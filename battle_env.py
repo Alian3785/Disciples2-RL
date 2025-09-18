@@ -35,53 +35,53 @@ def _multi_hot(values: List[str], vocab: List[str]) -> List[float]:
 # ------------------------ Units ------------------------
 UNITS_RED = [
     {"имя": "скелет-рыцарь",  "инициатива": 50, "инициатива_база": 50, "team": "red",  "position": 1, "stand": "ahead",
-     "Type": "Воин", "Урон": 100, "урон2": 0, "Здоровье": 270, "maxhealth": 270, "броня": 0, "Точность": 80, "Точность2": 0,
+     "Type": "Воин", "Урон": 100, "урон2": 0, "Health": 270, "maxhealth": 270, "броня": 0, "Точность": 80, "Точность2": 0,
      "иммунитет": ["death", "Poison"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
 
     {"имя": "рыцарь смерти",  "инициатива": 50, "инициатива_база": 50, "team": "red",  "position": 2, "stand": "ahead",
-     "Type": "Воин", "Урон": 120, "урон2": 0, "Здоровье": 255, "maxhealth": 255, "броня": 0, "Точность": 87, "Точность2": 0,
+     "Type": "Воин", "Урон": 120, "урон2": 0, "Health": 255, "maxhealth": 255, "броня": 0, "Точность": 87, "Точность2": 0,
      "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
 
     {"имя": "Мертвый дракон", "инициатива": 35, "инициатива_база": 35, "team": "red", "position": 3, "stand": "ahead",
-     "Type": "Dead dragon", "Урон": 65, "урон2": 20, "Здоровье": 450, "maxhealth": 450, "броня": 0, "Точность": 80, "Точность2": 40,
+     "Type": "Dead dragon", "Урон": 65, "урон2": 20, "Health": 450, "maxhealth": 450, "броня": 0, "Точность": 80, "Точность2": 40,
      "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "death", "Тип атаки 2": "poison", "big": True},
 
     {"имя": "Архилич", "инициатива": 40, "инициатива_база": 40, "team": "red", "position": 4, "stand": "behind",
-     "Type": "Mage", "Урон": 90, "урон2": 0, "Здоровье": 170, "maxhealth": 170, "броня": 0, "Точность": 80, "Точность2": 0,
+     "Type": "Mage", "Урон": 90, "урон2": 0, "Health": 170, "maxhealth": 170, "броня": 0, "Точность": 80, "Точность2": 0,
      "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "earth", "Тип атаки 2": "", "big": False},
 
     {"имя": "Смерть1", "инициатива": 40, "инициатива_база": 40, "team": "red", "position": 5, "stand": "behind",
-     "Type": "Death", "Урон": 100, "урон2": 20, "Здоровье": 125, "maxhealth": 125, "броня": 0, "Точность": 80, "Точность2": 50,
+     "Type": "Death", "Урон": 100, "урон2": 20, "Health": 125, "maxhealth": 125, "броня": 0, "Точность": 80, "Точность2": 50,
      "иммунитет": ["Weapon", "death"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "poison", "big": False},
 
     {"имя": "пусто", "инициатива": 0, "инициатива_база": 0, "team": "red", "position": 6, "stand": "behind",
-     "Type": "Archer", "Урон": 0, "урон2": 0, "Здоровье": 0, "maxhealth": 0, "броня": 0, "Точность": 0, "Точность2": 0,
+     "Type": "Archer", "Урон": 0, "урон2": 0, "Health": 0, "maxhealth": 0, "броня": 0, "Точность": 0, "Точность2": 0,
      "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
 ]
 
 UNITS_BLUE = [
     {"имя": "Астерот",   "инициатива": 50, "инициатива_база": 50, "team": "blue", "position": 7,  "stand": "ahead",
-     "Type": "Demon","Урон": 150, "урон2": 0, "Здоровье": 1020, "maxhealth": 1020, "броня": 0, "Точность": 80, "Точность2": 0,
+     "Type": "Demon","Урон": 150, "урон2": 0, "Health": 1020, "maxhealth": 1020, "броня": 0, "Точность": 80, "Точность2": 0,
      "иммунитет": [], "Стойкость": ["Mind", "Fire"], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": True},
 
     {"имя": "Герцог",  "инициатива": 50, "инициатива_база": 50, "team": "blue", "position": 8,  "stand": "ahead",
-     "Type": "Воин", "Урон": 120, "урон2": 0, "Здоровье": 306, "maxhealth": 306, "броня": 0, "Точность": 100, "Точность2": 0,
+     "Type": "Воин", "Урон": 120, "урон2": 0, "Health": 306, "maxhealth": 306, "броня": 0, "Точность": 100, "Точность2": 0,
      "иммунитет": [], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
 
     {"имя": "Гаргулья", "инициатива": 60, "инициатива_база": 60, "team": "blue", "position": 9,  "stand": "ahead",
-     "Type": "gargoil","Урон": 85, "урон2": 0, "Здоровье": 170, "maxhealth": 170, "броня": 65, "Точность": 80, "Точность2": 0,
+     "Type": "gargoil","Урон": 85, "урон2": 0, "Health": 170, "maxhealth": 170, "броня": 65, "Точность": 80, "Точность2": 0,
      "иммунитет": ["poison"], "Стойкость": ["Mind"], "Тип атаки 1": "earth", "Тип атаки 2": "", "big": True},
 
     {"имя": "пусто",    "инициатива": 0,  "инициатива_база": 0,  "team": "blue", "position": 10, "stand": "behind",
-     "Type": "Archer","Урон": 0,  "урон2": 0, "Здоровье": 0, "maxhealth": 0, "броня": 0,  "Точность": 0, "Точность2": 0,
+     "Type": "Archer","Урон": 0,  "урон2": 0, "Health": 0, "maxhealth": 0, "броня": 0,  "Точность": 0, "Точность2": 0,
      "иммунитет": [], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
 
     {"имя": "пусто",    "инициатива": 0,  "инициатива_база": 0,  "team": "blue", "position": 11, "stand": "behind",
-     "Type": "Archer","Урон": 0,  "урон2": 0, "Здоровье": 0, "maxhealth": 0, "броня": 0,  "Точность": 0, "Точность2": 0,
+     "Type": "Archer","Урон": 0,  "урон2": 0, "Health": 0, "maxhealth": 0, "броня": 0,  "Точность": 0, "Точность2": 0,
      "иммунитет": [], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
 
     {"имя": "пусто",    "инициатива": 0,  "инициатива_база": 0,  "team": "blue", "position": 12, "stand": "behind",
-     "Type": "Archer","Урон": 0,  "урон2": 0, "Здоровье": 0, "maxhealth": 0, "броня": 0,  "Точность": 0, "Точность2": 0,
+     "Type": "Archer","Урон": 0,  "урон2": 0, "Health": 0, "maxhealth": 0, "броня": 0,  "Точность": 0, "Точность2": 0,
      "иммунитет": [], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
 ]
 
@@ -93,7 +93,7 @@ BLUE_POSITIONS: List[int] = list(range(7, 13))
 TARGET_POSITIONS: List[int] = RED_POSITIONS
 
 # Constants for observation normalization
-MAX_HP   = max([u["Здоровье"] for u in (UNITS_RED + UNITS_BLUE)])
+MAX_HP   = max([u["Health"] for u in (UNITS_RED + UNITS_BLUE)])
 MAX_INIT = max([u["инициатива_база"] for u in (UNITS_RED + UNITS_BLUE)])
 MAX_DMG  = max([u["Урон"] for u in (UNITS_RED + UNITS_BLUE)])
 MAX_DMG2 = max([u["урон2"] for u in (UNITS_RED + UNITS_BLUE)])
@@ -179,7 +179,7 @@ class BattleEnv(gym.Env):
         self.rng = random.Random(seed)
 
     def _alive(self, u) -> bool:
-        return u["Здоровье"] > 0
+        return u["Health"] > 0
 
     def _team_alive(self, team: str) -> bool:
         return any(self._alive(u) and u["team"] == team for u in self.combined)
@@ -252,7 +252,7 @@ class BattleEnv(gym.Env):
         for p in positions:
             u = self._unit_by_position(p)
             if u is not None and self._alive(u):
-                candidates.append((u["Здоровье"], p))
+                candidates.append((u["Health"], p))
         if not candidates:
             return None
         min_hp = min(hp for hp, _ in candidates)
@@ -272,15 +272,15 @@ class BattleEnv(gym.Env):
             else:
                 tick = int(unit.get("poison_damage_per_tick", 0) or 0)
                 if tick > 0:
-                    before = unit["Здоровье"]
-                    unit["Здоровье"] -= tick
+                    before = unit["Health"]
+                    unit["Health"] -= tick
                     unit["poison_turns_left"] -= 1
-                    after = unit["Здоровье"]
+                    after = unit["Health"]
                     self._log(
                         f"☠ Яд поражает {unit['team'].upper()} {unit['имя']}#{unit['position']}: "
                         f"{tick} ({before}→{max(0, after)}); осталось ходов: {unit['poison_turns_left']}"
                     )
-                    if unit["Здоровье"] <= 0:
+                    if unit["Health"] <= 0:
                         unit["инициатива"] = 0
                         self._log(f"✖ {unit['team'].upper()} {unit['имя']}#{unit['position']} погибает от яда.")
                         self._check_victory_after_hit()
@@ -301,15 +301,15 @@ class BattleEnv(gym.Env):
             else:
                 tick = int(unit.get("burn_damage_per_tick", 0) or BURN_DAMAGE)
                 if tick > 0:
-                    before = unit["Здоровье"]
-                    unit["Здоровье"] -= tick
+                    before = unit["Health"]
+                    unit["Health"] -= tick
                     unit["burn_turns_left"] -= 1
-                    after = unit["Здоровье"]
+                    after = unit["Health"]
                     self._log(
                         f"🔥 Поджог поражает {unit['team'].upper()} {unit['имя']}#{unit['position']}: "
                         f"{tick} ({before}→{max(0, after)}); осталось ходов: {unit['burn_turns_left']}"
                     )
-                    if unit["Здоровье"] <= 0:
+                    if unit["Health"] <= 0:
                         unit["инициатива"] = 0
                         self._log(f"✖ {unit['team'].upper()} {unit['имя']}#{unit['position']} погибает от поджога.")
                         self._check_victory_after_hit()
@@ -428,16 +428,16 @@ class BattleEnv(gym.Env):
                         continue
                     if self._resilience_blocks(attacker, victim):
                         continue
-                    before = victim["Здоровье"]
+                    before = victim["Health"]
                     dmg = self._apply_damage_with_armor(attacker["Урон"], victim)
-                    victim["Здоровье"] -= dmg
-                    after = victim["Здоровье"]
+                    victim["Health"] -= dmg
+                    after = victim["Health"]
                     self._log(
                         f"{attacker['team'].upper()} {attacker['имя']}#{attacker['position']} → "
                         f"{victim['team'].upper()} {victim['имя']}#{victim['position']}: {dmg} "
                         f"({before}→{max(0, after)})"
                     )
-                    if victim["Здоровье"] <= 0:
+                    if victim["Health"] <= 0:
                         victim["инициатива"] = 0
                         self._log(f"✖ {victim['team'].upper()} {victim['имя']}#{victim['position']} выведен из строя.")
                     else:
@@ -489,10 +489,10 @@ class BattleEnv(gym.Env):
             if self._resilience_blocks(attacker, victim):
                 return True, "resilience_block"
 
-            before = victim["Здоровье"]
+            before = victim["Health"]
             dmg = self._apply_damage_with_armor(attacker["Урон"], victim)
-            victim["Здоровье"] -= dmg
-            after = victim["Здоровье"]
+            victim["Health"] -= dmg
+            after = victim["Health"]
             self._log(
                 f"{attacker['team'].upper()} {attacker['имя']}#{attacker['position']} → "
                 f"{victim['team'].upper()} {victim['имя']}#{victim['position']}: {dmg} "
@@ -545,7 +545,7 @@ class BattleEnv(gym.Env):
                                 f"{victim['team'].upper()} {victim['имя']}#{victim['position']} на {BURN_TURNS} хода."
                             )
 
-            if victim["Здоровье"] <= 0:
+            if victim["Health"] <= 0:
                 victim["инициатива"] = 0
                 self._log(f"✖ {victim['team'].upper()} {victim['имя']}#{victim['position']} выведен из строя.")
             return True, "ok"
@@ -634,7 +634,7 @@ class BattleEnv(gym.Env):
         vec: List[float] = []
         for pos in RED_POSITIONS + BLUE_POSITIONS:
             u = self._unit_by_position(pos)
-            hp      = float(max(0, u["Здоровье"]))
+            hp      = float(max(0, u["Health"]))
             ini     = float(max(0, u["инициатива"]))
             ini_b   = float(u.get("инициатива_база", 0))
             dmg     = float(u["Урон"])

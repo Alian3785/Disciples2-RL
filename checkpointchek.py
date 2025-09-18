@@ -21,7 +21,7 @@ from stable_baselines3.common.monitor import Monitor
 from battle_env import BattleEnv, UNITS_RED, UNITS_BLUE, TARGET_POSITIONS
 
 # --- путь к чекпоинту (замени на свой .zip) ---
-CHECKPOINT_PATH = "./checkpoints/20250918-220546/ppo_step_3000000.zip"
+CHECKPOINT_PATH = "./checkpoints/20250918-220546/ppo_step_1000000.zip"
 assert os.path.exists(CHECKPOINT_PATH), f"Не найден чекпоинт: {CHECKPOINT_PATH}"
 
 # --- action→позиция целей (если не импортировано ранее) ---
@@ -94,7 +94,7 @@ if VISUALIZE:
 
     for u in (UNITS_RED + UNITS_BLUE):
         t = u.get("Type", "Archer")
-        start_hp = float(u["Здоровье"])
+        start_hp = float(u["Health"])
         state[u["position"]] = {
             "team": u["team"],
             "name": u["имя"] + _suffix_by_type(t),
