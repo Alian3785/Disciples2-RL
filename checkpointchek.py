@@ -97,13 +97,13 @@ if VISUALIZE:
         start_hp = float(u["Health"])
         state[u["position"]] = {
             "team": u["team"],
-            "name": u["имя"] + _suffix_by_type(t),
+            "name": u.get("Name", u.get("имя","")) + _suffix_by_type(t),
             "hp": start_hp,
             "maxhp": start_hp,
             "stand": u["stand"],
             "type": t,
             "big": bool(u.get("big", False)),
-            "acc2": float(u.get("Точность2", 0)),  # шанс отравления, % (для плашки)
+            "acc2": float(u.get("Accuracy2", u.get("Точность2", 0))),  # шанс отравления, % (для плашки)
         }
 
     fig, ax = plt.subplots(figsize=(12, 8))

@@ -34,55 +34,55 @@ def _multi_hot(values: List[str], vocab: List[str]) -> List[float]:
 
 # ------------------------ Units ------------------------
 UNITS_RED = [
-    {"имя": "скелет-рыцарь",  "инициатива": 50, "инициатива_база": 50, "team": "red",  "position": 1, "stand": "ahead",
-     "Type": "Воин", "Урон": 100, "урон2": 0, "Health": 270, "maxhealth": 270, "броня": 0, "Точность": 80, "Точность2": 0,
-     "иммунитет": ["death", "Poison"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
+    {"Name": "скелет-рыцарь",  "Initiative": 50, "BaseInitiative": 50, "team": "red",  "position": 1, "stand": "ahead",
+     "Type": "Воин", "Damage": 100, "Damage2": 0, "Health": 270, "maxhealth": 270, "Armor": 0, "Accuracy": 80, "Accuracy2": 0,
+     "Immunity": ["death", "Poison"], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False},
 
-    {"имя": "рыцарь смерти",  "инициатива": 50, "инициатива_база": 50, "team": "red",  "position": 2, "stand": "ahead",
-     "Type": "Воин", "Урон": 120, "урон2": 0, "Health": 255, "maxhealth": 255, "броня": 0, "Точность": 87, "Точность2": 0,
-     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
+    {"Name": "рыцарь смерти",  "Initiative": 50, "BaseInitiative": 50, "team": "red",  "position": 2, "stand": "ahead",
+     "Type": "Воин", "Damage": 120, "Damage2": 0, "Health": 255, "maxhealth": 255, "Armor": 0, "Accuracy": 87, "Accuracy2": 0,
+     "Immunity": ["death"], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False},
 
-    {"имя": "Мертвый дракон", "инициатива": 35, "инициатива_база": 35, "team": "red", "position": 3, "stand": "ahead",
-     "Type": "Dead dragon", "Урон": 65, "урон2": 20, "Health": 450, "maxhealth": 450, "броня": 0, "Точность": 80, "Точность2": 40,
-     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "death", "Тип атаки 2": "poison", "big": True},
+    {"Name": "Мертвый дракон", "Initiative": 35, "BaseInitiative": 35, "team": "red", "position": 3, "stand": "ahead",
+     "Type": "Dead dragon", "Damage": 65, "Damage2": 20, "Health": 450, "maxhealth": 450, "Armor": 0, "Accuracy": 80, "Accuracy2": 40,
+     "Immunity": ["death"], "Resilience": [], "AttackType1": "death", "AttackType2": "poison", "big": True},
 
-    {"имя": "Архилич", "инициатива": 40, "инициатива_база": 40, "team": "red", "position": 4, "stand": "behind",
-     "Type": "Mage", "Урон": 90, "урон2": 0, "Health": 170, "maxhealth": 170, "броня": 0, "Точность": 80, "Точность2": 0,
-     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "earth", "Тип атаки 2": "", "big": False},
+    {"Name": "Архилич", "Initiative": 40, "BaseInitiative": 40, "team": "red", "position": 4, "stand": "behind",
+     "Type": "Mage", "Damage": 90, "Damage2": 0, "Health": 170, "maxhealth": 170, "Armor": 0, "Accuracy": 80, "Accuracy2": 0,
+     "Immunity": ["death"], "Resilience": [], "AttackType1": "earth", "AttackType2": "", "big": False},
 
-    {"имя": "Смерть1", "инициатива": 40, "инициатива_база": 40, "team": "red", "position": 5, "stand": "behind",
-     "Type": "Death", "Урон": 100, "урон2": 20, "Health": 125, "maxhealth": 125, "броня": 0, "Точность": 80, "Точность2": 50,
-     "иммунитет": ["Weapon", "death"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "poison", "big": False},
+    {"Name": "Смерть1", "Initiative": 40, "BaseInitiative": 40, "team": "red", "position": 5, "stand": "behind",
+     "Type": "Death", "Damage": 100, "Damage2": 20, "Health": 125, "maxhealth": 125, "Armor": 0, "Accuracy": 80, "Accuracy2": 50,
+     "Immunity": ["Weapon", "death"], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "poison", "big": False},
 
-    {"имя": "пусто", "инициатива": 0, "инициатива_база": 0, "team": "red", "position": 6, "stand": "behind",
-     "Type": "Archer", "Урон": 0, "урон2": 0, "Health": 0, "maxhealth": 0, "броня": 0, "Точность": 0, "Точность2": 0,
-     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
+    {"Name": "пусто", "Initiative": 0, "BaseInitiative": 0, "team": "red", "position": 6, "stand": "behind",
+     "Type": "Archer", "Damage": 0, "Damage2": 0, "Health": 0, "maxhealth": 0, "Armor": 0, "Accuracy": 0, "Accuracy2": 0,
+     "Immunity": ["death"], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False},
 ]
 
 UNITS_BLUE = [
-    {"имя": "Астерот",   "инициатива": 50, "инициатива_база": 50, "team": "blue", "position": 7,  "stand": "ahead",
-     "Type": "Demon","Урон": 150, "урон2": 0, "Health": 1020, "maxhealth": 1020, "броня": 0, "Точность": 80, "Точность2": 0,
-     "иммунитет": [], "Стойкость": ["Mind", "Fire"], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": True},
+    {"Name": "Астерот",   "Initiative": 50, "BaseInitiative": 50, "team": "blue", "position": 7,  "stand": "ahead",
+     "Type": "Demon","Damage": 150, "Damage2": 0, "Health": 1020, "maxhealth": 1020, "Armor": 0, "Accuracy": 80, "Accuracy2": 0,
+     "Immunity": [], "Resilience": ["Mind", "Fire"], "AttackType1": "Weapon", "AttackType2": "", "big": True},
 
-    {"имя": "Герцог",  "инициатива": 50, "инициатива_база": 50, "team": "blue", "position": 8,  "stand": "ahead",
-     "Type": "Воин", "Урон": 120, "урон2": 0, "Health": 306, "maxhealth": 306, "броня": 0, "Точность": 100, "Точность2": 0,
-     "иммунитет": [], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
+    {"Name": "Герцог",  "Initiative": 50, "BaseInitiative": 50, "team": "blue", "position": 8,  "stand": "ahead",
+     "Type": "Воин", "Damage": 120, "Damage2": 0, "Health": 306, "maxhealth": 306, "Armor": 0, "Accuracy": 100, "Accuracy2": 0,
+     "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False},
 
-    {"имя": "Гаргулья", "инициатива": 60, "инициатива_база": 60, "team": "blue", "position": 9,  "stand": "ahead",
-     "Type": "gargoil","Урон": 85, "урон2": 0, "Health": 170, "maxhealth": 170, "броня": 65, "Точность": 80, "Точность2": 0,
-     "иммунитет": ["poison"], "Стойкость": ["Mind"], "Тип атаки 1": "earth", "Тип атаки 2": "", "big": True},
+    {"Name": "Гаргулья", "Initiative": 60, "BaseInitiative": 60, "team": "blue", "position": 9,  "stand": "ahead",
+     "Type": "gargoil","Damage": 85, "Damage2": 0, "Health": 170, "maxhealth": 170, "Armor": 65, "Accuracy": 80, "Accuracy2": 0,
+     "Immunity": ["poison"], "Resilience": ["Mind"], "AttackType1": "earth", "AttackType2": "", "big": True},
 
-    {"имя": "пусто",    "инициатива": 0,  "инициатива_база": 0,  "team": "blue", "position": 10, "stand": "behind",
-     "Type": "Archer","Урон": 0,  "урон2": 0, "Health": 0, "maxhealth": 0, "броня": 0,  "Точность": 0, "Точность2": 0,
-     "иммунитет": [], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
+    {"Name": "пусто",    "Initiative": 0,  "BaseInitiative": 0,  "team": "blue", "position": 10, "stand": "behind",
+     "Type": "Archer","Damage": 0,  "Damage2": 0, "Health": 0, "maxhealth": 0, "Armor": 0,  "Accuracy": 0, "Accuracy2": 0,
+     "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False},
 
-    {"имя": "пусто",    "инициатива": 0,  "инициатива_база": 0,  "team": "blue", "position": 11, "stand": "behind",
-     "Type": "Archer","Урон": 0,  "урон2": 0, "Health": 0, "maxhealth": 0, "броня": 0,  "Точность": 0, "Точность2": 0,
-     "иммунитет": [], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
+    {"Name": "пусто",    "Initiative": 0,  "BaseInitiative": 0,  "team": "blue", "position": 11, "stand": "behind",
+     "Type": "Archer","Damage": 0,  "Damage2": 0, "Health": 0, "maxhealth": 0, "Armor": 0,  "Accuracy": 0, "Accuracy2": 0,
+     "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False},
 
-    {"имя": "пусто",    "инициатива": 0,  "инициатива_база": 0,  "team": "blue", "position": 12, "stand": "behind",
-     "Type": "Archer","Урон": 0,  "урон2": 0, "Health": 0, "maxhealth": 0, "броня": 0,  "Точность": 0, "Точность2": 0,
-     "иммунитет": [], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
+    {"Name": "пусто",    "Initiative": 0,  "BaseInitiative": 0,  "team": "blue", "position": 12, "stand": "behind",
+     "Type": "Archer","Damage": 0,  "Damage2": 0, "Health": 0, "maxhealth": 0, "Armor": 0,  "Accuracy": 0, "Accuracy2": 0,
+     "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False},
 ]
 
 # Position ranges
@@ -94,9 +94,9 @@ TARGET_POSITIONS: List[int] = RED_POSITIONS
 
 # Constants for observation normalization
 MAX_HP   = max([u["Health"] for u in (UNITS_RED + UNITS_BLUE)])
-MAX_INIT = max([u["инициатива_база"] for u in (UNITS_RED + UNITS_BLUE)])
-MAX_DMG  = max([u["Урон"] for u in (UNITS_RED + UNITS_BLUE)])
-MAX_DMG2 = max([u["урон2"] for u in (UNITS_RED + UNITS_BLUE)])
+MAX_INIT = max([u["BaseInitiative"] for u in (UNITS_RED + UNITS_BLUE)])
+MAX_DMG  = max([u["Damage"] for u in (UNITS_RED + UNITS_BLUE)])
+MAX_DMG2 = max([u["Damage2"] for u in (UNITS_RED + UNITS_BLUE)])
 
 POISON_TURNS  = 3
 BURN_DAMAGE   = 10
@@ -263,11 +263,11 @@ class BattleEnv(gym.Env):
     def _apply_start_of_turn_effects(self, unit: Dict) -> bool:
         # Poison
         if unit.get("poison_turns_left", 0) > 0 and self._alive(unit):
-            if "poison" in (unit.get("иммунитет") or []):
+            if "poison" in (unit.get("Immunity") or []):
                 unit["poison_turns_left"] = 0
                 unit["poison_damage_per_tick"] = 0
                 self._log(
-                    f"🛡 Иммунитет к эффекту 'poison' — яд не действует на {unit['team'].upper()} {unit['имя']}#{unit['position']}."
+                    f"🛡 Иммунитет к эффекту 'poison' — яд не действует на {unit['team'].upper()} {unit['Name']}#{unit['position']}."
                 )
             else:
                 tick = int(unit.get("poison_damage_per_tick", 0) or 0)
@@ -277,12 +277,12 @@ class BattleEnv(gym.Env):
                     unit["poison_turns_left"] -= 1
                     after = unit["Health"]
                     self._log(
-                        f"☠ Яд поражает {unit['team'].upper()} {unit['имя']}#{unit['position']}: "
+                        f"☠ Яд поражает {unit['team'].upper()} {unit['Name']}#{unit['position']}: "
                         f"{tick} ({before}→{max(0, after)}); осталось ходов: {unit['poison_turns_left']}"
                     )
                     if unit["Health"] <= 0:
                         unit["инициатива"] = 0
-                        self._log(f"✖ {unit['team'].upper()} {unit['имя']}#{unit['position']} погибает от яда.")
+                        self._log(f"✖ {unit['team'].upper()} {unit['Name']}#{unit['position']} погибает от яда.")
                         self._check_victory_after_hit()
                         return False
                 else:
@@ -292,11 +292,11 @@ class BattleEnv(gym.Env):
 
         # Burn — tick damage from burn_damage_per_tick (for lord = его урон2)
         if unit.get("burn_turns_left", 0) > 0 and self._alive(unit):
-            if "Fire" in (unit.get("иммунитет") or []):
+            if "Fire" in (unit.get("Immunity") or []):
                 unit["burn_turns_left"] = 0
                 unit["burn_damage_per_tick"] = 0
                 self._log(
-                    f"🛡 Иммунитет к эффекту 'Fire' — поджог не действует на {unit['team'].upper()} {unit['имя']}#{unit['position']}."
+                    f"🛡 Иммунитет к эффекту 'Fire' — поджог не действует на {unit['team'].upper()} {unit['Name']}#{unit['position']}."
                 )
             else:
                 tick = int(unit.get("burn_damage_per_tick", 0) or BURN_DAMAGE)
@@ -306,12 +306,12 @@ class BattleEnv(gym.Env):
                     unit["burn_turns_left"] -= 1
                     after = unit["Health"]
                     self._log(
-                        f"🔥 Поджог поражает {unit['team'].upper()} {unit['имя']}#{unit['position']}: "
+                        f"🔥 Поджог поражает {unit['team'].upper()} {unit['Name']}#{unit['position']}: "
                         f"{tick} ({before}→{max(0, after)}); осталось ходов: {unit['burn_turns_left']}"
                     )
                     if unit["Health"] <= 0:
                         unit["инициатива"] = 0
-                        self._log(f"✖ {unit['team'].upper()} {unit['имя']}#{unit['position']} погибает от поджога.")
+                        self._log(f"✖ {unit['team'].upper()} {unit['Name']}#{unit['position']} погибает от поджога.")
                         self._check_victory_after_hit()
                         return False
                 else:
@@ -325,15 +325,15 @@ class BattleEnv(gym.Env):
     def _reset_state(self):
         self.combined = [u.copy() for u in (UNITS_RED + UNITS_BLUE)]
         for u in self.combined:
-            u["инициатива"] = u.get("инициатива_база", 0)
-            u.setdefault("Тип атаки 1", "Weapon")
-            u.setdefault("Тип атаки 2", "")
-            u.setdefault("иммунитет", [])
-            u.setdefault("Стойкость", [])
-            u.setdefault("броня", 0)
-            u.setdefault("Точность", 100)
-            u.setdefault("Точность2", 0)
-            u.setdefault("урон2", 0)
+            u["Initiative"] = u.get("BaseInitiative", 0)
+            u.setdefault("AttackType1", "Weapon")
+            u.setdefault("AttackType2", "")
+            u.setdefault("Immunity", [])
+            u.setdefault("Resilience", [])
+            u.setdefault("Armor", 0)
+            u.setdefault("Accuracy", 100)
+            u.setdefault("Accuracy2", 0)
+            u.setdefault("Damage2", 0)
             u.setdefault("big", False)
             u["poison_turns_left"] = 0
             u["poison_damage_per_tick"] = 0
@@ -348,39 +348,39 @@ class BattleEnv(gym.Env):
         self._log(f"Эпизод начат. Раунд {self.round_no}.")
 
     def _candidates(self):
-        return [u for u in self.combined if self._alive(u) and u["инициатива"] > 0]
+        return [u for u in self.combined if self._alive(u) and u["Initiative"] > 0]
 
     def _pop_next(self):
         cand = self._candidates()
         if not cand:
             return None
         self.rng.shuffle(cand)
-        cand.sort(key=itemgetter("инициатива"), reverse=True)
+        cand.sort(key=itemgetter("Initiative"), reverse=True)
         return cand[0]
 
     def _end_round_restore(self):
         for u in self.combined:
-            u["инициатива"] = u.get("инициатива_база", 0) if self._alive(u) else 0
+            u["Initiative"] = u.get("BaseInitiative", 0) if self._alive(u) else 0
         self._log("Восстановление инициативы. Новый раунд.")
 
     def _is_immune_damage(self, attacker: Dict, victim: Dict) -> bool:
-        atk1 = attacker.get("Тип атаки 1", "Weapon")
-        return atk1 in (victim.get("иммунитет") or [])
+        atk1 = attacker.get("AttackType1", "Weapon")
+        return atk1 in (victim.get("Immunity") or [])
 
     def _is_immune_status(self, attacker: Dict, victim: Dict) -> bool:
-        atk2 = attacker.get("Тип атаки 2", "")
-        return bool(atk2) and (atk2 in (victim.get("иммунитет") or []))
+        atk2 = attacker.get("AttackType2", "")
+        return bool(atk2) and (atk2 in (victim.get("Immunity") or []))
 
     def _resilience_blocks(self, attacker: Dict, victim: Dict) -> bool:
-        res_list = set(victim.get("Стойкость") or [])
+        res_list = set(victim.get("Resilience") or [])
         if not res_list:
             return False
         used = set(victim.get("resilience_used_types") or [])
         available = res_list - used
         if not available:
             return False
-        atk1 = attacker.get("Тип атаки 1", "")
-        atk2 = attacker.get("Тип атаки 2", "")
+        atk1 = attacker.get("AttackType1", "")
+        atk2 = attacker.get("AttackType2", "")
         for tag in (atk1, atk2):
             if tag and tag in available:
                 victim.setdefault("resilience_used_types", []).append(tag)
@@ -392,13 +392,13 @@ class BattleEnv(gym.Env):
         return False
 
     def _apply_damage_with_armor(self, base_dmg: float, victim: Dict) -> int:
-        armor = float(victim.get("броня", 0) or 0)
+        armor = float(victim.get("Armor", 0) or 0)
         factor = (1.0 - armor / 100.0) if armor > 0 else 1.0
         eff = base_dmg * max(0.0, factor)
         return int(round(eff))
 
     def _roll_hit(self, attacker: Dict) -> bool:
-        acc = float(attacker.get("Точность", 100) or 0)
+        acc = float(attacker.get("Accuracy", 100) or 0)
         return self.rng.random() < (acc / 100.0)
 
     def _roll_status(self, chance_percent: float) -> bool:
@@ -412,37 +412,37 @@ class BattleEnv(gym.Env):
             targets = [u for u in self.combined if u["team"] == enemy_team and self._alive(u)]
             if targets:
                 atype = attacker.get("Type")
-                self._log(f"{attacker['team'].upper()} {attacker['имя']}#{attacker['position']} ({atype}) применяет массовую атаку.")
+                self._log(f"{attacker['team'].upper()} {attacker['Name']}#{attacker['position']} ({atype}) применяет массовую атаку.")
                 for victim in targets:
                     if not self._roll_hit(attacker):
                         self._log(
-                            f"💨 Промах: {attacker['team'].upper()} {attacker['имя']}#{attacker['position']} по "
-                            f"{victim['team'].upper()} {victim['имя']}#{victim['position']}."
+                            f"💨 Промах: {attacker['team'].upper()} {attacker['Name']}#{attacker['position']} по "
+                            f"{victim['team'].upper()} {victim['Name']}#{victim['position']}."
                         )
                         continue
                     if self._is_immune_damage(attacker, victim):
                         self._log(
-                            f"🛡 Иммунитет к урону '{attacker.get('Тип атаки 1','')}' — "
-                            f"{victim['team'].upper()} {victim['имя']}#{victim['position']}: урон 0."
+                            f"🛡 Иммунитет к урону '{attacker.get('AttackType1','')}' — "
+                            f"{victim['team'].upper()} {victim['Name']}#{victim['position']}: урон 0."
                         )
                         continue
                     if self._resilience_blocks(attacker, victim):
                         continue
                     before = victim["Health"]
-                    dmg = self._apply_damage_with_armor(attacker["Урон"], victim)
+                    dmg = self._apply_damage_with_armor(attacker["Damage"], victim)
                     victim["Health"] -= dmg
                     after = victim["Health"]
                     self._log(
-                        f"{attacker['team'].upper()} {attacker['имя']}#{attacker['position']} → "
-                        f"{victim['team'].upper()} {victim['имя']}#{victim['position']}: {dmg} "
+                        f"{attacker['team'].upper()} {attacker['Name']}#{attacker['position']} → "
+                        f"{victim['team'].upper()} {victim['Name']}#{victim['position']}: {dmg} "
                         f"({before}→{max(0, after)})"
                     )
                     if victim["Health"] <= 0:
-                        victim["инициатива"] = 0
-                        self._log(f"✖ {victim['team'].upper()} {victim['имя']}#{victim['position']} выведен из строя.")
+                        victim["Initiative"] = 0
+                        self._log(f"✖ {victim['team'].upper()} {victim['Name']}#{victim['position']} выведен из строя.")
                     else:
-                        if atype == "Dead dragon" and attacker.get("Тип атаки 2", "") == "poison":
-                            acc2 = float(attacker.get("Точность2", 0) or 0)
+                        if atype == "Dead dragon" and attacker.get("AttackType2", "") == "poison":
+                            acc2 = float(attacker.get("Accuracy2", 0) or 0)
                             roll = self._roll_status(acc2)
                             self._log(
                                 f"🧪 Шанс отравления {int(acc2)}% — " + ("успех" if roll else "неудача")
@@ -451,12 +451,12 @@ class BattleEnv(gym.Env):
                             if roll:
                                 if self._is_immune_status(attacker, victim):
                                     self._log(
-                                        f"🛡 Иммунитет к эффекту '{attacker.get('Тип атаки 2','')}' — яд НЕ накладывается "
-                                        f"на {victim['team'].upper()} {victim['имя']}#{victim['position']}."
+                                        f"🛡 Иммунитет к эффекту '{attacker.get('AttackType2','')}' — яд НЕ накладывается "
+                                        f"на {victim['team'].upper()} {victim['Name']}#{victim['position']}."
                                     )
                                 else:
                                     victim["poison_turns_left"] = POISON_TURNS
-                                    victim["poison_damage_per_tick"] = int(attacker.get("урон2", 0) or 0)
+                                    victim["poison_damage_per_tick"] = int(attacker.get("Damage2", 0) or 0)
                                     self._log(
                                         f"☠ {attacker['team'].upper()} {attacker['имя']}#{attacker['position']} накладывает яд "
                                         f"({victim['poison_damage_per_tick']} урона/ход) на "
@@ -465,7 +465,7 @@ class BattleEnv(gym.Env):
                 return True, "aoe"
             else:
                 self._log(
-                    f"{attacker['team'].upper()} {attacker['имя']}#{attacker['position']} ({attacker.get('Type')}) применяет массовую атаку: целей нет."
+                    f"{attacker['team'].upper()} {attacker['Name']}#{attacker['position']} ({attacker.get('Type')}) применяет массовую атаку: целей нет."
                 )
                 return False, "aoe_no_targets"
 
@@ -474,15 +474,15 @@ class BattleEnv(gym.Env):
         if victim is not None and self._alive(victim):
             if not self._roll_hit(attacker):
                 self._log(
-                    f"💨 Промах: {attacker['team'].upper()} {attacker['имя']}#{attacker['position']} по "
-                    f"{victim['team'].upper()} {victim['имя']}#{victim['position']}."
+                    f"💨 Промах: {attacker['team'].upper()} {attacker['Name']}#{attacker['position']} по "
+                    f"{victim['team'].upper()} {victim['Name']}#{victim['position']}."
                 )
                 return True, "miss"
 
             if self._is_immune_damage(attacker, victim):
                 self._log(
-                    f"🛡 Иммунитет к урону '{attacker.get('Тип атаки 1','')}' — "
-                    f"{victim['team'].upper()} {victim['имя']}#{victim['position']}: атака наносит 0."
+                    f"🛡 Иммунитет к урону '{attacker.get('AttackType1','')}' — "
+                    f"{victim['team'].upper()} {victim['Name']}#{victim['position']}: атака наносит 0."
                 )
                 return True, "immune_damage"
 
@@ -490,12 +490,12 @@ class BattleEnv(gym.Env):
                 return True, "resilience_block"
 
             before = victim["Health"]
-            dmg = self._apply_damage_with_armor(attacker["Урон"], victim)
+            dmg = self._apply_damage_with_armor(attacker["Damage"], victim)
             victim["Health"] -= dmg
             after = victim["Health"]
             self._log(
-                f"{attacker['team'].upper()} {attacker['имя']}#{attacker['position']} → "
-                f"{victim['team'].upper()} {victim['имя']}#{victim['position']}: {dmg} "
+                f"{attacker['team'].upper()} {attacker['Name']}#{attacker['position']} → "
+                f"{victim['team'].upper()} {victim['Name']}#{victim['position']}: {dmg} "
                 f"({before}→{max(0, after)})"
             )
 
@@ -505,7 +505,7 @@ class BattleEnv(gym.Env):
                     and attacker.get("Тип атаки 2", "") == "poison"
                     and victim.get("poison_turns_left", 0) <= 0
                 ):
-                    acc2 = float(attacker.get("Точность2", 0) or 0)
+                    acc2 = float(attacker.get("Accuracy2", 0) or 0)
                     roll = self._roll_status(acc2)
                     self._log(
                         f"🧪 Шанс отравления {int(acc2)}% — "
@@ -515,12 +515,12 @@ class BattleEnv(gym.Env):
                     if roll:
                         if self._is_immune_status(attacker, victim):
                             self._log(
-                                f"🛡 Иммунитет к эффекту '{attacker.get('Тип атаки 2','')}' — яд НЕ накладывается "
-                                f"на {victim['team'].upper()} {victim['имя']}#{victim['position']}."
+                                f"🛡 Иммунитет к эффекту '{attacker.get('AttackType2','')}' — яд НЕ накладывается "
+                                f"на {victim['team'].upper()} {victim['Name']}#{victim['position']}."
                             )
                         else:
                             victim["poison_turns_left"] = POISON_TURNS
-                            victim["poison_damage_per_tick"] = int(attacker.get("урон2", 0) or 0)
+                            victim["poison_damage_per_tick"] = int(attacker.get("Damage2", 0) or 0)
                             self._log(
                                 f"☠ {attacker['team'].upper()} {attacker['имя']}#{attacker['position']} накладывает яд "
                                 f"({victim['poison_damage_per_tick']} урона/ход) на "
@@ -537,21 +537,21 @@ class BattleEnv(gym.Env):
                             )
                         else:
                             victim["burn_turns_left"] = BURN_TURNS
-                            victim["burn_damage_per_tick"] = int(attacker.get("урон2", 0) or 0)
+                            victim["burn_damage_per_tick"] = int(attacker.get("Damage2", 0) or 0)
                             self._lord_applied_burn[pos] = True
                             self._log(
-                                f"🔥 {attacker['team'].upper()} {attacker['имя']}#{pos} накладывает поджог "
+                                f"🔥 {attacker['team'].upper()} {attacker['Name']}#{pos} накладывает поджог "
                                 f"({victim['burn_damage_per_tick']} урона/ход) на "
                                 f"{victim['team'].upper()} {victim['имя']}#{victim['position']} на {BURN_TURNS} хода."
                             )
 
             if victim["Health"] <= 0:
-                victim["инициатива"] = 0
-                self._log(f"✖ {victim['team'].upper()} {victim['имя']}#{victim['position']} выведен из строя.")
+                victim["Initiative"] = 0
+                self._log(f"✖ {victim['team'].upper()} {victim['Name']}#{victim['position']} выведен из строя.")
             return True, "ok"
         else:
             self._log(
-                f"{attacker['team'].upper()} {attacker['имя']}#{attacker['position']} бьёт pos{target_pos}: цели нет/мертва/недоступна."
+                f"{attacker['team'].upper()} {attacker['Name']}#{attacker['position']} бьёт pos{target_pos}: цели нет/мертва/недоступна."
             )
             return False, "dead_or_absent"
 
@@ -581,13 +581,13 @@ class BattleEnv(gym.Env):
                 self.current_blue_attacker_pos = nxt["position"]
                 self.blue_attacks_left = 2 if (nxt.get("Type") == "Demon") else 1
                 self._log(
-                    f"Ход BLUE: {nxt['имя']}#{nxt['position']} (иниц {nxt['инициатива']}). "
+                    f"Ход BLUE: {nxt['Name']}#{nxt['position']} (иниц {nxt['Initiative']}). "
                     + ("Ожидание действия (демон: 2 удара)." if self.blue_attacks_left == 2 else "Ожидание действия.")
                 )
                 return True
 
             # RED plays automatically
-            nxt["инициатива"] = 0
+            nxt["Initiative"] = 0
             strikes = 2 if nxt.get("Type") == "Demon" else 1
 
             for hit_i in range(strikes):
@@ -601,16 +601,16 @@ class BattleEnv(gym.Env):
                         target_pos = self._pick_lowest_hp(options)
                         prefix = nxt.get("Type")
                         self._log(
-                            f"RED ход: {nxt['имя']}#{nxt['position']} ({prefix}) → цель с мин. HP pos{target_pos} (удар {hit_i+1}/{strikes})."
+                            f"RED ход: {nxt['Name']}#{nxt['position']} ({prefix}) → цель с мин. HP pos{target_pos} (удар {hit_i+1}/{strikes})."
                         )
                     else:
                         self._log(
-                            f"RED ход: {nxt['имя']}#{nxt['position']} ({nxt.get('Type')}) не может атаковать: доступных целей нет."
+                            f"RED ход: {nxt['Name']}#{nxt['position']} ({nxt.get('Type')}) не может атаковать: доступных целей нет."
                         )
                 elif nxt.get("Type") in ("Mage", "Dead dragon"):
                     if hit_i == 0:
                         self._log(
-                            f"RED ход: {nxt['имя']}#{nxt['position']} ({nxt.get('Type')}) выполняет массовую атаку."
+                            f"RED ход: {nxt['Name']}#{nxt['position']} ({nxt.get('Type')}) выполняет массовую атаку."
                         )
                     else:
                         break
@@ -619,7 +619,7 @@ class BattleEnv(gym.Env):
                     target_pos = self._pick_lowest_hp(live_blue_positions) if live_blue_positions else None
                     ut = nxt.get("Type")
                     self._log(
-                        f"RED ход: {nxt['имя']}#{nxt['position']} ({ut}) → цель с мин. HP pos{target_pos} (удар {hit_i+1}/{strikes})."
+                        f"RED ход: {nxt['Name']}#{nxt['position']} ({ut}) → цель с мин. HP pos{target_pos} (удар {hit_i+1}/{strikes})."
                     )
 
                 if target_pos is not None or nxt.get("Type") in ("Mage", "Dead dragon"):
@@ -635,22 +635,22 @@ class BattleEnv(gym.Env):
         for pos in RED_POSITIONS + BLUE_POSITIONS:
             u = self._unit_by_position(pos)
             hp      = float(max(0, u["Health"]))
-            ini     = float(max(0, u["инициатива"]))
-            ini_b   = float(u.get("инициатива_база", 0))
-            dmg     = float(u["Урон"])
-            dmg2    = float(u.get("урон2", 0))
+            ini     = float(max(0, u["Initiative"]))
+            ini_b   = float(u.get("BaseInitiative", 0))
+            dmg     = float(u["Damage"])
+            dmg2    = float(u.get("Damage2", 0))
             team_v  = 0.0 if u["team"] == "red" else 1.0
             pos_v   = float(u["position"])
             stand_v = 0.0 if u["stand"] == "ahead" else 1.0
 
             t_onehot   = _one_hot(u.get("Type","Archer"), TYPE_LIST)
-            imm_mhot   = _multi_hot(u.get("иммунитет", []), ATTACK_TYPES)
-            atk1_oh    = _one_hot(u.get("Тип атаки 1",""), ATTACK_TYPES) if u.get("Тип атаки 1","") in ATTACK_TYPES else [0.0]*len(ATTACK_TYPES)
-            atk2_oh    = _one_hot(u.get("Тип атаки 2",""), ATTACK_TYPES) if u.get("Тип атаки 2","") in ATTACK_TYPES else [0.0]*len(ATTACK_TYPES)
-            res_mhot   = _multi_hot(u.get("Стойкость", []), ATTACK_TYPES)
-            armor_v    = float(u.get("броня", 0))
-            acc_v      = float(u.get("Точность", 100))
-            acc2_v     = float(u.get("Точность2", 0))
+            imm_mhot   = _multi_hot(u.get("Immunity", []), ATTACK_TYPES)
+            atk1_oh    = _one_hot(u.get("AttackType1",""), ATTACK_TYPES) if u.get("AttackType1","") in ATTACK_TYPES else [0.0]*len(ATTACK_TYPES)
+            atk2_oh    = _one_hot(u.get("AttackType2",""), ATTACK_TYPES) if u.get("AttackType2","") in ATTACK_TYPES else [0.0]*len(ATTACK_TYPES)
+            res_mhot   = _multi_hot(u.get("Resilience", []), ATTACK_TYPES)
+            armor_v    = float(u.get("Armor", 0))
+            acc_v      = float(u.get("Accuracy", 100))
+            acc2_v     = float(u.get("Accuracy2", 0))
             poison_v   = float(u.get("poison_turns_left", 0))
             burn_v     = float(u.get("burn_turns_left", 0))
 
@@ -683,17 +683,17 @@ class BattleEnv(gym.Env):
         can_strike = (
             attacker is not None
             and self._alive(attacker)
-            and (attacker["инициатива"] > 0 or (attacker.get("Type") == "Demon" and self.blue_attacks_left > 0))
+            and (attacker["Initiative"] > 0 or (attacker.get("Type") == "Demon" and self.blue_attacks_left > 0))
         )
         if can_strike:
-            self._log(f"BLUE действие: {attacker['имя']}#{attacker['position']} → pos{target_pos}")
-            attacker["инициатива"] = 0
+            self._log(f"BLUE действие: {attacker['Name']}#{attacker['position']} → pos{target_pos}")
+            attacker["Initiative"] = 0
 
             if attacker.get("Type") in ("Воин", "Demon", "lord"):
                 allowed = self._warrior_allowed_targets(attacker)
                 if target_pos not in allowed:
                     self._log(
-                        f"BLUE {attacker['имя']}#{attacker['position']} ({attacker.get('Type')}) не может достать pos{target_pos}. "
+                        f"BLUE {attacker['Name']}#{attacker['position']} ({attacker.get('Type')}) не может достать pos{target_pos}. "
                         f"Доступные цели: {(', '.join('pos'+str(p) for p in allowed)) if allowed else 'нет'}"
                     )
                     step_shaping += self.penalty_unreachable_warrior
