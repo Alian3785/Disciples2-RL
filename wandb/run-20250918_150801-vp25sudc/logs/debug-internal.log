@@ -1,0 +1,11 @@
+{"time":"2025-09-18T15:08:03.8707905+03:00","level":"INFO","msg":"stream: starting","core version":"0.21.4"}
+{"time":"2025-09-18T15:08:04.2733728+03:00","level":"ERROR","msg":"HTTP error","status":403,"method":"POST","url":"https://api.wandb.ai/graphql"}
+{"time":"2025-09-18T15:08:04.2733728+03:00","level":"ERROR","msg":"featurechecker: failed to load features, all will be disabled","error":"returned error 403: {\"data\":null,\"errors\":[{\"message\":\"\\u003c!doctype html\\u003e\\u003cmeta charset=\\\"utf-8\\\"\\u003e\\u003cmeta name=viewport content=\\\"width=device-width, initial-scale=1\\\"\\u003e\\u003ctitle\\u003e403\\u003c/title\\u003e403 Forbidden\"}]}"}
+{"time":"2025-09-18T15:08:04.2745185+03:00","level":"INFO","msg":"stream: created new stream","id":"vp25sudc"}
+{"time":"2025-09-18T15:08:04.2745185+03:00","level":"INFO","msg":"stream: started","id":"vp25sudc"}
+{"time":"2025-09-18T15:08:04.2750326+03:00","level":"INFO","msg":"writer: started","stream_id":"vp25sudc"}
+{"time":"2025-09-18T15:08:04.2750439+03:00","level":"INFO","msg":"handler: started","stream_id":"vp25sudc"}
+{"time":"2025-09-18T15:08:04.2750439+03:00","level":"INFO","msg":"sender: started","stream_id":"vp25sudc"}
+{"time":"2025-09-18T15:08:04.2762125+03:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2025-09-18T15:08:04.518032+03:00","level":"ERROR","msg":"HTTP error","status":403,"method":"POST","url":"https://api.wandb.ai/graphql"}
+{"time":"2025-09-18T15:08:04.518032+03:00","level":"ERROR","msg":"runupserter: failed to init run","error":"returned error 403: {\"data\":null,\"errors\":[{\"message\":\"\\u003c!doctype html\\u003e\\u003cmeta charset=\\\"utf-8\\\"\\u003e\\u003cmeta name=viewport content=\\\"width=device-width, initial-scale=1\\\"\\u003e\\u003ctitle\\u003e403\\u003c/title\\u003e403 Forbidden\"}]}"}

@@ -1,0 +1,18 @@
+2025-09-18 02:48:55,775 INFO    MainThread:10144 [wandb_setup.py:_flush():81] Current SDK version is 0.21.4
+2025-09-18 02:48:55,775 INFO    MainThread:10144 [wandb_setup.py:_flush():81] Configure stats pid to 10144
+2025-09-18 02:48:55,775 INFO    MainThread:10144 [wandb_setup.py:_flush():81] Loading settings from C:\Users\Aerocool\.config\wandb\settings
+2025-09-18 02:48:55,775 INFO    MainThread:10144 [wandb_setup.py:_flush():81] Loading settings from C:\realnewdisciples\wandb\settings
+2025-09-18 02:48:55,775 INFO    MainThread:10144 [wandb_setup.py:_flush():81] Loading settings from environment variables
+2025-09-18 02:48:55,775 INFO    MainThread:10144 [wandb_init.py:setup_run_log_directory():686] Logging user logs to C:\realnewdisciples\wandb\run-20250918_024855-2sgs35mg\logs\debug.log
+2025-09-18 02:48:55,776 INFO    MainThread:10144 [wandb_init.py:setup_run_log_directory():687] Logging internal logs to C:\realnewdisciples\wandb\run-20250918_024855-2sgs35mg\logs\debug-internal.log
+2025-09-18 02:48:55,782 ERROR   MainThread:10144 [util.py:get_module():252] Error importing optional module tensorboard
+Traceback (most recent call last):
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python313\Lib\site-packages\wandb\util.py", line 245, in get_module
+    return import_module(name)
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1324, in _find_and_load_unlocked
+ModuleNotFoundError: No module named 'tensorboard'

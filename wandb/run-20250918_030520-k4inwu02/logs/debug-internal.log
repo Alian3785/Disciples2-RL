@@ -1,0 +1,19 @@
+{"time":"2025-09-18T03:05:22.5346673+03:00","level":"INFO","msg":"stream: starting","core version":"0.21.4"}
+{"time":"2025-09-18T03:05:22.9348799+03:00","level":"ERROR","msg":"HTTP error","status":403,"method":"POST","url":"https://api.wandb.ai/graphql"}
+{"time":"2025-09-18T03:05:22.9348799+03:00","level":"ERROR","msg":"featurechecker: failed to load features, all will be disabled","error":"returned error 403: {\"data\":null,\"errors\":[{\"message\":\"\\u003c!doctype html\\u003e\\u003cmeta charset=\\\"utf-8\\\"\\u003e\\u003cmeta name=viewport content=\\\"width=device-width, initial-scale=1\\\"\\u003e\\u003ctitle\\u003e403\\u003c/title\\u003e403 Forbidden\"}]}"}
+{"time":"2025-09-18T03:05:22.9372888+03:00","level":"INFO","msg":"stream: created new stream","id":"k4inwu02"}
+{"time":"2025-09-18T03:05:22.9372888+03:00","level":"INFO","msg":"stream: started","id":"k4inwu02"}
+{"time":"2025-09-18T03:05:22.9378541+03:00","level":"INFO","msg":"writer: started","stream_id":"k4inwu02"}
+{"time":"2025-09-18T03:05:22.9379388+03:00","level":"INFO","msg":"handler: started","stream_id":"k4inwu02"}
+{"time":"2025-09-18T03:05:22.9379388+03:00","level":"INFO","msg":"sender: started","stream_id":"k4inwu02"}
+{"time":"2025-09-18T03:05:22.9451675+03:00","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2025-09-18T03:05:23.1877819+03:00","level":"ERROR","msg":"HTTP error","status":403,"method":"POST","url":"https://api.wandb.ai/graphql"}
+{"time":"2025-09-18T03:05:23.1877819+03:00","level":"ERROR","msg":"runupserter: failed to init run","error":"returned error 403: {\"data\":null,\"errors\":[{\"message\":\"\\u003c!doctype html\\u003e\\u003cmeta charset=\\\"utf-8\\\"\\u003e\\u003cmeta name=viewport content=\\\"width=device-width, initial-scale=1\\\"\\u003e\\u003ctitle\\u003e403\\u003c/title\\u003e403 Forbidden\"}]}"}
+{"time":"2025-09-18T03:05:23.1988845+03:00","level":"INFO","msg":"stream: closing","id":"k4inwu02"}
+{"time":"2025-09-18T03:05:23.1994473+03:00","level":"ERROR","msg":"sender: uploadConfigFile: stream: no run"}
+{"time":"2025-09-18T03:05:23.4864869+03:00","level":"ERROR","msg":"HTTP error","status":403,"method":"POST","url":"https://api.wandb.ai/graphql"}
+{"time":"2025-09-18T03:05:23.4864869+03:00","level":"ERROR","msg":"runfiles: CreateRunFiles returned error: returned error 403: {\"data\":null,\"errors\":[{\"message\":\"\\u003c!doctype html\\u003e\\u003cmeta charset=\\\"utf-8\\\"\\u003e\\u003cmeta name=viewport content=\\\"width=device-width, initial-scale=1\\\"\\u003e\\u003ctitle\\u003e403\\u003c/title\\u003e403 Forbidden\"}]}"}
+{"time":"2025-09-18T03:05:23.4864869+03:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-09-18T03:05:23.4864869+03:00","level":"INFO","msg":"handler: closed","stream_id":"k4inwu02"}
+{"time":"2025-09-18T03:05:23.4870068+03:00","level":"INFO","msg":"sender: closed","stream_id":"k4inwu02"}
+{"time":"2025-09-18T03:05:23.4870068+03:00","level":"INFO","msg":"stream: closed","id":"k4inwu02"}
