@@ -24,11 +24,11 @@ except Exception:
     WANDB_AVAILABLE = False
 
 
-TOTAL_STEPS     = int(os.environ.get("TOTAL_STEPS", "10000"))
+TOTAL_STEPS     = int(os.environ.get("TOTAL_STEPS", "100000"))
 N_ENVS          = int(os.environ.get("N_ENVS", "8"))
 MODEL_SAVE_FREQ = int(os.environ.get("MODEL_SAVE_FREQ", "1000"))
 EVAL_FREQ       = int(os.environ.get("EVAL_FREQ", "10000"))
-CHECKPOINT_EVERY = int(os.environ.get("CHECKPOINT_EVERY", "1000"))
+CHECKPOINT_EVERY = int(os.environ.get("CHECKPOINT_EVERY", "100000"))
 
 
 def main() -> None:

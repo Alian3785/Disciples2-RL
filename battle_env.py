@@ -386,7 +386,7 @@ class BattleEnv(gym.Env):
                 victim.setdefault("resilience_used_types", []).append(tag)
                 self._log(
                     f"🧿 Стойкость — первый удар типа '{tag}' по "
-                    f"{victim['team'].upper()} {victim['имя']}#{victim['position']} поглощён."
+                    f"{victim['team'].upper()} {victim['Name']}#{victim['position']} поглощён."
                 )
                 return True
         return False
@@ -446,7 +446,7 @@ class BattleEnv(gym.Env):
                             roll = self._roll_status(acc2)
                             self._log(
                                 f"🧪 Шанс отравления {int(acc2)}% — " + ("успех" if roll else "неудача")
-                                + f" по {victim['team'].upper()} {victim['имя']}#{victim['position']}."
+                                + f" по {victim['team'].upper()} {victim['Name']}#{victim['position']}."
                             )
                             if roll:
                                 if self._is_immune_status(attacker, victim):
@@ -458,9 +458,9 @@ class BattleEnv(gym.Env):
                                     victim["poison_turns_left"] = POISON_TURNS
                                     victim["poison_damage_per_tick"] = int(attacker.get("Damage2", 0) or 0)
                                     self._log(
-                                        f"☠ {attacker['team'].upper()} {attacker['имя']}#{attacker['position']} накладывает яд "
+                                        f"☠ {attacker['team'].upper()} {attacker['Name']}#{attacker['position']} накладывает яд "
                                         f"({victim['poison_damage_per_tick']} урона/ход) на "
-                                        f"{victim['team'].upper()} {victim['имя']}#{victim['position']} на {POISON_TURNS} хода."
+                                        f"{victim['team'].upper()} {victim['Name']}#{victim['position']} на {POISON_TURNS} хода."
                                     )
                 return True, "aoe"
             else:
@@ -510,7 +510,7 @@ class BattleEnv(gym.Env):
                     self._log(
                         f"🧪 Шанс отравления {int(acc2)}% — "
                         + ("успех" if roll else "неудача")
-                        + f" по {victim['team'].upper()} {victim['имя']}#{victim['position']}."
+                        + f" по {victim['team'].upper()} {victim['Name']}#{victim['position']}."
                     )
                     if roll:
                         if self._is_immune_status(attacker, victim):
@@ -522,9 +522,9 @@ class BattleEnv(gym.Env):
                             victim["poison_turns_left"] = POISON_TURNS
                             victim["poison_damage_per_tick"] = int(attacker.get("Damage2", 0) or 0)
                             self._log(
-                                f"☠ {attacker['team'].upper()} {attacker['имя']}#{attacker['position']} накладывает яд "
+                                f"☠ {attacker['team'].upper()} {attacker['Name']}#{attacker['position']} накладывает яд "
                                 f"({victim['poison_damage_per_tick']} урона/ход) на "
-                                f"{victim['team'].upper()} {victim['имя']}#{victim['position']} на {POISON_TURNS} хода."
+                                f"{victim['team'].upper()} {victim['Name']}#{victim['position']} на {POISON_TURNS} хода."
                             )
 
                 if attacker.get("Type") == "lord":
@@ -533,7 +533,7 @@ class BattleEnv(gym.Env):
                         if self._is_immune_status(attacker, victim):
                             self._log(
                                 f"🛡 Иммунитет к эффекту '{attacker.get('Тип атаки 2','')}' — поджог НЕ накладывается "
-                                f"на {victim['team'].upper()} {victim['имя']}#{victim['position']}."
+                                f"на {victim['team'].upper()} {victim['Name']}#{victim['position']}."
                             )
                         else:
                             victim["burn_turns_left"] = BURN_TURNS
@@ -542,7 +542,7 @@ class BattleEnv(gym.Env):
                             self._log(
                                 f"🔥 {attacker['team'].upper()} {attacker['Name']}#{pos} накладывает поджог "
                                 f"({victim['burn_damage_per_tick']} урона/ход) на "
-                                f"{victim['team'].upper()} {victim['имя']}#{victim['position']} на {BURN_TURNS} хода."
+                                f"{victim['team'].upper()} {victim['Name']}#{victim['position']} на {BURN_TURNS} хода."
                             )
 
             if victim["Health"] <= 0:
