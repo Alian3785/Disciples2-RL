@@ -14,12 +14,13 @@ from typing import List, Dict, Optional
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
-
+#5555555
+#4y3443hjerjdfjdsfjsdfj
 # --- encoding vocabularies ---
 TYPE_LIST = [
     "Archer", "gargoil", "Mage", "Воин", "Demon", "Death", "lord", "Dead dragon"
 ]
-ATTACK_TYPES = ["Weapon", "earth", "Fire", "poison", "death", "Mind"]
+ATTACK_TYPES = ["Weapon", "earth", "Fire", "poison", "death", "Mind", "Magic"]
 
 
 def _one_hot(value: str, vocab: List[str]) -> List[float]:

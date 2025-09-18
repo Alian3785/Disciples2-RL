@@ -23,7 +23,7 @@ from battle_env import BattleEnv, UNITS_RED, UNITS_BLUE, TARGET_POSITIONS
 # --- путь к чекпоинту (замени на свой .zip) ---
 CHECKPOINT_PATH = "./checkpoints/20250918-220546/ppo_step_8000000.zip"
 assert os.path.exists(CHECKPOINT_PATH), f"Не найден чекпоинт: {CHECKPOINT_PATH}"
-
+#dfsjdfjdfjfdjsdfj
 # --- action→позиция целей (если не импортировано ранее) ---
 try:
     TARGET_POSITIONS

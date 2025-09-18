@@ -24,7 +24,7 @@ except Exception:
     WANDB_AVAILABLE = False
 
 
-TOTAL_STEPS     = int(os.environ.get("TOTAL_STEPS", "8000000"))
+TOTAL_STEPS     = int(os.environ.get("TOTAL_STEPS", "4000000"))
 N_ENVS          = int(os.environ.get("N_ENVS", "8"))
 MODEL_SAVE_FREQ = int(os.environ.get("MODEL_SAVE_FREQ", "10000"))
 EVAL_FREQ       = int(os.environ.get("EVAL_FREQ", "10000"))
