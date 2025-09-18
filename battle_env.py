@@ -20,7 +20,7 @@ from gymnasium import spaces
 TYPE_LIST = [
     "Archer", "gargoil", "Mage", "Воин", "Demon", "Death", "lord", "Dead dragon"
 ]
-ATTACK_TYPES = ["Weapon", "earth", "Fire", "poison", "death", "Mind", "Magic"]
+ATTACK_TYPES = ["Weapon", "earth", "Fire", "poison", "death", "Mind", "Magic", "Ice"]
 
 
 def _one_hot(value: str, vocab: List[str]) -> List[float]:
