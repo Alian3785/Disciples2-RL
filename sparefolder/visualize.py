@@ -1,81 +1,69 @@
-# ============================================================
-# ТЕСТ МОДЕЛИ ИЗ ЧЕКПОИНТА: ЛОГИ + ВИЗУАЛИЗАЦИЯ (big/яд/поджог/Точность2)
-# Промахи случайные: нигде не фиксируем seed.
-# ============================================================
+"""
+Checkpoint playback and visualization for BattleEnv and SB3 PPO models.
+No training here; loads a .zip checkpoint and replays one episode with logs.
+"""
 
-import os, re, time, math
+from __future__ import annotations
+
+import os
+import re
+import time
+import math
+from typing import Optional
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import patches
 from matplotlib.patches import FancyArrowPatch
+
 try:
     from IPython.display import display
 except Exception:
     display = None
 
-# Stable-Baselines3
 from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
 
-# Получаем определения среды из battle_env напрямую
 from battle_env import BattleEnv, UNITS_RED, UNITS_BLUE, TARGET_POSITIONS
 
-# --- путь к чекпоинту (замени на свой .zip) ---
-CHECKPOINT_PATH = "./checkpoints/20250918-220546/ppo_step_1000000.zip"
-assert os.path.exists(CHECKPOINT_PATH), f"Не найден чекпоинт: {CHECKPOINT_PATH}"
 
-# --- action→позиция целей (если не импортировано ранее) ---
-try:
-    TARGET_POSITIONS
-except NameError:
-    TARGET_POSITIONS = list(range(1, 7))  # pos1..pos6
+def play_checkpoint(checkpoint_path: str, visual_speed_mult: float = 8.0, frame_delay: float = 0.28) -> None:
+    assert os.path.exists(checkpoint_path), f"Не найден чекпоинт: {checkpoint_path}"
 
-# --- загрузка модели и подготовка сред ---
-eval_env = Monitor(BattleEnv(log_enabled=False))
-ckpt_model = PPO.load(CHECKPOINT_PATH, env=eval_env, device="auto")
+    eval_env = Monitor(BattleEnv(log_enabled=False))
+    model = PPO.load(checkpoint_path, env=eval_env, device="auto")
 
-test_env_ckpt = BattleEnv(log_enabled=True)
-obs, info = test_env_ckpt.reset()  # без seed → промахи/инициативы рандомны
+    env = BattleEnv(log_enabled=True)
+    obs, info = env.reset()
 
-# --- прогон с логами ---
-all_logs_ckpt = []
-all_logs_ckpt += test_env_ckpt.pop_pretty_events()
+    all_logs: list[str] = []
+    all_logs += env.pop_pretty_events()
 
-done = False
-total_reward = 0.0
-step_i = 0
-while not done:
-    step_i += 1
-    action, _ = ckpt_model.predict(obs, deterministic=True)
+    done = False
+    total_reward = 0.0
+    step_i = 0
+    while not done:
+        step_i += 1
+        action, _ = model.predict(obs, deterministic=True)
+        target_pos = TARGET_POSITIONS[int(action)]
+        chosen_line = f"[CKPT STEP {step_i}] Агент выбирает action={int(action)} → атака RED pos{target_pos}"
+        print("\n" + chosen_line)
+        all_logs.append(chosen_line)
 
-    target_pos = TARGET_POSITIONS[int(action)]
-    chosen_line = f"[CKPT STEP {step_i}] Агент выбирает action={int(action)} → атака RED pos{target_pos}"
-    print("\n" + chosen_line)
-    all_logs_ckpt.append(chosen_line)
+        obs, reward, terminated, truncated, info = env.step(action)
+        total_reward += reward
+        done = terminated or truncated
 
-    obs, reward, terminated, truncated, info = test_env_ckpt.step(action)
-    total_reward += reward
-    done = terminated or truncated
+        new_lines = env.pop_pretty_events()
+        all_logs += new_lines
+        for line in new_lines:
+            print(line)
 
-    new_lines = test_env_ckpt.pop_pretty_events()
-    all_logs_ckpt += new_lines
-    for line in new_lines:
-        print(line)
+    print("\n=== ЭПИЗОД (ЧЕКПОИНТ) ЗАВЕРШЁН ===")
+    print("Победитель:", env.winner.upper(), "| Суммарная награда:", total_reward)
 
-print("\n=== ЭПИЗОД (ЧЕКПОИНТ) ЗАВЕРШЁН ===")
-print("Победитель:", test_env_ckpt.winner.upper(), "| Суммарная награда:", total_reward)
-
-# ============================================================
-# ВИЗУАЛИЗАЦИЯ ЛОГОВ (big-юниты, HP-бары, яд/поджог, Точность2)
-# ============================================================
-
-VISUALIZE = True
-FRAME_DELAY = 0.28
-
-if VISUALIZE:
-    VISUAL_SPEED_MULT = 8.0
-
-    # --- сетка поля
+    # ------------- Visualization -------------
+    VISUAL_SPEED_MULT = visual_speed_mult
     RED_FRONT, RED_BACK   = [1,2,3],   [4,5,6]
     BLUE_FRONT, BLUE_BACK = [7,8,9],   [10,11,12]
     COL_X = {0: 0.18, 1: 0.50, 2: 0.82}
@@ -84,8 +72,7 @@ if VISUALIZE:
     SLOT_W, SLOT_H = 0.28, 0.13
     HP_H = 0.028
 
-    # --- состояние для отрисовки (берём стартовые HP из исходных юнитов)
-    state = {}
+    state: dict[int, dict] = {}
     def _suffix_by_type(t: str) -> str:
         return {
             "Mage": " (Mage)", "gargoil": " (Gargoil)", "Воин": " (воин)", "Demon": " (Demon)",
@@ -94,7 +81,7 @@ if VISUALIZE:
 
     for u in (UNITS_RED + UNITS_BLUE):
         t = u.get("Type", "Archer")
-        start_hp = float(u["Health"])
+        start_hp = float(u["Здоровье"])
         state[u["position"]] = {
             "team": u["team"],
             "name": u["имя"] + _suffix_by_type(t),
@@ -103,11 +90,10 @@ if VISUALIZE:
             "stand": u["stand"],
             "type": t,
             "big": bool(u.get("big", False)),
-            "acc2": float(u.get("Точность2", 0)),  # шанс отравления, % (для плашки)
+            "acc2": float(u.get("Точность2", 0)),
         }
 
     fig, ax = plt.subplots(figsize=(12, 8))
-    # Пытаемся использовать IPython display-обновления, иначе откроем обычное окно
     handle = None
     IS_NOTEBOOK = False
     if display is not None:
@@ -154,27 +140,22 @@ if VISUALIZE:
                 linewidth=3.0, edgecolor=(1.0, 0.82, 0.10), facecolor='none', alpha=0.95
             ))
         name = u["name"][:22]
-        ax.text(x + 0.012, y + SLOT_H*0.78, name,
-                fontsize=10, fontweight="bold", ha="left", va="center", color="black")
+        ax.text(x + 0.012, y + SLOT_H*0.78, name, fontsize=10, fontweight="bold", ha="left", va="center", color="black")
         if u.get("acc2", 0) > 0:
-            ax.text(x + SLOT_W - 0.012, y + SLOT_H*0.78, f"☠{int(u['acc2'])}%",
-                    fontsize=9, ha="right", va="center", color="black")
-
+            ax.text(x + SLOT_W - 0.012, y + SLOT_H*0.78, f"☠{int(u['acc2'])}%", fontsize=9, ha="right", va="center", color="black")
         hp_x, hp_y = x + 0.012, y + SLOT_H*0.10
         hp_w = SLOT_W - 0.024
         ax.add_patch(patches.Rectangle((hp_x, hp_y), hp_w, HP_H, facecolor=(0.88,0.88,0.88), edgecolor='none'))
         frac = max(0.0, min(1.0, u["hp"]/u["maxhp"])) if u["maxhp"] > 1e-9 else 0.0
         ax.add_patch(patches.Rectangle((hp_x, hp_y), hp_w*frac, HP_H, facecolor=(0.15,0.70,0.25), edgecolor='none'))
-        ax.text(hp_x + hp_w/2, hp_y + HP_H/2, f"{int(max(0,u['hp']))}/{int(u['maxhp'])}",
-                fontsize=9, ha="center", va="center", color="black")
-
+        ax.text(hp_x + hp_w/2, hp_y + HP_H/2, f"{int(max(0,u['hp']))}/{int(u['maxhp'])}", fontsize=9, ha="center", va="center", color="black")
         ax.text(x + SLOT_W/2, y - 0.008, f"pos{pos}", fontsize=8, ha="center", va="top", color=(0.2,0.2,0.2))
 
     def draw_big_unit(ax, front_pos: int, is_active: bool = False):
         back_pos = front_pos + 3
         uf = state[front_pos]
         x_front, y_front = pos_to_xy(front_pos)
-        _,       y_back  = pos_to_xy(back_pos)
+        x_back,  y_back  = pos_to_xy(back_pos)
         x = x_front
         y = min(y_front, y_back)
         height = (max(y_front, y_back) + SLOT_H) - y
@@ -192,26 +173,24 @@ if VISUALIZE:
                 linewidth=3.2, edgecolor=(1.0, 0.82, 0.10), facecolor='none', alpha=0.95
             ))
         name = uf["name"][:22]
-        ax.text(x + 0.012, y + height*0.82, name,
-                fontsize=11, fontweight="bold", ha="left", va="center", color="black")
+        ax.text(x + 0.012, y + height*0.82, name, fontsize=11, fontweight="bold", ha="left", va="center", color="black")
         if uf.get("acc2", 0) > 0:
-            ax.text(x + width - 0.012, y + height*0.82, f"☠{int(uf['acc2'])}%",
-                    fontsize=10, ha="right", va="center", color="black")
-
-        # HP-бар
+            ax.text(x + width - 0.012, y + height*0.82, f"☠{int(uf['acc2'])}%", fontsize=10, ha="right", va="center", color="black")
         hp_w = width - 0.024
         hp_x, hp_y = x + 0.012, y + height*0.10
         ax.add_patch(patches.Rectangle((hp_x, hp_y), hp_w, HP_H, facecolor=(0.88,0.88,0.88), edgecolor='none'))
         frac = max(0.0, min(1.0, uf["hp"]/uf["maxhp"])) if uf["maxhp"] > 1e-9 else 0.0
         ax.add_patch(patches.Rectangle((hp_x, hp_y), hp_w*frac, HP_H, facecolor=(0.15,0.70,0.25), edgecolor='none'))
-        ax.text(hp_x + hp_w/2, hp_y + HP_H/2, f"{int(max(0,uf['hp']))}/{int(uf['maxhp'])}",
-                fontsize=9, ha="center", va="center", color="black")
+        ax.text(hp_x + hp_w/2, hp_y + HP_H/2, f"{int(max(0,uf['hp']))}/{int(uf['maxhp'])}", fontsize=9, ha="center", va="center", color="black")
         ax.text(x + width/2, y - 0.010, f"pos{front_pos}+{back_pos}", fontsize=8, ha="center", va="top", color=(0.2,0.2,0.2))
 
     def draw_attack_arrow(ax, src_pos:int, dst_pos:int, team:str,
-                          text: str|None = None, style: str = "solid",
-                          color: tuple|None = None, alpha: float = 0.95,
-                          curve: float = 0.18, lw: float = 2.6):
+                          text: Optional[str] = None,
+                          style: str = "solid",
+                          color: Optional[tuple] = None,
+                          alpha: float = 0.95,
+                          curve: float = 0.18,
+                          lw: float = 2.6):
         sx, sy = pos_center(src_pos)
         dx, dy = pos_center(dst_pos)
         vx, vy = dx - sx, dy - sy
@@ -222,17 +201,14 @@ if VISUALIZE:
         if color is None:
             color = (0.20, 0.35, 0.85) if team == "BLUE" else (0.85, 0.25, 0.25)
         con_style = f"arc3,rad={curve}" if abs(vx) > 0.01 and abs(vy) > 0.01 else "arc3,rad=0.0"
-        arrow = FancyArrowPatch((sx, sy), (dx, dy), arrowstyle="-|>",
-                                mutation_scale=14, linewidth=lw,
+        arrow = FancyArrowPatch((sx, sy), (dx, dy), arrowstyle="-|>", mutation_scale=14, linewidth=lw,
                                 linestyle="--" if style=="dashed" else "solid",
                                 color=color, alpha=alpha, connectionstyle=con_style)
         ax.add_patch(arrow)
         if text:
             mx, my = (sx + dx)/2, (sy + dy)/2
-            ax.text(mx, my + 0.03, text, fontsize=10, fontweight="bold",
-                    ha="center", va="center", color=color)
+            ax.text(mx, my + 0.03, text, fontsize=10, fontweight="bold", ha="center", va="center", color=color)
 
-    # --- регексы (учитываем «цель с мин. HP pos...» и события статусов)
     atk_re           = re.compile(r'^(RED|BLUE)\s+[^#]+#(\d+)\s+→\s+(RED|BLUE)\s+[^#]+#(\d+):\s+(\d+)\s+\((\d+)→(\d+)\)')
     kill_re          = re.compile(r'^✖\s+(RED|BLUE)\s+[^#]+#(\d+)\s+выведен из строя\.')
     vict_re          = re.compile(r'^🏆 Победа (RED|BLUE)!')
@@ -250,7 +226,7 @@ if VISUALIZE:
     miss_re          = re.compile(r'^💨 Промах:\s+(RED|BLUE)\s+[^#]+#(\d+)\s+по\s+(RED|BLUE)\s+[^#]+#(\d+)\.')
     poison_roll_re   = re.compile(r'^🧪 Шанс отравления \d+% — (успех|неудача)')
 
-    def draw_board(arrows: list[dict] = None, headline: str = "", active_pos: int | None = None):
+    def draw_board(arrows: list[dict] | None = None, headline: str = "", active_pos: Optional[int] = None):
         ax.cla()
         ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis("off")
         ax.plot([0.02, 0.98], [0.50, 0.50], color=(0.6,0.6,0.6), lw=1.2, ls="--", alpha=0.7)
@@ -259,14 +235,11 @@ if VISUALIZE:
 
         arrows = arrows or []
         drawn_big_pairs = set()
-
-        # рисуем big-юниты для всех фронтов, где big=True
-        for front_pos in (BLUE_FRONT + RED_FRONT):
+        for front_pos in [3, 7, 9]:
             if front_pos in state and state[front_pos].get("big", False):
                 draw_big_unit(ax, front_pos, is_active=(active_pos == front_pos))
                 drawn_big_pairs.add((front_pos, front_pos+3))
 
-        # рисуем остальные карточки
         for pos in (BLUE_BACK + BLUE_FRONT + RED_FRONT + RED_BACK):
             if (pos-3, pos) in drawn_big_pairs or (pos, pos+3) in drawn_big_pairs:
                 continue
@@ -285,15 +258,14 @@ if VISUALIZE:
         if handle is not None:
             handle.update(fig)
         else:
-            plt.draw()
-            plt.pause(0.001)
+            plt.draw(); plt.pause(0.001)
 
-    # --- проигрываем логи покадрово
-    current_actor_pos = None
+    # Play frame-by-frame
+    current_actor_pos: Optional[int] = None
     draw_board(headline="Начало боя (чекпоинт)", active_pos=current_actor_pos)
 
     last_selection = None
-    for line in all_logs_ckpt:
+    for line in all_logs:
         arrows_now = []
         headline = ""
 
@@ -301,13 +273,13 @@ if VISUALIZE:
         if m:
             current_actor_pos = int(m.group(1))
             headline = line
-            draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.05); continue
+            draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep((frame_delay * VISUAL_SPEED_MULT) / 1.05); continue
 
         m = red_turn_re.match(line)
         if m:
             current_actor_pos = int(m.group(1))
             headline = line
-            draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.05); continue
+            draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep((frame_delay * VISUAL_SPEED_MULT) / 1.05); continue
 
         m = atk_re.match(line)
         if m:
@@ -317,41 +289,39 @@ if VISUALIZE:
             current_actor_pos = atk_pos
             arrows_now.append({"src": atk_pos, "dst": vic_pos, "team": atk_team, "text": f"-{dmg}"})
             headline = line
-            draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep(FRAME_DELAY * VISUAL_SPEED_MULT); continue
+            draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep(frame_delay * VISUAL_SPEED_MULT); continue
 
         m = poison_tick_re.match(line)
         if m:
             vic_pos = int(m.group(2)); after = int(m.group(5))
             if vic_pos in state: state[vic_pos]["hp"] = after
             headline = line
-            draw_board([], headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2); continue
+            draw_board([], headline, active_pos=current_actor_pos); time.sleep((frame_delay * VISUAL_SPEED_MULT) / 1.2); continue
 
         m = burn_tick_re.match(line)
         if m:
             vic_pos = int(m.group(2)); after = int(m.group(5))
             if vic_pos in state: state[vic_pos]["hp"] = after
             headline = line
-            draw_board([], headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2); continue
+            draw_board([], headline, active_pos=current_actor_pos); time.sleep((frame_delay * VISUAL_SPEED_MULT) / 1.2); continue
 
         m = blue_action_re.match(line)
         if m:
             src = int(m.group(1)); dst = int(m.group(2))
             last_selection = {"src": src, "dst": dst, "team": "BLUE"}
             current_actor_pos = src
-            arrows_now.append({"src": src, "dst": dst, "team": "BLUE",
-                               "style":"dashed", "alpha":0.65, "lw":2.0})
+            arrows_now.append({"src": src, "dst": dst, "team": "BLUE", "style":"dashed", "alpha":0.65, "lw":2.0})
             headline = line
-            draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.1); continue
+            draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep((frame_delay * VISUAL_SPEED_MULT) / 1.1); continue
 
         m = red_target_re.match(line)
         if m:
             src = int(m.group(1)); dst = int(m.group(2))
             last_selection = {"src": src, "dst": dst, "team": "RED"}
             current_actor_pos = src
-            arrows_now.append({"src": src, "dst": dst, "team": "RED",
-                               "style":"dashed", "alpha":0.65, "lw":2.0})
+            arrows_now.append({"src": src, "dst": dst, "team": "RED", "style":"dashed", "alpha":0.65, "lw":2.0})
             headline = line
-            draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.1); continue
+            draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep((frame_delay * VISUAL_SPEED_MULT) / 1.1); continue
 
         if immune_dmg_re.match(line) or immune_stat_re.match(line) or resist_re.match(line):
             if last_selection:
@@ -360,43 +330,53 @@ if VISUALIZE:
                                    "style":"solid", "alpha":0.9, "text":"RESIST"})
                 current_actor_pos = last_selection["src"]
             headline = line
-            draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2); continue
+            draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep((frame_delay * VISUAL_SPEED_MULT) / 1.2); continue
 
         m = blue_cant_re.match(line)
         if m:
             src = int(m.group(1)); dst = int(m.group(2))
-            arrows_now.append({"src": src, "dst": dst, "team": "BLUE",
-                               "color": (0.5,0.5,0.5), "style":"dashed", "alpha":0.9, "text":"недосягаемо"})
+            arrows_now.append({"src": src, "dst": dst, "team": "BLUE", "color": (0.5,0.5,0.5), "style":"dashed", "alpha":0.9, "text":"недосягаемо"})
             current_actor_pos = src
             headline = line
-            draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2); continue
+            draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep((frame_delay * VISUAL_SPEED_MULT) / 1.2); continue
 
         m = miss_re.match(line)
         if m:
             atk_team = m.group(1); atk_pos  = int(m.group(2)); vic_pos = int(m.group(4))
             current_actor_pos = atk_pos
-            arrows_now.append({"src": atk_pos, "dst": vic_pos, "team": atk_team,
-                               "color": (0.5,0.5,0.5), "style":"solid", "alpha":0.9, "text":"MISS"})
+            arrows_now.append({"src": atk_pos, "dst": vic_pos, "team": atk_team, "color": (0.5,0.5,0.5), "style":"solid", "alpha":0.9, "text":"MISS"})
             headline = line
-            draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.15); continue
+            draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep((frame_delay * VISUAL_SPEED_MULT) / 1.15); continue
 
         m = kill_re.match(line)
         if m:
             pos = int(m.group(2))
             if pos in state: state[pos]["hp"] = 0
             headline = line
-            draw_board([], headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.1); continue
+            draw_board([], headline, active_pos=current_actor_pos); time.sleep((frame_delay * VISUAL_SPEED_MULT) / 1.1); continue
 
         if mage_banner_re.match(line) or poison_roll_re.match(line):
             headline = line
-            draw_board([], headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.1); continue
+            draw_board([], headline, active_pos=current_actor_pos); time.sleep((frame_delay * VISUAL_SPEED_MULT) / 1.1); continue
 
         if vict_re.match(line):
             headline = line
             current_actor_pos = None
-            draw_board([], headline, active_pos=current_actor_pos); time.sleep(FRAME_DELAY * VISUAL_SPEED_MULT); continue
+            draw_board([], headline, active_pos=current_actor_pos); time.sleep(frame_delay * VISUAL_SPEED_MULT); continue
 
-        # Прочие строки
-        draw_board([], line, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2)
+        draw_board([], line, active_pos=current_actor_pos); time.sleep((frame_delay * VISUAL_SPEED_MULT) / 1.2)
 
     draw_board([], "Конец эпизода (чекпоинт)", active_pos=None)
+
+
+if __name__ == "__main__":
+    # Example: python visualize.py --ckpt .\checkpoints\20250918-143701\ppo_step_1000000.zip
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ckpt", required=True, help="Path to SB3 PPO checkpoint .zip")
+    parser.add_argument("--speed", type=float, default=8.0)
+    parser.add_argument("--delay", type=float, default=0.28)
+    args = parser.parse_args()
+    play_checkpoint(args.ckpt, visual_speed_mult=args.speed, frame_delay=args.delay)
+
+
