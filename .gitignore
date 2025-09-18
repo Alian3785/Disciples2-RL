@@ -1,0 +1,30 @@
+# Ignore everything by default
+*
+
+# Then allow these files and paths explicitly
+!.gitignore
+!README.md
+!battle_env.py
+!train_sb3.py
+!visualize.py
+!unifile.py
+!checkpointchek.py
+
+# Also keep package metadata if later added
+!requirements.txt
+!pyproject.toml
+!setup.cfg
+
+# But still exclude common large/artifact dirs just in case
+.venv/
+__pycache__/
+*.pyc
+checkpoints/
+models/
+tb_logs/
+wandb/
+.idea/
+.vscode/
+.DS_Store
+*.zip
+
