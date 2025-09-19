@@ -14,7 +14,32 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CallbackList, EvalCallback, BaseCallback
 from stable_baselines3.common.env_checker import check_env
 
-from battle_env import BattleEnv, TARGET_POSITIONS, TYPE_LIST, ATTACK_TYPES
+import sys
+import argparse
+import importlib
+import importlib.util
+
+
+def _load_env_module(kind: str):
+    """Load environment module depending on kind: 'default' or 'object'.
+
+    - default: regular import of battle_env
+    - object: load from local file 'battle_env object.py' via importlib
+    """
+    kind = (kind or "default").strip().lower()
+    if kind == "object":
+        here = os.path.dirname(os.path.abspath(__file__))
+        path = os.path.join(here, "battle_env object.py")
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Environment file not found: {path}")
+        module_name = "battle_env_object"
+        spec = importlib.util.spec_from_file_location(module_name, path)
+        module = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+        sys.modules[module_name] = module
+        assert spec is not None and spec.loader is not None
+        spec.loader.exec_module(module)
+        return module
+    return importlib.import_module("battle_env")
 
 try:
     import wandb  # type: ignore
@@ -24,14 +49,24 @@ except Exception:
     WANDB_AVAILABLE = False
 
 
-TOTAL_STEPS     = int(os.environ.get("TOTAL_STEPS", "100000"))
+TOTAL_STEPS     = int(os.environ.get("TOTAL_STEPS", "6000000"))
 N_ENVS          = int(os.environ.get("N_ENVS", "8"))
-MODEL_SAVE_FREQ = int(os.environ.get("MODEL_SAVE_FREQ", "1000"))
-EVAL_FREQ       = int(os.environ.get("EVAL_FREQ", "10000"))
-CHECKPOINT_EVERY = int(os.environ.get("CHECKPOINT_EVERY", "100000"))
+MODEL_SAVE_FREQ = int(os.environ.get("MODEL_SAVE_FREQ", "100000"))
+EVAL_FREQ       = int(os.environ.get("EVAL_FREQ", "100000"))
+CHECKPOINT_EVERY = int(os.environ.get("CHECKPOINT_EVERY", "1000000"))
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Train PPO on BattleEnv")
+    parser.add_argument("--env-kind", choices=["default", "object"], default=os.environ.get("ENV_KIND", "object"), help="Which env implementation to use")
+    args = parser.parse_args()
+
+    env_mod = _load_env_module(args.env_kind)
+    BattleEnv = env_mod.BattleEnv
+    TARGET_POSITIONS = env_mod.TARGET_POSITIONS
+    TYPE_LIST = env_mod.TYPE_LIST
+    ATTACK_TYPES = env_mod.ATTACK_TYPES
+
     check_env(BattleEnv(log_enabled=False), warn=True)
 
     USE_WANDB = bool(WANDB_AVAILABLE) and os.environ.get("WANDB_DISABLED", "false").lower() not in ("1","true","yes")
