@@ -741,12 +741,186 @@ __all__ = [
 ]
 
 
-if __name__ == "__main__":
-    # Quick sanity check run
+def _pos_row_label(pos: int) -> str:
+    if pos in (1, 2, 3, 7, 8, 9):
+        return "передний ряд"
+    return "задний ряд"
+
+
+def _pos_col_label(pos: int) -> str:
+    col = (pos - 1) % 3
+    return {0: "левый", 1: "центр", 2: "правый"}.get(col, str(col))
+
+
+def print_action_space_info():
+    print("\n=== Доступные действия агента (Discrete(6)) ===")
+    print("Действие i соответствует выбору цели posX среди врагов (RED: pos1..pos6).")
+    for i, pos in enumerate(TARGET_POSITIONS):
+        print(
+            f"  {i}: pos{pos} — RED, {_pos_row_label(pos)}, столбец {_pos_col_label(pos)}"
+        )
+    print("Примечания:")
+    print("- 'Воин'/'Demon'/'lord': ближний бой — цель должна быть достижима по правилам колонок и рядов.")
+    print("- 'Mage'/'Dead dragon': массовая атака — выбор posX игнорируется, бьёт по всем целям противника.")
+    print(
+        "- Если цель недоступна/мертва: действие считается неэффективным и может давать штраф shaping."
+    )
+
+
+def _build_slot_feature_names() -> List[str]:
+    base = [
+        "hp",
+        "ini",
+        "ini_base",
+        "dmg",
+        "dmg2",
+        "team",  # 0=red, 1=blue
+        "pos",
+        "stand",  # 0=ahead, 1=behind
+    ]
+    type_oh = [f"type[{t}]" for t in TYPE_LIST]
+    imm = [f"imm[{a}]" for a in ATTACK_TYPES]
+    atk1 = [f"atk1[{a}]" for a in ATTACK_TYPES]
+    atk2 = [f"atk2[{a}]" for a in ATTACK_TYPES]
+    res = [f"res[{a}]" for a in ATTACK_TYPES]
+    tail = ["armor", "accuracy", "accuracy2", "poison_left", "burn_left"]
+    names = base + type_oh + imm + atk1 + atk2 + res + tail
+    return names
+
+
+def build_all_feature_names() -> List[str]:
+    per_slot = _build_slot_feature_names()
+    all_names: List[str] = []
+    for pos in RED_POSITIONS + BLUE_POSITIONS:
+        pref = f"pos{pos}."
+        all_names.extend([pref + n for n in per_slot])
+    return all_names
+
+
+def print_observation_space_info(env: BattleEnv, obs: np.ndarray) -> None:
+    names = build_all_feature_names()
+    print("\n=== Observation space ===")
+    print(f"Space: {env.observation_space}")
+    print("Структура: 12 позиций × 45 признаков = 540 значений.")
+    print("Индексация признаков (i → имя):")
+    for i, nm in enumerate(names):
+        print(f"  {i:3d}: {nm}")
+    # Полные границы пространства
+    np.set_printoptions(threshold=np.inf, linewidth=200, suppress=True)
     try:
-        from stable_baselines3.common.env_checker import check_env
-        check_env(BattleEnv(log_enabled=False), warn=True)
-        print("Env check: OK")
-    except Exception as e:
-        print("Env check failed:", e)
+        print("\nГраницы low:")
+        print(env.observation_space.low)
+        print("Границы high:")
+        print(env.observation_space.high)
+    except Exception:
+        pass
+    # Текущее наблюдение
+    print("\nТекущее наблюдение obs (после reset):")
+    print(obs)
+
+
+def _describe_unit(u: Dict) -> str:
+    alive = u["Health"] > 0
+    hp_str = f"{max(0, u['Health'])}/{u.get('maxhealth', u['Health'])}"
+    ini_str = f"{u.get('Initiative', 0)}/{u.get('BaseInitiative', 0)}"
+    row = _pos_row_label(u["position"])  # передний/задний ряд
+    col = _pos_col_label(u["position"])  # левый/центр/правый
+    status_parts: List[str] = []
+    if u.get("poison_turns_left", 0) > 0:
+        status_parts.append(
+            f"☠ poison {u.get('poison_damage_per_tick', 0)}/ход · {u['poison_turns_left']} хода"
+        )
+    if u.get("burn_turns_left", 0) > 0:
+        status_parts.append(
+            f"🔥 burn {u.get('burn_damage_per_tick', 0)}/ход · {u['burn_turns_left']} хода"
+        )
+    status = ("; ".join(status_parts)) if status_parts else "—"
+    type_tag = u.get("Type", "")
+    atk1 = u.get("AttackType1", "")
+    atk2 = u.get("AttackType2", "")
+    acc = int(u.get("Accuracy", 0) or 0)
+    acc2 = int(u.get("Accuracy2", 0) or 0)
+    arm = int(u.get("Armor", 0) or 0)
+    big = ", BIG" if u.get("big") else ""
+    life = "ALIVE" if alive else "DEAD"
+    return (
+        f"pos{u['position']:>2} {u['team'].upper():>4} {u['Name']} ({type_tag}{big}) | "
+        f"HP {hp_str} | INI {ini_str} | ARM {arm} | ATK {atk1}{('/'+atk2) if atk2 else ''} | "
+        f"ACC {acc}/{acc2} | {row}, {col} | {life} | статус: {status}"
+    )
+
+
+def render_battle_state(env: BattleEnv) -> None:
+    print("RED команда:")
+    for pos in RED_POSITIONS:
+        u = env._unit_by_position(pos)
+        if u is not None:
+            print("  " + _describe_unit(u))
+    print("BLUE команда:")
+    for pos in BLUE_POSITIONS:
+        u = env._unit_by_position(pos)
+        if u is not None:
+            print("  " + _describe_unit(u))
+
+
+def choose_action_min_hp(env: BattleEnv) -> int:
+    attacker_pos = env.current_blue_attacker_pos
+    if attacker_pos is None:
+        return 0
+    attacker = env._unit_by_position(attacker_pos)
+    if attacker is None:
+        return 0
+    if attacker.get("Type") in ("Воин", "Demon", "lord"):
+        allowed = env._warrior_allowed_targets(attacker)
+    else:
+        allowed = env._live_positions_of("red")
+    if not allowed:
+        allowed = env._live_positions_of("red")
+    if not allowed:
+        return 0
+    # Choose min HP among allowed
+    best_pos = None
+    best_hp = None
+    for p in allowed:
+        uu = env._unit_by_position(p)
+        if uu is None or uu["Health"] <= 0:
+            continue
+        if best_hp is None or uu["Health"] < best_hp:
+            best_hp = uu["Health"]
+            best_pos = p
+    if best_pos is None:
+        best_pos = allowed[0]
+    try:
+        return TARGET_POSITIONS.index(best_pos)
+    except ValueError:
+        return 0
+
+
+def run_demo(num_actions: int, seed: int = 42) -> None:
+    env = BattleEnv(log_enabled=True)
+    env.seed(seed)
+    env.reset()
+    actions_done = 0
+    while actions_done < num_actions and env.winner is None:
+        act = choose_action_min_hp(env)
+        _, _, terminated, _, _ = env.step(act)
+        actions_done += 1
+        # Print turn log and current state
+        events = env.pop_pretty_events()
+        if events:
+            print("\n— События после действия", actions_done, "—")
+            for line in events:
+                print(line)
+        print(f"\nСостояние после {actions_done} действия(й):")
+        render_battle_state(env)
+        if terminated:
+            break
+
+
+if __name__ == "__main__":
+    # Демонстрация среды: вывод состояния после 1-го и 5-го действия агента
+    print("=== Демонстрация: после 1 действия агента ===")
+    run_demo(num_actions=1, seed=42)
+    print("\n=== Демонстрация: после 5 действий агента ===")
+    run_demo(num_actions=5, seed=42)
 
