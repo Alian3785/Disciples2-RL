@@ -76,6 +76,8 @@ class BaseUnit:
         self.big = bool(big)
 
         # runtime battle fields
+        # Twohits: 1 for Demon (has a second strike available this round), else 0
+        self.Twohits = 1 if unit_type == "Demon" else 0
         self.poison_turns_left = 0
         self.poison_damage_per_tick = 0
         self.burn_turns_left = 0
@@ -225,7 +227,6 @@ class BattleEnv(gym.Env):
         self.round_no: int = 1
         self.winner: Optional[str] = None
         self.current_blue_attacker_pos: Optional[int] = None
-        self.blue_attacks_left: int = 0
         self._lord_applied_burn: Dict[int, bool] = {}
 
     # ------------------ Helpers ------------------
@@ -406,7 +407,6 @@ class BattleEnv(gym.Env):
         self.round_no = 1
         self.winner = None
         self.current_blue_attacker_pos = None
-        self.blue_attacks_left = 0
         self._lord_applied_burn = {}
         self._log(f"Эпизод начат. Раунд {self.round_no}.")
 
@@ -424,6 +424,9 @@ class BattleEnv(gym.Env):
     def _end_round_restore(self):
         for u in self.combined:
             u.initiative = u.base_initiative if self._alive(u) else 0
+            # В конце раунда демоны восстанавливают возможность второго удара
+            if u.unit_type == "Demon":
+                u.Twohits = 1
         self._log("Восстановление инициативы. Новый раунд.")
 
     def _is_immune_damage(self, attacker, victim):
@@ -632,8 +635,7 @@ class BattleEnv(gym.Env):
         - Если в текущем раунде больше нет юнитов с инициативой, завершается раунд,
           всем живым восстанавливается базовая инициатива, начинается новый раунд.
         - Применяются эффекты начала хода (яд/поджог); они могут убить юнита и завершить бой.
-        - Если наступил ход BLUE, сохраняем позицию атакующего, количество ударов (Demon=2, иначе 1)
-          и выходим, чтобы агент мог выбрать действие на своём ходу.
+        - Если наступил ход BLUE, сохраняем позицию атакующего и выходим, чтобы агент мог выбрать действие.
         - Если ход RED, он играет автоматически (один или два удара) по правилам ближнего/массового боя.
           После каждого удара проверяется победа. Если бой завершён — выходим.
         Возвращает True, если успешно дошли до хода BLUE; False — если раунд продолжить нельзя (бой завершён).
@@ -655,20 +657,19 @@ class BattleEnv(gym.Env):
                     return False
                 continue
 
-            # Если наступил ход BLUE — сохраняем текущего атакующего и число ударов (Demon=2),
-            # затем выходим, чтобы агент принял решение.
+            # Если наступил ход BLUE — сохраняем текущего атакующего и выходим,
+            # чтобы агент принял решение. У Demon возможен второй удар при Twohits=1.
             if nxt.team == "blue":
                 self.current_blue_attacker_pos = nxt.position
-                self.blue_attacks_left = 2 if (nxt.unit_type == "Demon") else 1
                 self._log(
                     f"Ход BLUE: {nxt.name}#{nxt.position} (иниц {nxt.initiative}). "
-                    + ("Ожидание действия (демон: 2 удара)." if self.blue_attacks_left == 2 else "Ожидание действия.")
+                    + ("Ожидание действия (демон: 2 удара)." if (nxt.unit_type == "Demon" and nxt.Twohits == 1) else "Ожидание действия.")
                 )
                 return True
 
-            # RED ходит автоматически. Тратим инициативу и определяем количество ударов.
+            # RED ходит автоматически. Тратим инициативу и определяем количество ударов по Twohits.
             nxt.initiative = 0
-            strikes = 2 if nxt.unit_type == "Demon" else 1
+            strikes = 2 if (nxt.unit_type == "Demon" and getattr(nxt, "Twohits", 0) == 1) else 1
 
             for hit_i in range(strikes):
                 if self.winner is not None:
@@ -708,6 +709,9 @@ class BattleEnv(gym.Env):
                 # Выполняем удар, если есть цель, либо AoE-тип (Mage/Dead dragon)
                 if target_pos is not None or nxt.unit_type in ("Mage", "Dead dragon"):
                     self._attack(nxt, target_pos)
+                    # После первого удара демона сбрасываем Twohits в 0
+                    if nxt.unit_type == "Demon" and hit_i == 0 and getattr(nxt, "Twohits", 0) == 1:
+                        nxt.Twohits = 0
                     self._check_victory_after_hit()
                     if self.winner is not None:
                         return False
@@ -797,16 +801,20 @@ class BattleEnv(gym.Env):
 
         # Текущий атакующий BLUE юнит
         attacker = self._unit_by_position(self.current_blue_attacker_pos)
-        # Может ли он ударить сейчас (жив, есть инициатива; для Demon разрешён второй удар подряд)
+        # Может ли он ударить сейчас (жив, есть инициатива; для Demon разрешён второй удар подряд по Twohits)
         can_strike = (
             attacker is not None
             and self._alive(attacker)
-            and (attacker.initiative > 0 or (attacker.unit_type == "Demon" and self.blue_attacks_left > 0))
+            and (
+                attacker.initiative > 0
+                or (attacker.unit_type == "Demon" and getattr(attacker, "Twohits", 0) == 0)
+            )
         )
         if can_strike:
+            was_demon_first_strike = attacker.unit_type == "Demon" and getattr(attacker, "Twohits", 0) == 1
             # Логируем выбранное действие
             self._log(f"BLUE действие: {attacker.name}#{attacker.position} → pos{target_pos}")
-            # Тратим инициативу на удар (для Demon blue_attacks_left управляет дополнительным ударом)
+            # Тратим инициативу на удар (для Demon второй удар будет доступен при Twohits=0)
             attacker.initiative = 0
 
             # Ветвь ближнего боя: проверяем достижимые цели по правилам колонок/рядов
@@ -834,13 +842,18 @@ class BattleEnv(gym.Env):
                     step_shaping += self.penalty_invalid_target
                 self._check_victory_after_hit()
 
-        # Обработка возможного второго удара у Demon и перехода хода
+            # После первого удара демона флаг Twohits должен стать 0
+            if was_demon_first_strike and self.winner is None:
+                attacker.Twohits = 0
+
+        # Обработка возможного второго удара у Demon (по Twohits) и перехода хода
         if self.winner is None:
-            if self.blue_attacks_left > 0:
-                self.blue_attacks_left -= 1
-            if self.blue_attacks_left > 0:
-                reward, terminated = self.reward_step + step_shaping, False
-                return self._obs(), reward, terminated, False, {}
+            if attacker is not None and attacker.unit_type == "Demon":
+                # Если это был первый удар демона (мы перевели Twohits из 1 в 0), оставляем ход BLUE для второго удара
+                if 'was_demon_first_strike' in locals() and was_demon_first_strike:
+                    reward, terminated = self.reward_step + step_shaping, False
+                    return self._obs(), reward, terminated, False, {}
+            # Иначе — передаём ход дальше
             self.current_blue_attacker_pos = None
             self._advance_until_blue_turn()
 
