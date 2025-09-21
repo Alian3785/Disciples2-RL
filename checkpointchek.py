@@ -21,7 +21,7 @@ from stable_baselines3.common.monitor import Monitor
 from battle_env import BattleEnv, UNITS_RED, UNITS_BLUE, TARGET_POSITIONS
 
 # --- путь к чекпоинту (замени на свой .zip) ---
-CHECKPOINT_PATH = "./checkpoints/20250918-220546/ppo_step_1000000.zip"
+CHECKPOINT_PATH = "./checkpoints/20250920-153602/ppo_step_10000000.zip"
 assert os.path.exists(CHECKPOINT_PATH), f"Не найден чекпоинт: {CHECKPOINT_PATH}"
 
 # --- action→позиция целей (если не импортировано ранее) ---

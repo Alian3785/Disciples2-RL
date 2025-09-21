@@ -9,6 +9,7 @@
 import os
 import sys
 import argparse
+from typing import List, Dict, Optional
 from battle_env import (
     BattleEnv,
     TYPE_LIST,
@@ -29,7 +30,8 @@ def _multi_hot(values: List[str], vocab: List[str]) -> List[float]:
     s = set(values or [])
     return [1.0 if v in s else 0.0 for v in vocab]
 
-from battle_env import BattleEnv as _BattleEnvCheck  # for env check CLI
+from battle_env import BattleEnv as _BattleEnvCheck  
+if False:
     metadata = {"render_modes": []}
 
     def __init__(self,
@@ -690,7 +692,7 @@ if __name__ == "__main__":
     else:
         _print_help()
         sys.exit(0)
-TOTAL_STEPS     = 8_000_000
+TOTAL_STEPS     = 6_000_000
 N_ENVS          = 8
 MODEL_SAVE_FREQ = 10_000
 EVAL_FREQ       = 10_000

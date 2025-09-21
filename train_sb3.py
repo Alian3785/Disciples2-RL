@@ -58,7 +58,7 @@ CHECKPOINT_EVERY = int(os.environ.get("CHECKPOINT_EVERY", "1000000"))
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train PPO on BattleEnv")
-    parser.add_argument("--env-kind", choices=["default", "object"], default=os.environ.get("ENV_KIND", "object"), help="Which env implementation to use")
+    parser.add_argument("--env-kind", choices=["default", "object"], default=os.environ.get("ENV_KIND", "default"), help="Which env implementation to use")
     args = parser.parse_args()
 
     env_mod = _load_env_module(args.env_kind)
