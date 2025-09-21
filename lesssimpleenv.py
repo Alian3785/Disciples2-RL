@@ -173,8 +173,11 @@ class BattleEnv(gym.Env):
         self.reward_step    = float(reward_step)
         self.reward_illegal = float(reward_illegal)
 
-        # Флаг лога для человекочитаемых сообщений (только для тестового прогона)
+        # Включаем человекочитаемые логи по флагу конструктора
         self.log_enabled = bool(log_enabled)
+
+        # ГСЧ: без фиксированного seed, каждое выполнение случайно
+        self.rng = random.Random()
 
         # Пространство действий: выбор целевой позиции среди 6 красных слотов
         self.action_space = spaces.Discrete(6)
@@ -212,9 +215,6 @@ class BattleEnv(gym.Env):
         high  = np.tile(high_per_pos, 12)
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
 
-        # ГСЧ для воспроизводимости (инициализируем через seed())
-        self.rng = random.Random()
-
         # Текущее состояние боя
         self.combined = None                   # список из 12 dict-юнитов (копии исходных)
         self.round_no = None                   # номер текущего раунда
@@ -225,10 +225,6 @@ class BattleEnv(gym.Env):
         self._pretty_events = []
 
     # ------------------ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ------------------
-
-    def seed(self, seed=None):
-        """Установить seed для генератора случайных чисел (воспроизводимость)."""
-        self.rng = random.Random(seed)
 
     def _alive(self, u) -> bool:
         """Вернуть True, если юнит жив (HP > 0)."""
@@ -430,7 +426,7 @@ class BattleEnv(gym.Env):
         for pos in RED_POSITIONS + BLUE_POSITIONS:
             u = self._unit_by_position(pos)
             vec.append(self._unit_obs(u))
-        return np.concatenate(vec, dtype=np.float32)
+        return np.concatenate(vec).astype(np.float32)
 
     # ------------------------ API GYMNASIUM ------------------------
 
@@ -441,8 +437,7 @@ class BattleEnv(gym.Env):
           2) Автоматически докручиваем до первого хода BLUE (или терминала).
           3) Возвращаем начальное наблюдение и пустой info (по стандарту Gymnasium).
         """
-        if seed is not None:
-            self.seed(seed)
+        # seed параметр намеренно игнорируется, чтобы сохранить случайность
         self._reset_state()
         self._advance_until_blue_turn()
         return self._obs(), {}
@@ -505,9 +500,10 @@ if __name__ == "__main__":
     from stable_baselines3 import PPO
     from stable_baselines3.common.env_util import make_vec_env
     from stable_baselines3.common.monitor import Monitor
-    from stable_baselines3.common.callbacks import CallbackList, EvalCallback, BaseCallback
+    from stable_baselines3.common.callbacks import CallbackList, EvalCallback
 
-    # Weights & Biases для трекинга обучения (робастная и опциональная инициализация)
+    # Weights & Biases: опционально и безопасно
+    from stable_baselines3.common.callbacks import BaseCallback
     try:
         import wandb  # type: ignore
         WANDB_AVAILABLE = True
@@ -529,14 +525,13 @@ if __name__ == "__main__":
                 return True
 
     # ---------------- ПАРАМЕТРЫ ОБУЧЕНИЯ ----------------
-    TOTAL_STEPS    = 1000000  # сколько шагов среды сделает PPO (суммарно по всем векторным копиям)
-    N_ENVS         = 8        # сколько параллельных копий среды использовать
-    VISUALIZE_TEST = True     # включить ли опциональную визуализацию после теста
-    FRAME_DELAY    = 0.28     # задержка между «кадрами» визуализации (сек)
-    USE_COLOR      = True     # цветные ANSI в консоли (если терминал поддерживает)
+    TOTAL_STEPS    = 1_000_000  # сколько шагов среды сделает PPO (суммарно по всем векторным копиям)
+    N_ENVS         = 8          # сколько параллельных копий среды использовать
+    VISUALIZE_TEST = True       # включить ли опциональную визуализацию после теста
+    FRAME_DELAY    = 0.28       # задержка между «кадрами» визуализации (сек)
+    USE_COLOR      = True       # цветные ANSI в консоли (если терминал поддерживает)
 
     # ------------- ИНИЦИАЛИЗАЦИЯ W&B ЛОГА --------------
-    # Переменная окружения ENV: set WANDB_DISABLED=true для отключения
     USE_WANDB = bool(WANDB_AVAILABLE) and os.environ.get("WANDB_DISABLED", "false").lower() not in ("1", "true", "yes")
     run = None
     if USE_WANDB:
@@ -580,7 +575,7 @@ if __name__ == "__main__":
         ))
 
     # Векторная среда: N_ENVS параллельных копий для ускоренного сбора опыта
-    vec_env = make_vec_env(make_env, n_envs=N_ENVS, seed=42)
+    vec_env = make_vec_env(make_env, n_envs=N_ENVS)  # seed убран
 
     # Отдельная среда для периодической оценки (EvalCallback)
     eval_env = Monitor(BattleEnv(log_enabled=False, reward_illegal=-0.1))
@@ -599,9 +594,8 @@ if __name__ == "__main__":
         clip_range=0.2,
         ent_coef=0.0,
         vf_coef=0.5,
-        seed=42,
         tensorboard_log=f"./tb_logs/{run_id}",  # куда писать TB-логи (W&B их подхватит)
-    )
+    )  # seed параметр удалён
 
     # Колбэк W&B: сохранение градиентов/модели и синк метрик
     callbacks = []
@@ -619,7 +613,7 @@ if __name__ == "__main__":
         eval_env,
         best_model_save_path=f"./models/{run_id}/best",
         log_path=f"./eval/{run_id}",
-        eval_freq=10_000,
+        eval_freq=10_000,               # каждые 10k шагов
         n_eval_episodes=5,
         deterministic=True,
         render=False,
@@ -637,7 +631,7 @@ if __name__ == "__main__":
     # ================= ТЕСТОВЫЙ ПРОГОН С ЛОГАМИ =================
     print("\n=== ТЕСТОВЫЙ ПРОГОН С ЛОГАМИ ===")
     test_env = BattleEnv(log_enabled=True, reward_illegal=-0.1)  # включаем логи; штраф тот же
-    obs, info = test_env.reset(seed=123)
+    obs, info = test_env.reset()  # seed убран
 
     # Собираем все строки логов (будут использованы и для опциональной визуализации)
     all_logs = []
