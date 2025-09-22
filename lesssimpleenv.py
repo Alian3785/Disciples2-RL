@@ -24,64 +24,64 @@ UNITS_RED = [
     {"Name": "рыцарь1",  "Initiative": 67, "BaseInitiative": 67, "team": "red",  "position": 1, "stand": "ahead",
      "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 0, "maxhealth": 270, "Armor": 0, "Accuracy": 80, "Accuracy2": 0,
      "Immunity": ["Death", "Poison"], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False,
-     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0},
+     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь2",  "Initiative": 33, "BaseInitiative": 33, "team": "red",  "position": 2, "stand": "ahead",
       "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 0, "maxhealth": 255, "Armor": 0, "Accuracy": 87, "Accuracy2": 0,
       "Immunity": ["Death"], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False,
-      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0},
+      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь3",  "Initiative": 78, "BaseInitiative": 78, "team": "red",  "position": 3, "stand": "ahead",
      "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 20, "maxhealth": 450, "Armor": 0, "Accuracy": 80, "Accuracy2": 40,
      "Immunity": ["Death"], "Resilience": [], "AttackType1": "Death", "AttackType2": "poison", "big": True,
-     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0},
+     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь7",  "Initiative": 45, "BaseInitiative": 45, "team": "red",  "position": 4, "stand": "behind",
      "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 0, "maxhealth": 170, "Armor": 0, "Accuracy": 80, "Accuracy2": 0,
      "Immunity": ["Death"], "Resilience": [], "AttackType1": "Earth", "AttackType2": "", "big": False,
-     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0},
+     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь8",  "Initiative": 90, "BaseInitiative": 90, "team": "red",  "position": 5, "stand": "behind",
      "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 20, "maxhealth": 125, "Armor": 0, "Accuracy": 80, "Accuracy2": 50,
      "Immunity": ["Weapon", "Death"], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "poison", "big": False,
-     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0},
+     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь9",  "Initiative": 12, "BaseInitiative": 12, "team": "red",  "position": 6, "stand": "behind",
      "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 0, "maxhealth": 0, "Armor": 0, "Accuracy": 0, "Accuracy2": 0,
      "Immunity": ["Death"], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False,
-     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0},
+     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 ]
 
 UNITS_BLUE = [
     {"Name": "рыцарь4",  "Initiative": 88, "BaseInitiative": 88, "team": "blue", "position": 7,  "stand": "ahead",
      "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 0, "maxhealth": 1020, "Armor": 0, "Accuracy": 80, "Accuracy2": 0,
      "Immunity": [], "Resilience": ["Mind", "Fire"], "AttackType1": "Weapon", "AttackType2": "", "big": True,
-     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0},
+     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": ["Mind", "Fire"]},
 
     {"Name": "рыцарь5",  "Initiative": 55, "BaseInitiative": 55, "team": "blue", "position": 8,  "stand": "ahead",
      "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 0, "maxhealth": 306, "Armor": 0, "Accuracy": 100, "Accuracy2": 0,
      "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False,
-     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0},
+     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь6",  "Initiative": 22, "BaseInitiative": 22, "team": "blue", "position": 9,  "stand": "ahead",
      "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 0, "maxhealth": 170, "Armor": 65, "Accuracy": 80, "Accuracy2": 0,
      "Immunity": ["Poison"], "Resilience": ["Mind"], "AttackType1": "Earth", "AttackType2": "", "big": True,
-     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0},
+     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": ["Mind"]},
 
     {"Name": "рыцарь10", "Initiative": 60, "BaseInitiative": 60, "team": "blue", "position": 10, "stand": "behind",
      "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 0, "maxhealth": 0, "Armor": 0, "Accuracy": 0, "Accuracy2": 0,
      "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False,
-     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0},
+     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь11", "Initiative": 47, "BaseInitiative": 47, "team": "blue", "position": 11, "stand": "behind",
      "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 0, "maxhealth": 0, "Armor": 0, "Accuracy": 0, "Accuracy2": 0,
      "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False,
-     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0},
+     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь12", "Initiative": 75, "BaseInitiative": 75, "team": "blue", "position": 12, "stand": "behind",
      "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 0, "maxhealth": 0, "Armor": 0, "Accuracy": 0, "Accuracy2": 0,
      "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False,
-     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0},
+     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 ]
 
 # Два диапазона позиций: RED (1..6) и BLUE (7..12)
@@ -295,6 +295,8 @@ class BattleEnv(gym.Env):
         self.combined = [u.copy() for u in (UNITS_RED + UNITS_BLUE)]
         for u in self.combined:
             u["Initiative"] = u["BaseInitiative"]
+            # Initialize original_resilience for each unit
+            u["original_resilience"] = u.get("Resilience", []).copy()
         self.round_no = 1
         self.winner = None
         self.current_blue_attacker_pos = None
@@ -352,6 +354,17 @@ class BattleEnv(gym.Env):
                     f"🛡 Иммунитет к урону '{atk1}' — {victim['team'].upper()} {victim['Name']}#{victim['position']}: урон 0."
                 )
                 return
+
+            # Resilience check: if victim has resilience to attacker's AttackType1, no damage is applied (only for first attack)
+            victim_res = victim.get("Resilience") or []
+            if atk1 in victim_res:
+                self._log(
+                    f"🛡 Резистентность к урону '{atk1}' — {victim['team'].upper()} {victim['Name']}#{victim['position']}: урон 0 (первая атака этого типа)."
+                )
+                # Remove this attack type from victim's Resilience (temporary)
+                victim["Resilience"] = [r for r in victim_res if r != atk1]
+                return
+
             before = victim["Health"]
             victim["Health"] -= attacker["Damage"]
             after = victim["Health"]
@@ -529,6 +542,10 @@ class BattleEnv(gym.Env):
         if self.winner is None:
             reward, terminated = step_reward, False
         else:
+            # Бой завершён - восстанавливаем оригинальные значения Resilience
+            for u in self.combined:
+                if "original_resilience" in u:
+                    u["Resilience"] = u["original_resilience"].copy()
             reward  = self.reward_win if self.winner == "blue" else self.reward_loss
             terminated = True
 
