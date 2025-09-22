@@ -346,6 +346,13 @@ class BattleEnv(gym.Env):
         """
         victim = self._unit_by_position(target_pos) if target_pos is not None else None
         if victim is not None and self._alive(victim):
+            # Miss check: attacker misses with (100 - Accuracy)% probability
+            attacker_accuracy = attacker.get("Accuracy", 0)
+            if self.rng.random() > (attacker_accuracy / 100):
+                self._log(f"❌ {attacker['team'].upper()} {attacker['Name']}#{attacker['position']} → "
+                          f"{victim['team'].upper()} {victim['Name']}#{victim['position']}: промах!")
+                return
+
             # Immunity check: if victim is immune to attacker's AttackType1, no damage is applied
             atk1 = (attacker.get("AttackType1") or "Weapon")
             victim_imm = victim.get("Immunity") or []
