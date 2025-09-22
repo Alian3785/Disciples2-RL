@@ -32,13 +32,13 @@ UNITS_RED = [
       "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь3",  "Initiative": 78, "BaseInitiative": 78, "team": "red",  "position": 3, "stand": "ahead",
-     "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 20, "maxhealth": 450, "Armor": 0, "Accuracy": 80, "Accuracy2": 40,
+     "Type": "Death", "Damage": 20, "Health": 60, "Damage2": 20, "maxhealth": 450, "Armor": 0, "Accuracy": 80, "Accuracy2": 40,
      "Immunity": ["Death"], "Resilience": [], "AttackType1": "Death", "AttackType2": "poison", "big": True,
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь7",  "Initiative": 45, "BaseInitiative": 45, "team": "red",  "position": 4, "stand": "behind",
-     "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 0, "maxhealth": 170, "Armor": 0, "Accuracy": 80, "Accuracy2": 0,
-     "Immunity": ["Death"], "Resilience": [], "AttackType1": "Earth", "AttackType2": "", "big": False,
+     "Type": "Death", "Damage": 20, "Health": 60, "Damage2": 15, "maxhealth": 170, "Armor": 0, "Accuracy": 80, "Accuracy2": 35,
+     "Immunity": ["Death"], "Resilience": [], "AttackType1": "Earth", "AttackType2": "poison", "big": False,
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь8",  "Initiative": 90, "BaseInitiative": 90, "team": "red",  "position": 5, "stand": "behind",
@@ -59,8 +59,8 @@ UNITS_BLUE = [
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": ["Mind", "Fire"]},
 
     {"Name": "рыцарь5",  "Initiative": 55, "BaseInitiative": 55, "team": "blue", "position": 8,  "stand": "ahead",
-     "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 0, "maxhealth": 306, "Armor": 0, "Accuracy": 100, "Accuracy2": 0,
-     "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False,
+     "Type": "Death", "Damage": 20, "Health": 60, "Damage2": 18, "maxhealth": 306, "Armor": 0, "Accuracy": 100, "Accuracy2": 45,
+     "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "poison", "big": False,
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь6",  "Initiative": 22, "BaseInitiative": 22, "team": "blue", "position": 9,  "stand": "ahead",
@@ -69,8 +69,8 @@ UNITS_BLUE = [
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": ["Mind"]},
 
     {"Name": "рыцарь10", "Initiative": 60, "BaseInitiative": 60, "team": "blue", "position": 10, "stand": "behind",
-     "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 0, "maxhealth": 0, "Armor": 0, "Accuracy": 0, "Accuracy2": 0,
-     "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False,
+     "Type": "Death", "Damage": 20, "Health": 60, "Damage2": 12, "maxhealth": 0, "Armor": 0, "Accuracy": 0, "Accuracy2": 30,
+     "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "poison", "big": False,
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь11", "Initiative": 47, "BaseInitiative": 47, "team": "blue", "position": 11, "stand": "behind",
@@ -374,6 +374,27 @@ class BattleEnv(gym.Env):
             if victim["Health"] <= 0:
                 victim["Initiative"] = 0
                 self._log(f"✖ {victim['team'].upper()} {victim['Name']}#{victim['position']} выведен из строя.")
+
+            # Death unit poison application: Accuracy2% chance to apply poison
+            if attacker.get("Type") == "Death" and self.rng.random() < (attacker.get("Accuracy2", 0) / 100):
+                poison_value = attacker.get("AttackType2", "")
+                if poison_value:  # Only apply if AttackType2 is not empty
+                    # Check immunity to poison
+                    victim_imm = victim.get("Immunity") or []
+                    if "poison" in [imm.lower() for imm in victim_imm]:
+                        self._log(f"🛡 Иммунитет к poison — {victim['team'].upper()} {victim['Name']}#{victim['position']}: poison не наложен.")
+                    else:
+                        # Check resilience to poison
+                        victim_res = victim.get("Resilience") or []
+                        if "poison" in [res.lower() for res in victim_res]:
+                            self._log(f"🛡 Резистентность к poison — {victim['team'].upper()} {victim['Name']}#{victim['position']}: poison не наложен.")
+                            # Remove poison from victim's Resilience (temporary)
+                            victim["Resilience"] = [r for r in victim_res if r.lower() != "poison"]
+                        else:
+                            # Apply poison
+                            victim["Poison"] = poison_value
+                            self._log(f"☠️ {attacker['team'].upper()} {attacker['Name']}#{attacker['position']} → "
+                                      f"{victim['team'].upper()} {victim['Name']}#{victim['position']}: poison наложен ({poison_value})")
         else:
             self._log(f"{attacker['team'].upper()} {attacker['Name']}#{attacker['position']} бьёт pos{target_pos}: цели нет/мертва.")
 
