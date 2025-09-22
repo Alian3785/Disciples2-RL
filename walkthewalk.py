@@ -5,19 +5,22 @@ from gymnasium import spaces
 from typing import Optional, Tuple
 
 
-# ====== СРЕДА 10x10: Бои по порядку, WOUNDED и авто-лечение в (0,0) ======
+# ====== СРЕДА 10x10: Бои по порядку, WOUNDED и лечение ДЕЙСТВИЕМ в (0,0) ======
 class GridWorldCombatEnv(gym.Env):
     """
     - Поле 10x10. Агент стартует в (1,1), уровень = 1.
     - Враги (строгий порядок): (0,5) lvl1 -> (4,7) lvl2 -> (9,9) lvl3.
-    - Вступая на клетку врага, агент сражается:
+    - Действия:
+        0..7 — движение (8 направлений),
+        8 — heal: работает ТОЛЬКО в (0,0), снимает wounded, позиция не меняется.
+    - Бой при входе на клетку врага:
         * Если wounded=True -> немедленный проигрыш (fail_penalty).
-        * Если враг не тот, кто ожидается по порядку -> проигрыш (fail_penalty).
+        * Если враг не тот по порядку -> проигрыш (fail_penalty).
         * Иначе, если agent_level >= enemy_level -> победа:
             enemy погибает, agent_level += 1, агент становится wounded=True,
-            даётся win_reward; на 3-й победе ДОПОЛНИТЕЛЬНО goal_reward и эпизод завершается.
+            выдаётся win_reward; на 3-й победе ДОПОЛНИТЕЛЬНО goal_reward и эпизод завершается.
         * Иначе -> проигрыш (fail_penalty) и wounded=True.
-    - Лечение: НЕТ отдельного действия. Встав на (0,0), агент автоматически лечится (wounded=False).
+    - Лечение: НЕТ автолечения. Только действие heal в (0,0) снимает ранения.
     - Награды: step_cost за шаг, win_reward за каждую победу,
       goal_reward плюс на 3-й победе, fail_penalty за поражение.
     - Таймаут: max_steps (по умолчанию 1000).
@@ -49,9 +52,9 @@ class GridWorldCombatEnv(gym.Env):
         ]
         self.enemy_levels = [1, 2, 3]
 
-        # Действия: только движение (8 направлений)
-        self.action_space = spaces.Discrete(8)
-        # 0:Up, 1:Down, 2:Right, 3:Left, 4:Up-Right, 5:Up-Left, 6:Down-Right, 7:Down-Left
+        # Действия: движение (8) + heal (1) = 9
+        self.action_space = spaces.Discrete(9)
+        # 0:Up, 1:Down, 2:Right, 3:Left, 4:Up-Right, 5:Up-Left, 6:Down-Right, 7:Down-Left, 8:Heal
         self._action_to_delta = {
             0: np.array([ 0, -1], dtype=np.int32),
             1: np.array([ 0,  1], dtype=np.int32),
@@ -61,6 +64,7 @@ class GridWorldCombatEnv(gym.Env):
             5: np.array([-1, -1], dtype=np.int32),
             6: np.array([ 1,  1], dtype=np.int32),
             7: np.array([-1,  1], dtype=np.int32),
+            # 8: heal (без перемещения)
         }
 
         # Наблюдение
@@ -86,7 +90,7 @@ class GridWorldCombatEnv(gym.Env):
 
     @property
     def action_meanings(self):
-        return ["Up", "Down", "Right", "Left", "Up-Right", "Up-Left", "Down-Right", "Down-Left"]
+        return ["Up", "Down", "Right", "Left", "Up-Right", "Up-Left", "Down-Right", "Down-Left", "Heal"]
 
     # ---------- Вспомогательные ----------
     def _get_obs(self) -> np.ndarray:
@@ -138,46 +142,48 @@ class GridWorldCombatEnv(gym.Env):
     def step(self, action: int):
         assert self.action_space.contains(action), "Недопустимое действие"
 
-        # Движение
-        delta = self._action_to_delta[int(action)]
-        self.pos = self.pos + delta
-        np.clip(self.pos, 0, self.size - 1, out=self.pos)
-
-        # Авто-лечение, если пришли в (0,0)
-        if np.array_equal(self.pos, self.heal_cell):
-            self.wounded = False
-
         reward = self.step_cost
         terminated = False
 
-        # Бой, если на клетке враг
-        enemy_idx = self._enemy_at_pos()
-        if enemy_idx is not None:
-            if self.wounded:
-                reward = self.fail_penalty
-                terminated = True
-            else:
-                if enemy_idx != self.next_required_idx:
+        if action == 8:
+            # HEAL — доступен только в (0,0); позиция не меняется
+            if np.array_equal(self.pos, self.heal_cell):
+                self.wounded = False
+            # если не в (0,0), действие ничего не делает кроме траты шага
+        else:
+            # Движение
+            delta = self._action_to_delta[int(action)]
+            self.pos = self.pos + delta
+            np.clip(self.pos, 0, self.size - 1, out=self.pos)
+
+            # Бой, если на клетке враг
+            enemy_idx = self._enemy_at_pos()
+            if enemy_idx is not None:
+                if self.wounded:
                     reward = self.fail_penalty
                     terminated = True
                 else:
-                    enemy_lvl = self.enemy_levels[enemy_idx]
-                    if self.agent_level >= enemy_lvl:
-                        # Победа
-                        self.enemies_alive[enemy_idx] = False
-                        self.agent_level += 1
-                        self.next_required_idx += 1
-                        self.wounded = True  # после боя ранимся
-
-                        # Награда за победу; на последней добавляем финальную
-                        reward = self.step_cost + self.win_reward
-                        if self.next_required_idx == 3:
-                            reward += self.goal_reward
-                            terminated = True
-                    else:
+                    if enemy_idx != self.next_required_idx:
                         reward = self.fail_penalty
                         terminated = True
-                        self.wounded = True
+                    else:
+                        enemy_lvl = self.enemy_levels[enemy_idx]
+                        if self.agent_level >= enemy_lvl:
+                            # Победа
+                            self.enemies_alive[enemy_idx] = False
+                            self.agent_level += 1
+                            self.next_required_idx += 1
+                            self.wounded = True  # после боя ранимся
+
+                            # Награда за победу; на последней добавляем финальную
+                            reward = self.step_cost + self.win_reward
+                            if self.next_required_idx == 3:
+                                reward += self.goal_reward
+                                terminated = True
+                        else:
+                            reward = self.fail_penalty
+                            terminated = True
+                            self.wounded = True
 
         self.steps += 1
         truncated = bool(self.steps >= self.max_steps)
@@ -216,7 +222,7 @@ if __name__ == "__main__":
     from stable_baselines3.common.callbacks import EvalCallback
     from stable_baselines3.common.evaluation import evaluate_policy
 
-    log_dir = "./logs/ppo_grid_combat_autoheal_origin"
+    log_dir = "./logs/ppo_grid_combat_heal_action_at_origin"
     os.makedirs(log_dir, exist_ok=True)
 
     def make_env(render: bool = False):
@@ -255,10 +261,10 @@ if __name__ == "__main__":
         ent_coef=0.02,
         vf_coef=0.5,
         verbose=1,
-        # tensorboard_log=log_dir,  # включите при установленном tensorboard
+        # tensorboard_log=log_dir,
     )
 
-    # Обучение 1e6 шагов (без прогресс-бара, чтобы избежать LiveError)
+    # Обучение 1e6 шагов (без прогресс-бара)
     total_timesteps = 1_000_000
     model.learn(total_timesteps=total_timesteps, callback=eval_callback, progress_bar=False)
 
@@ -267,7 +273,6 @@ if __name__ == "__main__":
     train_env.save(os.path.join(log_dir, "vecnormalize.pkl"))
 
     # ====== РУЧНАЯ ОЦЕНКА ======
-    # Создаём сырой eval-вектор и грузим на него сохранённые статы VecNormalize
     eval_env_raw = make_vec_env(make_env, n_envs=1)
     eval_env_loaded = VecNormalize.load(os.path.join(log_dir, "vecnormalize.pkl"), eval_env_raw)
     eval_env_loaded.training = False
@@ -276,17 +281,32 @@ if __name__ == "__main__":
     mean_reward, std_reward = evaluate_policy(model, eval_env_loaded, n_eval_episodes=50, deterministic=True)
     print(f"[Eval] mean_reward={mean_reward:.3f} ± {std_reward:.3f}")
 
-    # ====== ДЕМОНСТРАЦИЯ (визуализация в консоль) ======
+    # ====== ДЕМОНСТРАЦИЯ (визуализация + лог действий/наблюдений) ======
+
+    # Помощник для разворачивания всех обёрток до исходного env
+    def unwrap_env(e):
+        env = e
+        # разматываем .env, пока можно
+        while hasattr(env, "env"):
+            env = env.env
+        return env
+
     # 1) Env с render_mode='human'
     demo_env_raw = make_vec_env(lambda: GridWorldCombatEnv(render_mode="human", max_steps=1000), n_envs=1)
 
     # 2) Грузим те же статы нормализации на демо-окружение
-    demo_env = VecNormalize.load(os.path.join(log_dir, "vecnormalize.pkl"), demo_env_raw)
+    from stable_baselines3.common.vec_env import VecNormalize as VN
+    demo_env = VN.load(os.path.join(log_dir, "vecnormalize.pkl"), demo_env_raw)
     demo_env.training = False
     demo_env.norm_reward = True  # можно False, если нужны «сырые» награды
 
-    # 3) Достаём базовый env для печати
-    base_env = demo_env.venv.envs[0]  # Monitor -> GridWorldCombatEnv(render_mode='human')
+    # 3) Базовый env (для печати render и сырого obs)
+    wrapped = demo_env.venv.envs[0]     # это Monitor
+    base_env = unwrap_env(wrapped)      # это уже GridWorldCombatEnv
+
+    # Список действий
+    meanings = base_env.action_meanings
+    actions_help = ", ".join([f"{i}:{m}" for i, m in enumerate(meanings)])
 
     obs = demo_env.reset()
     done = False
@@ -295,19 +315,34 @@ if __name__ == "__main__":
     steps = 0
 
     print("\nДемонстрация после обучения:")
-    base_env.render()  # первая отрисовка
+    print("Доступные действия:", actions_help)
+    # стартовая визуализация и obs
+    base_env.render()
+    print(f"Obs(model, normalized) = {obs[0].tolist()}")
+    print(f"Obs(raw)              = {base_env._get_obs().tolist()}")
 
     while not (done or truncated):
+        # Выбор действия
         action, _ = model.predict(obs, deterministic=True)
+        a = int(action[0]) if isinstance(action, (list, np.ndarray)) else int(action)
+        print(f"\n[Step {steps+1}] Chosen action: {a} ({meanings[a]})")
+
+        # Применяем действие
         obs, rewards, dones, infos = demo_env.step(action)
         done = bool(dones[0])
         truncated = bool(infos[0].get("TimeLimit.truncated", False))
         total_r += float(rewards[0])
+
+        # Визуализация и текущее наблюдение
+        base_env.render()
+        print(f"Obs(model, normalized) = {obs[0].tolist()}")
+        print(f"Obs(raw)              = {base_env._get_obs().tolist()}")
+        print(f"Reward: {float(rewards[0]):.3f} | Done: {done} | Truncated: {truncated}")
+
         steps += 1
-        base_env.render()  # печатаем поле каждый шаг
 
     last_info = infos[0] if infos else {}
-    print(f"Успех: {last_info.get('is_success', False)} | "
+    print(f"\nУспех: {last_info.get('is_success', False)} | "
           f"Уровень агента: {last_info.get('agent_level')} | "
           f"Wounded: {last_info.get('wounded')} | "
           f"Следующий враг: {last_info.get('next_required_idx')} | "
