@@ -36,53 +36,53 @@ def _multi_hot(values: List[str], vocab: List[str]) -> List[float]:
 UNITS_RED = [
     {"Name": "скелет-рыцарь",  "Initiative": 50, "BaseInitiative": 50, "team": "red",  "position": 1, "stand": "ahead",
      "Type": "Воин", "Damage": 100, "Damage2": 0, "Health": 270, "maxhealth": 270, "Armor": 0, "Accuracy": 80, "Accuracy2": 0,
-     "Immunity": ["death", "Poison"], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False},
+     "Immunity": ["death", "Poison"], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False, "Runningaway": 0},
 
     {"Name": "рыцарь смерти",  "Initiative": 50, "BaseInitiative": 50, "team": "red",  "position": 2, "stand": "ahead",
      "Type": "Воин", "Damage": 120, "Damage2": 0, "Health": 255, "maxhealth": 255, "Armor": 0, "Accuracy": 87, "Accuracy2": 0,
-     "Immunity": ["death"], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False},
+     "Immunity": ["death"], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False, "Runningaway": 0},
 
     {"Name": "Мертвый дракон", "Initiative": 35, "BaseInitiative": 35, "team": "red", "position": 3, "stand": "ahead",
      "Type": "Dead dragon", "Damage": 65, "Damage2": 20, "Health": 450, "maxhealth": 450, "Armor": 0, "Accuracy": 80, "Accuracy2": 40,
-     "Immunity": ["death"], "Resilience": [], "AttackType1": "death", "AttackType2": "poison", "big": True},
+     "Immunity": ["death"], "Resilience": [], "AttackType1": "death", "AttackType2": "poison", "big": True, "Runningaway": 0},
 
     {"Name": "Архилич", "Initiative": 40, "BaseInitiative": 40, "team": "red", "position": 4, "stand": "behind",
      "Type": "Mage", "Damage": 90, "Damage2": 0, "Health": 170, "maxhealth": 170, "Armor": 0, "Accuracy": 80, "Accuracy2": 0,
-     "Immunity": ["death"], "Resilience": [], "AttackType1": "earth", "AttackType2": "", "big": False},
+     "Immunity": ["death"], "Resilience": [], "AttackType1": "earth", "AttackType2": "", "big": False, "Runningaway": 0},
 
     {"Name": "Смерть1", "Initiative": 40, "BaseInitiative": 40, "team": "red", "position": 5, "stand": "behind",
      "Type": "Death", "Damage": 100, "Damage2": 20, "Health": 125, "maxhealth": 125, "Armor": 0, "Accuracy": 80, "Accuracy2": 50,
-     "Immunity": ["Weapon", "death"], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "poison", "big": False},
+     "Immunity": ["Weapon", "death"], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "poison", "big": False, "Runningaway": 0},
 
     {"Name": "пусто", "Initiative": 0, "BaseInitiative": 0, "team": "red", "position": 6, "stand": "behind",
      "Type": "Archer", "Damage": 0, "Damage2": 0, "Health": 0, "maxhealth": 0, "Armor": 0, "Accuracy": 0, "Accuracy2": 0,
-     "Immunity": ["death"], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False},
+     "Immunity": ["death"], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False, "Runningaway": 0},
 ]
 
 UNITS_BLUE = [
     {"Name": "Астерот",   "Initiative": 50, "BaseInitiative": 50, "team": "blue", "position": 7,  "stand": "ahead",
      "Type": "Demon","Damage": 150, "Damage2": 0, "Health": 1020, "maxhealth": 1020, "Armor": 0, "Accuracy": 80, "Accuracy2": 0,
-     "Immunity": [], "Resilience": ["Mind", "Fire"], "AttackType1": "Weapon", "AttackType2": "", "big": True},
+     "Immunity": [], "Resilience": ["Mind", "Fire"], "AttackType1": "Weapon", "AttackType2": "", "big": True, "Runningaway": 0},
 
     {"Name": "Герцог",  "Initiative": 50, "BaseInitiative": 50, "team": "blue", "position": 8,  "stand": "ahead",
      "Type": "Воин", "Damage": 120, "Damage2": 0, "Health": 306, "maxhealth": 306, "Armor": 0, "Accuracy": 100, "Accuracy2": 0,
-     "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False},
+     "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False, "Runningaway": 0},
 
     {"Name": "Гаргулья", "Initiative": 60, "BaseInitiative": 60, "team": "blue", "position": 9,  "stand": "ahead",
      "Type": "gargoil","Damage": 85, "Damage2": 0, "Health": 170, "maxhealth": 170, "Armor": 65, "Accuracy": 80, "Accuracy2": 0,
-     "Immunity": ["poison"], "Resilience": ["Mind"], "AttackType1": "earth", "AttackType2": "", "big": True},
+     "Immunity": ["poison"], "Resilience": ["Mind"], "AttackType1": "earth", "AttackType2": "", "big": True, "Runningaway": 0},
 
     {"Name": "пусто",    "Initiative": 0,  "BaseInitiative": 0,  "team": "blue", "position": 10, "stand": "behind",
      "Type": "Archer","Damage": 0,  "Damage2": 0, "Health": 0, "maxhealth": 0, "Armor": 0,  "Accuracy": 0, "Accuracy2": 0,
-     "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False},
+     "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False, "Runningaway": 0},
 
     {"Name": "пусто",    "Initiative": 0,  "BaseInitiative": 0,  "team": "blue", "position": 11, "stand": "behind",
      "Type": "Archer","Damage": 0,  "Damage2": 0, "Health": 0, "maxhealth": 0, "Armor": 0,  "Accuracy": 0, "Accuracy2": 0,
-     "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False},
+     "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False, "Runningaway": 0},
 
     {"Name": "пусто",    "Initiative": 0,  "BaseInitiative": 0,  "team": "blue", "position": 12, "stand": "behind",
      "Type": "Archer","Damage": 0,  "Damage2": 0, "Health": 0, "maxhealth": 0, "Armor": 0,  "Accuracy": 0, "Accuracy2": 0,
-     "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False},
+     "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False, "Runningaway": 0},
 ]
 
 # Position ranges

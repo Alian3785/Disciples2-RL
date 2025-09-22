@@ -78,6 +78,7 @@ class BaseUnit:
         # runtime battle fields
         # Twohits: 1 for Demon (has a second strike available this round), else 0
         self.Twohits = 1 if unit_type == "Demon" else 0
+        self.Runningaway = 0
         self.poison_turns_left = 0
         self.poison_damage_per_tick = 0
         self.burn_turns_left = 0
