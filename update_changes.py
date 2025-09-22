@@ -14,34 +14,30 @@ def get_recent_commits(since_days=7):
         # Get commits from the last N days
         result = subprocess.run([
             'git', 'log',
-            f'--since={since_days} days ago',
+            f'--since="{since_days} days ago"',
             '--oneline',
-            '--no-merges',
-            '--pretty=format:%H|%s|%an|%ad|%D'
+            '--no-merges'
         ], capture_output=True, text=True, check=True)
 
         commits = []
         for line in result.stdout.strip().split('\n'):
             if line:
-                parts = line.split('|', 4)
-                if len(parts) >= 4:
-                    commit_hash, message, author, date = parts[:4]
-                    # Parse date (format: Thu Sep 19 10:30:00 2024 +0300)
-                    try:
-                        date_obj = datetime.strptime(date.split(' ', 3)[2], '%b %d %H:%M:%S %Y')
-                        commits.append({
-                            'hash': commit_hash[:8],
-                            'message': message,
-                            'author': author,
-                            'date': date_obj.strftime('%Y-%m-%d'),
-                            'refs': parts[4] if len(parts) > 4 else ''
-                        })
-                    except (IndexError, ValueError):
-                        continue
+                # Parse format: hash message
+                parts = line.split(' ', 1)
+                if len(parts) == 2:
+                    commit_hash = parts[0][:8]
+                    message = parts[1]
+                    commits.append({
+                        'hash': commit_hash,
+                        'message': message,
+                        'author': 'Unknown',
+                        'date': datetime.now().strftime('%Y-%m-%d'),
+                        'refs': ''
+                    })
 
         return commits
-    except subprocess.CalledProcessError:
-        print("Error: Not a git repository or git command failed")
+    except subprocess.CalledProcessError as e:
+        print(f"Error: Git command failed - {e}")
         return []
 
 def update_changes_md(commits):
@@ -55,21 +51,29 @@ def update_changes_md(commits):
     # Read current content
     content = changes_file.read_text()
 
-    # Add new commits to unreleased section
-    new_entries = []
+    # Group commits by category
+    categories = {"Added": [], "Changed": [], "Fixed": [], "Removed": []}
+
     for commit in commits:
-        # Categorize commit message
         message = commit['message'].lower()
 
-        category = "Changed"  # default
-        if any(word in message for word in ['add', 'new', 'create', 'implement']):
-            category = "Added"
-        elif any(word in message for word in ['fix', 'bug', 'error', 'issue']):
-            category = "Fixed"
-        elif any(word in message for word in ['remove', 'delete', 'drop']):
-            category = "Removed"
+        # Categorize commit message
+        if any(word in message for word in ['add', 'new', 'create', 'implement', 'feat']):
+            categories["Added"].append(commit)
+        elif any(word in message for word in ['fix', 'bug', 'error', 'issue', 'resolve']):
+            categories["Fixed"].append(commit)
+        elif any(word in message for word in ['remove', 'delete', 'drop', 'obsolete']):
+            categories["Removed"].append(commit)
+        else:
+            categories["Changed"].append(commit)
 
-        new_entries.append(f"- {commit['message']} ({commit['hash']})")
+    # Create new entries grouped by category
+    new_entries = []
+    for category, commits_in_category in categories.items():
+        if commits_in_category:
+            new_entries.append(f"### {category}")
+            for commit in commits_in_category:
+                new_entries.append(f"- {commit['message']} ({commit['hash']})")
 
     if new_entries:
         # Find the unreleased section and add entries
@@ -78,28 +82,38 @@ def update_changes_md(commits):
         in_unreleased = False
         added_entries = False
 
-        for line in lines:
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+
             if line.strip() == '## [Unreleased]':
                 in_unreleased = True
                 updated_lines.append(line)
+                i += 1
                 continue
 
             if in_unreleased and line.strip().startswith('### Added'):
                 # Add our entries before the Added section
                 if not added_entries:
-                    updated_lines.extend([f"### {category}"] + new_entries)
+                    updated_lines.extend(new_entries)
                     added_entries = True
                 updated_lines.append(line)
+                i += 1
                 continue
             elif in_unreleased and line.strip().startswith('###'):
                 # We've passed all the category sections
                 break
 
             updated_lines.append(line)
+            i += 1
+
+        # Add entries at the end if we didn't find the Added section
+        if not added_entries and new_entries:
+            updated_lines.extend(new_entries)
 
         # Write back the updated content
         changes_file.write_text('\n'.join(updated_lines))
-        print(f"Added {len(new_entries)} commit entries to changes.md")
+        print(f"Added {len(commits)} commit entries to changes.md")
     else:
         print("No recent commits found")
 
