@@ -261,7 +261,7 @@ if __name__ == "__main__":
         ent_coef=0.02,
         vf_coef=0.5,
         verbose=1,
-        # tensorboard_log=log_dir,
+        # tensorboard_log=log_dir,  # включите при установленном tensorboard
     )
 
     # Обучение 1e6 шагов (без прогресс-бара)
@@ -281,32 +281,17 @@ if __name__ == "__main__":
     mean_reward, std_reward = evaluate_policy(model, eval_env_loaded, n_eval_episodes=50, deterministic=True)
     print(f"[Eval] mean_reward={mean_reward:.3f} ± {std_reward:.3f}")
 
-    # ====== ДЕМОНСТРАЦИЯ (визуализация + лог действий/наблюдений) ======
-
-    # Помощник для разворачивания всех обёрток до исходного env
-    def unwrap_env(e):
-        env = e
-        # разматываем .env, пока можно
-        while hasattr(env, "env"):
-            env = env.env
-        return env
-
+    # ====== ДЕМОНСТРАЦИЯ (визуализация в консоль) ======
     # 1) Env с render_mode='human'
     demo_env_raw = make_vec_env(lambda: GridWorldCombatEnv(render_mode="human", max_steps=1000), n_envs=1)
 
     # 2) Грузим те же статы нормализации на демо-окружение
-    from stable_baselines3.common.vec_env import VecNormalize as VN
-    demo_env = VN.load(os.path.join(log_dir, "vecnormalize.pkl"), demo_env_raw)
+    demo_env = VecNormalize.load(os.path.join(log_dir, "vecnormalize.pkl"), demo_env_raw)
     demo_env.training = False
     demo_env.norm_reward = True  # можно False, если нужны «сырые» награды
 
-    # 3) Базовый env (для печати render и сырого obs)
-    wrapped = demo_env.venv.envs[0]     # это Monitor
-    base_env = unwrap_env(wrapped)      # это уже GridWorldCombatEnv
-
-    # Список действий
-    meanings = base_env.action_meanings
-    actions_help = ", ".join([f"{i}:{m}" for i, m in enumerate(meanings)])
+    # 3) Достаём базовый env для печати
+    base_env = demo_env.venv.envs[0]  # Monitor -> GridWorldCombatEnv(render_mode='human')
 
     obs = demo_env.reset()
     done = False
@@ -315,34 +300,19 @@ if __name__ == "__main__":
     steps = 0
 
     print("\nДемонстрация после обучения:")
-    print("Доступные действия:", actions_help)
-    # стартовая визуализация и obs
-    base_env.render()
-    print(f"Obs(model, normalized) = {obs[0].tolist()}")
-    print(f"Obs(raw)              = {base_env._get_obs().tolist()}")
+    base_env.render()  # первая отрисовка
 
     while not (done or truncated):
-        # Выбор действия
         action, _ = model.predict(obs, deterministic=True)
-        a = int(action[0]) if isinstance(action, (list, np.ndarray)) else int(action)
-        print(f"\n[Step {steps+1}] Chosen action: {a} ({meanings[a]})")
-
-        # Применяем действие
         obs, rewards, dones, infos = demo_env.step(action)
         done = bool(dones[0])
         truncated = bool(infos[0].get("TimeLimit.truncated", False))
         total_r += float(rewards[0])
-
-        # Визуализация и текущее наблюдение
-        base_env.render()
-        print(f"Obs(model, normalized) = {obs[0].tolist()}")
-        print(f"Obs(raw)              = {base_env._get_obs().tolist()}")
-        print(f"Reward: {float(rewards[0]):.3f} | Done: {done} | Truncated: {truncated}")
-
         steps += 1
+        base_env.render()  # печатаем поле каждый шаг
 
     last_info = infos[0] if infos else {}
-    print(f"\nУспех: {last_info.get('is_success', False)} | "
+    print(f"Успех: {last_info.get('is_success', False)} | "
           f"Уровень агента: {last_info.get('agent_level')} | "
           f"Wounded: {last_info.get('wounded')} | "
           f"Следующий враг: {last_info.get('next_required_idx')} | "
