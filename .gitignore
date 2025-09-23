@@ -3,6 +3,7 @@
 .venv/
 __pycache__/
 *.pyc
+logs/
 checkpoints/
 models/
 tb_logs/
@@ -11,4 +12,5 @@ wandb/
 .vscode/
 .DS_Store
 *.zip
+changes.md
 

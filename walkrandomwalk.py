@@ -5,6 +5,12 @@ import gymnasium as gym
 from gymnasium import spaces
 from typing import Optional, Tuple
 
+from stable_baselines3 import PPO
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import VecNormalize
+from stable_baselines3.common.callbacks import EvalCallback, BaseCallback, CallbackList
+from stable_baselines3.common.evaluation import evaluate_policy
+
 # ====== СРЕДА 10x10: Бои по порядку, WOUNDED и лечение ДЕЙСТВИЕМ в (0,0), враги рандомно (разнообразные дистанции) ======
 class GridWorldCombatEnv(gym.Env):
     """
@@ -291,12 +297,6 @@ class GridWorldCombatEnv(gym.Env):
 if __name__ == "__main__":
     import torch.nn as nn
     from collections import deque
-
-    from stable_baselines3 import PPO
-    from stable_baselines3.common.env_util import make_vec_env
-    from stable_baselines3.common.vec_env import VecNormalize
-    from stable_baselines3.common.callbacks import EvalCallback, BaseCallback, CallbackList
-    from stable_baselines3.common.evaluation import evaluate_policy
 
     # ---------- W&B (опционально) ----------
     wandb = None
