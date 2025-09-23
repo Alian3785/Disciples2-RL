@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- Refactor gameplay mechanics in walkrandomwalk.py and walkthewalk.py, enhancing combat dynamics with a new GridWorldCombatEnv. Update changes.md to document these improvements and consolidate previous entries for clarity. Streamline the repository by removing obsolete monitor and evaluation files from specific directories. (c7d6077)
 - Refactor gameplay mechanics in walkrandomwalk.py and walkthewalk.py, enhancing combat dynamics with a new GridWorldCombatEnv. Update changes.md to document these improvements and consolidate previous entries for clarity. Remove obsolete monitor and evaluation files from ppo_grid_combat_autoheal_origin and ppo_grid_combat_heal_action_at_origin directories to streamline the repository. (a8a5c9f)
 - Refactor gameplay mechanics in walkrandomwalk.py and walkthewalk.py. Introduce a new GridWorldCombatEnv for enhanced combat dynamics, including healing actions and improved enemy spawning logic. Update changes.md to document these gameplay enhancements and consolidate previous entries for clarity. (5670413)
 - Consolidate updates in changes.md to reflect recent gameplay enhancements, including improved unit attributes and action mechanics. Add new features for automatic tracking and categorization of changes, ensuring clarity and organization in the documentation. (7ba2777)
@@ -16,12 +17,9 @@
 ### Removed
 - Remove obsolete monitor and evaluation files from ppo_grid_combat_autoheal_origin and ppo_grid_combat_heal_action_at_origin directories to clean up the repository and improve organization. (4e5587a)
 ### Added
+- Refactor gameplay mechanics in walkrandomwalk.py and walkthewalk.py, enhancing combat dynamics with a new GridWorldCombatEnv. Update changes.md to document these improvements and consolidate previous entries for clarity. Remove obsolete monitor and evaluation files from ppo_grid_combat_autoheal_origin and ppo_grid_combat_heal_action_at_origin directories to streamline the repository. (a8a5c9f)
 - Refactor gameplay mechanics in walkrandomwalk.py and walkthewalk.py. Introduce a new GridWorldCombatEnv for enhanced combat dynamics, including healing actions and improved enemy spawning logic. Update changes.md to document these gameplay enhancements and consolidate previous entries for clarity. (5670413)
 - Consolidate updates in changes.md to reflect recent gameplay enhancements, including improved unit attributes and action mechanics. Add new features for automatic tracking and categorization of changes, ensuring clarity and organization in the documentation. (7ba2777)
 - feat: Improve automatic categorization of commits in changes.md (45f4104)
 - feat: Add automatic changes.md tracking system (cee4997)
 - Add new 'walkrandomwalk' file and update action mechanics in 'walkthewalk.py' to include a heal action. Adjust action space and documentation to reflect changes in gameplay dynamics. (064f9eb)
-- Add miss check for attacker accuracy in BattleEnv class of lesssimpleenv.py. Enhance combat mechanics by logging missed attacks, improving gameplay interactions. (da888ed)
-- Update unit types to 'Death' in lesssimpleenv.py and implement poison application logic in BattleEnv class. Adjust unit attributes for improved gameplay mechanics, including damage and accuracy adjustments for 'Death' units, enhancing combat interactions. (7606752)
-- Enhance unit attributes in lesssimpleenv.py by adding 'original_resilience' to track initial resilience values. Update BattleEnv class to initialize and restore these values during combat, improving resilience handling and gameplay mechanics. (3eb2ae0)
-- Add 'Runningaway' attribute to units in battle_env.py and lesssimpleenv.py, enhancing gameplay mechanics. Update feature count in BattleEnv class to reflect new attribute and adjust related logic for improved unit behavior. (949641f)

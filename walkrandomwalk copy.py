@@ -8,7 +8,7 @@ from typing import Optional, Tuple
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import VecNormalize
-from stable_baselines3.common.callbacks import EvalCallback, BaseCallback, CallbackList, CheckpointCallback
+from stable_baselines3.common.callbacks import EvalCallback, BaseCallback, CallbackList
 from stable_baselines3.common.evaluation import evaluate_policy
 
 # ====== СРЕДА 10x10: Бои по порядку, WOUNDED и лечение ДЕЙСТВИЕМ в (0,0), враги рандомно (разнообразные дистанции) ======
@@ -392,8 +392,41 @@ if __name__ == "__main__":
                     pass
             return True
 
+    # ---------- НОВОЕ: чекпойнты каждые 200_000 ТАЙМСТЕПОВ (а не вызовов колбэка) ----------
+    class PeriodicCheckpointByTimesteps(BaseCallback):
+        """
+        Сохраняет модель каждые `save_every` timesteps в указанную директорию.
+        Имена файлов: {name_prefix}_{k}k_steps.zip
+        """
+        def __init__(self, save_every: int, save_dir: str, name_prefix: str = "ppo_model", verbose: int = 1):
+            super().__init__(verbose)
+            self.save_every = int(save_every)
+            self.save_dir = save_dir
+            self.name_prefix = name_prefix
+            self._next = int(save_every)
+
+        def _on_training_start(self) -> None:
+            os.makedirs(self.save_dir, exist_ok=True)
+
+        def _on_step(self) -> bool:
+            cur = int(self.model.num_timesteps)
+            saved = False
+            while cur >= self._next:
+                k = self._next // 1000
+                path = os.path.join(self.save_dir, f"{self.name_prefix}_{k}k_steps")
+                self.model.save(path)
+                if self.verbose:
+                    print(f"[CKPT] Saved model at ≥{self._next} timesteps -> {path}.zip")
+                self._next += self.save_every
+                saved = True
+            return True
+
     log_dir = "./logs/ppo_grid_wandb_diverse_spawn_goalx2"
     os.makedirs(log_dir, exist_ok=True)
+
+    # Папка для чекпойнтов (как просили)
+    ckpt_dir2 = "./checkpoints2"
+    os.makedirs(ckpt_dir2, exist_ok=True)
 
     def make_env(render: bool = False):
         return GridWorldCombatEnv(
@@ -462,14 +495,15 @@ if __name__ == "__main__":
     # Собираем колбэки
     callbacks = [eval_callback]
 
-    # Добавляем callback для сохранения модели каждые 300000 шагов
-    checkpoint_callback = CheckpointCallback(
-        save_freq=100_000,
-        save_path="./checkpoints2/",
-        name_prefix="ppo_model",
-        verbose=1
+    # === НОВОЕ: сохраняем в ./checkpoints2 каждые 200_000 ТАЙМСТЕПОВ ===
+    callbacks.append(
+        PeriodicCheckpointByTimesteps(
+            save_every=200_000,
+            save_dir=ckpt_dir2,
+            name_prefix="ppo_model",
+            verbose=1
+        )
     )
-    callbacks.append(checkpoint_callback)
 
     if wandb_run is not None:
         callbacks.append(WBLoggerCallback(wandb_run, window=100))
@@ -478,8 +512,9 @@ if __name__ == "__main__":
         callbacks.append(EntropyAnnealCallback(start=0.05, end=0.01))
     callback = CallbackList(callbacks)
 
-    # Обучение 1e6 шагов
-    total_timesteps = 300000
+    # Обучение 600k шагов
+    total_timesteps = 800000
+    model._total_timesteps = total_timesteps  # для аннила энтропии
     model.learn(total_timesteps=total_timesteps, callback=callback, progress_bar=False)
 
     # Сохранения
