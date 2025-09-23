@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- Consolidate updates in changes.md to reflect recent gameplay enhancements, including improved unit attributes and action mechanics. Add new features for automatic tracking and categorization of changes, ensuring clarity and organization in the documentation. (7ba2777)
 - feat: Improve automatic categorization of commits in changes.md (45f4104)
 - feat: Add automatic changes.md tracking system (cee4997)
 - Add new 'walkrandomwalk' file and update action mechanics in 'walkthewalk.py' to include a heal action. Adjust action space and documentation to reflect changes in gameplay dynamics. (064f9eb)
