@@ -5,7 +5,7 @@ import gymnasium as gym
 from gymnasium import spaces
 from typing import Optional, Tuple
 
-# ====== СРЕДА 10x10: Бои по порядку, WOUNDED и лечение ДЕЙСТВИЕМ в (0,0), враги рандомно (с упорядочением дистанций) ======
+# ====== СРЕДА 10x10: Бои по порядку, WOUNDED и лечение ДЕЙСТВИЕМ в (0,0), враги рандомно (разнообразные дистанции) ======
 class GridWorldCombatEnv(gym.Env):
     """
     - Поле 10x10. Агент стартует в (1,1), уровень = 1.
@@ -13,7 +13,8 @@ class GridWorldCombatEnv(gym.Env):
       НО:
         * не на старте (1,1)
         * не в клетке лечения (0,0)
-        * и с упорядочением: dist(start,e1) < dist(start,e2) < dist(start,e3) (манхэттен).
+        * и с упорядочением: dist(start,e1) < dist(start,e2) < dist(start,e3) (манхэттен),
+          причём зоны подбора таковы, чтобы враги распределялись по ВСЕЙ карте, включая дальние клетки.
     - Действия:
         0..7 — движение (8 направлений),
         8 — heal: работает ТОЛЬКО в (0,0), снимает wounded, позиция не меняется.
@@ -25,7 +26,7 @@ class GridWorldCombatEnv(gym.Env):
             выдаётся win_reward; на 3-й победе ДОПОЛНИТЕЛЬНО goal_reward и эпизод завершается.
         * Иначе -> проигрыш (fail_penalty) и wounded=True.
     - Награды:
-        step_cost (мягкий отрицательный), win_reward за победу 1 и 2, goal_reward добавляется на 3-й победе,
+        step_cost (мягкий отрицательный), win_reward за победу 1 и 2, goal_reward (увеличена) добавляется на 3-й победе,
         fail_penalty смягчён.
     - Таймаут: max_steps (по умолчанию 1000).
     - Наблюдение (float32, 16 признаков):
@@ -38,10 +39,10 @@ class GridWorldCombatEnv(gym.Env):
 
     def __init__(self,
                  render_mode: Optional[str] = None,
-                 step_cost: float = -0.005,   # идея (7): мягче плата за шаг
-                 goal_reward: float = 2.0,    # увеличенная финальная награда
+                 step_cost: float = -0.005,   # мягче плата за шаг
+                 goal_reward: float = 4.0,    # <-- УДВОЕНА финальная награда (было 2.0)
                  win_reward: float = 0.5,     # промежуточные победы как раньше
-                 fail_penalty: float = -0.35, # идея (7): мягче штраф за провал
+                 fail_penalty: float = -0.35, # мягкий штраф за провал
                  max_steps: int = 1000):
         super().__init__()
         self.size = 10
@@ -133,8 +134,12 @@ class GridWorldCombatEnv(gym.Env):
 
     def _sample_unique_enemy_positions(self):
         """
-        Идея (4): упорядоченный спавн по расстоянию от старта:
-        dist(e1) < dist(e2) < dist(e3).
+        Разнообразный спавн по зонам дистанций (манхэттен от старта):
+        - e1: ближняя зона (по умолчанию 1..3)
+        - e2: средняя зона (по умолчанию 5..9)
+        - e3: дальняя зона (по умолчанию 12..maxD)
+        Если в зоне нет кандидатов — зона авто-расширяется до пределов [1..maxD].
+        Гарантируется: dist(e1) < dist(e2) < dist(e3) и уникальность позиций.
         """
         size = self.size
         banned = {
@@ -142,34 +147,54 @@ class GridWorldCombatEnv(gym.Env):
             self.heal_cell[1] * size + self.heal_cell[0],  # (0,0)
         }
 
-        # Все допустимые клетки
+        # Все допустимые клетки + дистанции
         coords = [np.array([idx % size, idx // size], dtype=np.int32)
                   for idx in range(size * size) if idx not in banned]
-
-        # Считаем дистанции до старта и сортируем
         dists = [(p, self._manhattan(p, self.start)) for p in coords]
-        dists.sort(key=lambda t: t[1])
+        maxD = max(d for _, d in dists)  # для (1,1) на поле 10x10 это 16 (клетка (9,9))
 
-        # Выбираем e1 среди минимальной дистанции (рандом среди равных)
-        min_d = dists[0][1]
-        cand_e1 = [p for (p, d) in dists if d == min_d]
-        e1 = cand_e1[self.np_random.integers(len(cand_e1))]
+        used = set()  # уже выбранные позиции
 
-        # Выбираем e2: дистанция строго > dist(e1), берём минимальную из таких; рандом среди равных
-        d_gt_e1 = [ (p,d) for (p,d) in dists if d > self._manhattan(e1, self.start) ]
-        # На всякий случай (должно хватать на 10x10)
-        assert len(d_gt_e1) > 0, "Не удалось найти позицию для e2 с бОльшей дистанцией"
-        min_d2 = d_gt_e1[0][1]
-        cand_e2 = [p for (p,d) in d_gt_e1 if d == min_d2 and not np.array_equal(p, e1)]
-        e2 = cand_e2[self.np_random.integers(len(cand_e2))]
+        def pick_from_band(min_required_dist: int, low: int, high: int):
+            """Выбирает случайную клетку с dist in [low..high] и dist > min_required_dist;
+               если нет — расширяет диапазон до [1..maxD]."""
+            l, h = max(1, low), min(maxD, high)
+            # строгая дистанция > min_required_dist:
+            l = max(l, min_required_dist + 1)
 
-        # Выбираем e3: дистанция строго > dist(e2)
-        d_gt_e2 = [ (p,d) for (p,d) in dists if d > self._manhattan(e2, self.start) and not np.array_equal(p, e1) ]
-        assert len(d_gt_e2) > 0, "Не удалось найти позицию для e3 с бОльшей дистанцией"
-        min_d3 = d_gt_e2[0][1]
-        cand_e3 = [p for (p,d) in d_gt_e2 if d == min_d3 and not np.array_equal(p, e1) and not np.array_equal(p, e2)]
-        e3 = cand_e3[self.np_random.integers(len(cand_e3))]
+            while True:
+                candidates = [(tuple(p), d) for (p, d) in dists
+                              if (l <= d <= h) and (tuple(p) not in used) and (d > min_required_dist)]
+                if candidates:
+                    pos, d = candidates[self.np_random.integers(len(candidates))]
+                    used.add(pos)
+                    return np.array(pos, dtype=np.int32), d
+                # расширяем диапазон
+                if l > 1:
+                    l -= 1
+                if h < maxD:
+                    h += 1
+                # если уже полный диапазон — берем любой d > min_required_dist
+                if l == 1 and h == maxD:
+                    fallback = [(tuple(p), d) for (p, d) in dists
+                                if (tuple(p) not in used) and (d > min_required_dist)]
+                    if not fallback:
+                        raise RuntimeError("Не удалось подобрать уникальные позиции врагов с возрастанием дистанций")
+                    pos, d = fallback[self.np_random.integers(len(fallback))]
+                    used.add(pos)
+                    return np.array(pos, dtype=np.int32), d
 
+        # Базовые зоны (можно подправить)
+        NEAR_L, NEAR_H   = 1, 3
+        MID_L,  MID_H    = 5, 9
+        FAR_L,  FAR_H    = 12, maxD
+
+        # Выбираем по порядку
+        e1, d1 = pick_from_band(min_required_dist=0,  low=NEAR_L, high=NEAR_H)
+        e2, d2 = pick_from_band(min_required_dist=d1, low=MID_L,  high=MID_H)
+        e3, d3 = pick_from_band(min_required_dist=d2, low=FAR_L,  high=FAR_H)
+
+        assert d1 < d2 < d3, "Дистанции должны быть строго возрастающими"
         self.enemy_positions = [e1, e2, e3]
 
     # ---------- API Gymnasium ----------
@@ -182,7 +207,7 @@ class GridWorldCombatEnv(gym.Env):
         self.enemies_alive = [True, True, True]
         self.next_required_idx = 0
 
-        # Рандомизируем координаты врагов (3 разные клетки, упорядоченные по дистанции)
+        # Рандомизируем координаты врагов (3 разные клетки, разнообразные зоны дистанций)
         self._sample_unique_enemy_positions()
 
         return self._get_obs(), self._get_info()
@@ -248,13 +273,10 @@ class GridWorldCombatEnv(gym.Env):
         grid[hy][hx] = "H"
         ax, ay = map(int, self.pos)
         grid[ay][ax] = "✔" if self.next_required_idx == 3 else "A"
-        status = ("[Agent Lvl: {}] Wounded: {} | "
-                  "Heal@{} | Next target: "
-                  "{} | "
-                  "Steps: {}".format(self.agent_level, self.wounded,
-                  tuple(self.heal_cell),
-                  self.next_required_idx + 1 if self.next_required_idx < 3 else '-',
-                  self.steps))
+        status = (f"[Agent Lvl: {self.agent_level}] Wounded: {self.wounded} | "
+                  f"Heal@{tuple(self.heal_cell)} | Next target: "
+                  f"{self.next_required_idx + 1 if self.next_required_idx < 3 else '-'} | "
+                  f"Steps: {self.steps}")
         out = "\n".join(" ".join(row) for row in grid)
         if self.render_mode == "human":
             print(status)
@@ -282,7 +304,7 @@ if __name__ == "__main__":
     try:
         import wandb as _wandb
         wandb = _wandb
-        run_name = "ppo-gridworld-{}".format(int(time.time()))
+        run_name = f"ppo-gridworld-{int(time.time())}"
         wandb_run = wandb.init(
             project=os.environ.get("WANDB_PROJECT", "gridworld-ppo"),
             name=run_name,
@@ -291,12 +313,8 @@ if __name__ == "__main__":
             anonymous="allow",
         )
         print("[W&B] логирование включено.")
-    except ImportError:
-        print("[W&B] библиотека wandb не установлена. Продолжаем без логирования.")
     except Exception as e:
-        print("[W&B] ошибка подключения: {}. Продолжаем без логирования.".format(str(e)))
-        wandb = None
-        wandb_run = None
+        print(f"[W&B] отключено: {e}")
 
     # ---------- Кастомный колбэк: лог скользящей средней награды/длины эпизода ----------
     class WBLoggerCallback(BaseCallback):
@@ -374,11 +392,15 @@ if __name__ == "__main__":
                     pass
             return True
 
-    log_dir = "./logs/ppo_grid_wandb_ordspawn_softpen"
+    log_dir = "./logs/ppo_grid_wandb_diverse_spawn_goalx2"
     os.makedirs(log_dir, exist_ok=True)
 
     def make_env(render: bool = False):
-        return GridWorldCombatEnv(render_mode="human" if render else None, max_steps=1000)
+        return GridWorldCombatEnv(
+            render_mode="human" if render else None,
+            max_steps=1000,
+            goal_reward=4.0,  # явное указание (хотя и так по дефолту 4.0)
+        )
 
     # === TRAIN: DummyVecEnv (внутри уже Monitor) -> VecNormalize ===
     n_envs = 16
@@ -447,7 +469,7 @@ if __name__ == "__main__":
     callback = CallbackList(callbacks)
 
     # Обучение 1e6 шагов
-    total_timesteps = 100000
+    total_timesteps = 1_000_000
     model.learn(total_timesteps=total_timesteps, callback=callback, progress_bar=False)
 
     # Сохранения
@@ -459,17 +481,17 @@ if __name__ == "__main__":
         try:
             wandb_run.finish()
         except Exception as e:
-            print("[W&B] ошибка при завершении: {}".format(e))
+            print(f"[W&B] ошибка при завершении: {e}")
 
     # ====== РУЧНАЯ ОЦЕНКА ======
-    eval_env_raw = make_vec_env(make_env, n_envs=1)
     from stable_baselines3.common.vec_env import VecNormalize as VN
+    eval_env_raw = make_vec_env(make_env, n_envs=1)
     eval_env_loaded = VN.load(os.path.join(log_dir, "vecnormalize.pkl"), eval_env_raw)
     eval_env_loaded.training = False
     eval_env_loaded.norm_reward = True
 
     mean_reward, std_reward = evaluate_policy(model, eval_env_loaded, n_eval_episodes=50, deterministic=True)
-    print("[Eval] mean_reward={:.3f} ± {:.3f}".format(mean_reward, std_reward))
+    print(f"[Eval] mean_reward={mean_reward:.3f} ± {std_reward:.3f}")
 
     # ====== ДЕМОНСТРАЦИЯ (визуализация + лог действий/наблюдений) ======
 
@@ -481,7 +503,7 @@ if __name__ == "__main__":
         return env
 
     # 1) Env с render_mode='human'
-    demo_env_raw = make_vec_env(lambda: GridWorldCombatEnv(render_mode="human", max_steps=1000), n_envs=1)
+    demo_env_raw = make_vec_env(lambda: GridWorldCombatEnv(render_mode="human", max_steps=1000, goal_reward=4.0), n_envs=1)
 
     # 2) Грузим те же статы нормализации на демо-окружение
     demo_env = VN.load(os.path.join(log_dir, "vecnormalize.pkl"), demo_env_raw)
@@ -494,7 +516,7 @@ if __name__ == "__main__":
 
     # Список действий
     meanings = base_env.action_meanings
-    actions_help = ", ".join(["{}:{}".format(i, m) for i, m in enumerate(meanings)])
+    actions_help = ", ".join([f"{i}:{m}" for i, m in enumerate(meanings)])
 
     obs = demo_env.reset()
     done = False
@@ -506,14 +528,14 @@ if __name__ == "__main__":
     print("Доступные действия:", actions_help)
     # стартовая визуализация и obs
     base_env.render()
-    print("Obs(model, normalized) = {}".format(obs[0].tolist()))
-    print("Obs(raw)              = {}".format(base_env._get_obs().tolist()))
+    print(f"Obs(model, normalized) = {obs[0].tolist()}")
+    print(f"Obs(raw)              = {base_env._get_obs().tolist()}")
 
     while not (done or truncated):
         # Выбор действия
         action, _ = model.predict(obs, deterministic=True)
         a = int(action[0]) if isinstance(action, (list, np.ndarray)) else int(action)
-        print("\n[Step {}] Chosen action: {} ({})".format(steps+1, a, meanings[a]))
+        print(f"\n[Step {steps+1}] Chosen action: {a} ({meanings[a]})")
 
         # Применяем действие
         obs, rewards, dones, infos = demo_env.step(action)
@@ -523,20 +545,15 @@ if __name__ == "__main__":
 
         # Визуализация и текущее наблюдение
         base_env.render()
-        print("Obs(model, normalized) = {}".format(obs[0].tolist()))
-        print("Obs(raw)              = {}".format(base_env._get_obs().tolist()))
-        print("Reward: {:.3f} | Done: {} | Truncated: {}".format(float(rewards[0]), done, truncated))
+        print(f"Obs(model, normalized) = {obs[0].tolist()}")
+        print(f"Obs(raw)              = {base_env._get_obs().tolist()}")
+        print(f"Reward: {float(rewards[0]):.3f} | Done: {done} | Truncated: {truncated}")
 
         steps += 1
 
     last_info = infos[0] if infos else {}
-    print("\nУспех: {} | "
-          "Уровень агента: {} | "
-          "Wounded: {} | "
-          "Следующий враг: {} | "
-          "Шагов: {} | Суммарная награда: {:.3f}".format(
-          last_info.get('is_success', False),
-          last_info.get('agent_level'),
-          last_info.get('wounded'),
-          last_info.get('next_required_idx'),
-          steps, total_r))
+    print(f"\nУспех: {last_info.get('is_success', False)} | "
+          f"Уровень агента: {last_info.get('agent_level')} | "
+          f"Wounded: {last_info.get('wounded')} | "
+          f"Следующий враг: {last_info.get('next_required_idx')} | "
+          f"Шагов: {steps} | Суммарная награда: {total_r:.3f}")
