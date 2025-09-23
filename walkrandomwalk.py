@@ -8,7 +8,7 @@ from typing import Optional, Tuple
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import VecNormalize
-from stable_baselines3.common.callbacks import EvalCallback, BaseCallback, CallbackList
+from stable_baselines3.common.callbacks import EvalCallback, BaseCallback, CallbackList, CheckpointCallback
 from stable_baselines3.common.evaluation import evaluate_policy
 
 # ====== СРЕДА 10x10: Бои по порядку, WOUNDED и лечение ДЕЙСТВИЕМ в (0,0), враги рандомно (разнообразные дистанции) ======
@@ -461,6 +461,16 @@ if __name__ == "__main__":
 
     # Собираем колбэки
     callbacks = [eval_callback]
+
+    # Добавляем callback для сохранения модели каждые 300000 шагов
+    checkpoint_callback = CheckpointCallback(
+        save_freq=100_000,
+        save_path="./checkpoints2/",
+        name_prefix="ppo_model",
+        verbose=1
+    )
+    callbacks.append(checkpoint_callback)
+
     if wandb_run is not None:
         callbacks.append(WBLoggerCallback(wandb_run, window=100))
         callbacks.append(EntropyAnnealCallback(start=0.05, end=0.01, wandb_run=wandb_run))
@@ -469,7 +479,7 @@ if __name__ == "__main__":
     callback = CallbackList(callbacks)
 
     # Обучение 1e6 шагов
-    total_timesteps = 1_000_000
+    total_timesteps = 300000
     model.learn(total_timesteps=total_timesteps, callback=callback, progress_bar=False)
 
     # Сохранения
