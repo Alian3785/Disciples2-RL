@@ -24,7 +24,7 @@ UNITS_RED = [
     {"Name": "рыцарь1",  "Initiative": 88, "BaseInitiative": 88, "team": "red", "position": 1,  "stand": "ahead",
      "Type": "Mage", "Damage": 10, "Health": 60, "Damage2": 0, "maxhealth": 1020, "Armor": 0, "Accuracy": 80, "Accuracy2": 0,
      "Immunity": [], "Resilience": ["Mind", "Fire"], "AttackType1": "Mind", "AttackType2": "", "big": True,
-     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Longparalized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": ["Mind", "Fire"]},
+     "Twohits": 0, "Burn": 5, "Freeze": 0, "Poison": 3, "Paralized": 0, "Longparalized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": ["Mind", "Fire"]},
 
     {"Name": "рыцарь2",  "Initiative": 55, "BaseInitiative": 55, "team": "red", "position": 2,  "stand": "ahead",
      "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 18, "maxhealth": 306, "Armor": 0, "Accuracy": 100, "Accuracy2": 45,
@@ -32,9 +32,9 @@ UNITS_RED = [
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Longparalized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь3",  "Initiative": 22, "BaseInitiative": 22, "team": "red", "position": 3,  "stand": "ahead",
-     "Type": "Warrior", "Damage": 30, "Health": 60, "Damage2": 0, "maxhealth": 170, "Armor": 65, "Accuracy": 80, "Accuracy2": 50,
+     "Type": "Asterot", "Damage": 30, "Health": 60, "Damage2": 0, "maxhealth": 170, "Armor": 65, "Accuracy": 80, "Accuracy2": 50,
      "Immunity": ["Poison"], "Resilience": ["Mind"], "AttackType1": "Weapon", "AttackType2": "", "big": True,
-     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Longparalized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": ["Mind"]},
+     "Twohits": 1, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Longparalized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": ["Mind"]},
 
     {"Name": "рыцарь4", "Initiative": 60, "BaseInitiative": 60, "team": "red", "position": 4, "stand": "behind",
      "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 12, "maxhealth": 60, "Armor": 0, "Accuracy": 80, "Accuracy2": 30,
@@ -47,8 +47,8 @@ UNITS_RED = [
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Longparalized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь6", "Initiative": 75, "BaseInitiative": 75, "team": "red", "position": 6, "stand": "behind",
-     "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 0, "maxhealth": 0, "Armor": 0, "Accuracy": 80, "Accuracy2": 50,
-     "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False,
+     "Type": "PoisonDragon", "Damage": 12, "Health": 60, "Damage2": 8, "maxhealth": 0, "Armor": 0, "Accuracy": 90, "Accuracy2": 75,
+     "Immunity": [], "Resilience": [], "AttackType1": "Poison", "AttackType2": "poison", "big": False,
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Longparalized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 ]
 
@@ -56,7 +56,7 @@ UNITS_BLUE = [
     {"Name": "рыцарь4",  "Initiative": 88, "BaseInitiative": 88, "team": "blue", "position": 7,  "stand": "ahead",
      "Type": "Mage", "Damage": 10, "Health": 60, "Damage2": 0, "maxhealth": 1020, "Armor": 0, "Accuracy": 80, "Accuracy2": 0,
      "Immunity": [], "Resilience": ["Mind", "Fire"], "AttackType1": "Mind", "AttackType2": "", "big": True,
-     "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Longparalized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": ["Mind", "Fire"]},
+     "Twohits": 0, "Burn": 2, "Freeze": 4, "Poison": 1, "Paralized": 0, "Longparalized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": ["Mind", "Fire"]},
 
     {"Name": "рыцарь5",  "Initiative": 55, "BaseInitiative": 55, "team": "blue", "position": 8,  "stand": "ahead",
      "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 18, "maxhealth": 306, "Armor": 0, "Accuracy": 100, "Accuracy2": 45,
@@ -79,8 +79,8 @@ UNITS_BLUE = [
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Longparalized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь12", "Initiative": 75, "BaseInitiative": 75, "team": "blue", "position": 12, "stand": "behind",
-     "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 0, "maxhealth": 0, "Armor": 0, "Accuracy": 80, "Accuracy2": 50,
-     "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False,
+     "Type": "Death", "Damage": 18, "Health": 60, "Damage2": 12, "maxhealth": 0, "Armor": 0, "Accuracy": 90, "Accuracy2": 70,
+     "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "poison", "big": False,
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Longparalized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 ]
 
@@ -305,6 +305,57 @@ class BattleEnv(gym.Env):
         self.current_blue_attacker_pos = None
         self._log(f"Эпизод начат. Раунд {self.round_no}.")
 
+    def _apply_status_effects(self, unit):
+        """
+        Применить эффекты состояния перед ходом юнита.
+        Вычитает урон из здоровья и с вероятностью 30% обнуляет эффекты.
+        """
+        if not self._alive(unit):
+            return
+
+        damage_taken = 0
+        effects_applied = []
+
+        # Применяем урон от эффектов
+        if unit.get("Burn", 0) > 0:
+            damage_taken += unit["Burn"]
+            effects_applied.append(f"Burn({unit['Burn']})")
+
+        if unit.get("Freeze", 0) > 0:
+            damage_taken += unit["Freeze"]
+            effects_applied.append(f"Freeze({unit['Freeze']})")
+
+        if unit.get("Poison", 0) > 0:
+            damage_taken += unit["Poison"]
+            effects_applied.append(f"Poison({unit['Poison']})")
+
+        # Вычитаем урон из здоровья
+        if damage_taken > 0:
+            unit["Health"] -= damage_taken
+            effects_str = ", ".join(effects_applied)
+            self._log(f"💀 {unit['team'].upper()} {unit['Name']}#{unit['position']}: {effects_str} наносит {damage_taken} урона")
+
+            # Если юнит умер от эффектов, сбрасываем его инициативу
+            if unit["Health"] <= 0:
+                unit["Initiative"] = 0
+                self._log(f"✖ {unit['team'].upper()} {unit['Name']}#{unit['position']} погибает от эффектов состояния!")
+
+        # Каждый эффект отдельно обнуляется с вероятностью 30%
+        effects_cleared = []
+        if unit.get("Burn", 0) > 0 and self.rng.random() < 0.3:
+            unit["Burn"] = 0
+            effects_cleared.append("Burn")
+        if unit.get("Freeze", 0) > 0 and self.rng.random() < 0.3:
+            unit["Freeze"] = 0
+            effects_cleared.append("Freeze")
+        if unit.get("Poison", 0) > 0 and self.rng.random() < 0.3:
+            unit["Poison"] = 0
+            effects_cleared.append("Poison")
+
+        if effects_cleared:
+            effects_str = ", ".join(effects_cleared)
+            self._log(f"✨ {unit['team'].upper()} {unit['Name']}#{unit['position']}: эффекты {effects_str} исчезают!")
+
     def _candidates(self):
         """
         Вернуть список юнитов, которые могут ходить в текущем раунде:
@@ -333,9 +384,13 @@ class BattleEnv(gym.Env):
         """
         Конец раунда: всем ЖИВЫМ возвращаем Initiative к BaseInitiative,
         мёртвым оставляем 0. Увеличение номера раунда происходит снаружи.
+        Также сбрасываем Twohits для всех Asterot.
         """
         for u in self.combined:
             u["Initiative"] = u["BaseInitiative"] if self._alive(u) else 0
+            # Сброс Twohits для Asterot
+            if u.get("Type") == "Asterot" and self._alive(u):
+                u["Twohits"] = 1
         self._log("Восстановление инициативы. Новый раунд.")
 
     # ------------------- УДАР И ПРОВЕРКА ПОБЕДЫ -------------------
@@ -370,10 +425,10 @@ class BattleEnv(gym.Env):
         - Во фронт врага сначала бьёт смежных; «дальний» доступен, когда оба смежных мертвы.
         - Если фронт врага выбит — правила применяются к тылу врага.
         """
-        assert attacker.get("Type") == "Warrior"
+        assert attacker.get("Type") in ["Warrior", "Asterot"]
         # Блок для воинов в тылу
         if attacker.get("stand") == "behind":
-            if any(self._alive(u) and u["team"] == attacker["team"] and u.get("Type") == "Warrior" and u.get("stand") == "ahead"
+            if any(self._alive(u) and u["team"] == attacker["team"] and u.get("Type") in ["Warrior", "Asterot"] and u.get("stand") == "ahead"
                    for u in self.combined):
                 return []
 
@@ -434,18 +489,33 @@ class BattleEnv(gym.Env):
             # Атакуем каждого вражеского юнита индивидуально
             for victim in targets:
                 self._attack_single_target(attacker, victim["position"])
-        elif attacker.get("Type") == "Warrior":
-            # Воин может атаковать только разрешенные цели
+        elif attacker.get("Type") == "PoisonDragon":
+            # PoisonDragon атакует всех вражеских юнитов как Mage
+            enemy_team = "blue" if attacker["team"] == "red" else "red"
+            targets = [u for u in self.combined if u["team"] == enemy_team and self._alive(u)]
+            if not targets:
+                self._log(f"{attacker['team'].upper()} {attacker['Name']}#{attacker['position']} (Ядовитый Дракон): нет целей для атаки.")
+                return
+
+            self._log(f"🐉 {attacker['team'].upper()} {attacker['Name']}#{attacker['position']} (Ядовитый Дракон) атакует всех вражеских юнитов!")
+
+            # Атакуем каждого вражеского юнита индивидуально
+            for victim in targets:
+                self._attack_single_target(attacker, victim["position"])
+        elif attacker.get("Type") in ["Warrior", "Asterot"]:
+            # Воин и Астерот могут атаковать только разрешенные цели
             allowed_targets = self._warrior_allowed_targets(attacker)
 
-            # Проверяем, является ли выбранная агентом цель доступной для воина
+            # Проверяем, является ли выбранная агентом цель доступной
             if target_pos not in allowed_targets:
                 # Цель недоступна - штраф за неправильный выбор
-                self._log(f"❌ {attacker['team'].upper()} {attacker['Name']}#{attacker['position']} (Воин): цель pos{target_pos} недоступна!")
+                unit_type = "Астерот" if attacker.get("Type") == "Asterot" else "Воин"
+                self._log(f"❌ {attacker['team'].upper()} {attacker['Name']}#{attacker['position']} ({unit_type}): цель pos{target_pos} недоступна!")
                 return True  # Флаг, что был применен штраф
 
             # Цель доступна - выполняем атаку
-            self._log(f"⚔️ {attacker['team'].upper()} {attacker['Name']}#{attacker['position']} (Воин) атакует pos{target_pos}!")
+            unit_type = "Астерот" if attacker.get("Type") == "Asterot" else "Воин"
+            self._log(f"⚔️ {attacker['team'].upper()} {attacker['Name']}#{attacker['position']} ({unit_type}) атакует pos{target_pos}!")
             self._attack_single_target(attacker, target_pos)
             return False  # Флаг, что штраф не применялся
         else:
@@ -494,6 +564,36 @@ class BattleEnv(gym.Env):
                 victim["Initiative"] = 0
                 self._log(f"✖ {victim['team'].upper()} {victim['Name']}#{victim['position']} выведен из строя.")
 
+            # Логика отравления для типов Death и PoisonDragon - срабатывает ТОЛЬКО ПОСЛЕ успешной основной атаки и если цель выжила
+            if attacker.get("Type") in ["Death", "PoisonDragon"] and attacker.get("Damage2", 0) > 0 and victim["Health"] > 0:
+                # Проверка Accuracy2 для отравления (аналогично проверке на промах)
+                attacker_accuracy2 = attacker.get("Accuracy2", 0)
+                if self.rng.random() > (attacker_accuracy2 / 100):
+                    self._log(f"❌ {attacker['team'].upper()} {attacker['Name']}#{attacker['position']} → "
+                              f"{victim['team'].upper()} {victim['Name']}#{victim['position']}: отравление не удалось!")
+                else:
+                    # Проверки для AttackType2
+                    atk2 = (attacker.get("AttackType2") or "")
+                    victim_imm = victim.get("Immunity") or []
+                    victim_res = victim.get("Resilience") or []
+
+                    # Immunity check for AttackType2
+                    if atk2 in victim_imm:
+                        self._log(f"🛡 Иммунитет к урону '{atk2}' — {victim['team'].upper()} {victim['Name']}#{victim['position']}: отравление не сработало.")
+                    elif atk2 in victim_res:
+                        self._log(f"🛡 Резистентность к урону '{atk2}' — {victim['team'].upper()} {victim['Name']}#{victim['position']}: отравление не сработало.")
+                        # Remove this attack type from victim's Resilience (temporary)
+                        victim["Resilience"] = [r for r in victim_res if r != atk2]
+                    else:
+                        # Проверка на существующий Poison
+                        if victim.get("Poison", 0) == 0:
+                            victim["Poison"] += attacker["Damage2"]
+                            self._log(f"☠ {attacker['team'].upper()} {attacker['Name']}#{attacker['position']} → "
+                                      f"{victim['team'].upper()} {victim['Name']}#{victim['position']}: отравление на {attacker['Damage2']}!")
+                        else:
+                            self._log(f"❌ {attacker['team'].upper()} {attacker['Name']}#{attacker['position']} → "
+                                      f"{victim['team'].upper()} {victim['Name']}#{victim['position']}: цель уже отравлена!")
+
         else:
             self._log(f"{attacker['team'].upper()} {attacker['Name']}#{attacker['position']} бьёт pos{target_pos}: цели нет/мертва.")
 
@@ -536,6 +636,9 @@ class BattleEnv(gym.Env):
                 return True
 
             # === Ход RED (противник): случайный выбор живой цели среди BLUE ===
+            # Применяем эффекты состояния перед ходом
+            self._apply_status_effects(nxt)
+
             nxt["Initiative"] = 0  # в рамках текущего раунда этот юнит сходил
             live_blue_positions = self._live_positions_of("blue")
             target_pos = self.rng.choice(live_blue_positions) if live_blue_positions else None
@@ -547,6 +650,23 @@ class BattleEnv(gym.Env):
             self._check_victory_after_hit()
             if self.winner is not None:
                 return False
+
+            # === Логика двойного хода для Asterot ===
+            if nxt.get("Type") == "Asterot" and nxt.get("Twohits", 0) == 1:
+                # Астерот делает двойной ход без эффектов состояния
+                self._log(f"⭐ {nxt['team'].upper()} {nxt['Name']}#{nxt['position']} (Астерот): активирует двойной ход!")
+                nxt["Twohits"] = 0  # сбрасываем Twohits
+
+                # Делаем второй ход БЕЗ применения эффектов состояния
+                live_blue_positions = self._live_positions_of("blue")
+                target_pos = self.rng.choice(live_blue_positions) if live_blue_positions else None
+                self._log(f"RED ход (двойной): {nxt['Name']}#{nxt['position']} → случайная цель pos{target_pos}.")
+                penalty_applied = self._attack(nxt, target_pos)
+                if penalty_applied:
+                    continue
+                self._check_victory_after_hit()
+                if self.winner is not None:
+                    return False
 
         # Боевые действия закончились до очереди BLUE
         return False
@@ -647,6 +767,9 @@ class BattleEnv(gym.Env):
         illegal = (victim is None) or (victim.get("Health", 0) <= 0)
 
         if attacker is not None and self._alive(attacker) and attacker["Initiative"] > 0:
+            # Применяем эффекты состояния перед ходом
+            self._apply_status_effects(attacker)
+
             self._log(f"BLUE действие: {attacker['Name']}#{attacker['position']} → pos{target_pos}")
             attacker["Initiative"] = 0                   # в этом раунде синий уже сходил
 
@@ -805,7 +928,7 @@ if __name__ == "__main__":
     callbacks.append(eval_cb)
 
     # Запуск обучения с колбэками (W&B + eval)
-    model.learn(total_timesteps=TOTAL_STEPS, callback=CallbackList(callbacks))
+    # model.learn(total_timesteps=TOTAL_STEPS, callback=CallbackList(callbacks))
 
     # Сохранение финальной модели
     model.save("ppo_blue_vs_red")
@@ -869,7 +992,8 @@ if __name__ == "__main__":
         HP_H = 0.028
 
         # --- состояние (имена и стартовые HP для визуализации)
-        state = {u["position"]: {"team": u["team"], "name": u["Name"], "hp": float(u["Health"]), "maxhp": float(u["Health"]) }
+        state = {u["position"]: {"team": u["team"], "name": u["Name"], "hp": float(u["Health"]), "maxhp": float(u["Health"]),
+                                "burn": float(u["Burn"]), "freeze": float(u["Freeze"]), "poison": float(u["Poison"]) }
                  for u in (UNITS_RED + UNITS_BLUE)}
 
         fig, ax = plt.subplots(figsize=(12, 8))
@@ -909,7 +1033,17 @@ if __name__ == "__main__":
             # Скрываем задний ряд мёртвых (чтобы не загромождать)
             if pos in (RED_BACK + BLUE_BACK) and u["hp"] <= 0:
                 return
-            card_color = (0.90, 0.30, 0.30, 0.16) if u["team"] == "red" else (0.30, 0.45, 0.90, 0.16)
+            # Цвет карточки в зависимости от команды и типа
+            if u.get("Type") == "Death":
+                card_color = (0.70, 0.30, 0.90, 0.16)  # Фиолетовый для Death
+            elif u.get("Type") == "PoisonDragon":
+                card_color = (0.50, 0.90, 0.30, 0.16)  # Зеленый для PoisonDragon
+            elif u.get("Type") == "Asterot":
+                card_color = (0.90, 0.70, 0.30, 0.16)  # Оранжевый для Asterot
+            elif u["team"] == "red":
+                card_color = (0.90, 0.30, 0.30, 0.16)
+            else:
+                card_color = (0.30, 0.45, 0.90, 0.16)
             ax.add_patch(patches.FancyBboxPatch((x, y), SLOT_W, SLOT_H,
                                                 boxstyle="round,pad=0.010,rounding_size=0.016",
                                                 linewidth=1.3, edgecolor="black", facecolor=card_color))
@@ -922,6 +1056,22 @@ if __name__ == "__main__":
             name = u["name"][:22]
             ax.text(x + 0.012, y + SLOT_H*0.78, name,
                     fontsize=10, fontweight="bold", ha="left", va="center", color="black")
+
+            # Отображаем эффекты состояния и Twohits в правом верхнем углу
+            effects_text = ""
+            if u["burn"] > 0 or u["freeze"] > 0 or u["poison"] > 0 or u.get("Twohits", 0) > 0:
+                effects = []
+                if u.get("Twohits", 0) > 0:
+                    effects.append(f"⭐{int(u['Twohits'])}")
+                if u["burn"] > 0:
+                    effects.append(f"B:{int(u['burn'])}")
+                if u["freeze"] > 0:
+                    effects.append(f"F:{int(u['freeze'])}")
+                if u["poison"] > 0:
+                    effects.append(f"P:{int(u['poison'])}")
+                effects_text = " ".join(effects)
+                ax.text(x + SLOT_W - 0.012, y + SLOT_H*0.78, effects_text,
+                        fontsize=8, fontweight="bold", ha="right", va="center", color="red")
 
             hp_x, hp_y = x + 0.012, y + SLOT_H*0.10
             hp_w = SLOT_W - 0.024
@@ -964,6 +1114,9 @@ if __name__ == "__main__":
         blue_turn_re   = re.compile(r'^Ход BLUE:\s+[^#]+#(\d+)')
         red_turn_re    = re.compile(r'^RED ход:\s+[^#]+#(\d+)')
         blue_action_re = re.compile(r'^BLUE действие:\s+[^#]+#(\d+)\s+→\s+pos(\d+)')
+        # Регексы для эффектов состояния
+        status_damage_re = re.compile(r'^💀\s+(RED|BLUE)\s+[^#]+#(\d+):\s+(.+?)\s+наносит\s+(\d+)\s+урона')
+        status_clear_re  = re.compile(r'^✨\s+(RED|BLUE)\s+[^#]+#(\d+):\s+эффекты\s+(.+?)\s+исчезают!')
 
         def draw_board(arrows: list[dict] = None, headline: str = "", active_pos: int | None = None):
             ax.cla()
@@ -1022,6 +1175,15 @@ if __name__ == "__main__":
                 headline = line
                 draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep(FRAME_DELAY * VISUAL_SPEED_MULT); continue
 
+            m = status_damage_re.match(line)
+            if m:
+                team = m.group(1); pos = int(m.group(2)); dmg = int(m.group(4))
+                if pos in state:
+                    # Обновляем HP юнита после получения урона от эффектов
+                    state[pos]["hp"] = max(0, state[pos]["hp"] - dmg)
+                headline = line
+                draw_board([], headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2); continue
+
             m = blue_action_re.match(line)
             if m:
                 src = int(m.group(1)); dst = int(m.group(2))
@@ -1038,6 +1200,30 @@ if __name__ == "__main__":
                 if pos in state: state[pos]["hp"] = 0
                 headline = line
                 draw_board([], headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.1); continue
+
+            m = status_damage_re.match(line)
+            if m:
+                pos = int(m.group(2))
+                if pos in state:
+                    # Обновляем HP (это уже делается в других местах, но на всякий случай)
+                    pass
+                headline = line
+                draw_board([], headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2); continue
+
+            m = status_clear_re.match(line)
+            if m:
+                pos = int(m.group(2))
+                effects_str = m.group(3)
+                if pos in state:
+                    # Обнуляем эффекты в визуализации (теперь эффекты могут исчезать по отдельности)
+                    if "Burn" in effects_str:
+                        state[pos]["burn"] = 0
+                    if "Freeze" in effects_str:
+                        state[pos]["freeze"] = 0
+                    if "Poison" in effects_str:
+                        state[pos]["poison"] = 0
+                headline = line
+                draw_board([], headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2); continue
 
             if vict_re.match(line) or line.startswith("— ") or "RED ход" in line:
                 headline = line
