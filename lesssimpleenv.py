@@ -432,20 +432,19 @@ class BattleEnv(gym.Env):
             for victim in targets:
                 self._attack_single_target(attacker, victim["position"])
         elif attacker.get("Type") == "Warrior":
-            # Воин атакует только разрешенные цели
-            if attacker["team"] == "red":
-                chosen_target = self._pick_warrior_target_for_red(attacker)
-            else:
-                # Синие воины атакуют случайную цель из доступных
-                options = self._warrior_allowed_targets(attacker)
-                chosen_target = self.rng.choice(options) if options else None
+            # Воин может атаковать только разрешенные цели
+            allowed_targets = self._warrior_allowed_targets(attacker)
 
-            if chosen_target is None:
-                self._log(f"{attacker['team'].upper()} {attacker['Name']}#{attacker['position']} (Воин): нет доступных целей.")
-                return
+            # Проверяем, является ли выбранная агентом цель доступной для воина
+            if target_pos not in allowed_targets:
+                # Цель недоступна - штраф за неправильный выбор
+                self._log(f"❌ {attacker['team'].upper()} {attacker['Name']}#{attacker['position']} (Воин): цель pos{target_pos} недоступна!")
+                return True  # Флаг, что был применен штраф
 
-            self._log(f"⚔️ {attacker['team'].upper()} {attacker['Name']}#{attacker['position']} (Воин) атакует pos{chosen_target}!")
-            self._attack_single_target(attacker, chosen_target)
+            # Цель доступна - выполняем атаку
+            self._log(f"⚔️ {attacker['team'].upper()} {attacker['Name']}#{attacker['position']} (Воин) атакует pos{target_pos}!")
+            self._attack_single_target(attacker, target_pos)
+            return False  # Флаг, что штраф не применялся
         else:
             # Обычная атака по одной цели
             self._attack_single_target(attacker, target_pos)
@@ -558,7 +557,10 @@ class BattleEnv(gym.Env):
             live_blue_positions = self._live_positions_of("blue")
             target_pos = self.rng.choice(live_blue_positions) if live_blue_positions else None
             self._log(f"RED ход: {nxt['Name']}#{nxt['position']} → случайная цель pos{target_pos}.")
-            self._attack(nxt, target_pos)
+            penalty_applied = self._attack(nxt, target_pos)
+            if penalty_applied:
+                # Штраф уже применен в _attack, пропускаем ход
+                continue
             self._check_victory_after_hit()
             if self.winner is not None:
                 return False
@@ -664,12 +666,16 @@ class BattleEnv(gym.Env):
         if attacker is not None and self._alive(attacker) and attacker["Initiative"] > 0:
             self._log(f"BLUE действие: {attacker['Name']}#{attacker['position']} → pos{target_pos}")
             attacker["Initiative"] = 0                   # в этом раунде синий уже сходил
-            self._attack(attacker, target_pos)          # применяем урон (или фиксируем пустую цель в логах)
-            self._check_victory_after_hit()             # проверяем победителя
 
-            # Явный штраф за недопустимое действие, если бой продолжается
-            if illegal and self.winner is None:
-                step_reward += self.reward_illegal
+            # Проверяем, был ли применен штраф для воина
+            penalty_applied = self._attack(attacker, target_pos)  # применяем урон (или фиксируем штраф в логах)
+
+            if not penalty_applied:
+                self._check_victory_after_hit()             # проверяем победителя
+
+                # Явный штраф за недопустимое действие, если бой продолжается
+                if illegal and self.winner is None:
+                    step_reward += self.reward_illegal
 
         # Если бой не завершён — докрутка до следующего BLUE (RED ходит автоматически)
         if self.winner is None:
