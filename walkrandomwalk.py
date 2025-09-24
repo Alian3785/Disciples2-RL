@@ -479,7 +479,7 @@ if __name__ == "__main__":
     callback = CallbackList(callbacks)
 
     # Обучение 1e6 шагов
-    total_timesteps = 300000
+    total_timesteps = 1000000
     model.learn(total_timesteps=total_timesteps, callback=callback, progress_bar=False)
 
     # Сохранения
