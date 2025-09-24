@@ -22,8 +22,8 @@ from gymnasium import spaces
 
 UNITS_RED = [
     {"Name": "рыцарь1",  "Initiative": 88, "BaseInitiative": 88, "team": "red", "position": 1,  "stand": "ahead",
-     "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 0, "maxhealth": 1020, "Armor": 0, "Accuracy": 80, "Accuracy2": 0,
-     "Immunity": [], "Resilience": ["Mind", "Fire"], "AttackType1": "Weapon", "AttackType2": "", "big": True,
+     "Type": "Mage", "Damage": 10, "Health": 60, "Damage2": 0, "maxhealth": 1020, "Armor": 0, "Accuracy": 80, "Accuracy2": 0,
+     "Immunity": [], "Resilience": ["Mind", "Fire"], "AttackType1": "Mind", "AttackType2": "", "big": True,
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": ["Mind", "Fire"]},
 
     {"Name": "рыцарь2",  "Initiative": 55, "BaseInitiative": 55, "team": "red", "position": 2,  "stand": "ahead",
@@ -32,8 +32,8 @@ UNITS_RED = [
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь3",  "Initiative": 22, "BaseInitiative": 22, "team": "red", "position": 3,  "stand": "ahead",
-     "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 0, "maxhealth": 170, "Armor": 65, "Accuracy": 80, "Accuracy2": 50,
-     "Immunity": ["Poison"], "Resilience": ["Mind"], "AttackType1": "Earth", "AttackType2": "", "big": True,
+     "Type": "Warrior", "Damage": 30, "Health": 60, "Damage2": 0, "maxhealth": 170, "Armor": 65, "Accuracy": 80, "Accuracy2": 50,
+     "Immunity": ["Poison"], "Resilience": ["Mind"], "AttackType1": "Weapon", "AttackType2": "", "big": True,
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": ["Mind"]},
 
     {"Name": "рыцарь4", "Initiative": 60, "BaseInitiative": 60, "team": "red", "position": 4, "stand": "behind",
@@ -54,8 +54,8 @@ UNITS_RED = [
 
 UNITS_BLUE = [
     {"Name": "рыцарь4",  "Initiative": 88, "BaseInitiative": 88, "team": "blue", "position": 7,  "stand": "ahead",
-     "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 0, "maxhealth": 1020, "Armor": 0, "Accuracy": 80, "Accuracy2": 0,
-     "Immunity": [], "Resilience": ["Mind", "Fire"], "AttackType1": "Weapon", "AttackType2": "", "big": True,
+     "Type": "Mage", "Damage": 10, "Health": 60, "Damage2": 0, "maxhealth": 1020, "Armor": 0, "Accuracy": 80, "Accuracy2": 0,
+     "Immunity": [], "Resilience": ["Mind", "Fire"], "AttackType1": "Mind", "AttackType2": "", "big": True,
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": ["Mind", "Fire"]},
 
     {"Name": "рыцарь5",  "Initiative": 55, "BaseInitiative": 55, "team": "blue", "position": 8,  "stand": "ahead",
@@ -64,8 +64,8 @@ UNITS_BLUE = [
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь6",  "Initiative": 22, "BaseInitiative": 22, "team": "blue", "position": 9,  "stand": "ahead",
-     "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 0, "maxhealth": 170, "Armor": 65, "Accuracy": 80, "Accuracy2": 50,
-     "Immunity": ["Poison"], "Resilience": ["Mind"], "AttackType1": "Earth", "AttackType2": "", "big": True,
+     "Type": "Warrior", "Damage": 30, "Health": 60, "Damage2": 0, "maxhealth": 170, "Armor": 65, "Accuracy": 80, "Accuracy2": 50,
+     "Immunity": ["Poison"], "Resilience": ["Mind"], "AttackType1": "Weapon", "AttackType2": "", "big": True,
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": ["Mind"]},
 
     {"Name": "рыцарь10", "Initiative": 60, "BaseInitiative": 60, "team": "blue", "position": 10, "stand": "behind",
@@ -337,12 +337,122 @@ class BattleEnv(gym.Env):
 
     # ------------------- УДАР И ПРОВЕРКА ПОБЕДЫ -------------------
 
+    def _enemy_rows(self, team):
+        """Вернуть списки позиций фронта и тыла врага."""
+        if team == "red":
+            ahead = {0: 7, 1: 8, 2: 9}   # фронт синих
+            behind = {0: 10, 1: 11, 2: 12} # тыл синих
+        else:
+            ahead = {0: 1, 1: 2, 2: 3}   # фронт красных
+            behind = {0: 4, 1: 5, 2: 6}  # тыл красных
+        return ahead, behind
+
+    def _col_of(self, position):
+        """Вернуть колонку (0,1,2) для позиции."""
+        return (position - 1) % 3
+
+    def _warrior_near_far_cols(self, col):
+        """Вернуть (ближние_колонки, дальние_колонки) для воина в колонке col."""
+        if col == 0:  # Левая колонка
+            return [0, 1], [2]  # Ближние: 0,1; дальняя: 2
+        elif col == 2:  # Правая колонка
+            return [1, 2], [0]  # Ближние: 1,2; дальняя: 0
+        else:  # Центральная колонка (col == 1)
+            return [0, 1, 2], []  # Все три, нет "дальней"
+
+    def _warrior_allowed_targets(self, attacker):
+        """
+        Вернуть позиции, по которым воин МОЖЕТ ударить сейчас.
+        - В тылу не атакует, пока жив любой союзный воин во фронте.
+        - Во фронт врага сначала бьёт смежных; «дальний» доступен, когда оба смежных мертвы.
+        - Если фронт врага выбит — правила применяются к тылу врага.
+        """
+        assert attacker.get("Type") == "Warrior"
+        # Блок для воинов в тылу
+        if attacker.get("stand") == "behind":
+            if any(self._alive(u) and u["team"] == attacker["team"] and u.get("Type") == "Warrior" and u.get("stand") == "ahead"
+                   for u in self.combined):
+                return []
+
+        enemy_team = "blue" if attacker["team"] == "red" else "red"
+        ahead, behind = self._enemy_rows(attacker["team"])
+        col = self._col_of(attacker["position"])
+        near_cols, far_cols = self._warrior_near_far_cols(col)
+
+        def alive(pos):
+            uu = self._unit_by_position(pos)
+            return uu is not None and self._alive(uu)
+
+        # Сначала фронт
+        near = [ahead[c] for c in near_cols if alive(ahead[c])]
+        if near:
+            return near
+        far = [ahead[c] for c in far_cols if alive(ahead[c])]
+        if far:
+            return far
+
+        # Если фронт врага выбит — тыл
+        near2 = [behind[c] for c in near_cols if alive(behind[c])]
+        if near2:
+            return near2
+        far2 = [behind[c] for c in far_cols if alive(behind[c])]
+        return far2
+
+    def _pick_warrior_target_for_red(self, attacker):
+        """RED-воин выбирает цель с минимальным HP из доступных, при равенстве — случайная."""
+        options = self._warrior_allowed_targets(attacker)
+        if not options:
+            return None
+        pairs = [(self._unit_by_position(p)["Health"], p) for p in options]
+        min_hp = min(h for h, _ in pairs)
+        pool = [p for h, p in pairs if h == min_hp]
+        return self.rng.choice(pool)
+
     def _attack(self, attacker, target_pos: int):
         """
         Выполнить атаку «attacker» по позиции target_pos:
-        — Если в целевой позиции есть живой юнит, отнимаем у него HP на величину Damage.
+        — Если атакующий — маг, то атака наносится всем вражеским юнитам с индивидуальной проверкой промаха, иммунитета и resistance.
+        — Если атакующий — воин, то атака наносится только на разрешенные позиции.
+        — Если атакующий — обычный юнит, то атака наносится только по указанной позиции.
         — Если после удара HP <= 0, сбрасываем Initiative жертвы (в этом раунде она уже не сходится).
         — Пишем человекочитаемую запись (если включён лог).
+        """
+        # Определяем цели атаки
+        if attacker.get("Type") == "Mage":
+            # Маг атакует всех вражеских юнитов
+            enemy_team = "blue" if attacker["team"] == "red" else "red"
+            targets = [u for u in self.combined if u["team"] == enemy_team and self._alive(u)]
+            if not targets:
+                self._log(f"{attacker['team'].upper()} {attacker['Name']}#{attacker['position']} (Маг): нет целей для атаки.")
+                return
+
+            self._log(f"🔮 {attacker['team'].upper()} {attacker['Name']}#{attacker['position']} (Маг) атакует всех вражеских юнитов!")
+
+            # Атакуем каждого вражеского юнита индивидуально
+            for victim in targets:
+                self._attack_single_target(attacker, victim["position"])
+        elif attacker.get("Type") == "Warrior":
+            # Воин атакует только разрешенные цели
+            if attacker["team"] == "red":
+                chosen_target = self._pick_warrior_target_for_red(attacker)
+            else:
+                # Синие воины атакуют случайную цель из доступных
+                options = self._warrior_allowed_targets(attacker)
+                chosen_target = self.rng.choice(options) if options else None
+
+            if chosen_target is None:
+                self._log(f"{attacker['team'].upper()} {attacker['Name']}#{attacker['position']} (Воин): нет доступных целей.")
+                return
+
+            self._log(f"⚔️ {attacker['team'].upper()} {attacker['Name']}#{attacker['position']} (Воин) атакует pos{chosen_target}!")
+            self._attack_single_target(attacker, chosen_target)
+        else:
+            # Обычная атака по одной цели
+            self._attack_single_target(attacker, target_pos)
+
+    def _attack_single_target(self, attacker, target_pos: int):
+        """
+        Выполнить атаку по одной цели с проверкой промаха, иммунитета и resistance.
         """
         victim = self._unit_by_position(target_pos) if target_pos is not None else None
         if victim is not None and self._alive(victim):
@@ -610,7 +720,7 @@ if __name__ == "__main__":
                 return True
 
     # ---------------- ПАРАМЕТРЫ ОБУЧЕНИЯ ----------------
-    TOTAL_STEPS    = 2_000_000  # сколько шагов среды сделает PPO (суммарно по всем векторным копиям)
+    TOTAL_STEPS    = 1_000_000  # сколько шагов среды сделает PPO (суммарно по всем векторным копиям)
     N_ENVS         = 8          # сколько параллельных копий среды использовать
     VISUALIZE_TEST = True       # включить ли опциональную визуализацию после теста
     FRAME_DELAY    = 0.28       # задержка между «кадрами» визуализации (сек)
