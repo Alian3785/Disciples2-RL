@@ -5,11 +5,12 @@ from gymnasium import spaces
 from typing import Optional, Tuple
 
 
-# ====== СРЕДА 10x10: Бои по порядку, WOUNDED и лечение ДЕЙСТВИЕМ в (0,0) ======
+# ====== СРЕДА 15x15: 5 врагов по порядку, WOUNDED и лечение ДЕЙСТВИЕМ в (0,0) ======
 class GridWorldCombatEnv(gym.Env):
     """
-    - Поле 10x10. Агент стартует в (1,1), уровень = 1.
-    - Враги (строгий порядок): (0,5) lvl1 -> (4,7) lvl2 -> (9,9) lvl3.
+    - Поле 15x15. Агент стартует в (1,1), уровень = 1.
+    - Враги (строгий порядок):
+        (0,5) lvl1 -> (4,7) lvl2 -> (9,9) lvl3 -> (12,3) lvl4 -> (14,14) lvl5.
     - Действия:
         0..7 — движение (8 направлений),
         8 — heal: работает ТОЛЬКО в (0,0), снимает wounded, позиция не меняется.
@@ -18,39 +19,44 @@ class GridWorldCombatEnv(gym.Env):
         * Если враг не тот по порядку -> проигрыш (fail_penalty).
         * Иначе, если agent_level >= enemy_level -> победа:
             enemy погибает, agent_level += 1, агент становится wounded=True,
-            выдаётся win_reward; на 3-й победе ДОПОЛНИТЕЛЬНО goal_reward и эпизод завершается.
+            выдаётся win_reward; на 5-й победе ДОПОЛНИТЕЛЬНО goal_reward (здесь x2) и эпизод завершается.
         * Иначе -> проигрыш (fail_penalty) и wounded=True.
     - Лечение: НЕТ автолечения. Только действие heal в (0,0) снимает ранения.
     - Награды: step_cost за шаг, win_reward за каждую победу,
-      goal_reward плюс на 3-й победе, fail_penalty за поражение.
+      goal_reward на 5-й победе (удвоено), fail_penalty за поражение.
     - Таймаут: max_steps (по умолчанию 1000).
-    - Наблюдение (float32, 16 признаков):
+    - Наблюдение (float32, 24 признака):
       (ax, ay, agent_level, wounded,
        e1x, e1y, e1_level, e1_alive,
        e2x, e2y, e2_level, e2_alive,
-       e3x, e3y, e3_level, e3_alive)
+       e3x, e3y, e3_level, e3_alive,
+       e4x, e4y, e4_level, e4_alive,
+       e5x, e5y, e5_level, e5_alive)
     """
     metadata = {"render_modes": ["ansi", "human"], "render_fps": 4}
 
     def __init__(self,
                  render_mode: Optional[str] = None,
                  step_cost: float = -0.01,
-                 goal_reward: float = 1.0,
+                 goal_reward: float = 2.0,   # <— удвоено (было 1.0)
                  win_reward: float = 0.5,
                  fail_penalty: float = -0.5,
                  max_steps: int = 1000):
         super().__init__()
-        self.size = 10
+        self.size = 15
         self.start = np.array([1, 1], dtype=np.int32)
         self.heal_cell = np.array([0, 0], dtype=np.int32)
 
-        # Враги по порядку
+        # Враги по порядку (уровни 1..5), добавлены (12,3) lvl4 и (14,14) lvl5
         self.enemy_positions = [
-            np.array([0, 5], dtype=np.int32),  # idx0 lvl1
-            np.array([4, 7], dtype=np.int32),  # idx1 lvl2
-            np.array([9, 9], dtype=np.int32),  # idx2 lvl3
+            np.array([0,  5], dtype=np.int32),   # idx0 lvl1
+            np.array([4,  7], dtype=np.int32),   # idx1 lvl2
+            np.array([9,  9], dtype=np.int32),   # idx2 lvl3
+            np.array([12, 3], dtype=np.int32),   # idx3 lvl4
+            np.array([14,14], dtype=np.int32),   # idx4 lvl5
         ]
-        self.enemy_levels = [1, 2, 3]
+        self.enemy_levels = [1, 2, 3, 4, 5]
+        self.n_enemies = len(self.enemy_positions)
 
         # Действия: движение (8) + heal (1) = 9
         self.action_space = spaces.Discrete(9)
@@ -67,10 +73,22 @@ class GridWorldCombatEnv(gym.Env):
             # 8: heal (без перемещения)
         }
 
-        # Наблюдение
-        low  = np.array([0, 0, 0, 0,   0, 0, 1, 0,   0, 0, 1, 0,   0, 0, 1, 0], dtype=np.float32)
-        high = np.array([9, 9, 6, 1,   9, 9, 3, 1,   9, 9, 3, 1,   9, 9, 3, 1], dtype=np.float32)
-        self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32, shape=(16,))
+        # Наблюдение (формируем динамически под 5 врагов)
+        # Агент: (x, y, level, wounded)
+        obs_low  = [0, 0, 0, 0]
+        obs_high = [self.size - 1, self.size - 1, 6, 1]  # агент может дойти до 6 уровня после 5 побед
+
+        # Враги: (x, y, level, alive)
+        for _ in range(self.n_enemies):
+            obs_low  += [0, 0, 1, 0]
+            obs_high += [self.size - 1, self.size - 1, 5, 1]
+
+        self.observation_space = spaces.Box(
+            low=np.array(obs_low, dtype=np.float32),
+            high=np.array(obs_high, dtype=np.float32),
+            dtype=np.float32,
+            shape=(4 + 4 * self.n_enemies,)
+        )
 
         # Параметры наград/эпизода
         self.render_mode = render_mode
@@ -85,8 +103,8 @@ class GridWorldCombatEnv(gym.Env):
         self.steps = 0
         self.agent_level = 1
         self.wounded = False
-        self.enemies_alive = [True, True, True]
-        self.next_required_idx = 0  # кого нужно бить следующим (0..2)
+        self.enemies_alive = [True] * self.n_enemies
+        self.next_required_idx = 0  # кого нужно бить следующим (0..4)
 
     @property
     def action_meanings(self):
@@ -95,7 +113,7 @@ class GridWorldCombatEnv(gym.Env):
     # ---------- Вспомогательные ----------
     def _get_obs(self) -> np.ndarray:
         e = []
-        for i in range(3):
+        for i in range(self.n_enemies):
             x, y = self.enemy_positions[i]
             e.extend([float(x), float(y), float(self.enemy_levels[i]), 1.0 if self.enemies_alive[i] else 0.0])
         return np.array([
@@ -115,15 +133,15 @@ class GridWorldCombatEnv(gym.Env):
                 {"pos": (int(self.enemy_positions[i][0]), int(self.enemy_positions[i][1])),
                  "level": int(self.enemy_levels[i]),
                  "alive": bool(self.enemies_alive[i])}
-                for i in range(3)
+                for i in range(self.n_enemies)
             ],
             "next_required_idx": int(self.next_required_idx),
             "steps": self.steps,
-            "is_success": bool(self.next_required_idx == 3),
+            "is_success": bool(self.next_required_idx == self.n_enemies),
         }
 
     def _enemy_at_pos(self) -> Optional[int]:
-        for i in range(3):
+        for i in range(self.n_enemies):
             if self.enemies_alive[i] and np.array_equal(self.pos, self.enemy_positions[i]):
                 return i
         return None
@@ -135,7 +153,7 @@ class GridWorldCombatEnv(gym.Env):
         self.steps = 0
         self.agent_level = 1
         self.wounded = False
-        self.enemies_alive = [True, True, True]
+        self.enemies_alive = [True] * self.n_enemies
         self.next_required_idx = 0
         return self._get_obs(), self._get_info()
 
@@ -149,7 +167,7 @@ class GridWorldCombatEnv(gym.Env):
             # HEAL — доступен только в (0,0); позиция не меняется
             if np.array_equal(self.pos, self.heal_cell):
                 self.wounded = False
-            # если не в (0,0), действие ничего не делает кроме траты шага
+            # если не в (0,0), действие только тратит шаг
         else:
             # Движение
             delta = self._action_to_delta[int(action)]
@@ -175,9 +193,9 @@ class GridWorldCombatEnv(gym.Env):
                             self.next_required_idx += 1
                             self.wounded = True  # после боя ранимся
 
-                            # Награда за победу; на последней добавляем финальную
+                            # Награда за победу; на последней добавляем финальную (удвоенную)
                             reward = self.step_cost + self.win_reward
-                            if self.next_required_idx == 3:
+                            if self.next_required_idx == self.n_enemies:
                                 reward += self.goal_reward
                                 terminated = True
                         else:
@@ -199,10 +217,10 @@ class GridWorldCombatEnv(gym.Env):
         hx, hy = map(int, self.heal_cell)
         grid[hy][hx] = "H"
         ax, ay = map(int, self.pos)
-        grid[ay][ax] = "✔" if self.next_required_idx == 3 else "A"
+        grid[ay][ax] = "✔" if self.next_required_idx == self.n_enemies else "A"
         status = (f"[Agent Lvl: {self.agent_level}] Wounded: {self.wounded} | "
                   f"Heal@{tuple(self.heal_cell)} | Next target: "
-                  f"{self.next_required_idx + 1 if self.next_required_idx < 3 else '-'} | "
+                  f"{self.next_required_idx + 1 if self.next_required_idx < self.n_enemies else '-'} | "
                   f"Steps: {self.steps}")
         out = "\n".join(" ".join(row) for row in grid)
         if self.render_mode == "human":
@@ -222,7 +240,7 @@ if __name__ == "__main__":
     from stable_baselines3.common.callbacks import EvalCallback
     from stable_baselines3.common.evaluation import evaluate_policy
 
-    log_dir = "./logs/ppo_grid_combat_heal_action_at_origin"
+    log_dir = "./logs/ppo_grid_combat_heal_action_at_origin_15x15_5enemies_goal2x"
     os.makedirs(log_dir, exist_ok=True)
 
     def make_env(render: bool = False):
@@ -261,10 +279,10 @@ if __name__ == "__main__":
         ent_coef=0.02,
         vf_coef=0.5,
         verbose=1,
-        # tensorboard_log=log_dir,  # включите при установленном tensorboard
+        # tensorboard_log=log_dir,
     )
 
-    # Обучение 1e6 шагов (без прогресс-бара)
+    # Обучение 1e6 шагов
     total_timesteps = 1_000_000
     model.learn(total_timesteps=total_timesteps, callback=eval_callback, progress_bar=False)
 

@@ -513,7 +513,7 @@ if __name__ == "__main__":
     callback = CallbackList(callbacks)
 
     # Обучение 600k шагов
-    total_timesteps = 800000
+    total_timesteps = 2000000
     model._total_timesteps = total_timesteps  # для аннила энтропии
     model.learn(total_timesteps=total_timesteps, callback=callback, progress_bar=False)
 
