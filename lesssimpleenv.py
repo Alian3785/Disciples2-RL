@@ -32,12 +32,12 @@ UNITS_RED = [
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Longparalized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь3",  "Initiative": 22, "BaseInitiative": 22, "team": "red", "position": 3,  "stand": "ahead",
-     "Type": "Asterot", "Damage": 30, "Health": 60, "Damage2": 0, "maxhealth": 170, "Armor": 65, "Accuracy": 80, "Accuracy2": 50,
+     "Type": "Asterot", "Damage": 30, "Health": 0, "Damage2": 0, "maxhealth": 170, "Armor": 65, "Accuracy": 80, "Accuracy2": 50,
      "Immunity": ["Poison"], "Resilience": ["Mind"], "AttackType1": "Weapon", "AttackType2": "", "big": True,
      "Twohits": 1, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Longparalized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": ["Mind"]},
 
     {"Name": "рыцарь4", "Initiative": 60, "BaseInitiative": 60, "team": "red", "position": 4, "stand": "behind",
-     "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 12, "maxhealth": 60, "Armor": 0, "Accuracy": 80, "Accuracy2": 30,
+     "Type": "Archer", "Damage": 20, "Health": 0, "Damage2": 12, "maxhealth": 60, "Armor": 0, "Accuracy": 80, "Accuracy2": 30,
      "Immunity": [], "Resilience": [], "AttackType1": "Earth", "AttackType2": "poison", "big": False,
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Longparalized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
@@ -54,32 +54,32 @@ UNITS_RED = [
 
 UNITS_BLUE = [
     {"Name": "рыцарь4",  "Initiative": 88, "BaseInitiative": 88, "team": "blue", "position": 7,  "stand": "ahead",
-     "Type": "Mage", "Damage": 10, "Health": 60, "Damage2": 0, "maxhealth": 1020, "Armor": 0, "Accuracy": 80, "Accuracy2": 0,
+     "Type": "Asterot", "Damage": 30, "Health": 800, "Damage2": 0, "maxhealth": 1020, "Armor": 0, "Accuracy": 80, "Accuracy2": 0,
      "Immunity": [], "Resilience": ["Mind", "Fire"], "AttackType1": "Mind", "AttackType2": "", "big": True,
      "Twohits": 0, "Burn": 2, "Freeze": 4, "Poison": 1, "Paralized": 0, "Longparalized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": ["Mind", "Fire"]},
 
     {"Name": "рыцарь5",  "Initiative": 55, "BaseInitiative": 55, "team": "blue", "position": 8,  "stand": "ahead",
-     "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 18, "maxhealth": 306, "Armor": 0, "Accuracy": 100, "Accuracy2": 45,
+     "Type": "Archer", "Damage": 20, "Health": 0, "Damage2": 18, "maxhealth": 306, "Armor": 0, "Accuracy": 100, "Accuracy2": 45,
      "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "poison", "big": False,
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Longparalized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь6",  "Initiative": 22, "BaseInitiative": 22, "team": "blue", "position": 9,  "stand": "ahead",
-     "Type": "Warrior", "Damage": 30, "Health": 60, "Damage2": 0, "maxhealth": 170, "Armor": 65, "Accuracy": 80, "Accuracy2": 50,
+     "Type": "Warrior", "Damage": 30, "Health": 0, "Damage2": 0, "maxhealth": 170, "Armor": 65, "Accuracy": 80, "Accuracy2": 50,
      "Immunity": ["Poison"], "Resilience": ["Mind"], "AttackType1": "Weapon", "AttackType2": "", "big": True,
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Longparalized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": ["Mind"]},
 
     {"Name": "рыцарь10", "Initiative": 60, "BaseInitiative": 60, "team": "blue", "position": 10, "stand": "behind",
-     "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 12, "maxhealth": 60, "Armor": 0, "Accuracy": 80, "Accuracy2": 30,
+     "Type": "Archer", "Damage": 20, "Health": 0, "Damage2": 12, "maxhealth": 60, "Armor": 0, "Accuracy": 80, "Accuracy2": 30,
      "Immunity": [], "Resilience": [], "AttackType1": "Earth", "AttackType2": "poison", "big": False,
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Longparalized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь11", "Initiative": 47, "BaseInitiative": 47, "team": "blue", "position": 11, "stand": "behind",
-     "Type": "Archer", "Damage": 20, "Health": 60, "Damage2": 0, "maxhealth": 0, "Armor": 0, "Accuracy": 80, "Accuracy2": 50,
+     "Type": "Archer", "Damage": 20, "Health": 0, "Damage2": 0, "maxhealth": 0, "Armor": 0, "Accuracy": 80, "Accuracy2": 50,
      "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "", "big": False,
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Longparalized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 
     {"Name": "рыцарь12", "Initiative": 75, "BaseInitiative": 75, "team": "blue", "position": 12, "stand": "behind",
-     "Type": "Death", "Damage": 18, "Health": 60, "Damage2": 12, "maxhealth": 0, "Armor": 0, "Accuracy": 90, "Accuracy2": 70,
+     "Type": "Death", "Damage": 18, "Health": 0, "Damage2": 12, "maxhealth": 0, "Armor": 0, "Accuracy": 90, "Accuracy2": 70,
      "Immunity": [], "Resilience": [], "AttackType1": "Weapon", "AttackType2": "poison", "big": False,
      "Twohits": 0, "Burn": 0, "Freeze": 0, "Poison": 0, "Paralized": 0, "Longparalized": 0, "Stoned": 0, "Runningaway": 0, "original_resilience": []},
 ]
@@ -832,7 +832,7 @@ if __name__ == "__main__":
                 return True
 
     # ---------------- ПАРАМЕТРЫ ОБУЧЕНИЯ ----------------
-    TOTAL_STEPS    = 10000  # сколько шагов среды сделает PPO (суммарно по всем векторным копиям)
+    TOTAL_STEPS    = 1000000  # сколько шагов среды сделает PPO (суммарно по всем векторным копиям)
     N_ENVS         = 8          # сколько параллельных копий среды использовать
     VISUALIZE_TEST = True       # включить ли опциональную визуализацию после теста
     FRAME_DELAY    = 0.28       # задержка между «кадрами» визуализации (сек)
