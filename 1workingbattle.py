@@ -26,8 +26,8 @@ import numpy as np
 from gymnasium import spaces
 
 # --- словари для кодирования в наблюдении ---
-TYPE_LIST = ["Archer", "gargoil", "Mage", "Воин", "Demon", "Death", "lord", "Dead dragon"]  # one-hot(8)
-ATTACK_TYPES = ["Weapon", "earth", "Fire", "poison", "death", "Mind"]                        # one-hot(6)
+TYPE_LIST = ["Archer", "gargoil", "Mage", "Воин", "Demon", "Death", "lord", "Dead dragon", "Ismir son"]  # one-hot(9)
+ATTACK_TYPES = ["Weapon", "earth", "Fire", "Water", "poison", "death", "Mind"]                        # one-hot(7)
 
 def _one_hot(value: str, vocab: List[str]) -> List[float]:
     return [1.0 if value == v else 0.0 for v in vocab]
@@ -47,8 +47,8 @@ UNITS_RED = [
      "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
 
     {"имя": "Мертвый дракон (Астерот1)", "инициатива": 35, "инициатива_база": 35, "team": "red", "position": 3, "stand": "ahead",
-     "Type": "Demon", "Урон": 100, "урон2": 0, "Здоровье": 1020, "maxhealth": 450, "броня": 0, "Точность": 80, "Точность2": 40,
-     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "death", "Тип атаки 2": "poison", "big": True},
+     "Type": "lord", "Урон": 100, "урон2": 20, "Здоровье": 1020, "maxhealth": 1020, "броня": 0, "Точность": 80, "Точность2": 90,
+     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "death", "Тип атаки 2": "Fire", "big": True},
 
     {"имя": "Архилич", "инициатива": 40, "инициатива_база": 40, "team": "red", "position": 4, "stand": "behind",
      "Type": "Mage", "Урон": 90, "урон2": 0, "Здоровье": 0, "maxhealth": 170, "броня": 0, "Точность": 80, "Точность2": 0,
@@ -65,7 +65,7 @@ UNITS_RED = [
 
 UNITS_BLUE = [
     {"имя": "Астерот",   "инициатива": 50, "инициатива_база": 50, "team": "blue", "position": 7,  "stand": "ahead",
-     "Type": "Demon","Урон": 150, "урон2": 0, "Здоровье": 1020, "maxhealth": 1020, "броня": 0, "Точность": 80, "Точность2": 0,
+     "Type": "Ismir son","Урон": 100, "урон2": 20, "Здоровье": 1020, "maxhealth": 1020, "броня": 0, "Точность": 80, "Точность2": 90,
      "иммунитет": [], "Стойкость": ["Mind", "Fire"], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": True},
 
     {"имя": "Герцог",  "инициатива": 50, "инициатива_база": 50, "team": "blue", "position": 8,  "stand": "ahead",
@@ -105,11 +105,13 @@ MAX_DMG2 = max([u["урон2"] for u in (UNITS_RED + UNITS_BLUE)])
 POISON_TURNS  = 3
 BURN_DAMAGE = 10     # базовый фолбэк; Владыка задаёт per-tick из своего урон2
 BURN_TURNS  = 3
+URAN_DAMAGE = 10     # базовый фолбэк; Сын Измира задаёт per-tick из своего урон2
+URAN_TURNS  = 3
 
 # ------------------------ Кастомная среда ------------------------
 class BattleEnv(gym.Env):
     """
-    Observation (540): 12 слотов × 45 признаков (добавлена Точность2).
+    Observation (612): 12 слотов × 51 признаков (добавлены Точность2 и таймеры эффектов).
     Action space: Discrete(6) — выбор цели среди врагов (pos1..pos6).
     """
 
@@ -147,7 +149,7 @@ class BattleEnv(gym.Env):
             + [0]                      # armor
             + [0]                      # accuracy
             + [0]                      # accuracy2 (Точность2)
-            + [0, 0],                  # poison_left, burn_left
+            + [0, 0, 0],               # poison_left, burn_left, uranium_left
             dtype=np.float32
         )
         high_unit = np.array(
@@ -160,7 +162,7 @@ class BattleEnv(gym.Env):
             + [100]         # armor
             + [100]         # accuracy
             + [100]         # accuracy2 (Точность2)
-            + [POISON_TURNS, BURN_TURNS],
+            + [POISON_TURNS, BURN_TURNS, URAN_TURNS],
             dtype=np.float32
         )
         low  = np.tile(low_unit, 12)
@@ -175,6 +177,7 @@ class BattleEnv(gym.Env):
         self.current_blue_attacker_pos: Optional[int] = None
         self.blue_attacks_left: int = 0
         self._lord_applied_burn: Dict[int, bool] = {}
+        self._ismir_applied_uran: Dict[int, bool] = {}
 
     # ------------------ Вспомогательные методы ------------------
 
@@ -218,10 +221,10 @@ class BattleEnv(gym.Env):
         return [1, 2], [0]
 
     def _warrior_allowed_targets(self, attacker: Dict) -> List[int]:
-        assert attacker.get("Type") in ("Воин", "Demon", "lord")
+        assert attacker.get("Type") in ("Воин", "Demon", "lord", "Ismir son")
         if attacker["stand"] == "behind":
             if any(self._alive(u) and u["team"] == attacker["team"]
-                   and u.get("Type") in ("Воин", "Demon", "lord") and u["stand"] == "ahead"
+                   and u.get("Type") in ("Воин", "Demon", "lord", "Ismir son") and u["stand"] == "ahead"
                    for u in self.combined):
                 return []
         ahead, behind = self._enemy_rows(attacker["team"])
@@ -312,6 +315,37 @@ class BattleEnv(gym.Env):
                 if unit["burn_turns_left"] <= 0:
                     unit["burn_damage_per_tick"] = 0
 
+        # Вода — наносит периодический урон (для Сына Измира = его урон2)
+        if unit.get("uran_turns_left", 0) > 0 and self._alive(unit):
+            if "Water" in (unit.get("иммунитет") or []):
+                unit["uran_turns_left"] = 0
+                unit["uran_damage_per_tick"] = 0
+                self._log(
+                    f"🛡 Иммунитет к эффекту 'Water' — вода не действует на {unit['team'].upper()} {unit['имя']}#{unit['position']}."
+                )
+            else:
+                tick = int(unit.get("uran_damage_per_tick", 0) or URAN_DAMAGE)
+                if tick > 0:
+                    before = unit["Здоровье"]
+                    unit["Здоровье"] -= tick
+                    unit["uran_turns_left"] -= 1
+                    after = unit["Здоровье"]
+                    self._log(
+                        f"☢ Вода поражает {unit['team'].upper()} {unit['имя']}#{unit['position']}: "
+                        f"{tick} ({before}→{max(0, after)}); осталось ходов: {unit['uran_turns_left']}"
+                    )
+                    if unit["Здоровье"] <= 0:
+                        unit["инициатива"] = 0
+                        self._log(
+                            f"✖ {unit['team'].upper()} {unit['имя']}#{unit['position']} погибает от воды."
+                        )
+                        self._check_victory_after_hit()
+                        return False
+                else:
+                    unit["uran_turns_left"] -= 1
+                if unit["uran_turns_left"] <= 0:
+                    unit["uran_damage_per_tick"] = 0
+
         return True
 
     # ------------------ Боевая логика ------------------
@@ -333,12 +367,15 @@ class BattleEnv(gym.Env):
             u["poison_damage_per_tick"] = 0
             u["burn_turns_left"] = 0
             u["burn_damage_per_tick"] = 0  # per-tick для поджога
+            u["uran_turns_left"] = 0
+            u["uran_damage_per_tick"] = 0
             u["resilience_used_types"] = []
         self.round_no = 1
         self.winner = None
         self.current_blue_attacker_pos = None
         self.blue_attacks_left = 0
         self._lord_applied_burn = {}
+        self._ismir_applied_uran = {}
         self._log(f"Эпизод начат. Раунд {self.round_no}.")
 
     def _candidates(self):
@@ -514,6 +551,25 @@ class BattleEnv(gym.Env):
                                       f"({victim['burn_damage_per_tick']} урона/ход) на "
                                       f"{victim['team'].upper()} {victim['имя']}#{victim['position']} на {BURN_TURNS} хода.")
 
+                # Вода от Сына Измира
+                if attacker.get("Type") == "Ismir son":
+                    pos = attacker["position"]
+                    if not self._ismir_applied_uran.get(pos, False):
+                        if self._is_immune_status(attacker, victim):
+                            self._log(
+                                f"🛡 Иммунитет к эффекту '{attacker.get('Тип атаки 2','')}' — вода НЕ накладывается "
+                                f"на {victim['team'].upper()} {victim['имя']}#{victim['position']}."
+                            )
+                        else:
+                            victim["uran_turns_left"] = URAN_TURNS
+                            victim["uran_damage_per_tick"] = int(attacker.get("урон2", 0) or 0)
+                            self._ismir_applied_uran[pos] = True
+                            self._log(
+                                f"☢ {attacker['team'].upper()} {attacker['имя']}#{pos} накладывает воду "
+                                f"({victim['uran_damage_per_tick']} урона/ход) на "
+                                f"{victim['team'].upper()} {victim['имя']}#{victim['position']} на {URAN_TURNS} хода."
+                            )
+
             if victim["Здоровье"] <= 0:
                 victim["инициатива"] = 0
                 self._log(f"✖ {victim['team'].upper()} {victim['имя']}#{victim['position']} выведен из строя.")
@@ -565,7 +621,7 @@ class BattleEnv(gym.Env):
                     return False
 
                 target_pos = None
-                if nxt.get("Type") in ("Воин", "Demon", "lord"):
+                if nxt.get("Type") in ("Воин", "Demon", "lord", "Ismir son"):
                     options = self._warrior_allowed_targets(nxt)
                     if options:
                         target_pos = self._pick_lowest_hp(options)
@@ -616,10 +672,11 @@ class BattleEnv(gym.Env):
             acc2_v     = float(u.get("Точность2", 0))
             poison_v   = float(u.get("poison_turns_left", 0))
             burn_v     = float(u.get("burn_turns_left", 0))
+            uran_v     = float(u.get("uran_turns_left", 0))
 
             vec.extend([hp, ini, ini_b, dmg, dmg2, team_v, pos_v, stand_v,
                         *t_onehot, *imm_mhot, *atk1_oh, *atk2_oh, *res_mhot,
-                        armor_v, acc_v, acc2_v, poison_v, burn_v])
+                        armor_v, acc_v, acc2_v, poison_v, burn_v, uran_v])
         return np.array(vec, dtype=np.float32)
 
     # ------------------ API Gymnasium ------------------
@@ -652,7 +709,7 @@ class BattleEnv(gym.Env):
             self._log(f"BLUE действие: {attacker['имя']}#{attacker['position']} → pos{target_pos}")
             attacker["инициатива"] = 0
 
-            if attacker.get("Type") in ("Воин", "Demon", "lord"):
+            if attacker.get("Type") in ("Воин", "Demon", "lord", "Ismir son"):
                 allowed = self._warrior_allowed_targets(attacker)
                 if target_pos not in allowed:
                     self._log(
@@ -935,6 +992,7 @@ if VISUALIZE_TEST:
             "Archer": " (лучник)",
             "lord": " (Lord)",
             "Dead dragon": " (Dead dragon)",
+            "Ismir son": " (Ismir son)",
         }.get(t, f" ({t})")
 
     for u in (UNITS_RED + UNITS_BLUE):
@@ -979,6 +1037,18 @@ if VISUALIZE_TEST:
     def pos_center(pos: int):
         x, y = pos_to_xy(pos)
         return x + SLOT_W/2, y + SLOT_H/2
+
+    def _set_hp(pos: int, hp_value: float):
+        clamped = max(0.0, hp_value)
+        if pos in state:
+            state[pos]["hp"] = clamped
+        partner = None
+        if pos in state and state[pos].get("big", False):
+            partner = pos + 3
+        elif (pos - 3) in state and state[pos - 3].get("big", False):
+            partner = pos - 3
+        if partner in state:
+            state[partner]["hp"] = clamped
 
     # ---- рисование ячейки обычного размера
     def draw_unit(ax, pos, is_active: bool = False):
@@ -1111,6 +1181,7 @@ if VISUALIZE_TEST:
     blue_cant_re     = re.compile(r'^BLUE\s+[^#]+#(\d+).+не может достать pos(\d+)')
     poison_tick_re   = re.compile(r'^☠ Яд поражает (RED|BLUE)\s+[^#]+#(\d+):\s+(\d+)\s+\((\d+)→(\d+)\)')
     burn_tick_re     = re.compile(r'^🔥 Поджог поражает (RED|BLUE)\s+[^#]+#(\d+):\s+(\d+)\s+\((\d+)→(\d+)\)')
+    uran_tick_re     = re.compile(r'^☢ Вода поражает (RED|BLUE)\s+[^#]+#(\d+):\s+(\d+)\s+\((\d+)→(\d+)\)')
     immune_dmg_re    = re.compile(r'^🛡 Иммунитет к урону')
     immune_stat_re   = re.compile(r'^🛡 Иммунитет к эффекту')
     resist_re        = re.compile(r'^🧿 Стойкость')
@@ -1191,8 +1262,7 @@ if VISUALIZE_TEST:
             vic_pos  = int(m.group(4))
             dmg      = int(m.group(5))
             after    = int(m.group(7))
-            if vic_pos in state:
-                state[vic_pos]["hp"] = after
+            _set_hp(vic_pos, after)
             current_actor_pos = atk_pos
             arrows_now.append({"src": atk_pos, "dst": vic_pos, "team": atk_team, "text": f"-{dmg}"})
             headline = line
@@ -1203,14 +1273,21 @@ if VISUALIZE_TEST:
         m = poison_tick_re.match(line)
         if m:
             vic_pos = int(m.group(2)); after = int(m.group(5))
-            if vic_pos in state: state[vic_pos]["hp"] = after
+            _set_hp(vic_pos, after)
             headline = line
             draw_board([], headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2); continue
 
         m = burn_tick_re.match(line)
         if m:
             vic_pos = int(m.group(2)); after = int(m.group(5))
-            if vic_pos in state: state[vic_pos]["hp"] = after
+            _set_hp(vic_pos, after)
+            headline = line
+            draw_board([], headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2); continue
+
+        m = uran_tick_re.match(line)
+        if m:
+            vic_pos = int(m.group(2)); after = int(m.group(5))
+            _set_hp(vic_pos, after)
             headline = line
             draw_board([], headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2); continue
 
@@ -1266,7 +1343,7 @@ if VISUALIZE_TEST:
         m = kill_re.match(line)
         if m:
             pos = int(m.group(2))
-            if pos in state: state[pos]["hp"] = 0
+            _set_hp(pos, 0)
             headline = line
             draw_board([], headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.1); continue
 
