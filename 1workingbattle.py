@@ -26,7 +26,7 @@ import numpy as np
 from gymnasium import spaces
 
 # --- словари для кодирования в наблюдении ---
-TYPE_LIST = ["Archer", "gargoil", "Mage", "Воин", "Demon", "Death", "lord", "Dead dragon", "Ismir son", "Ghost"]  # one-hot(10)
+TYPE_LIST = ["Archer", "gargoil", "Mage", "Воин", "Demon", "Death", "lord", "Dead dragon", "Ismir son", "Ghost", "Shadow"]  # one-hot(11)
 ATTACK_TYPES = ["Weapon", "earth", "Fire", "Water", "poison", "death", "Mind"]                        # one-hot(7)
 
 def _one_hot(value: str, vocab: List[str]) -> List[float]:
@@ -58,9 +58,9 @@ UNITS_RED = [
      "Type": "Death", "Урон": 100, "урон2": 20, "Здоровье": 0, "maxhealth": 125, "броня": 0, "Точность": 80, "Точность2": 50,
      "иммунитет": ["Weapon", "death"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "poison", "big": False, "paralized": 0, "longparalized": 0},
 
-    {"имя": "Призрак", "инициатива": 0, "инициатива_база": 0, "team": "red", "position": 6, "stand": "behind",
-     "Type": "Ghost", "Урон": 0, "урон2": 0, "Здоровье": 0, "maxhealth": 0, "броня": 0, "Точность": 0, "Точность2": 0,
-     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
+    {"имя": "Тень", "инициатива": 0, "инициатива_база": 0, "team": "red", "position": 6, "stand": "behind",
+     "Type": "Shadow", "Урон": 0, "урон2": 0, "Здоровье": 0, "maxhealth": 0, "броня": 0, "Точность": 0, "Точность2": 0,
+     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "Mind", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
 ]
 
 UNITS_BLUE = [
@@ -68,8 +68,8 @@ UNITS_BLUE = [
      "Type": "Ismir son","Урон": 100, "урон2": 20, "Здоровье": 1020, "maxhealth": 1020, "броня": 0, "Точность": 80, "Точность2": 90,
      "иммунитет": [], "Стойкость": ["Mind", "Fire"], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": True, "paralized": 0, "longparalized": 0},
 
-    {"имя": "Призрак",  "инициатива": 55, "инициатива_база": 55, "team": "blue", "position": 8,  "stand": "behind",
-     "Type": "Ghost", "Урон": 0, "урон2": 0, "Здоровье": 100, "maxhealth": 100, "броня": 0, "Точность": 85, "Точность2": 0,
+    {"имя": "Тень",  "инициатива": 55, "инициатива_база": 55, "team": "blue", "position": 8,  "stand": "behind",
+     "Type": "Shadow", "Урон": 0, "урон2": 0, "Здоровье": 100, "maxhealth": 100, "броня": 0, "Точность": 85, "Точность2": 0,
      "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "Mind", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
 
     {"имя": "Гаргулья", "инициатива": 60, "инициатива_база": 60, "team": "blue", "position": 9,  "stand": "ahead",
@@ -437,6 +437,41 @@ class BattleEnv(gym.Env):
         cp = max(0.0, min(100.0, float(chance_percent or 0.0)))
         return self.rng.random() < (cp / 100.0)
 
+    def _apply_paralysis_effect(self, attacker: Dict, victim: Dict) -> bool:
+        if victim.get("paralized", 0):
+            return False
+        if "Mind" in (victim.get("иммунитет") or []):
+            self._log(
+                f"Иммунитет к 'Mind' — паралич не действует на "
+                f"{victim['team'].upper()} {victim['имя']}#{victim['position']}"
+            )
+            return False
+        victim["paralized"] = 1
+        self._log(
+            f"Паралич: {attacker['team'].upper()} {attacker['имя']}#{attacker['position']} "
+            f"лишает хода {victim['team'].upper()} {victim['имя']}#{victim['position']}"
+        )
+        return True
+
+    def _apply_shadow_aoe(self, attacker: Dict, primary_victim: Optional[Dict]) -> None:
+        enemy_team = "blue" if attacker.get("team") == "red" else "red"
+        accuracy = float(attacker.get("Точность", 0) or 0)
+        for victim in self.combined:
+            if victim is primary_victim:
+                continue
+            if victim.get("team") != enemy_team or not self._alive(victim):
+                continue
+            if victim.get("paralized", 0):
+                continue
+            roll = self._roll_status(accuracy)
+            self._log(
+                f"🕳 Шанс паралича тенью {int(accuracy)}% — "
+                + ("успех" if roll else "неудача")
+                + f" по {victim['team'].upper()} {victim['имя']}#{victim['position']}."
+            )
+            if roll:
+                self._apply_paralysis_effect(attacker, victim)
+
     def _attack(self, attacker, target_pos: Optional[int]):
         """
         Выполнить урон.
@@ -518,18 +553,10 @@ class BattleEnv(gym.Env):
                       f"({before}→{max(0, after)})")
 
             if self._alive(victim):
-                if attacker.get("имя") == "Призрак" and victim.get("paralized", 0) == 0:
-                    if "Mind" in (victim.get("иммунитет") or []):
-                        self._log(
-                            f"Иммунитет к 'Mind' — паралич не действует на "
-                            f"{victim['team'].upper()} {victim['имя']}#{victim['position']}"
-                        )
-                    else:
-                        victim["paralized"] = 1
-                        self._log(
-                            f"Паралич: {attacker['team'].upper()} {attacker['имя']}#{attacker['position']} "
-                            f"лишает хода {victim['team'].upper()} {victim['имя']}#{victim['position']}"
-                        )
+                if attacker.get("Type") in ("Ghost", "Shadow"):
+                    applied = self._apply_paralysis_effect(attacker, victim)
+                    if attacker.get("Type") == "Shadow" and applied:
+                        self._apply_shadow_aoe(attacker, victim)
 
                 # ЯД от Death по шансу Точность2 (если ещё не отравлен)
                 if attacker.get("Type") == "Death" and attacker.get("Тип атаки 2", "") == "poison" and victim.get("poison_turns_left", 0) <= 0:
