@@ -26,7 +26,7 @@ import numpy as np
 from gymnasium import spaces
 
 # --- словари для кодирования в наблюдении ---
-TYPE_LIST = ["Archer", "gargoil", "Mage", "Воин", "Demon", "Death", "lord", "Dead dragon", "Ismir son"]  # one-hot(9)
+TYPE_LIST = ["Archer", "gargoil", "Mage", "Воин", "Demon", "Death", "lord", "Dead dragon", "Ismir son", "Ghost"]  # one-hot(10)
 ATTACK_TYPES = ["Weapon", "earth", "Fire", "Water", "poison", "death", "Mind"]                        # one-hot(7)
 
 def _one_hot(value: str, vocab: List[str]) -> List[float]:
@@ -40,54 +40,54 @@ def _multi_hot(values: List[str], vocab: List[str]) -> List[float]:
 UNITS_RED = [
     {"имя": "скелет-рыцарь",  "инициатива": 50, "инициатива_база": 50, "team": "red",  "position": 1, "stand": "ahead",
      "Type": "Воин", "Урон": 100, "урон2": 0, "Здоровье": 0, "maxhealth": 270, "броня": 0, "Точность": 80, "Точность2": 0,
-     "иммунитет": ["death", "Poison"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
+     "иммунитет": ["death", "Poison"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
 
     {"имя": "рыцарь смерти",  "инициатива": 50, "инициатива_база": 50, "team": "red",  "position": 2, "stand": "ahead",
      "Type": "Воин", "Урон": 120, "урон2": 0, "Здоровье": 0, "maxhealth": 255, "броня": 0, "Точность": 87, "Точность2": 0,
-     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
+     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
 
     {"имя": "Мертвый дракон (Астерот1)", "инициатива": 35, "инициатива_база": 35, "team": "red", "position": 3, "stand": "ahead",
      "Type": "lord", "Урон": 100, "урон2": 20, "Здоровье": 1020, "maxhealth": 1020, "броня": 0, "Точность": 80, "Точность2": 90,
-     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "death", "Тип атаки 2": "Fire", "big": True},
+     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "death", "Тип атаки 2": "Fire", "big": True, "paralized": 0, "longparalized": 0},
 
     {"имя": "Архилич", "инициатива": 40, "инициатива_база": 40, "team": "red", "position": 4, "stand": "behind",
      "Type": "Mage", "Урон": 90, "урон2": 0, "Здоровье": 0, "maxhealth": 170, "броня": 0, "Точность": 80, "Точность2": 0,
-     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "earth", "Тип атаки 2": "", "big": False},
+     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "earth", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
 
     {"имя": "Смерть1", "инициатива": 40, "инициатива_база": 40, "team": "red", "position": 5, "stand": "behind",
      "Type": "Death", "Урон": 100, "урон2": 20, "Здоровье": 0, "maxhealth": 125, "броня": 0, "Точность": 80, "Точность2": 50,
-     "иммунитет": ["Weapon", "death"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "poison", "big": False},
+     "иммунитет": ["Weapon", "death"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "poison", "big": False, "paralized": 0, "longparalized": 0},
 
-    {"имя": "пусто", "инициатива": 0, "инициатива_база": 0, "team": "red", "position": 6, "stand": "behind",
-     "Type": "Archer", "Урон": 0, "урон2": 0, "Здоровье": 0, "maxhealth": 0, "броня": 0, "Точность": 0, "Точность2": 0,
-     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
+    {"имя": "Призрак", "инициатива": 0, "инициатива_база": 0, "team": "red", "position": 6, "stand": "behind",
+     "Type": "Ghost", "Урон": 0, "урон2": 0, "Здоровье": 0, "maxhealth": 0, "броня": 0, "Точность": 0, "Точность2": 0,
+     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
 ]
 
 UNITS_BLUE = [
     {"имя": "Астерот",   "инициатива": 50, "инициатива_база": 50, "team": "blue", "position": 7,  "stand": "ahead",
      "Type": "Ismir son","Урон": 100, "урон2": 20, "Здоровье": 1020, "maxhealth": 1020, "броня": 0, "Точность": 80, "Точность2": 90,
-     "иммунитет": [], "Стойкость": ["Mind", "Fire"], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": True},
+     "иммунитет": [], "Стойкость": ["Mind", "Fire"], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": True, "paralized": 0, "longparalized": 0},
 
-    {"имя": "Герцог",  "инициатива": 50, "инициатива_база": 50, "team": "blue", "position": 8,  "stand": "ahead",
-     "Type": "Воин", "Урон": 120, "урон2": 0, "Здоровье": 0, "maxhealth": 306, "броня": 0, "Точность": 100, "Точность2": 0,
-     "иммунитет": [], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
+    {"имя": "Призрак",  "инициатива": 55, "инициатива_база": 55, "team": "blue", "position": 8,  "stand": "behind",
+     "Type": "Ghost", "Урон": 0, "урон2": 0, "Здоровье": 100, "maxhealth": 100, "броня": 0, "Точность": 85, "Точность2": 0,
+     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "Mind", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
 
     {"имя": "Гаргулья", "инициатива": 60, "инициатива_база": 60, "team": "blue", "position": 9,  "stand": "ahead",
      "Type": "gargoil","Урон": 85, "урон2": 0, "Здоровье": 0, "maxhealth": 170, "броня": 65, "Точность": 80, "Точность2": 0,
-     "иммунитет": ["poison"], "Стойкость": ["Mind"], "Тип атаки 1": "earth", "Тип атаки 2": "", "big": True},
+     "иммунитет": ["poison"], "Стойкость": ["Mind"], "Тип атаки 1": "earth", "Тип атаки 2": "", "big": True, "paralized": 0, "longparalized": 0},
 
     {"имя": "пусто",    "инициатива": 0,  "инициатива_база": 0,  "team": "blue", "position": 10, "stand": "behind",
      "Type": "Archer","Урон": 0,  "урон2": 0, "Здоровье": 0, "maxhealth": 0, "броня": 0,  "Точность": 0, "Точность2": 0,
-     "иммунитет": [], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
+     "иммунитет": [], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
 
     {"имя": "пусто",    "инициатива": 0,  "инициатива_база": 0,  "team": "blue", "position": 11, "stand": "behind",
      "Type": "Archer","Урон": 0,  "урон2": 0, "Здоровье": 0, "maxhealth": 0, "броня": 0,  "Точность": 0, "Точность2": 0,
-     "иммунитет": [], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
+     "иммунитет": [], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
 
     {"имя": "пусто",    "инициатива": 0,  "инициатива_база": 0,  "team": "blue", "position": 12, "stand": "behind",
      "Type": "Archer","Урон": 0,  "урон2": 0, "Здоровье": 0, "maxhealth": 0, "броня": 0,  "Точность": 0, "Точность2": 0,
-     "иммунитет": [], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False},
-]
+     "иммунитет": [], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
+]   
 
 # Диапазоны позиций
 RED_POSITIONS:  List[int] = list(range(1, 7))
@@ -518,6 +518,19 @@ class BattleEnv(gym.Env):
                       f"({before}→{max(0, after)})")
 
             if self._alive(victim):
+                if attacker.get("имя") == "Призрак" and victim.get("paralized", 0) == 0:
+                    if "Mind" in (victim.get("иммунитет") or []):
+                        self._log(
+                            f"Иммунитет к 'Mind' — паралич не действует на "
+                            f"{victim['team'].upper()} {victim['имя']}#{victim['position']}"
+                        )
+                    else:
+                        victim["paralized"] = 1
+                        self._log(
+                            f"Паралич: {attacker['team'].upper()} {attacker['имя']}#{attacker['position']} "
+                            f"лишает хода {victim['team'].upper()} {victim['имя']}#{victim['position']}"
+                        )
+
                 # ЯД от Death по шансу Точность2 (если ещё не отравлен)
                 if attacker.get("Type") == "Death" and attacker.get("Тип атаки 2", "") == "poison" and victim.get("poison_turns_left", 0) <= 0:
                     acc2 = float(attacker.get("Точность2", 0) or 0)
@@ -601,6 +614,14 @@ class BattleEnv(gym.Env):
             if not self._apply_start_of_turn_effects(nxt):
                 if self.winner is not None:
                     return False
+                continue
+
+            if nxt.get("paralized", 0) == 1 and self._alive(nxt):
+                nxt["paralized"] = 0
+                nxt["инициатива"] = 0
+                self._log(
+                    f"⛔ Паралич: {nxt['team'].upper()} {nxt['имя']}#{nxt['position']} пропускает ход."
+                )
                 continue
 
             if nxt["team"] == "blue":
@@ -780,7 +801,7 @@ from stable_baselines3.common.env_checker import check_env
 check_env(BattleEnv(log_enabled=False), warn=True)
 
 # -------------------- Параметры обучения и теста --------------------
-TOTAL_STEPS     = 100000
+TOTAL_STEPS     = 1000000
 N_ENVS          = 8
 MODEL_SAVE_FREQ = 10_000
 EVAL_FREQ       = 10_000
@@ -1007,6 +1028,7 @@ if VISUALIZE_TEST:
             "type": t,
             "big": bool(u.get("big", False)),
             "acc2": float(u.get("Точность2", 0)),
+            "paralized": int(u.get("paralized", 0)),
         }
 
     fig, ax = plt.subplots(figsize=(12, 8))
@@ -1050,6 +1072,17 @@ if VISUALIZE_TEST:
         if partner in state:
             state[partner]["hp"] = clamped
 
+    def _set_paralysis(pos: int, value: int):
+        if pos in state:
+            state[pos]["paralized"] = value
+        partner = None
+        if pos in state and state[pos].get("big", False):
+            partner = pos + 3
+        elif (pos - 3) in state and state[pos - 3].get("big", False):
+            partner = pos - 3
+        if partner in state:
+            state[partner]["paralized"] = value
+
     # ---- рисование ячейки обычного размера
     def draw_unit(ax, pos, is_active: bool = False):
         u = state[pos]; x, y = pos_to_xy(pos)
@@ -1085,6 +1118,10 @@ if VISUALIZE_TEST:
         ax.add_patch(patches.Rectangle((hp_x, hp_y), hp_w*frac, HP_H, facecolor=(0.15,0.70,0.25), edgecolor='none'))
         ax.text(hp_x + hp_w/2, hp_y + HP_H/2, f"{int(max(0,u['hp']))}/{int(u['maxhp'])}",
                 fontsize=9, ha="center", va="center", color="black")
+
+        if u.get("paralized", 0):
+            ax.text(x + SLOT_W/2, y + SLOT_H*0.38, "PAR", fontsize=9, fontweight="bold",
+                    ha="center", va="center", color=(0.75, 0.05, 0.05))
 
         ax.text(x + SLOT_W/2, y - 0.008, f"pos{pos}", fontsize=8, ha="center", va="top", color=(0.2,0.2,0.2))
 
@@ -1130,6 +1167,10 @@ if VISUALIZE_TEST:
                 fontsize=9, ha="center", va="center", color="black")
 
         ax.text(x + width/2, y - 0.010, f"pos{front_pos}+{back_pos}", fontsize=8, ha="center", va="top", color=(0.2,0.2,0.2))
+
+        if uf.get("paralized", 0):
+            ax.text(x + width/2, y + height*0.46, "PAR", fontsize=10, fontweight="bold",
+                    ha="center", va="center", color=(0.75, 0.05, 0.05))
 
     def draw_attack_arrow(ax, src_pos:int, dst_pos:int, team:str,
                           text: str|None = None,
@@ -1186,6 +1227,8 @@ if VISUALIZE_TEST:
     immune_stat_re   = re.compile(r'^🛡 Иммунитет к эффекту')
     resist_re        = re.compile(r'^🧿 Стойкость')
     miss_re          = re.compile(r'^💨 Промах:\s+(RED|BLUE)\s+[^#]+#(\d+)\s+по\s+(RED|BLUE)\s+[^#]+#(\d+)\.')
+    paralysis_apply_re = re.compile(r'^Паралич: (RED|BLUE)\s+[^#]+#(\d+)\s+лишает хода\s+(RED|BLUE)\s+[^#]+#(\d+)')
+    paralysis_skip_re  = re.compile(r'^⛔ Паралич: (RED|BLUE)\s+[^#]+#(\d+)\s+пропускает ход\.')
 
     def draw_board(arrows: list[dict] = None, headline: str = "", active_pos: int | None = None):
         ax.cla()
@@ -1275,21 +1318,27 @@ if VISUALIZE_TEST:
             vic_pos = int(m.group(2)); after = int(m.group(5))
             _set_hp(vic_pos, after)
             headline = line
-            draw_board([], headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2); continue
+            draw_board([], headline, active_pos=current_actor_pos)
+            time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2)
+            continue
 
         m = burn_tick_re.match(line)
         if m:
             vic_pos = int(m.group(2)); after = int(m.group(5))
             _set_hp(vic_pos, after)
             headline = line
-            draw_board([], headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2); continue
+            draw_board([], headline, active_pos=current_actor_pos)
+            time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2)
+            continue
 
         m = uran_tick_re.match(line)
         if m:
             vic_pos = int(m.group(2)); after = int(m.group(5))
             _set_hp(vic_pos, after)
             headline = line
-            draw_board([], headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2); continue
+            draw_board([], headline, active_pos=current_actor_pos)
+            time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2)
+            continue
 
         m = blue_action_re.match(line)
         if m:
@@ -1299,7 +1348,9 @@ if VISUALIZE_TEST:
             arrows_now.append({"src": src, "dst": dst, "team": "BLUE",
                                "style":"dashed", "alpha":0.65, "lw":2.0})
             headline = line
-            draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.1); continue
+            draw_board(arrows_now, headline, active_pos=current_actor_pos)
+            time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.1)
+            continue
 
         m = red_target_re.match(line)
         if m:
@@ -1309,7 +1360,9 @@ if VISUALIZE_TEST:
             arrows_now.append({"src": src, "dst": dst, "team": "RED",
                                "style":"dashed", "alpha":0.65, "lw":2.0})
             headline = line
-            draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.1); continue
+            draw_board(arrows_now, headline, active_pos=current_actor_pos)
+            time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.1)
+            continue
 
         if immune_dmg_re.match(line) or immune_stat_re.match(line) or resist_re.match(line):
             if last_selection:
@@ -1318,7 +1371,9 @@ if VISUALIZE_TEST:
                                    "style":"solid", "alpha":0.9, "text":"RESIST"})
                 current_actor_pos = last_selection["src"]
             headline = line
-            draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2); continue
+            draw_board(arrows_now, headline, active_pos=current_actor_pos)
+            time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2)
+            continue
 
         m = blue_cant_re.match(line)
         if m:
@@ -1327,7 +1382,9 @@ if VISUALIZE_TEST:
                                "color": (0.5,0.5,0.5), "style":"dashed", "alpha":0.9, "text":"недосягаемо"})
             current_actor_pos = src
             headline = line
-            draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2); continue
+            draw_board(arrows_now, headline, active_pos=current_actor_pos)
+            time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2)
+            continue
 
         m = miss_re.match(line)
         if m:
@@ -1338,26 +1395,35 @@ if VISUALIZE_TEST:
             arrows_now.append({"src": atk_pos, "dst": vic_pos, "team": atk_team,
                                "color": (0.5,0.5,0.5), "style":"solid", "alpha":0.9, "text":"MISS"})
             headline = line
-            draw_board(arrows_now, headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.15); continue
+            draw_board(arrows_now, headline, active_pos=current_actor_pos)
+            time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.15)
+            continue
 
         m = kill_re.match(line)
         if m:
             pos = int(m.group(2))
             _set_hp(pos, 0)
             headline = line
-            draw_board([], headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.1); continue
+            draw_board([], headline, active_pos=current_actor_pos)
+            time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.1)
+            continue
 
         if mage_banner_re.match(line):
             headline = line
-            draw_board([], headline, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.1); continue
+            draw_board([], headline, active_pos=current_actor_pos)
+            time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.1)
+            continue
 
         if vict_re.match(line):
             headline = line
             current_actor_pos = None
-            draw_board([], headline, active_pos=current_actor_pos); time.sleep(FRAME_DELAY * VISUAL_SPEED_MULT); continue
+            draw_board([], headline, active_pos=current_actor_pos)
+            time.sleep(FRAME_DELAY * VISUAL_SPEED_MULT)
+            continue
 
         # любые прочие события (в т.ч. 🧪 Шанс отравления ...)
-        draw_board([], line, active_pos=current_actor_pos); time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2)
+        draw_board([], line, active_pos=current_actor_pos)
+        time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.2)
 
     draw_board([], "Конец эпизода", active_pos=None)
     time.sleep(0.6 * VISUAL_SPEED_MULT)
