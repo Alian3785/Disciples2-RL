@@ -8,6 +8,7 @@ checkpoints/
 checkpoints2/
 models/
 tb_logs/
+eval/
 wandb/
 .idea/
 .vscode/
