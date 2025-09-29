@@ -28,7 +28,7 @@ import numpy as np
 from gymnasium import spaces
 
 # --- словари для кодирования в наблюдении ---
-TYPE_LIST = ["Archer", "gargoil", "Mage", "Warrior", "Demon", "Death", "lord", "Dead dragon", "Ismir son", "Ghost", "Shadow"]  # one-hot(11)
+TYPE_LIST = ["Archer", "gargoil", "Mage", "Warrior", "Demon", "Death", "lord", "Dead dragon", "Ismir son", "Ghost", "Shadow", "Betrezen"]  # one-hot(12)
 ATTACK_TYPES = ["Weapon", "earth", "Fire", "Water", "poison", "death", "Mind"]                        # one-hot(7)
 
 def _one_hot(value: str, vocab: List[str]) -> List[float]:
@@ -41,12 +41,12 @@ def _multi_hot(values: List[str], vocab: List[str]) -> List[float]:
 # ------------------------ Исходные юниты ------------------------
 UNITS_RED = [
     {"name": "скелет-рыцарь",  "initiative": 50, "initiative_base": 50, "team": "red",  "position": 1, "stand": "ahead",
-     "unit_type": "Warrior", "damage": 100, "damage_secondary": 0, "health": 270, "max_health": 270, "armor": 0, "accuracy": 80, "accuracy_secondary": 0,
+     "unit_type": "Warrior", "damage": 100, "damage_secondary": 0, "health": 0, "max_health": 270, "armor": 0, "accuracy": 80, "accuracy_secondary": 0,
      "immunity": ["death", "Poison"], "resistance": [], "attack_type_primary": "Weapon", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
      "running_away": 0, "transformed": 0},
 
     {"name": "рыцарь смерти",  "initiative": 50, "initiative_base": 50, "team": "red",  "position": 2, "stand": "ahead",
-     "unit_type": "Warrior", "damage": 120, "damage_secondary": 0, "health": 255, "max_health": 255, "armor": 0, "accuracy": 87, "accuracy_secondary": 0,
+     "unit_type": "Warrior", "damage": 120, "damage_secondary": 0, "health": 0, "max_health": 255, "armor": 0, "accuracy": 87, "accuracy_secondary": 0,
      "immunity": ["death"], "resistance": [], "attack_type_primary": "Weapon", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
      "running_away": 0, "transformed": 0},
 
@@ -56,12 +56,12 @@ UNITS_RED = [
      "running_away": 0, "transformed": 0},
 
     {"name": "Архилич", "initiative": 40, "initiative_base": 40, "team": "red", "position": 4, "stand": "behind",
-     "unit_type": "Mage", "damage": 90, "damage_secondary": 0, "health": 170, "max_health": 170, "armor": 0, "accuracy": 80, "accuracy_secondary": 0,
+     "unit_type": "Mage", "damage": 90, "damage_secondary": 0, "health": 0, "max_health": 170, "armor": 0, "accuracy": 80, "accuracy_secondary": 0,
      "immunity": ["death"], "resistance": [], "attack_type_primary": "earth", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
      "running_away": 0, "transformed": 0},
 
     {"name": "Смерть1", "initiative": 40, "initiative_base": 40, "team": "red", "position": 5, "stand": "behind",
-     "unit_type": "Death", "damage": 100, "damage_secondary": 20, "health": 125, "max_health": 125, "armor": 0, "accuracy": 80, "accuracy_secondary": 50,
+     "unit_type": "Death", "damage": 100, "damage_secondary": 20, "health": 0, "max_health": 125, "armor": 0, "accuracy": 80, "accuracy_secondary": 50,
      "immunity": ["Weapon", "death"], "resistance": [], "attack_type_primary": "Weapon", "attack_type_secondary": "poison", "big": False, "paralyzed": 0, "long_paralyzed": 0,
      "running_away": 0, "transformed": 0},
 
@@ -72,18 +72,18 @@ UNITS_RED = [
 ]
 
 UNITS_BLUE = [
-    {"name": "Астерот",   "initiative": 50, "initiative_base": 50, "team": "blue", "position": 7,  "stand": "ahead",
-     "unit_type": "Demon","damage": 150, "damage_secondary": 0, "health": 1020, "max_health": 1020, "armor": 0, "accuracy": 80, "accuracy_secondary": 0,
-     "immunity": [], "resistance": ["Mind", "Fire"], "attack_type_primary": "Weapon", "attack_type_secondary": "", "big": True, "paralyzed": 0, "long_paralyzed": 0,
+    {"name": "Демон Утер",   "initiative": 50, "initiative_base": 50, "team": "blue", "position": 7,  "stand": "ahead",
+     "unit_type": "Betrezen","damage": 150, "damage_secondary": 0, "health": 300, "max_health": 300, "armor": 0, "accuracy": 80, "accuracy_secondary": 75,
+     "immunity": [], "resistance": ["Mind", "Fire"], "attack_type_primary": "Fire", "attack_type_secondary": "Mind", "big": True, "paralyzed": 0, "long_paralyzed": 0,
      "running_away": 0, "transformed": 0},
 
     {"name": "Герцог",  "initiative": 50, "initiative_base": 50, "team": "blue", "position": 8,  "stand": "ahead",
-     "unit_type": "Warrior", "damage": 120, "damage_secondary": 0, "health": 306, "max_health": 306, "armor": 0, "accuracy": 100, "accuracy_secondary": 0,
+     "unit_type": "Warrior", "damage": 120, "damage_secondary": 0, "health": 0, "max_health": 306, "armor": 0, "accuracy": 100, "accuracy_secondary": 0,
      "immunity": [], "resistance": [], "attack_type_primary": "Weapon", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
      "running_away": 0, "transformed": 0},
 
     {"name": "Гаргулья", "initiative": 60, "initiative_base": 60, "team": "blue", "position": 9,  "stand": "ahead",
-     "unit_type": "gargoil","damage": 85, "damage_secondary": 0, "health": 170, "max_health": 170, "armor": 65, "accuracy": 80, "accuracy_secondary": 0,
+     "unit_type": "gargoil","damage": 85, "damage_secondary": 0, "health": 0, "max_health": 170, "armor": 65, "accuracy": 80, "accuracy_secondary": 0,
      "immunity": ["poison"], "resistance": ["Mind"], "attack_type_primary": "earth", "attack_type_secondary": "", "big": True, "paralyzed": 0, "long_paralyzed": 0,
      "running_away": 0, "transformed": 0},
 
@@ -588,6 +588,34 @@ class BattleEnv(gym.Env):
         )
         return True
 
+    def _apply_long_paralysis_effect(self, attacker: Dict, victim: Dict) -> bool:
+        if victim.get("long_paralyzed", 0):
+            return False
+        if "Mind" in (victim.get("immunity") or []):
+            self._log(
+                f"Иммунитет к 'Mind' — долгий паралич не действует на "
+                f"{victim['team'].upper()} {victim['name']}#{victim['position']}"
+            )
+            return False
+
+        res_list = set(victim.get("resistance") or [])
+        if "Mind" in res_list:
+            used = set(victim.get("resilience_used_types") or [])
+            if "Mind" not in used:
+                victim.setdefault("resilience_used_types", []).append("Mind")
+                self._log(
+                    f"🧿 Стойкость — первый эффект типа 'Mind' по "
+                    f"{victim['team'].upper()} {victim['name']}#{victim['position']} поглощён."
+                )
+                return False
+
+        victim["long_paralyzed"] = 1
+        self._log(
+            f"⚡ Долгий паралич: {attacker['team'].upper()} {attacker['name']}#{attacker['position']} "
+            f"накладывает долгий паралич на {victim['team'].upper()} {victim['name']}#{victim['position']}"
+        )
+        return True
+
     def _apply_shadow_aoe(self, attacker: Dict, primary_victim: Optional[Dict]) -> None:
         enemy_team = "blue" if attacker.get("team") == "red" else "red"
         accuracy = float(attacker.get("accuracy", 0) or 0)
@@ -714,6 +742,16 @@ class BattleEnv(gym.Env):
                 if attacker.get("unit_type") == "Ghost":
                     self._apply_paralysis_effect(attacker, victim)
 
+                # Долгий паралич от Betrezen по шансу Точность2
+                if attacker.get("unit_type") == "Betrezen":
+                    acc2 = float(attacker.get("accuracy_secondary", 0) or 0)
+                    if acc2 > 0:
+                        roll = self._roll_status(acc2)
+                        self._log(f"⚡ Шанс долгого паралича {int(acc2)}% — " +
+                                  ("успех" if roll else "неудача") + f" по {victim['team'].upper()} {victim['name']}#{victim['position']}.")
+                        if roll:
+                            self._apply_long_paralysis_effect(attacker, victim)
+
                 # ЯД от Death по шансу Точность2 (если ещё не отравлен)
                 if attacker.get("unit_type") == "Death" and attacker.get("attack_type_secondary", "") == "poison" and victim.get("poison_turns_left", 0) <= 0:
                     acc2 = float(attacker.get("accuracy_secondary", 0) or 0)
@@ -805,6 +843,20 @@ class BattleEnv(gym.Env):
                 self._log(
                     f"⛔ Паралич: {nxt['team'].upper()} {nxt['name']}#{nxt['position']} пропускает ход."
                 )
+                continue
+
+            if nxt.get("long_paralyzed", 0) == 1 and self._alive(nxt):
+                nxt["initiative"] = 0
+                # 33% шанс снять долгий паралич
+                if self.rng.random() < 0.33:
+                    nxt["long_paralyzed"] = 0
+                    self._log(
+                        f"⛔ Долгий паралич: {nxt['team'].upper()} {nxt['name']}#{nxt['position']} пропускает ход и восстанавливается."
+                    )
+                else:
+                    self._log(
+                        f"⛔ Пас: {nxt['team'].upper()} {nxt['name']}#{nxt['position']} остаётся парализован."
+                    )
                 continue
 
             if nxt["team"] == "blue":
@@ -988,7 +1040,7 @@ from stable_baselines3.common.env_checker import check_env
 check_env(BattleEnv(log_enabled=False), warn=True)
 
 # -------------------- Параметры обучения и теста --------------------
-TOTAL_STEPS     = 7000000
+TOTAL_STEPS     = 100000
 N_ENVS          = 8
 MODEL_SAVE_FREQ = 1000000
 EVAL_FREQ       = 1000000
@@ -1019,7 +1071,7 @@ try:
             "clip_range": 0.2,
             "model_save_freq": MODEL_SAVE_FREQ,
             "eval_freq": EVAL_FREQ,
-            "obs_dim": 12*45,  # <— обновлено под Точность2
+            "obs_dim": 12*58,  # <— 12 юнитов × 58 признаков (включая Betrezen)
             "types": TYPE_LIST,
             "attack_types": ATTACK_TYPES,
             "action_space": len(TARGET_POSITIONS),  # 6
@@ -1201,6 +1253,9 @@ if VISUALIZE_TEST:
             "lord": " (Lord)",
             "Dead dragon": " (Dead dragon)",
             "Ismir son": " (Ismir son)",
+            "Ghost": " (Ghost)",
+            "Shadow": " (Shadow)",
+            "Betrezen": " (Betrezen)",
         }.get(t, f" ({t})")
 
     for u in (UNITS_RED + UNITS_BLUE):
@@ -1416,6 +1471,10 @@ if VISUALIZE_TEST:
     miss_re          = re.compile(r'^💨 Промах:\s+(RED|BLUE)\s+[^#]+#(\d+)\s+по\s+(RED|BLUE)\s+[^#]+#(\d+)\.')
     paralysis_apply_re = re.compile(r'^Паралич: (RED|BLUE)\s+[^#]+#(\d+)\s+лишает хода\s+(RED|BLUE)\s+[^#]+#(\d+)')
     paralysis_skip_re  = re.compile(r'^⛔ Паралич: (RED|BLUE)\s+[^#]+#(\d+)\s+пропускает ход\.')
+    long_paralysis_pass_re = re.compile(r'^⛔ Пас: (RED|BLUE)\s+[^#]+#(\d+)\s+остаётся парализован\.')
+    long_paralysis_recover_re = re.compile(r'^⛔ Долгий паралич: (RED|BLUE)\s+[^#]+#(\d+)\s+пропускает ход и восстанавливается\.')
+    long_paralysis_chance_re = re.compile(r'^⚡ Шанс долгого паралича')
+    long_paralysis_apply_re = re.compile(r'^⚡ Долгий паралич: (RED|BLUE)\s+[^#]+#(\d+)\s+накладывает долгий паралич на\s+(RED|BLUE)\s+[^#]+#(\d+)')
 
     def draw_board(arrows: list[dict] = None, headline: str = "", active_pos: int | None = None):
         ax.cla()
@@ -1596,6 +1655,24 @@ if VISUALIZE_TEST:
             continue
 
         if mage_banner_re.match(line):
+            headline = line
+            draw_board([], headline, active_pos=current_actor_pos)
+            time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.1)
+            continue
+
+        m = long_paralysis_pass_re.match(line)
+        if m:
+            pos = int(m.group(2))
+            current_actor_pos = pos
+            headline = line
+            draw_board([], headline, active_pos=current_actor_pos)
+            time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.1)
+            continue
+
+        m = long_paralysis_recover_re.match(line)
+        if m:
+            pos = int(m.group(2))
+            current_actor_pos = pos
             headline = line
             draw_board([], headline, active_pos=current_actor_pos)
             time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.1)
