@@ -39,12 +39,12 @@ def _multi_hot(values: List[str], vocab: List[str]) -> List[float]:
 # ------------------------ Исходные юниты ------------------------
 UNITS_RED = [
     {"имя": "скелет-рыцарь",  "инициатива": 50, "инициатива_база": 50, "team": "red",  "position": 1, "stand": "ahead",
-     "Type": "Воин", "Урон": 100, "урон2": 0, "Здоровье": 0, "maxhealth": 270, "броня": 0, "Точность": 80, "Точность2": 0,
-     "иммунитет": ["death", "Poison"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
+     "Type": "Воин", "Урон": 100, "урон2": 0, "Здоровье": 100, "maxhealth": 270, "броня": 0, "Точность": 80, "Точность2": 0,
+     "иммунитет": ["death", "Poison"], "Стойкость": ["Mind",], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
 
     {"имя": "рыцарь смерти",  "инициатива": 50, "инициатива_база": 50, "team": "red",  "position": 2, "stand": "ahead",
      "Type": "Воин", "Урон": 120, "урон2": 0, "Здоровье": 0, "maxhealth": 255, "броня": 0, "Точность": 87, "Точность2": 0,
-     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
+     "иммунитет": ["death"], "Стойкость": ["Mind",], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
 
     {"имя": "Мертвый дракон (Астерот1)", "инициатива": 35, "инициатива_база": 35, "team": "red", "position": 3, "stand": "ahead",
      "Type": "lord", "Урон": 100, "урон2": 20, "Здоровье": 1020, "maxhealth": 1020, "броня": 0, "Точность": 80, "Точность2": 90,
@@ -65,11 +65,11 @@ UNITS_RED = [
 
 UNITS_BLUE = [
     {"имя": "Астерот",   "инициатива": 50, "инициатива_база": 50, "team": "blue", "position": 7,  "stand": "ahead",
-     "Type": "Ismir son","Урон": 100, "урон2": 20, "Здоровье": 1020, "maxhealth": 1020, "броня": 0, "Точность": 80, "Точность2": 90,
+     "Type": "Ismir son","Урон": 100, "урон2": 20, "Здоровье": 0, "maxhealth": 1020, "броня": 0, "Точность": 80, "Точность2": 90,
      "иммунитет": [], "Стойкость": ["Mind", "Fire"], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": True, "paralized": 0, "longparalized": 0},
 
-    {"имя": "Тень",  "инициатива": 55, "инициатива_база": 55, "team": "blue", "position": 8,  "stand": "behind",
-     "Type": "Shadow", "Урон": 0, "урон2": 0, "Здоровье": 100, "maxhealth": 100, "броня": 0, "Точность": 85, "Точность2": 0,
+    {"имя": "прзрк",  "инициатива": 55, "инициатива_база": 55, "team": "blue", "position": 8,  "stand": "behind",
+     "Type": "Shadow", "Урон": 0, "урон2": 0, "Здоровье": 3000, "maxhealth": 100, "броня": 0, "Точность": 10, "Точность2": 0,
      "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "Mind", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
 
     {"имя": "Гаргулья", "инициатива": 60, "инициатива_база": 60, "team": "blue", "position": 9,  "stand": "ahead",
@@ -446,6 +446,18 @@ class BattleEnv(gym.Env):
                 f"{victim['team'].upper()} {victim['имя']}#{victim['position']}"
             )
             return False
+
+        res_list = set(victim.get("Стойкость") or [])
+        if "Mind" in res_list:
+            used = set(victim.get("resilience_used_types") or [])
+            if "Mind" not in used:
+                victim.setdefault("resilience_used_types", []).append("Mind")
+                self._log(
+                    f"🧿 Стойкость — первый эффект типа 'Mind' по "
+                    f"{victim['team'].upper()} {victim['имя']}#{victim['position']} поглощён."
+                )
+                return False
+
         victim["paralized"] = 1
         self._log(
             f"Паралич: {attacker['team'].upper()} {attacker['имя']}#{attacker['position']} "
@@ -478,6 +490,29 @@ class BattleEnv(gym.Env):
         Возврат: (hit: bool, reason: str)
           reason ∈ {"ok","dead_or_absent","aoe","aoe_no_targets","immune_damage","immune_status","miss","resilience_block"}
         """
+        # AoE для Shadow — массовый паралич
+        if attacker is not None and attacker.get("Type") == "Shadow":
+            enemy_team = "blue" if attacker["team"] == "red" else "red"
+            targets = [u for u in self.combined if u["team"] == enemy_team and self._alive(u)]
+            if targets:
+                self._log(
+                    f"{attacker['team'].upper()} {attacker['имя']}#{attacker['position']} (Shadow) пытается парализовать всю команду противника."
+                )
+                for victim in targets:
+                    if not self._roll_hit(attacker):
+                        self._log(
+                            f"💨 Промах: {attacker['team'].upper()} {attacker['имя']}#{attacker['position']} по "
+                            f"{victim['team'].upper()} {victim['имя']}#{victim['position']}."
+                        )
+                        continue
+                    self._apply_paralysis_effect(attacker, victim)
+                return True, "aoe"
+            else:
+                self._log(
+                    f"{attacker['team'].upper()} {attacker['имя']}#{attacker['position']} (Shadow) пытается парализовать: целей нет."
+                )
+                return False, "aoe_no_targets"
+
         # AoE для Mage и Dead dragon
         if attacker is not None and attacker.get("Type") in ("Mage", "Dead dragon"):
             enemy_team = "blue" if attacker["team"] == "red" else "red"
@@ -553,10 +588,8 @@ class BattleEnv(gym.Env):
                       f"({before}→{max(0, after)})")
 
             if self._alive(victim):
-                if attacker.get("Type") in ("Ghost", "Shadow"):
-                    applied = self._apply_paralysis_effect(attacker, victim)
-                    if attacker.get("Type") == "Shadow" and applied:
-                        self._apply_shadow_aoe(attacker, victim)
+                if attacker.get("Type") == "Ghost":
+                    self._apply_paralysis_effect(attacker, victim)
 
                 # ЯД от Death по шансу Точность2 (если ещё не отравлен)
                 if attacker.get("Type") == "Death" and attacker.get("Тип атаки 2", "") == "poison" and victim.get("poison_turns_left", 0) <= 0:
@@ -828,7 +861,7 @@ from stable_baselines3.common.env_checker import check_env
 check_env(BattleEnv(log_enabled=False), warn=True)
 
 # -------------------- Параметры обучения и теста --------------------
-TOTAL_STEPS     = 1000000
+TOTAL_STEPS     = 100000
 N_ENVS          = 8
 MODEL_SAVE_FREQ = 10_000
 EVAL_FREQ       = 10_000
