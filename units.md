@@ -12,7 +12,7 @@
   - `damage`: 100
   - `damage_secondary`: 0
   - `health`: 0
-  - `max_health`: 270
+  - `max_health`: 0
   - `armor`: 0
   - `accuracy`: 80
   - `accuracy_secondary`: 0
@@ -36,7 +36,7 @@
   - `damage`: 120
   - `damage_secondary`: 0
   - `health`: 0
-  - `max_health`: 255
+  - `max_health`: 0
   - `armor`: 0
   - `accuracy`: 87
   - `accuracy_secondary`: 0
@@ -50,24 +50,24 @@
   - `running_away`: 0
   - `transformed`: 0
 
-- **Мертвый дракон**
-  - `initiative`: 35
-  - `initiative_base`: 35
+- **Ашган**
+  - `initiative`: 90
+  - `initiative_base`: 90
   - `team`: "red"
   - `position`: 3
   - `stand`: "ahead"
-  - `unit_type`: "Dead dragon"
-  - `damage`: 65
-  - `damage_secondary`: 20
-  - `health`: 450
-  - `max_health`: 450
-  - `armor`: 0
-  - `accuracy`: 80
-  - `accuracy_secondary`: 40
+  - `unit_type`: "Mage"
+  - `damage`: 250
+  - `damage_secondary`: 0
+  - `health`: 900
+  - `max_health`: 900
+  - `armor`: 90
+  - `accuracy`: 90
+  - `accuracy_secondary`: 0
   - `immunity`: ["death"]
   - `resistance`: []
-  - `attack_type_primary`: "death"
-  - `attack_type_secondary`: "poison"
+  - `attack_type_primary`: "Life"
+  - `attack_type_secondary`: ""
   - `big`: true
   - `paralyzed`: 0
   - `long_paralyzed`: 0
@@ -75,8 +75,8 @@
   - `transformed`: 0
 
 - **Архилич**
-  - `initiative`: 40
-  - `initiative_base`: 40
+  - `initiative`: 90
+  - `initiative_base`: 90
   - `team`: "red"
   - `position`: 4
   - `stand`: "behind"
@@ -148,72 +148,72 @@
 
 ## UNITS_BLUE
 
-- **Демон Утер**
-  - `initiative`: 50
-  - `initiative_base`: 50
+- **Утер ребенок**
+  - `initiative`: 60
+  - `initiative_base`: 60
   - `team`: "blue"
   - `position`: 7
   - `stand`: "ahead"
-  - `unit_type`: "Betrezen"
-  - `damage`: 150
+  - `unit_type`: "Uter"
+  - `damage`: 80
   - `damage_secondary`: 0
   - `health`: 300
   - `max_health`: 300
   - `armor`: 0
   - `accuracy`: 80
-  - `accuracy_secondary`: 75
+  - `accuracy_secondary`: 60
   - `immunity`: []
   - `resistance`: ["Mind", "Fire"]
-  - `attack_type_primary`: "Fire"
-  - `attack_type_secondary`: "Mind"
-  - `big`: true
-  - `paralyzed`: 0
-  - `long_paralyzed`: 0
-  - `running_away`: 0
-  - `transformed`: 0
-
-- **Герцог**
-  - `initiative`: 50
-  - `initiative_base`: 50
-  - `team`: "blue"
-  - `position`: 8
-  - `stand`: "ahead"
-  - `unit_type`: "Warrior"
-  - `damage`: 120
-  - `damage_secondary`: 0
-  - `health`: 0
-  - `max_health`: 306
-  - `armor`: 0
-  - `accuracy`: 100
-  - `accuracy_secondary`: 0
-  - `immunity`: []
-  - `resistance`: []
   - `attack_type_primary`: "Weapon"
-  - `attack_type_secondary`: ""
+  - `attack_type_secondary`: "Mind"
   - `big`: false
   - `paralyzed`: 0
   - `long_paralyzed`: 0
   - `running_away`: 0
   - `transformed`: 0
 
-- **Гаргулья**
+- **Утер**
   - `initiative`: 60
   - `initiative_base`: 60
   - `team`: "blue"
+  - `position`: 8
+  - `stand`: "ahead"
+  - `unit_type`: "Betrezen"
+  - `damage`: 100
+  - `damage_secondary`: 0
+  - `health`: 300
+  - `max_health`: 300
+  - `armor`: 0
+  - `accuracy`: 90
+  - `accuracy_secondary`: 90
+  - `immunity`: []
+  - `resistance`: []
+  - `attack_type_primary`: "Fire"
+  - `attack_type_secondary`: "Mind"
+  - `big`: false
+  - `paralyzed`: 0
+  - `long_paralyzed`: 0
+  - `running_away`: 0
+  - `transformed`: 0
+
+- **Утер демон**
+  - `initiative`: 65
+  - `initiative_base`: 65
+  - `team`: "blue"
   - `position`: 9
   - `stand`: "ahead"
-  - `unit_type`: "gargoil"
-  - `damage`: 85
+  - `unit_type`: "Uter Demon"
+  - `damage`: 150
   - `damage_secondary`: 0
-  - `health`: 0
-  - `max_health`: 170
-  - `armor`: 65
-  - `accuracy`: 80
-  - `accuracy_secondary`: 0
-  - `immunity`: ["poison"]
+  - `health`: 1500
+  - `max_health`: 1500
+  - `armor`: 0
+  - `accuracy`: 90
+  - `accuracy_secondary`: 60
+  - `immunity`: []
   - `resistance`: ["Mind"]
-  - `attack_type_primary`: "earth"
-  - `attack_type_secondary`: ""
+  - `attack_type_primary`: "Fire"
+  - `attack_type_secondary`: "Mind"
   - `big`: true
   - `paralyzed`: 0
   - `long_paralyzed`: 0
