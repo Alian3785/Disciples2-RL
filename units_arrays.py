@@ -1,0 +1,64 @@
+# ------------------------ Исходные юниты ------------------------
+UNITS_RED = [
+    {"name": "скелет-рыцарь",  "initiative": 50, "initiative_base": 50, "team": "red",  "position": 1, "stand": "ahead",
+     "unit_type": "Warrior", "damage": 100, "damage_secondary": 0, "health": 270, "max_health": 270, "armor": 0, "accuracy": 80, "accuracy_secondary": 0,
+     "immunity": ["death", "Poison"], "resistance": [], "attack_type_primary": "Weapon", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
+     "running_away": 0, "transformed": 0},
+
+    {"name": "рыцарь смерти",  "initiative": 50, "initiative_base": 50, "team": "red",  "position": 2, "stand": "ahead",
+     "unit_type": "Warrior", "damage": 120, "damage_secondary": 0, "health": 255, "max_health": 255, "armor": 0, "accuracy": 87, "accuracy_secondary": 0,
+     "immunity": ["death"], "resistance": [], "attack_type_primary": "Weapon", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
+     "running_away": 0, "transformed": 0},
+
+    {"name": "Мертвый дракон", "initiative": 35, "initiative_base": 35, "team": "red", "position": 3, "stand": "ahead",
+     "unit_type": "Dead dragon", "damage": 65, "damage_secondary": 20, "health": 450, "max_health": 450, "armor": 0, "accuracy": 80, "accuracy_secondary": 40,
+     "immunity": ["death"], "resistance": [], "attack_type_primary": "death", "attack_type_secondary": "poison", "big": True, "paralyzed": 0, "long_paralyzed": 0,
+     "running_away": 0, "transformed": 0},
+
+    {"name": "Архилич", "initiative": 40, "initiative_base": 40, "team": "red", "position": 4, "stand": "behind",
+     "unit_type": "Mage", "damage": 90, "damage_secondary": 0, "health": 170, "max_health": 170, "armor": 0, "accuracy": 80, "accuracy_secondary": 0,
+     "immunity": ["death"], "resistance": [], "attack_type_primary": "earth", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
+     "running_away": 0, "transformed": 0},
+
+    {"name": "Смерть1", "initiative": 40, "initiative_base": 40, "team": "red", "position": 5, "stand": "behind",
+     "unit_type": "Death", "damage": 100, "damage_secondary": 20, "health": 125, "max_health": 125, "armor": 0, "accuracy": 80, "accuracy_secondary": 50,
+     "immunity": ["Weapon", "death"], "resistance": [], "attack_type_primary": "Weapon", "attack_type_secondary": "poison", "big": False, "paralyzed": 0, "long_paralyzed": 0,
+     "running_away": 0, "transformed": 0},
+
+    {"name": "пусто", "initiative": 0, "initiative_base": 0, "team": "red", "position": 6, "stand": "behind",
+     "unit_type": "Archer", "damage": 0, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0, "accuracy": 0, "accuracy_secondary": 0,
+     "immunity": ["death"], "resistance": [], "attack_type_primary": "Weapon", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
+     "running_away": 0, "transformed": 0},
+]
+
+UNITS_BLUE = [
+    {"name": "Астерот",   "initiative": 50, "initiative_base": 50, "team": "blue", "position": 7,  "stand": "ahead",
+     "unit_type": "Demon","damage": 150, "damage_secondary": 0, "health": 1020, "max_health": 1020, "armor": 0, "accuracy": 80, "accuracy_secondary": 0,
+     "immunity": [], "resistance": ["Mind", "Fire"], "attack_type_primary": "Weapon", "attack_type_secondary": "", "big": True, "paralyzed": 0, "long_paralyzed": 0,
+     "running_away": 0, "transformed": 0},
+
+    {"name": "Герцог",  "initiative": 50, "initiative_base": 50, "team": "blue", "position": 8,  "stand": "ahead",
+     "unit_type": "Warrior", "damage": 120, "damage_secondary": 0, "health": 306, "max_health": 306, "armor": 0, "accuracy": 100, "accuracy_secondary": 0,
+     "immunity": [], "resistance": [], "attack_type_primary": "Weapon", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
+     "running_away": 0, "transformed": 0},
+
+    {"name": "Гаргулья", "initiative": 60, "initiative_base": 60, "team": "blue", "position": 9,  "stand": "ahead",
+     "unit_type": "gargoil","damage": 85, "damage_secondary": 0, "health": 170, "max_health": 170, "armor": 65, "accuracy": 80, "accuracy_secondary": 0,
+     "immunity": ["poison"], "resistance": ["Mind"], "attack_type_primary": "earth", "attack_type_secondary": "", "big": True, "paralyzed": 0, "long_paralyzed": 0,
+     "running_away": 0, "transformed": 0},
+
+    {"name": "пусто",    "initiative": 0,  "initiative_base": 0,  "team": "blue", "position": 10, "stand": "behind",
+     "unit_type": "Archer","damage": 0,  "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0,  "accuracy": 0, "accuracy_secondary": 0,
+     "immunity": [], "resistance": [], "attack_type_primary": "Weapon", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
+     "running_away": 0, "transformed": 0},
+
+    {"name": "пусто",    "initiative": 0,  "initiative_base": 0,  "team": "blue", "position": 11, "stand": "behind",
+     "unit_type": "Archer","damage": 0,  "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0,  "accuracy": 0, "accuracy_secondary": 0,
+     "immunity": [], "resistance": [], "attack_type_primary": "Weapon", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
+     "running_away": 0, "transformed": 0},
+
+    {"name": "пусто",    "initiative": 0,  "initiative_base": 0,  "team": "blue", "position": 12, "stand": "behind",
+     "unit_type": "Archer","damage": 0,  "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0,  "accuracy": 0, "accuracy_secondary": 0,
+     "immunity": [], "resistance": [], "attack_type_primary": "Weapon", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
+     "running_away": 0, "transformed": 0},
+]

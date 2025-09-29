@@ -17,8 +17,10 @@ except Exception:
     # noqa
     import gymnasium as gym
 
+import json
 import os
 import random
+from datetime import datetime
 from operator import itemgetter
 from typing import List, Dict, Optional
 
@@ -100,6 +102,107 @@ UNITS_BLUE = [
      "immunity": [], "resistance": [], "attack_type_primary": "Weapon", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
      "running_away": 0, "transformed": 0},
 ]   
+
+# Удалить это потом когда не надо будет сохранять юнитов в файл
+def _units_to_markdown_section(title: str, units: List[Dict]) -> str:
+    lines: List[str] = [f"## {title}", ""]
+    for idx, unit in enumerate(units, 1):
+        display_name = unit.get("name", f"unit_{idx}")
+        lines.append(f"- **{display_name}**")
+        for key, value in unit.items():
+            if key == "name":
+                continue
+            formatted = json.dumps(value, ensure_ascii=False)
+            lines.append(f"  - `{key}`: {formatted}")
+        lines.append("")
+    return "\n".join(lines).rstrip()
+
+
+def save_units_markdown(path: str = "units.md") -> None:
+    sections = [
+        _units_to_markdown_section("UNITS_RED", UNITS_RED),
+        _units_to_markdown_section("UNITS_BLUE", UNITS_BLUE),
+    ]
+    content = "# Battle Units Snapshot\n\n" + "\n\n".join(sections) + "\n"
+    with open(path, "w", encoding="utf-8") as fp:
+        fp.write(content)
+
+
+def _format_value_for_py(value) -> str:
+    if isinstance(value, str):
+        escaped = value.replace("\\", "\\\\").replace("\"", "\\\"")
+        return f'"{escaped}"'
+    if isinstance(value, bool):
+        return "True" if value else "False"
+    if value is None:
+        return "None"
+    if isinstance(value, list):
+        return "[" + ", ".join(_format_value_for_py(v) for v in value) + "]"
+    return str(value)
+
+
+def _dict_to_python_literal(unit: Dict) -> List[str]:
+    key_order = [
+        "name",
+        "initiative",
+        "initiative_base",
+        "team",
+        "position",
+        "stand",
+        "unit_type",
+        "damage",
+        "damage_secondary",
+        "health",
+        "max_health",
+        "armor",
+        "accuracy",
+        "accuracy_secondary",
+        "immunity",
+        "resistance",
+        "attack_type_primary",
+        "attack_type_secondary",
+        "big",
+        "paralyzed",
+        "long_paralyzed",
+        "running_away",
+        "transformed",
+    ]
+    lines = ["    {"]
+    ordered_keys = [k for k in key_order if k in unit] + [k for k in unit.keys() if k not in key_order]
+    for k in ordered_keys:
+        lines.append(f'        "{k}": {_format_value_for_py(unit[k])},')
+    lines.append("    },")
+    return lines
+
+
+def _units_to_python_block(name: str, units: List[Dict]) -> str:
+    lines: List[str] = [f"{name} = ["]
+    for idx, unit in enumerate(units):
+        lines.extend(_dict_to_python_literal(unit))
+        if idx != len(units) - 1:
+            lines.append("")
+    lines.append("]")
+    return "\n".join(lines)
+
+
+def append_units_arrays_snapshot(path: str = "units_arrays.py") -> None:
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    header = [
+        "",
+        "",
+        f"# Snapshot at {timestamp}",
+        "# ------------------------ Исходные юниты ------------------------",
+        _units_to_python_block("UNITS_RED", UNITS_RED),
+        "",
+        _units_to_python_block("UNITS_BLUE", UNITS_BLUE),
+    ]
+    with open(path, "a", encoding="utf-8") as fp:
+        fp.write("\n".join(header) + "\n")
+
+
+save_units_markdown()
+append_units_arrays_snapshot()
+
 
 # Диапазоны позиций
 RED_POSITIONS:  List[int] = list(range(1, 7))
