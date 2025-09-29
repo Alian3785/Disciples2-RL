@@ -26,7 +26,7 @@ import numpy as np
 from gymnasium import spaces
 
 # --- словари для кодирования в наблюдении ---
-TYPE_LIST = ["Archer", "gargoil", "Mage", "Воин", "Demon", "Death", "lord", "Dead dragon", "Ismir son", "Ghost", "Shadow"]  # one-hot(11)
+TYPE_LIST = ["Archer", "gargoil", "Mage", "Warrior", "Demon", "Death", "lord", "Dead dragon", "Ismir son", "Ghost", "Shadow"]  # one-hot(11)
 ATTACK_TYPES = ["Weapon", "earth", "Fire", "Water", "poison", "death", "Mind"]                        # one-hot(7)
 
 def _one_hot(value: str, vocab: List[str]) -> List[float]:
@@ -39,54 +39,66 @@ def _multi_hot(values: List[str], vocab: List[str]) -> List[float]:
 # ------------------------ Исходные юниты ------------------------
 UNITS_RED = [
     {"имя": "скелет-рыцарь",  "инициатива": 50, "инициатива_база": 50, "team": "red",  "position": 1, "stand": "ahead",
-     "Type": "Воин", "Урон": 100, "урон2": 0, "Здоровье": 100, "maxhealth": 270, "броня": 0, "Точность": 80, "Точность2": 0,
-     "иммунитет": ["death", "Poison"], "Стойкость": ["Mind",], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
+     "Type": "Warrior", "Урон": 100, "урон2": 0, "Здоровье": 100, "maxhealth": 270, "броня": 0, "Точность": 80, "Точность2": 0,
+     "иммунитет": ["death", "Poison"], "Стойкость": ["Mind",], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0,
+     "Runningaway": 0},
 
     {"имя": "рыцарь смерти",  "инициатива": 50, "инициатива_база": 50, "team": "red",  "position": 2, "stand": "ahead",
-     "Type": "Воин", "Урон": 120, "урон2": 0, "Здоровье": 0, "maxhealth": 255, "броня": 0, "Точность": 87, "Точность2": 0,
-     "иммунитет": ["death"], "Стойкость": ["Mind",], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
+     "Type": "Warrior", "Урон": 120, "урон2": 0, "Здоровье": 0, "maxhealth": 255, "броня": 0, "Точность": 87, "Точность2": 0,
+     "иммунитет": ["death"], "Стойкость": ["Mind",], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0,
+     "Runningaway": 0},
 
     {"имя": "Мертвый дракон (Астерот1)", "инициатива": 35, "инициатива_база": 35, "team": "red", "position": 3, "stand": "ahead",
      "Type": "lord", "Урон": 100, "урон2": 20, "Здоровье": 1020, "maxhealth": 1020, "броня": 0, "Точность": 80, "Точность2": 90,
-     "иммунитет": ["death"], "Стойкость": ["Mind",], "Тип атаки 1": "Weapon", "Тип атаки 2": "Fire", "big": True, "paralized": 0, "longparalized": 0},
+     "иммунитет": ["death"], "Стойкость": ["Mind",], "Тип атаки 1": "Weapon", "Тип атаки 2": "Fire", "big": True, "paralized": 0, "longparalized": 0,
+     "Runningaway": 0},
 
     {"имя": "Архилич", "инициатива": 40, "инициатива_база": 40, "team": "red", "position": 4, "stand": "behind",
      "Type": "Mage", "Урон": 90, "урон2": 0, "Здоровье": 0, "maxhealth": 170, "броня": 0, "Точность": 80, "Точность2": 0,
-     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "earth", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
+     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "earth", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0,
+     "Runningaway": 0},
 
     {"имя": "Смерть1", "инициатива": 40, "инициатива_база": 40, "team": "red", "position": 5, "stand": "behind",
      "Type": "Death", "Урон": 100, "урон2": 20, "Здоровье": 0, "maxhealth": 125, "броня": 0, "Точность": 80, "Точность2": 50,
-     "иммунитет": ["Weapon", "death"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "poison", "big": False, "paralized": 0, "longparalized": 0},
+     "иммунитет": ["Weapon", "death"], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "poison", "big": False, "paralized": 0, "longparalized": 0,
+     "Runningaway": 0},
 
     {"имя": "Тень", "инициатива": 0, "инициатива_база": 0, "team": "red", "position": 6, "stand": "behind",
      "Type": "Shadow", "Урон": 0, "урон2": 0, "Здоровье": 0, "maxhealth": 0, "броня": 0, "Точность": 0, "Точность2": 0,
-     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "Mind", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
+     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "Mind", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0,
+     "Runningaway": 0},
 ]
 
 UNITS_BLUE = [
     {"имя": "Астерот",   "инициатива": 50, "инициатива_база": 50, "team": "blue", "position": 7,  "stand": "ahead",
      "Type": "Ismir son","Урон": 100, "урон2": 20, "Здоровье": 0, "maxhealth": 1020, "броня": 0, "Точность": 80, "Точность2": 90,
-     "иммунитет": [], "Стойкость": ["Mind", "Fire"], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": True, "paralized": 0, "longparalized": 0},
+     "иммунитет": [], "Стойкость": ["Mind", "Fire"], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": True, "paralized": 0, "longparalized": 0,
+     "Runningaway": 0},
 
     {"имя": "прзрк",  "инициатива": 55, "инициатива_база": 55, "team": "blue", "position": 8,  "stand": "behind",
      "Type": "Shadow", "Урон": 0, "урон2": 0, "Здоровье": 3000, "maxhealth": 100, "броня": 0, "Точность": 10, "Точность2": 0,
-     "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "Mind", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
+    "иммунитет": ["death"], "Стойкость": [], "Тип атаки 1": "Mind", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0,
+    "Runningaway": 0},
 
     {"имя": "Гаргулья", "инициатива": 60, "инициатива_база": 60, "team": "blue", "position": 9,  "stand": "ahead",
      "Type": "gargoil","Урон": 85, "урон2": 0, "Здоровье": 0, "maxhealth": 170, "броня": 65, "Точность": 80, "Точность2": 0,
-     "иммунитет": ["poison"], "Стойкость": ["Mind"], "Тип атаки 1": "earth", "Тип атаки 2": "", "big": True, "paralized": 0, "longparalized": 0},
+     "иммунитет": ["poison"], "Стойкость": ["Mind"], "Тип атаки 1": "earth", "Тип атаки 2": "", "big": True, "paralized": 0, "longparalized": 0,
+     "Runningaway": 0},
 
     {"имя": "пусто",    "инициатива": 0,  "инициатива_база": 0,  "team": "blue", "position": 10, "stand": "behind",
      "Type": "Archer","Урон": 0,  "урон2": 0, "Здоровье": 0, "maxhealth": 0, "броня": 0,  "Точность": 0, "Точность2": 0,
-     "иммунитет": [], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
+     "иммунитет": [], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0,
+     "Runningaway": 0},
 
     {"имя": "пусто",    "инициатива": 0,  "инициатива_база": 0,  "team": "blue", "position": 11, "stand": "behind",
      "Type": "Archer","Урон": 0,  "урон2": 0, "Здоровье": 0, "maxhealth": 0, "броня": 0,  "Точность": 0, "Точность2": 0,
-     "иммунитет": [], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
+     "иммунитет": [], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0,
+     "Runningaway": 0},
 
     {"имя": "пусто",    "инициатива": 0,  "инициатива_база": 0,  "team": "blue", "position": 12, "stand": "behind",
      "Type": "Archer","Урон": 0,  "урон2": 0, "Здоровье": 0, "maxhealth": 0, "броня": 0,  "Точность": 0, "Точность2": 0,
-     "иммунитет": [], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0},
+     "иммунитет": [], "Стойкость": [], "Тип атаки 1": "Weapon", "Тип атаки 2": "", "big": False, "paralized": 0, "longparalized": 0,
+     "Runningaway": 0},
 ]   
 
 # Диапазоны позиций
@@ -111,7 +123,7 @@ URAN_TURNS  = 3
 # ------------------------ Кастомная среда ------------------------
 class BattleEnv(gym.Env):
     """
-    Observation (612): 12 слотов × 51 признаков (добавлены Точность2 и таймеры эффектов).
+    Observation (696): 12 слотов × 58 признаков (добавлены Точность2, таймеры эффектов и другие состояния).
     Action space: Discrete(6) — выбор цели среди врагов (pos1..pos6).
     """
 
@@ -140,16 +152,21 @@ class BattleEnv(gym.Env):
 
         # Observation space
         low_unit = np.array(
-            [0, 0, 0, 0, 0, 0, 1, 0]   # HP, INI, INI_base, DMG, DMG2, team, pos, stand
-            + [0]*len(TYPE_LIST)       # type one-hot
-            + [0]*len(ATTACK_TYPES)    # immunity
-            + [0]*len(ATTACK_TYPES)    # atk1
-            + [0]*len(ATTACK_TYPES)    # atk2
-            + [0]*len(ATTACK_TYPES)    # resilience
-            + [0]                      # armor
-            + [0]                      # accuracy
-            + [0]                      # accuracy2 (Точность2)
-            + [0, 0, 0],               # poison_left, burn_left, uranium_left
+            [0, 0, 0, 0, 0, 0, 1, 0]
+            + [0]*len(TYPE_LIST)
+            + [0]*len(ATTACK_TYPES)
+            + [0]*len(ATTACK_TYPES)
+            + [0]*len(ATTACK_TYPES)
+            + [0]*len(ATTACK_TYPES)
+            + [0]
+            + [0]
+            + [0]
+            + [0, 0, 0]
+            + [0]
+            + [0]
+            + [0]
+            + [0]
+            + [0],
             dtype=np.float32
         )
         high_unit = np.array(
@@ -159,10 +176,16 @@ class BattleEnv(gym.Env):
             + [1]*len(ATTACK_TYPES)
             + [1]*len(ATTACK_TYPES)
             + [1]*len(ATTACK_TYPES)
-            + [100]         # armor
-            + [100]         # accuracy
-            + [100]         # accuracy2 (Точность2)
-            + [POISON_TURNS, BURN_TURNS, URAN_TURNS],
+            + [100]
+            + [100]
+            + [100]
+            + [POISON_TURNS, BURN_TURNS, URAN_TURNS]
+            + [1]
+            + [1]
+            + [1]
+            + [100]
+            + [1]
+            + [1],
             dtype=np.float32
         )
         low  = np.tile(low_unit, 12)
@@ -221,10 +244,10 @@ class BattleEnv(gym.Env):
         return [1, 2], [0]
 
     def _warrior_allowed_targets(self, attacker: Dict) -> List[int]:
-        assert attacker.get("Type") in ("Воин", "Demon", "lord", "Ismir son")
+        assert attacker.get("Type") in ("Warrior", "Demon", "lord", "Ismir son")
         if attacker["stand"] == "behind":
             if any(self._alive(u) and u["team"] == attacker["team"]
-                   and u.get("Type") in ("Воин", "Demon", "lord", "Ismir son") and u["stand"] == "ahead"
+                   and u.get("Type") in ("Warrior", "Demon", "lord", "Ismir son") and u["stand"] == "ahead"
                    for u in self.combined):
                 return []
         ahead, behind = self._enemy_rows(attacker["team"])
@@ -702,7 +725,7 @@ class BattleEnv(gym.Env):
                     return False
 
                 target_pos = None
-                if nxt.get("Type") in ("Воин", "Demon", "lord", "Ismir son"):
+                if nxt.get("Type") in ("Warrior", "Demon", "lord", "Ismir son"):
                     options = self._warrior_allowed_targets(nxt)
                     if options:
                         target_pos = self._pick_lowest_hp(options)
@@ -754,10 +777,13 @@ class BattleEnv(gym.Env):
             poison_v   = float(u.get("poison_turns_left", 0))
             burn_v     = float(u.get("burn_turns_left", 0))
             uran_v     = float(u.get("uran_turns_left", 0))
+            run_v      = float(u.get("Runningaway", 0))
+            par_v      = float(u.get("paralized", 0))
+            long_par_v = float(u.get("longparalized", 0))
 
             vec.extend([hp, ini, ini_b, dmg, dmg2, team_v, pos_v, stand_v,
                         *t_onehot, *imm_mhot, *atk1_oh, *atk2_oh, *res_mhot,
-                        armor_v, acc_v, acc2_v, poison_v, burn_v, uran_v])
+                        armor_v, acc_v, acc2_v, poison_v, burn_v, uran_v, run_v, par_v, long_par_v])
         return np.array(vec, dtype=np.float32)
 
     # ------------------ API Gymnasium ------------------
@@ -790,7 +816,7 @@ class BattleEnv(gym.Env):
             self._log(f"BLUE действие: {attacker['имя']}#{attacker['position']} → pos{target_pos}")
             attacker["инициатива"] = 0
 
-            if attacker.get("Type") in ("Воин", "Demon", "lord", "Ismir son"):
+            if attacker.get("Type") in ("Warrior", "Demon", "lord", "Ismir son"):
                 allowed = self._warrior_allowed_targets(attacker)
                 if target_pos not in allowed:
                     self._log(
@@ -1067,7 +1093,7 @@ if VISUALIZE_TEST:
         return {
             "Mage": " (Mage)",
             "gargoil": " (Gargoil)",
-            "Воин": " (воин)",
+            "Warrior": " (Warrior)",
             "Demon": " (Demon)",
             "Death": " (Death)",
             "Archer": " (лучник)",
