@@ -11,7 +11,7 @@
   - `unit_type`: "Warrior"
   - `damage`: 100
   - `damage_secondary`: 0
-  - `health`: 270
+  - `health`: 0
   - `max_health`: 270
   - `armor`: 0
   - `accuracy`: 80
@@ -35,7 +35,7 @@
   - `unit_type`: "Warrior"
   - `damage`: 120
   - `damage_secondary`: 0
-  - `health`: 255
+  - `health`: 0
   - `max_health`: 255
   - `armor`: 0
   - `accuracy`: 87
@@ -83,7 +83,7 @@
   - `unit_type`: "Mage"
   - `damage`: 90
   - `damage_secondary`: 0
-  - `health`: 170
+  - `health`: 0
   - `max_health`: 170
   - `armor`: 0
   - `accuracy`: 80
@@ -107,7 +107,7 @@
   - `unit_type`: "Death"
   - `damage`: 100
   - `damage_secondary`: 20
-  - `health`: 125
+  - `health`: 0
   - `max_health`: 125
   - `armor`: 0
   - `accuracy`: 80
@@ -148,24 +148,24 @@
 
 ## UNITS_BLUE
 
-- **Астерот**
+- **Демон Утер**
   - `initiative`: 50
   - `initiative_base`: 50
   - `team`: "blue"
   - `position`: 7
   - `stand`: "ahead"
-  - `unit_type`: "Demon"
+  - `unit_type`: "Betrezen"
   - `damage`: 150
   - `damage_secondary`: 0
-  - `health`: 1020
-  - `max_health`: 1020
+  - `health`: 300
+  - `max_health`: 300
   - `armor`: 0
   - `accuracy`: 80
-  - `accuracy_secondary`: 0
+  - `accuracy_secondary`: 75
   - `immunity`: []
   - `resistance`: ["Mind", "Fire"]
-  - `attack_type_primary`: "Weapon"
-  - `attack_type_secondary`: ""
+  - `attack_type_primary`: "Fire"
+  - `attack_type_secondary`: "Mind"
   - `big`: true
   - `paralyzed`: 0
   - `long_paralyzed`: 0
@@ -181,7 +181,7 @@
   - `unit_type`: "Warrior"
   - `damage`: 120
   - `damage_secondary`: 0
-  - `health`: 306
+  - `health`: 0
   - `max_health`: 306
   - `armor`: 0
   - `accuracy`: 100
@@ -205,7 +205,7 @@
   - `unit_type`: "gargoil"
   - `damage`: 85
   - `damage_secondary`: 0
-  - `health`: 170
+  - `health`: 0
   - `max_health`: 170
   - `armor`: 65
   - `accuracy`: 80
