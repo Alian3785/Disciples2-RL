@@ -22,7 +22,9 @@ import os
 import random
 from datetime import datetime
 from operator import itemgetter
-from typing import List, Dict, Optional
+from typing import Any, Dict, List, Optional
+
+SAVE_UNITS_ARRAYS_FLAG = int(os.environ.get("SAVE_UNITS_ARRAYS_FLAG", "0"))
 
 import numpy as np
 from gymnasium import spaces
@@ -56,7 +58,7 @@ UNITS_RED = [
      "running_away": 0, "transformed": 0},
 
     {"name": "Архилич", "initiative": 90, "initiative_base": 90, "team": "red", "position": 4, "stand": "behind",
-     "unit_type": "Mage", "damage": 90, "damage_secondary": 0, "health": 0, "max_health": 170, "armor": 0, "accuracy": 80, "accuracy_secondary": 0,
+     "unit_type": "Mage", "damage": 150, "damage_secondary": 0, "health": 500, "max_health": 500, "armor": 0, "accuracy": 80, "accuracy_secondary": 0,
      "immunity": ["death"], "resistance": [], "attack_type_primary": "earth", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
      "running_away": 0, "transformed": 0},
 
@@ -72,18 +74,18 @@ UNITS_RED = [
 ]
 
 UNITS_BLUE = [
-    {"name": "Утер ребенок",   "initiative": 60, "initiative_base": 60, "team": "blue", "position": 7,  "stand": "ahead",
-     "unit_type": "Uter","damage": 80, "damage_secondary": 0, "health": 300, "max_health": 300, "armor": 0, "accuracy": 80, "accuracy_secondary": 60,
+    {"name": "просто воин",   "initiative": 60, "initiative_base": 60, "team": "blue", "position": 7,  "stand": "ahead",
+     "unit_type": "Warrior","damage": 80, "damage_secondary": 0, "health": 300, "max_health": 300, "armor": 0, "accuracy": 80, "accuracy_secondary": 60,
      "immunity": [], "resistance": ["Mind", "Fire"], "attack_type_primary": "Weapon", "attack_type_secondary": "Mind", "big": False, "paralyzed": 0, "long_paralyzed": 0,
      "running_away": 0, "transformed": 0},
 
-    {"name": "Утер",  "initiative": 60, "initiative_base": 60, "team": "blue", "position": 8,  "stand": "ahead",
-     "unit_type": "Betrezen", "damage": 100, "damage_secondary": 0, "health": 300, "max_health": 300, "armor": 0, "accuracy": 90, "accuracy_secondary": 90,
-     "immunity": [], "resistance": [], "attack_type_primary": "Fire", "attack_type_secondary": "Mind", "big": False, "paralyzed": 0, "long_paralyzed": 0,
+    {"name": "Ведьма",  "initiative": 60, "initiative_base": 60, "team": "blue", "position": 8,  "stand": "ahead",
+     "unit_type": "Witch ", "damage": 0, "damage_secondary": 0, "health": 5000, "max_health": 5000, "armor": 0, "accuracy": 99, "accuracy_secondary": 0,
+     "immunity": [], "resistance": [], "attack_type_primary": "Mind", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
      "running_away": 0, "transformed": 0},
 
     {"name": "Утер демон", "initiative": 65, "initiative_base": 65, "team": "blue", "position": 9,  "stand": "ahead",
-     "unit_type": "Uter Demon","damage": 150, "damage_secondary": 0, "health": 1500, "max_health": 1500, "armor": 0, "accuracy": 90, "accuracy_secondary": 60,
+     "unit_type": "Uter Demon","damage": 150, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0, "accuracy": 90, "accuracy_secondary": 60,
      "immunity": [], "resistance": ["Mind"], "attack_type_primary": "Fire", "attack_type_secondary": "Mind", "big": True, "paralyzed": 0, "long_paralyzed": 0,
      "running_away": 0, "transformed": 0},
 
@@ -186,6 +188,8 @@ def _units_to_python_block(name: str, units: List[Dict]) -> str:
 
 
 def append_units_arrays_snapshot(path: str = "units_arrays.py") -> None:
+    if SAVE_UNITS_ARRAYS_FLAG != 1:
+        return
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     header = [
         "",
@@ -201,7 +205,8 @@ def append_units_arrays_snapshot(path: str = "units_arrays.py") -> None:
 
 
 save_units_markdown()
-append_units_arrays_snapshot()
+if SAVE_UNITS_ARRAYS_FLAG == 1:
+    append_units_arrays_snapshot()
 
 
 # Диапазоны позиций
@@ -388,6 +393,10 @@ class BattleEnv(gym.Env):
     # ----------- эффекты начала хода (яд/поджог) -----------
     def _apply_start_of_turn_effects(self, unit: Dict) -> bool:
         # ЯД
+        if unit.get("transformed", 0) == 1 and self._witch_transformations.get(unit["position"]):
+            if self.rng.random() < 0.33:
+                self._revert_witch_transformation(unit)
+
         if unit.get("poison_turns_left", 0) > 0 and self._alive(unit):
             if "poison" in (unit.get("immunity") or []):
                 unit["poison_turns_left"] = 0
@@ -499,6 +508,7 @@ class BattleEnv(gym.Env):
         self.blue_attacks_left = 0
         self._lord_applied_burn = {}
         self._ismir_applied_uran = {}
+        self._witch_transformations: Dict[int, Dict[str, Any]] = {}
         self._log(f"Эпизод начат. Раунд {self.round_no}.")
 
     def _candidates(self):
@@ -645,6 +655,64 @@ class BattleEnv(gym.Env):
             if roll:
                 self._apply_paralysis_effect(attacker, victim)
 
+    def _apply_witch_transformation(self, attacker: Dict, victim: Dict) -> None:
+        pos = victim["position"]
+        if pos not in self._witch_transformations:
+            self._witch_transformations[pos] = {
+                "accuracy": victim.get("accuracy", 0),
+                "accuracy_secondary": victim.get("accuracy_secondary", 0),
+                "damage": victim.get("damage", 0),
+                "damage_secondary": victim.get("damage_secondary", 0),
+                "attack_type_primary": victim.get("attack_type_primary", ""),
+                "attack_type_secondary": victim.get("attack_type_secondary", ""),
+                "initiative": victim.get("initiative", 0),
+                "initiative_base": victim.get("initiative_base", 0),
+                "unit_type": victim.get("unit_type"),
+                "resistance": list(victim.get("resistance") or []),
+                "resilience_used_types": list(victim.get("resilience_used_types") or []),
+                "transformed": victim.get("transformed", 0),
+            }
+
+        is_big = bool(victim.get("big", False))
+        accuracy = 80
+        damage = 30 if is_big else 20
+        initiative = 50 if is_big else 30
+
+        victim["accuracy"] = accuracy
+        victim["accuracy_secondary"] = 0
+        victim["damage"] = damage
+        victim["damage_secondary"] = 0
+        victim["attack_type_primary"] = "Weapon"
+        victim["attack_type_secondary"] = ""
+        victim["initiative"] = initiative
+        victim["initiative_base"] = initiative
+        victim["unit_type"] = "Warrior"
+        victim["resistance"] = []
+        victim["resilience_used_types"] = []
+        victim["transformed"] = 1
+
+        self._log(
+            f"🧙‍♀️ Witch: {attacker['team'].upper()} {attacker['name']}#{attacker['position']}"
+            f" преобразует {victim['team'].upper()} {victim['name']}#{victim['position']} ({'big' if is_big else 'small'})."
+        )
+
+    def _revert_witch_transformation(self, unit: Dict) -> None:
+        pos = unit["position"]
+        original = self._witch_transformations.pop(pos, None)
+        if not original:
+            return
+
+        for key, value in original.items():
+            if key in ("resistance", "resilience_used_types"):
+                unit[key] = list(value)
+            else:
+                unit[key] = value
+
+        unit["transformed"] = original.get("transformed", 0)
+        self._log(
+            f"✨ Witch: характеристики {unit['team'].upper()} {unit['name']}#{unit['position']} возвращены к исходным."
+        )
+
     def _attack(self, attacker, target_pos: Optional[int]):
         """
         Выполнить урон.
@@ -761,6 +829,9 @@ class BattleEnv(gym.Env):
             if self._alive(victim):
                 if attacker.get("unit_type") == "Ghost":
                     self._apply_paralysis_effect(attacker, victim)
+
+                if attacker.get("unit_type") == "Witch":
+                    self._apply_witch_transformation(attacker, victim)
 
                 # Долгий паралич от Betrezen по шансу Точность2
                 if attacker.get("unit_type") == "Betrezen":
