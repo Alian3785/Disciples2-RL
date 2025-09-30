@@ -81,10 +81,10 @@
   - `position`: 4
   - `stand`: "behind"
   - `unit_type`: "Mage"
-  - `damage`: 90
+  - `damage`: 150
   - `damage_secondary`: 0
-  - `health`: 0
-  - `max_health`: 170
+  - `health`: 500
+  - `max_health`: 500
   - `armor`: 0
   - `accuracy`: 80
   - `accuracy_secondary`: 0
@@ -148,13 +148,13 @@
 
 ## UNITS_BLUE
 
-- **Утер ребенок**
+- **просто воин**
   - `initiative`: 60
   - `initiative_base`: 60
   - `team`: "blue"
   - `position`: 7
   - `stand`: "ahead"
-  - `unit_type`: "Uter"
+  - `unit_type`: "Warrior"
   - `damage`: 80
   - `damage_secondary`: 0
   - `health`: 300
@@ -172,24 +172,24 @@
   - `running_away`: 0
   - `transformed`: 0
 
-- **Утер**
+- **Суккуб**
   - `initiative`: 60
   - `initiative_base`: 60
   - `team`: "blue"
   - `position`: 8
   - `stand`: "ahead"
-  - `unit_type`: "Betrezen"
-  - `damage`: 100
+  - `unit_type`: "Succub "
+  - `damage`: 0
   - `damage_secondary`: 0
-  - `health`: 300
-  - `max_health`: 300
+  - `health`: 5000
+  - `max_health`: 5000
   - `armor`: 0
-  - `accuracy`: 90
-  - `accuracy_secondary`: 90
+  - `accuracy`: 99
+  - `accuracy_secondary`: 0
   - `immunity`: []
   - `resistance`: []
-  - `attack_type_primary`: "Fire"
-  - `attack_type_secondary`: "Mind"
+  - `attack_type_primary`: "Mind"
+  - `attack_type_secondary`: ""
   - `big`: false
   - `paralyzed`: 0
   - `long_paralyzed`: 0
@@ -205,8 +205,8 @@
   - `unit_type`: "Uter Demon"
   - `damage`: 150
   - `damage_secondary`: 0
-  - `health`: 1500
-  - `max_health`: 1500
+  - `health`: 0
+  - `max_health`: 0
   - `armor`: 0
   - `accuracy`: 90
   - `accuracy_secondary`: 60
