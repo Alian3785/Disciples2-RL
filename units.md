@@ -57,10 +57,10 @@
   - `position`: 3
   - `stand`: "ahead"
   - `unit_type`: "Mage"
-  - `damage`: 250
+  - `damage`: 20
   - `damage_secondary`: 0
-  - `health`: 900
-  - `max_health`: 900
+  - `health`: 500
+  - `max_health`: 500
   - `armor`: 90
   - `accuracy`: 90
   - `accuracy_secondary`: 0
@@ -74,21 +74,21 @@
   - `running_away`: 0
   - `transformed`: 0
 
-- **Архилич**
+- **Маг**
   - `initiative`: 90
   - `initiative_base`: 90
   - `team`: "red"
   - `position`: 4
   - `stand`: "behind"
   - `unit_type`: "Mage"
-  - `damage`: 150
+  - `damage`: 50
   - `damage_secondary`: 0
-  - `health`: 500
-  - `max_health`: 500
+  - `health`: 490
+  - `max_health`: 490
   - `armor`: 0
   - `accuracy`: 80
   - `accuracy_secondary`: 0
-  - `immunity`: ["death"]
+  - `immunity`: []
   - `resistance`: []
   - `attack_type_primary`: "earth"
   - `attack_type_secondary`: ""
@@ -105,10 +105,10 @@
   - `position`: 5
   - `stand`: "behind"
   - `unit_type`: "Death"
-  - `damage`: 100
+  - `damage`: 40
   - `damage_secondary`: 20
   - `health`: 0
-  - `max_health`: 125
+  - `max_health`: 0
   - `armor`: 0
   - `accuracy`: 80
   - `accuracy_secondary`: 50
@@ -122,23 +122,23 @@
   - `running_away`: 0
   - `transformed`: 0
 
-- **пусто**
-  - `initiative`: 0
-  - `initiative_base`: 0
+- **Баронесса**
+  - `initiative`: 55
+  - `initiative_base`: 55
   - `team`: "red"
   - `position`: 6
   - `stand`: "behind"
-  - `unit_type`: "Archer"
+  - `unit_type`: "Baroness"
   - `damage`: 0
   - `damage_secondary`: 0
   - `health`: 0
   - `max_health`: 0
-  - `armor`: 0
-  - `accuracy`: 0
+  - `armor`: 10
+  - `accuracy`: 85
   - `accuracy_secondary`: 0
-  - `immunity`: ["death"]
+  - `immunity`: []
   - `resistance`: []
-  - `attack_type_primary`: "Weapon"
+  - `attack_type_primary`: "Mind"
   - `attack_type_secondary`: ""
   - `big`: false
   - `paralyzed`: 0
@@ -148,41 +148,41 @@
 
 ## UNITS_BLUE
 
-- **просто воин**
+- **баронесса**
   - `initiative`: 60
   - `initiative_base`: 60
   - `team`: "blue"
   - `position`: 7
   - `stand`: "ahead"
-  - `unit_type`: "Warrior"
-  - `damage`: 80
+  - `unit_type`: "Baroness"
+  - `damage`: 0
   - `damage_secondary`: 0
-  - `health`: 300
-  - `max_health`: 300
+  - `health`: 500
+  - `max_health`: 500
   - `armor`: 0
   - `accuracy`: 80
   - `accuracy_secondary`: 60
   - `immunity`: []
-  - `resistance`: ["Mind", "Fire"]
-  - `attack_type_primary`: "Weapon"
-  - `attack_type_secondary`: "Mind"
+  - `resistance`: []
+  - `attack_type_primary`: "Mind"
+  - `attack_type_secondary`: ""
   - `big`: false
   - `paralyzed`: 0
   - `long_paralyzed`: 0
   - `running_away`: 0
   - `transformed`: 0
 
-- **Суккуб**
+- **Ведьма**
   - `initiative`: 60
   - `initiative_base`: 60
   - `team`: "blue"
   - `position`: 8
   - `stand`: "ahead"
-  - `unit_type`: "Succub "
-  - `damage`: 0
+  - `unit_type`: "Mage "
+  - `damage`: 50
   - `damage_secondary`: 0
-  - `health`: 5000
-  - `max_health`: 5000
+  - `health`: 0
+  - `max_health`: 0
   - `armor`: 0
   - `accuracy`: 99
   - `accuracy_secondary`: 0
