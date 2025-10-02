@@ -23,7 +23,7 @@ import random
 from copy import deepcopy
 from datetime import datetime
 from operator import itemgetter
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 SAVE_UNITS_ARRAYS_FLAG = int(os.environ.get("SAVE_UNITS_ARRAYS_FLAG", "1"))
 
@@ -31,7 +31,7 @@ import numpy as np
 from gymnasium import spaces
 
 # --- словари для кодирования в наблюдении ---
-TYPE_LIST = ["Archer", "gargoil", "Mage", "Warrior", "Demon", "Death", "lord", "Dead dragon", "Ismir son", "Ghost", "Shadow", "Betrezen", "Uter", "Uter Demon", "Baroness"]  # one-hot(15)
+TYPE_LIST = ["Archer", "gargoil", "Mage", "Witch", "Warrior", "Demon", "Death", "lord", "Dead dragon", "Ismir son", "Ghost", "Shadow", "Succub", "Betrezen", "Uter", "Uter Demon", "Baroness"]  # one-hot(17)
 ATTACK_TYPES = ["Weapon", "earth", "Fire", "Water", "poison", "death", "Mind"]                        # one-hot(7)
 
 def _one_hot(value: str, vocab: List[str]) -> List[float]:
@@ -43,68 +43,84 @@ def _multi_hot(values: List[str], vocab: List[str]) -> List[float]:
 
 # ------------------------ Исходные юниты ------------------------
 UNITS_RED = [
-    {"name": "скелет-рыцарь",  "initiative": 50, "initiative_base": 50, "team": "red",  "position": 1, "stand": "ahead",
-     "unit_type": "Warrior", "damage": 100, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0, "accuracy": 80, "accuracy_secondary": 0,
-     "immunity": ["death", "Poison"], "resistance": [], "attack_type_primary": "Weapon", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
-     "running_away": 0, "transformed": 0},
+    {"name": "Мертвый дракон", "initiative": 35, "initiative_base": 35, "team": "red", "position": 1, "stand": "ahead",
+     "unit_type": "Dead dragon", "damage": 70, "damage_secondary": 25, "health": 0, "max_health": 0, "armor": 10,
+     "accuracy": 80, "accuracy_secondary": 40, "immunity": ["death"], "resistance": [], "attack_type_primary": "death",
+     "attack_type_secondary": "poison", "big": True, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
+     "basestats": []},
 
-    {"name": "рыцарь смерти",  "initiative": 50, "initiative_base": 50, "team": "red",  "position": 2, "stand": "ahead",
-     "unit_type": "Warrior", "damage": 120, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0, "accuracy": 87, "accuracy_secondary": 0,
-     "immunity": ["death"], "resistance": [], "attack_type_primary": "Weapon", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
-     "running_away": 0, "transformed": 0},
+    {"name": "Суккуб", "initiative": 55, "initiative_base": 55, "team": "red", "position": 2, "stand": "behind",
+     "unit_type": "Succub", "damage": 0, "damage_secondary": 0, "health": 400, "max_health": 400, "armor": 0,
+     "accuracy": 85, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Mind",
+     "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
+     "basestats": []},
 
-    {"name": "Ашган", "initiative": 90, "initiative_base": 90, "team": "red", "position": 3, "stand": "ahead",
-     "unit_type": "Mage", "damage": 20, "damage_secondary": 0, "health": 500, "max_health": 500, "armor": 90, "accuracy": 90, "accuracy_secondary": 0,
-     "immunity": ["death"], "resistance": [], "attack_type_primary": "Life", "attack_type_secondary": "", "big": True, "paralyzed": 0, "long_paralyzed": 0,
-     "running_away": 0, "transformed": 0},
+    {"name": "воин", "initiative": 48, "initiative_base": 48, "team": "red", "position": 3, "stand": "behind",
+     "unit_type": "Warrior", "damage": 0, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0,
+     "accuracy": 78, "accuracy_secondary": 0, "immunity": ["death"], "resistance": ["Mind"], "attack_type_primary": "Mind",
+     "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
+     "basestats": []},
 
-    {"name": "Маг", "initiative": 90, "initiative_base": 90, "team": "red", "position": 4, "stand": "behind",
-     "unit_type": "Mage", "damage": 50, "damage_secondary": 0, "health": 490, "max_health": 490, "armor": 0, "accuracy": 80, "accuracy_secondary": 0,
-     "immunity": [], "resistance": [], "attack_type_primary": "earth", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
-     "running_away": 0, "transformed": 0},
+    {"name": "Смерть", "initiative": 40, "initiative_base": 40, "team": "red", "position": 4, "stand": "behind",
+     "unit_type": "Death", "damage": 95, "damage_secondary": 20, "health": 0, "max_health": 0, "armor": 0,
+     "accuracy": 80, "accuracy_secondary": 55, "immunity": ["Weapon", "death"], "resistance": [],
+     "attack_type_primary": "Weapon", "attack_type_secondary": "poison", "big": False,
+     "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
+     "basestats": []},
 
-    {"name": "Смерть1", "initiative": 40, "initiative_base": 40, "team": "red", "position": 5, "stand": "behind",
-     "unit_type": "Death", "damage": 40, "damage_secondary": 20, "health": 0, "max_health": 0, "armor": 0, "accuracy": 80, "accuracy_secondary": 50,
-     "immunity": ["Weapon", "death"], "resistance": [], "attack_type_primary": "Weapon", "attack_type_secondary": "poison", "big": False, "paralyzed": 0, "long_paralyzed": 0,
-     "running_away": 0, "transformed": 0},
+    {"name": "пусто", "initiative": 0, "initiative_base": 0, "team": "red", "position": 5, "stand": "behind",
+     "unit_type": "Archer", "damage": 0, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0,
+     "accuracy": 0, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Weapon",
+     "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
+     "basestats": []},
 
-    {"name": "Баронесса", "initiative": 55, "initiative_base": 55, "team": "red", "position": 6, "stand": "behind",
-     "unit_type": "Baroness", "damage": 0, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 10, "accuracy": 85, "accuracy_secondary": 0,
-     "immunity": [], "resistance": [], "attack_type_primary": "Mind", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
-     "running_away": 0, "transformed": 0},
+    {"name": "пусто", "initiative": 0, "initiative_base": 0, "team": "red", "position": 6, "stand": "behind",
+     "unit_type": "Archer", "damage": 0, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0,
+     "accuracy": 0, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Weapon",
+     "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
+     "basestats": []},
 ]
 
 UNITS_BLUE = [
-    {"name": "баронесса", "initiative": 60, "initiative_base": 60, "team": "blue", "position": 7,  "stand": "ahead",
-     "unit_type": "Baroness","damage": 0, "damage_secondary": 0, "health": 500, "max_health": 500, "armor": 0, "accuracy": 80, "accuracy_secondary": 60,
-     "immunity": [], "resistance": [], "attack_type_primary": "Mind", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
-     "running_away": 0, "transformed": 0},
+    {"name": "Лучник", "initiative": 95, "initiative_base": 95, "team": "blue", "position": 7, "stand": "ahead",
+     "unit_type": "Archer", "damage": 100, "damage_secondary": 0, "health": 330, "max_health": 330, "armor": 0,
+     "accuracy": 85, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Weapon",
+     "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
+     "basestats": []},
 
-    {"name": "Ведьма",  "initiative": 60, "initiative_base": 60, "team": "blue", "position": 8,  "stand": "ahead",
-     "unit_type": "Mage ", "damage": 50, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0, "accuracy": 99, "accuracy_secondary": 0,
-     "immunity": [], "resistance": [], "attack_type_primary": "Mind", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
-     "running_away": 0, "transformed": 0},
+    {"name": "Боевой маг", "initiative": 62, "initiative_base": 62, "team": "blue", "position": 8, "stand": "behind",
+     "unit_type": "Mage", "damage": 60, "damage_secondary": 0, "health": 100, "max_health": 100, "armor": 0,
+     "accuracy": 88, "accuracy_secondary": 0, "immunity": [], "resistance": [],
+     "attack_type_primary": "Fire", "attack_type_secondary": "", "big": False,
+     "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
+     "basestats": []},
 
-    {"name": "Утер демон", "initiative": 65, "initiative_base": 65, "team": "blue", "position": 9,  "stand": "ahead",
-     "unit_type": "Uter Demon","damage": 150, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0, "accuracy": 90, "accuracy_secondary": 60,
-     "immunity": [], "resistance": ["Mind"], "attack_type_primary": "Fire", "attack_type_secondary": "Mind", "big": True, "paralyzed": 0, "long_paralyzed": 0,
-     "running_away": 0, "transformed": 0},
+    {"name": "Инквизитор", "initiative": 52, "initiative_base": 52, "team": "blue", "position": 9, "stand": "behind",
+     "unit_type": "Uter", "damage": 70, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 5,
+     "accuracy": 82, "accuracy_secondary": 65, "immunity": [], "resistance": [],
+     "attack_type_primary": "Weapon", "attack_type_secondary": "Mind", "big": False,
+     "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
+     "basestats": []},
 
-    {"name": "пусто", "initiative": 0,  "initiative_base": 0,  "team": "blue", "position": 10, "stand": "behind",
-     "unit_type": "Archer","damage": 0,  "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0,  "accuracy": 0, "accuracy_secondary": 0,
-     "immunity": [], "resistance": [], "attack_type_primary": "Weapon", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
-     "running_away": 0, "transformed": 0},
+    {"name": "Арбалетчик", "initiative": 40, "initiative_base": 40, "team": "blue", "position": 10, "stand": "behind",
+     "unit_type": "Archer", "damage": 75, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0,
+     "accuracy": 90, "accuracy_secondary": 0, "immunity": [], "resistance": [],
+     "attack_type_primary": "Weapon", "attack_type_secondary": "", "big": False,
+     "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
+     "basestats": []},
 
-    {"name": "пусто",    "initiative": 0,  "initiative_base": 0,  "team": "blue", "position": 11, "stand": "behind",
-     "unit_type": "Archer","damage": 0,  "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0,  "accuracy": 0, "accuracy_secondary": 0,
-     "immunity": [], "resistance": [], "attack_type_primary": "Weapon", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
-     "running_away": 0, "transformed": 0},
+    {"name": "пусто", "initiative": 0, "initiative_base": 0, "team": "blue", "position": 11, "stand": "behind",
+     "unit_type": "Archer", "damage": 0, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0,
+     "accuracy": 0, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Weapon",
+     "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
+     "basestats": []},
 
-    {"name": "пусто",    "initiative": 0,  "initiative_base": 0,  "team": "blue", "position": 12, "stand": "behind",
-     "unit_type": "Archer","damage": 0,  "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0,  "accuracy": 0, "accuracy_secondary": 0,
-     "immunity": [], "resistance": [], "attack_type_primary": "Weapon", "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0,
-     "running_away": 0, "transformed": 0},
-]   
+    {"name": "пусто", "initiative": 0, "initiative_base": 0, "team": "blue", "position": 12, "stand": "behind",
+     "unit_type": "Archer", "damage": 0, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0,
+     "accuracy": 0, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Weapon",
+     "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
+     "basestats": []},
+]
 
 # Удалить это потом когда не надо будет сохранять юнитов в файл
 def _units_to_markdown_section(title: str, units: List[Dict]) -> str:
@@ -499,6 +515,42 @@ class BattleEnv(gym.Env):
                     f"😰 {unit['team'].upper()} {unit['name']}#{unit['position']} пока парализован и не может бежать."
                 )
 
+        basestats = unit.get("basestats")
+        if unit.get("transformed", 0) == 1 and basestats:
+            pos_key = unit.get("position")
+            snapshots: List[Dict] = []
+            if isinstance(basestats, dict):
+                snapshots = basestats.get(pos_key) or []
+            elif isinstance(basestats, list):
+                snapshots = basestats
+
+            if snapshots and self.rng.random() < 0.7:
+                base_snapshot = snapshots[0]
+                if isinstance(base_snapshot, dict):
+                    unit["accuracy"] = base_snapshot.get("accuracy", unit.get("accuracy", 0))
+                    unit["accuracy_secondary"] = base_snapshot.get("accuracy_secondary", unit.get("accuracy_secondary", 0))
+                    unit["damage"] = base_snapshot.get("damage", unit.get("damage", 0))
+                    unit["damage_secondary"] = base_snapshot.get("damage_secondary", unit.get("damage_secondary", 0))
+                    unit["attack_type_primary"] = base_snapshot.get("attack_type_primary", unit.get("attack_type_primary", "Weapon"))
+                    unit["attack_type_secondary"] = base_snapshot.get("attack_type_secondary", unit.get("attack_type_secondary", ""))
+                    ini_val = base_snapshot.get("initiative", unit.get("initiative", 0))
+                    unit["initiative_base"] = ini_val
+                    unit["initiative"] = ini_val
+                    unit["unit_type"] = base_snapshot.get("unit_type", unit.get("unit_type", "Warrior"))
+                    unit["resistance"] = list(base_snapshot.get("resistance", []))
+                    unit["resilience_used_types"] = list(base_snapshot.get("resilience_used_types", []))
+                    unit["transformed"] = base_snapshot.get("transformed", 0)
+                if isinstance(basestats, dict):
+                    basestats.pop(pos_key, None)
+                else:
+                    try:
+                        snapshots.pop(0)
+                    except IndexError:
+                        pass
+                self._log(
+                    f"🔄 {unit['basestats']}"
+                )
+
         return True
 
     # ------------------ Боевая логика ------------------
@@ -642,6 +694,51 @@ class BattleEnv(gym.Env):
         )
         return True
 
+    def _apply_witch_effect(self, attacker: Dict, victim: Dict) -> None:
+        updated_entry = {
+            "accuracy": victim["accuracy"],
+            "accuracy_secondary": victim["accuracy_secondary"],
+            "damage": victim["damage"],
+            "damage_secondary": victim["damage_secondary"],
+            "attack_type_primary": victim["attack_type_primary"],
+            "attack_type_secondary": victim["attack_type_secondary"],
+            "initiative": victim["initiative_base"],
+            "unit_type": victim["unit_type"],
+            "resistance": list(victim["resistance"]),
+            "resilience_used_types": list(victim["resilience_used_types"]),
+            "transformed": victim["transformed"],
+        }
+        pos_key = victim.get("position")
+        basestats = victim.get("basestats")
+        if not isinstance(basestats, dict):
+            basestats = {}
+            victim["basestats"] = basestats
+        if pos_key not in basestats:
+            basestats[pos_key] = [updated_entry]
+        is_big = bool(victim.get("big", False))
+        old_initiative = victim.get("initiative", 0)
+        new_initiative = 50 if is_big else 30
+
+        victim["accuracy"] = 80
+        victim["accuracy_secondary"] = 0
+        victim["damage"] = 30 if is_big else 20
+        victim["damage_secondary"] = 0
+        victim["attack_type_primary"] = "Weapon"
+        victim["attack_type_secondary"] = ""
+        victim["initiative_base"] = new_initiative
+        if old_initiative == 0:
+            victim["initiative"] = old_initiative
+        else:
+            victim["initiative"] = new_initiative
+        victim["unit_type"] = "Warrior"
+        victim["resistance"] = []
+        victim["resilience_used_types"] = []
+        victim["transformed"] = 1
+        self._log(
+            f"🧙 Ведьма меняет характеристики {victim['team'].upper()} {victim['name']}#{victim['position']}: "
+            f"accuracy=80, damage={victim['damage']}, initiative={victim['initiative']}"
+        )
+
     def _apply_long_paralysis_effect(self, attacker: Dict, victim: Dict) -> bool:
         if victim.get("long_paralyzed", 0):
             return False
@@ -675,38 +772,27 @@ class BattleEnv(gym.Env):
         )
         return True
 
-    def _apply_shadow_aoe(self, attacker: Dict, primary_victim: Optional[Dict]) -> None:
-        enemy_team = "blue" if attacker.get("team") == "red" else "red"
-        accuracy = float(attacker.get("accuracy", 0) or 0)
-        for victim in self.combined:
-            if victim is primary_victim:
-                continue
-            if victim.get("team") != enemy_team or not self._alive(victim):
-                continue
-            if victim.get("paralyzed", 0):
-                continue
-            roll = self._roll_status(accuracy)
-            self._log(
-                f"🕳 Шанс паралича тенью {int(accuracy)}% — "
-                + ("успех" if roll else "неудача")
-                + f" по {victim['team'].upper()} {victim['name']}#{victim['position']}."
-            )
-            if roll:
-                self._apply_paralysis_effect(attacker, victim)
-
+    
     def _attack(self, attacker, target_pos: Optional[int]):
         """
         Выполнить урон.
         Возврат: (hit: bool, reason: str)
           reason ∈ {"ok","dead_or_absent","aoe","aoe_no_targets","immune_damage","immune_status","miss","resilience_block"}
         """
-        # AoE для Shadow — массовый паралич
-        if attacker is not None and attacker.get("unit_type") == "Shadow":
+        # AoE для Shadow и Succub
+        if attacker is not None and attacker.get("unit_type") in ("Shadow", "Succub"):
             enemy_team = "blue" if attacker["team"] == "red" else "red"
             targets = [u for u in self.combined if u["team"] == enemy_team and self._alive(u)]
             if targets:
+                attacker_type = attacker.get("unit_type")
+                if attacker_type == "Shadow":
+                    action_desc = "парализовать"
+                    log_type = "Shadow"
+                else:
+                    action_desc = "превратить"
+                    log_type = "Succub"
                 self._log(
-                    f"{attacker['team'].upper()} {attacker['name']}#{attacker['position']} (Shadow) пытается парализовать всю команду противника."
+                    f"{attacker['team'].upper()} {attacker['name']}#{attacker['position']} ({log_type}) пытается {action_desc} всю команду противника."
                 )
                 for victim in targets:
                     if not self._roll_hit(attacker):
@@ -715,11 +801,21 @@ class BattleEnv(gym.Env):
                             f"{victim['team'].upper()} {victim['name']}#{victim['position']}."
                         )
                         continue
-                    self._apply_paralysis_effect(attacker, victim)
+                    if attacker_type == "Shadow":
+                        self._apply_paralysis_effect(attacker, victim)
+                    else:
+                        self._apply_witch_effect(attacker, victim)
                 return True, "aoe"
             else:
+                attacker_type = attacker.get("unit_type")
+                if attacker_type == "Shadow":
+                    action_desc = "парализовать"
+                    log_type = "Shadow"
+                else:
+                    action_desc = "превратить"
+                    log_type = "Succub"
                 self._log(
-                    f"{attacker['team'].upper()} {attacker['name']}#{attacker['position']} (Shadow) пытается парализовать: целей нет."
+                    f"{attacker['team'].upper()} {attacker['name']}#{attacker['position']} ({log_type}) пытается {action_desc}: целей нет."
                 )
                 return False, "aoe_no_targets"
 
@@ -796,30 +892,32 @@ class BattleEnv(gym.Env):
                           f"{victim['team'].upper()} {victim['name']}#{victim['position']}: атака наносит 0.")
                 return True, "immune_damage"
 
-            if self._resilience_blocks(attacker, victim):
-                return True, "resilience_block"
+        if self._resilience_blocks(attacker, victim):
+            return True, "resilience_block"
 
-            before = victim["health"]
-            dmg = self._apply_damage_with_armor(attacker["damage"], victim)
-            victim["health"] -= dmg
-            after = victim["health"]
-            self._log(f"{attacker['team'].upper()} {attacker['name']}#{attacker['position']} → "
-                      f"{victim['team'].upper()} {victim['name']}#{victim['position']}: {dmg} "
-                      f"({before}→{max(0, after)})")
+        before = victim["health"]
+        dmg = self._apply_damage_with_armor(attacker["damage"], victim)
+        victim["health"] -= dmg
+        after = victim["health"]
+        self._log(f"{attacker['team'].upper()} {attacker['name']}#{attacker['position']} → "
+                  f"{victim['team'].upper()} {victim['name']}#{victim['position']}: {dmg} "
+                  f"({before}→{max(0, after)})")
 
-            if self._alive(victim):
-                if attacker.get("unit_type") == "Ghost":
-                    self._apply_paralysis_effect(attacker, victim)
-
-                # Долгий паралич от Betrezen по шансу Точность2
-                if attacker.get("unit_type") == "Betrezen":
-                    acc2 = float(attacker.get("accuracy_secondary", 0) or 0)
-                    if acc2 > 0:
-                        roll = self._roll_status(acc2)
-                        self._log(f"⚡ Шанс долгого паралича {int(acc2)}% — " +
-                                  ("успех" if roll else "неудача") + f" по {victim['team'].upper()} {victim['name']}#{victim['position']}.")
-                        if roll:
-                            self._apply_long_paralysis_effect(attacker, victim)
+        if self._alive(victim):
+            if attacker.get("unit_type") == "Ghost":
+                self._apply_paralysis_effect(attacker, victim)
+            if attacker.get("unit_type") == "Witch":
+                self._apply_witch_effect(attacker, victim)
+        
+            # Долгий паралич от Betrezen по шансу Точность2
+            if attacker.get("unit_type") == "Betrezen":
+                acc2 = float(attacker.get("accuracy_secondary", 0) or 0)
+                if acc2 > 0:
+                    roll = self._roll_status(acc2)
+                    self._log(f"⚡ Шанс долгого паралича {int(acc2)}% — " +
+                              ("успех" if roll else "неудача") + f" по {victim['team'].upper()} {victim['name']}#{victim['position']}.")
+                    if roll:
+                        self._apply_long_paralysis_effect(attacker, victim)
 
                 # Долгий паралич от Uter по шансу Точность2
                 if attacker.get("unit_type") == "Uter":
@@ -1119,10 +1217,10 @@ from stable_baselines3.common.callbacks import CallbackList, EvalCallback, BaseC
 from wandb.integration.sb3 import WandbCallback
 from stable_baselines3.common.env_checker import check_env
 
-check_env(BattleEnv(log_enabled=False), warn=True)
+check_env(BattleEnv(log_enabled=True), warn=True)
 
 # -------------------- Параметры обучения и теста --------------------
-TOTAL_STEPS     = 300000
+TOTAL_STEPS     = 100000
 N_ENVS          = 8
 MODEL_SAVE_FREQ = 1000000
 EVAL_FREQ       = 1000000
@@ -1337,6 +1435,7 @@ if VISUALIZE_TEST:
             "Ismir son": " (Ismir son)",
             "Ghost": " (Ghost)",
             "Shadow": " (Shadow)",
+            "Succub": " (Succub)",
             "Betrezen": " (Betrezen)",
             "Uter": " (Uter)",
             "Uter Demon": " (Uter Demon)",
