@@ -31,7 +31,8 @@ import numpy as np
 from gymnasium import spaces
 
 # --- словари для кодирования в наблюдении ---
-TYPE_LIST = ["Archer", "gargoil", "Mage", "Witch", "Warrior", "Demon", "Death", "lord", "Dead dragon", "Ismir son", "Ghost", "Shadow", "Succub", "Betrezen", "Uter", "Uter Demon", "Baroness"]  # one-hot(17)
+TYPE_LIST = ["Archer", "gargoil", "Mage", "Witch", "Warrior", "Demon", "Death", "lord", "Dead dragon", "Ismir son", "Ghost", "Shadow", "Succub", 
+"Betrezen", "Uter", "Uter Demon", "Baroness", "Incub",]  # one-hot(18)
 ATTACK_TYPES = ["Weapon", "earth", "Fire", "Water", "poison", "death", "Mind"]                        # one-hot(7)
 
 def _one_hot(value: str, vocab: List[str]) -> List[float]:
@@ -49,9 +50,9 @@ UNITS_RED = [
      "attack_type_secondary": "poison", "big": True, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
-    {"name": "Суккуб", "initiative": 55, "initiative_base": 55, "team": "red", "position": 2, "stand": "behind",
-     "unit_type": "Succub", "damage": 0, "damage_secondary": 0, "health": 400, "max_health": 400, "armor": 0,
-     "accuracy": 85, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Mind",
+    {"name": "Тень", "initiative": 55, "initiative_base": 55, "team": "red", "position": 2, "stand": "behind",
+     "unit_type": "Shadow", "damage": 0, "damage_secondary": 0, "health": 400, "max_health": 400, "armor": 0,
+     "accuracy": 90, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Mind",
      "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
@@ -84,13 +85,13 @@ UNITS_RED = [
 UNITS_BLUE = [
     {"name": "Лучник", "initiative": 95, "initiative_base": 95, "team": "blue", "position": 7, "stand": "ahead",
      "unit_type": "Archer", "damage": 100, "damage_secondary": 0, "health": 330, "max_health": 330, "armor": 0,
-     "accuracy": 85, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Weapon",
+     "accuracy": 85, "accuracy_secondary": 0, "immunity": [], "resistance": ["Mind"], "attack_type_primary": "Weapon",
      "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
     {"name": "Боевой маг", "initiative": 62, "initiative_base": 62, "team": "blue", "position": 8, "stand": "behind",
      "unit_type": "Mage", "damage": 60, "damage_secondary": 0, "health": 100, "max_health": 100, "armor": 0,
-     "accuracy": 88, "accuracy_secondary": 0, "immunity": [], "resistance": [],
+     "accuracy": 88, "accuracy_secondary": 0, "immunity": [], "resistance": ["Mind"],
      "attack_type_primary": "Fire", "attack_type_secondary": "", "big": False,
      "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
@@ -524,7 +525,7 @@ class BattleEnv(gym.Env):
             elif isinstance(basestats, list):
                 snapshots = basestats
 
-            if snapshots and self.rng.random() < 0.7:
+            if snapshots and self.rng.random() < 0.3:
                 base_snapshot = snapshots[0]
                 if isinstance(base_snapshot, dict):
                     unit["accuracy"] = base_snapshot.get("accuracy", unit.get("accuracy", 0))
@@ -665,7 +666,7 @@ class BattleEnv(gym.Env):
         if victim.get("paralyzed", 0):
             return False
         
-        effect_type = attacker.get("attack_type_secondary", "")
+        effect_type = attacker.get("attack_type_primary", "")
         if not effect_type:
             effect_type = "Mind"  # фолбэк для обратной совместимости
         
@@ -780,7 +781,7 @@ class BattleEnv(gym.Env):
           reason ∈ {"ok","dead_or_absent","aoe","aoe_no_targets","immune_damage","immune_status","miss","resilience_block"}
         """
         # AoE для Shadow и Succub
-        if attacker is not None and attacker.get("unit_type") in ("Shadow", "Succub"):
+        if attacker is not None and attacker.get("unit_type") in ("Shadow", "Succub", "Incub"):
             enemy_team = "blue" if attacker["team"] == "red" else "red"
             targets = [u for u in self.combined if u["team"] == enemy_team and self._alive(u)]
             if targets:
@@ -788,6 +789,9 @@ class BattleEnv(gym.Env):
                 if attacker_type == "Shadow":
                     action_desc = "парализовать"
                     log_type = "Shadow"
+                elif attacker_type == "Incub":
+                    action_desc = "Окаменить"
+                    log_type = "Incub"
                 else:
                     action_desc = "превратить"
                     log_type = "Succub"
@@ -801,7 +805,7 @@ class BattleEnv(gym.Env):
                             f"{victim['team'].upper()} {victim['name']}#{victim['position']}."
                         )
                         continue
-                    if attacker_type == "Shadow":
+                    if attacker_type == "Shadow" or attacker_type == "Incub":
                         self._apply_paralysis_effect(attacker, victim)
                     else:
                         self._apply_witch_effect(attacker, victim)
@@ -811,6 +815,9 @@ class BattleEnv(gym.Env):
                 if attacker_type == "Shadow":
                     action_desc = "парализовать"
                     log_type = "Shadow"
+                elif attacker_type == "Incub":
+                    action_desc = "Окаменить"
+                    log_type = "Incub"
                 else:
                     action_desc = "превратить"
                     log_type = "Succub"
@@ -1439,6 +1446,7 @@ if VISUALIZE_TEST:
             "Betrezen": " (Betrezen)",
             "Uter": " (Uter)",
             "Uter Demon": " (Uter Demon)",
+            "Incub": " (Incub)",
         }.get(t, f" ({t})")
 
     for u in (UNITS_RED + UNITS_BLUE):
