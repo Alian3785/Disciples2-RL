@@ -2,138 +2,43 @@
 
 ## UNITS_RED
 
-- **скелет-рыцарь**
-  - `initiative`: 50
-  - `initiative_base`: 50
+- **Мертвый дракон**
+  - `initiative`: 35
+  - `initiative_base`: 35
   - `team`: "red"
   - `position`: 1
   - `stand`: "ahead"
-  - `unit_type`: "Warrior"
-  - `damage`: 100
-  - `damage_secondary`: 0
+  - `unit_type`: "Dead dragon"
+  - `damage`: 70
+  - `damage_secondary`: 25
   - `health`: 0
   - `max_health`: 0
-  - `armor`: 0
+  - `armor`: 10
   - `accuracy`: 80
-  - `accuracy_secondary`: 0
-  - `immunity`: ["death", "Poison"]
-  - `resistance`: []
-  - `attack_type_primary`: "Weapon"
-  - `attack_type_secondary`: ""
-  - `big`: false
-  - `paralyzed`: 0
-  - `long_paralyzed`: 0
-  - `running_away`: 0
-  - `transformed`: 0
-
-- **рыцарь смерти**
-  - `initiative`: 50
-  - `initiative_base`: 50
-  - `team`: "red"
-  - `position`: 2
-  - `stand`: "ahead"
-  - `unit_type`: "Warrior"
-  - `damage`: 120
-  - `damage_secondary`: 0
-  - `health`: 0
-  - `max_health`: 0
-  - `armor`: 0
-  - `accuracy`: 87
-  - `accuracy_secondary`: 0
+  - `accuracy_secondary`: 40
   - `immunity`: ["death"]
   - `resistance`: []
-  - `attack_type_primary`: "Weapon"
-  - `attack_type_secondary`: ""
-  - `big`: false
-  - `paralyzed`: 0
-  - `long_paralyzed`: 0
-  - `running_away`: 0
-  - `transformed`: 0
-
-- **Ашган**
-  - `initiative`: 90
-  - `initiative_base`: 90
-  - `team`: "red"
-  - `position`: 3
-  - `stand`: "ahead"
-  - `unit_type`: "Mage"
-  - `damage`: 20
-  - `damage_secondary`: 0
-  - `health`: 500
-  - `max_health`: 500
-  - `armor`: 90
-  - `accuracy`: 90
-  - `accuracy_secondary`: 0
-  - `immunity`: ["death"]
-  - `resistance`: []
-  - `attack_type_primary`: "Life"
-  - `attack_type_secondary`: ""
+  - `attack_type_primary`: "death"
+  - `attack_type_secondary`: "poison"
   - `big`: true
   - `paralyzed`: 0
   - `long_paralyzed`: 0
   - `running_away`: 0
   - `transformed`: 0
+  - `basestats`: []
 
-- **Маг**
-  - `initiative`: 90
-  - `initiative_base`: 90
-  - `team`: "red"
-  - `position`: 4
-  - `stand`: "behind"
-  - `unit_type`: "Mage"
-  - `damage`: 50
-  - `damage_secondary`: 0
-  - `health`: 490
-  - `max_health`: 490
-  - `armor`: 0
-  - `accuracy`: 80
-  - `accuracy_secondary`: 0
-  - `immunity`: []
-  - `resistance`: []
-  - `attack_type_primary`: "earth"
-  - `attack_type_secondary`: ""
-  - `big`: false
-  - `paralyzed`: 0
-  - `long_paralyzed`: 0
-  - `running_away`: 0
-  - `transformed`: 0
-
-- **Смерть1**
-  - `initiative`: 40
-  - `initiative_base`: 40
-  - `team`: "red"
-  - `position`: 5
-  - `stand`: "behind"
-  - `unit_type`: "Death"
-  - `damage`: 40
-  - `damage_secondary`: 20
-  - `health`: 0
-  - `max_health`: 0
-  - `armor`: 0
-  - `accuracy`: 80
-  - `accuracy_secondary`: 50
-  - `immunity`: ["Weapon", "death"]
-  - `resistance`: []
-  - `attack_type_primary`: "Weapon"
-  - `attack_type_secondary`: "poison"
-  - `big`: false
-  - `paralyzed`: 0
-  - `long_paralyzed`: 0
-  - `running_away`: 0
-  - `transformed`: 0
-
-- **Баронесса**
+- **Суккуб**
   - `initiative`: 55
   - `initiative_base`: 55
   - `team`: "red"
-  - `position`: 6
+  - `position`: 2
   - `stand`: "behind"
-  - `unit_type`: "Baroness"
+  - `unit_type`: "Succub"
   - `damage`: 0
   - `damage_secondary`: 0
-  - `health`: 0
-  - `max_health`: 0
-  - `armor`: 10
+  - `health`: 400
+  - `max_health`: 400
+  - `armor`: 0
   - `accuracy`: 85
   - `accuracy_secondary`: 0
   - `immunity`: []
@@ -145,86 +50,63 @@
   - `long_paralyzed`: 0
   - `running_away`: 0
   - `transformed`: 0
+  - `basestats`: []
 
-## UNITS_BLUE
-
-- **баронесса**
-  - `initiative`: 60
-  - `initiative_base`: 60
-  - `team`: "blue"
-  - `position`: 7
-  - `stand`: "ahead"
-  - `unit_type`: "Baroness"
+- **воин**
+  - `initiative`: 48
+  - `initiative_base`: 48
+  - `team`: "red"
+  - `position`: 3
+  - `stand`: "behind"
+  - `unit_type`: "Warrior"
   - `damage`: 0
   - `damage_secondary`: 0
-  - `health`: 500
-  - `max_health`: 500
+  - `health`: 0
+  - `max_health`: 0
+  - `armor`: 0
+  - `accuracy`: 78
+  - `accuracy_secondary`: 0
+  - `immunity`: ["death"]
+  - `resistance`: ["Mind"]
+  - `attack_type_primary`: "Mind"
+  - `attack_type_secondary`: ""
+  - `big`: false
+  - `paralyzed`: 0
+  - `long_paralyzed`: 0
+  - `running_away`: 0
+  - `transformed`: 0
+  - `basestats`: []
+
+- **Смерть**
+  - `initiative`: 40
+  - `initiative_base`: 40
+  - `team`: "red"
+  - `position`: 4
+  - `stand`: "behind"
+  - `unit_type`: "Death"
+  - `damage`: 95
+  - `damage_secondary`: 20
+  - `health`: 0
+  - `max_health`: 0
   - `armor`: 0
   - `accuracy`: 80
-  - `accuracy_secondary`: 60
-  - `immunity`: []
+  - `accuracy_secondary`: 55
+  - `immunity`: ["Weapon", "death"]
   - `resistance`: []
-  - `attack_type_primary`: "Mind"
-  - `attack_type_secondary`: ""
+  - `attack_type_primary`: "Weapon"
+  - `attack_type_secondary`: "poison"
   - `big`: false
   - `paralyzed`: 0
   - `long_paralyzed`: 0
   - `running_away`: 0
   - `transformed`: 0
-
-- **Ведьма**
-  - `initiative`: 60
-  - `initiative_base`: 60
-  - `team`: "blue"
-  - `position`: 8
-  - `stand`: "ahead"
-  - `unit_type`: "Mage "
-  - `damage`: 50
-  - `damage_secondary`: 0
-  - `health`: 0
-  - `max_health`: 0
-  - `armor`: 0
-  - `accuracy`: 99
-  - `accuracy_secondary`: 0
-  - `immunity`: []
-  - `resistance`: []
-  - `attack_type_primary`: "Mind"
-  - `attack_type_secondary`: ""
-  - `big`: false
-  - `paralyzed`: 0
-  - `long_paralyzed`: 0
-  - `running_away`: 0
-  - `transformed`: 0
-
-- **Утер демон**
-  - `initiative`: 65
-  - `initiative_base`: 65
-  - `team`: "blue"
-  - `position`: 9
-  - `stand`: "ahead"
-  - `unit_type`: "Uter Demon"
-  - `damage`: 150
-  - `damage_secondary`: 0
-  - `health`: 0
-  - `max_health`: 0
-  - `armor`: 0
-  - `accuracy`: 90
-  - `accuracy_secondary`: 60
-  - `immunity`: []
-  - `resistance`: ["Mind"]
-  - `attack_type_primary`: "Fire"
-  - `attack_type_secondary`: "Mind"
-  - `big`: true
-  - `paralyzed`: 0
-  - `long_paralyzed`: 0
-  - `running_away`: 0
-  - `transformed`: 0
+  - `basestats`: []
 
 - **пусто**
   - `initiative`: 0
   - `initiative_base`: 0
-  - `team`: "blue"
-  - `position`: 10
+  - `team`: "red"
+  - `position`: 5
   - `stand`: "behind"
   - `unit_type`: "Archer"
   - `damage`: 0
@@ -243,6 +125,134 @@
   - `long_paralyzed`: 0
   - `running_away`: 0
   - `transformed`: 0
+  - `basestats`: []
+
+- **пусто**
+  - `initiative`: 0
+  - `initiative_base`: 0
+  - `team`: "red"
+  - `position`: 6
+  - `stand`: "behind"
+  - `unit_type`: "Archer"
+  - `damage`: 0
+  - `damage_secondary`: 0
+  - `health`: 0
+  - `max_health`: 0
+  - `armor`: 0
+  - `accuracy`: 0
+  - `accuracy_secondary`: 0
+  - `immunity`: []
+  - `resistance`: []
+  - `attack_type_primary`: "Weapon"
+  - `attack_type_secondary`: ""
+  - `big`: false
+  - `paralyzed`: 0
+  - `long_paralyzed`: 0
+  - `running_away`: 0
+  - `transformed`: 0
+  - `basestats`: []
+
+## UNITS_BLUE
+
+- **Лучник**
+  - `initiative`: 95
+  - `initiative_base`: 95
+  - `team`: "blue"
+  - `position`: 7
+  - `stand`: "ahead"
+  - `unit_type`: "Archer"
+  - `damage`: 100
+  - `damage_secondary`: 0
+  - `health`: 330
+  - `max_health`: 330
+  - `armor`: 0
+  - `accuracy`: 85
+  - `accuracy_secondary`: 0
+  - `immunity`: []
+  - `resistance`: []
+  - `attack_type_primary`: "Weapon"
+  - `attack_type_secondary`: ""
+  - `big`: false
+  - `paralyzed`: 0
+  - `long_paralyzed`: 0
+  - `running_away`: 0
+  - `transformed`: 0
+  - `basestats`: []
+
+- **Боевой маг**
+  - `initiative`: 62
+  - `initiative_base`: 62
+  - `team`: "blue"
+  - `position`: 8
+  - `stand`: "behind"
+  - `unit_type`: "Mage"
+  - `damage`: 60
+  - `damage_secondary`: 0
+  - `health`: 100
+  - `max_health`: 100
+  - `armor`: 0
+  - `accuracy`: 88
+  - `accuracy_secondary`: 0
+  - `immunity`: []
+  - `resistance`: []
+  - `attack_type_primary`: "Fire"
+  - `attack_type_secondary`: ""
+  - `big`: false
+  - `paralyzed`: 0
+  - `long_paralyzed`: 0
+  - `running_away`: 0
+  - `transformed`: 0
+  - `basestats`: []
+
+- **Инквизитор**
+  - `initiative`: 52
+  - `initiative_base`: 52
+  - `team`: "blue"
+  - `position`: 9
+  - `stand`: "behind"
+  - `unit_type`: "Uter"
+  - `damage`: 70
+  - `damage_secondary`: 0
+  - `health`: 0
+  - `max_health`: 0
+  - `armor`: 5
+  - `accuracy`: 82
+  - `accuracy_secondary`: 65
+  - `immunity`: []
+  - `resistance`: []
+  - `attack_type_primary`: "Weapon"
+  - `attack_type_secondary`: "Mind"
+  - `big`: false
+  - `paralyzed`: 0
+  - `long_paralyzed`: 0
+  - `running_away`: 0
+  - `transformed`: 0
+  - `basestats`: []
+
+- **Арбалетчик**
+  - `initiative`: 40
+  - `initiative_base`: 40
+  - `team`: "blue"
+  - `position`: 10
+  - `stand`: "behind"
+  - `unit_type`: "Archer"
+  - `damage`: 75
+  - `damage_secondary`: 0
+  - `health`: 0
+  - `max_health`: 0
+  - `armor`: 0
+  - `accuracy`: 90
+  - `accuracy_secondary`: 0
+  - `immunity`: []
+  - `resistance`: []
+  - `attack_type_primary`: "Weapon"
+  - `attack_type_secondary`: ""
+  - `big`: false
+  - `paralyzed`: 0
+  - `long_paralyzed`: 0
+  - `running_away`: 0
+  - `transformed`: 0
+  - `basestats`: []
 
 - **пусто**
   - `initiative`: 0
@@ -267,6 +277,7 @@
   - `long_paralyzed`: 0
   - `running_away`: 0
   - `transformed`: 0
+  - `basestats`: []
 
 - **пусто**
   - `initiative`: 0
@@ -291,3 +302,4 @@
   - `long_paralyzed`: 0
   - `running_away`: 0
   - `transformed`: 0
+  - `basestats`: []
