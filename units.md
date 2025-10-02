@@ -27,19 +27,19 @@
   - `transformed`: 0
   - `basestats`: []
 
-- **Суккуб**
+- **Тень**
   - `initiative`: 55
   - `initiative_base`: 55
   - `team`: "red"
   - `position`: 2
   - `stand`: "behind"
-  - `unit_type`: "Succub"
+  - `unit_type`: "Shadow"
   - `damage`: 0
   - `damage_secondary`: 0
   - `health`: 400
   - `max_health`: 400
   - `armor`: 0
-  - `accuracy`: 85
+  - `accuracy`: 90
   - `accuracy_secondary`: 0
   - `immunity`: []
   - `resistance`: []
@@ -169,7 +169,7 @@
   - `accuracy`: 85
   - `accuracy_secondary`: 0
   - `immunity`: []
-  - `resistance`: []
+  - `resistance`: ["Mind"]
   - `attack_type_primary`: "Weapon"
   - `attack_type_secondary`: ""
   - `big`: false
@@ -194,7 +194,7 @@
   - `accuracy`: 88
   - `accuracy_secondary`: 0
   - `immunity`: []
-  - `resistance`: []
+  - `resistance`: ["Mind"]
   - `attack_type_primary`: "Fire"
   - `attack_type_secondary`: ""
   - `big`: false
