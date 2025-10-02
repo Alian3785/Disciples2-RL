@@ -667,8 +667,6 @@ class BattleEnv(gym.Env):
             return False
         
         effect_type = attacker.get("attack_type_primary", "")
-        if not effect_type:
-            effect_type = "Mind"  # фолбэк для обратной совместимости
         
         if effect_type in (victim.get("immunity") or []):
             self._log(
@@ -745,8 +743,6 @@ class BattleEnv(gym.Env):
             return False
         
         effect_type = attacker.get("attack_type_secondary", "")
-        if not effect_type:
-            effect_type = "Mind"  # фолбэк для обратной совместимости
         
         if effect_type in (victim.get("immunity") or []):
             self._log(
