@@ -32,7 +32,7 @@ from gymnasium import spaces
 
 # --- словари для кодирования в наблюдении ---
 TYPE_LIST = ["Archer", "gargoil", "Mage", "Witch", "Warrior", "Demon", "Death", "lord", "Dead dragon", "Ismir son", "Ghost", "Shadow", "Succub", 
-"Betrezen", "Uter", "Uter Demon", "Baroness", "Incub",]  # one-hot(18)
+"Betrezen", "Uter", "Uter Demon", "Tiamat", "Baroness", "Incub",]  # one-hot(19)
 ATTACK_TYPES = ["Weapon", "earth", "Fire", "Water", "poison", "death", "Mind"]                        # one-hot(7)
 
 def _one_hot(value: str, vocab: List[str]) -> List[float]:
@@ -769,6 +769,44 @@ class BattleEnv(gym.Env):
         )
         return True
 
+    def _apply_tiamat_damage_debuff(self, attacker: Dict, victim: Dict) -> bool:
+        effect_type = attacker.get("attack_type_secondary", "")
+
+        if effect_type and effect_type in (victim.get("immunity") or []):
+            self._log(
+                f"🛡 Иммунитет к эффекту '{effect_type}' — ослабление урона НЕ действует на "
+                f"{victim['team'].upper()} {victim['name']}#{victim['position']}."
+            )
+            return False
+
+        if effect_type:
+            res_list = set(victim.get("resistance") or [])
+            if effect_type in res_list:
+                used = set(victim.get("resilience_used_types") or [])
+                if effect_type not in used:
+                    victim.setdefault("resilience_used_types", []).append(effect_type)
+                    self._log(
+                        f"🧿 Стойкость — первый эффект типа '{effect_type}' по "
+                        f"{victim['team'].upper()} {victim['name']}#{victim['position']} поглощён."
+                    )
+                    return False
+
+        base_primary = int(victim.get("damage", 0) or 0)
+        new_primary = max(0, int(round(base_primary * 0.68)))
+
+        if new_primary == base_primary:
+            self._log(
+                f"🔻 Ослабление: урон {victim['team'].upper()} {victim['name']}#{victim['position']} уже равен {base_primary} — изменений нет."
+            )
+            return True
+
+        victim["damage"] = new_primary
+        self._log(
+            f"🔻 Ослабление: {attacker['team'].upper()} {attacker['name']}#{attacker['position']} снижает урон "
+            f"{victim['team'].upper()} {victim['name']}#{victim['position']} с {base_primary} до {new_primary}."
+        )
+        return True
+
     
     def _attack(self, attacker, target_pos: Optional[int]):
         """
@@ -822,8 +860,8 @@ class BattleEnv(gym.Env):
                 )
                 return False, "aoe_no_targets"
 
-        # AoE для Mage, Dead dragon и Uter Demon
-        if attacker is not None and attacker.get("unit_type") in ("Mage", "Dead dragon", "Uter Demon"):
+        # AoE для Mage, Dead dragon, Uter Demon и Tiamat
+        if attacker is not None and attacker.get("unit_type") in ("Mage", "Dead dragon", "Uter Demon", "Tiamat"):
             enemy_team = "blue" if attacker["team"] == "red" else "red"
             targets = [u for u in self.combined if u["team"] == enemy_team and self._alive(u)]
             if targets:
@@ -877,6 +915,17 @@ class BattleEnv(gym.Env):
                                           ("успех" if roll else "неудача") + f" по {victim['team'].upper()} {victim['name']}#{victim['position']}.")
                                 if roll:
                                     self._apply_long_paralysis_effect(attacker, victim)
+                                    
+                        if atype == "Tiamat":
+                            acc2 = float(attacker.get("accuracy_secondary", 0) or 0)
+                            roll = self._roll_status(acc2)
+                            self._log(
+                                f"🔻 Шанс ослабления урона {int(acc2)}% — "
+                                 + ("успех" if roll else "неудача")
+                                + f" по {victim['team'].upper()} {victim['name']}#{victim['position']}."
+                             )
+                            if roll:
+                                self._apply_tiamat_damage_debuff(attacker, victim)
                 return True, "aoe"
             else:
                 self._log(f"{attacker['team'].upper()} {attacker['name']}#{attacker['position']} ({attacker.get('unit_type')}) применяет массовую атаку: целей нет.")
@@ -921,16 +970,6 @@ class BattleEnv(gym.Env):
                               ("успех" if roll else "неудача") + f" по {victim['team'].upper()} {victim['name']}#{victim['position']}.")
                     if roll:
                         self._apply_long_paralysis_effect(attacker, victim)
-
-                # Долгий паралич от Uter по шансу Точность2
-                if attacker.get("unit_type") == "Uter":
-                    acc2 = float(attacker.get("accuracy_secondary", 0) or 0)
-                    if acc2 > 0:
-                        roll = self._roll_status(acc2)
-                        self._log(f"⚡ Шанс долгого паралича {int(acc2)}% — " +
-                                  ("успех" if roll else "неудача") + f" по {victim['team'].upper()} {victim['name']}#{victim['position']}.")
-                        if roll:
-                            self._apply_long_paralysis_effect(attacker, victim)
 
                 # ЯД от Death по шансу Точность2 (если ещё не отравлен)
                 if attacker.get("unit_type") == "Death" and attacker.get("attack_type_secondary", "") == "poison" and victim.get("poison_turns_left", 0) <= 0:
@@ -984,7 +1023,7 @@ class BattleEnv(gym.Env):
                             self._log(
                                 f"☢ {attacker['team'].upper()} {attacker['name']}#{pos} накладывает воду "
                                 f"({victim['uran_damage_per_tick']} урона/ход) на "
-                                f"{victim['team'].upper()} {victim['name']}#{victim['position']} на {URAN_TURNS} хода."
+                                f"{victim['team'].upper()} {victim['name']}#{victим['position']} на {URAN_TURNS} хода."
                             )
 
             if victim["health"] <= 0:
@@ -1068,7 +1107,7 @@ class BattleEnv(gym.Env):
                         self._log(f"RED ход: {nxt['name']}#{nxt['position']} ({prefix}) → цель с мин. HP pos{target_pos} (удар {hit_i+1}/{strikes}).")
                     else:
                         self._log(f"RED ход: {nxt['name']}#{nxt['position']} ({nxt.get('unit_type')}) не может атаковать: доступных целей нет.")
-                elif nxt.get("unit_type") in ("Mage", "Dead dragon", "Uter Demon"):
+                elif nxt.get("unit_type") in ("Mage", "Dead dragon", "Uter Demon", "Tiamat"):
                     if hit_i == 0:
                         self._log(f"RED ход: {nxt['name']}#{nxt['position']} ({nxt.get('unit_type')}) выполняет массовую атаку.")
                     else:
@@ -1079,7 +1118,7 @@ class BattleEnv(gym.Env):
                     ut = nxt.get("unit_type")
                     self._log(f"RED ход: {nxt['name']}#{nxt['position']} ({ut}) → цель с мин. HP pos{target_pos} (удар {hit_i+1}/{strikes}).")
 
-                if target_pos is not None or nxt.get("unit_type") in ("Mage", "Dead dragon", "Uter Demon"):
+                if target_pos is not None or nxt.get("unit_type") in ("Mage", "Dead dragon", "Uter Demon", "Tiamat"):
                     self._attack(nxt, target_pos)
                     self._check_victory_after_hit()
                     if self.winner is not None:
@@ -1165,7 +1204,7 @@ class BattleEnv(gym.Env):
                     if not hit and reason == "dead_or_absent":
                         step_shaping += self.penalty_invalid_target
                     self._check_victory_after_hit()
-            elif attacker.get("unit_type") in ("Mage", "Dead dragon", "Uter Demon"):
+            elif attacker.get("unit_type") in ("Mage", "Dead dragon", "Uter Demon", "Tiamat"):
                 hit, reason = self._attack(attacker, target_pos)
                 self._check_victory_after_hit()
             else:
@@ -1442,6 +1481,7 @@ if VISUALIZE_TEST:
             "Betrezen": " (Betrezen)",
             "Uter": " (Uter)",
             "Uter Demon": " (Uter Demon)",
+            "Tiamat": " (Tiamat)",
             "Incub": " (Incub)",
         }.get(t, f" ({t})")
 
@@ -1657,7 +1697,7 @@ if VISUALIZE_TEST:
     blue_action_re   = re.compile(r'^BLUE действие:\s+[^#]+#(\d+)\s+→\s+pos(\d+)')
     # обновлён: допускаем "цель ..." или "цель с мин. HP ..."
     red_target_re    = re.compile(r'^RED ход:\s+[^#]+#(\d+).+цель.*pos(\d+)')
-    mage_banner_re   = re.compile(r'^\w+\s+[^#]+#(\d+)\s+\((?:Mage|Dead dragon|Uter Demon)\).+массов')
+    mage_banner_re   = re.compile(r'^\w+\s+[^#]+#(\d+)\s+\((?:Mage|Dead dragon|Uter Demon|Tiamat)\).+массов')
     blue_cant_re     = re.compile(r'^BLUE\s+[^#]+#(\d+).+не может достать pos(\d+)')
     poison_tick_re   = re.compile(r'^☠ Яд поражает (RED|BLUE)\s+[^#]+#(\d+):\s+(\d+)\s+\((\d+)→(\d+)\)')
     burn_tick_re     = re.compile(r'^🔥 Поджог поражает (RED|BLUE)\s+[^#]+#(\d+):\s+(\d+)\s+\((\d+)→(\d+)\)')
