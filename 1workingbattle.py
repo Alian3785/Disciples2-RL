@@ -32,7 +32,7 @@ from gymnasium import spaces
 
 # --- словари для кодирования в наблюдении ---
 TYPE_LIST = ["Archer", "gargoil", "Mage", "Witch", "Warrior", "Demon", "Death", "lord", "Dead dragon", "Ismir son", "Ghost", "Shadow", "Succub", 
-"Betrezen", "Uter", "Uter Demon", "Tiamat", "Baroness", "Incub",]  # one-hot(19)
+"Betrezen", "Uter", "Uter Demon", "Tiamat", "Baroness", "Incub", "Abyss Devil"]  # one-hot(20)
 ATTACK_TYPES = ["Weapon", "earth", "Fire", "Water", "poison", "death", "Mind"]                        # one-hot(7)
 
 def _one_hot(value: str, vocab: List[str]) -> List[float]:
@@ -368,10 +368,10 @@ class BattleEnv(gym.Env):
         return [1, 2], [0]
 
     def _warrior_allowed_targets(self, attacker: Dict) -> List[int]:
-        assert attacker.get("unit_type") in ("Warrior", "Demon", "lord", "Ismir son", "Uter")
+        assert attacker.get("unit_type") in ("Warrior", "Demon", "lord", "Ismir son", "Uter", "Abyss Devil")
         if attacker["stand"] == "behind":
             if any(self._alive(u) and u["team"] == attacker["team"]
-                   and u.get("unit_type") in ("Warrior", "Demon", "lord", "Ismir son", "Uter") and u["stand"] == "ahead"
+                   and u.get("unit_type") in ("Warrior", "Demon", "lord", "Ismir son", "Uter", "Abyss Devil") and u["stand"] == "ahead"
                    for u in self.combined):
                 return []
         ahead, behind = self._enemy_rows(attacker["team"])
@@ -761,8 +761,10 @@ class BattleEnv(gym.Env):
                     f"{victim['team'].upper()} {victim['name']}#{victim['position']} поглощён."
                 )
                 return False
-
-        victim["long_paralyzed"] = 1
+        if attacker.get("unit_type") == "Abyss Devil":
+            victim["paralyzed"] = 1
+        else:
+            victim["long_paralyzed"] = 1
         self._log(
             f"⚡ Долгий паралич: {attacker['team'].upper()} {attacker['name']}#{attacker['position']} "
             f"накладывает долгий паралич на {victim['team'].upper()} {victim['name']}#{victim['position']}"
@@ -915,7 +917,7 @@ class BattleEnv(gym.Env):
                                           ("успех" if roll else "неудача") + f" по {victim['team'].upper()} {victim['name']}#{victim['position']}.")
                                 if roll:
                                     self._apply_long_paralysis_effect(attacker, victim)
-                                    
+
                         if atype == "Tiamat":
                             acc2 = float(attacker.get("accuracy_secondary", 0) or 0)
                             roll = self._roll_status(acc2)
@@ -963,6 +965,15 @@ class BattleEnv(gym.Env):
         
             # Долгий паралич от Betrezen по шансу Точность2
             if attacker.get("unit_type") == "Betrezen":
+                acc2 = float(attacker.get("accuracy_secondary", 0) or 0)
+                if acc2 > 0:
+                    roll = self._roll_status(acc2)
+                    self._log(f"⚡ Шанс долгого паралича {int(acc2)}% — " +
+                              ("успех" if roll else "неудача") + f" по {victim['team'].upper()} {victim['name']}#{victim['position']}.")
+                    if roll:
+                        self._apply_long_paralysis_effect(attacker, victim)
+
+            if attacker.get("unit_type") in ("Uter", "Abyss Devil"):
                 acc2 = float(attacker.get("accuracy_secondary", 0) or 0)
                 if acc2 > 0:
                     roll = self._roll_status(acc2)
@@ -1099,7 +1110,7 @@ class BattleEnv(gym.Env):
                     return False
 
                 target_pos = None
-                if nxt.get("unit_type") in ("Warrior", "Demon", "lord", "Ismir son", "Uter"):
+                if nxt.get("unit_type") in ("Warrior", "Demon", "lord", "Ismir son", "Uter", "Abyss Devil"):
                     options = self._warrior_allowed_targets(nxt)
                     if options:
                         target_pos = self._pick_lowest_hp(options)
@@ -1191,7 +1202,7 @@ class BattleEnv(gym.Env):
             self._log(f"BLUE действие: {attacker['name']}#{attacker['position']} → pos{target_pos}")
             attacker["initiative"] = 0
 
-            if attacker.get("unit_type") in ("Warrior", "Demon", "lord", "Ismir son", "Uter"):
+            if attacker.get("unit_type") in ("Warrior", "Demon", "lord", "Ismir son", "Uter", "Abyss Devil"):
                 allowed = self._warrior_allowed_targets(attacker)
                 if target_pos not in allowed:
                     self._log(
@@ -1482,7 +1493,8 @@ if VISUALIZE_TEST:
             "Uter": " (Uter)",
             "Uter Demon": " (Uter Demon)",
             "Tiamat": " (Tiamat)",
-            "Incub": " (Incub)",
+            "Incub": " (Incub)",  
+            "Abyss Devil": " (Abyss Devil)",
         }.get(t, f" ({t})")
 
     for u in (UNITS_RED + UNITS_BLUE):
@@ -1695,7 +1707,7 @@ if VISUALIZE_TEST:
     blue_turn_re     = re.compile(r'^Ход BLUE:\s+[^#]+#(\d+)')
     red_turn_re      = re.compile(r'^RED ход:\s+[^#]+#(\d+)')
     blue_action_re   = re.compile(r'^BLUE действие:\s+[^#]+#(\d+)\s+→\s+pos(\d+)')
-    # обновлён: допускаем "цель ..." или "цель с мин. HP ..."
+    # обновлён: допускаем "цель ..." или "цель с мин. HP ..."       
     red_target_re    = re.compile(r'^RED ход:\s+[^#]+#(\d+).+цель.*pos(\d+)')
     mage_banner_re   = re.compile(r'^\w+\s+[^#]+#(\d+)\s+\((?:Mage|Dead dragon|Uter Demon|Tiamat)\).+массов')
     blue_cant_re     = re.compile(r'^BLUE\s+[^#]+#(\d+).+не может достать pos(\d+)')
