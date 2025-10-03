@@ -27,13 +27,13 @@
   - `transformed`: 0
   - `basestats`: []
 
-- **Утер**
+- **Тиамат**
   - `initiative`: 55
   - `initiative_base`: 55
   - `team`: "red"
   - `position`: 2
   - `stand`: "behind"
-  - `unit_type`: "Uter"
+  - `unit_type`: "Tiamat"
   - `damage`: 50
   - `damage_secondary`: 0
   - `health`: 400
@@ -166,7 +166,7 @@
   - `health`: 330
   - `max_health`: 330
   - `armor`: 0
-  - `accuracy`: 10
+  - `accuracy`: 50
   - `accuracy_secondary`: 90
   - `immunity`: []
   - `resistance`: ["Mind"]

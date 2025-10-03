@@ -50,8 +50,8 @@ UNITS_RED = [
      "attack_type_secondary": "poison", "big": True, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
-    {"name": "Утер", "initiative": 55, "initiative_base": 55, "team": "red", "position": 2, "stand": "behind",
-     "unit_type": "Uter", "damage": 50, "damage_secondary": 0, "health": 400, "max_health": 400, "armor": 0,
+    {"name": "Тиамат", "initiative": 55, "initiative_base": 55, "team": "red", "position": 2, "stand": "behind",
+     "unit_type": "Tiamat", "damage": 50, "damage_secondary": 0, "health": 400, "max_health": 400, "armor": 0,
      "accuracy": 90, "accuracy_secondary": 90, "immunity": [], "resistance": [], "attack_type_primary": "Weapon",
      "attack_type_secondary": "Mind", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
@@ -85,7 +85,7 @@ UNITS_RED = [
 UNITS_BLUE = [
     {"name": "Дьявол бездны", "initiative": 95, "initiative_base": 95, "team": "blue", "position": 7, "stand": "ahead",
      "unit_type": "Abyss Devil", "damage": 100, "damage_secondary": 0, "health": 330, "max_health": 330, "armor": 0,
-     "accuracy": 10, "accuracy_secondary": 90, "immunity": [], "resistance": ["Mind"], "attack_type_primary": "Weapon",
+     "accuracy": 50, "accuracy_secondary": 90, "immunity": [], "resistance": ["Mind"], "attack_type_primary": "Weapon",
      "attack_type_secondary": "Mind", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
