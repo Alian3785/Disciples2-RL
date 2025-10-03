@@ -50,10 +50,10 @@ UNITS_RED = [
      "attack_type_secondary": "poison", "big": True, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
-    {"name": "Тень", "initiative": 55, "initiative_base": 55, "team": "red", "position": 2, "stand": "behind",
-     "unit_type": "Shadow", "damage": 0, "damage_secondary": 0, "health": 400, "max_health": 400, "armor": 0,
-     "accuracy": 90, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Mind",
-     "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
+    {"name": "Утер", "initiative": 55, "initiative_base": 55, "team": "red", "position": 2, "stand": "behind",
+     "unit_type": "Uter", "damage": 50, "damage_secondary": 0, "health": 400, "max_health": 400, "armor": 0,
+     "accuracy": 90, "accuracy_secondary": 90, "immunity": [], "resistance": [], "attack_type_primary": "Weapon",
+     "attack_type_secondary": "Mind", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
     {"name": "воин", "initiative": 48, "initiative_base": 48, "team": "red", "position": 3, "stand": "behind",
@@ -83,14 +83,14 @@ UNITS_RED = [
 ]
 
 UNITS_BLUE = [
-    {"name": "Лучник", "initiative": 95, "initiative_base": 95, "team": "blue", "position": 7, "stand": "ahead",
-     "unit_type": "Archer", "damage": 100, "damage_secondary": 0, "health": 330, "max_health": 330, "armor": 0,
-     "accuracy": 85, "accuracy_secondary": 0, "immunity": [], "resistance": ["Mind"], "attack_type_primary": "Weapon",
-     "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
+    {"name": "Дьявол бездны", "initiative": 95, "initiative_base": 95, "team": "blue", "position": 7, "stand": "ahead",
+     "unit_type": "Abyss Devil", "damage": 100, "damage_secondary": 0, "health": 330, "max_health": 330, "armor": 0,
+     "accuracy": 10, "accuracy_secondary": 90, "immunity": [], "resistance": ["Mind"], "attack_type_primary": "Weapon",
+     "attack_type_secondary": "Mind", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
     {"name": "Боевой маг", "initiative": 62, "initiative_base": 62, "team": "blue", "position": 8, "stand": "behind",
-     "unit_type": "Mage", "damage": 60, "damage_secondary": 0, "health": 100, "max_health": 100, "armor": 0,
+     "unit_type": "Mage", "damage": 60, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0,
      "accuracy": 88, "accuracy_secondary": 0, "immunity": [], "resistance": ["Mind"],
      "attack_type_primary": "Fire", "attack_type_secondary": "", "big": False,
      "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
@@ -620,9 +620,9 @@ class BattleEnv(gym.Env):
             return False
 
         atk1 = attacker.get("attack_type_primary", "")
-        atk2 = attacker.get("attack_type_secondary", "")
+        #atk2 = attacker.get("attack_type_secondary", "")
 
-        for tag in (atk1, atk2):
+        for tag in (atk1):
             if tag and tag in available:
                 victim.setdefault("resilience_used_types", []).append(tag)
                 self._log(f"🧿 Стойкость — первый удар типа '{tag}' по "
