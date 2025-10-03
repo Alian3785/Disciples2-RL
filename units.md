@@ -27,24 +27,24 @@
   - `transformed`: 0
   - `basestats`: []
 
-- **Тень**
+- **Утер**
   - `initiative`: 55
   - `initiative_base`: 55
   - `team`: "red"
   - `position`: 2
   - `stand`: "behind"
-  - `unit_type`: "Shadow"
-  - `damage`: 0
+  - `unit_type`: "Uter"
+  - `damage`: 50
   - `damage_secondary`: 0
   - `health`: 400
   - `max_health`: 400
   - `armor`: 0
   - `accuracy`: 90
-  - `accuracy_secondary`: 0
+  - `accuracy_secondary`: 90
   - `immunity`: []
   - `resistance`: []
-  - `attack_type_primary`: "Mind"
-  - `attack_type_secondary`: ""
+  - `attack_type_primary`: "Weapon"
+  - `attack_type_secondary`: "Mind"
   - `big`: false
   - `paralyzed`: 0
   - `long_paralyzed`: 0
@@ -154,24 +154,24 @@
 
 ## UNITS_BLUE
 
-- **Лучник**
+- **Дьявол бездны**
   - `initiative`: 95
   - `initiative_base`: 95
   - `team`: "blue"
   - `position`: 7
   - `stand`: "ahead"
-  - `unit_type`: "Archer"
+  - `unit_type`: "Abyss Devil"
   - `damage`: 100
   - `damage_secondary`: 0
   - `health`: 330
   - `max_health`: 330
   - `armor`: 0
-  - `accuracy`: 85
-  - `accuracy_secondary`: 0
+  - `accuracy`: 10
+  - `accuracy_secondary`: 90
   - `immunity`: []
   - `resistance`: ["Mind"]
   - `attack_type_primary`: "Weapon"
-  - `attack_type_secondary`: ""
+  - `attack_type_secondary`: "Mind"
   - `big`: false
   - `paralyzed`: 0
   - `long_paralyzed`: 0
@@ -188,8 +188,8 @@
   - `unit_type`: "Mage"
   - `damage`: 60
   - `damage_secondary`: 0
-  - `health`: 100
-  - `max_health`: 100
+  - `health`: 0
+  - `max_health`: 0
   - `armor`: 0
   - `accuracy`: 88
   - `accuracy_secondary`: 0
