@@ -32,8 +32,11 @@ from gymnasium import spaces
 
 # --- словари для кодирования в наблюдении ---
 TYPE_LIST = ["Archer", "gargoil", "Mage", "Witch", "Warrior", "Demon", "Death", "lord", "Dead dragon", "Ismir son", "Ghost", "Shadow", "Succub", 
-"Betrezen", "Uter", "Uter Demon", "Tiamat", "Baroness", "Incub", "Abyss Devil"]  # one-hot(20)
-ATTACK_TYPES = ["Weapon", "earth", "Fire", "Water", "poison", "death", "Mind"]                        # one-hot(7)
+"Betrezen", "Uter", "Uter Demon", "Tiamat", "Baroness", "Incub", "Abyss Devil", "Cliric", "Profit"]  # one-hot(22)
+ATTACK_TYPES = ["Weapon", "earth", "Fire", "Water", "poison", "death", "Mind", "Life"]                        # one-hot(8)
+
+FEATURES_PER_UNIT = 8 + len(TYPE_LIST) + 4 * len(ATTACK_TYPES) + 10
+OBSERVATION_SIZE = FEATURES_PER_UNIT * 12
 
 def _one_hot(value: str, vocab: List[str]) -> List[float]:
     return [1.0 if value == v else 0.0 for v in vocab]
@@ -50,20 +53,20 @@ UNITS_RED = [
      "attack_type_secondary": "poison", "big": True, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
-    {"name": "Тиамат", "initiative": 55, "initiative_base": 55, "team": "red", "position": 2, "stand": "behind",
-     "unit_type": "Tiamat", "damage": 50, "damage_secondary": 0, "health": 400, "max_health": 400, "armor": 0,
-     "accuracy": 90, "accuracy_secondary": 90, "immunity": [], "resistance": [], "attack_type_primary": "Weapon",
-     "attack_type_secondary": "Mind", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
+    {"name": "воин1", "initiative": 55, "initiative_base": 55, "team": "red", "position": 2, "stand": "behind",
+     "unit_type": "Warrior", "damage": 70, "damage_secondary": 0, "health": 320, "max_health": 320, "armor": 0,
+     "accuracy": 80, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Mind",
+     "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
     {"name": "воин", "initiative": 48, "initiative_base": 48, "team": "red", "position": 3, "stand": "behind",
-     "unit_type": "Warrior", "damage": 0, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0,
+     "unit_type": "Warrior", "damage": 50, "damage_secondary": 0, "health": 300, "max_health": 300, "armor": 0,
      "accuracy": 78, "accuracy_secondary": 0, "immunity": ["death"], "resistance": ["Mind"], "attack_type_primary": "Mind",
      "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
-    {"name": "Смерть", "initiative": 40, "initiative_base": 40, "team": "red", "position": 4, "stand": "behind",
-     "unit_type": "Death", "damage": 95, "damage_secondary": 20, "health": 0, "max_health": 0, "armor": 0,
+    {"name": "арбалетчик", "initiative": 40, "initiative_base": 40, "team": "red", "position": 4, "stand": "behind",
+     "unit_type": "Archer", "damage": 95, "damage_secondary": 20, "health": 0, "max_health": 0, "armor": 0,
      "accuracy": 80, "accuracy_secondary": 55, "immunity": ["Weapon", "death"], "resistance": [],
      "attack_type_primary": "Weapon", "attack_type_secondary": "poison", "big": False,
      "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
@@ -83,21 +86,21 @@ UNITS_RED = [
 ]
 
 UNITS_BLUE = [
-    {"name": "Дьявол бездны", "initiative": 95, "initiative_base": 95, "team": "blue", "position": 7, "stand": "ahead",
-     "unit_type": "Abyss Devil", "damage": 100, "damage_secondary": 0, "health": 330, "max_health": 330, "armor": 0,
+    {"name": "Инквизитор", "initiative": 95, "initiative_base": 95, "team": "blue", "position": 7, "stand": "ahead",
+     "unit_type": "Warrior", "damage": 100, "damage_secondary": 0, "health": 200, "max_health": 200, "armor": 0,
      "accuracy": 50, "accuracy_secondary": 90, "immunity": [], "resistance": ["Mind"], "attack_type_primary": "Weapon",
      "attack_type_secondary": "Mind", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
-    {"name": "Боевой маг", "initiative": 62, "initiative_base": 62, "team": "blue", "position": 8, "stand": "behind",
-     "unit_type": "Mage", "damage": 60, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0,
-     "accuracy": 88, "accuracy_secondary": 0, "immunity": [], "resistance": ["Mind"],
+    {"name": "Боевой маг", "initiative": 62, "initiative_base": 62, "team": "blue", "position": 8, "stand": "ahead",
+     "unit_type": "Warrior", "damage": 50, "damage_secondary": 0, "health": 320, "max_health": 320, "armor": 0,
+     "accuracy": 80, "accuracy_secondary": 0, "immunity": [], "resistance": ["Weapon"],
      "attack_type_primary": "Fire", "attack_type_secondary": "", "big": False,
      "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
-    {"name": "Инквизитор", "initiative": 52, "initiative_base": 52, "team": "blue", "position": 9, "stand": "behind",
-     "unit_type": "Uter", "damage": 70, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 5,
+    {"name": "Инквизитор", "initiative": 52, "initiative_base": 52, "team": "blue", "position": 9, "stand": "ahead",
+     "unit_type": "Warrior", "damage": 70, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 5,
      "accuracy": 82, "accuracy_secondary": 65, "immunity": [], "resistance": [],
      "attack_type_primary": "Weapon", "attack_type_secondary": "Mind", "big": False,
      "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
@@ -110,9 +113,9 @@ UNITS_BLUE = [
      "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
-    {"name": "пусто", "initiative": 0, "initiative_base": 0, "team": "blue", "position": 11, "stand": "behind",
-     "unit_type": "Archer", "damage": 0, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0,
-     "accuracy": 0, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Weapon",
+    {"name": "Провидеца", "initiative": 20, "initiative_base": 20, "team": "blue", "position": 11, "stand": "behind",
+     "unit_type": "Profit", "damage": 40, "damage_secondary": 0, "health": 500, "max_health": 500, "armor": 0,
+     "accuracy": 100, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Life",
      "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
@@ -233,6 +236,11 @@ BLUE_POSITIONS: List[int] = list(range(7, 13))
 
 # Доступные цели для действия агента — только враги (pos1..pos6)
 TARGET_POSITIONS: List[int] = RED_POSITIONS  # 6 действий
+
+RED_FRONT_POSITIONS: List[int] = [1, 2, 3]
+RED_BACK_POSITIONS: List[int] = [4, 5, 6]
+BLUE_FRONT_POSITIONS: List[int] = [7, 8, 9]
+BLUE_BACK_POSITIONS: List[int] = [10, 11, 12]
 
 # Константы для нормирования наблюдений
 MAX_HP   = max([u["health"] for u in (UNITS_RED + UNITS_BLUE)])   # 1020
@@ -391,6 +399,55 @@ class BattleEnv(gym.Env):
         if near2: return near2
         far2 = [behind[c] for c in far_cols if alive(behind[c])]
         return far2
+
+    def _opposite_position(self, pos: int, team: str) -> Optional[int]:
+        col = self._col_of(pos)
+        if team == "blue":
+            if pos in RED_FRONT_POSITIONS:
+                return BLUE_FRONT_POSITIONS[col]
+            if pos in RED_BACK_POSITIONS:
+                return BLUE_BACK_POSITIONS[col]
+        else:
+            if pos in BLUE_FRONT_POSITIONS:
+                return RED_FRONT_POSITIONS[col]
+            if pos in BLUE_BACK_POSITIONS:
+                return RED_BACK_POSITIONS[col]
+        return None
+
+    def _cliric_auto_target(self, healer: Dict) -> Optional[int]:
+        allies = [u for u in self.combined if u["team"] == healer["team"] and self._alive(u) and u["health"] < u.get("max_health", 0)]
+        if not allies:
+            return None
+        min_hp = min(u["health"] for u in allies)
+        candidates = [u for u in allies if u["health"] == min_hp]
+        return self.rng.choice(candidates)["position"]
+
+    def _apply_cliric_heal(self, healer: Dict, recipient: Optional[Dict]) -> bool:
+        if recipient is None or not self._alive(recipient):
+            return False
+
+        heal_amount = int(healer.get("damage", 0) or 0)
+        if heal_amount <= 0:
+            self._log(
+                f"✨ Лечение без силы: {healer['team'].upper()} {healer['name']}#{healer['position']} имеет недостаточный урон (damage={heal_amount})."
+            )
+            return False
+
+        before = recipient["health"]
+        max_hp = recipient.get("max_health", before)
+        if before >= max_hp:
+            return False
+
+        healed = min(heal_amount, max_hp - before)
+        if healed <= 0:
+            return False
+
+        recipient["health"] += healed
+        self._log(
+            f"✨ Лечение: {healer['team'].upper()} {healer['name']}#{healer['position']} восстанавливает {healed} HP "
+            f"для {recipient['team'].upper()} {recipient['name']}#{recipient['position']} ({before}→{recipient['health']})."
+        )
+        return True
 
     # --- НОВОЕ: выбор позиции с минимальным HP из списка позиций ---
     def _pick_lowest_hp(self, positions: List[int]) -> Optional[int]:
@@ -622,7 +679,11 @@ class BattleEnv(gym.Env):
         atk1 = attacker.get("attack_type_primary", "")
         #atk2 = attacker.get("attack_type_secondary", "")
 
-        for tag in (atk1):
+        attack_tags = []
+        if atk1:
+            attack_tags.append(atk1)
+
+        for tag in attack_tags:
             if tag and tag in available:
                 victim.setdefault("resilience_used_types", []).append(tag)
                 self._log(f"🧿 Стойкость — первый удар типа '{tag}' по "
@@ -1123,6 +1184,36 @@ class BattleEnv(gym.Env):
                         self._log(f"RED ход: {nxt['name']}#{nxt['position']} ({nxt.get('unit_type')}) выполняет массовую атаку.")
                     else:
                         break
+                elif nxt.get("unit_type") in ("Cliric", "Profit"):
+                    if nxt.get("unit_type") == "Cliric":
+                        ally_pos = self._cliric_auto_target(nxt)
+                        if ally_pos is None:
+                            self._log(
+                                f"RED ход: {nxt['name']}#{nxt['position']} (Cliric) не находит союзников для лечения."
+                            )
+                            break
+                        recipient = self._unit_by_position(ally_pos)
+                        if recipient is None:
+                            break
+                        self._log(
+                            f"RED ход: {nxt['name']}#{nxt['position']} (Cliric) лечит союзника на pos{ally_pos}."
+                        )
+                        self._apply_cliric_heal(nxt, recipient)
+                    else:
+                        healed_any = False
+                        for ally in self.combined:
+                            if ally.get("team") == nxt.get("team") and self._alive(ally) and ally is not nxt:
+                                if self._apply_cliric_heal(nxt, ally):
+                                    healed_any = True
+                        if healed_any:
+                            self._log(
+                                f"RED ход: {nxt['name']}#{nxt['position']} (Profit) массово исцеляет союзников."
+                            )
+                        else:
+                            self._log(
+                                f"RED ход: {nxt['name']}#{nxt['position']} (Profit) не смог исцелить союзников."
+                            )
+                    break
                 else:
                     live_blue_positions = self._live_positions_of("blue")
                     target_pos = self._pick_lowest_hp(live_blue_positions) if live_blue_positions else None
@@ -1202,7 +1293,40 @@ class BattleEnv(gym.Env):
             self._log(f"BLUE действие: {attacker['name']}#{attacker['position']} → pos{target_pos}")
             attacker["initiative"] = 0
 
-            if attacker.get("unit_type") in ("Warrior", "Demon", "lord", "Ismir son", "Uter", "Abyss Devil"):
+            if attacker.get("unit_type") in ("Cliric", "Profit"):
+                if attacker.get("unit_type") == "Cliric":
+                    opposite_pos = self._opposite_position(target_pos, attacker["team"])
+                    recipient = self._unit_by_position(opposite_pos) if opposite_pos is not None else None
+                    if (
+                        recipient is None
+                        or recipient.get("team") != attacker.get("team")
+                        or not self._alive(recipient)
+                    ):
+                        self._log(
+                            f"🛡 Лечение не сработало: {attacker['team'].upper()} {attacker['name']}#{attacker['position']} не находит союзника на противоположной позиции."
+                        )
+                        step_shaping += self.penalty_invalid_target
+                    else:
+                        healed = self._apply_cliric_heal(attacker, recipient)
+                        if not healed:
+                            self._log(
+                                f"✨ Лечение без эффекта: {recipient['team'].upper()} {recipient['name']}#{recipient['position']} уже на максимальном здоровье."
+                            )
+                else:
+                    healed_any = False
+                    for ally in self.combined:
+                        if ally.get("team") == attacker.get("team") and self._alive(ally) and ally is not attacker:
+                            if self._apply_cliric_heal(attacker, ally):
+                                healed_any = True
+                    if healed_any:
+                        self._log(
+                            f"✨ Массовое лечение: {attacker['team'].upper()} {attacker['name']}#{attacker['position']} восстанавливает союзникам здоровье."
+                        )
+                    else:
+                        self._log(
+                            f"✨ Массовое лечение без эффекта: {attacker['team'].upper()} {attacker['name']}#{attacker['position']} — все союзники в порядке."
+                        )
+            elif attacker.get("unit_type") in ("Warrior", "Demon", "lord", "Ismir son", "Uter", "Abyss Devil"):
                 allowed = self._warrior_allowed_targets(attacker)
                 if target_pos not in allowed:
                     self._log(
@@ -1273,7 +1397,7 @@ from stable_baselines3.common.env_checker import check_env
 check_env(BattleEnv(log_enabled=True), warn=True)
 
 # -------------------- Параметры обучения и теста --------------------
-TOTAL_STEPS     = 100000
+TOTAL_STEPS     = 1000000
 N_ENVS          = 8
 MODEL_SAVE_FREQ = 1000000
 EVAL_FREQ       = 1000000
@@ -1500,11 +1624,12 @@ if VISUALIZE_TEST:
     for u in (UNITS_RED + UNITS_BLUE):
         t = u.get("unit_type", "Archer")
         start_hp = float(u["health"])
+        max_hp = float(u.get("max_health", start_hp) or start_hp)
         state[u["position"]] = {
             "team": u["team"],
             "name": u["name"] + _suffix_by_type(t),
             "hp": start_hp,
-            "maxhp": start_hp,
+            "maxhp": max_hp,
             "stand": u["stand"],
             "type": t,
             "big": bool(u.get("big", False)),
@@ -1714,6 +1839,8 @@ if VISUALIZE_TEST:
     poison_tick_re   = re.compile(r'^☠ Яд поражает (RED|BLUE)\s+[^#]+#(\d+):\s+(\d+)\s+\((\d+)→(\d+)\)')
     burn_tick_re     = re.compile(r'^🔥 Поджог поражает (RED|BLUE)\s+[^#]+#(\d+):\s+(\d+)\s+\((\d+)→(\d+)\)')
     uran_tick_re     = re.compile(r'^☢ Вода поражает (RED|BLUE)\s+[^#]+#(\d+):\s+(\d+)\s+\((\d+)→(\d+)\)')
+    heal_re          = re.compile(r'^✨ Лечение: (RED|BLUE)\s+[^#]+#(\d+)\s+восстанавливает\s+(\d+)\s+HP\s+для\s+(RED|BLUE)\s+[^#]+#(\d+)\s+\((\d+)→(\d+)\)\.')
+    heal_mass_re     = re.compile(r'^✨ Массовое лечение: (RED|BLUE)\s+[^#]+#(\d+)\s+восстанавливает союзникам здоровье\.')
     immune_dmg_re    = re.compile(r'^🛡 Иммунитет к урону')
     immune_stat_re   = re.compile(r'^🛡 Иммунитет к эффекту')
     resist_re        = re.compile(r'^🧿 Стойкость')
@@ -1806,6 +1933,50 @@ if VISUALIZE_TEST:
             headline = line
             draw_board(arrows_now, headline, active_pos=current_actor_pos)
             time.sleep(FRAME_DELAY * VISUAL_SPEED_MULT)
+            continue
+
+        m = heal_re.match(line)
+        if m:
+            healer_team = m.group(1)
+            healer_pos = int(m.group(2))
+            amount = int(m.group(3))
+            target_pos = int(m.group(5))
+            after = int(m.group(7))
+            _set_hp(target_pos, after)
+            current_actor_pos = healer_pos
+            last_selection = {"src": healer_pos, "dst": target_pos, "team": healer_team}
+            arrows_now.append({
+                "src": healer_pos,
+                "dst": target_pos,
+                "team": healer_team,
+                "color": (0.15, 0.7, 0.25),
+                "style": "solid",
+                "alpha": 0.9,
+                "text": f"+{amount}"
+            })
+            headline = line
+            draw_board(arrows_now, headline, active_pos=current_actor_pos)
+            time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.05)
+            continue
+
+        m = heal_mass_re.match(line)
+        if m:
+            healer_team = m.group(1)
+            healer_pos = int(m.group(2))
+            current_actor_pos = healer_pos
+            last_selection = None
+            arrows_now.append({
+                "src": healer_pos,
+                "dst": healer_pos,
+                "team": healer_team,
+                "color": (0.1, 0.6, 0.2),
+                "style": "dashed",
+                "alpha": 0.45,
+                "text": "+AOE"
+            })
+            headline = line
+            draw_board(arrows_now, headline, active_pos=current_actor_pos)
+            time.sleep((FRAME_DELAY * VISUAL_SPEED_MULT) / 1.05)
             continue
 
         m = poison_tick_re.match(line)
