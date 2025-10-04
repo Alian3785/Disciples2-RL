@@ -27,24 +27,24 @@
   - `transformed`: 0
   - `basestats`: []
 
-- **Тиамат**
+- **воин1**
   - `initiative`: 55
   - `initiative_base`: 55
   - `team`: "red"
   - `position`: 2
   - `stand`: "behind"
-  - `unit_type`: "Tiamat"
-  - `damage`: 50
+  - `unit_type`: "Warrior"
+  - `damage`: 70
   - `damage_secondary`: 0
-  - `health`: 400
-  - `max_health`: 400
+  - `health`: 320
+  - `max_health`: 320
   - `armor`: 0
-  - `accuracy`: 90
-  - `accuracy_secondary`: 90
+  - `accuracy`: 80
+  - `accuracy_secondary`: 0
   - `immunity`: []
   - `resistance`: []
-  - `attack_type_primary`: "Weapon"
-  - `attack_type_secondary`: "Mind"
+  - `attack_type_primary`: "Mind"
+  - `attack_type_secondary`: ""
   - `big`: false
   - `paralyzed`: 0
   - `long_paralyzed`: 0
@@ -59,10 +59,10 @@
   - `position`: 3
   - `stand`: "behind"
   - `unit_type`: "Warrior"
-  - `damage`: 0
+  - `damage`: 50
   - `damage_secondary`: 0
-  - `health`: 0
-  - `max_health`: 0
+  - `health`: 300
+  - `max_health`: 300
   - `armor`: 0
   - `accuracy`: 78
   - `accuracy_secondary`: 0
@@ -77,13 +77,13 @@
   - `transformed`: 0
   - `basestats`: []
 
-- **Смерть**
+- **арбалетчик**
   - `initiative`: 40
   - `initiative_base`: 40
   - `team`: "red"
   - `position`: 4
   - `stand`: "behind"
-  - `unit_type`: "Death"
+  - `unit_type`: "Archer"
   - `damage`: 95
   - `damage_secondary`: 20
   - `health`: 0
@@ -154,17 +154,17 @@
 
 ## UNITS_BLUE
 
-- **Дьявол бездны**
+- **Инквизитор**
   - `initiative`: 95
   - `initiative_base`: 95
   - `team`: "blue"
   - `position`: 7
   - `stand`: "ahead"
-  - `unit_type`: "Abyss Devil"
+  - `unit_type`: "Warrior"
   - `damage`: 100
   - `damage_secondary`: 0
-  - `health`: 330
-  - `max_health`: 330
+  - `health`: 200
+  - `max_health`: 200
   - `armor`: 0
   - `accuracy`: 50
   - `accuracy_secondary`: 90
@@ -184,17 +184,17 @@
   - `initiative_base`: 62
   - `team`: "blue"
   - `position`: 8
-  - `stand`: "behind"
-  - `unit_type`: "Mage"
-  - `damage`: 60
+  - `stand`: "ahead"
+  - `unit_type`: "Warrior"
+  - `damage`: 50
   - `damage_secondary`: 0
-  - `health`: 0
-  - `max_health`: 0
+  - `health`: 320
+  - `max_health`: 320
   - `armor`: 0
-  - `accuracy`: 88
+  - `accuracy`: 80
   - `accuracy_secondary`: 0
   - `immunity`: []
-  - `resistance`: ["Mind"]
+  - `resistance`: ["Weapon"]
   - `attack_type_primary`: "Fire"
   - `attack_type_secondary`: ""
   - `big`: false
@@ -209,8 +209,8 @@
   - `initiative_base`: 52
   - `team`: "blue"
   - `position`: 9
-  - `stand`: "behind"
-  - `unit_type`: "Uter"
+  - `stand`: "ahead"
+  - `unit_type`: "Warrior"
   - `damage`: 70
   - `damage_secondary`: 0
   - `health`: 0
@@ -254,23 +254,23 @@
   - `transformed`: 0
   - `basestats`: []
 
-- **пусто**
-  - `initiative`: 0
-  - `initiative_base`: 0
+- **Провидеца**
+  - `initiative`: 20
+  - `initiative_base`: 20
   - `team`: "blue"
   - `position`: 11
   - `stand`: "behind"
-  - `unit_type`: "Archer"
-  - `damage`: 0
+  - `unit_type`: "Profit"
+  - `damage`: 40
   - `damage_secondary`: 0
-  - `health`: 0
-  - `max_health`: 0
+  - `health`: 500
+  - `max_health`: 500
   - `armor`: 0
-  - `accuracy`: 0
+  - `accuracy`: 100
   - `accuracy_secondary`: 0
   - `immunity`: []
   - `resistance`: []
-  - `attack_type_primary`: "Weapon"
+  - `attack_type_primary`: "Life"
   - `attack_type_secondary`: ""
   - `big`: false
   - `paralyzed`: 0
