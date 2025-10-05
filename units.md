@@ -179,6 +179,9 @@
   - `transformed`: 0
   - `basestats`: []
   - `Firedefence`: 0
+  - `Airdefence`: 0
+  - `Waterdefence`: 0
+  - `Earthdefence`: 0
 
 - **Боевой маг**
   - `initiative`: 62
@@ -205,6 +208,9 @@
   - `transformed`: 0
   - `basestats`: []
   - `Firedefence`: 0
+  - `Airdefence`: 0
+  - `Waterdefence`: 0
+  - `Earthdefence`: 0
 
 - **Инквизитор**
   - `initiative`: 52
@@ -231,6 +237,9 @@
   - `transformed`: 0
   - `basestats`: []
   - `Firedefence`: 0
+  - `Airdefence`: 0
+  - `Waterdefence`: 0
+  - `Earthdefence`: 0
 
 - **Арбалетчик**
   - `initiative`: 40
@@ -257,14 +266,17 @@
   - `transformed`: 0
   - `basestats`: []
   - `Firedefence`: 0
+  - `Airdefence`: 0
+  - `Waterdefence`: 0
+  - `Earthdefence`: 0
 
-- **Солнечная танцовщица**
+- **Дева рощи**
   - `initiative`: 20
   - `initiative_base`: 20
   - `team`: "blue"
   - `position`: 11
   - `stand`: "behind"
-  - `unit_type`: "Sundancer"
+  - `unit_type`: "Deva roshi"
   - `damage`: 40
   - `damage_secondary`: 0
   - `health`: 500
@@ -283,6 +295,9 @@
   - `transformed`: 0
   - `basestats`: []
   - `Firedefence`: 0
+  - `Airdefence`: 0
+  - `Waterdefence`: 0
+  - `Earthdefence`: 0
 
 - **пусто**
   - `initiative`: 0
@@ -309,3 +324,6 @@
   - `transformed`: 0
   - `basestats`: []
   - `Firedefence`: 0
+  - `Airdefence`: 0
+  - `Waterdefence`: 0
+  - `Earthdefence`: 0
