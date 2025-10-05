@@ -43,7 +43,7 @@
   - `accuracy_secondary`: 0
   - `immunity`: []
   - `resistance`: []
-  - `attack_type_primary`: "Mind"
+  - `attack_type_primary`: "Fire"
   - `attack_type_secondary`: ""
   - `big`: false
   - `paralyzed`: 0
@@ -68,7 +68,7 @@
   - `accuracy_secondary`: 0
   - `immunity`: ["death"]
   - `resistance`: ["Mind"]
-  - `attack_type_primary`: "Mind"
+  - `attack_type_primary`: "Fire"
   - `attack_type_secondary`: ""
   - `big`: false
   - `paralyzed`: 0
@@ -178,6 +178,7 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
+  - `Firedefence`: 0
 
 - **Боевой маг**
   - `initiative`: 62
@@ -188,8 +189,8 @@
   - `unit_type`: "Warrior"
   - `damage`: 50
   - `damage_secondary`: 0
-  - `health`: 320
-  - `max_health`: 320
+  - `health`: 200
+  - `max_health`: 200
   - `armor`: 0
   - `accuracy`: 80
   - `accuracy_secondary`: 0
@@ -203,6 +204,7 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
+  - `Firedefence`: 0
 
 - **Инквизитор**
   - `initiative`: 52
@@ -228,6 +230,7 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
+  - `Firedefence`: 0
 
 - **Арбалетчик**
   - `initiative`: 40
@@ -253,14 +256,15 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
+  - `Firedefence`: 0
 
-- **Провидеца**
+- **Солнечная танцовщица**
   - `initiative`: 20
   - `initiative_base`: 20
   - `team`: "blue"
   - `position`: 11
   - `stand`: "behind"
-  - `unit_type`: "Profit"
+  - `unit_type`: "Sundancer"
   - `damage`: 40
   - `damage_secondary`: 0
   - `health`: 500
@@ -278,6 +282,7 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
+  - `Firedefence`: 0
 
 - **пусто**
   - `initiative`: 0
@@ -303,3 +308,4 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
+  - `Firedefence`: 0
