@@ -32,8 +32,8 @@ from gymnasium import spaces
 
 # --- словари для кодирования в наблюдении ---
 TYPE_LIST = ["Archer", "gargoil", "Mage", "Witch", "Warrior", "Demon", "Death", "lord", "Dead dragon", "Ismir son", "Ghost", "Shadow", "Succub", 
-"Betrezen", "Uter", "Uter Demon", "Tiamat", "Baroness", "Incub", "Abyss Devil", "Cliric", "Profit"]  # one-hot(22)
-ATTACK_TYPES = ["Weapon", "earth", "Fire", "Water", "poison", "death", "Mind", "Life"]                        # one-hot(8)
+"Betrezen", "Uter", "Uter Demon", "Tiamat", "Baroness", "Incub", "Abyss Devil", "Cliric", "Profit", "Sundancer", "Sylfid"]  # one-hot(24)
+ATTACK_TYPES = ["Weapon", "earth", "Fire", "Water", "poison", "death", "Mind", "Life", "Air"]                        # one-hot(8)
 
 FEATURES_PER_UNIT = 8 + len(TYPE_LIST) + 4 * len(ATTACK_TYPES) + 10
 OBSERVATION_SIZE = FEATURES_PER_UNIT * 12
@@ -55,13 +55,13 @@ UNITS_RED = [
 
     {"name": "воин1", "initiative": 55, "initiative_base": 55, "team": "red", "position": 2, "stand": "behind",
      "unit_type": "Warrior", "damage": 70, "damage_secondary": 0, "health": 320, "max_health": 320, "armor": 0,
-     "accuracy": 80, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Mind",
+     "accuracy": 80, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Fire",
      "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
     {"name": "воин", "initiative": 48, "initiative_base": 48, "team": "red", "position": 3, "stand": "behind",
      "unit_type": "Warrior", "damage": 50, "damage_secondary": 0, "health": 300, "max_health": 300, "armor": 0,
-     "accuracy": 78, "accuracy_secondary": 0, "immunity": ["death"], "resistance": ["Mind"], "attack_type_primary": "Mind",
+     "accuracy": 78, "accuracy_secondary": 0, "immunity": ["death"], "resistance": ["Mind"], "attack_type_primary": "Fire",
      "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
@@ -93,7 +93,7 @@ UNITS_BLUE = [
      "basestats": []},
 
     {"name": "Боевой маг", "initiative": 62, "initiative_base": 62, "team": "blue", "position": 8, "stand": "ahead",
-     "unit_type": "Warrior", "damage": 50, "damage_secondary": 0, "health": 320, "max_health": 320, "armor": 0,
+     "unit_type": "Warrior", "damage": 50, "damage_secondary": 0, "health": 200, "max_health": 200, "armor": 0,
      "accuracy": 80, "accuracy_secondary": 0, "immunity": [], "resistance": ["Weapon"],
      "attack_type_primary": "Fire", "attack_type_secondary": "", "big": False,
      "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
@@ -113,8 +113,8 @@ UNITS_BLUE = [
      "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
-    {"name": "Провидеца", "initiative": 20, "initiative_base": 20, "team": "blue", "position": 11, "stand": "behind",
-     "unit_type": "Profit", "damage": 40, "damage_secondary": 0, "health": 500, "max_health": 500, "armor": 0,
+    {"name": "Солнечная танцовщица", "initiative": 20, "initiative_base": 20, "team": "blue", "position": 11, "stand": "behind",
+     "unit_type": "Sundancer", "damage": 40, "damage_secondary": 0, "health": 500, "max_health": 500, "armor": 0,
      "accuracy": 100, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Life",
      "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
@@ -125,6 +125,20 @@ UNITS_BLUE = [
      "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 ]
+
+
+def _apply_team_traits(units: List[Dict]) -> None:
+    if any(unit.get("unit_type") == "Sundancer" for unit in units):
+        for unit in units:
+            unit["Firedefence"] = 0
+            
+    if any(unit.get("unit_type") == "Sylfid" for unit in units):
+        for unit in units:
+            unit["Airdefence"] = 0
+
+
+_apply_team_traits(UNITS_RED)
+_apply_team_traits(UNITS_BLUE)
 
 # Удалить это потом когда не надо будет сохранять юнитов в файл
 def _units_to_markdown_section(title: str, units: List[Dict]) -> str:
@@ -433,6 +447,34 @@ class BattleEnv(gym.Env):
             )
             return False
 
+        if healer.get("unit_type") == "Sundancer":
+            if "resistance" not in recipient:
+                recipient["resistance"] = []
+            if "Fire" not in recipient["resistance"]:
+                recipient["resistance"].append("Fire")
+            recipient.setdefault("resilience_used_types", [])
+            if "Fire" in recipient["resilience_used_types"]:
+                recipient["resilience_used_types"].remove("Fire")
+            recipient["Firedefence"] = 1
+            self._log(
+                f"☀ Защита от огня: {healer['team'].upper()} {healer['name']}#{healer['position']} даёт огненную защиту "
+                f"для {recipient['team'].upper()} {recipient['name']}#{recipient['position']}"
+            )
+
+        elif healer.get("unit_type") == "Sylfid":
+            if "resistance" not in recipient:
+                recipient["resistance"] = []
+            if "Air" not in recipient["resistance"]:
+                recipient["resistance"].append("Air")
+            recipient.setdefault("resilience_used_types", [])
+            if "Air" in recipient["resilience_used_types"]:
+                recipient["resilience_used_types"].remove("Air")
+            recipient["Airdefence"] = 1
+            self._log(
+                f"☀ Защита от воздуха: {healer['team'].upper()} {healer['name']}#{healer['position']} даёт воздушную защиту "
+                f"для {recipient['team'].upper()} {recipient['name']}#{recipient['position']}"
+            )
+
         before = recipient["health"]
         max_hp = recipient.get("max_health", before)
         if before >= max_hp:
@@ -447,6 +489,7 @@ class BattleEnv(gym.Env):
             f"✨ Лечение: {healer['team'].upper()} {healer['name']}#{healer['position']} восстанавливает {healed} HP "
             f"для {recipient['team'].upper()} {recipient['name']}#{recipient['position']} ({before}→{recipient['health']})."
         )
+
         return True
 
     # --- НОВОЕ: выбор позиции с минимальным HP из списка позиций ---
@@ -468,6 +511,38 @@ class BattleEnv(gym.Env):
 
     # ----------- эффекты начала хода (яд/поджог) -----------
     def _apply_start_of_turn_effects(self, unit: Dict) -> bool:
+        if unit.get("unit_type") == "Sundancer":
+            for ally in self.combined:
+                if ally.get("team") != unit.get("team"):
+                    continue
+                if ally.get("Firedefence", 0) == 1:
+                    ally["Firedefence"] = 0
+                    if "resistance" in ally:
+                        ally["resistance"] = [res for res in ally.get("resistance", []) if res != "Fire"]
+                        if not ally["resistance"]:
+                            ally["resistance"] = []
+                    if "resilience_used_types" in ally and ally["resilience_used_types"]:
+                        ally["resilience_used_types"] = [res for res in ally["resilience_used_types"] if res != "Fire"]
+                    self._log(
+                        f"☀ Солнечная защита рассеялась: {ally['team'].upper()} {ally['name']}#{ally['position']} лишается огненной стойкости."
+                    )
+
+        if unit.get("unit_type") == "Sylfid":
+            for ally in self.combined:
+                if ally.get("team") != unit.get("team"):
+                    continue
+                if ally.get("Airdefence", 0) == 1:
+                    ally["Airdefence"] = 0
+                    if "resistance" in ally:
+                        ally["resistance"] = [res for res in ally.get("resistance", []) if res != "Air"]
+                        if not ally["resistance"]:
+                            ally["resistance"] = []
+                    if "resilience_used_types" in ally and ally["resilience_used_types"]:
+                        ally["resilience_used_types"] = [res for res in ally["resilience_used_types"] if res != "Air"]
+                    self._log(
+                        f"☀ Воздушная защита рассеялась: {ally['team'].upper()} {ally['name']}#{ally['position']} лишается воздушной стойкости."
+                    )
+
         # ЯД
         if unit.get("poison_turns_left", 0) > 0 and self._alive(unit):
             if "poison" in (unit.get("immunity") or []):
@@ -614,7 +689,7 @@ class BattleEnv(gym.Env):
     # ------------------ Боевая логика ------------------
 
     def _reset_state(self):
-        self.combined = [u.copy() for u in (UNITS_RED + UNITS_BLUE)]
+        self.combined = deepcopy(UNITS_RED + UNITS_BLUE)
         for u in self.combined:
             u["initiative"] = u.get("initiative_base", 0)
             u.setdefault("attack_type_primary", "Weapon")
@@ -1293,7 +1368,7 @@ class BattleEnv(gym.Env):
             self._log(f"BLUE действие: {attacker['name']}#{attacker['position']} → pos{target_pos}")
             attacker["initiative"] = 0
 
-            if attacker.get("unit_type") in ("Cliric", "Profit"):
+            if attacker.get("unit_type") in ("Cliric", "Profit", "Sylfid", "Sundancer"):
                 if attacker.get("unit_type") == "Cliric":
                     opposite_pos = self._opposite_position(target_pos, attacker["team"])
                     recipient = self._unit_by_position(opposite_pos) if opposite_pos is not None else None
@@ -1397,7 +1472,7 @@ from stable_baselines3.common.env_checker import check_env
 check_env(BattleEnv(log_enabled=True), warn=True)
 
 # -------------------- Параметры обучения и теста --------------------
-TOTAL_STEPS     = 1000000
+TOTAL_STEPS     = 500000
 N_ENVS          = 8
 MODEL_SAVE_FREQ = 1000000
 EVAL_FREQ       = 1000000
@@ -1619,6 +1694,8 @@ if VISUALIZE_TEST:
             "Tiamat": " (Tiamat)",
             "Incub": " (Incub)",  
             "Abyss Devil": " (Abyss Devil)",
+            "Sundancer": " (Sundancer)",
+            "Sylfid": " (Sylfid)",
         }.get(t, f" ({t})")
 
     for u in (UNITS_RED + UNITS_BLUE):
