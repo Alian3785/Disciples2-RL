@@ -32,8 +32,8 @@ from gymnasium import spaces
 
 # --- словари для кодирования в наблюдении ---
 TYPE_LIST = ["Archer", "gargoil", "Mage", "Witch", "Warrior", "Demon", "Death", "lord", "Dead dragon", "Ismir son", "Ghost", "Shadow", "Succub", 
-"Betrezen", "Uter", "Uter Demon", "Tiamat", "Baroness", "Incub", "Abyss Devil", "Cliric", "Profit", "Sundancer", "Sylfid"]  # one-hot(24)
-ATTACK_TYPES = ["Weapon", "earth", "Fire", "Water", "poison", "death", "Mind", "Life", "Air"]                        # one-hot(8)
+"Betrezen", "Uter", "Uter Demon", "Tiamat", "Baroness", "Incub", "Abyss Devil", "Cliric", "Profit", "Sundancer", "Sylfid", "Deva roshi"]  # one-hot(25)
+ATTACK_TYPES = ["Weapon", "earth", "Fire", "Water", "poison", "death", "Mind", "Life", "Air"]                        # one-hot(9)
 
 FEATURES_PER_UNIT = 8 + len(TYPE_LIST) + 4 * len(ATTACK_TYPES) + 10
 OBSERVATION_SIZE = FEATURES_PER_UNIT * 12
@@ -113,8 +113,8 @@ UNITS_BLUE = [
      "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
-    {"name": "Солнечная танцовщица", "initiative": 20, "initiative_base": 20, "team": "blue", "position": 11, "stand": "behind",
-     "unit_type": "Sundancer", "damage": 40, "damage_secondary": 0, "health": 500, "max_health": 500, "armor": 0,
+    {"name": "Дева рощи", "initiative": 20, "initiative_base": 20, "team": "blue", "position": 11, "stand": "behind",
+     "unit_type": "Deva roshi", "damage": 40, "damage_secondary": 0, "health": 500, "max_health": 500, "armor": 0,
      "accuracy": 100, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Life",
      "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
@@ -135,6 +135,13 @@ def _apply_team_traits(units: List[Dict]) -> None:
     if any(unit.get("unit_type") == "Sylfid" for unit in units):
         for unit in units:
             unit["Airdefence"] = 0
+
+    if any(unit.get("unit_type") == "Deva roshi" for unit in units):
+        for unit in units:
+            unit["Firedefence"] = 0
+            unit["Airdefence"] = 0
+            unit["Waterdefence"] = 0
+            unit["Earthdefence"] = 0
 
 
 _apply_team_traits(UNITS_RED)
@@ -347,6 +354,7 @@ class BattleEnv(gym.Env):
         self._lord_applied_burn: Dict[int, bool] = {}
         self._ismir_applied_uran: Dict[int, bool] = {}
         self.survived_inits: List[Dict] = []
+        self.step_count: int = 0
 
     # ------------------ Вспомогательные методы ------------------
 
@@ -475,6 +483,27 @@ class BattleEnv(gym.Env):
                 f"для {recipient['team'].upper()} {recipient['name']}#{recipient['position']}"
             )
 
+        elif healer.get("unit_type") == "Deva roshi":
+            if "resistance" not in recipient:
+                recipient["resistance"] = []
+            recipient.setdefault("resilience_used_types", [])
+            element_map = (
+                ("Fire", "Firedefence"),
+                ("Air", "Airdefence"),
+                ("Water", "Waterdefence"),
+                ("earth", "Earthdefence"),
+            )
+            for element, field in element_map:
+                if element not in recipient["resistance"]:
+                    recipient["resistance"].append(element)
+                if element in recipient["resilience_used_types"]:
+                    recipient["resilience_used_types"].remove(element)
+                recipient[field] = 1
+            self._log(
+                f"☀ Четверная защита: {healer['team'].upper()} {healer['name']}#{healer['position']} усиливает защиту "
+                f"{recipient['team'].upper()} {recipient['name']}#{recipient['position']} от огня, воздуха, воды и земли."
+            )
+
         before = recipient["health"]
         max_hp = recipient.get("max_health", before)
         if before >= max_hp:
@@ -542,6 +571,33 @@ class BattleEnv(gym.Env):
                     self._log(
                         f"☀ Воздушная защита рассеялась: {ally['team'].upper()} {ally['name']}#{ally['position']} лишается воздушной стойкости."
                     )
+
+        if unit.get("unit_type") == "Deva roshi":
+            for ally in self.combined:
+                if ally.get("team") != unit.get("team"):
+                    continue
+                reset_map = (
+                    ("Firedefence", "Fire"),
+                    ("Airdefence", "Air"),
+                    ("Waterdefence", "Water"),
+                    ("Earthdefence", "earth"),
+                )
+                cleared = []
+                for field, element in reset_map:
+                    if ally.get(field, 0) == 1:
+                        ally[field] = 0
+                        cleared.append(element)
+                if not cleared:
+                    continue
+                if "resistance" in ally:
+                    ally["resistance"] = [res for res in ally.get("resistance", []) if res not in cleared]
+                    if not ally["resistance"]:
+                        ally["resistance"] = []
+                if "resilience_used_types" in ally and ally["resilience_used_types"]:
+                    ally["resilience_used_types"] = [res for res in ally["resilience_used_types"] if res not in cleared]
+                self._log(
+                    f"☀ Защита Дэвы рассеялась: {ally['team'].upper()} {ally['name']}#{ally['position']} теряет стойкость против {', '.join(cleared)}."
+                )
 
         # ЯД
         if unit.get("poison_turns_left", 0) > 0 and self._alive(unit):
@@ -715,6 +771,7 @@ class BattleEnv(gym.Env):
         self._lord_applied_burn = {}
         self._ismir_applied_uran = {}
         self.survived_inits = []
+        self.step_count = 0
         self._log(f"Эпизод начат. Раунд {self.round_no}.")
 
     def _candidates(self):
@@ -1368,8 +1425,8 @@ class BattleEnv(gym.Env):
             self._log(f"BLUE действие: {attacker['name']}#{attacker['position']} → pos{target_pos}")
             attacker["initiative"] = 0
 
-            if attacker.get("unit_type") in ("Cliric", "Profit", "Sylfid", "Sundancer"):
-                if attacker.get("unit_type") == "Cliric":
+            if attacker.get("unit_type") in ("Cliric", "Profit", "Sylfid", "Sundancer", "Deva roshi"):
+                if attacker.get("unit_type") in ("Cliric", "Deva roshi"):
                     opposite_pos = self._opposite_position(target_pos, attacker["team"])
                     recipient = self._unit_by_position(opposite_pos) if opposite_pos is not None else None
                     if (
@@ -1440,7 +1497,13 @@ class BattleEnv(gym.Env):
             terminated = True
 
         reward = base + step_shaping
-        return self._obs(), reward, terminated, False, {}
+        truncated = False
+        if not terminated:
+            self.step_count += 1
+            if self.step_count >= 1000:
+                truncated = True
+                self._log("⏱ Лимит по шагам: бой остановлен на 1000 такте.")
+        return self._obs(), reward, terminated, truncated, {}
 
 # ============================================================
 # ОБУЧЕНИЕ PPO + W&B, ЧЕКПОИНТЫ, ТЕСТ И УЛУЧШЕННАЯ ВИЗУАЛИЗАЦИЯ
@@ -1472,7 +1535,7 @@ from stable_baselines3.common.env_checker import check_env
 check_env(BattleEnv(log_enabled=True), warn=True)
 
 # -------------------- Параметры обучения и теста --------------------
-TOTAL_STEPS     = 500000
+TOTAL_STEPS     = 2000000
 N_ENVS          = 8
 MODEL_SAVE_FREQ = 1000000
 EVAL_FREQ       = 1000000
@@ -1696,6 +1759,7 @@ if VISUALIZE_TEST:
             "Abyss Devil": " (Abyss Devil)",
             "Sundancer": " (Sundancer)",
             "Sylfid": " (Sylfid)",
+            "Deva roshi": " (Deva roshi)",
         }.get(t, f" ({t})")
 
     for u in (UNITS_RED + UNITS_BLUE):
