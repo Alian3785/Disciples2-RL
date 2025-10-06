@@ -127,7 +127,7 @@ UNITS_BLUE = [
 ]
 
 
-def _apply_team_traits(units: List[Dict]) -> None:
+def _apply_team_traits(units: List[Dict], enemy_units: Optional[List[Dict]] = None) -> None:
     if any(unit.get("unit_type") == "Sundancer" for unit in units):
         for unit in units:
             unit["Firedefence"] = 0
@@ -143,9 +143,13 @@ def _apply_team_traits(units: List[Dict]) -> None:
             unit["Waterdefence"] = 0
             unit["Earthdefence"] = 0
 
+    if enemy_units is not None and any(unit.get("unit_type") == "Tiamat" for unit in units):
+        for enemy in enemy_units:
+            enemy["teamated"] = 0
 
-_apply_team_traits(UNITS_RED)
-_apply_team_traits(UNITS_BLUE)
+
+_apply_team_traits(UNITS_RED, UNITS_BLUE)
+_apply_team_traits(UNITS_BLUE, UNITS_RED)
 
 # Удалить это потом когда не надо будет сохранять юнитов в файл
 def _units_to_markdown_section(title: str, units: List[Dict]) -> str:
@@ -985,7 +989,9 @@ class BattleEnv(gym.Env):
                         f"{victim['team'].upper()} {victim['name']}#{victim['position']} поглощён."
                     )
                     return False
-
+        if victim.get("teamated", 0) == 1:
+            return False
+        victim["teamated"] = 1
         base_primary = int(victim.get("damage", 0) or 0)
         new_primary = max(0, int(round(base_primary * 0.68)))
 
@@ -1000,6 +1006,8 @@ class BattleEnv(gym.Env):
             f"🔻 Ослабление: {attacker['team'].upper()} {attacker['name']}#{attacker['position']} снижает урон "
             f"{victim['team'].upper()} {victim['name']}#{victim['position']} с {base_primary} до {new_primary}."
         )
+
+
         return True
 
     
