@@ -281,8 +281,8 @@ MAX_HP   = max([u["health"] for u in (UNITS_RED + UNITS_BLUE)])   # 1020
 MAX_INIT = max([u["initiative_base"] for u in (UNITS_RED + UNITS_BLUE)])
 MAX_DMG  = max([u["damage"] for u in (UNITS_RED + UNITS_BLUE)])
 MAX_DMG2 = max([u["damage_secondary"] for u in (UNITS_RED + UNITS_BLUE)])
-# Травница может баффать союзника на +25% урона, поэтому расширяем допустимый максимум.
-TRAVNITSA_MULTIPLIER = 1.25
+# Травница может баффать союзника на +75% урона, поэтому расширяем допустимый максимум.
+TRAVNITSA_MULTIPLIER = 2
 MAX_DMG_BUFFED = int(np.ceil(MAX_DMG * TRAVNITSA_MULTIPLIER))
 
 POISON_TURNS  = 3
@@ -1651,7 +1651,7 @@ from stable_baselines3.common.env_checker import check_env
 check_env(BattleEnv(log_enabled=True), warn=True)
 
 # -------------------- Параметры обучения и теста --------------------
-TOTAL_STEPS     = 1000000
+TOTAL_STEPS     = 2000000
 N_ENVS          = 8
 MODEL_SAVE_FREQ = 1000000
 EVAL_FREQ       = 1000000
