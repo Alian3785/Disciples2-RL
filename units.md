@@ -26,6 +26,8 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
+  - `powerup`: 0
+  - `original_damage`: 70
 
 - **воин1**
   - `initiative`: 55
@@ -36,8 +38,8 @@
   - `unit_type`: "Warrior"
   - `damage`: 70
   - `damage_secondary`: 0
-  - `health`: 320
-  - `max_health`: 320
+  - `health`: 0
+  - `max_health`: 0
   - `armor`: 0
   - `accuracy`: 80
   - `accuracy_secondary`: 0
@@ -51,6 +53,8 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
+  - `powerup`: 0
+  - `original_damage`: 70
 
 - **воин**
   - `initiative`: 48
@@ -59,12 +63,12 @@
   - `position`: 3
   - `stand`: "behind"
   - `unit_type`: "Warrior"
-  - `damage`: 50
+  - `damage`: 100
   - `damage_secondary`: 0
-  - `health`: 300
-  - `max_health`: 300
+  - `health`: 1000
+  - `max_health`: 1000
   - `armor`: 0
-  - `accuracy`: 78
+  - `accuracy`: 80
   - `accuracy_secondary`: 0
   - `immunity`: ["death"]
   - `resistance`: ["Mind"]
@@ -76,6 +80,8 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
+  - `powerup`: 0
+  - `original_damage`: 100
 
 - **арбалетчик**
   - `initiative`: 40
@@ -101,18 +107,20 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
+  - `powerup`: 0
+  - `original_damage`: 95
 
-- **пусто**
-  - `initiative`: 0
-  - `initiative_base`: 0
+- **Новичок**
+  - `initiative`: 20
+  - `initiative_base`: 20
   - `team`: "red"
   - `position`: 5
   - `stand`: "behind"
-  - `unit_type`: "Archer"
+  - `unit_type`: "Novice"
   - `damage`: 0
   - `damage_secondary`: 0
-  - `health`: 0
-  - `max_health`: 0
+  - `health`: 500
+  - `max_health`: 500
   - `armor`: 0
   - `accuracy`: 0
   - `accuracy_secondary`: 0
@@ -126,6 +134,8 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
+  - `powerup`: 0
+  - `original_damage`: 0
 
 - **пусто**
   - `initiative`: 0
@@ -151,6 +161,8 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
+  - `powerup`: 0
+  - `original_damage`: 0
 
 ## UNITS_BLUE
 
@@ -163,10 +175,10 @@
   - `unit_type`: "Warrior"
   - `damage`: 100
   - `damage_secondary`: 0
-  - `health`: 200
-  - `max_health`: 200
+  - `health`: 1000
+  - `max_health`: 1000
   - `armor`: 0
-  - `accuracy`: 50
+  - `accuracy`: 80
   - `accuracy_secondary`: 90
   - `immunity`: []
   - `resistance`: ["Mind"]
@@ -178,10 +190,8 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
-  - `Firedefence`: 0
-  - `Airdefence`: 0
-  - `Waterdefence`: 0
-  - `Earthdefence`: 0
+  - `powerup`: 0
+  - `original_damage`: 100
 
 - **Боевой маг**
   - `initiative`: 62
@@ -192,8 +202,8 @@
   - `unit_type`: "Warrior"
   - `damage`: 50
   - `damage_secondary`: 0
-  - `health`: 200
-  - `max_health`: 200
+  - `health`: 0
+  - `max_health`: 0
   - `armor`: 0
   - `accuracy`: 80
   - `accuracy_secondary`: 0
@@ -207,10 +217,8 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
-  - `Firedefence`: 0
-  - `Airdefence`: 0
-  - `Waterdefence`: 0
-  - `Earthdefence`: 0
+  - `powerup`: 0
+  - `original_damage`: 50
 
 - **Инквизитор**
   - `initiative`: 52
@@ -236,10 +244,8 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
-  - `Firedefence`: 0
-  - `Airdefence`: 0
-  - `Waterdefence`: 0
-  - `Earthdefence`: 0
+  - `powerup`: 0
+  - `original_damage`: 70
 
 - **Арбалетчик**
   - `initiative`: 40
@@ -265,28 +271,26 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
-  - `Firedefence`: 0
-  - `Airdefence`: 0
-  - `Waterdefence`: 0
-  - `Earthdefence`: 0
+  - `powerup`: 0
+  - `original_damage`: 75
 
-- **Дева рощи**
+- **Новичек**
   - `initiative`: 20
   - `initiative_base`: 20
   - `team`: "blue"
   - `position`: 11
   - `stand`: "behind"
-  - `unit_type`: "Deva roshi"
-  - `damage`: 40
+  - `unit_type`: "Novice"
+  - `damage`: 0
   - `damage_secondary`: 0
   - `health`: 500
   - `max_health`: 500
   - `armor`: 0
-  - `accuracy`: 100
+  - `accuracy`: 0
   - `accuracy_secondary`: 0
   - `immunity`: []
   - `resistance`: []
-  - `attack_type_primary`: "Life"
+  - `attack_type_primary`: "Weapon"
   - `attack_type_secondary`: ""
   - `big`: false
   - `paralyzed`: 0
@@ -294,10 +298,8 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
-  - `Firedefence`: 0
-  - `Airdefence`: 0
-  - `Waterdefence`: 0
-  - `Earthdefence`: 0
+  - `powerup`: 0
+  - `original_damage`: 0
 
 - **пусто**
   - `initiative`: 0
@@ -323,7 +325,5 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
-  - `Firedefence`: 0
-  - `Airdefence`: 0
-  - `Waterdefence`: 0
-  - `Earthdefence`: 0
+  - `powerup`: 0
+  - `original_damage`: 0

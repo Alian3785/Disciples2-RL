@@ -32,7 +32,8 @@ from gymnasium import spaces
 
 # --- словари для кодирования в наблюдении ---
 TYPE_LIST = ["Archer", "gargoil", "Mage", "Witch", "Warrior", "Demon", "Death", "lord", "Dead dragon", "Ismir son", "Ghost", "Shadow", "Succub", 
-"Betrezen", "Uter", "Uter Demon", "Tiamat", "Baroness", "Incub", "Abyss Devil", "Cliric", "Profit", "Sundancer", "Sylfid", "Deva roshi"]  # one-hot(25)
+"Betrezen", "Uter", "Uter Demon", "Tiamat", "Baroness", "Incub", "Abyss Devil", "Cliric", "Profit", "Sundancer", "Sylfid", "Travnitsa", "Deva roshi",
+"Novice"]  # one-hot(27)
 ATTACK_TYPES = ["Weapon", "earth", "Fire", "Water", "poison", "death", "Mind", "Life", "Air"]                        # one-hot(9)
 
 FEATURES_PER_UNIT = 8 + len(TYPE_LIST) + 4 * len(ATTACK_TYPES) + 10
@@ -54,14 +55,14 @@ UNITS_RED = [
      "basestats": []},
 
     {"name": "воин1", "initiative": 55, "initiative_base": 55, "team": "red", "position": 2, "stand": "behind",
-     "unit_type": "Warrior", "damage": 70, "damage_secondary": 0, "health": 320, "max_health": 320, "armor": 0,
+     "unit_type": "Warrior", "damage": 70, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0,
      "accuracy": 80, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Fire",
      "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
     {"name": "воин", "initiative": 48, "initiative_base": 48, "team": "red", "position": 3, "stand": "behind",
-     "unit_type": "Warrior", "damage": 50, "damage_secondary": 0, "health": 300, "max_health": 300, "armor": 0,
-     "accuracy": 78, "accuracy_secondary": 0, "immunity": ["death"], "resistance": ["Mind"], "attack_type_primary": "Fire",
+     "unit_type": "Warrior", "damage": 100, "damage_secondary": 0, "health": 1000, "max_health": 1000, "armor": 0,
+     "accuracy": 80, "accuracy_secondary": 0, "immunity": ["death"], "resistance": ["Mind"], "attack_type_primary": "Fire",
      "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
@@ -72,8 +73,8 @@ UNITS_RED = [
      "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
-    {"name": "пусто", "initiative": 0, "initiative_base": 0, "team": "red", "position": 5, "stand": "behind",
-     "unit_type": "Archer", "damage": 0, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0,
+    {"name": "Новичок", "initiative": 20, "initiative_base": 20, "team": "red", "position": 5, "stand": "behind",
+     "unit_type": "Novice", "damage": 0, "damage_secondary": 0, "health": 500, "max_health": 500, "armor": 0,
      "accuracy": 0, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Weapon",
      "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
@@ -87,13 +88,13 @@ UNITS_RED = [
 
 UNITS_BLUE = [
     {"name": "Инквизитор", "initiative": 95, "initiative_base": 95, "team": "blue", "position": 7, "stand": "ahead",
-     "unit_type": "Warrior", "damage": 100, "damage_secondary": 0, "health": 200, "max_health": 200, "armor": 0,
-     "accuracy": 50, "accuracy_secondary": 90, "immunity": [], "resistance": ["Mind"], "attack_type_primary": "Weapon",
+     "unit_type": "Warrior", "damage": 100, "damage_secondary": 0, "health": 1000, "max_health": 1000, "armor": 0,
+     "accuracy": 80, "accuracy_secondary": 90, "immunity": [], "resistance": ["Mind"], "attack_type_primary": "Weapon",
      "attack_type_secondary": "Mind", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
     {"name": "Боевой маг", "initiative": 62, "initiative_base": 62, "team": "blue", "position": 8, "stand": "ahead",
-     "unit_type": "Warrior", "damage": 50, "damage_secondary": 0, "health": 200, "max_health": 200, "armor": 0,
+     "unit_type": "Warrior", "damage": 50, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0,
      "accuracy": 80, "accuracy_secondary": 0, "immunity": [], "resistance": ["Weapon"],
      "attack_type_primary": "Fire", "attack_type_secondary": "", "big": False,
      "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
@@ -113,9 +114,9 @@ UNITS_BLUE = [
      "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
-    {"name": "Дева рощи", "initiative": 20, "initiative_base": 20, "team": "blue", "position": 11, "stand": "behind",
-     "unit_type": "Deva roshi", "damage": 40, "damage_secondary": 0, "health": 500, "max_health": 500, "armor": 0,
-     "accuracy": 100, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Life",
+    {"name": "Новичек", "initiative": 20, "initiative_base": 20, "team": "blue", "position": 11, "stand": "behind",
+     "unit_type": "Novice", "damage": 0, "damage_secondary": 0, "health": 500, "max_health": 500, "armor": 0,
+     "accuracy": 0, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Weapon",
      "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
@@ -135,6 +136,11 @@ def _apply_team_traits(units: List[Dict], enemy_units: Optional[List[Dict]] = No
     if any(unit.get("unit_type") == "Sylfid" for unit in units):
         for unit in units:
             unit["Airdefence"] = 0
+
+    if any(unit.get("unit_type") == "Travnitsa" or unit.get("unit_type") == "Novice" for unit in units):
+        for unit in units:
+            unit["powerup"] = 0
+            unit["original_damage"] = unit.get("damage", 0)
 
     if any(unit.get("unit_type") == "Deva roshi" for unit in units):
         for unit in units:
@@ -272,6 +278,9 @@ MAX_HP   = max([u["health"] for u in (UNITS_RED + UNITS_BLUE)])   # 1020
 MAX_INIT = max([u["initiative_base"] for u in (UNITS_RED + UNITS_BLUE)])
 MAX_DMG  = max([u["damage"] for u in (UNITS_RED + UNITS_BLUE)])
 MAX_DMG2 = max([u["damage_secondary"] for u in (UNITS_RED + UNITS_BLUE)])
+# Травница может баффать союзника на +25% урона, поэтому расширяем допустимый максимум.
+TRAVNITSA_MULTIPLIER = 1.25
+MAX_DMG_BUFFED = int(np.ceil(MAX_DMG * TRAVNITSA_MULTIPLIER))
 
 POISON_TURNS  = 3
 BURN_DAMAGE = 10     # базовый фолбэк; Владыка задаёт per-tick из своего урон2
@@ -328,7 +337,7 @@ class BattleEnv(gym.Env):
             dtype=np.float32,
         )
         high_unit = np.array(
-            [MAX_HP, MAX_INIT, MAX_INIT, MAX_DMG, MAX_DMG2, 1, 12, 1]
+            [MAX_HP, MAX_INIT, MAX_INIT, MAX_DMG_BUFFED, MAX_DMG2, 1, 12, 1]
             + [1] * len(TYPE_LIST)
             + [1] * len(ATTACK_TYPES)
             + [1] * len(ATTACK_TYPES)
@@ -425,6 +434,17 @@ class BattleEnv(gym.Env):
         if near2: return near2
         far2 = [behind[c] for c in far_cols if alive(behind[c])]
         return far2
+
+    def _travnitsa_auto_target(self, healer: Dict) -> Optional[int]:
+        allies = [
+            u for u in self.combined
+            if u["team"] == healer["team"]
+            and self._alive(u)
+            and u is not healer
+        ]
+        if not allies:
+            return None
+        return self.rng.choice(allies)["position"]
 
     def _opposite_position(self, pos: int, team: str) -> Optional[int]:
         col = self._col_of(pos)
@@ -523,6 +543,35 @@ class BattleEnv(gym.Env):
             f"для {recipient['team'].upper()} {recipient['name']}#{recipient['position']} ({before}→{recipient['health']})."
         )
 
+        return True
+
+    def _apply_travnitsa_buff(self, healer: Dict, recipient: Optional[Dict]) -> bool:
+        if recipient is None or not self._alive(recipient) or recipient is healer:
+            return False
+
+        current_damage = recipient.get("damage", 0)
+        stored_original = recipient.get("original_damage", 0)
+
+        if stored_original <= 0:
+            stored_original = current_damage
+            if stored_original <= 0:
+                return False
+            recipient["original_damage"] = stored_original
+        
+
+        if healer.get("unit_type") == "Travnitsa":
+            buffed_damage = int(round(stored_original * 1.25))
+        elif healer.get("unit_type") == "Novice":
+            buffed_damage = int(round(stored_original * 1.5))
+    
+        
+        recipient["damage"] = buffed_damage
+        recipient["powerup"] = 1
+
+        self._log(
+            f"🌿 Усиление травницы: {healer['team'].upper()} {healer['name']}#{healer['position']} увеличивает урон "
+            f"{recipient['team'].upper()} {recipient['name']}#{recipient['position']} до {buffed_damage}."
+        )
         return True
 
     # --- НОВОЕ: выбор позиции с минимальным HP из списка позиций ---
@@ -826,6 +875,14 @@ class BattleEnv(gym.Env):
                           f"{victim['team'].upper()} {victim['name']}#{victim['position']} поглощён.")
                 return True
         return False
+
+    def _reset_powerup(self, unit: Optional[Dict]) -> None:
+        if unit is None:
+            return
+        if unit.get("powerup", 0) != 0:
+            unit["powerup"] = 0
+            if unit.get("original_damage", 0) > 0:
+                unit["damage"] = unit["original_damage"]
 
     def _apply_damage_with_armor(self, base_dmg: float, victim: Dict) -> int:
         armor = float(victim.get("armor", 0) or 0)
@@ -1277,6 +1334,7 @@ class BattleEnv(gym.Env):
                 self._log(
                     f"⛔ Паралич: {nxt['team'].upper()} {nxt['name']}#{nxt['position']} пропускает ход."
                 )
+                self._reset_powerup(nxt)
                 continue
 
             if nxt.get("long_paralyzed", 0) == 1 and self._alive(nxt):
@@ -1291,6 +1349,7 @@ class BattleEnv(gym.Env):
                     self._log(
                         f"⛔ Пас: {nxt['team'].upper()} {nxt['name']}#{nxt['position']} остаётся парализован."
                     )
+                self._reset_powerup(nxt)
                 continue
 
             if nxt["team"] == "blue":
@@ -1324,10 +1383,10 @@ class BattleEnv(gym.Env):
                         self._log(f"RED ход: {nxt['name']}#{nxt['position']} ({nxt.get('unit_type')}) выполняет массовую атаку.")
                     else:
                         break
-                elif nxt.get("unit_type") in ("Cliric", "Profit"):
+                elif nxt.get("unit_type") in ("Cliric", "Profit", "Travnitsa", "Deva roshi", "Novice"):
                     if nxt.get("unit_type") == "Cliric":
                         ally_pos = self._cliric_auto_target(nxt)
-                        if ally_pos is None:
+                        if ally_pos is None:    
                             self._log(
                                 f"RED ход: {nxt['name']}#{nxt['position']} (Cliric) не находит союзников для лечения."
                             )
@@ -1339,6 +1398,24 @@ class BattleEnv(gym.Env):
                             f"RED ход: {nxt['name']}#{nxt['position']} (Cliric) лечит союзника на pos{ally_pos}."
                         )
                         self._apply_cliric_heal(nxt, recipient)
+                    elif nxt.get("unit_type") == "Travnitsa" or nxt.get("unit_type") == "Novice":
+                        buff_pos = self._travnitsa_auto_target(nxt)
+                        if buff_pos is None:
+                            self._log(
+                                f"RED ход: {nxt['name']}#{nxt['position']} (Travnitsa) не находит союзников для усиления."
+                            )
+                            break
+                        recipient = self._unit_by_position(buff_pos)
+                        if recipient is None:
+                            break
+                        if self._apply_travnitsa_buff(nxt, recipient):
+                            self._log(
+                                f"RED ход: {nxt['name']}#{nxt['position']} (Travnitsa) усиливает союзника на pos{buff_pos}."
+                            )
+                        else:
+                            self._log(
+                                f"RED ход: {nxt['name']}#{nxt['position']} (Travnitsa) не смогла усилить союзника на pos{buff_pos}."
+                            )
                     else:
                         healed_any = False
                         for ally in self.combined:
@@ -1365,6 +1442,7 @@ class BattleEnv(gym.Env):
                     self._check_victory_after_hit()
                     if self.winner is not None:
                         return False
+            self._reset_powerup(nxt)
         return False
 
     # ------------------ Наблюдение для агента ------------------
@@ -1433,7 +1511,7 @@ class BattleEnv(gym.Env):
             self._log(f"BLUE действие: {attacker['name']}#{attacker['position']} → pos{target_pos}")
             attacker["initiative"] = 0
 
-            if attacker.get("unit_type") in ("Cliric", "Profit", "Sylfid", "Sundancer", "Deva roshi"):
+            if attacker.get("unit_type") in ("Cliric", "Profit", "Travnitsa", "Sylfid", "Sundancer", "Deva roshi", "Novice"):
                 if attacker.get("unit_type") in ("Cliric", "Deva roshi"):
                     opposite_pos = self._opposite_position(target_pos, attacker["team"])
                     recipient = self._unit_by_position(opposite_pos) if opposite_pos is not None else None
@@ -1451,6 +1529,27 @@ class BattleEnv(gym.Env):
                         if not healed:
                             self._log(
                                 f"✨ Лечение без эффекта: {recipient['team'].upper()} {recipient['name']}#{recipient['position']} уже на максимальном здоровье."
+                            )
+                elif attacker.get("unit_type") == "Travnitsa" or attacker.get("unit_type") == "Novice":
+                    opposite_pos = self._opposite_position(target_pos, attacker["team"])
+                    recipient = self._unit_by_position(opposite_pos) if opposite_pos is not None else None
+                    if (
+                        recipient is None
+                        or recipient.get("team") != attacker.get("team")
+                        or not self._alive(recipient)
+                    ):
+                        self._log(
+                            f"🌿 Усиление не сработало: {attacker['team'].upper()} {attacker['name']}#{attacker['position']} не находит союзника на противоположной позиции."
+                        )
+                        step_shaping += self.penalty_invalid_target
+                    else:
+                        if self._apply_travnitsa_buff(attacker, recipient):
+                            self._log(
+                                f"🌿 Усиление: {attacker['team'].upper()} {attacker['name']}#{attacker['position']} повышает урон союзника на pos{recipient['position']}."
+                            )
+                        else:
+                            self._log(
+                                f"🌿 Усиление без эффекта: {recipient['team'].upper()} {recipient['name']}#{recipient['position']} не может быть усилен."
                             )
                 else:
                     healed_any = False
@@ -1495,6 +1594,7 @@ class BattleEnv(gym.Env):
                 reward, terminated = self.reward_step + step_shaping, False
                 return self._obs(), reward, terminated, False, {}
             self.current_blue_attacker_pos = None
+            self._reset_powerup(attacker)
             self._advance_until_blue_turn()
 
         if self.winner is None:
@@ -1543,7 +1643,7 @@ from stable_baselines3.common.env_checker import check_env
 check_env(BattleEnv(log_enabled=True), warn=True)
 
 # -------------------- Параметры обучения и теста --------------------
-TOTAL_STEPS     = 2000000
+TOTAL_STEPS     = 1000000
 N_ENVS          = 8
 MODEL_SAVE_FREQ = 1000000
 EVAL_FREQ       = 1000000
@@ -1768,6 +1868,8 @@ if VISUALIZE_TEST:
             "Sundancer": " (Sundancer)",
             "Sylfid": " (Sylfid)",
             "Deva roshi": " (Deva roshi)",
+            "Novice": " (Novice)",
+            "Travnitsa": " (Travnitsa)",
         }.get(t, f" ({t})")
 
     for u in (UNITS_RED + UNITS_BLUE):
