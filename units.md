@@ -190,7 +190,6 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
-  - `powerup`: 0
   - `original_damage`: 100
 
 - **Боевой маг**
@@ -217,7 +216,6 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
-  - `powerup`: 0
   - `original_damage`: 50
 
 - **Инквизитор**
@@ -244,7 +242,6 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
-  - `powerup`: 0
   - `original_damage`: 70
 
 - **Арбалетчик**
@@ -271,16 +268,15 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
-  - `powerup`: 0
   - `original_damage`: 75
 
-- **Новичек**
+- **Другид**
   - `initiative`: 20
   - `initiative_base`: 20
   - `team`: "blue"
   - `position`: 11
   - `stand`: "behind"
-  - `unit_type`: "Novice"
+  - `unit_type`: "dwarfdruid"
   - `damage`: 0
   - `damage_secondary`: 0
   - `health`: 500
@@ -298,7 +294,6 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
-  - `powerup`: 0
   - `original_damage`: 0
 
 - **пусто**
@@ -325,5 +320,4 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
-  - `powerup`: 0
   - `original_damage`: 0

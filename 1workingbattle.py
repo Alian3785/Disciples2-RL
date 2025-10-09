@@ -33,7 +33,7 @@ from gymnasium import spaces
 # --- словари для кодирования в наблюдении ---
 TYPE_LIST = ["Archer", "gargoil", "Mage", "Witch", "Warrior", "Demon", "Death", "lord", "Dead dragon", "Ismir son", "Ghost", "Shadow", "Succub", 
 "Betrezen", "Uter", "Uter Demon", "Tiamat", "Baroness", "Incub", "Abyss Devil", "Cliric", "Profit", "Sundancer", "Sylfid", "Travnitsa", "Deva roshi",
-"Novice"]  # one-hot(27)
+"Novice", "dwarfdruid", "arhidruid"]  # one-hot(27)
 ATTACK_TYPES = ["Weapon", "earth", "Fire", "Water", "poison", "death", "Mind", "Life", "Air"]                        # one-hot(9)
 
 FEATURES_PER_UNIT = 8 + len(TYPE_LIST) + 4 * len(ATTACK_TYPES) + 10
@@ -114,8 +114,8 @@ UNITS_BLUE = [
      "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
-    {"name": "Новичек", "initiative": 20, "initiative_base": 20, "team": "blue", "position": 11, "stand": "behind",
-     "unit_type": "Novice", "damage": 0, "damage_secondary": 0, "health": 500, "max_health": 500, "armor": 0,
+    {"name": "Другид", "initiative": 20, "initiative_base": 20, "team": "blue", "position": 11, "stand": "behind",
+     "unit_type": "dwarfdruid", "damage": 0, "damage_secondary": 0, "health": 500, "max_health": 500, "armor": 0,
      "accuracy": 0, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Weapon",
      "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
@@ -140,6 +140,9 @@ def _apply_team_traits(units: List[Dict], enemy_units: Optional[List[Dict]] = No
     if any(unit.get("unit_type") == "Travnitsa" or unit.get("unit_type") == "Novice" for unit in units):
         for unit in units:
             unit["powerup"] = 0
+            
+    if any(unit.get("unit_type") == "dwarfdruid" or unit.get("unit_type") == "arhidruid" or unit.get("unit_type") == "Travnitsa" or unit.get("unit_type") == "Novice" for unit in units):
+        for unit in units:
             unit["original_damage"] = unit.get("damage", 0)
 
     if any(unit.get("unit_type") == "Deva roshi" for unit in units):
@@ -556,13 +559,18 @@ class BattleEnv(gym.Env):
             stored_original = current_damage
             if stored_original <= 0:
                 return False
-            recipient["original_damage"] = stored_original
-        
+            
 
         if healer.get("unit_type") == "Travnitsa":
             buffed_damage = int(round(stored_original * 1.25))
+            recipient["powerup"] = 1
         elif healer.get("unit_type") == "Novice":
             buffed_damage = int(round(stored_original * 1.5))
+            recipient["powerup"] = 1
+        elif healer.get("unit_type") == "dwarfdruid":
+            buffed_damage = int(round(stored_original * 1.75))
+        elif healer.get("unit_type") == "arhidruid":
+            buffed_damage = int(round(stored_original * 2))
     
         
         recipient["damage"] = buffed_damage
@@ -1383,7 +1391,7 @@ class BattleEnv(gym.Env):
                         self._log(f"RED ход: {nxt['name']}#{nxt['position']} ({nxt.get('unit_type')}) выполняет массовую атаку.")
                     else:
                         break
-                elif nxt.get("unit_type") in ("Cliric", "Profit", "Travnitsa", "Deva roshi", "Novice"):
+                elif nxt.get("unit_type") in ("Cliric", "Profit", "Travnitsa", "Deva roshi", "Novice", "dwarfdruid", "arhidruid"):
                     if nxt.get("unit_type") == "Cliric":
                         ally_pos = self._cliric_auto_target(nxt)
                         if ally_pos is None:    
@@ -1398,7 +1406,7 @@ class BattleEnv(gym.Env):
                             f"RED ход: {nxt['name']}#{nxt['position']} (Cliric) лечит союзника на pos{ally_pos}."
                         )
                         self._apply_cliric_heal(nxt, recipient)
-                    elif nxt.get("unit_type") == "Travnitsa" or nxt.get("unit_type") == "Novice":
+                    elif nxt.get("unit_type") == "Travnitsa" or nxt.get("unit_type") == "Novice" or nxt.get("unit_type") == "dwarfdruid" or nxt.get("unit_type") == "arhidruid":
                         buff_pos = self._travnitsa_auto_target(nxt)
                         if buff_pos is None:
                             self._log(
@@ -1511,7 +1519,7 @@ class BattleEnv(gym.Env):
             self._log(f"BLUE действие: {attacker['name']}#{attacker['position']} → pos{target_pos}")
             attacker["initiative"] = 0
 
-            if attacker.get("unit_type") in ("Cliric", "Profit", "Travnitsa", "Sylfid", "Sundancer", "Deva roshi", "Novice"):
+            if attacker.get("unit_type") in ("Cliric", "Profit", "Travnitsa", "Sylfid", "Sundancer", "Deva roshi", "Novice", "dwarfdruid", "arhidruid"):
                 if attacker.get("unit_type") in ("Cliric", "Deva roshi"):
                     opposite_pos = self._opposite_position(target_pos, attacker["team"])
                     recipient = self._unit_by_position(opposite_pos) if opposite_pos is not None else None
@@ -1530,7 +1538,7 @@ class BattleEnv(gym.Env):
                             self._log(
                                 f"✨ Лечение без эффекта: {recipient['team'].upper()} {recipient['name']}#{recipient['position']} уже на максимальном здоровье."
                             )
-                elif attacker.get("unit_type") == "Travnitsa" or attacker.get("unit_type") == "Novice":
+                elif attacker.get("unit_type") == "Travnitsa" or attacker.get("unit_type") == "Novice" or attacker.get("unit_type") == "dwarfdruid" or attacker.get("unit_type") == "arhidruid":
                     opposite_pos = self._opposite_position(target_pos, attacker["team"])
                     recipient = self._unit_by_position(opposite_pos) if opposite_pos is not None else None
                     if (
@@ -1870,6 +1878,8 @@ if VISUALIZE_TEST:
             "Deva roshi": " (Deva roshi)",
             "Novice": " (Novice)",
             "Travnitsa": " (Travnitsa)",
+            "dwarfdruid": " (dwarfdruid)",
+            "arhidruid": " (arhidruid)",
         }.get(t, f" ({t})")
 
     for u in (UNITS_RED + UNITS_BLUE):
