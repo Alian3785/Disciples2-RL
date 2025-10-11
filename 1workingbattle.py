@@ -33,10 +33,10 @@ from gymnasium import spaces
 # --- словари для кодирования в наблюдении ---
 TYPE_LIST = ["Archer", "gargoil", "Mage", "Witch", "Warrior", "Demon", "Death", "lord", "Dead dragon", "Ismir son", "Ghost", "Shadow", "Succub", 
 "Betrezen", "Uter", "Uter Demon", "Tiamat", "Baroness", "Incub", "Abyss Devil", "Cliric", "Profit", "Sundancer", "Sylfid", "Travnitsa", "Deva roshi",
-"Novice", "dwarfdruid", "arhidruid"]  # one-hot(27)
+"Novice", "Alchemist", "dwarfdruid", "arhidruid"]  # one-hot(28)
 ATTACK_TYPES = ["Weapon", "earth", "Fire", "Water", "poison", "death", "Mind", "Life", "Air"]                        # one-hot(9)
 
-FEATURES_PER_UNIT = 8 + len(TYPE_LIST) + 4 * len(ATTACK_TYPES) + 10
+FEATURES_PER_UNIT = 8 + len(TYPE_LIST) + 4 * len(ATTACK_TYPES) + 11
 OBSERVATION_SIZE = FEATURES_PER_UNIT * 12
 
 def _one_hot(value: str, vocab: List[str]) -> List[float]:
@@ -74,7 +74,7 @@ UNITS_RED = [
      "basestats": []},
 
     {"name": "Новичок", "initiative": 20, "initiative_base": 20, "team": "red", "position": 5, "stand": "behind",
-     "unit_type": "Novice", "damage": 0, "damage_secondary": 0, "health": 500, "max_health": 500, "armor": 0,
+     "unit_type": "Novice", "damage": 0, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0,
      "accuracy": 0, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Weapon",
      "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
@@ -114,8 +114,8 @@ UNITS_BLUE = [
      "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
-    {"name": "Другид", "initiative": 20, "initiative_base": 20, "team": "blue", "position": 11, "stand": "behind",
-     "unit_type": "dwarfdruid", "damage": 0, "damage_secondary": 0, "health": 500, "max_health": 500, "armor": 0,
+    {"name": "Алхимик", "initiative": 20, "initiative_base": 20, "team": "blue", "position": 11, "stand": "behind",
+     "unit_type": "Alchemist", "damage": 0, "damage_secondary": 0, "health": 500, "max_health": 500, "armor": 0,
      "accuracy": 0, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Weapon",
      "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
@@ -137,11 +137,11 @@ def _apply_team_traits(units: List[Dict], enemy_units: Optional[List[Dict]] = No
         for unit in units:
             unit["Airdefence"] = 0
 
-    if any(unit.get("unit_type") == "Travnitsa" or unit.get("unit_type") == "Novice" for unit in units):
+    if any(unit.get("unit_type") in ("Travnitsa", "Novice", "Alchemist") for unit in units):
         for unit in units:
             unit["powerup"] = 0
             
-    if any(unit.get("unit_type") == "dwarfdruid" or unit.get("unit_type") == "arhidruid" or unit.get("unit_type") == "Travnitsa" or unit.get("unit_type") == "Novice" for unit in units):
+    if any(unit.get("unit_type") in ("dwarfdruid", "arhidruid", "Travnitsa", "Novice") for unit in units):
         for unit in units:
             unit["original_damage"] = unit.get("damage", 0)
 
@@ -151,6 +151,10 @@ def _apply_team_traits(units: List[Dict], enemy_units: Optional[List[Dict]] = No
             unit["Airdefence"] = 0
             unit["Waterdefence"] = 0
             unit["Earthdefence"] = 0
+
+    if any(unit.get("unit_type") == "Alchemist" for unit in units):
+        for unit in units:
+            unit["bonusturn"] = 0
 
     if enemy_units is not None and any(unit.get("unit_type") == "Tiamat" for unit in units):
         for enemy in enemy_units:
@@ -336,6 +340,7 @@ class BattleEnv(gym.Env):
             + [0]
             + [0]
             + [0]
+            + [0]
             + [0],
             dtype=np.float32,
         )
@@ -353,7 +358,8 @@ class BattleEnv(gym.Env):
             + [1]
             + [1]
             + [1]
-            + [1],
+            + [1]
+            + [10],
             dtype=np.float32,
         )
         low  = np.tile(low_unit, 12)
@@ -448,6 +454,46 @@ class BattleEnv(gym.Env):
         if not allies:
             return None
         return self.rng.choice(allies)["position"]
+
+    def _alchemist_auto_target(self, supporter: Dict) -> Optional[int]:
+        allies = [
+            u for u in self.combined
+            if u["team"] == supporter["team"]
+            and self._alive(u)
+            and u is not supporter
+            and u.get("unit_type") != "Alchemist"
+            and u.get("running_away", 0) != 1
+        ]
+        if not allies:
+            return None
+        needs_help = [
+            u for u in allies
+            if int(u.get("initiative", 0) or 0) < int(u.get("initiative_base", 0) or 0)
+        ]
+        pool = needs_help if needs_help else allies
+        chosen = self.rng.choice(pool)
+        return chosen["position"]
+
+    def _apply_alchemist_support(self, alchemist: Dict, recipient: Dict) -> bool:
+        if recipient is None or not self._alive(recipient):
+            return False
+        if recipient is alchemist:
+            return False
+        if recipient.get("unit_type") == "Alchemist" or recipient.get("running_away", 0) == 1:
+            self._log(
+                f"⚗️ Дополнительный ход без эффекта: {recipient['team'].upper()} {recipient['name']}#{recipient['position']} не может получить бонус от алхимика."
+            )
+            return False
+
+        recipient.setdefault("bonusturn", 0)
+        base_ini = int(recipient.get("initiative_base", 0) or 0)
+        recipient["initiative"] = base_ini
+        recipient["bonusturn"] += 1
+        self._log(
+            f"⚗️ Дополнительный ход: {alchemist['team'].upper()} {alchemist['name']}#{alchemist['position']} восстанавливает инициативу "
+            f"{recipient['team'].upper()} {recipient['name']}#{recipient['position']} до {base_ini} и увеличивает bonusturn до {recipient['bonusturn']}."
+        )
+        return True
 
     def _opposite_position(self, pos: int, team: str) -> Optional[int]:
         col = self._col_of(pos)
@@ -567,6 +613,8 @@ class BattleEnv(gym.Env):
         elif healer.get("unit_type") == "Novice":
             buffed_damage = int(round(stored_original * 1.5))
             recipient["powerup"] = 1
+        elif healer.get("unit_type") == "Alchemist":
+            return self._apply_alchemist_support(healer, recipient)
         elif healer.get("unit_type") == "dwarfdruid":
             buffed_damage = int(round(stored_original * 1.75))
         elif healer.get("unit_type") == "arhidruid":
@@ -818,6 +866,7 @@ class BattleEnv(gym.Env):
             u.setdefault("accuracy_secondary", 0)
             u.setdefault("damage_secondary", 0)
             u.setdefault("big", False)
+            u.setdefault("bonusturn", 0)
             u["poison_turns_left"] = 0
             u["poison_damage_per_tick"] = 0
             u["burn_turns_left"] = 0
@@ -1391,10 +1440,11 @@ class BattleEnv(gym.Env):
                         self._log(f"RED ход: {nxt['name']}#{nxt['position']} ({nxt.get('unit_type')}) выполняет массовую атаку.")
                     else:
                         break
-                elif nxt.get("unit_type") in ("Cliric", "Profit", "Travnitsa", "Deva roshi", "Novice", "dwarfdruid", "arhidruid"):
-                    if nxt.get("unit_type") == "Cliric":
+                elif nxt.get("unit_type") in ("Cliric", "Profit", "Travnitsa", "Deva roshi", "Novice", "Alchemist", "dwarfdruid", "arhidruid"):
+                    nxt_type = nxt.get("unit_type")
+                    if nxt_type == "Cliric":
                         ally_pos = self._cliric_auto_target(nxt)
-                        if ally_pos is None:    
+                        if ally_pos is None:
                             self._log(
                                 f"RED ход: {nxt['name']}#{nxt['position']} (Cliric) не находит союзников для лечения."
                             )
@@ -1406,25 +1456,9 @@ class BattleEnv(gym.Env):
                             f"RED ход: {nxt['name']}#{nxt['position']} (Cliric) лечит союзника на pos{ally_pos}."
                         )
                         self._apply_cliric_heal(nxt, recipient)
-                    elif nxt.get("unit_type") == "Travnitsa" or nxt.get("unit_type") == "Novice" or nxt.get("unit_type") == "dwarfdruid" or nxt.get("unit_type") == "arhidruid":
-                        buff_pos = self._travnitsa_auto_target(nxt)
-                        if buff_pos is None:
-                            self._log(
-                                f"RED ход: {nxt['name']}#{nxt['position']} (Travnitsa) не находит союзников для усиления."
-                            )
-                            break
-                        recipient = self._unit_by_position(buff_pos)
-                        if recipient is None:
-                            break
-                        if self._apply_travnitsa_buff(nxt, recipient):
-                            self._log(
-                                f"RED ход: {nxt['name']}#{nxt['position']} (Travnitsa) усиливает союзника на pos{buff_pos}."
-                            )
-                        else:
-                            self._log(
-                                f"RED ход: {nxt['name']}#{nxt['position']} (Travnitsa) не смогла усилить союзника на pos{buff_pos}."
-                            )
-                    else:
+                        break
+
+                    if nxt_type == "Profit":
                         healed_any = False
                         for ally in self.combined:
                             if ally.get("team") == nxt.get("team") and self._alive(ally) and ally is not nxt:
@@ -1438,6 +1472,39 @@ class BattleEnv(gym.Env):
                             self._log(
                                 f"RED ход: {nxt['name']}#{nxt['position']} (Profit) не смог исцелить союзников."
                             )
+                        break
+
+                    if nxt_type == "Alchemist":
+                        buff_pos = self._alchemist_auto_target(nxt)
+                    else:
+                        buff_pos = self._travnitsa_auto_target(nxt)
+
+                    if buff_pos is None:
+                        self._log(
+                            f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) не находит союзников для действия."
+                        )
+                        break
+
+                    recipient = self._unit_by_position(buff_pos)
+                    if recipient is None:
+                        break
+
+                    if nxt_type == "Alchemist":
+                        success = self._apply_alchemist_support(nxt, recipient)
+                        action_log = (
+                            f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) восстанавливает инициативу союзнику на pos{buff_pos}."
+                            if success
+                            else f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) не смог выполнить действие для союзника на pos{buff_pos}."
+                        )
+                    else:
+                        success = self._apply_travnitsa_buff(nxt, recipient)
+                        action_log = (
+                            f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) усиливает союзника на pos{buff_pos}."
+                            if success
+                            else f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) не смог выполнить действие для союзника на pos{buff_pos}."
+                        )
+
+                    self._log(action_log)
                     break
                 else:
                     live_blue_positions = self._live_positions_of("blue")
@@ -1483,10 +1550,11 @@ class BattleEnv(gym.Env):
             par_v      = float(u.get("paralyzed", 0))
             long_par_v = float(u.get("long_paralyzed", 0))
             trans_v    = float(u.get("transformed", 0))
+            bonus_v    = float(u.get("bonusturn", 0))
 
             vec.extend([hp, ini, ini_b, dmg, dmg2, team_v, pos_v, stand_v,
                         *t_onehot, *imm_mhot, *atk1_oh, *atk2_oh, *res_mhot,
-                        armor_v, acc_v, acc2_v, poison_v, burn_v, uran_v, run_v, par_v, long_par_v, trans_v])
+                        armor_v, acc_v, acc2_v, poison_v, burn_v, uran_v, run_v, par_v, long_par_v, trans_v, bonus_v])
         return np.array(vec, dtype=np.float32)
 
     # ------------------ API Gymnasium ------------------
@@ -1519,7 +1587,7 @@ class BattleEnv(gym.Env):
             self._log(f"BLUE действие: {attacker['name']}#{attacker['position']} → pos{target_pos}")
             attacker["initiative"] = 0
 
-            if attacker.get("unit_type") in ("Cliric", "Profit", "Travnitsa", "Sylfid", "Sundancer", "Deva roshi", "Novice", "dwarfdruid", "arhidruid"):
+            if attacker.get("unit_type") in ("Cliric", "Profit", "Travnitsa", "Sylfid", "Sundancer", "Deva roshi", "Novice", "Alchemist", "dwarfdruid", "arhidruid"):
                 if attacker.get("unit_type") in ("Cliric", "Deva roshi"):
                     opposite_pos = self._opposite_position(target_pos, attacker["team"])
                     recipient = self._unit_by_position(opposite_pos) if opposite_pos is not None else None
@@ -1538,7 +1606,7 @@ class BattleEnv(gym.Env):
                             self._log(
                                 f"✨ Лечение без эффекта: {recipient['team'].upper()} {recipient['name']}#{recipient['position']} уже на максимальном здоровье."
                             )
-                elif attacker.get("unit_type") == "Travnitsa" or attacker.get("unit_type") == "Novice" or attacker.get("unit_type") == "dwarfdruid" or attacker.get("unit_type") == "arhidruid":
+                elif attacker.get("unit_type") in ("Travnitsa", "Novice", "Alchemist", "dwarfdruid", "arhidruid"):
                     opposite_pos = self._opposite_position(target_pos, attacker["team"])
                     recipient = self._unit_by_position(opposite_pos) if opposite_pos is not None else None
                     if (
@@ -1551,14 +1619,24 @@ class BattleEnv(gym.Env):
                         )
                         step_shaping += self.penalty_invalid_target
                     else:
-                        if self._apply_travnitsa_buff(attacker, recipient):
-                            self._log(
-                                f"🌿 Усиление: {attacker['team'].upper()} {attacker['name']}#{attacker['position']} повышает урон союзника на pos{recipient['position']}."
-                            )
+                        if attacker.get("unit_type") == "Alchemist":
+                            if self._apply_alchemist_support(attacker, recipient):
+                                self._log(
+                                    f"⚗️ Поддержка: {attacker['team'].upper()} {attacker['name']}#{attacker['position']} восстанавливает инициативу союзника на pos{recipient['position']}."
+                                )
+                            else:
+                                self._log(
+                                    f"⚗️ Поддержка без эффекта: {recipient['team'].upper()} {recipient['name']}#{recipient['position']} не получает бонус."
+                                )
                         else:
-                            self._log(
-                                f"🌿 Усиление без эффекта: {recipient['team'].upper()} {recipient['name']}#{recipient['position']} не может быть усилен."
-                            )
+                            if self._apply_travnitsa_buff(attacker, recipient):
+                                self._log(
+                                    f"🌿 Усиление: {attacker['team'].upper()} {attacker['name']}#{attacker['position']} повышает урон союзника на pos{recipient['position']}"
+                                )
+                            else:
+                                self._log(
+                                    f"🌿 Усиление без эффекта: {recipient['team'].upper()} {recipient['name']}#{recipient['position']} не может быть усилен."
+                                )
                 else:
                     healed_any = False
                     for ally in self.combined:
@@ -1651,7 +1729,7 @@ from stable_baselines3.common.env_checker import check_env
 check_env(BattleEnv(log_enabled=True), warn=True)
 
 # -------------------- Параметры обучения и теста --------------------
-TOTAL_STEPS     = 2000000
+TOTAL_STEPS     = 5000000
 N_ENVS          = 8
 MODEL_SAVE_FREQ = 1000000
 EVAL_FREQ       = 1000000

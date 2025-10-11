@@ -119,8 +119,8 @@
   - `unit_type`: "Novice"
   - `damage`: 0
   - `damage_secondary`: 0
-  - `health`: 500
-  - `max_health`: 500
+  - `health`: 0
+  - `max_health`: 0
   - `armor`: 0
   - `accuracy`: 0
   - `accuracy_secondary`: 0
@@ -190,7 +190,8 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
-  - `original_damage`: 100
+  - `powerup`: 0
+  - `bonusturn`: 0
 
 - **Боевой маг**
   - `initiative`: 62
@@ -216,7 +217,8 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
-  - `original_damage`: 50
+  - `powerup`: 0
+  - `bonusturn`: 0
 
 - **Инквизитор**
   - `initiative`: 52
@@ -242,7 +244,8 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
-  - `original_damage`: 70
+  - `powerup`: 0
+  - `bonusturn`: 0
 
 - **Арбалетчик**
   - `initiative`: 40
@@ -268,15 +271,16 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
-  - `original_damage`: 75
+  - `powerup`: 0
+  - `bonusturn`: 0
 
-- **Другид**
+- **Алхимик**
   - `initiative`: 20
   - `initiative_base`: 20
   - `team`: "blue"
   - `position`: 11
   - `stand`: "behind"
-  - `unit_type`: "dwarfdruid"
+  - `unit_type`: "Alchemist"
   - `damage`: 0
   - `damage_secondary`: 0
   - `health`: 500
@@ -294,7 +298,8 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
-  - `original_damage`: 0
+  - `powerup`: 0
+  - `bonusturn`: 0
 
 - **пусто**
   - `initiative`: 0
@@ -320,4 +325,5 @@
   - `running_away`: 0
   - `transformed`: 0
   - `basestats`: []
-  - `original_damage`: 0
+  - `powerup`: 0
+  - `bonusturn`: 0
