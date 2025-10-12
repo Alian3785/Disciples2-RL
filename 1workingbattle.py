@@ -36,7 +36,7 @@ TYPE_LIST = ["Archer", "gargoil", "Mage", "Witch", "Warrior", "Demon", "Death", 
 "Novice", "Alchemist", "dwarfdruid", "arhidruid"]  # one-hot(28)
 ATTACK_TYPES = ["Weapon", "earth", "Fire", "Water", "poison", "death", "Mind", "Life", "Air"]                        # one-hot(9)
 
-FEATURES_PER_UNIT = 8 + len(TYPE_LIST) + 4 * len(ATTACK_TYPES) + 11
+FEATURES_PER_UNIT = 8 + len(TYPE_LIST) + 4 * len(ATTACK_TYPES) + 12
 OBSERVATION_SIZE = FEATURES_PER_UNIT * 12
 
 def _one_hot(value: str, vocab: List[str]) -> List[float]:
@@ -61,7 +61,7 @@ UNITS_RED = [
      "basestats": []},
 
     {"name": "воин", "initiative": 48, "initiative_base": 48, "team": "red", "position": 3, "stand": "behind",
-     "unit_type": "Warrior", "damage": 100, "damage_secondary": 0, "health": 1000, "max_health": 1000, "armor": 0,
+     "unit_type": "Warrior", "damage": 100, "damage_secondary": 0, "health": 600, "max_health": 600, "armor": 0,
      "accuracy": 80, "accuracy_secondary": 0, "immunity": ["death"], "resistance": ["Mind"], "attack_type_primary": "Fire",
      "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
@@ -73,9 +73,9 @@ UNITS_RED = [
      "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
-    {"name": "Новичок", "initiative": 20, "initiative_base": 20, "team": "red", "position": 5, "stand": "behind",
-     "unit_type": "Novice", "damage": 0, "damage_secondary": 0, "health": 0, "max_health": 0, "armor": 0,
-     "accuracy": 0, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Weapon",
+    {"name": "Другой алхимик", "initiative": 20, "initiative_base": 20, "team": "red", "position": 5, "stand": "behind",
+     "unit_type": "Alchemist", "damage": 0, "damage_secondary": 0, "health": 500, "max_health": 500, "armor": 0,
+     "accuracy": 100, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Weapon",
      "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
@@ -116,7 +116,7 @@ UNITS_BLUE = [
 
     {"name": "Алхимик", "initiative": 20, "initiative_base": 20, "team": "blue", "position": 11, "stand": "behind",
      "unit_type": "Alchemist", "damage": 0, "damage_secondary": 0, "health": 500, "max_health": 500, "armor": 0,
-     "accuracy": 0, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Weapon",
+     "accuracy": 100, "accuracy_secondary": 0, "immunity": [], "resistance": [], "attack_type_primary": "Weapon",
      "attack_type_secondary": "", "big": False, "paralyzed": 0, "long_paralyzed": 0, "running_away": 0, "transformed": 0,
      "basestats": []},
 
@@ -151,10 +151,6 @@ def _apply_team_traits(units: List[Dict], enemy_units: Optional[List[Dict]] = No
             unit["Airdefence"] = 0
             unit["Waterdefence"] = 0
             unit["Earthdefence"] = 0
-
-    if any(unit.get("unit_type") == "Alchemist" for unit in units):
-        for unit in units:
-            unit["bonusturn"] = 0
 
     if enemy_units is not None and any(unit.get("unit_type") == "Tiamat" for unit in units):
         for enemy in enemy_units:
@@ -485,13 +481,10 @@ class BattleEnv(gym.Env):
             )
             return False
 
-        recipient.setdefault("bonusturn", 0)
         base_ini = int(recipient.get("initiative_base", 0) or 0)
         recipient["initiative"] = base_ini
-        recipient["bonusturn"] += 1
         self._log(
-            f"⚗️ Дополнительный ход: {alchemist['team'].upper()} {alchemist['name']}#{alchemist['position']} восстанавливает инициативу "
-            f"{recipient['team'].upper()} {recipient['name']}#{recipient['position']} до {base_ini} и увеличивает bonusturn до {recipient['bonusturn']}."
+            f"⚗️ Дополнительный ход: {alchemist['team'].upper()} {alchemist['name']}#{alchemist['position']} восстанавливает инициативу "         
         )
         return True
 
@@ -866,7 +859,6 @@ class BattleEnv(gym.Env):
             u.setdefault("accuracy_secondary", 0)
             u.setdefault("damage_secondary", 0)
             u.setdefault("big", False)
-            u.setdefault("bonusturn", 0)
             u["poison_turns_left"] = 0
             u["poison_damage_per_tick"] = 0
             u["burn_turns_left"] = 0
@@ -1207,7 +1199,7 @@ class BattleEnv(gym.Env):
                         self._log(f"✖ {victim['team'].upper()} {victim['name']}#{victim['position']} выведен из строя.")
                     else:
                         # ЯД от Dead dragon по шансу Точность2
-                        if atype == "Dead dragon" and attacker.get("attack_type_secondary", "") == "poison":
+                        if atype == "Dead dragon" and victim.get("poison_turns_left", 0) <= 0:
                             acc2 = float(attacker.get("accuracy_secondary", 0) or 0)
                             roll = self._roll_status(acc2)
                             self._log(f"🧪 Шанс отравления {int(acc2)}% — " +
@@ -1217,6 +1209,17 @@ class BattleEnv(gym.Env):
                                     self._log(f"🛡 Иммунитет к эффекту '{attacker.get('attack_type_secondary','')}' — яд НЕ накладывается "
                                               f"на {victim['team'].upper()} {victim['name']}#{victim['position']}.")
                                 else:
+                                    effect_type = attacker.get("attack_type_secondary", "")
+                                    res_list = set(victim.get("resistance") or [])
+                                    if effect_type and effect_type in res_list:
+                                        used = set(victim.get("resilience_used_types") or [])
+                                        if effect_type not in used:
+                                            victim.setdefault("resilience_used_types", []).append(effect_type)
+                                            self._log(
+                                                f"🧿 Стойкость — первый эффект типа '{effect_type}' по "
+                                                f"{victim['team'].upper()} {victim['name']}#{victim['position']} поглощён."
+                                            )
+                                            continue
                                     victim["poison_turns_left"] = POISON_TURNS
                                     victim["poison_damage_per_tick"] = int(attacker.get("damage_secondary", 0) or 0)
                                     self._log(f"☠ {attacker['team'].upper()} {attacker['name']}#{attacker['position']} накладывает яд "
@@ -1550,11 +1553,11 @@ class BattleEnv(gym.Env):
             par_v      = float(u.get("paralyzed", 0))
             long_par_v = float(u.get("long_paralyzed", 0))
             trans_v    = float(u.get("transformed", 0))
-            bonus_v    = float(u.get("bonusturn", 0))
 
             vec.extend([hp, ini, ini_b, dmg, dmg2, team_v, pos_v, stand_v,
                         *t_onehot, *imm_mhot, *atk1_oh, *atk2_oh, *res_mhot,
-                        armor_v, acc_v, acc2_v, poison_v, burn_v, uran_v, run_v, par_v, long_par_v, trans_v, bonus_v])
+                        armor_v, acc_v, acc2_v, poison_v, burn_v, uran_v, run_v, par_v, long_par_v, trans_v,
+                        float(u.get("powerup", 0))])
         return np.array(vec, dtype=np.float32)
 
     # ------------------ API Gymnasium ------------------
@@ -1729,7 +1732,7 @@ from stable_baselines3.common.env_checker import check_env
 check_env(BattleEnv(log_enabled=True), warn=True)
 
 # -------------------- Параметры обучения и теста --------------------
-TOTAL_STEPS     = 5000000
+TOTAL_STEPS     = 1000000
 N_ENVS          = 8
 MODEL_SAVE_FREQ = 1000000
 EVAL_FREQ       = 1000000

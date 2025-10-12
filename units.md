@@ -27,7 +27,6 @@
   - `transformed`: 0
   - `basestats`: []
   - `powerup`: 0
-  - `original_damage`: 70
 
 - **воин1**
   - `initiative`: 55
@@ -54,7 +53,6 @@
   - `transformed`: 0
   - `basestats`: []
   - `powerup`: 0
-  - `original_damage`: 70
 
 - **воин**
   - `initiative`: 48
@@ -65,8 +63,8 @@
   - `unit_type`: "Warrior"
   - `damage`: 100
   - `damage_secondary`: 0
-  - `health`: 1000
-  - `max_health`: 1000
+  - `health`: 600
+  - `max_health`: 600
   - `armor`: 0
   - `accuracy`: 80
   - `accuracy_secondary`: 0
@@ -81,7 +79,6 @@
   - `transformed`: 0
   - `basestats`: []
   - `powerup`: 0
-  - `original_damage`: 100
 
 - **арбалетчик**
   - `initiative`: 40
@@ -108,21 +105,20 @@
   - `transformed`: 0
   - `basestats`: []
   - `powerup`: 0
-  - `original_damage`: 95
 
-- **Новичок**
+- **Другой алхимик**
   - `initiative`: 20
   - `initiative_base`: 20
   - `team`: "red"
   - `position`: 5
   - `stand`: "behind"
-  - `unit_type`: "Novice"
+  - `unit_type`: "Alchemist"
   - `damage`: 0
   - `damage_secondary`: 0
-  - `health`: 0
-  - `max_health`: 0
+  - `health`: 500
+  - `max_health`: 500
   - `armor`: 0
-  - `accuracy`: 0
+  - `accuracy`: 100
   - `accuracy_secondary`: 0
   - `immunity`: []
   - `resistance`: []
@@ -135,7 +131,6 @@
   - `transformed`: 0
   - `basestats`: []
   - `powerup`: 0
-  - `original_damage`: 0
 
 - **пусто**
   - `initiative`: 0
@@ -162,7 +157,6 @@
   - `transformed`: 0
   - `basestats`: []
   - `powerup`: 0
-  - `original_damage`: 0
 
 ## UNITS_BLUE
 
@@ -191,7 +185,6 @@
   - `transformed`: 0
   - `basestats`: []
   - `powerup`: 0
-  - `bonusturn`: 0
 
 - **Боевой маг**
   - `initiative`: 62
@@ -218,7 +211,6 @@
   - `transformed`: 0
   - `basestats`: []
   - `powerup`: 0
-  - `bonusturn`: 0
 
 - **Инквизитор**
   - `initiative`: 52
@@ -245,7 +237,6 @@
   - `transformed`: 0
   - `basestats`: []
   - `powerup`: 0
-  - `bonusturn`: 0
 
 - **Арбалетчик**
   - `initiative`: 40
@@ -272,7 +263,6 @@
   - `transformed`: 0
   - `basestats`: []
   - `powerup`: 0
-  - `bonusturn`: 0
 
 - **Алхимик**
   - `initiative`: 20
@@ -286,7 +276,7 @@
   - `health`: 500
   - `max_health`: 500
   - `armor`: 0
-  - `accuracy`: 0
+  - `accuracy`: 100
   - `accuracy_secondary`: 0
   - `immunity`: []
   - `resistance`: []
@@ -299,7 +289,6 @@
   - `transformed`: 0
   - `basestats`: []
   - `powerup`: 0
-  - `bonusturn`: 0
 
 - **пусто**
   - `initiative`: 0
@@ -326,4 +315,3 @@
   - `transformed`: 0
   - `basestats`: []
   - `powerup`: 0
-  - `bonusturn`: 0
