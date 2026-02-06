@@ -26,6 +26,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CallbackList, EvalCallback, BaseCallback
 from stable_baselines3.common.env_checker import check_env
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
 try:
     from wandb.integration.sb3 import WandbCallback
@@ -91,11 +92,35 @@ class CampaignCheckpointCallback(BaseCallback):
         if self.num_timesteps >= self.next_milestone:
             path = os.path.join(self.save_dir, f"campaign_ppo_step_{self.next_milestone}.zip")
             self.model.save(path)
+            vec_norm = self.model.get_vec_normalize_env()
+            if vec_norm is not None:
+                vec_path = os.path.join(
+                    self.save_dir, f"vecnormalize_step_{self.next_milestone}.pkl"
+                )
+                vec_norm.save(vec_path)
             if self.verbose:
                 print(f"[Checkpoint] Saved at {self.next_milestone} steps > {path}")
             if wandb and wandb.run:
                 wandb.log({"checkpoint_saved_at": self.next_milestone})
             self.next_milestone += self.milestone_steps
+        return True
+
+
+class SaveVecNormalizeOnBestCallback(BaseCallback):
+    """Сохраняет статистики VecNormalize при обновлении лучшей модели."""
+
+    def __init__(self, save_path: str, verbose: int = 0):
+        super().__init__(verbose)
+        self.save_path = save_path
+        os.makedirs(self.save_path, exist_ok=True)
+
+    def _on_step(self) -> bool:
+        vec_norm = self.model.get_vec_normalize_env()
+        if vec_norm is not None:
+            target = os.path.join(self.save_path, "best_vecnormalize.pkl")
+            vec_norm.save(target)
+            if self.verbose > 0:
+                print(f"[VecNormalize] Saved best stats > {target}")
         return True
 
 
@@ -161,6 +186,9 @@ if __name__ == "__main__":
     N_ENVS = args.n_envs
     CHECKPOINT_FREQ = args.checkpoint_freq
     EVAL_FREQ = args.eval_freq
+    VECNORM_NORM_OBS = False
+    VECNORM_NORM_REWARD = True
+    VECNORM_CLIP_REWARD = 10.0
 
     # -------------------- Инициализация W&B --------------------
     WANDB_AVAILABLE = wandb is not None and WandbCallback is not None and not args.no_wandb
@@ -193,6 +221,9 @@ if __name__ == "__main__":
                     "reward_all_enemies": 4.0,
                     "reward_loss": 0.0,
                     "reward_timeout": -6.0,
+                    "vecnormalize_norm_obs": VECNORM_NORM_OBS,
+                    "vecnormalize_norm_reward": VECNORM_NORM_REWARD,
+                    "vecnormalize_clip_reward": VECNORM_CLIP_REWARD,
                 },
                 sync_tensorboard=True,
                 save_code=True,
@@ -219,10 +250,27 @@ if __name__ == "__main__":
     # -------------------- Создание сред --------------------
     print(f"Создание {N_ENVS} параллельных сред...")
     vec_env = make_vec_env(make_env, n_envs=N_ENVS)
+    # Normalize only rewards to stabilize PPO targets; observation normalization stays disabled.
+    vec_env = VecNormalize(
+        vec_env,
+        training=True,
+        norm_obs=VECNORM_NORM_OBS,
+        norm_reward=VECNORM_NORM_REWARD,
+        clip_reward=VECNORM_CLIP_REWARD,
+        gamma=0.99,
+    )
 
     # Оценочная среда
-    eval_base = CampaignEnv(log_enabled=False, realcapital=2)
-    eval_env = Monitor(ActionMasker(eval_base, mask_fn))
+    eval_env = DummyVecEnv([lambda: make_env(log_enabled=False)])
+    # Eval env receives running statistics from train env via EvalCallback sync.
+    eval_env = VecNormalize(
+        eval_env,
+        training=False,
+        norm_obs=VECNORM_NORM_OBS,
+        norm_reward=False,
+        clip_reward=VECNORM_CLIP_REWARD,
+        gamma=0.99,
+    )
 
     # -------------------- Модель --------------------
     print("Инициализация MaskablePPO...")
@@ -266,6 +314,10 @@ if __name__ == "__main__":
         callbacks.append(wandb_cb)
 
     # Evaluation callback
+    best_vecnorm_cb = SaveVecNormalizeOnBestCallback(
+        save_path=f"{MODEL_DIR}/best",
+        verbose=0,
+    )
     if _HAS_MASKABLE_EVAL:
         eval_cb = MaskableEvalCallback(           
             eval_env,
@@ -275,6 +327,7 @@ if __name__ == "__main__":
             n_eval_episodes=10,
             deterministic=True,
             render=False,
+            callback_on_new_best=best_vecnorm_cb,
         )
     else:
         eval_cb = EvalCallback(
@@ -285,6 +338,7 @@ if __name__ == "__main__":
             n_eval_episodes=10,
             deterministic=True,
             render=False,
+            callback_on_new_best=best_vecnorm_cb,
         )
     callbacks.append(eval_cb)
 
@@ -306,6 +360,11 @@ if __name__ == "__main__":
     # -------------------- Сохранение финальной модели --------------------
     final_model_path = f"{MODEL_DIR}/final_model"
     model.save(final_model_path)
+    vec_norm = model.get_vec_normalize_env()
+    if vec_norm is not None:
+        vec_norm_path = f"{MODEL_DIR}/vecnormalize.pkl"
+        vec_norm.save(vec_norm_path)
+        print(f"VecNormalize stats saved: {vec_norm_path}")
     print(f"\nФинальная модель сохранена: {final_model_path}.zip")
 
     # Итоговая статистика

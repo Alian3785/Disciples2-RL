@@ -129,6 +129,11 @@ class CampaignEnv(gym.Env):
         self.persist_blue_hp = persist_blue_hp
         self.log_enabled = log_enabled
         self.max_grid_steps = max_grid_steps
+        self.turn_norm_k = max(
+            1.0,
+            float(self.max_grid_steps) / float(self.GRID_STEPS_PER_TURN),
+        )
+        self.gold_norm_k = max(1.0, self.turn_norm_k * float(self.GOLD_PER_TURN))
         # Realcapital: 1 = empire, 2 = legions, 3 = mountain_clans, 4 = undead_hordes, 5 = elves
         self.Realcapital = self._normalize_realcapital(realcapital)
 
@@ -167,7 +172,10 @@ class CampaignEnv(gym.Env):
         # Observation space: режим + grid + battle + ход + золото
         total_obs = 1 + self.GRID_OBS_SIZE + self.BATTLE_OBS_SIZE + 2
         self.observation_space = spaces.Box(
-            low=-np.inf, high=np.inf, shape=(total_obs,), dtype=np.float32
+            low=np.zeros(total_obs, dtype=np.float32),
+            high=np.ones(total_obs, dtype=np.float32),
+            shape=(total_obs,),
+            dtype=np.float32,
         )
 
         # Логи
@@ -384,6 +392,10 @@ class CampaignEnv(gym.Env):
         except (TypeError, ValueError):
             return 1
         return realcapital_value if realcapital_value in (1, 2, 3, 4, 5) else 1
+
+    @staticmethod
+    def _clip01(value: float) -> float:
+        return float(np.clip(float(value), 0.0, 1.0))
 
     def _get_building_keys(self, buildings: Dict) -> List[str]:
         """?????????? ????? ?????? (??? ????????? ????-?????? ????? 'alredybuilt')."""
@@ -1062,8 +1074,16 @@ class CampaignEnv(gym.Env):
         if battle_obs is None:
             battle_obs = np.zeros(self.BATTLE_OBS_SIZE, dtype=np.float32)
 
-        extra_obs = np.array([float(self.turns), float(self.gold)], dtype=np.float32)
-        return np.concatenate([mode_flag, grid_obs, battle_obs, extra_obs])
+        turns_raw = max(0.0, float(self.turns))
+        gold_raw = max(0.0, float(self.gold))
+        turns_norm = self._clip01(turns_raw / (turns_raw + self.turn_norm_k))
+        gold_norm = self._clip01(gold_raw / (gold_raw + self.gold_norm_k))
+        extra_obs = np.array([turns_norm, gold_norm], dtype=np.float32)
+
+        obs = np.concatenate([mode_flag, grid_obs, battle_obs, extra_obs])
+        obs = np.nan_to_num(obs, nan=0.0, posinf=1.0, neginf=0.0)
+        obs = np.clip(obs, 0.0, 1.0)
+        return obs
 
     def compute_action_mask(self) -> np.ndarray:
         """Маска действий в зависимости от режима."""
