@@ -759,6 +759,9 @@ class CampaignEnv(gym.Env):
             restored_unit["bonusturn"] = 0
             restored_unit.pop("resilience_used_types", None)
             restored_unit.pop("original_damage", None)
+            # Armor must be restored to the unit's battle-start value.
+            base_armor = int(restored_unit.get("base_armor", restored_unit.get("armor", 0)) or 0)
+            restored_unit["armor"] = max(0, base_armor)
             
             # Восстанавливаем initiative к базовому значению
             restored_unit["initiative"] = restored_unit.get("initiative_base", 0)

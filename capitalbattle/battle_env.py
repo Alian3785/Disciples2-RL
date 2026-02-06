@@ -2086,6 +2086,8 @@ class BattleEnv(gym.Env):
             u.setdefault("immunity", [])
             u.setdefault("resistance", [])
             u.setdefault("armor", 0)
+            # Keep battle-start armor so campaign can restore temporary armor changes.
+            u["base_armor"] = int(u.get("armor", 0) or 0)
             u.setdefault("accuracy", 100)
             u.setdefault("accuracy_secondary", 0)
             u.setdefault("damage_secondary", 0)
@@ -4484,6 +4486,8 @@ class BattleEnv(gym.Env):
             u.setdefault("immunity", [])
             u.setdefault("resistance", [])
             u.setdefault("armor", 0)
+            # Keep battle-start armor so campaign can restore temporary armor changes.
+            u["base_armor"] = int(u.get("armor", 0) or 0)
             u.setdefault("accuracy", 100)
             u.setdefault("accuracy_secondary", 0)           
             u.setdefault("damage_secondary", 0)
