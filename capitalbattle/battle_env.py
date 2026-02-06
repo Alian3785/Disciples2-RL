@@ -572,6 +572,37 @@ URAN_DAMAGE = 10  # базовый фолбэк; Сын Измира задаё�
 URAN_TURNS = 6
 WIGHT_DECAY_PERCENT = 0.33  # share of stats removed by wight effect
 
+# Observation normalization profile.
+INIT_BASE_NORM_MAX = 80.0
+INIT_CUR_NORM_MAX = 89.0
+DMG_NORM_MAX = 250.0
+DMG2_NORM_MAX = 35.0
+ARMOR_NORM_MAX = 100.0
+ACC_NORM_MAX = 100.0
+BONUS_NORM_MAX = 10.0
+EXP_KILL_NORM_MAX = 120.0
+EXP_REQ_NORM_MAX = 700.0
+POS_NORM_MAX = 11.0
+HP_FALLBACK_MAX = 800.0
+
+
+def _clip01(x: float) -> float:
+    return float(np.clip(float(x), 0.0, 1.0))
+
+
+def _safe_div(x: float, d: float) -> float:
+    d = float(d)
+    if d <= 1e-12:
+        return 0.0
+    return float(x) / d
+
+
+def _to01_bool(v) -> float:
+    try:
+        return 1.0 if float(v) > 0.0 else 0.0
+    except (TypeError, ValueError):
+        return 1.0 if bool(v) else 0.0
+
 
 # ------------------------ Кастомная среда ------------------------
 class BattleEnv(gym.Env):
@@ -607,53 +638,9 @@ class BattleEnv(gym.Env):
         # Action space = 6 целей + защита + ожидание
         self.action_space = spaces.Discrete(TOTAL_AGENT_ACTIONS)  # 15
 
-        # Observation space
-        low_unit = np.array(
-            [0, 0, 0, 0, 0, 0, 1, 0]
-            + [0] * len(TYPE_LIST)
-            + [0] * len(ATTACK_TYPES)
-            + [0] * len(ATTACK_TYPES)
-            + [0] * len(ATTACK_TYPES)
-            + [0] * len(ATTACK_TYPES)
-            + [0] * len(ATTACK_TYPES)
-            + [0]
-            + [0]
-            + [0]
-            + [0]
-            + [0]
-            + [0]
-            + [0]
-            + [0]
-            + [0]
-            + [0]
-            + [0]
-            + [0, 0, 0]
-            + [0, 0, 0],
-            dtype=np.float32,
-        )
-        high_unit = np.array(
-            [MAX_HP, MAX_INIT_DYNAMIC, MAX_INIT, MAX_DMG_BUFFED, MAX_DMG2, 1, 12, 1]
-            + [1] * len(TYPE_LIST)
-            + [1] * len(ATTACK_TYPES)
-            + [1] * len(ATTACK_TYPES)
-            + [1] * len(ATTACK_TYPES)
-            + [1] * len(ATTACK_TYPES)
-            + [1] * len(ATTACK_TYPES)
-            + [150]
-            + [100]
-            + [100]
-            + [1]
-            + [1]
-            + [1]
-            + [1]
-            + [10]
-            + [1]
-            + [1]
-            + [1]
-            + [1, 1, 1]
-            + [10000, 10000, 10000],
-            dtype=np.float32,
-        )
+        # Observation space contract: each component is expected in [0, 1].
+        low_unit = np.zeros(FEATURES_PER_UNIT, dtype=np.float32)
+        high_unit = np.ones(FEATURES_PER_UNIT, dtype=np.float32)
         low = np.tile(low_unit, 12)
         high = np.tile(high_unit, 12)
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
@@ -1756,6 +1743,16 @@ class BattleEnv(gym.Env):
 
     # ----------- эффекты начала хода (яд/поджог) -----------
     def _apply_start_of_turn_effects(self, unit: Dict) -> bool:
+        # DEFEND: временная броня спадает только в начале следующего хода этого юнита.
+        if unit.get("defense", 0) == 1:
+            current_armor = int(unit.get("armor", 0) or 0)
+            reduced_armor = max(0, current_armor - DEFEND_ARMOR_BONUS)
+            unit["armor"] = reduced_armor
+            unit["defense"] = 0
+            self._log(
+                f"DEFENCE EXPIRE: {unit['team'].upper()} {unit['name']}#{unit['position']} теряет бонус брони "
+                f"-{DEFEND_ARMOR_BONUS} ({current_armor}->{unit['armor']})."
+            )
         if unit.get("name") == "Двойник" and self._alive(unit):
             has_targets = self._has_transform_targets()
             if unit.get("unit_type") == "Doppelganger" and not has_targets:
@@ -2134,11 +2131,6 @@ class BattleEnv(gym.Env):
                 u["initiative"] = base_ini + self.rng.randint(0, 9)
             else:
                 u["initiative"] = 0
-            if u.get("defense", 0) == 1:
-                current_armor = int(u.get("armor", 0) or 0)
-                reduced_armor = max(0, current_armor - DEFEND_ARMOR_BONUS)
-                u["armor"] = reduced_armor
-                u["defense"] = 0
             u["waited"] = 0
         self._log("Восстановление инициативы. Новый раунд.")
 
@@ -4016,13 +4008,18 @@ class BattleEnv(gym.Env):
         vec = []
         for pos in RED_POSITIONS + BLUE_POSITIONS:
             u = self._unit_by_position(pos)
-            hp = float(max(0, u["health"]))
-            ini = float(max(0, u["initiative"]))
-            ini_b = float(u.get("initiative_base", 0))
-            dmg = float(u["damage"])
-            dmg2 = float(u.get("damage_secondary", 0))
+            hp_raw = float(u.get("health", 0) or 0)
+            max_hp_raw = float(u.get("max_health", 0) or 0)
+            hp = _clip01(
+                _safe_div(max(0.0, hp_raw), max_hp_raw if max_hp_raw > 0 else HP_FALLBACK_MAX)
+            )
+            ini = _clip01(_safe_div(max(0.0, float(u.get("initiative", 0) or 0)), INIT_CUR_NORM_MAX))
+            ini_b = _clip01(_safe_div(max(0.0, float(u.get("initiative_base", 0) or 0)), INIT_BASE_NORM_MAX))
+            dmg = _clip01(_safe_div(max(0.0, float(u.get("damage", 0) or 0)), DMG_NORM_MAX))
+            dmg2 = _clip01(_safe_div(max(0.0, float(u.get("damage_secondary", 0) or 0)), DMG2_NORM_MAX))
             team_v = 0.0 if u["team"] == "red" else 1.0
-            pos_v = float(u["position"])
+            pos_raw = float(u.get("position", pos) or pos)
+            pos_v = _clip01(_safe_div(pos_raw - 1.0, POS_NORM_MAX))
             stand_v = 0.0 if u["stand"] == "ahead" else 1.0
 
             t_onehot = _one_hot(u.get("unit_type", "Archer"), TYPE_LIST)
@@ -4038,25 +4035,36 @@ class BattleEnv(gym.Env):
                 else [0.0] * len(ATTACK_TYPES)
             )
             res_mhot = _multi_hot(u.get("resistance", []), ATTACK_TYPES)
-            armor_v = float(u.get("armor", 0))
-            acc_v = float(u.get("accuracy", 100))
-            acc2_v = float(u.get("accuracy_secondary", 0))
-            run_v = float(u.get("running_away", 0))
-            par_v = float(u.get("paralyzed", 0))
-            long_par_v = float(u.get("long_paralyzed", 0))
-            trans_v = float(u.get("transformed", 0))
-            bonus_v = float(u.get("bonusturn", 0))
+            armor_v = _clip01(_safe_div(max(0.0, float(u.get("armor", 0) or 0)), ARMOR_NORM_MAX))
+            acc_v = _clip01(_safe_div(max(0.0, float(u.get("accuracy", 0) or 0)), ACC_NORM_MAX))
+            acc2_v = _clip01(_safe_div(max(0.0, float(u.get("accuracy_secondary", 0) or 0)), ACC_NORM_MAX))
+            run_v = _to01_bool(u.get("running_away", 0))
+            par_v = _to01_bool(u.get("paralyzed", 0))
+            long_par_v = _to01_bool(u.get("long_paralyzed", 0))
+            trans_v = _to01_bool(u.get("transformed", 0))
+            bonus_v = _clip01(_safe_div(max(0.0, float(u.get("bonusturn", 0) or 0)), BONUS_NORM_MAX))
 
-            waited_v = float(u.get("waited", 0))
-            def_v = float(u.get("defense", 0))
-            big_v = 1.0 if u.get("big", False) else 0.0
+            waited_v = _to01_bool(u.get("waited", 0))
+            def_v = _to01_bool(u.get("defense", 0))
+            big_v = _to01_bool(u.get("big", False))
             res_used_mhot = _multi_hot(u.get("resilience_used_types", []), ATTACK_TYPES)
-            pois_dmg_v = float(u.get("poison_damage_per_tick", 0)) / MAX_DMG
-            burn_dmg_v = float(u.get("burn_damage_per_tick", 0)) / MAX_DMG
-            uran_dmg_v = float(u.get("uran_damage_per_tick", 0)) / MAX_DMG
-            exp_kill_v = float(u.get("exp_kill", 0))
-            exp_required_v = float(u.get("exp_required", 0))
-            exp_current_v = float(u.get("exp_current", 0))
+            pois_dmg_v = _clip01(
+                _safe_div(max(0.0, float(u.get("poison_damage_per_tick", 0) or 0)), DMG2_NORM_MAX)
+            )
+            burn_dmg_v = _clip01(
+                _safe_div(max(0.0, float(u.get("burn_damage_per_tick", 0) or 0)), DMG2_NORM_MAX)
+            )
+            uran_dmg_v = _clip01(
+                _safe_div(max(0.0, float(u.get("uran_damage_per_tick", 0) or 0)), DMG2_NORM_MAX)
+            )
+            exp_kill_v = _clip01(
+                _safe_div(max(0.0, float(u.get("exp_kill", 0) or 0)), EXP_KILL_NORM_MAX)
+            )
+            exp_required_raw = max(0.0, float(u.get("exp_required", 0) or 0))
+            exp_required_v = _clip01(_safe_div(exp_required_raw, EXP_REQ_NORM_MAX))
+            exp_current_v = _clip01(
+                _safe_div(max(0.0, float(u.get("exp_current", 0) or 0)), max(1.0, exp_required_raw))
+            )
 
             vec.extend(
                 [
@@ -4093,7 +4101,10 @@ class BattleEnv(gym.Env):
                     exp_current_v,
                 ]
             )
-        return np.array(vec, dtype=np.float32)
+        obs = np.array(vec, dtype=np.float32)
+        obs = np.nan_to_num(obs, nan=0.0, posinf=1.0, neginf=0.0)
+        obs = np.clip(obs, 0.0, 1.0)
+        return obs
 
     # ------------------ API Gymnasium ------------------
 
