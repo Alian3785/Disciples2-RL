@@ -66,7 +66,7 @@ class CampaignEnv(gym.Env):
         - [1:1+GRID_OBS_SIZE]: grid observation
           (базовые признаки + координаты вражеских отрядов + тип/HP юнитов)
         - [...]: battle observation (когда в бою) или нули
-        - [...]: ход и золото (каждые 20 шагов по карте)
+        - [...]: ход и золото
 
     Action Space:
         Discrete(52):
@@ -89,29 +89,40 @@ class CampaignEnv(gym.Env):
 
     GRID_OBS_SIZE = 0  # вычисляется в __init__
     BATTLE_OBS_SIZE = FEATURES_PER_UNIT * 12
-    GRID_STEPS_PER_TURN = 20
+    MOVES_PER_TURN = 20
+    GRID_STEPS_PER_TURN = MOVES_PER_TURN
     GOLD_PER_TURN = 1.5
     GRID_BOTTLE_ACTION_START = 9
     GRID_BOTTLE_POSITIONS = list(range(7, 13))  # 6 позиций BLUE
     HEAL_BOTTLE_AMOUNT = 150.0
-    MAX_HEAL_BOTTLES = 3
+    MAX_HEAL_BOTTLES = 4
     GRID_REVIVE_ACTION_START = GRID_BOTTLE_ACTION_START + len(GRID_BOTTLE_POSITIONS)  # 15
     REVIVE_BOTTLE_POSITIONS = GRID_BOTTLE_POSITIONS
-    MAX_REVIVE_BOTTLES = 3
+    MAX_REVIVE_BOTTLES = 4
     GRID_CASTLE_HEAL_ACTION_START = GRID_REVIVE_ACTION_START + len(REVIVE_BOTTLE_POSITIONS)  # 21
     CASTLE_HEAL_POSITIONS = GRID_BOTTLE_POSITIONS
     CASTLE_POS = (1, 1)
     GRID_BUILD_ACTION_START = GRID_CASTLE_HEAL_ACTION_START + len(CASTLE_HEAL_POSITIONS)  # 27
+    ENEMY_REWARD_MULTIPLIERS = {
+        1: 1.0,
+        2: 1.5,
+        3: 2.0,
+        4: 2.5,
+    }
 
     def __init__(
         self,
         grid_size: int = 10,
-        reward_engage_battle: float = 0.1,  # Награда за участие в битве (нашёл врага)
-        reward_defeat_enemy: float = 0.3,   # Награда за победу в каждой битве
-        reward_all_enemies: float = 4.0,    # Финальная награда за победу над всеми врагами
-        reward_loss: float = -1.0,          # Штраф за поражение
-        reward_timeout: float = -6.0,       # Штраф за таймаут (лимит шагов)
-        reward_turn_penalty: float = 0.05,  # Штраф за каждый прошедший ход
+        reward_engage_battle: float = 0.0,  # Не используется (оставлено для совместимости)
+        reward_defeat_enemy: float = 1.0,   # База награды за победу в бою (с множителем tier)
+        reward_all_enemies: float = 10.0,   # Награда за победу над всеми врагами
+        reward_loss: float = -5.0,          # Штраф за поражение кампании
+        reward_timeout: float = -3.0,       # Штраф за таймаут (лимит шагов)
+        reward_turn_penalty: float = 0.02,  # Штраф за завершение хода (REST)
+        exp_reward_norm_k: float = 100.0,   # Нормализация опыта: norm=exp/(exp+k)
+        reward_exp_weight: float = 0.2,     # Вес exp-компоненты
+        reward_survival_alive_weight: float = 0.5,  # Вес доли выживших BLUE
+        reward_survival_hp_weight: float = 0.5,     # Вес средней доли HP BLUE
         persist_blue_hp: bool = True,
         log_enabled: bool = False,
         max_grid_steps: int = 200,
@@ -126,9 +137,15 @@ class CampaignEnv(gym.Env):
         self.reward_loss = reward_loss
         self.reward_timeout = reward_timeout
         self.reward_turn_penalty = reward_turn_penalty
+        self.exp_reward_norm_k = max(1.0, float(exp_reward_norm_k))
+        self.reward_exp_weight = max(0.0, float(reward_exp_weight))
+        self.reward_survival_alive_weight = max(0.0, float(reward_survival_alive_weight))
+        self.reward_survival_hp_weight = max(0.0, float(reward_survival_hp_weight))
         self.persist_blue_hp = persist_blue_hp
         self.log_enabled = log_enabled
         self.max_grid_steps = max_grid_steps
+        # Базовый лимит шагов внутри одного хода кампании.
+        self.moves_per_turn = int(self.MOVES_PER_TURN)
         self.turn_norm_k = max(
             1.0,
             float(self.max_grid_steps) / float(self.GRID_STEPS_PER_TURN),
@@ -163,6 +180,7 @@ class CampaignEnv(gym.Env):
         self.revive_bottles_used: int = 0
         self.turns: int = 0
         self.gold: float = 0.0
+        self.moves: int = self.moves_per_turn
         self.active_buildings = self._get_buildings_for_capital(self.Realcapital)
         self.building_keys = self._get_building_keys(self.active_buildings)
         total_actions = self.GRID_BUILD_ACTION_START + len(self.building_keys)
@@ -196,6 +214,7 @@ class CampaignEnv(gym.Env):
         self.revive_bottles_used = 0
         self.turns = 0
         self.gold = 0.0
+        self.moves = self.moves_per_turn
         self.battle_env = None
         self._campaign_logs = []
 
@@ -212,6 +231,7 @@ class CampaignEnv(gym.Env):
             "enemies_alive": dict(self.grid_env.enemies_alive),
             "turns": self.turns,
             "gold": self.gold,
+            "moves": self.moves,
         }
 
         return self._build_obs(grid_obs=grid_obs), info
@@ -242,22 +262,38 @@ class CampaignEnv(gym.Env):
         if action >= self.GRID_BOTTLE_ACTION_START:
             return self._step_heal_with_bottle(action)
 
+        if 0 <= action <= 7 and self.moves <= 0:
+            grid_obs = self._get_grid_obs()
+            info = {
+                "mode": "grid",
+                "agent_pos": self.grid_env.agent_pos,
+                "enemies_alive": dict(self.grid_env.enemies_alive),
+                "battle_triggered": False,
+                "blocked_by_moves": True,
+                "turns": self.turns,
+                "gold": self.gold,
+                "moves": self.moves,
+            }
+            return self._build_obs(grid_obs=grid_obs), 0.0, False, False, info
+
         grid_action = min(action, 8)
 
         old_pos = self.grid_env.agent_pos
-        grid_obs, reward, terminated, truncated, grid_info = self.grid_env.step(
+        grid_obs, _grid_reward, terminated, truncated, grid_info = self.grid_env.step(
             grid_action
         )
+        reward = 0.0
         grid_obs = self._augment_grid_obs(grid_obs)
         new_pos = self.grid_env.agent_pos
 
         if old_pos != new_pos:
             self._log(f"Перемещение: {old_pos} -> {new_pos}")
 
+        if 0 <= grid_action <= 7:
+            self._spend_moves(1)
+
         if grid_info.get("battle_triggered"):
             self._apply_battle_grid_steps(extra_steps=10)
-
-        reward += self._update_turns()
 
         info = {
             "mode": "grid",
@@ -267,6 +303,7 @@ class CampaignEnv(gym.Env):
             "rest_action": grid_info.get("rest_action", False),
             "turns": self.turns,
             "gold": self.gold,
+            "moves": self.moves,
         }
 
         # Обработка действия REST — восстановление 5% HP
@@ -280,6 +317,7 @@ class CampaignEnv(gym.Env):
             reward += self._advance_turns(1)
             info["turns"] = self.turns
             info["gold"] = self.gold
+            info["moves"] = self.moves
             info["healed_units"] = healed
 
         # Проверяем столкновение с врагом
@@ -290,10 +328,6 @@ class CampaignEnv(gym.Env):
 
             self._log(f"!!! СТОЛКНОВЕНИЕ С ВРАГОМ {enemy_id} !!!")
             self._log(f"Описание: {ENEMY_DESCRIPTIONS.get(enemy_id, 'Неизвестный враг')}")
-
-            # Награда за участие в битве (нашёл врага!)
-            reward += self.reward_engage_battle
-            self._log(f"Награда за участие в битве: +{self.reward_engage_battle}")
 
             # Создаём BattleEnv с нужной RED командой
             self._init_battle(enemy_id)
@@ -316,7 +350,6 @@ class CampaignEnv(gym.Env):
         if truncated:
             self._log("=== ЛИМИТ ШАГОВ НА КАРТЕ ИСЧЕРПАН ===")
             reward += self.reward_timeout
-            self._log(f"Штраф за таймаут: {self.reward_timeout}")
             info["campaign_result"] = "timeout"
 
         return self._build_obs(grid_obs=grid_obs), reward, terminated, truncated, info
@@ -381,6 +414,7 @@ class CampaignEnv(gym.Env):
             "healed_unit_name": unit_name,
             "turns": self.turns,
             "gold": self.gold,
+            "moves": self.moves,
         }
 
         return self._build_obs(grid_obs=grid_obs), reward, terminated, truncated, info
@@ -524,6 +558,7 @@ class CampaignEnv(gym.Env):
             "build_locked": build_locked,
             "turns": self.turns,
             "gold": self.gold,
+            "moves": self.moves,
         }
 
         return self._build_obs(grid_obs=grid_obs), reward, terminated, truncated, info
@@ -561,6 +596,7 @@ class CampaignEnv(gym.Env):
             "heal_bottles_left": max(0, self.MAX_HEAL_BOTTLES - self.heal_bottles_used),
             "turns": self.turns,
             "gold": self.gold,
+            "moves": self.moves,
         }
 
         return self._build_obs(grid_obs=grid_obs), reward, terminated, truncated, info
@@ -599,6 +635,7 @@ class CampaignEnv(gym.Env):
             "revive_bottles_left": max(0, self.MAX_REVIVE_BOTTLES - self.revive_bottles_used),
             "turns": self.turns,
             "gold": self.gold,
+            "moves": self.moves,
         }
 
         return self._build_obs(grid_obs=grid_obs), reward, terminated, truncated, info
@@ -625,7 +662,8 @@ class CampaignEnv(gym.Env):
                 action = 0
             if action >= self.battle_env.action_space.n:
                 action = self.battle_env.action_space.n - 1
-            obs, reward, terminated, truncated, battle_info = self.battle_env.step(action)
+            obs, _battle_reward, terminated, truncated, battle_info = self.battle_env.step(action)
+            reward = 0.0
 
         info = {
             "mode": "battle",
@@ -633,21 +671,28 @@ class CampaignEnv(gym.Env):
             "battle_step": True,
             "turns": self.turns,
             "gold": self.gold,
+            "moves": self.moves,
         }
 
         if terminated or truncated:
-            # После окончания боя добавляем 1 ход
-            reward += self._advance_turns(1)
-            info["turns"] = self.turns
-            info["gold"] = self.gold
             winner = self.battle_env.winner
+            info["battle_winner"] = winner
 
             if winner == "blue":
+                exp_reward, exp_raw = self._compute_blue_exp_reward()
+                survival_reward, blue_alive_ratio, blue_hp_ratio = self._compute_blue_survival_reward()
+                enemy_reward = self._compute_enemy_defeat_reward(self.current_enemy_id)
+                reward += enemy_reward + exp_reward + survival_reward
+                info["enemy_defeat_reward"] = enemy_reward
+                info["blue_exp_reward"] = exp_reward
+                info["blue_exp_raw"] = exp_raw
+                info["blue_survival_reward"] = survival_reward
+                info["blue_alive_ratio"] = blue_alive_ratio
+                info["blue_hp_ratio"] = blue_hp_ratio
+
                 # Победа: помечаем врага побеждённым
                 self._log(f"=== ПОБЕДА В БОЮ ПРОТИВ ВРАГА {self.current_enemy_id}! ===")
                 self.grid_env.mark_enemy_defeated(self.current_enemy_id)
-                reward += self.reward_defeat_enemy
-                self._log(f"Награда за победу в битве: +{self.reward_defeat_enemy}")
 
                 # Восстанавливаем и воскрешаем всех юнитов BLUE после победы
                 if self.persist_blue_hp:
@@ -681,9 +726,9 @@ class CampaignEnv(gym.Env):
 
             else:
                 # Поражение: конец эпизода
+                reward += self.reward_loss
                 self._log(f"=== ПОРАЖЕНИЕ В БОЮ ПРОТИВ ВРАГА {self.current_enemy_id}! ===")
                 self._log("=== КАМПАНИЯ ПРОВАЛЕНА ===")
-                reward += self.reward_loss
                 info["battle_result"] = "defeat"
                 info["campaign_result"] = "defeat"
                 if self.battle_env is not None:
@@ -948,23 +993,87 @@ class CampaignEnv(gym.Env):
             self.blue_team_state = deepcopy(UNITS_BLUE)
         return self.blue_team_state
 
+    def _spend_moves(self, spent_moves: int) -> None:
+        """Списывает очки перемещения в grid-режиме."""
+        if spent_moves <= 0:
+            return
+        self.moves = max(0, int(self.moves) - int(spent_moves))
+
     def _apply_battle_grid_steps(self, extra_steps: int = 10) -> None:
-        """Увеличивает счётчик шагов по гриду из-за боя, не выше лимита хода."""
+        """Списывает дополнительные очки перемещения из-за входа в бой."""
         if extra_steps <= 0:
             return
-        steps_into_turn = int(self.grid_env.step_count) % self.GRID_STEPS_PER_TURN
-        if steps_into_turn + extra_steps >= self.GRID_STEPS_PER_TURN:
-            self.grid_env.step_count += self.GRID_STEPS_PER_TURN - steps_into_turn
-        else:
-            self.grid_env.step_count += extra_steps
+        self._spend_moves(extra_steps)
 
     def _update_turns(self) -> float:
-        """Обновляет количество ходов и золота по шагам в grid-режиме."""
-        grid_steps = int(self.grid_env.step_count)
-        new_turns = grid_steps // self.GRID_STEPS_PER_TURN
-        if new_turns > self.turns:
-            return self._advance_turns(new_turns - self.turns)
+        """Совместимость: ходы больше не рассчитываются по step_count."""
+        # Ходы теперь продвигаются только явным завершением хода (REST).
         return 0.0
+
+    def _compute_enemy_defeat_reward(self, enemy_id: Optional[int]) -> float:
+        """Награда за победу над врагом с учётом tier по enemy_id."""
+        multiplier = self.ENEMY_REWARD_MULTIPLIERS.get(int(enemy_id or 0), 1.0)
+        return float(self.reward_defeat_enemy) * float(multiplier)
+
+    def _compute_blue_exp_reward(self) -> Tuple[float, float]:
+        """Возвращает (reward, raw_exp) за опыт BLUE в завершённом бою."""
+        if self.battle_env is None or self.battle_env.winner != "blue":
+            return 0.0, 0.0
+        raw_exp = max(0.0, float(getattr(self.battle_env, "last_battle_exp", 0.0) or 0.0))
+        exp_norm = raw_exp / (raw_exp + self.exp_reward_norm_k)
+        reward = self.reward_exp_weight * exp_norm
+        return float(reward), float(raw_exp)
+
+    def _compute_blue_survival_reward(self) -> Tuple[float, float, float]:
+        """
+        Награда за сохранность базовой команды BLUE после боя.
+        Возвращает (reward, alive_ratio, hp_ratio).
+        """
+        if self.battle_env is None:
+            return 0.0, 0.0, 0.0
+
+        base_units = [u for u in UNITS_BLUE if int(u.get("position", -1)) >= 0]
+        if not base_units:
+            return 0.0, 0.0, 0.0
+
+        base_by_pos = {int(u["position"]): u for u in base_units}
+        combined_blue = {
+            int(u.get("position", -1)): u
+            for u in self.battle_env.combined
+            if u.get("team") == "blue" and int(u.get("position", -1)) in base_by_pos
+        }
+
+        alive_count = 0
+        hp_ratio_sum = 0.0
+        total = len(base_by_pos)
+
+        for pos, base_unit in base_by_pos.items():
+            cur_unit = combined_blue.get(pos)
+            hp = float(cur_unit.get("health", 0) or cur_unit.get("hp", 0) or 0) if cur_unit else 0.0
+            base_max = float(
+                base_unit.get("max_health", 0)
+                or base_unit.get("maxhp", 0)
+                or base_unit.get("health", 0)
+                or base_unit.get("hp", 0)
+                or 1.0
+            )
+            cur_max = (
+                float(cur_unit.get("max_health", 0) or cur_unit.get("maxhp", 0) or 0)
+                if cur_unit
+                else 0.0
+            )
+            max_hp = max(1.0, base_max, cur_max)
+            if hp > 0:
+                alive_count += 1
+            hp_ratio_sum += float(np.clip(hp / max_hp, 0.0, 1.0))
+
+        alive_ratio = float(alive_count) / float(total)
+        hp_ratio = float(hp_ratio_sum) / float(total)
+        reward = (
+            self.reward_survival_alive_weight * alive_ratio
+            + self.reward_survival_hp_weight * hp_ratio
+        )
+        return float(reward), float(alive_ratio), float(hp_ratio)
 
     def _advance_turns(self, delta_turns: int) -> float:
         """Увеличивает счётчик ходов и золото на заданное количество."""
@@ -972,6 +1081,7 @@ class CampaignEnv(gym.Env):
             return 0.0
         self.turns += int(delta_turns)
         self.gold += float(delta_turns) * self.GOLD_PER_TURN
+        self.moves = self.moves_per_turn
         self.active_buildings["alredybuilt"] = 0
         return -float(delta_turns) * self.reward_turn_penalty
 
@@ -1093,10 +1203,10 @@ class CampaignEnv(gym.Env):
         mask = np.zeros(self.action_space.n, dtype=bool)
 
         if self.mode == self.MODE_GRID:
-            # В grid режиме доступны первые 8 действий (движение) всегда,
-            # а REST (8) — только если есть раненые юниты BLUE.
-            mask[:8] = True
-            mask[8] = self._has_wounded_blue()
+            # В grid режиме движение доступно только при moves > 0.
+            # REST (8) доступен при ранении или когда очки перемещения закончились.
+            mask[:8] = self.moves > 0
+            mask[8] = self._has_wounded_blue() or self.moves <= 0
             # Бутыли лечения на позиции 7-12.
             if self.heal_bottles_used < self.MAX_HEAL_BOTTLES:
                 for idx, pos in enumerate(self.GRID_BOTTLE_POSITIONS):
@@ -1231,11 +1341,11 @@ class CampaignEnv(gym.Env):
             grid_render = self.grid_env.render(mode="ansi")
             if grid_render:
                 lines.append(grid_render)
-            lines.append(f"Ход: {self.turns} | Золото: {self.gold:g}")
+            lines.append(f"Ход: {self.turns} | Золото: {self.gold:g} | Шаги: {self.moves}")
         else:
             lines.append(f"В бою с врагом {self.current_enemy_id}")
             lines.append(f"Описание: {ENEMY_DESCRIPTIONS.get(self.current_enemy_id, '?')}")
-            lines.append(f"Ход: {self.turns} | Золото: {self.gold:g}")
+            lines.append(f"Ход: {self.turns} | Золото: {self.gold:g} | Шаги: {self.moves}")
 
         result = "\n".join(lines)
         print(result)
@@ -1256,4 +1366,5 @@ class CampaignEnv(gym.Env):
             "blue_hp_saved": self.blue_team_state is not None,
             "turns": self.turns,
             "gold": self.gold,
+            "moves": self.moves,
         }

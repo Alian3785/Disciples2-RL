@@ -62,11 +62,17 @@ def make_env(log_enabled: bool = False):
     """Фабрика создания среды."""
     base = CampaignEnv(
         grid_size=10,
-        reward_engage_battle=0.1,  # Награда за участие в битве (нашёл врага)
-        reward_defeat_enemy=0.3,   # Награда за победу в каждой битве
-        reward_all_enemies=4.0,    # Финальная награда за победу над всеми врагами
-        reward_loss=0.0,           # Штраф за поражение
-        reward_timeout=-6.0,       # Штраф за таймаут (увеличен в 3 раза)
+        # Основная цель: пройти всю кампанию (4/4 врага).
+        reward_engage_battle=0.0,
+        reward_defeat_enemy=1.0,   # tier-множитель по enemy_id даёт 1.0/1.5/2.0/2.5
+        reward_all_enemies=10.0,   # награда за полную победу кампании
+        reward_loss=-5.0,          # штраф за провал кампании
+        reward_timeout=-3.0,       # штраф за таймаут кампании
+        reward_turn_penalty=0.02,  # мягкий штраф за REST
+        exp_reward_norm_k=100.0,
+        reward_exp_weight=0.2,
+        reward_survival_alive_weight=0.5,
+        reward_survival_hp_weight=0.5,
         persist_blue_hp=True,
         log_enabled=log_enabled,
         max_grid_steps=200,
@@ -177,7 +183,20 @@ if __name__ == "__main__":
 
     # Проверка среды
     print("Проверка среды CampaignEnv...")
-    test_env = CampaignEnv(log_enabled=False, realcapital=2)
+    test_env = CampaignEnv(
+        log_enabled=False,
+        realcapital=2,
+        reward_engage_battle=0.0,
+        reward_defeat_enemy=1.0,
+        reward_all_enemies=10.0,
+        reward_loss=-5.0,
+        reward_timeout=-3.0,
+        reward_turn_penalty=0.02,
+        exp_reward_norm_k=100.0,
+        reward_exp_weight=0.2,
+        reward_survival_alive_weight=0.5,
+        reward_survival_hp_weight=0.5,
+    )
     check_env(test_env, warn=True)
     print("Среда прошла проверку!")
 
@@ -216,11 +235,16 @@ if __name__ == "__main__":
                     "grid_size": 10,
                     "num_enemies": 4,
                     "persist_blue_hp": True,
-                    "reward_engage_battle": 0.1,
-                    "reward_defeat_enemy": 0.3,
-                    "reward_all_enemies": 4.0,
-                    "reward_loss": 0.0,
-                    "reward_timeout": -6.0,
+                    "reward_engage_battle": 0.0,
+                    "reward_defeat_enemy": 1.0,
+                    "reward_all_enemies": 10.0,
+                    "reward_loss": -5.0,
+                    "reward_timeout": -3.0,
+                    "reward_turn_penalty": 0.02,
+                    "exp_reward_norm_k": 100.0,
+                    "reward_exp_weight": 0.2,
+                    "reward_survival_alive_weight": 0.5,
+                    "reward_survival_hp_weight": 0.5,
                     "vecnormalize_norm_obs": VECNORM_NORM_OBS,
                     "vecnormalize_norm_reward": VECNORM_NORM_REWARD,
                     "vecnormalize_clip_reward": VECNORM_CLIP_REWARD,
