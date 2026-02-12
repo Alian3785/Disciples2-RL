@@ -60,8 +60,7 @@ class BattleVisualizer:
     SLOT_W, SLOT_H = 0.28, 0.13
     HP_H = 0.028
 
-    FRAME_DELAY = 0.14  # Ускорено в 2 раза (было 0.28)
-    VISUAL_SPEED_MULT = 10.0
+    FRAME_DELAY = 0.14  # Базовая задержка между кадрами
 
     # Статы призванных юнитов
     OCCULTMASTER_SUMMON_STATS = {
@@ -116,11 +115,13 @@ class BattleVisualizer:
     laclaan_summon_re = re.compile(r"^\?\? LACLAAN: призван (?P<name>.+?) на pos(?P<pos>\d+)\s*\((?P<stand>ahead|behind)\)\.")
     centaur_bleed_re = re.compile(r"^\?\s*(RED|BLUE)\s+[^#]+#(\d+)\s+applies centaur bleed\s+\(([\d.]+)\)\s+to\s+(RED|BLUE)\s+[^#]+#(\d+)\s+\(([\d.]+)[>→]([\d.]+)\)\.?$")
 
-    def __init__(self, fig=None, ax=None):
+    def __init__(self, fig=None, ax=None, speed_mult: float = 1.0):
         """Инициализация визуализатора боя."""
         self.state = {}
         self.active_pos = None
         self.handle = None
+        # speed_mult > 1.0 ускоряет анимацию, < 1.0 замедляет.
+        self.speed_mult = max(0.01, float(speed_mult))
 
         if fig is None or ax is None:
             self.fig, self.ax = plt.subplots(figsize=(12, 8))
@@ -392,7 +393,7 @@ class BattleVisualizer:
             self.fig.canvas.flush_events()
 
     def wait(self, frames=1.0):
-        time.sleep(self.FRAME_DELAY * self.VISUAL_SPEED_MULT * frames)
+        time.sleep((self.FRAME_DELAY * frames) / self.speed_mult)
 
     def _render_state(self):
         self.ax.clear()
@@ -654,7 +655,7 @@ class BattleVisualizer:
                 for v in np.linspace(start_hp, 0.0, 6):
                     self._set_hp(pos, v)
                     self._render_state()
-                    time.sleep(self.FRAME_DELAY / self.VISUAL_SPEED_MULT)
+                    time.sleep(self.FRAME_DELAY / self.speed_mult)
             return
 
         m = self.linked_summon_kill_re.match(line)
@@ -664,7 +665,7 @@ class BattleVisualizer:
             for v in np.linspace(start_hp, 0.0, 6):
                 self._set_hp(pos, v)
                 self._render_state()
-                time.sleep(self.FRAME_DELAY / self.VISUAL_SPEED_MULT)
+                time.sleep(self.FRAME_DELAY / self.speed_mult)
             self._set_hp(pos, 0.0)
             return
 
@@ -730,6 +731,7 @@ class CampaignVisualizer:
         highlight_battle: int = None,
         turns: int = 0,
         gold: float = 0.0,
+        steps: int = 0,
         built_buildings: list = None,
     ):
         """Отрисовка карты."""
@@ -826,8 +828,8 @@ class CampaignVisualizer:
         # Заголовок
         self.ax.set_title(title, fontsize=14, fontweight="bold")
 
-        # Ход, золото и постройки справа от грида
-        info_lines = [f"Ход: {turns}", f"Золото: {gold:g}"]
+        # Ход, золото, шаги и постройки справа от грида
+        info_lines = [f"Ход: {turns}", f"Золото: {gold:g}", f"Шаги: {steps}"]
         built_buildings = built_buildings or []
         if built_buildings:
             info_lines.append("Постройки:")
@@ -910,7 +912,11 @@ class CampaignVisualizer:
         plt.close(self.fig)
 
 
-def run_campaign_visualization(model_path: str, delay: float = 0.3):
+def run_campaign_visualization(
+    model_path: str,
+    delay: float = 0.3,
+    battle_speed: float = 1.0,
+):
     """Запускает визуализацию кампании."""
 
     # Загрузка модели
@@ -1029,6 +1035,7 @@ def run_campaign_visualization(model_path: str, delay: float = 0.3):
                 title=title,
                 turns=env_base.turns,
                 gold=env_base.gold,
+                steps=env_base.moves,
                 built_buildings=env_base.get_built_building_names(),
             )
 
@@ -1066,13 +1073,14 @@ def run_campaign_visualization(model_path: str, delay: float = 0.3):
                     highlight_battle=enemy_id,
                     turns=env_base.turns,
                     gold=env_base.gold,
+                    steps=env_base.moves,
                     built_buildings=env_base.get_built_building_names(),
                 )
                 grid_viz.show_battle_start(enemy_id)
                 time.sleep(delay * 2)
 
                 # Создаём визуализатор боя
-                battle_viz = BattleVisualizer()
+                battle_viz = BattleVisualizer(speed_mult=battle_speed)
                 if env_base.battle_env:
                     battle_viz.init_state_from_units(env_base.battle_env.combined)
                     battle_viz.draw_board(headline=f"Бой с врагом {enemy_id} начинается!", active_pos=None)
@@ -1153,6 +1161,7 @@ def run_campaign_visualization(model_path: str, delay: float = 0.3):
         title=f"CAMPAIGN {'VICTORY' if battles_won == total_enemies else 'ENDED'} | Reward: {total_reward:.2f}",
         turns=env_base.turns,
         gold=env_base.gold,
+        steps=env_base.moves,
         built_buildings=env_base.get_built_building_names(),
     )
 
@@ -1201,6 +1210,12 @@ if __name__ == "__main__":
         default=0.3,
         help="Delay between steps (seconds)",
     )
+    parser.add_argument(
+        "--battle-speed",
+        type=float,
+        default=1.0,
+        help="Battle animation speed multiplier (>1 faster, <1 slower)",
+    )
     args = parser.parse_args()
 
     # Ищем модель
@@ -1210,4 +1225,8 @@ if __name__ == "__main__":
         if model_path:
             print(f"Найдена последняя модель: {model_path}")
 
-    run_campaign_visualization(model_path, delay=args.delay)
+    run_campaign_visualization(
+        model_path,
+        delay=args.delay,
+        battle_speed=args.battle_speed,
+    )
