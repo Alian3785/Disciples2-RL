@@ -563,7 +563,7 @@ ENEMY_TEAM_3 = [
 ]
 
 # ============================================================
-# КОМАНДА 4: 3 орка на передней линии
+# КОМАНДА 4: 2 орка + гоблин спереди, гоблин-лучник сзади
 # ============================================================
 ENEMY_TEAM_4 = [
     {
@@ -687,19 +687,19 @@ ENEMY_TEAM_4 = [
         'turns_into': []
     },
     {
-        'name': 'пусто',
-        'initiative': 0,
-        'initiative_base': 0,
+        'name': 'Гоблин лучник',
+        'initiative': 50,
+        'initiative_base': 50,
         'team': 'red',
         'position': 5,
         'stand': 'behind',
         'unit_type': 'Archer',
-        'damage': 0,
+        'damage': 15,
         'damage_secondary': 0,
-        'health': 0,
-        'max_health': 0,
+        'health': 40,
+        'max_health': 40,
         'armor': 0,
-        'accuracy': 0,
+        'accuracy': 80,
         'accuracy_secondary': 0,
         'immunity': [],
         'resistance': [],
@@ -711,8 +711,8 @@ ENEMY_TEAM_4 = [
         'running_away': 0,
         'transformed': 0,
         'basestats': [],
-        'exp_kill': 0,
-        'exp_required': 0,
+        'exp_kill': 10,
+        'exp_required': 75,
         'exp_current': 0,
         'turns_into': []
     },
@@ -760,5 +760,5 @@ ENEMY_DESCRIPTIONS = {
     1: "Отряд: Орк, скваер и орк",
     2: "Отряд: Орк, 2 гоблина и гоблин-лучник",
     3: "Отряд: Орк и 2 гоблина",
-    4: "Отряд: 3 орка на передней линии",
+    4: "Отряд: 2 орка, гоблин и гоблин-лучник",
 }

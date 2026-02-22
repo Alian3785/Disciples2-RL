@@ -9,6 +9,7 @@
 """
 
 import os
+import re
 import time
 from pathlib import Path
 import numpy as np
@@ -52,6 +53,73 @@ if os.name == "nt":
 # Директория этого файла (чтобы пути были стабильны независимо от cwd)
 BASE_DIR = Path(__file__).resolve().parent
 
+REWARD_CONFIG = {
+    "reward_engage_battle": 0.0,  # Не используется в текущей логике CampaignEnv.
+    # Награда за победу в бою против каждого отряда (дополнительно масштабируется по tier enemy_id).
+    "reward_defeat_enemy": 1.0,
+    "reward_all_enemies": 20.0,  # Большая финальная награда за победу над всеми врагами
+    "reward_loss": 0.0,
+    "reward_timeout": 0.0,
+    "reward_turn_penalty": 0.0,
+    "exp_reward_norm_k": 100.0,
+    "reward_exp_weight": 0.0,
+    "reward_survival_alive_weight": 0.0,
+    "reward_survival_hp_weight": 0.0,
+    "reward_unit_upgrade": 1.0,
+}
+
+REQUIRED_WANDB_VERSION = (0, 25, 0)
+
+
+def _wandb_version_tuple(raw_version: str) -> tuple[int, int, int] | None:
+    """Parse semantic version (major.minor.patch) from a W&B version string."""
+    match = re.match(r"^(\d+)\.(\d+)\.(\d+)", raw_version or "")
+    if not match:
+        return None
+    return tuple(int(part) for part in match.groups())
+
+
+def _wandb_version_is_supported() -> bool:
+    """Require wandb>=0.25.0 for stable training integration."""
+    if wandb is None:
+        return False
+    parsed = _wandb_version_tuple(getattr(wandb, "__version__", ""))
+    return parsed is not None and parsed >= REQUIRED_WANDB_VERSION
+
+
+def _init_wandb_run(project: str, name: str, config: dict, entity: str | None = None):
+    """
+    Initialize W&B with online mode first and fallback to offline mode.
+    Keeps logging enabled for training even without online auth/network.
+    """
+    init_kwargs = {
+        "project": project,
+        "name": name,
+        "config": config,
+        "sync_tensorboard": True,
+        "save_code": True,
+    }
+    if entity:
+        init_kwargs["entity"] = entity
+
+    if os.name == "nt":
+        try:
+            init_kwargs["settings"] = wandb.Settings(symlink=False)
+        except Exception:
+            # Keep env-var fallback when Settings API is unavailable.
+            pass
+
+    try:
+        return wandb.init(**init_kwargs)
+    except Exception as exc:
+        msg = str(exc)
+        print(f"[WARN] W&B online init failed, trying offline mode: {msg}")
+        if "403" in msg or "permission" in msg.lower():
+            print("[WARN] W&B 403 usually means auth/entity access issue.")
+            print("[WARN] Verify key: wandb login --relogin --verify")
+            print("[WARN] If project belongs to a team, pass --wandb-entity <team_or_user>")
+        return wandb.init(mode="offline", **init_kwargs)
+
 
 def mask_fn(env: CampaignEnv) -> np.ndarray:
     """Функция маскирования для ActionMasker."""
@@ -63,16 +131,7 @@ def make_env(log_enabled: bool = False):
     base = CampaignEnv(
         grid_size=10,
         # Основная цель: пройти всю кампанию (4/4 врага).
-        reward_engage_battle=0.0,
-        reward_defeat_enemy=1.0,   # tier-множитель по enemy_id даёт 1.0/1.5/2.0/2.5
-        reward_all_enemies=10.0,   # награда за полную победу кампании
-        reward_loss=-5.0,          # штраф за провал кампании
-        reward_timeout=-3.0,       # штраф за таймаут кампании
-        reward_turn_penalty=0.02,  # мягкий штраф за REST
-        exp_reward_norm_k=100.0,
-        reward_exp_weight=0.2,
-        reward_survival_alive_weight=0.5,
-        reward_survival_hp_weight=0.5,
+        **REWARD_CONFIG,
         persist_blue_hp=True,
         log_enabled=log_enabled,
         max_grid_steps=200,
@@ -178,6 +237,18 @@ if __name__ == "__main__":
     parser.add_argument("--checkpoint-freq", type=int, default=500_000, help="Checkpoint frequency")
     parser.add_argument("--eval-freq", type=int, default=50_000, help="Evaluation frequency")
     parser.add_argument("--no-wandb", action="store_true", help="Disable W&B logging")
+    parser.add_argument(
+        "--wandb-project",
+        type=str,
+        default=os.getenv("WANDB_PROJECT", "disciples-campaign"),
+        help="W&B project name",
+    )
+    parser.add_argument(
+        "--wandb-entity",
+        type=str,
+        default=os.getenv("WANDB_ENTITY", None),
+        help="W&B entity (username or team)",
+    )
     parser.add_argument("--run-name", type=str, default=None, help="Custom run name")
     args = parser.parse_args()
 
@@ -186,16 +257,7 @@ if __name__ == "__main__":
     test_env = CampaignEnv(
         log_enabled=False,
         realcapital=2,
-        reward_engage_battle=0.0,
-        reward_defeat_enemy=1.0,
-        reward_all_enemies=10.0,
-        reward_loss=-5.0,
-        reward_timeout=-3.0,
-        reward_turn_penalty=0.02,
-        exp_reward_norm_k=100.0,
-        reward_exp_weight=0.2,
-        reward_survival_alive_weight=0.5,
-        reward_survival_hp_weight=0.5,
+        **REWARD_CONFIG,
     )
     check_env(test_env, warn=True)
     print("Среда прошла проверку!")
@@ -211,52 +273,49 @@ if __name__ == "__main__":
 
     # -------------------- Инициализация W&B --------------------
     WANDB_AVAILABLE = wandb is not None and WandbCallback is not None and not args.no_wandb
+    if WANDB_AVAILABLE and not _wandb_version_is_supported():
+        detected = getattr(wandb, "__version__", "unknown")
+        required = ".".join(str(v) for v in REQUIRED_WANDB_VERSION)
+        print(f"[WARN] wandb>={required} is required, found {detected}. W&B logging disabled.")
+        WANDB_AVAILABLE = False
 
     run_name = args.run_name or f"campaign-ppo-{TOTAL_STEPS // 1000}k"
 
     if WANDB_AVAILABLE:
+        wandb_config = {
+            "algo": "MaskablePPO",
+            "total_timesteps": TOTAL_STEPS,
+            "n_envs": N_ENVS,
+            "n_steps": 2048,
+            "batch_size": 256,
+            "gamma": 0.995,
+            "gae_lambda": 0.95,
+            "learning_rate": 3e-4,
+            "clip_range": 0.2,
+            "ent_coef": 0.01,
+            "checkpoint_freq": CHECKPOINT_FREQ,
+            "eval_freq": EVAL_FREQ,
+            "grid_size": 10,
+            "num_enemies": 4,
+            "persist_blue_hp": True,
+            **REWARD_CONFIG,
+            "vecnormalize_norm_obs": VECNORM_NORM_OBS,
+            "vecnormalize_norm_reward": VECNORM_NORM_REWARD,
+            "vecnormalize_clip_reward": VECNORM_CLIP_REWARD,
+        }
         try:
-            run = wandb.init(
-                project="disciples-campaign",
+            run = _init_wandb_run(
+                project=args.wandb_project,
                 name=run_name,
-                config={
-                    "algo": "MaskablePPO",
-                    "total_timesteps": TOTAL_STEPS,
-                    "n_envs": N_ENVS,
-                    "n_steps": 2048,
-                    "batch_size": 256,
-                    "gamma": 0.99,
-                    "gae_lambda": 0.95,
-                    "learning_rate": 3e-4,
-                    "clip_range": 0.2,
-                    "ent_coef": 0.05,
-                    "checkpoint_freq": CHECKPOINT_FREQ,
-                    "eval_freq": EVAL_FREQ,
-                    "grid_size": 10,
-                    "num_enemies": 4,
-                    "persist_blue_hp": True,
-                    "reward_engage_battle": 0.0,
-                    "reward_defeat_enemy": 1.0,
-                    "reward_all_enemies": 10.0,
-                    "reward_loss": -5.0,
-                    "reward_timeout": -3.0,
-                    "reward_turn_penalty": 0.02,
-                    "exp_reward_norm_k": 100.0,
-                    "reward_exp_weight": 0.2,
-                    "reward_survival_alive_weight": 0.5,
-                    "reward_survival_hp_weight": 0.5,
-                    "vecnormalize_norm_obs": VECNORM_NORM_OBS,
-                    "vecnormalize_norm_reward": VECNORM_NORM_REWARD,
-                    "vecnormalize_clip_reward": VECNORM_CLIP_REWARD,
-                },
-                sync_tensorboard=True,
-                save_code=True,
+                config=wandb_config,
+                entity=args.wandb_entity,
             )
             run_id = run.id
+            print(f"[INFO] W&B enabled (wandb={wandb.__version__}, mode={run.settings.mode})")
         except Exception as exc:
             WANDB_AVAILABLE = False
             run_id = f"offline-{int(time.time())}"
-            print(f"[WARN] W&B init failed, switching to offline mode: {exc}")
+            print(f"[WARN] W&B init failed, training will continue without W&B: {exc}")
     else:
         run_id = f"offline-{int(time.time())}"
         print("[INFO] W&B disabled, running in offline mode")
@@ -281,7 +340,7 @@ if __name__ == "__main__":
         norm_obs=VECNORM_NORM_OBS,
         norm_reward=VECNORM_NORM_REWARD,
         clip_reward=VECNORM_CLIP_REWARD,
-        gamma=0.99,
+        gamma=0.995,
     )
 
     # Оценочная среда
@@ -293,7 +352,7 @@ if __name__ == "__main__":
         norm_obs=VECNORM_NORM_OBS,
         norm_reward=False,
         clip_reward=VECNORM_CLIP_REWARD,
-        gamma=0.99,
+        gamma=0.995,
     )
 
     # -------------------- Модель --------------------
@@ -305,11 +364,11 @@ if __name__ == "__main__":
         n_steps=2048,
         batch_size=256,
         gae_lambda=0.95,
-        gamma=0.99,
+        gamma=0.995,
         n_epochs=10,
         learning_rate=3e-4,
         clip_range=0.2,
-        ent_coef=0.05,  # Увеличенная энтропия для исследования
+        ent_coef=0.01,
         vf_coef=0.5,
         tensorboard_log=TB_LOG_DIR,
     )
