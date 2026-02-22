@@ -732,6 +732,10 @@ class CampaignVisualizer:
         turns: int = 0,
         gold: float = 0.0,
         steps: int = 0,
+        heal_bottles_left: int = 0,
+        max_heal_bottles: int = 0,
+        revive_bottles_left: int = 0,
+        max_revive_bottles: int = 0,
         built_buildings: list = None,
     ):
         """Отрисовка карты."""
@@ -829,7 +833,13 @@ class CampaignVisualizer:
         self.ax.set_title(title, fontsize=14, fontweight="bold")
 
         # Ход, золото, шаги и постройки справа от грида
-        info_lines = [f"Ход: {turns}", f"Золото: {gold:g}", f"Шаги: {steps}"]
+        info_lines = [
+            f"Ход: {turns}",
+            f"Золото: {gold:g}",
+            f"Шаги: {steps}",
+            f"Леч. бутылки: {heal_bottles_left}/{max_heal_bottles}",
+            f"Воскр. бутылки: {revive_bottles_left}/{max_revive_bottles}",
+        ]
         built_buildings = built_buildings or []
         if built_buildings:
             info_lines.append("Постройки:")
@@ -959,6 +969,15 @@ def run_campaign_visualization(
     current_mode = "grid"
     battle_logs_buffer = []
 
+    def get_bottle_counters():
+        max_heal = int(getattr(env_base, "MAX_HEAL_BOTTLES", 0) or 0)
+        max_revive = int(getattr(env_base, "MAX_REVIVE_BOTTLES", 0) or 0)
+        heal_used = int(getattr(env_base, "heal_bottles_used", 0) or 0)
+        revive_used = int(getattr(env_base, "revive_bottles_used", 0) or 0)
+        heal_left = max(0, max_heal - heal_used)
+        revive_left = max(0, max_revive - revive_used)
+        return heal_left, max_heal, revive_left, max_revive
+
     while not done:
         step_count += 1
 
@@ -1026,6 +1045,7 @@ def run_campaign_visualization(
             action_names = ["↑", "↓", "←", "→", "↖", "↗", "↙", "↘", "⊙"]
             action_name = action_names[min(int(action), 8)]
             title = f"Step {step_count} | Action: {action_name} | Reward: {total_reward:.2f}"
+            heal_left, max_heal, revive_left, max_revive = get_bottle_counters()
 
             grid_viz.draw_grid(
                 agent_pos=agent_pos,
@@ -1036,6 +1056,10 @@ def run_campaign_visualization(
                 turns=env_base.turns,
                 gold=env_base.gold,
                 steps=env_base.moves,
+                heal_bottles_left=heal_left,
+                max_heal_bottles=max_heal,
+                revive_bottles_left=revive_left,
+                max_revive_bottles=max_revive,
                 built_buildings=env_base.get_built_building_names(),
             )
 
@@ -1063,6 +1087,7 @@ def run_campaign_visualization(
                 enemy_id = info.get("enemy_id")
                 print(f"\n⚔️ Начало боя с врагом {enemy_id}!")
                 print(f"   {ENEMY_DESCRIPTIONS.get(enemy_id, 'Unknown')}")
+                heal_left, max_heal, revive_left, max_revive = get_bottle_counters()
 
                 grid_viz.draw_grid(
                     agent_pos=env_base.grid_env.agent_pos,
@@ -1074,6 +1099,10 @@ def run_campaign_visualization(
                     turns=env_base.turns,
                     gold=env_base.gold,
                     steps=env_base.moves,
+                    heal_bottles_left=heal_left,
+                    max_heal_bottles=max_heal,
+                    revive_bottles_left=revive_left,
+                    max_revive_bottles=max_revive,
                     built_buildings=env_base.get_built_building_names(),
                 )
                 grid_viz.show_battle_start(enemy_id)
@@ -1153,6 +1182,7 @@ def run_campaign_visualization(
                 )
 
     # Финальная отрисовка
+    heal_left, max_heal, revive_left, max_revive = get_bottle_counters()
     grid_viz.draw_grid(
         agent_pos=env_base.grid_env.agent_pos,
         enemy_positions=env_base.grid_env.enemy_positions,
@@ -1162,6 +1192,10 @@ def run_campaign_visualization(
         turns=env_base.turns,
         gold=env_base.gold,
         steps=env_base.moves,
+        heal_bottles_left=heal_left,
+        max_heal_bottles=max_heal,
+        revive_bottles_left=revive_left,
+        max_revive_bottles=max_revive,
         built_buildings=env_base.get_built_building_names(),
     )
 

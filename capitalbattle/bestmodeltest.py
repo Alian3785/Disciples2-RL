@@ -34,10 +34,19 @@ def make_env() -> Monitor:
     return Monitor(ActionMasker(base, mask_fn))
 
 
-def evaluate_best_model(run_id: str, episodes: int, deterministic: bool) -> int:
-    model_path = f"./campaign_models/{run_id}/best/best_model.zip"
-    vec_path_best = f"./campaign_models/{run_id}/best/best_vecnormalize.pkl"
-    vec_path_fallback = f"./campaign_models/{run_id}/vecnormalize.pkl"
+def evaluate_model(run_id: str, episodes: int, deterministic: bool, model_type: str) -> int:
+    if model_type == "final":
+        model_path = f"./campaign_models/{run_id}/final_model.zip"
+        vec_paths = [
+            f"./campaign_models/{run_id}/vecnormalize.pkl",
+            f"./campaign_models/{run_id}/best/best_vecnormalize.pkl",
+        ]
+    else:
+        model_path = f"./campaign_models/{run_id}/best/best_model.zip"
+        vec_paths = [
+            f"./campaign_models/{run_id}/best/best_vecnormalize.pkl",
+            f"./campaign_models/{run_id}/vecnormalize.pkl",
+        ]
 
     if not os.path.exists(model_path):
         print(f"[ERROR] Model not found: {model_path}")
@@ -45,8 +54,8 @@ def evaluate_best_model(run_id: str, episodes: int, deterministic: bool) -> int:
 
     env = DummyVecEnv([make_env])
 
-    vec_path = vec_path_best if os.path.exists(vec_path_best) else vec_path_fallback
-    if os.path.exists(vec_path):
+    vec_path = next((path for path in vec_paths if os.path.exists(path)), None)
+    if vec_path is not None:
         env = VecNormalize.load(vec_path, env)
     else:
         print("[WARN] VecNormalize stats not found, running without them.")
@@ -85,6 +94,7 @@ def evaluate_best_model(run_id: str, episodes: int, deterministic: bool) -> int:
         outcomes[last_info.get("campaign_result", "other")] += 1
 
     print(f"run_id: {run_id}")
+    print(f"model_type: {model_type}")
     print(f"episodes: {episodes}")
     print(
         f"mean_reward: {np.mean(episode_rewards):.3f} +/- {np.std(episode_rewards):.3f}"
@@ -103,17 +113,25 @@ def evaluate_best_model(run_id: str, episodes: int, deterministic: bool) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Quick eval of best model: mean reward + victory/defeat/timeout counts."
+        description="Quick eval of campaign model: mean reward + victory/defeat/timeout counts."
     )
     parser.add_argument("--run-id", type=str, default="offline-1770462365")
     parser.add_argument("--episodes", type=int, default=10)
+    parser.add_argument(
+        "--model-type",
+        type=str,
+        choices=["best", "final"],
+        default="best",
+        help="Which checkpoint to evaluate",
+    )
     parser.add_argument("--deterministic", action="store_true")
     args = parser.parse_args()
 
-    return evaluate_best_model(
+    return evaluate_model(
         run_id=args.run_id,
         episodes=args.episodes,
         deterministic=args.deterministic,
+        model_type=args.model_type,
     )
 
 

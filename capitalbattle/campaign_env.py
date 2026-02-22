@@ -123,6 +123,7 @@ class CampaignEnv(gym.Env):
         reward_exp_weight: float = 0.2,     # Вес exp-компоненты
         reward_survival_alive_weight: float = 0.5,  # Вес доли выживших BLUE
         reward_survival_hp_weight: float = 0.5,     # Вес средней доли HP BLUE
+        reward_unit_upgrade: float = 1.0,
         persist_blue_hp: bool = True,
         log_enabled: bool = False,
         max_grid_steps: int = 200,
@@ -141,6 +142,7 @@ class CampaignEnv(gym.Env):
         self.reward_exp_weight = max(0.0, float(reward_exp_weight))
         self.reward_survival_alive_weight = max(0.0, float(reward_survival_alive_weight))
         self.reward_survival_hp_weight = max(0.0, float(reward_survival_hp_weight))
+        self.reward_unit_upgrade = max(0.0, float(reward_unit_upgrade))
         self.persist_blue_hp = persist_blue_hp
         self.log_enabled = log_enabled
         self.max_grid_steps = max_grid_steps
@@ -699,11 +701,16 @@ class CampaignEnv(gym.Env):
                     self._save_blue_state()
                     self._log("Состояние BLUE сохранено (без автолечения и воскрешений)")
 
+                upgrade_count = 0
                 if self.battle_env is not None:
                     self._log(f"Опыт за бой: {self.battle_env.last_battle_exp:g}")
                     for name in getattr(self.battle_env, "last_levelups", []) or []:
                         self._log(f"Уровень юнита {name} повышен")
-                    self._log_turns_into_levelups()
+                    upgrade_count = self._log_turns_into_levelups()
+                upgrade_reward = float(upgrade_count) * self.reward_unit_upgrade
+                reward += upgrade_reward
+                info["unit_upgrades"] = int(upgrade_count)
+                info["unit_upgrade_reward"] = float(upgrade_reward)
 
                 # Возвращаемся в grid режим
                 self.mode = self.MODE_GRID
@@ -866,25 +873,27 @@ class CampaignEnv(gym.Env):
                 self.blue_team_state[idx] = deepcopy(upgraded)
                 return
 
-    def _log_turns_into_levelups(self) -> None:
-        """Логирует повышение до юнита, если есть построенное здание."""
+    def _log_turns_into_levelups(self) -> int:
+        """Applies BLUE unit upgrades after level-up checks and returns applied count."""
         if self.battle_env is None:
-            return
+            return 0
         levelup_names = getattr(self.battle_env, "last_levelups", []) or []
         if not levelup_names:
-            return
+            return 0
 
         name_to_units: Dict[str, List[Dict]] = {}
         for unit in getattr(self.battle_env, "combined", []) or []:
+            if unit.get("team") != "blue":
+                continue
             name = str(unit.get("name", "") or "").strip()
             if not name:
                 continue
             name_to_units.setdefault(name, []).append(unit)
 
-        upgraded_any = False
+        upgraded_count = 0
         for name in levelup_names:
             unit_data = self._find_unit_data_by_name(name)
-            capital_value = unit_data.get("столица") if unit_data else None
+            capital_value = unit_data.get("\u0441\u0442\u043e\u043b\u0438\u0446\u0430") if unit_data else None
             buildings = self._get_buildings_for_capital(capital_value)
 
             units = name_to_units.get(name)
@@ -915,7 +924,7 @@ class CampaignEnv(gym.Env):
                     continue
                 built_flag = building.get("Build", building.get("built", 0))
                 if int(built_flag or 0) == 1:
-                    self._log(f'Юнит "{unit_label}" повышен до "{target_name}"')
+                    self._log(f'Unit "{unit_label}" upgraded to "{target_name}"')
                     unit_data = self._find_unit_data_by_name(target_name)
                     if unit_data is not None:
                         upgraded_unit = self._build_unit_from_data(
@@ -926,11 +935,10 @@ class CampaignEnv(gym.Env):
                         unit.clear()
                         unit.update(deepcopy(upgraded_unit))
                         self._replace_blue_unit(upgraded_unit)
-                        upgraded_any = True
+                        upgraded_count += 1
                     break
 
-        if upgraded_any:
-            return
+        return int(upgraded_count)
 
     def _heal_blue_team(self, heal_percent: float = 0.05) -> int:
         """
