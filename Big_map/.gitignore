@@ -1,0 +1,10 @@
+# Local artifacts for the Big_map workspace
+.venv/
+.pytest_cache/
+__pycache__/
+*.pyc
+wandb/
+campaign_checkpoints/
+campaign_eval/
+campaign_models/
+campaign_tb_logs/
