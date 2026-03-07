@@ -325,6 +325,7 @@ def map_unit_to_battle(u: dict, team: str, position: int) -> dict:
     exp_kill_raw = _get(u, "\u043e\u043f\u044b\u0442 \u0443\u0431\u0438\u0439\u0441\u0442\u0432\u0430", "exp_kill", default=0)
     exp_req_raw = _get(u, "\u043d\u0443\u0436\u043d\u044b\u0439 \u043e\u043f\u044b\u0442", "exp_required", default=0)
     exp_cur_raw = _get(u, "\u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043e\u043f\u044b\u0442", "exp_current", default=0)
+    next_level_raw = _get(u, "\u0441\u043b\u0435\u0434\u0443\u0440\u043e\u0432\u0435\u043d\u044c", "next_level_exp", default=0)
     turns_raw = _get(u, "\u043f\u0440\u0435\u0432\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044f \u0432", "turns_into", default=[])
 
     try:
@@ -344,6 +345,11 @@ def map_unit_to_battle(u: dict, team: str, position: int) -> dict:
         exp_current_v = int(round(float(exp_cur_raw)))
     except Exception:
         exp_current_v = 0
+
+    try:
+        next_level_exp_v = int(round(float(next_level_raw)))
+    except Exception:
+        next_level_exp_v = 0
 
     try:
         level_v = int(round(float(level_raw)))
@@ -390,6 +396,7 @@ def map_unit_to_battle(u: dict, team: str, position: int) -> dict:
         "exp_kill": exp_kill_v,
         "exp_required": exp_required_v,
         "exp_current": exp_current_v,
+        "next_level_exp": next_level_exp_v,
         "turns_into": turns_into_v,
     }
 

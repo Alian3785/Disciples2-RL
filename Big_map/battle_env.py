@@ -188,6 +188,41 @@ def _resolve_unit_level(unit: Dict) -> int:
         return 0
     return _to_int_or_default(LEVEL_BY_NAME.get(unit_name, 0), default=0)
 
+
+def _build_next_level_exp_by_name(unit_data: List[Dict]) -> Dict[str, int]:
+    next_level_by_name: Dict[str, int] = {}
+    for entry in unit_data:
+        if not isinstance(entry, dict):
+            continue
+        entry_name = entry.get("\u043a\u0442\u043e")
+        if entry_name is None:
+            entry_name = entry.get("Р С”РЎвЂљР С•")
+        if entry_name is None:
+            continue
+        name = str(entry_name).strip()
+        if not name:
+            continue
+        next_level_raw = entry.get(
+            "\u0441\u043b\u0435\u0434\u0443\u0440\u043e\u0432\u0435\u043d\u044c",
+            entry.get("next_level_exp", 0),
+        )
+        next_level_by_name[name] = _to_int_or_default(next_level_raw, default=0)
+    return next_level_by_name
+
+
+NEXT_LEVEL_EXP_BY_NAME = _build_next_level_exp_by_name(UNIT_DATA)
+
+
+def _resolve_unit_next_level_exp(unit: Dict) -> int:
+    if "next_level_exp" in unit:
+        return _to_int_or_default(unit.get("next_level_exp", 0), default=0)
+    if "\u0441\u043b\u0435\u0434\u0443\u0440\u043e\u0432\u0435\u043d\u044c" in unit:
+        return _to_int_or_default(unit.get("\u0441\u043b\u0435\u0434\u0443\u0440\u043e\u0432\u0435\u043d\u044c", 0), default=0)
+    unit_name = str(unit.get("name", "") or "").strip()
+    if not unit_name:
+        return 0
+    return _to_int_or_default(NEXT_LEVEL_EXP_BY_NAME.get(unit_name, 0), default=0)
+
 UNITS_RED = [{'name': 'Скелет рыцарь',
   'initiative': 50,
   'initiative_base': 50,
@@ -559,6 +594,7 @@ _apply_team_traits(UNITS_BLUE, UNITS_RED)
 
 for unit in UNITS_RED + UNITS_BLUE:
     unit["Level"] = _resolve_unit_level(unit)
+    unit["next_level_exp"] = _resolve_unit_next_level_exp(unit)
     unit.setdefault("defense", 0)
     unit.setdefault("waited", 0)
 
@@ -2132,6 +2168,7 @@ class BattleEnv(gym.Env):
             u.setdefault("damage_secondary", 0)
             u.setdefault("big", False)
             u.setdefault("Level", _resolve_unit_level(u))
+            u.setdefault("next_level_exp", _resolve_unit_next_level_exp(u))
             u.setdefault("bonusturn", 0)
             u["defense"] = 0
             u["waited"] = 0
@@ -3668,8 +3705,14 @@ class BattleEnv(gym.Env):
             if req_value <= 0:
                 continue
             if new_value >= req_value:
-                u["exp_current"] = max(0.0, req_value - 1)
                 unit_name = u.get("name", "unknown")
+                next_level_exp = _resolve_unit_next_level_exp(u)
+                if next_level_exp > 0:
+                    u["Level"] = _to_int_or_default(u.get("Level", 0), default=0) + 1
+                    u["exp_required"] = _to_int_or_default(req_value, default=0) + next_level_exp
+                    u["exp_current"] = 0
+                else:
+                    u["exp_current"] = max(0.0, req_value - 1)
                 self._log(f"Уровень юнита {unit_name} повышен")
                 self.last_levelups.append(unit_name)
 
@@ -4533,6 +4576,7 @@ class BattleEnv(gym.Env):
             u.setdefault("damage_secondary", 0)
             u.setdefault("big", False)
             u.setdefault("Level", _resolve_unit_level(u))
+            u.setdefault("next_level_exp", _resolve_unit_next_level_exp(u))
             u.setdefault("bonusturn", 0)
             u.setdefault("original_damage", u.get("damage", 0))
 
