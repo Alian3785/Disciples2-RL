@@ -996,6 +996,20 @@ class CampaignEnv(gym.Env):
             "exp_current",
             default=0,
         )
+        try:
+            new_unit["next_level_exp"] = int(
+                round(
+                    float(
+                        _entry_get(
+                            "\u0441\u043b\u0435\u0434\u0443\u0440\u043e\u0432\u0435\u043d\u044c",
+                            "next_level_exp",
+                            default=0,
+                        )
+                    )
+                )
+            )
+        except (TypeError, ValueError):
+            new_unit["next_level_exp"] = 0
         turns_raw = _entry_get(
             "\u043f\u0440\u0435\u0432\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044f \u0432",
             "\u0420\u0457\u0421\u0402\u0420\xb5\u0420\u0406\u0421\u0402\u0420\xb0\u0421\u2030\u0420\xb0\u0420\xb5\u0421\u201a\u0421\u0403\u0421\u040f \u0420\u0406",
