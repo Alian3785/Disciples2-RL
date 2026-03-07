@@ -99,8 +99,13 @@ def test_campaign_moves_per_turn_scales_with_travel_hero_level():
 
     env._sync_moves_per_turn_with_hero(units=env.blue_team_state, grant_delta=True)
 
-    assert env.moves_per_turn == 22
-    assert env.moves == 7
+    assert env.moves_per_turn == 26
+    assert env.moves == 11
+    assert env.get_travel_hero_visual_info() == {
+        "name": duke["name"],
+        "level": 2,
+        "abilities": ["Нахождение пути (+20% шагов)"],
+    }
 
     env._advance_turns(1)
-    assert env.moves == 22
+    assert env.moves == 26

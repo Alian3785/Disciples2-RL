@@ -91,6 +91,8 @@ class CampaignEnv(gym.Env):
     BATTLE_OBS_SIZE = FEATURES_PER_UNIT * 12
     MOVES_PER_TURN = 20
     GRID_STEPS_PER_TURN = MOVES_PER_TURN
+    HERO_PATHFINDING_LEVEL = 2
+    HERO_PATHFINDING_MOVE_BONUS_PCT = 0.20
     GOLD_PER_TURN = 1.5
     GRID_BOTTLE_ACTION_START = 9
     GRID_BOTTLE_POSITIONS = list(range(7, 13))  # 6 позиций BLUE
@@ -465,7 +467,7 @@ class CampaignEnv(gym.Env):
                 continue
         return min(heroes, key=lambda unit: int(unit.get("position", 999) or 999))
 
-    def _hero_move_bonus(self, units: Optional[List[Dict]] = None) -> int:
+    def _hero_level(self, units: Optional[List[Dict]] = None) -> int:
         hero = self._resolve_travel_hero(units=units)
         if hero is None:
             return 0
@@ -473,6 +475,35 @@ class CampaignEnv(gym.Env):
             return max(0, int(round(float(hero.get("Level", 0) or 0))))
         except (TypeError, ValueError):
             return 0
+
+    def _hero_has_pathfinding(self, units: Optional[List[Dict]] = None) -> bool:
+        return self._hero_level(units=units) >= int(self.HERO_PATHFINDING_LEVEL)
+
+    def _hero_pathfinding_move_bonus(self, units: Optional[List[Dict]] = None) -> int:
+        if not self._hero_has_pathfinding(units=units):
+            return 0
+        return max(
+            0,
+            int(round(float(self.MOVES_PER_TURN) * float(self.HERO_PATHFINDING_MOVE_BONUS_PCT))),
+        )
+
+    def _hero_move_bonus(self, units: Optional[List[Dict]] = None) -> int:
+        return self._hero_level(units=units) + self._hero_pathfinding_move_bonus(units=units)
+
+    def get_travel_hero_visual_info(self) -> Optional[Dict]:
+        hero = self._resolve_travel_hero()
+        if hero is None:
+            return None
+
+        abilities: List[str] = []
+        if self._hero_has_pathfinding(units=[hero]):
+            abilities.append("Нахождение пути (+20% шагов)")
+
+        return {
+            "name": str(hero.get("name", "") or "").strip(),
+            "level": self._hero_level(units=[hero]),
+            "abilities": abilities,
+        }
 
     def _sync_moves_per_turn_with_hero(
         self,

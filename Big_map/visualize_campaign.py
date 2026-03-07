@@ -742,6 +742,9 @@ class CampaignVisualizer:
         revive_bottles_left: int = 0,
         max_revive_bottles: int = 0,
         built_buildings: list = None,
+        hero_name: str = "",
+        hero_level: int = 0,
+        hero_abilities: list | None = None,
     ):
         """Отрисовка карты."""
         self.ax.clear()
@@ -865,6 +868,15 @@ class CampaignVisualizer:
             info_lines.extend(f"- {name}" for name in built_buildings)
         else:
             info_lines.append("Постройки: нет")
+        hero_name = str(hero_name or "").strip()
+        hero_abilities = list(hero_abilities or [])
+        if hero_name:
+            info_lines.append(f"Герой: {hero_name} (ур. {hero_level})")
+            info_lines.append("Способности героя:")
+            if hero_abilities:
+                info_lines.extend(f"- {ability}" for ability in hero_abilities)
+            else:
+                info_lines.append("- нет")
         info_text = "\n".join(info_lines)
         self.ax.text(
             1.02,
@@ -1018,6 +1030,18 @@ def run_campaign_visualization(
         revive_left = max(0, max_revive - revive_used)
         return heal_left, max_heal, revive_left, max_revive
 
+    def get_travel_hero_panel():
+        if not hasattr(env_base, "get_travel_hero_visual_info"):
+            return "", 0, []
+        info = env_base.get_travel_hero_visual_info()
+        if not info:
+            return "", 0, []
+        return (
+            str(info.get("name", "") or "").strip(),
+            int(info.get("level", 0) or 0),
+            list(info.get("abilities", []) or []),
+        )
+
     while not done:
         step_count += 1
 
@@ -1086,6 +1110,7 @@ def run_campaign_visualization(
             action_name = action_names[min(int(action), 8)]
             title = f"Step {step_count} | Action: {action_name} | Reward: {total_reward:.2f}"
             heal_left, max_heal, revive_left, max_revive = get_bottle_counters()
+            hero_name, hero_level, hero_abilities = get_travel_hero_panel()
 
             grid_viz.draw_grid(
                 agent_pos=agent_pos,
@@ -1102,6 +1127,9 @@ def run_campaign_visualization(
                 revive_bottles_left=revive_left,
                 max_revive_bottles=max_revive,
                 built_buildings=env_base.get_built_building_names(),
+                hero_name=hero_name,
+                hero_level=hero_level,
+                hero_abilities=hero_abilities,
             )
 
             # Проверяем, был ли только что бой
@@ -1129,6 +1157,7 @@ def run_campaign_visualization(
                 print(f"\n⚔️ Начало боя с врагом {enemy_id}!")
                 print(f"   {ENEMY_DESCRIPTIONS.get(enemy_id, 'Unknown')}")
                 heal_left, max_heal, revive_left, max_revive = get_bottle_counters()
+                hero_name, hero_level, hero_abilities = get_travel_hero_panel()
 
                 grid_viz.draw_grid(
                     agent_pos=env_base.grid_env.agent_pos,
@@ -1146,6 +1175,9 @@ def run_campaign_visualization(
                     revive_bottles_left=revive_left,
                     max_revive_bottles=max_revive,
                     built_buildings=env_base.get_built_building_names(),
+                    hero_name=hero_name,
+                    hero_level=hero_level,
+                    hero_abilities=hero_abilities,
                 )
                 grid_viz.show_battle_start(enemy_id)
                 time.sleep(delay * 2)
@@ -1246,6 +1278,7 @@ def run_campaign_visualization(
 
     # Финальная отрисовка
     heal_left, max_heal, revive_left, max_revive = get_bottle_counters()
+    hero_name, hero_level, hero_abilities = get_travel_hero_panel()
     grid_viz.draw_grid(
         agent_pos=env_base.grid_env.agent_pos,
         enemy_positions=env_base.grid_env.enemy_positions,
@@ -1261,6 +1294,9 @@ def run_campaign_visualization(
         revive_bottles_left=revive_left,
         max_revive_bottles=max_revive,
         built_buildings=env_base.get_built_building_names(),
+        hero_name=hero_name,
+        hero_level=hero_level,
+        hero_abilities=hero_abilities,
     )
 
     # Закрываем визуализатор боя если открыт
