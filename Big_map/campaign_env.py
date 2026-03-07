@@ -229,7 +229,7 @@ class CampaignEnv(gym.Env):
         self.revive_bottles_used = 0
         self.turns = 0
         self.gold = 0.0
-        self.moves = self.moves_per_turn
+        self._sync_moves_per_turn_with_hero(units=self.blue_team_state, refill=True)
         self.battle_env = None
         self._campaign_logs = []
 
@@ -444,6 +444,53 @@ class CampaignEnv(gym.Env):
         if level >= 4:
             return 3.0
         return 1.0
+
+    @staticmethod
+    def _is_hero_unit(unit: Dict) -> bool:
+        try:
+            return int(round(float(unit.get("next_level_exp", 0) or 0))) > 0
+        except (TypeError, ValueError):
+            return False
+
+    def _resolve_travel_hero(self, units: Optional[List[Dict]] = None) -> Optional[Dict]:
+        roster = units if units is not None else self._get_blue_state()
+        heroes = [unit for unit in roster if self._is_hero_unit(unit)]
+        if not heroes:
+            return None
+        for unit in heroes:
+            try:
+                if int(unit.get("position", -1)) == 8:
+                    return unit
+            except (TypeError, ValueError):
+                continue
+        return min(heroes, key=lambda unit: int(unit.get("position", 999) or 999))
+
+    def _hero_move_bonus(self, units: Optional[List[Dict]] = None) -> int:
+        hero = self._resolve_travel_hero(units=units)
+        if hero is None:
+            return 0
+        try:
+            return max(0, int(round(float(hero.get("Level", 0) or 0))))
+        except (TypeError, ValueError):
+            return 0
+
+    def _sync_moves_per_turn_with_hero(
+        self,
+        units: Optional[List[Dict]] = None,
+        *,
+        refill: bool = False,
+        grant_delta: bool = False,
+    ) -> None:
+        previous_cap = int(self.moves_per_turn)
+        new_cap = int(self.MOVES_PER_TURN) + self._hero_move_bonus(units=units)
+        self.moves_per_turn = new_cap
+        if refill:
+            self.moves = new_cap
+            return
+        if grant_delta and new_cap > previous_cap:
+            self.moves = min(new_cap, int(self.moves) + (new_cap - previous_cap))
+        elif int(self.moves) > new_cap:
+            self.moves = new_cap
 
     def _heal_unit_to_full_at_position(self, position: int) -> Tuple[float, Optional[str]]:
         """Лечит одного юнита BLUE на позиции в пределах золота с тарифом по Level."""
@@ -940,7 +987,8 @@ class CampaignEnv(gym.Env):
             restored_unit["initiative"] = restored_unit.get("initiative_base", 0)
             
             self.blue_team_state.append(restored_unit)
-        
+
+        self._sync_moves_per_turn_with_hero(units=self.blue_team_state, grant_delta=True)
         self._log("Состояние BLUE команды сохранено (HP не восстановлено)")
 
     def _find_unit_data_by_name(self, name: str) -> Optional[Dict]:
@@ -1036,6 +1084,7 @@ class CampaignEnv(gym.Env):
         for idx, unit in enumerate(self.blue_team_state):
             if int(unit.get("position", -1)) == int(pos):
                 self.blue_team_state[idx] = deepcopy(upgraded)
+                self._sync_moves_per_turn_with_hero(units=self.blue_team_state)
                 return
 
     def _log_turns_into_levelups(self) -> int:
@@ -1164,6 +1213,7 @@ class CampaignEnv(gym.Env):
         """Возвращает (и при необходимости инициализирует) сохранённое состояние BLUE."""
         if self.blue_team_state is None:
             self.blue_team_state = deepcopy(UNITS_BLUE)
+            self._sync_moves_per_turn_with_hero(units=self.blue_team_state, refill=True)
         return self.blue_team_state
 
     def _spend_moves(self, spent_moves: int) -> None:

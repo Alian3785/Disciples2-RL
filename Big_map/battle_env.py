@@ -223,6 +223,28 @@ def _resolve_unit_next_level_exp(unit: Dict) -> int:
         return 0
     return _to_int_or_default(NEXT_LEVEL_EXP_BY_NAME.get(unit_name, 0), default=0)
 
+
+def _apply_hero_levelup_bonuses(unit: Dict) -> None:
+    base_damage = float(unit.get("original_damage", unit.get("damage", 0)) or 0)
+    new_damage = max(0, _to_int_or_default(base_damage * 1.1, default=0))
+    unit["damage"] = new_damage
+    unit["original_damage"] = new_damage
+
+    current_health = float(unit.get("health", unit.get("hp", 0)) or 0)
+    max_health = float(unit.get("max_health", unit.get("maxhp", 0)) or 0)
+    unit["health"] = max(0, _to_int_or_default(current_health * 1.1, default=0))
+    unit["max_health"] = max(0, _to_int_or_default(max_health * 1.1, default=0))
+    if "hp" in unit:
+        unit["hp"] = unit["health"]
+    if "maxhp" in unit:
+        unit["maxhp"] = unit["max_health"]
+
+    current_accuracy = _to_int_or_default(unit.get("accuracy", 0), default=0)
+    unit["accuracy"] = max(0, min(100, current_accuracy + 1))
+
+    current_exp_kill = float(unit.get("exp_kill", 0) or 0)
+    unit["exp_kill"] = max(0, _to_int_or_default(current_exp_kill * 1.1, default=0))
+
 UNITS_RED = [{'name': 'Скелет рыцарь',
   'initiative': 50,
   'initiative_base': 50,
@@ -3711,6 +3733,7 @@ class BattleEnv(gym.Env):
                     u["Level"] = _to_int_or_default(u.get("Level", 0), default=0) + 1
                     u["exp_required"] = _to_int_or_default(req_value, default=0) + next_level_exp
                     u["exp_current"] = 0
+                    _apply_hero_levelup_bonuses(u)
                 else:
                     u["exp_current"] = max(0.0, req_value - 1)
                 self._log(f"Уровень юнита {unit_name} повышен")
