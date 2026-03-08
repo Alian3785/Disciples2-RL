@@ -14,6 +14,14 @@ def _castle_heal_action_slice(env: CampaignEnv):
     return slice(start, stop)
 
 
+def _pairwise_manhattan_distances(tiles):
+    distances = []
+    for index, (x1, y1) in enumerate(tiles):
+        for x2, y2 in tiles[index + 1:]:
+            distances.append(abs(x1 - x2) + abs(y1 - y2))
+    return distances
+
+
 def test_hero_starts_at_1_1_and_returns_there_on_reset():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     assert env.grid_env.agent_pos == (1, 1)
@@ -23,23 +31,23 @@ def test_hero_starts_at_1_1_and_returns_there_on_reset():
     assert tuple(info["agent_pos"]) == (1, 1)
 
 
-def test_castle_has_two_extra_heal_tiles_without_enemies():
+def test_heal_tiles_are_far_apart_and_do_not_overlap_enemies():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
 
     heal_tiles = tuple(env.castle_heal_tiles)
-    assert (1, 1) in heal_tiles
     assert len(heal_tiles) == 3
+    assert set(heal_tiles) == {(1, 1), (38, 1), (1, 38)}
 
-    extra_tiles = [tile for tile in heal_tiles if tile != (1, 1)]
-    assert len(extra_tiles) == 2
+    pairwise_distances = _pairwise_manhattan_distances(heal_tiles)
+    assert min(pairwise_distances) >= env.grid_size - 3
 
     enemy_tiles = set(env.grid_env.enemy_positions.values())
-    for tile in extra_tiles:
+    for tile in heal_tiles:
         assert tile not in enemy_tiles
 
 
-def test_castle_heal_actions_available_on_extra_heal_tiles():
+def test_castle_heal_actions_available_on_all_heal_tiles():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
     env.gold = 10.0

@@ -767,7 +767,7 @@ class CampaignVisualizer:
             )
             self.ax.add_patch(rect)
 
-        # Heal tiles (castle + extra heal cells) — highlight in yellow.
+        # Heal tiles on the map — highlight in yellow.
         if castle_heal_tiles is None:
             heal_tiles = [self.CASTLE_POS]
         else:
