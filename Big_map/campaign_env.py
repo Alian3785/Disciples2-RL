@@ -69,7 +69,7 @@ class CampaignEnv(gym.Env):
         - [...]: ход и золото
 
     Action Space:
-        Discrete(52):
+        Discrete(58):
         - В режиме grid:
           - 0-7: движение в 8 направлениях
           - 8: отдых (REST) — восстановление 5% HP раненым юнитам
@@ -77,7 +77,9 @@ class CampaignEnv(gym.Env):
           - 15-20: применить бутыль воскрешения к позициям BLUE 7-12 (оживляет с 1 HP)
           - 21-26: лечение на специальных клетках карты по позициям BLUE 7-12
             (стоимость за 1 HP зависит от Level)
-          - 27-51: ????????? ????????? ??????? (25 ????????)
+          - 27-32: воскрешение на специальных клетках карты по позициям BLUE 7-12
+            (стоимость зависит от Level)
+          - 33-57: ????????? ????????? ??????? (25 ????????)
         - В режиме battle: используются действия 0-14 (атака/защита/ожидание)
 
         Action masking применяется для блокировки недопустимых действий.
@@ -106,7 +108,9 @@ class CampaignEnv(gym.Env):
     CASTLE_HEAL_TILE_COUNT = 3
     GRID_CASTLE_HEAL_ACTION_START = GRID_REVIVE_ACTION_START + len(REVIVE_BOTTLE_POSITIONS)  # 21
     CASTLE_HEAL_POSITIONS = GRID_BOTTLE_POSITIONS
-    GRID_BUILD_ACTION_START = GRID_CASTLE_HEAL_ACTION_START + len(CASTLE_HEAL_POSITIONS)  # 27
+    GRID_CASTLE_REVIVE_ACTION_START = GRID_CASTLE_HEAL_ACTION_START + len(CASTLE_HEAL_POSITIONS)  # 27
+    CASTLE_REVIVE_POSITIONS = REVIVE_BOTTLE_POSITIONS
+    GRID_BUILD_ACTION_START = GRID_CASTLE_REVIVE_ACTION_START + len(CASTLE_REVIVE_POSITIONS)  # 33
     GREEN_DRAGON_ENEMY_ID = 30
     GREEN_DRAGON_REWARD_MULTIPLIER = 10.0
     ENEMY_REWARD_MULTIPLIERS = {}
@@ -264,9 +268,12 @@ class CampaignEnv(gym.Env):
         #   9-14 — применить бутыль лечения к позициям 7-12 соответственно.
         #   15-20 — применить бутыль воскрешения к позициям 7-12 соответственно.
         #   21-26 — лечение на специальных клетках карты по позициям 7-12.
-        #   27-51 ? ????????? ?????? ????????? ??????? (25 ????????).
+        #   27-32 — воскрешение на специальных клетках карты по позициям 7-12.
+        #   33-57 ? ????????? ?????? ????????? ??????? (25 ????????).
         if action >= self.GRID_BUILD_ACTION_START:
             return self._step_building(action)
+        if action >= self.GRID_CASTLE_REVIVE_ACTION_START:
+            return self._step_revive_in_castle(action)
         if action >= self.GRID_CASTLE_HEAL_ACTION_START:
             return self._step_heal_in_castle(action)
         if action >= self.GRID_REVIVE_ACTION_START:
@@ -495,7 +502,7 @@ class CampaignEnv(gym.Env):
 
     @staticmethod
     def _castle_heal_gold_per_hp(unit: Dict) -> float:
-        """Стоимость лечения в замке: 1/2/3 gold за 1 HP в зависимости от Level."""
+        """Стоимость лечения на клетке лечения: 1/2/3 gold за 1 HP в зависимости от Level."""
         level_raw = unit.get("Level", 1)
         try:
             level = int(round(float(level_raw)))
@@ -507,6 +514,25 @@ class CampaignEnv(gym.Env):
         if level >= 4:
             return 3.0
         return 1.0
+
+    @staticmethod
+    def _castle_revive_gold_cost(unit: Dict) -> float:
+        """Стоимость воскрешения на клетке лечения в зависимости от Level."""
+        level_raw = unit.get("Level", 1)
+        try:
+            level = int(round(float(level_raw)))
+        except (TypeError, ValueError):
+            level = 1
+
+        if level <= 1:
+            return 50.0
+        if level == 2:
+            return 200.0
+        if level == 3:
+            return 400.0
+        if level == 4:
+            return 600.0
+        return 800.0
 
     @staticmethod
     def _is_hero_unit(unit: Dict) -> bool:
@@ -661,6 +687,105 @@ class CampaignEnv(gym.Env):
             "castle_heal_target_pos": target_pos,
             "healed_amount": healed_amount,
             "healed_unit_name": unit_name,
+            "gold_spent": gold_spent,
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+        }
+
+        return self._build_obs(grid_obs=grid_obs), reward, terminated, truncated, info
+
+    def _castle_revive_cost_at_position(self, position: int) -> float:
+        """Возвращает стоимость воскрешения мёртвого юнита на позиции или 0.0."""
+        state = self._get_blue_state()
+        for unit in state:
+            if int(unit.get("position", -1)) != position:
+                continue
+            hp = float(unit.get("hp", 0) or unit.get("health", 0))
+            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
+            if max_hp <= 0 or hp > 0:
+                return 0.0
+            return float(self._castle_revive_gold_cost(unit))
+        return 0.0
+
+    def _revive_unit_with_gold_at_position(
+        self,
+        position: int,
+    ) -> Tuple[bool, Optional[str], float]:
+        """Воскрешает юнита за золото на клетке лечения, если хватает средств."""
+        state = self._get_blue_state()
+        for unit in state:
+            if int(unit.get("position", -1)) != position:
+                continue
+
+            hp = float(unit.get("hp", 0) or unit.get("health", 0))
+            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
+            if max_hp <= 0 or hp > 0:
+                return False, None, 0.0
+
+            revive_cost = float(self._castle_revive_gold_cost(unit))
+            gold_available = max(0.0, float(self.gold or 0.0))
+            if revive_cost <= 0.0 or gold_available < revive_cost:
+                return False, None, 0.0
+
+            unit["hp"] = 1.0
+            unit["health"] = 1.0
+            self.gold = max(0.0, gold_available - revive_cost)
+            name = unit.get("name", f"pos_{position}")
+            self._log(
+                f"Heal tile revive: {name} (pos {position}) revived with 1 HP "
+                f"(cost={revive_cost:.1f} gold, gold_left={self.gold:.1f})"
+            )
+            return True, name, revive_cost
+
+        return False, None, 0.0
+
+    def _step_revive_in_castle(self, action: int):
+        """Воскрешает выбранного юнита BLUE за золото на клетках лечения."""
+        idx = action - self.GRID_CASTLE_REVIVE_ACTION_START
+        target_pos = (
+            self.CASTLE_REVIVE_POSITIONS[idx]
+            if 0 <= idx < len(self.CASTLE_REVIVE_POSITIONS)
+            else None
+        )
+
+        grid_obs = self._get_grid_obs()
+        reward = 0.0
+        terminated = False
+        truncated = False
+
+        revive_cost = 0.0
+        target_unit_name = None
+        if target_pos is not None:
+            revive_cost = self._castle_revive_cost_at_position(target_pos)
+            for unit in self._get_blue_state():
+                if int(unit.get("position", -1)) == target_pos:
+                    target_unit_name = unit.get("name", f"pos_{target_pos}")
+                    break
+
+        revived, revived_unit_name, gold_spent = (False, None, 0.0)
+        if self._is_at_castle() and target_pos is not None:
+            revived, revived_unit_name, gold_spent = self._revive_unit_with_gold_at_position(
+                position=target_pos
+            )
+
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            "castle_revive_action": True,
+            "castle_heal_tiles": self.castle_heal_tiles,
+            "castle_revive_available": (
+                self._is_at_castle()
+                and target_pos is not None
+                and self._can_castle_revive_position(target_pos)
+            ),
+            "castle_revive_target_pos": target_pos,
+            "target_unit_name": target_unit_name,
+            "revived": revived,
+            "revived_unit_name": revived_unit_name,
+            "revive_cost": revive_cost,
             "gold_spent": gold_spent,
             "turns": self.turns,
             "gold": self.gold,
@@ -1584,10 +1709,12 @@ class CampaignEnv(gym.Env):
                 for idx, pos in enumerate(self.REVIVE_BOTTLE_POSITIONS):
                     mask[self.GRID_REVIVE_ACTION_START + idx] = self._can_revive_position(pos)
 
-            # Лечение: доступно только на специальных клетках лечения.
+            # Лечение и воскрешение за золото доступны только на специальных клетках лечения.
             if self._is_at_castle() and float(self.gold) > 0.0:
                 for idx, pos in enumerate(self.CASTLE_HEAL_POSITIONS):
                     mask[self.GRID_CASTLE_HEAL_ACTION_START + idx] = self._can_heal_position(pos)
+                for idx, pos in enumerate(self.CASTLE_REVIVE_POSITIONS):
+                    mask[self.GRID_CASTLE_REVIVE_ACTION_START + idx] = self._can_castle_revive_position(pos)
 
             # Постройки: доступны при достаточном золоте и если не blocked/built
             alredybuilt_flag = self.active_buildings.get("alredybuilt", 0)
@@ -1660,6 +1787,11 @@ class CampaignEnv(gym.Env):
             max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
             return max_hp > 0 and hp <= 0
         return False
+
+    def _can_castle_revive_position(self, position: int) -> bool:
+        """Можно ли воскресить юнита за золото на клетке лечения."""
+        revive_cost = self._castle_revive_cost_at_position(position)
+        return revive_cost > 0.0 and float(self.gold or 0.0) >= revive_cost
 
     def _revive_unit_at_position(self, position: int) -> Tuple[bool, Optional[str]]:
         """

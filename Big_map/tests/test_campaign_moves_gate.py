@@ -6,11 +6,11 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from campaign_env import CampaignEnv
 
 
-def test_grid_movement_is_blocked_after_20_moves_until_rest():
+def test_grid_movement_is_blocked_after_all_starting_moves_until_rest():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
 
-    assert env.moves == env.moves_per_turn == 20
+    assert env.moves == env.moves_per_turn == 21
 
     # Safe movement action at map border: no relocation, no battle triggers.
     move_action = 2  # LEFT
@@ -41,7 +41,7 @@ def test_grid_movement_is_blocked_after_20_moves_until_rest():
     assert terminated is False
     assert truncated is False
     assert rest_info.get("rest_action", False) is True
-    assert env.moves == env.moves_per_turn == 20
+    assert env.moves == env.moves_per_turn == 21
     assert rest_reward < 0.0
 
     mask_after_rest = env.compute_action_mask()

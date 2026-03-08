@@ -94,13 +94,15 @@ def test_campaign_moves_per_turn_scales_with_travel_hero_level():
     env.reset(seed=123)
 
     duke = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
+    assert duke["Level"] == 1
+    assert env.moves_per_turn == 21
     env.moves = 5
     duke["Level"] = 2
 
     env._sync_moves_per_turn_with_hero(units=env.blue_team_state, grant_delta=True)
 
     assert env.moves_per_turn == 26
-    assert env.moves == 11
+    assert env.moves == 10
     assert env.get_travel_hero_visual_info() == {
         "name": duke["name"],
         "level": 2,

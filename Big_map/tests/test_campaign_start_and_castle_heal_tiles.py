@@ -14,6 +14,12 @@ def _castle_heal_action_slice(env: CampaignEnv):
     return slice(start, stop)
 
 
+def _castle_revive_action_slice(env: CampaignEnv):
+    start = env.GRID_CASTLE_REVIVE_ACTION_START
+    stop = start + len(env.CASTLE_REVIVE_POSITIONS)
+    return slice(start, stop)
+
+
 def _pairwise_manhattan_distances(tiles):
     distances = []
     for index, (x1, y1) in enumerate(tiles):
@@ -64,6 +70,24 @@ def test_castle_heal_actions_available_on_all_heal_tiles():
         env.grid_env.agent_pos = tile
         mask = env.compute_action_mask()
         assert mask[castle_slice].any()
+
+
+def test_castle_revive_actions_available_on_all_heal_tiles_when_gold_is_enough():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+    env.gold = 50.0
+
+    unit = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 7)
+    unit["hp"] = 0.0
+    unit["health"] = 0.0
+    unit["Level"] = 1
+
+    castle_revive_slice = _castle_revive_action_slice(env)
+
+    for tile in env.castle_heal_tiles:
+        env.grid_env.agent_pos = tile
+        mask = env.compute_action_mask()
+        assert mask[castle_revive_slice].any()
 
 
 def test_castle_heal_spends_only_required_gold_when_enough():
@@ -137,3 +161,64 @@ def test_castle_heal_level_4_or_5_costs_three_gold_per_hp_and_can_be_partial():
     assert env.gold == pytest.approx(0.0)
     assert float(info.get("healed_amount", 0.0)) == pytest.approx(expected_healed)
     assert float(info.get("gold_spent", 0.0)) == pytest.approx(5.5)
+
+
+@pytest.mark.parametrize(
+    ("level", "revive_cost"),
+    [
+        (1, 50.0),
+        (2, 200.0),
+        (3, 400.0),
+        (4, 600.0),
+        (5, 800.0),
+    ],
+)
+def test_castle_revive_spends_gold_by_unit_level(level, revive_cost):
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    target_pos = 7
+    action = env.GRID_CASTLE_REVIVE_ACTION_START + env.CASTLE_REVIVE_POSITIONS.index(target_pos)
+    env.grid_env.agent_pos = env.castle_heal_tiles[0]
+
+    unit = next(u for u in env.blue_team_state if int(u.get("position", -1)) == target_pos)
+    unit["hp"] = 0.0
+    unit["health"] = 0.0
+    unit["Level"] = level
+
+    env.gold = revive_cost + 25.0
+    _, _, _, _, info = env.step(action)
+
+    assert float(unit.get("hp", 0) or 0) == pytest.approx(1.0)
+    assert float(unit.get("health", 0) or 0) == pytest.approx(1.0)
+    assert env.gold == pytest.approx(25.0)
+    assert info.get("revived") is True
+    assert float(info.get("revive_cost", 0.0)) == pytest.approx(revive_cost)
+    assert float(info.get("gold_spent", 0.0)) == pytest.approx(revive_cost)
+
+
+def test_castle_revive_action_is_blocked_when_gold_is_below_required_cost():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    target_pos = 7
+    action = env.GRID_CASTLE_REVIVE_ACTION_START + env.CASTLE_REVIVE_POSITIONS.index(target_pos)
+    env.grid_env.agent_pos = env.castle_heal_tiles[0]
+
+    unit = next(u for u in env.blue_team_state if int(u.get("position", -1)) == target_pos)
+    unit["hp"] = 0.0
+    unit["health"] = 0.0
+    unit["Level"] = 4
+
+    env.gold = 599.0
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is False
+
+    _, _, _, _, info = env.step(action)
+
+    assert float(unit.get("hp", 0) or 0) == pytest.approx(0.0)
+    assert float(unit.get("health", 0) or 0) == pytest.approx(0.0)
+    assert env.gold == pytest.approx(599.0)
+    assert info.get("revived") is False
+    assert float(info.get("revive_cost", 0.0)) == pytest.approx(600.0)
+    assert float(info.get("gold_spent", 0.0)) == pytest.approx(0.0)
