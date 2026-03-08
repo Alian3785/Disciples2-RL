@@ -75,7 +75,8 @@ class CampaignEnv(gym.Env):
           - 8: отдых (REST) — восстановление 5% HP раненым юнитам
           - 9-14: применить бутыль лечения к позициям BLUE 7-12 (+150 HP, не выше максимума)
           - 15-20: применить бутыль воскрешения к позициям BLUE 7-12 (оживляет с 1 HP)
-          - 21-26: лечение в замке по позициям BLUE 7-12 (стоимость за 1 HP зависит от Level)
+          - 21-26: лечение на специальных клетках карты по позициям BLUE 7-12
+            (стоимость за 1 HP зависит от Level)
           - 27-51: ????????? ????????? ??????? (25 ????????)
         - В режиме battle: используются действия 0-14 (атака/защита/ожидание)
 
@@ -102,16 +103,7 @@ class CampaignEnv(gym.Env):
     REVIVE_BOTTLE_POSITIONS = GRID_BOTTLE_POSITIONS
     MAX_REVIVE_BOTTLES = 40
     CASTLE_POS = (1, 1)
-    EXTRA_CASTLE_HEAL_TILE_COUNT = 2
-    CASTLE_EXTRA_HEAL_TILE_CANDIDATES = (
-        (1, 2),
-        (2, 1),
-        (2, 2),
-        (1, 0),
-        (0, 1),
-        (2, 0),
-        (0, 2),
-    )
+    CASTLE_HEAL_TILE_COUNT = 3
     GRID_CASTLE_HEAL_ACTION_START = GRID_REVIVE_ACTION_START + len(REVIVE_BOTTLE_POSITIONS)  # 21
     CASTLE_HEAL_POSITIONS = GRID_BOTTLE_POSITIONS
     GRID_BUILD_ACTION_START = GRID_CASTLE_HEAL_ACTION_START + len(CASTLE_HEAL_POSITIONS)  # 27
@@ -242,7 +234,7 @@ class CampaignEnv(gym.Env):
 
         self._log("=== НОВАЯ КАМПАНИЯ ===")
         self._log(f"Старт на позиции {self.grid_env.agent_pos}")
-        self._log(f"Клетки лечения в замке: {self.castle_heal_tiles}")
+        self._log(f"Клетки лечения на карте: {self.castle_heal_tiles}")
         self._log(f"Враги на карте: {list(self.grid_env.enemy_positions.items())}")
 
         info = {
@@ -271,7 +263,7 @@ class CampaignEnv(gym.Env):
         #   0-7 — движение, 8 — отдых,
         #   9-14 — применить бутыль лечения к позициям 7-12 соответственно.
         #   15-20 — применить бутыль воскрешения к позициям 7-12 соответственно.
-        #   21-26 — лечение в замке по позициям 7-12.
+        #   21-26 — лечение на специальных клетках карты по позициям 7-12.
         #   27-51 ? ????????? ?????? ????????? ??????? (25 ????????).
         if action >= self.GRID_BUILD_ACTION_START:
             return self._step_building(action)
@@ -398,39 +390,108 @@ class CampaignEnv(gym.Env):
 
     def _resolve_castle_heal_tiles(self) -> Tuple[Tuple[int, int], ...]:
         """
-        Формирует клетки лечения в замке:
-        - базовая клетка всегда (1, 1) (с clamp по размеру карты);
-        - дополнительно подбираются 2 свободные клетки без врагов.
+        Формирует клетки лечения на карте так, чтобы они были
+        разнесены по разным краям и не стояли на врагах.
         """
-        castle_tile = self._clamp_grid_pos(self.CASTLE_POS)
         enemy_tiles = {tuple(pos) for pos in self.grid_env.enemy_positions.values()}
 
-        extra_tiles: List[Tuple[int, int]] = []
-        for candidate in self.CASTLE_EXTRA_HEAL_TILE_CANDIDATES:
-            tile = self._clamp_grid_pos(candidate)
-            if tile == castle_tile or tile in enemy_tiles or tile in extra_tiles:
+        if self.grid_size >= 4:
+            margin = 1
+        else:
+            margin = 0
+        far_edge = max(0, self.grid_size - 1 - margin)
+        near_edge = margin
+
+        preferred_anchors = (
+            self._clamp_grid_pos(self.CASTLE_POS),
+            (far_edge, near_edge),
+            (near_edge, far_edge),
+            (far_edge, far_edge),
+        )
+
+        heal_tiles: List[Tuple[int, int]] = []
+        blocked_tiles = set(enemy_tiles)
+
+        for anchor in preferred_anchors:
+            tile = self._nearest_free_tile(anchor, blocked_tiles)
+            if tile is None:
                 continue
-            extra_tiles.append(tile)
-            if len(extra_tiles) >= self.EXTRA_CASTLE_HEAL_TILE_COUNT:
+            heal_tiles.append(tile)
+            blocked_tiles.add(tile)
+            if len(heal_tiles) >= self.CASTLE_HEAL_TILE_COUNT:
                 break
 
-        if len(extra_tiles) < self.EXTRA_CASTLE_HEAL_TILE_COUNT:
-            for y in range(self.grid_size):
-                for x in range(self.grid_size):
-                    tile = (x, y)
-                    if tile == castle_tile or tile in enemy_tiles or tile in extra_tiles:
-                        continue
-                    extra_tiles.append(tile)
-                    if len(extra_tiles) >= self.EXTRA_CASTLE_HEAL_TILE_COUNT:
-                        break
-                if len(extra_tiles) >= self.EXTRA_CASTLE_HEAL_TILE_COUNT:
-                    break
+        while len(heal_tiles) < self.CASTLE_HEAL_TILE_COUNT:
+            tile = self._farthest_free_tile(blocked_tiles, reference_tiles=tuple(heal_tiles))
+            if tile is None:
+                break
+            heal_tiles.append(tile)
+            blocked_tiles.add(tile)
 
-        return tuple([castle_tile] + extra_tiles)
+        return tuple(heal_tiles)
 
     def _is_at_castle(self) -> bool:
-        """True если агент стоит на одной из клеток лечения замка в grid-режиме."""
+        """True если агент стоит на одной из клеток лечения в grid-режиме."""
         return tuple(self.grid_env.agent_pos) in self.castle_heal_tiles
+
+    def _nearest_free_tile(
+        self,
+        anchor: Tuple[int, int],
+        blocked_tiles: set[Tuple[int, int]],
+    ) -> Optional[Tuple[int, int]]:
+        """Ищет свободную клетку, ближайшую к опорной точке."""
+        best_tile: Optional[Tuple[int, int]] = None
+        best_distance: Optional[int] = None
+        ax, ay = self._clamp_grid_pos(anchor)
+
+        for y in range(self.grid_size):
+            for x in range(self.grid_size):
+                tile = (x, y)
+                if tile in blocked_tiles:
+                    continue
+                distance = abs(x - ax) + abs(y - ay)
+                if (
+                    best_distance is None
+                    or distance < best_distance
+                    or (distance == best_distance and tile < best_tile)
+                ):
+                    best_tile = tile
+                    best_distance = distance
+
+        return best_tile
+
+    def _farthest_free_tile(
+        self,
+        blocked_tiles: set[Tuple[int, int]],
+        reference_tiles: Tuple[Tuple[int, int], ...],
+    ) -> Optional[Tuple[int, int]]:
+        """Фолбэк: берёт свободную клетку с максимальной удалённостью от уже выбранных."""
+        best_tile: Optional[Tuple[int, int]] = None
+        best_score: Optional[Tuple[int, int, int, int]] = None
+
+        for y in range(self.grid_size):
+            for x in range(self.grid_size):
+                tile = (x, y)
+                if tile in blocked_tiles:
+                    continue
+
+                if reference_tiles:
+                    distances = [
+                        (x - rx) * (x - rx) + (y - ry) * (y - ry)
+                        for rx, ry in reference_tiles
+                    ]
+                    min_distance = min(distances)
+                    total_distance = sum(distances)
+                else:
+                    min_distance = 0
+                    total_distance = 0
+
+                score = (min_distance, total_distance, -y, -x)
+                if best_score is None or score > best_score:
+                    best_tile = tile
+                    best_score = score
+
+        return best_tile
 
     @staticmethod
     def _castle_heal_gold_per_hp(unit: Dict) -> float:
@@ -559,7 +620,7 @@ class CampaignEnv(gym.Env):
 
             name = unit.get("name", f"pos_{position}")
             self._log(
-                f"Castle heal: {name} (pos {position}) HP {hp:.1f} -> {new_hp:.1f} "
+                f"Heal tile: {name} (pos {position}) HP {hp:.1f} -> {new_hp:.1f} "
                 f"(+{healed:.1f}, level={level_for_log}, "
                 f"cost={gold_spent:.1f} gold, gold_left={self.gold:.1f})"
             )
@@ -568,7 +629,7 @@ class CampaignEnv(gym.Env):
         return 0.0, None
 
     def _step_heal_in_castle(self, action: int):
-        """Лечит выбранного юнита BLUE на клетках замка с ценой за HP по Level."""
+        """Лечит выбранного юнита BLUE на клетках лечения с ценой за HP по Level."""
         idx = action - self.GRID_CASTLE_HEAL_ACTION_START
         target_pos = (
             self.CASTLE_HEAL_POSITIONS[idx]
@@ -1523,7 +1584,7 @@ class CampaignEnv(gym.Env):
                 for idx, pos in enumerate(self.REVIVE_BOTTLE_POSITIONS):
                     mask[self.GRID_REVIVE_ACTION_START + idx] = self._can_revive_position(pos)
 
-            # Лечение в замке: доступно только на специальных клетках лечения.
+            # Лечение: доступно только на специальных клетках лечения.
             if self._is_at_castle() and float(self.gold) > 0.0:
                 for idx, pos in enumerate(self.CASTLE_HEAL_POSITIONS):
                     mask[self.GRID_CASTLE_HEAL_ACTION_START + idx] = self._can_heal_position(pos)
