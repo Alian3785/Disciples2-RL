@@ -6,6 +6,8 @@ import pytest
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from campaign_env import CampaignEnv
+from grid import DEFAULT_HERO_GRID_POSITION, are_targets_reachable
+from grid_world_env import GridWorldEnv
 
 
 def _castle_heal_action_slice(env: CampaignEnv):
@@ -28,29 +30,127 @@ def _pairwise_manhattan_distances(tiles):
     return distances
 
 
-def test_hero_starts_at_1_1_and_returns_there_on_reset():
+def _largest_component_size(tiles):
+    remaining = set(tiles)
+    best = 0
+
+    while remaining:
+        start = remaining.pop()
+        stack = [start]
+        size = 0
+        while stack:
+            x, y = stack.pop()
+            size += 1
+            for dx, dy in ((0, 1), (1, 0), (0, -1), (-1, 0)):
+                neighbor = (x + dx, y + dy)
+                if neighbor in remaining:
+                    remaining.remove(neighbor)
+                    stack.append(neighbor)
+        best = max(best, size)
+
+    return best
+
+
+def test_hero_starts_at_legions_capital_and_returns_there_on_reset():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
-    assert env.grid_env.agent_pos == (1, 1)
+    assert env.grid_env.agent_pos == DEFAULT_HERO_GRID_POSITION
 
     _, info = env.reset(seed=123)
-    assert env.grid_env.agent_pos == (1, 1)
-    assert tuple(info["agent_pos"]) == (1, 1)
+    assert env.grid_env.agent_pos == DEFAULT_HERO_GRID_POSITION
+    assert tuple(info["agent_pos"]) == DEFAULT_HERO_GRID_POSITION
 
 
-def test_heal_tiles_are_far_apart_and_do_not_overlap_enemies():
+def test_only_capital_heal_tile_exists_and_does_not_overlap_enemies():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
 
     heal_tiles = tuple(env.castle_heal_tiles)
-    assert len(heal_tiles) == 3
-    assert set(heal_tiles) == {(1, 1), (38, 1), (1, 38)}
-
-    pairwise_distances = _pairwise_manhattan_distances(heal_tiles)
-    assert min(pairwise_distances) >= env.grid_size - 3
+    assert len(heal_tiles) == 1
+    assert heal_tiles[0] == DEFAULT_HERO_GRID_POSITION
 
     enemy_tiles = set(env.grid_env.enemy_positions.values())
     for tile in heal_tiles:
         assert tile not in enemy_tiles
+
+
+def test_default_layout_uses_static_obstacles_and_keeps_targets_reachable():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    obstacle_tiles = set(env.grid_env.obstacle_positions)
+    assert obstacle_tiles
+    assert len(obstacle_tiles) == 837
+    assert obstacle_tiles.isdisjoint(set(env.castle_heal_tiles))
+    assert obstacle_tiles.isdisjoint(set(env.grid_env.enemy_positions.values()))
+    assert env.grid_env.start_position not in obstacle_tiles
+
+    reachable_targets = set(env.castle_heal_tiles) | set(env.grid_env.enemy_positions.values())
+    assert are_targets_reachable(
+        env.grid_size,
+        env.grid_env.start_position,
+        obstacle_tiles,
+        reachable_targets,
+    )
+
+
+def test_hero_start_is_empty_and_adjacent_to_legions_capital_obstacles():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    start_x, start_y = env.grid_env.start_position
+    capital_tiles = {
+        (x, y)
+        for x in range(22, 27)
+        for y in range(8, 13)
+    }
+
+    assert env.grid_env.start_position == DEFAULT_HERO_GRID_POSITION
+    assert env.grid_env.start_position not in env.grid_env.obstacle_positions
+    assert any(
+        (start_x + dx, start_y + dy) in capital_tiles
+        for dx in (-1, 0, 1)
+        for dy in (-1, 0, 1)
+        if dx or dy
+    )
+
+
+def test_obstacle_blocks_movement_with_configured_penalty():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    origin_tile = env.grid_env.agent_pos
+    obstacle_tile = (origin_tile[0] + 1, origin_tile[1])
+    move_action = env.grid_env.ACTION_RIGHT
+    env.grid_env.obstacle_positions = {obstacle_tile}
+
+    env.grid_env.agent_pos = origin_tile
+    env.grid_env.visited_cells = {origin_tile}
+    env.grid_visit_counts = {}
+    env.recent_positions = []
+
+    _, reward, _, _, info = env.step(move_action)
+
+    expected_reward = 0.2 * (
+        float(env.grid_env.step_penalty) + float(env.grid_env.obstacle_penalty)
+    )
+    assert env.grid_env.agent_pos == origin_tile
+    assert reward == pytest.approx(expected_reward)
+    assert info["blocked_by_obstacle"] is True
+    assert tuple(info["blocked_obstacle_pos"]) == obstacle_tile
+
+
+def test_grid_world_render_marks_obstacles():
+    env = GridWorldEnv(
+        grid_size=5,
+        enemy_positions={},
+        obstacle_positions={(2, 2)},
+        start_position=(1, 2),
+    )
+    env.reset(seed=123)
+
+    rendered = env.render(mode="ansi")
+    assert rendered is not None
+    assert "# " in rendered
 
 
 def test_castle_heal_actions_available_on_all_heal_tiles():

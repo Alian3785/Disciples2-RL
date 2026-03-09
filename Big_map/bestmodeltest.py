@@ -15,6 +15,7 @@ from sb3_contrib.common.wrappers import ActionMasker
 from sb3_contrib.ppo_mask import MaskablePPO
 
 from campaign_env import CampaignEnv
+from grid import DEFAULT_GRID_SIZE
 
 
 def mask_fn(env: CampaignEnv) -> np.ndarray:
@@ -23,7 +24,7 @@ def mask_fn(env: CampaignEnv) -> np.ndarray:
 
 def make_env() -> Monitor:
     base = CampaignEnv(
-        grid_size=40,
+        grid_size=DEFAULT_GRID_SIZE,
         reward_engage_battle=0.1,
         reward_defeat_enemy=4.0,
         reward_all_enemies=4.0,

@@ -13,6 +13,7 @@ import re
 import time
 import subprocess
 from pathlib import Path
+from typing import Any
 import numpy as np
 from console_encoding import setup_utf8_console
 
@@ -30,7 +31,8 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CallbackList, EvalCallback, BaseCallback
 from stable_baselines3.common.env_checker import check_env
-from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+from stable_baselines3.common.evaluation import evaluate_policy as sb3_evaluate_policy
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize, sync_envs_normalization
 
 try:
     from wandb.integration.sb3 import WandbCallback
@@ -42,12 +44,16 @@ from sb3_contrib.ppo_mask import MaskablePPO
 from sb3_contrib.common.wrappers import ActionMasker
 
 try:
-    from sb3_contrib.common.maskable.callbacks import MaskableEvalCallback
+    from sb3_contrib.common.maskable.evaluation import (
+        evaluate_policy as maskable_evaluate_policy,
+    )
     _HAS_MASKABLE_EVAL = True
 except ImportError:
+    maskable_evaluate_policy = None
     _HAS_MASKABLE_EVAL = False
 
 from campaign_env import CampaignEnv
+from grid import DEFAULT_GRID_SIZE
 
 # Для Windows и симлинков W&B
 if os.name == "nt":
@@ -55,8 +61,6 @@ if os.name == "nt":
 
 # Директория этого файла (чтобы пути были стабильны независимо от cwd)
 BASE_DIR = Path(__file__).resolve().parent
-DEFAULT_GRID_SIZE = 40
-
 REWARD_CONFIG = {
     "reward_engage_battle": 0.25,
     "reward_defeat_enemy": 4.0,
@@ -259,6 +263,218 @@ class SaveVecNormalizeOnBestCallback(BaseCallback):
             if self.verbose > 0:
                 print(f"[VecNormalize] Saved best stats > {target}")
         return True
+
+
+def is_better_campaign_eval(
+    *,
+    victory_rate: float,
+    mean_reward: float,
+    best_victory_rate: float,
+    best_mean_reward: float,
+) -> bool:
+    """Choose the best checkpoint by victory rate, using mean reward only as a tie-break."""
+    victory_rate = float(victory_rate)
+    mean_reward = float(mean_reward)
+    best_victory_rate = float(best_victory_rate)
+    best_mean_reward = float(best_mean_reward)
+
+    if victory_rate > best_victory_rate:
+        return True
+    if np.isclose(victory_rate, best_victory_rate):
+        return mean_reward > best_mean_reward
+    return False
+
+
+class CampaignVictoryEvalCallback(EvalCallback):
+    """Eval callback that logs deterministic and stochastic campaign win rates.
+
+    The best checkpoint is still chosen by deterministic victory rate.
+    """
+
+    def __init__(self, *args, use_masking: bool = True, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.use_masking = bool(use_masking)
+        self.best_victory_rate = -np.inf
+        self.last_victory_rate = 0.0
+        self.last_stochastic_victory_rate = 0.0
+        self._eval_victory_buffer: list[bool] = []
+        self.evaluations_victories: list[list[bool]] = []
+        self.stochastic_evaluations_results: list[list[float]] = []
+        self.stochastic_evaluations_length: list[list[int]] = []
+        self.stochastic_evaluations_victories: list[list[bool]] = []
+        self.stochastic_evaluations_successes: list[list[bool]] = []
+
+    def _log_success_callback(self, locals_: dict[str, Any], globals_: dict[str, Any]) -> None:
+        super()._log_success_callback(locals_, globals_)
+        if locals_["done"]:
+            info = locals_["info"]
+            self._eval_victory_buffer.append(info.get("campaign_result") == "victory")
+
+    def _evaluate_policy(self, *, deterministic: bool):
+        if self.use_masking:
+            if maskable_evaluate_policy is None:
+                raise RuntimeError("Maskable evaluation is unavailable, but use_masking=True.")
+            return maskable_evaluate_policy(
+                self.model,  # type: ignore[arg-type]
+                self.eval_env,
+                n_eval_episodes=self.n_eval_episodes,
+                render=self.render,
+                deterministic=deterministic,
+                return_episode_rewards=True,
+                warn=self.warn,
+                callback=self._log_success_callback,
+                use_masking=True,
+            )
+        return sb3_evaluate_policy(
+            self.model,
+            self.eval_env,
+            n_eval_episodes=self.n_eval_episodes,
+            render=self.render,
+            deterministic=deterministic,
+            return_episode_rewards=True,
+            warn=self.warn,
+            callback=self._log_success_callback,
+        )
+
+    def _run_campaign_eval(self, *, deterministic: bool) -> tuple[list[float], list[int], list[bool], list[bool]]:
+        self._is_success_buffer = []
+        self._eval_victory_buffer = []
+        episode_rewards, episode_lengths = self._evaluate_policy(deterministic=deterministic)
+        return (
+            list(episode_rewards),
+            list(episode_lengths),
+            list(self._is_success_buffer),
+            list(self._eval_victory_buffer),
+        )
+
+    def _on_step(self) -> bool:
+        continue_training = True
+
+        if self.eval_freq > 0 and self.n_calls % self.eval_freq == 0:
+            if self.model.get_vec_normalize_env() is not None:
+                try:
+                    sync_envs_normalization(self.training_env, self.eval_env)
+                except AttributeError as e:
+                    raise AssertionError(
+                        "Training and eval env are not wrapped the same way, "
+                        "see https://stable-baselines3.readthedocs.io/en/master/guide/callbacks.html#evalcallback "
+                        "and warning above."
+                    ) from e
+
+            det_rewards, det_lengths, det_successes, det_victories = self._run_campaign_eval(
+                deterministic=True
+            )
+            stoch_rewards, stoch_lengths, stoch_successes, stoch_victories = self._run_campaign_eval(
+                deterministic=False
+            )
+
+            if self.log_path is not None:
+                self.evaluations_timesteps.append(self.num_timesteps)
+                self.evaluations_results.append(det_rewards)
+                self.evaluations_length.append(det_lengths)
+                self.evaluations_victories.append(det_victories)
+                self.stochastic_evaluations_results.append(stoch_rewards)
+                self.stochastic_evaluations_length.append(stoch_lengths)
+                self.stochastic_evaluations_victories.append(stoch_victories)
+
+                kwargs = {
+                    "victories": self.evaluations_victories,
+                    "deterministic_results": self.evaluations_results,
+                    "deterministic_ep_lengths": self.evaluations_length,
+                    "deterministic_victories": self.evaluations_victories,
+                    "stochastic_results": self.stochastic_evaluations_results,
+                    "stochastic_ep_lengths": self.stochastic_evaluations_length,
+                    "stochastic_victories": self.stochastic_evaluations_victories,
+                }
+                if det_successes:
+                    self.evaluations_successes.append(det_successes)
+                    kwargs["successes"] = self.evaluations_successes
+                    kwargs["deterministic_successes"] = self.evaluations_successes
+                if stoch_successes:
+                    self.stochastic_evaluations_successes.append(stoch_successes)
+                    kwargs["stochastic_successes"] = self.stochastic_evaluations_successes
+
+                np.savez(
+                    self.log_path,
+                    timesteps=self.evaluations_timesteps,
+                    results=self.evaluations_results,
+                    ep_lengths=self.evaluations_length,
+                    **kwargs,
+                )
+
+            mean_reward = float(np.mean(det_rewards))
+            std_reward = float(np.std(det_rewards))
+            mean_ep_length = float(np.mean(det_lengths))
+            std_ep_length = float(np.std(det_lengths))
+            victory_rate = float(np.mean(det_victories)) if det_victories else 0.0
+            stochastic_mean_reward = float(np.mean(stoch_rewards))
+            stochastic_std_reward = float(np.std(stoch_rewards))
+            stochastic_mean_ep_length = float(np.mean(stoch_lengths))
+            stochastic_std_ep_length = float(np.std(stoch_lengths))
+            stochastic_victory_rate = float(np.mean(stoch_victories)) if stoch_victories else 0.0
+            self.last_mean_reward = mean_reward
+            self.last_victory_rate = victory_rate
+            self.last_stochastic_victory_rate = stochastic_victory_rate
+
+            if self.verbose >= 1:
+                print(
+                    f"Eval num_timesteps={self.num_timesteps}, "
+                    f"det_reward={mean_reward:.2f} +/- {std_reward:.2f}, "
+                    f"stoch_reward={stochastic_mean_reward:.2f} +/- {stochastic_std_reward:.2f}"
+                )
+                print(
+                    f"Episode length: det={mean_ep_length:.2f} +/- {std_ep_length:.2f}, "
+                    f"stoch={stochastic_mean_ep_length:.2f} +/- {stochastic_std_ep_length:.2f}"
+                )
+                print(
+                    f"Victory rate: det={100 * victory_rate:.2f}%, "
+                    f"stoch={100 * stochastic_victory_rate:.2f}%"
+                )
+
+            self.logger.record("eval/mean_reward", mean_reward)
+            self.logger.record("eval/mean_ep_length", mean_ep_length)
+            self.logger.record("eval/victory_rate", victory_rate)
+            self.logger.record("eval/deterministic_mean_reward", mean_reward)
+            self.logger.record("eval/deterministic_mean_ep_length", mean_ep_length)
+            self.logger.record("eval/deterministic_victory_rate", victory_rate)
+            self.logger.record("eval/stochastic_mean_reward", stochastic_mean_reward)
+            self.logger.record("eval/stochastic_mean_ep_length", stochastic_mean_ep_length)
+            self.logger.record("eval/stochastic_victory_rate", stochastic_victory_rate)
+
+            if det_successes:
+                success_rate = float(np.mean(det_successes))
+                if self.verbose >= 1:
+                    print(f"Success rate: det={100 * success_rate:.2f}%")
+                self.logger.record("eval/success_rate", success_rate)
+                self.logger.record("eval/deterministic_success_rate", success_rate)
+            if stoch_successes:
+                stochastic_success_rate = float(np.mean(stoch_successes))
+                if self.verbose >= 1:
+                    print(f"Success rate (stochastic): {100 * stochastic_success_rate:.2f}%")
+                self.logger.record("eval/stochastic_success_rate", stochastic_success_rate)
+
+            self.logger.record("time/total_timesteps", self.num_timesteps, exclude="tensorboard")
+            self.logger.dump(self.num_timesteps)
+
+            if is_better_campaign_eval(
+                victory_rate=victory_rate,
+                mean_reward=mean_reward,
+                best_victory_rate=self.best_victory_rate,
+                best_mean_reward=self.best_mean_reward,
+            ):
+                if self.verbose >= 1:
+                    print("New best model by deterministic victory rate!")
+                if self.best_model_save_path is not None:
+                    self.model.save(os.path.join(self.best_model_save_path, "best_model"))
+                self.best_victory_rate = victory_rate
+                self.best_mean_reward = mean_reward
+                if self.callback_on_new_best is not None:
+                    continue_training = self.callback_on_new_best.on_step()
+
+            if self.callback is not None:
+                continue_training = continue_training and self._on_event()
+
+        return continue_training
 
 
 class CampaignMetricsCallback(BaseCallback):
@@ -482,28 +698,17 @@ if __name__ == "__main__":
         save_path=f"{MODEL_DIR}/best",
         verbose=0,
     )
-    if _HAS_MASKABLE_EVAL:
-        eval_cb = MaskableEvalCallback(
-            eval_env,
-            best_model_save_path=f"{MODEL_DIR}/best",
-            log_path=EVAL_DIR,
-            eval_freq=EVAL_FREQ,
-            n_eval_episodes=10,
-            deterministic=True,
-            render=False,
-            callback_on_new_best=best_vecnorm_cb,
-        )
-    else:
-        eval_cb = EvalCallback(
-            eval_env,
-            best_model_save_path=f"{MODEL_DIR}/best",
-            log_path=EVAL_DIR,
-            eval_freq=EVAL_FREQ,
-            n_eval_episodes=10,
-            deterministic=True,
-            render=False,
-            callback_on_new_best=best_vecnorm_cb,
-        )
+    eval_cb = CampaignVictoryEvalCallback(
+        eval_env,
+        best_model_save_path=f"{MODEL_DIR}/best",
+        log_path=EVAL_DIR,
+        eval_freq=EVAL_FREQ,
+        n_eval_episodes=10,
+        deterministic=True,
+        render=False,
+        callback_on_new_best=best_vecnorm_cb,
+        use_masking=_HAS_MASKABLE_EVAL,
+    )
     callbacks.append(eval_cb)
 
     # -------------------- Обучение --------------------

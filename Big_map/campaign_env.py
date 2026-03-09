@@ -3,8 +3,8 @@
 Двухуровневая среда: Grid World + Battle.
 ВЕРСИЯ БЕЗ ВОССТАНОВЛЕНИЯ HP.
 
-Агент перемещается по карте 40×40 (по умолчанию), встречает врагов и сражается с ними.
-Всего 4 битвы с врагами разной сложности.
+Агент перемещается по карте 48×48 (по умолчанию), встречает врагов и сражается с ними.
+Список врагов и их позиции соответствуют совпавшим отрядам из сценарной карты.
 
 После каждой победы HP юнитов BLUE НЕ восстанавливается,
 погибшие юниты НЕ воскрешаются. Только сбрасываются временные эффекты.
@@ -12,7 +12,7 @@
 Схема наград:
   - За участие в битве (нашёл врага): +0.1
   - За победу в каждой битве: +0.3
-  - За победу над всеми 4 врагами: +4.0
+  - За полную зачистку карты: финал кампании
   - За поражение: -1.0
   - За таймаут (лимит шагов): -6.0
 """
@@ -24,8 +24,17 @@ from typing import Optional, Dict, List, Tuple
 from copy import deepcopy
 
 from battle_env import BattleEnv, UNITS_BLUE, FEATURES_PER_UNIT
-from grid_world_env import GridWorldEnv
 from enemy_configs import ENEMY_CONFIGS, ENEMY_DESCRIPTIONS
+from grid import (
+    are_targets_reachable,
+    DEFAULT_GRID_SIZE,
+    DEFAULT_HERO_GRID_POSITION,
+    HEAL_TILE_COUNT,
+    resolve_obstacle_tiles,
+    resolve_heal_tiles,
+    scale_enemy_positions,
+)
+from grid_world_env import GridWorldEnv
 from data_dicts_compact_lines import DATA as UNIT_DATA, map_unit_to_battle
 from Buildings import (
     empire_buildings_d2,
@@ -47,7 +56,7 @@ BUILDINGS_D2_TEMPLATE = {key: deepcopy(value) for key, value in BUILDINGS_D2.ite
 
 class CampaignEnv(gym.Env):
     """
-    Двухуровневая среда: Grid World + Battle (4 битвы).
+    Двухуровневая среда: Grid World + Battle.
 
     Режимы:
         - MODE_GRID: агент перемещается по карте
@@ -56,7 +65,7 @@ class CampaignEnv(gym.Env):
     Награды:
         - Награда за участие в битве (нашёл врага): +0.1
         - Награда за победу в каждой битве: +0.3
-        - Финальный бонус за победу над зелёным драконом (enemy_id=30): reward_all_enemies * 10
+        - Финальный бонус за победу над зелёным драконом: reward_all_enemies * 10
         - Штраф за поражение: -1.0
         - Штраф за таймаут (лимит шагов на карте): -6.0
 
@@ -104,20 +113,20 @@ class CampaignEnv(gym.Env):
     GRID_REVIVE_ACTION_START = GRID_BOTTLE_ACTION_START + len(GRID_BOTTLE_POSITIONS)  # 15
     REVIVE_BOTTLE_POSITIONS = GRID_BOTTLE_POSITIONS
     MAX_REVIVE_BOTTLES = 40
-    CASTLE_POS = (1, 1)
-    CASTLE_HEAL_TILE_COUNT = 3
+    CASTLE_POS = DEFAULT_HERO_GRID_POSITION
+    CASTLE_HEAL_TILE_COUNT = HEAL_TILE_COUNT
     GRID_CASTLE_HEAL_ACTION_START = GRID_REVIVE_ACTION_START + len(REVIVE_BOTTLE_POSITIONS)  # 21
     CASTLE_HEAL_POSITIONS = GRID_BOTTLE_POSITIONS
     GRID_CASTLE_REVIVE_ACTION_START = GRID_CASTLE_HEAL_ACTION_START + len(CASTLE_HEAL_POSITIONS)  # 27
     CASTLE_REVIVE_POSITIONS = REVIVE_BOTTLE_POSITIONS
     GRID_BUILD_ACTION_START = GRID_CASTLE_REVIVE_ACTION_START + len(CASTLE_REVIVE_POSITIONS)  # 33
-    GREEN_DRAGON_ENEMY_ID = 30
+    GREEN_DRAGON_ENEMY_ID = 31
     GREEN_DRAGON_REWARD_MULTIPLIER = 10.0
     ENEMY_REWARD_MULTIPLIERS = {}
 
     def __init__(
         self,
-        grid_size: int = 40,
+        grid_size: int = DEFAULT_GRID_SIZE,
         reward_engage_battle: float = 0.2,  # Бонус за вход в бой с живым врагом.
         reward_defeat_enemy: float = 1.0,   # Награда за победу в бою против каждого отряда
         reward_all_enemies: float = 10.0,   # Базовая финальная награда (зелёный дракон получает x10)
@@ -169,13 +178,32 @@ class CampaignEnv(gym.Env):
         # Realcapital: 1 = empire, 2 = legions, 3 = mountain_clans, 4 = undead_hordes, 5 = elves
         self.Realcapital = self._normalize_realcapital(realcapital)
 
-        # Подсреда grid: 4 врага, позиции автоматически масштабируются под размер карты.
+        enemy_positions = scale_enemy_positions(self.grid_size)
+        self.castle_heal_tiles: Tuple[Tuple[int, int], ...] = resolve_heal_tiles(
+            self.grid_size,
+            enemy_positions,
+            start_position=self.CASTLE_POS,
+            heal_tile_count=self.CASTLE_HEAL_TILE_COUNT,
+        )
+        obstacle_tiles = resolve_obstacle_tiles(
+            self.grid_size,
+            enemy_positions,
+            heal_tiles=self.castle_heal_tiles,
+            start_position=self.CASTLE_POS,
+        )
+        self._static_enemy_positions = dict(enemy_positions)
+        self._static_castle_heal_tiles: Tuple[Tuple[int, int], ...] = tuple(self.castle_heal_tiles)
+        self._static_obstacle_tiles: Tuple[Tuple[int, int], ...] = tuple(obstacle_tiles)
+
+        # Подсреда grid: враги и препятствия автоматически масштабируются под размер карты.
         self.grid_env = GridWorldEnv(
             grid_size=grid_size,
+            enemy_positions=self._static_enemy_positions,
+            obstacle_positions=self._static_obstacle_tiles,
             start_position=self.CASTLE_POS,
             max_steps=max_grid_steps,
         )
-        self.castle_heal_tiles: Tuple[Tuple[int, int], ...] = self._resolve_castle_heal_tiles()
+        self._ensure_map_layout_consistency()
         self.battle_env: Optional[BattleEnv] = None
         self.grid_obs_base_size = int(self.grid_env.observation_space.shape[0])
         self._init_enemy_obs_metadata()
@@ -230,15 +258,18 @@ class CampaignEnv(gym.Env):
         self._sync_moves_per_turn_with_hero(units=self.blue_team_state, refill=True)
         self.battle_env = None
         self._campaign_logs = []
+        self.castle_heal_tiles = self._static_castle_heal_tiles
+        self.grid_env.enemy_positions = dict(self._static_enemy_positions)
+        self.grid_env.obstacle_positions = set(self._static_obstacle_tiles)
 
         grid_obs, grid_info = self.grid_env.reset(seed=seed)
-        self.castle_heal_tiles = self._resolve_castle_heal_tiles()
         grid_obs = self._augment_grid_obs(grid_obs)
         self._reset_stagnation_tracking(self.grid_env.agent_pos)
 
         self._log("=== НОВАЯ КАМПАНИЯ ===")
         self._log(f"Старт на позиции {self.grid_env.agent_pos}")
         self._log(f"Клетки лечения на карте: {self.castle_heal_tiles}")
+        self._log(f"Препятствия на карте: {sorted(self.grid_env.obstacle_positions)}")
         self._log(f"Враги на карте: {list(self.grid_env.enemy_positions.items())}")
 
         info = {
@@ -310,9 +341,14 @@ class CampaignEnv(gym.Env):
 
         if old_pos != new_pos:
             self._log(f"Перемещение: {old_pos} -> {new_pos}")
+        elif grid_info.get("blocked_by_obstacle"):
+            self._log(
+                f"Препятствие: переход {old_pos} -> {grid_info.get('blocked_target')} заблокирован"
+            )
 
         if 0 <= grid_action <= 7:
-            stagnation_penalty = self._compute_stagnation_penalty(old_pos, new_pos)
+            if not grid_info.get("blocked_by_obstacle", False):
+                stagnation_penalty = self._compute_stagnation_penalty(old_pos, new_pos)
             reward += stagnation_penalty
             self._spend_moves(1)
 
@@ -329,6 +365,8 @@ class CampaignEnv(gym.Env):
             "enemies_alive": dict(self.grid_env.enemies_alive),
             "battle_triggered": grid_info.get("battle_triggered", False),
             "rest_action": grid_info.get("rest_action", False),
+            "blocked_by_obstacle": grid_info.get("blocked_by_obstacle", False),
+            "blocked_obstacle_pos": grid_info.get("blocked_target"),
             "grid_reward_raw": float(_grid_reward),
             "grid_reward_scaled": float(reward),
             "stagnation_penalty": float(stagnation_penalty),
@@ -386,119 +424,9 @@ class CampaignEnv(gym.Env):
 
         return self._build_obs(grid_obs=grid_obs), reward, terminated, truncated, info
 
-    def _clamp_grid_pos(self, pos: Tuple[int, int]) -> Tuple[int, int]:
-        """Ограничивает координаты рамками карты."""
-        x = int(pos[0])
-        y = int(pos[1])
-        return (
-            max(0, min(self.grid_size - 1, x)),
-            max(0, min(self.grid_size - 1, y)),
-        )
-
-    def _resolve_castle_heal_tiles(self) -> Tuple[Tuple[int, int], ...]:
-        """
-        Формирует клетки лечения на карте так, чтобы они были
-        разнесены по разным краям и не стояли на врагах.
-        """
-        enemy_tiles = {tuple(pos) for pos in self.grid_env.enemy_positions.values()}
-
-        if self.grid_size >= 4:
-            margin = 1
-        else:
-            margin = 0
-        far_edge = max(0, self.grid_size - 1 - margin)
-        near_edge = margin
-
-        preferred_anchors = (
-            self._clamp_grid_pos(self.CASTLE_POS),
-            (far_edge, near_edge),
-            (near_edge, far_edge),
-            (far_edge, far_edge),
-        )
-
-        heal_tiles: List[Tuple[int, int]] = []
-        blocked_tiles = set(enemy_tiles)
-
-        for anchor in preferred_anchors:
-            tile = self._nearest_free_tile(anchor, blocked_tiles)
-            if tile is None:
-                continue
-            heal_tiles.append(tile)
-            blocked_tiles.add(tile)
-            if len(heal_tiles) >= self.CASTLE_HEAL_TILE_COUNT:
-                break
-
-        while len(heal_tiles) < self.CASTLE_HEAL_TILE_COUNT:
-            tile = self._farthest_free_tile(blocked_tiles, reference_tiles=tuple(heal_tiles))
-            if tile is None:
-                break
-            heal_tiles.append(tile)
-            blocked_tiles.add(tile)
-
-        return tuple(heal_tiles)
-
     def _is_at_castle(self) -> bool:
         """True если агент стоит на одной из клеток лечения в grid-режиме."""
         return tuple(self.grid_env.agent_pos) in self.castle_heal_tiles
-
-    def _nearest_free_tile(
-        self,
-        anchor: Tuple[int, int],
-        blocked_tiles: set[Tuple[int, int]],
-    ) -> Optional[Tuple[int, int]]:
-        """Ищет свободную клетку, ближайшую к опорной точке."""
-        best_tile: Optional[Tuple[int, int]] = None
-        best_distance: Optional[int] = None
-        ax, ay = self._clamp_grid_pos(anchor)
-
-        for y in range(self.grid_size):
-            for x in range(self.grid_size):
-                tile = (x, y)
-                if tile in blocked_tiles:
-                    continue
-                distance = abs(x - ax) + abs(y - ay)
-                if (
-                    best_distance is None
-                    or distance < best_distance
-                    or (distance == best_distance and tile < best_tile)
-                ):
-                    best_tile = tile
-                    best_distance = distance
-
-        return best_tile
-
-    def _farthest_free_tile(
-        self,
-        blocked_tiles: set[Tuple[int, int]],
-        reference_tiles: Tuple[Tuple[int, int], ...],
-    ) -> Optional[Tuple[int, int]]:
-        """Фолбэк: берёт свободную клетку с максимальной удалённостью от уже выбранных."""
-        best_tile: Optional[Tuple[int, int]] = None
-        best_score: Optional[Tuple[int, int, int, int]] = None
-
-        for y in range(self.grid_size):
-            for x in range(self.grid_size):
-                tile = (x, y)
-                if tile in blocked_tiles:
-                    continue
-
-                if reference_tiles:
-                    distances = [
-                        (x - rx) * (x - rx) + (y - ry) * (y - ry)
-                        for rx, ry in reference_tiles
-                    ]
-                    min_distance = min(distances)
-                    total_distance = sum(distances)
-                else:
-                    min_distance = 0
-                    total_distance = 0
-
-                score = (min_distance, total_distance, -y, -x)
-                if best_score is None or score > best_score:
-                    best_tile = tile
-                    best_score = score
-
-        return best_tile
 
     @staticmethod
     def _castle_heal_gold_per_hp(unit: Dict) -> float:
@@ -694,6 +622,38 @@ class CampaignEnv(gym.Env):
         }
 
         return self._build_obs(grid_obs=grid_obs), reward, terminated, truncated, info
+
+    def _ensure_map_layout_consistency(self) -> None:
+        """Fail fast if generated map features overlap on forbidden tiles."""
+        heal_tiles = {tuple(tile) for tile in self.castle_heal_tiles}
+        enemy_tiles = {tuple(pos) for pos in self.grid_env.enemy_positions.values()}
+        obstacle_tiles = {tuple(pos) for pos in self.grid_env.obstacle_positions}
+
+        heal_enemy_overlap = heal_tiles & enemy_tiles
+        if heal_enemy_overlap:
+            raise ValueError(f"Heal tiles overlap enemy tiles: {sorted(heal_enemy_overlap)}")
+
+        obstacle_enemy_overlap = obstacle_tiles & enemy_tiles
+        if obstacle_enemy_overlap:
+            raise ValueError(
+                f"Obstacle tiles overlap enemy tiles: {sorted(obstacle_enemy_overlap)}"
+            )
+
+        obstacle_heal_overlap = obstacle_tiles & heal_tiles
+        if obstacle_heal_overlap:
+            raise ValueError(
+                f"Obstacle tiles overlap heal tiles: {sorted(obstacle_heal_overlap)}"
+            )
+
+        reachable_targets = set(enemy_tiles)
+        reachable_targets.update(heal_tiles)
+        if not are_targets_reachable(
+            self.grid_size,
+            self.CASTLE_POS,
+            obstacle_tiles,
+            reachable_targets,
+        ):
+            raise ValueError("Obstacle tiles block path to at least one enemy or heal tile")
 
     def _castle_revive_cost_at_position(self, position: int) -> float:
         """Возвращает стоимость воскрешения мёртвого юнита на позиции или 0.0."""
