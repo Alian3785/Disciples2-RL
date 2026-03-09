@@ -1,0 +1,2122 @@
+[
+  {
+    "stack_id": "S001KC0006",
+    "owner": "S001PL0000",
+    "inside": "S001FT0002",
+    "x": 3,
+    "y": 1,
+    "leader_id": "S001UN000f",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 1,
+        "unit_id": "S001UN000f",
+        "type_id": "G000UU0044",
+        "name": "Сeгeрик",
+        "level": 1,
+        "hp": 225,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 1,
+        "unit_id": "S001UN0010",
+        "type_id": "G000UU0029",
+        "name": "Холмовой великан",
+        "level": 1,
+        "hp": 210,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 0,
+        "unit_id": "S001UN0011",
+        "type_id": "G000UU0036",
+        "name": "Гном",
+        "level": 1,
+        "hp": 150,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0011",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 7,
+    "y": 2,
+    "leader_id": "S001UN003f",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN003f",
+        "type_id": "G000UU5229",
+        "name": "Холмовой вeликан",
+        "level": 1,
+        "hp": 210,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC000c",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 19,
+    "y": 2,
+    "leader_id": "S001UN003b",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN003b",
+        "type_id": "G000UU5236",
+        "name": "Гном",
+        "level": 1,
+        "hp": 150,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 1,
+        "unit_id": "S001UN01fd",
+        "type_id": "G000UU0033",
+        "name": "Травница",
+        "level": 1,
+        "hp": 60,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 0,
+        "unit_id": "S001UN01fe",
+        "type_id": "G000UU0161",
+        "name": "Алхимик",
+        "level": 3,
+        "hp": 120,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0036",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 39,
+    "y": 3,
+    "leader_id": "S001UN00d5",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN00d5",
+        "type_id": "G000UU5279",
+        "name": "Призрак",
+        "level": 1,
+        "hp": 90,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 1,
+        "unit_id": "S001UN00d6",
+        "type_id": "G000UU0081",
+        "name": "Колдун",
+        "level": 2,
+        "hp": 75,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 2,
+        "unit_id": "S001UN00d7",
+        "type_id": "G000UU0086",
+        "name": "Воин",
+        "level": 1,
+        "hp": 120,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0010",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 2,
+    "y": 4,
+    "leader_id": "S001UN0044",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 1,
+        "unit_id": "S001UN0044",
+        "type_id": "G000UU5139",
+        "name": "Волк",
+        "level": 1,
+        "hp": 180,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0208",
+        "type_id": "G000UU5040",
+        "name": "Варвар",
+        "level": 1,
+        "hp": 250,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC000f",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 7,
+    "y": 4,
+    "leader_id": "S001UN0041",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0041",
+        "type_id": "G000UU5236",
+        "name": "Гном",
+        "level": 1,
+        "hp": 150,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 2,
+        "unit_id": "S001UN0042",
+        "type_id": "G000UU0026",
+        "name": "Метатель топоров",
+        "level": 1,
+        "hp": 65,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 0,
+        "unit_id": "S001UN0043",
+        "type_id": "G000UU0033",
+        "name": "Травница",
+        "level": 1,
+        "hp": 60,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0055",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 16,
+    "y": 5,
+    "leader_id": "S001UN0144",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0144",
+        "type_id": "G000UU5236",
+        "name": "Гном",
+        "level": 1,
+        "hp": 150,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0145",
+        "type_id": "G000UU0026",
+        "name": "Метатель топоров",
+        "level": 1,
+        "hp": 65,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0020",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 25,
+    "y": 5,
+    "leader_id": "S001UN006a",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN006a",
+        "type_id": "G000UU5130",
+        "name": "Разбойник",
+        "level": 1,
+        "hp": 65,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0033",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 45,
+    "y": 5,
+    "leader_id": "S001UN00a4",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN00a4",
+        "type_id": "G000UU5279",
+        "name": "Призрак",
+        "level": 1,
+        "hp": 90,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN00a7",
+        "type_id": "G000UU0090",
+        "name": "Тамплиер",
+        "level": 2,
+        "hp": 160,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC000a",
+    "owner": "S001PL0000",
+    "inside": "S001FT0004",
+    "x": 37,
+    "y": 6,
+    "leader_id": "S001UN0026",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0026",
+        "type_id": "G000UU0096",
+        "name": "Тифаc",
+        "level": 1,
+        "hp": 150,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 2,
+        "unit_id": "S001UN002a",
+        "type_id": "G000UU0085",
+        "name": "Злой дух",
+        "level": 3,
+        "hp": 75,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 0,
+        "unit_id": "S001UN01f0",
+        "type_id": "G000UU0079",
+        "name": "Призрак",
+        "level": 2,
+        "hp": 90,
+        "is_leader": false
+      },
+      {
+        "slot": 3,
+        "battle_pos": 1,
+        "unit_id": "S001UN01f1",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0045",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 9,
+    "y": 7,
+    "leader_id": "S001UN011d",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN011d",
+        "type_id": "G000UU5139",
+        "name": "Wolf",
+        "level": 1,
+        "hp": 180,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC000d",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 14,
+    "y": 7,
+    "leader_id": "S001UN003d",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 1,
+        "unit_id": "S001UN003d",
+        "type_id": "G000UU5236",
+        "name": "Гном",
+        "level": 1,
+        "hp": 150,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN01a0",
+        "type_id": "G000UU0036",
+        "name": "Гном",
+        "level": 1,
+        "hp": 150,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0021",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 29,
+    "y": 9,
+    "leader_id": "S001UN006c",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN006c",
+        "type_id": "G000UU5131",
+        "name": "Головорeз",
+        "level": 1,
+        "hp": 110,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0003",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 7,
+    "y": 10,
+    "leader_id": "S001UN0006",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0006",
+        "type_id": "G000UU5135",
+        "name": "Гигантcкмй чeрный паук",
+        "level": 1,
+        "hp": 370,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC003a",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 41,
+    "y": 10,
+    "leader_id": "S001UN00ca",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN00ca",
+        "type_id": "G000UU5279",
+        "name": "Призрак",
+        "level": 1,
+        "hp": 90,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 1,
+        "unit_id": "S001UN00cb",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 3,
+        "unit_id": "S001UN00cc",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      },
+      {
+        "slot": 3,
+        "battle_pos": 0,
+        "unit_id": "S001UN00cd",
+        "type_id": "G000UU0086",
+        "name": "Воин",
+        "level": 1,
+        "hp": 120,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0032",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 12,
+    "y": 11,
+    "leader_id": "S001UN020c",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN020c",
+        "type_id": "G000UU5115",
+        "name": "Людоед",
+        "level": 1,
+        "hp": 300,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0035",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 32,
+    "y": 11,
+    "leader_id": "S001UN020b",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN00c4",
+        "type_id": "G000UU0012",
+        "name": "Жрец",
+        "level": 2,
+        "hp": 75,
+        "is_leader": false
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN020b",
+        "type_id": "G000UU5103",
+        "name": "Копейщик",
+        "level": 1,
+        "hp": 140,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC000b",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 18,
+    "y": 12,
+    "leader_id": "S001UN003a",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN003a",
+        "type_id": "G000UU5236",
+        "name": "Dwarf",
+        "level": 1,
+        "hp": 150,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0015",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 40,
+    "y": 13,
+    "leader_id": "S001UN0058",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0058",
+        "type_id": "G000UU5287",
+        "name": "Зомби",
+        "level": 1,
+        "hp": 170,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC001a",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 29,
+    "y": 14,
+    "leader_id": "S001UN005d",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 1,
+        "unit_id": "S001UN005d",
+        "type_id": "G000UU5101",
+        "name": "Peasant",
+        "level": 1,
+        "hp": 40,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN005e",
+        "type_id": "G000UU5001",
+        "name": "Крестьянин",
+        "level": 1,
+        "hp": 40,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 0,
+        "unit_id": "S001UN005f",
+        "type_id": "G000UU5001",
+        "name": "Крестьянин",
+        "level": 1,
+        "hp": 40,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0058",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 14,
+    "y": 15,
+    "leader_id": "S001UN020d",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN020d",
+        "type_id": "G000UU5112",
+        "name": "Орк-багатур",
+        "level": 1,
+        "hp": 220,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0004",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 5,
+    "y": 16,
+    "leader_id": "S001UN0008",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0008",
+        "type_id": "G000UU5136",
+        "name": "Гиганткий паук",
+        "level": 1,
+        "hp": 420,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC000e",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 23,
+    "y": 16,
+    "leader_id": "S001UN020f",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN020f",
+        "type_id": "G000UU5113",
+        "name": "Орк",
+        "level": 1,
+        "hp": 200,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC001d",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 28,
+    "y": 16,
+    "leader_id": "S001UN0066",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 1,
+        "unit_id": "S001UN0066",
+        "type_id": "G000UU5201",
+        "name": "Squire",
+        "level": 1,
+        "hp": 100,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0067",
+        "type_id": "G000UU5002",
+        "name": "Ополченец",
+        "level": 1,
+        "hp": 95,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0057",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 18,
+    "y": 17,
+    "leader_id": "S001UN020e",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN020e",
+        "type_id": "G000UU5112",
+        "name": "Орк-багатур",
+        "level": 1,
+        "hp": 220,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0059",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 10,
+    "y": 18,
+    "leader_id": "S001UN0150",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0150",
+        "type_id": "G000UU5116",
+        "name": "Тролль",
+        "level": 1,
+        "hp": 350,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC004f",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 40,
+    "y": 20,
+    "leader_id": "S001UN0137",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0137",
+        "type_id": "G000UU5294",
+        "name": "Дракон Рока",
+        "level": 1,
+        "hp": 300,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC002c",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 6,
+    "y": 22,
+    "leader_id": "S001UN0109",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 2,
+        "unit_id": "S001UN0109",
+        "type_id": "G000UU5279",
+        "name": "Призрак",
+        "level": 1,
+        "hp": 90,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 3,
+        "unit_id": "S001UN010a",
+        "type_id": "G000UU0081",
+        "name": "Колдун",
+        "level": 2,
+        "hp": 75,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 4,
+        "unit_id": "S001UN010d",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      },
+      {
+        "slot": 3,
+        "battle_pos": 0,
+        "unit_id": "S001UN010e",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      },
+      {
+        "slot": 4,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN01e8",
+        "type_id": "G000UU0086",
+        "name": "Воин",
+        "level": 1,
+        "hp": 120,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0008",
+    "owner": "S001PL0000",
+    "inside": "S001FT0006",
+    "x": 37,
+    "y": 22,
+    "leader_id": "S001UN001b",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 1,
+        "unit_id": "S001UN001b",
+        "type_id": "G000UU0098",
+        "name": "Унфeгра",
+        "level": 1,
+        "hp": 65,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 1,
+        "unit_id": "S001UN002e",
+        "type_id": "G000UU0093",
+        "name": "Виверна",
+        "level": 1,
+        "hp": 225,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC005d",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 14,
+    "y": 23,
+    "leader_id": "S001UN0210",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0210",
+        "type_id": "G000UU5115",
+        "name": "Людоед",
+        "level": 1,
+        "hp": 300,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0051",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 24,
+    "y": 23,
+    "leader_id": "S001UN013a",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN013a",
+        "type_id": "G000UU5279",
+        "name": "Призрак",
+        "level": 1,
+        "hp": 90,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN013b",
+        "type_id": "G000UU0081",
+        "name": "Колдун",
+        "level": 2,
+        "hp": 75,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 2,
+        "unit_id": "S001UN01fa",
+        "type_id": "G000UU0090",
+        "name": "Тамплиер",
+        "level": 2,
+        "hp": 160,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0046",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 34,
+    "y": 24,
+    "leader_id": "S001UN011c",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN011c",
+        "type_id": "G000UU5139",
+        "name": "Wolf",
+        "level": 1,
+        "hp": 180,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC002d",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 34,
+    "y": 25,
+    "leader_id": "S001UN01f9",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN01f9",
+        "type_id": "G000UU5292",
+        "name": "Оборотнь",
+        "level": 1,
+        "hp": 100,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 1,
+        "unit_id": "S001UN01fc",
+        "type_id": "G000UU0174",
+        "name": "Тень",
+        "level": 3,
+        "hp": 135,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0030",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 41,
+    "y": 25,
+    "leader_id": "S001UN009d",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 1,
+        "unit_id": "S001UN009d",
+        "type_id": "G000UU5289",
+        "name": "Скeлeт-рыцарь",
+        "level": 1,
+        "hp": 270,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 5,
+        "unit_id": "S001UN010f",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 0,
+        "unit_id": "S001UN0110",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      },
+      {
+        "slot": 3,
+        "battle_pos": 3,
+        "unit_id": "S001UN0111",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      },
+      {
+        "slot": 4,
+        "battle_pos": 2,
+        "unit_id": "S001UN0112",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      },
+      {
+        "slot": 5,
+        "battle_pos": 4,
+        "unit_id": "S001UN0113",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0024",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 7,
+    "y": 26,
+    "leader_id": "S001UN01f5",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 0,
+        "unit_id": "S001UN01f5",
+        "type_id": "G000UU5117",
+        "name": "Гоблин",
+        "level": 1,
+        "hp": 50,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN01f6",
+        "type_id": "G000UU5018",
+        "name": "Гоблин-лучник",
+        "level": 1,
+        "hp": 40,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 1,
+        "unit_id": "S001UN01f7",
+        "type_id": "G000UU5017",
+        "name": "Гоблин",
+        "level": 1,
+        "hp": 50,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0050",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 26,
+    "y": 26,
+    "leader_id": "S001UN0138",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0138",
+        "type_id": "G000UU5279",
+        "name": "Призрак",
+        "level": 1,
+        "hp": 90,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0139",
+        "type_id": "G000UU0086",
+        "name": "Воин",
+        "level": 1,
+        "hp": 120,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0031",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 31,
+    "y": 26,
+    "leader_id": "S001UN009b",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 1,
+        "unit_id": "S001UN009b",
+        "type_id": "G000UU5287",
+        "name": "Зомби",
+        "level": 1,
+        "hp": 170,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN009c",
+        "type_id": "G000UU0087",
+        "name": "Зомби",
+        "level": 2,
+        "hp": 170,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 0,
+        "unit_id": "S001UN01fb",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC002b",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 18,
+    "y": 27,
+    "leader_id": "S001UN0211",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0211",
+        "type_id": "G000UU5112",
+        "name": "Орк-багатур",
+        "level": 1,
+        "hp": 220,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC005a",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 22,
+    "y": 28,
+    "leader_id": "S001UN0152",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 2,
+        "unit_id": "S001UN0152",
+        "type_id": "G000UU5283",
+        "name": "Вампир",
+        "level": 1,
+        "hp": 185,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0153",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0154",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0040",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 35,
+    "y": 29,
+    "leader_id": "S001UN00e9",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN00e9",
+        "type_id": "G000UU5279",
+        "name": "Призрак",
+        "level": 1,
+        "hp": 90,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 1,
+        "unit_id": "S001UN00ea",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 2,
+        "unit_id": "S001UN00eb",
+        "type_id": "G000UU0086",
+        "name": "Воин",
+        "level": 1,
+        "hp": 120,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0009",
+    "owner": "S001PL0000",
+    "inside": "S001FT0005",
+    "x": 25,
+    "y": 30,
+    "leader_id": "S001UN0020",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0020",
+        "type_id": "G000UU0097",
+        "name": "Нигош",
+        "level": 1,
+        "hp": 90,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 1,
+        "unit_id": "S001UN0021",
+        "type_id": "G000UU0081",
+        "name": "Колдун",
+        "level": 2,
+        "hp": 75,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 2,
+        "unit_id": "S001UN0031",
+        "type_id": "G000UU0086",
+        "name": "Воин",
+        "level": 1,
+        "hp": 120,
+        "is_leader": false
+      },
+      {
+        "slot": 3,
+        "battle_pos": 0,
+        "unit_id": "S001UN01f2",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0023",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 4,
+    "y": 31,
+    "leader_id": "S001UN007a",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 1,
+        "unit_id": "S001UN007a",
+        "type_id": "G000UU5117",
+        "name": "Гоблин",
+        "level": 1,
+        "hp": 50,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN007b",
+        "type_id": "G000UU5017",
+        "name": "Гоблин",
+        "level": 1,
+        "hp": 50,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 0,
+        "unit_id": "S001UN007c",
+        "type_id": "G000UU5017",
+        "name": "Гоблин",
+        "level": 1,
+        "hp": 50,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0029",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 22,
+    "y": 31,
+    "leader_id": "S001UN0158",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0158",
+        "type_id": "G000UU5279",
+        "name": "Призрак",
+        "level": 1,
+        "hp": 90,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 3,
+        "unit_id": "S001UN015a",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 2,
+        "unit_id": "S001UN015d",
+        "type_id": "G000UU0086",
+        "name": "Воин",
+        "level": 1,
+        "hp": 120,
+        "is_leader": false
+      },
+      {
+        "slot": 3,
+        "battle_pos": 0,
+        "unit_id": "S001UN01e6",
+        "type_id": "G000UU0079",
+        "name": "Призрак",
+        "level": 2,
+        "hp": 90,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0019",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 37,
+    "y": 31,
+    "leader_id": "S001UN005b",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN005b",
+        "type_id": "G000UU5287",
+        "name": "Зомби",
+        "level": 1,
+        "hp": 170,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC005b",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 14,
+    "y": 32,
+    "leader_id": "S001UN020a",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN020a",
+        "type_id": "G000UU5115",
+        "name": "Людоед",
+        "level": 1,
+        "hp": 300,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0069",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 45,
+    "y": 32,
+    "leader_id": "S001UN01bf",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN01bf",
+        "type_id": "G000UU5287",
+        "name": "Зомби",
+        "level": 1,
+        "hp": 170,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN01c0",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC003b",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 29,
+    "y": 33,
+    "leader_id": "S001UN00d0",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 3,
+        "unit_id": "S001UN00d0",
+        "type_id": "G000UU5279",
+        "name": "Призрак",
+        "level": 1,
+        "hp": 90,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 1,
+        "unit_id": "S001UN00d1",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 2,
+        "unit_id": "S001UN00d2",
+        "type_id": "G000UU0086",
+        "name": "Воин",
+        "level": 1,
+        "hp": 120,
+        "is_leader": false
+      },
+      {
+        "slot": 3,
+        "battle_pos": 0,
+        "unit_id": "S001UN00d3",
+        "type_id": "G000UU0086",
+        "name": "Воин",
+        "level": 1,
+        "hp": 120,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC006d",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 30,
+    "y": 33,
+    "leader_id": "S001UN01c7",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN01c7",
+        "type_id": "G000UU5287",
+        "name": "Зомби",
+        "level": 1,
+        "hp": 170,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC006a",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 41,
+    "y": 34,
+    "leader_id": "S001UN01c3",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN01c3",
+        "type_id": "G000UU5287",
+        "name": "Зомби",
+        "level": 1,
+        "hp": 170,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0016",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 25,
+    "y": 35,
+    "leader_id": "S001UN0057",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0057",
+        "type_id": "G000UU5287",
+        "name": "Зомби",
+        "level": 1,
+        "hp": 170,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN01e7",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC005e",
+    "owner": "S001PL0000",
+    "inside": "S001FT0003",
+    "x": 1,
+    "y": 37,
+    "leader_id": "S001UN017c",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 0,
+        "unit_id": "S001UN017c",
+        "type_id": "G000UU5218",
+        "name": "Titan",
+        "level": 1,
+        "hp": 250,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 0,
+        "unit_id": "S001UN017d",
+        "type_id": "G000UU0001",
+        "name": "Сквайр",
+        "level": 1,
+        "hp": 100,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 1,
+        "unit_id": "S001UN017e",
+        "type_id": "G000UU0001",
+        "name": "Сквайр",
+        "level": 1,
+        "hp": 100,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0044",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 10,
+    "y": 37,
+    "leader_id": "S001UN01f8",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN01f8",
+        "type_id": "G000UU5139",
+        "name": "Wolf",
+        "level": 1,
+        "hp": 180,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0072",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 14,
+    "y": 37,
+    "leader_id": "S001UN0206",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0206",
+        "type_id": "G000UU5139",
+        "name": "Волк",
+        "level": 1,
+        "hp": 180,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 1,
+        "unit_id": "S001UN0207",
+        "type_id": "G000UU5039",
+        "name": "Волк",
+        "level": 1,
+        "hp": 180,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC004a",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 33,
+    "y": 37,
+    "leader_id": "S001UN0125",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0125",
+        "type_id": "G000UU5287",
+        "name": "Зомби",
+        "level": 1,
+        "hp": 170,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN01eb",
+        "type_id": "G000UU0079",
+        "name": "Призрак",
+        "level": 2,
+        "hp": 90,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC003e",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 44,
+    "y": 37,
+    "leader_id": "S001UN01a1",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 3,
+        "unit_id": "S001UN01a1",
+        "type_id": "G000UU5279",
+        "name": "Призрак",
+        "level": 1,
+        "hp": 90,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 1,
+        "unit_id": "S001UN01a2",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 2,
+        "unit_id": "S001UN01a6",
+        "type_id": "G000UU0087",
+        "name": "Зомби",
+        "level": 2,
+        "hp": 170,
+        "is_leader": false
+      },
+      {
+        "slot": 3,
+        "battle_pos": 0,
+        "unit_id": "S001UN01f3",
+        "type_id": "G000UU0086",
+        "name": "Воин",
+        "level": 1,
+        "hp": 120,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC005f",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 10,
+    "y": 40,
+    "leader_id": "S001UN0186",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0186",
+        "type_id": "G000UU5103",
+        "name": "Копeйщик",
+        "level": 1,
+        "hp": 140,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0187",
+        "type_id": "G000UU0011",
+        "name": "Послушница",
+        "level": 1,
+        "hp": 50,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0070",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 20,
+    "y": 40,
+    "leader_id": "S001UN01d3",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN01d3",
+        "type_id": "G000UU5113",
+        "name": "Орк",
+        "level": 1,
+        "hp": 200,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 1,
+        "unit_id": "S001UN01f4",
+        "type_id": "G000UU5018",
+        "name": "Гоблин-лучник",
+        "level": 1,
+        "hp": 40,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0063",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 4,
+    "y": 41,
+    "leader_id": "S001UN0183",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0183",
+        "type_id": "G000UU5130",
+        "name": "Головорeз",
+        "level": 1,
+        "hp": 65,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0067",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 9,
+    "y": 41,
+    "leader_id": "S001UN0209",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 0,
+        "unit_id": "S001UN0199",
+        "type_id": "G000UU5001",
+        "name": "Крестьянин",
+        "level": 1,
+        "hp": 40,
+        "is_leader": false
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN019a",
+        "type_id": "G000UU5001",
+        "name": "Крестьянин",
+        "level": 1,
+        "hp": 40,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 2,
+        "unit_id": "S001UN0209",
+        "type_id": "G000UU5201",
+        "name": "Сквайр",
+        "level": 1,
+        "hp": 100,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0042",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 28,
+    "y": 41,
+    "leader_id": "S001UN01df",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN01df",
+        "type_id": "G000UU5105",
+        "name": "Forest Elf",
+        "level": 1,
+        "hp": 100,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN01e0",
+        "type_id": "G000UU5009",
+        "name": "Эльф-следопыт",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0071",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 30,
+    "y": 41,
+    "leader_id": "S001UN01e1",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN01e1",
+        "type_id": "G000UU5111",
+        "name": "Кeнтавр-копeйщик",
+        "level": 1,
+        "hp": 165,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN01e2",
+        "type_id": "G000UU5009",
+        "name": "Эльф-следопыт",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC005c",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 14,
+    "y": 42,
+    "leader_id": "S001UN0161",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 1,
+        "unit_id": "S001UN0161",
+        "type_id": "G000UU5113",
+        "name": "Орк",
+        "level": 1,
+        "hp": 200,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0162",
+        "type_id": "G000UU5017",
+        "name": "Гоблин",
+        "level": 1,
+        "hp": 50,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 0,
+        "unit_id": "S001UN0163",
+        "type_id": "G000UU5017",
+        "name": "Гоблин",
+        "level": 1,
+        "hp": 50,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0060",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 7,
+    "y": 43,
+    "leader_id": "S001UN0188",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 1,
+        "unit_id": "S001UN0188",
+        "type_id": "G000UU5201",
+        "name": "Cквайр",
+        "level": 1,
+        "hp": 100,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0189",
+        "type_id": "G000UU0001",
+        "name": "Сквайр",
+        "level": 1,
+        "hp": 100,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 0,
+        "unit_id": "S001UN018a",
+        "type_id": "G000UU0001",
+        "name": "Сквайр",
+        "level": 1,
+        "hp": 100,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC002a",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 18,
+    "y": 44,
+    "leader_id": "S001UN00b5",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN00b5",
+        "type_id": "G000UU5112",
+        "name": "Орк-багатур",
+        "level": 1,
+        "hp": 220,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0002",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 41,
+    "y": 44,
+    "leader_id": "S001UN0015",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0015",
+        "type_id": "G000UU5258",
+        "name": "Дeмон",
+        "level": 1,
+        "hp": 270,
+        "is_leader": true
+      },
+      {
+        "slot": 1,
+        "battle_pos": 1,
+        "unit_id": "S001UN01ec",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      },
+      {
+        "slot": 2,
+        "battle_pos": 0,
+        "unit_id": "S001UN01ed",
+        "type_id": "G000UU0078",
+        "name": "Привидение",
+        "level": 1,
+        "hp": 45,
+        "is_leader": false
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0007",
+    "owner": "S001PL0000",
+    "inside": "G000000000",
+    "x": 30,
+    "y": 46,
+    "leader_id": "S001UN001a",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN001a",
+        "type_id": "G000UU5123",
+        "name": "Зeлeный дракон",
+        "level": 1,
+        "hp": 600,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0000",
+    "owner": "S001PL0001",
+    "inside": "S001FT0000",
+    "x": 22,
+    "y": 8,
+    "leader_id": "S001UN0001",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0001",
+        "type_id": "G000UU0019",
+        "name": "Едвин",
+        "level": 1,
+        "hp": 150,
+        "is_leader": true
+      }
+    ]
+  },
+  {
+    "stack_id": "S001KC0001",
+    "owner": "S001PL0002",
+    "inside": "S001FT0001",
+    "x": 1,
+    "y": 25,
+    "leader_id": "S001UN0003",
+    "composition": [
+      {
+        "slot": 0,
+        "battle_pos": 4294967295,
+        "unit_id": "S001UN0003",
+        "type_id": "G000UU0070",
+        "name": "Заориш",
+        "level": 1,
+        "hp": 150,
+        "is_leader": true
+      }
+    ]
+  }
+]

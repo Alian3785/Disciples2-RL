@@ -27,6 +27,7 @@ from sb3_contrib.ppo_mask import MaskablePPO
 from sb3_contrib.common.wrappers import ActionMasker
 
 from campaign_env import CampaignEnv
+from grid import DEFAULT_GRID_SIZE, DEFAULT_HERO_GRID_POSITION
 from enemy_configs import ENEMY_DESCRIPTIONS
 from battle_env import (
     TARGET_POSITIONS,
@@ -713,9 +714,10 @@ class CampaignVisualizer:
     COLOR_UNVISITED = (0.95, 0.95, 0.95, 1.0)
     COLOR_PATH = (0.3, 0.6, 0.9, 0.6)
     COLOR_CASTLE = (1.0, 0.92, 0.2, 0.55)
-    CASTLE_POS = (1, 1)
+    COLOR_OBSTACLE = (0.55, 0.55, 0.55, 0.9)
+    CASTLE_POS = DEFAULT_HERO_GRID_POSITION
 
-    def __init__(self, grid_size: int = 40, cell_size: float = 0.8):
+    def __init__(self, grid_size: int = DEFAULT_GRID_SIZE, cell_size: float = 0.8):
         self.grid_size = grid_size
         self.cell_size = cell_size
         self.path_history = []
@@ -734,6 +736,7 @@ class CampaignVisualizer:
         title: str = "",
         highlight_battle: int = None,
         castle_heal_tiles: list | tuple | None = None,
+        obstacle_tiles: list | tuple | set | None = None,
         turns: int = 0,
         gold: float = 0.0,
         steps: int = 0,
@@ -766,6 +769,20 @@ class CampaignVisualizer:
                 edgecolor="none",
             )
             self.ax.add_patch(rect)
+
+        if obstacle_tiles:
+            for tile in obstacle_tiles:
+                try:
+                    ox, oy = int(tile[0]), int(tile[1])
+                except Exception:
+                    continue
+                obstacle_rect = patches.Rectangle(
+                    (ox - 0.45, oy - 0.45), 0.9, 0.9,
+                    facecolor=self.COLOR_OBSTACLE,
+                    edgecolor=(0.25, 0.25, 0.25),
+                    linewidth=1.5,
+                )
+                self.ax.add_patch(obstacle_rect)
 
         # Heal tiles on the map — highlight in yellow.
         if castle_heal_tiles is None:
@@ -1119,6 +1136,7 @@ def run_campaign_visualization(
                 visited_cells=env_base.grid_env.visited_cells,
                 title=title,
                 castle_heal_tiles=getattr(env_base, "castle_heal_tiles", None),
+                obstacle_tiles=getattr(env_base.grid_env, "obstacle_positions", None),
                 turns=env_base.turns,
                 gold=env_base.gold,
                 steps=env_base.moves,
@@ -1167,6 +1185,7 @@ def run_campaign_visualization(
                     title=f"BATTLE vs Enemy {enemy_id}!",
                     highlight_battle=enemy_id,
                     castle_heal_tiles=getattr(env_base, "castle_heal_tiles", None),
+                    obstacle_tiles=getattr(env_base.grid_env, "obstacle_positions", None),
                     turns=env_base.turns,
                     gold=env_base.gold,
                     steps=env_base.moves,
@@ -1286,6 +1305,7 @@ def run_campaign_visualization(
         visited_cells=env_base.grid_env.visited_cells,
         title=f"CAMPAIGN {'VICTORY' if battles_won == total_enemies else 'ENDED'} | Reward: {total_reward:.2f}",
         castle_heal_tiles=getattr(env_base, "castle_heal_tiles", None),
+        obstacle_tiles=getattr(env_base.grid_env, "obstacle_positions", None),
         turns=env_base.turns,
         gold=env_base.gold,
         steps=env_base.moves,

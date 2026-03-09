@@ -1,0 +1,1347 @@
+{
+  "neutral_enemy_owner": "S001PL0000",
+  "matched_map_stacks": [
+    {
+      "stack_id": "S001KC0045",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 9,
+      "y": 7,
+      "composition_names": [
+        "Wolf"
+      ],
+      "signature": [
+        "волк"
+      ],
+      "campaign_enemy_id": 5,
+      "campaign_description": "Отряд: волк на передней линии",
+      "campaign_composition_names": [
+        "Волк"
+      ]
+    },
+    {
+      "stack_id": "S001KC0032",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 12,
+      "y": 11,
+      "composition_names": [
+        "Людоед"
+      ],
+      "signature": [
+        "людоед"
+      ],
+      "campaign_enemy_id": 7,
+      "campaign_description": "Отряд: людоед на передней линии",
+      "campaign_composition_names": [
+        "Людоед"
+      ]
+    },
+    {
+      "stack_id": "S001KC0058",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 14,
+      "y": 15,
+      "composition_names": [
+        "Орк-багатур"
+      ],
+      "signature": [
+        "орк чемпион"
+      ],
+      "campaign_enemy_id": 13,
+      "campaign_description": "Отряд: орк чемпион на передней линии",
+      "campaign_composition_names": [
+        "Орк чемпион"
+      ]
+    },
+    {
+      "stack_id": "S001KC0004",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 5,
+      "y": 16,
+      "composition_names": [
+        "Гиганткий паук"
+      ],
+      "signature": [
+        "гигантский паук"
+      ],
+      "campaign_enemy_id": 23,
+      "campaign_description": "Отряд: гигантский паук на передней линии",
+      "campaign_composition_names": [
+        "Гигантский паук"
+      ]
+    },
+    {
+      "stack_id": "S001KC0057",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 18,
+      "y": 17,
+      "composition_names": [
+        "Орк-багатур"
+      ],
+      "signature": [
+        "орк чемпион"
+      ],
+      "campaign_enemy_id": 13,
+      "campaign_description": "Отряд: орк чемпион на передней линии",
+      "campaign_composition_names": [
+        "Орк чемпион"
+      ]
+    },
+    {
+      "stack_id": "S001KC0059",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 10,
+      "y": 18,
+      "composition_names": [
+        "Тролль"
+      ],
+      "signature": [
+        "тролль"
+      ],
+      "campaign_enemy_id": 21,
+      "campaign_description": "Отряд: тролль на передней линии",
+      "campaign_composition_names": [
+        "Тролль"
+      ]
+    },
+    {
+      "stack_id": "S001KC002c",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 6,
+      "y": 22,
+      "composition_names": [
+        "Призрак",
+        "Колдун",
+        "Привидение",
+        "Привидение",
+        "Воин"
+      ],
+      "signature": [
+        "воин",
+        "колдун",
+        "привидение",
+        "привидение",
+        "призрак"
+      ],
+      "campaign_enemy_id": 3,
+      "campaign_description": "Отряд: воин + привидение спереди, колдун + призрак + привидение сзади",
+      "campaign_composition_names": [
+        "Воин",
+        "Привидение",
+        "Колдун",
+        "Призрак",
+        "Привидение"
+      ]
+    },
+    {
+      "stack_id": "S001KC005d",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 14,
+      "y": 23,
+      "composition_names": [
+        "Людоед"
+      ],
+      "signature": [
+        "людоед"
+      ],
+      "campaign_enemy_id": 7,
+      "campaign_description": "Отряд: людоед на передней линии",
+      "campaign_composition_names": [
+        "Людоед"
+      ]
+    },
+    {
+      "stack_id": "S001KC0051",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 24,
+      "y": 23,
+      "composition_names": [
+        "Призрак",
+        "Колдун",
+        "Тамплиер"
+      ],
+      "signature": [
+        "колдун",
+        "призрак",
+        "тамплиер"
+      ],
+      "campaign_enemy_id": 20,
+      "campaign_description": "Отряд: тамплиер спереди, колдун и призрак сзади",
+      "campaign_composition_names": [
+        "Тамплиер",
+        "Колдун",
+        "Призрак"
+      ]
+    },
+    {
+      "stack_id": "S001KC0046",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 34,
+      "y": 24,
+      "composition_names": [
+        "Wolf"
+      ],
+      "signature": [
+        "волк"
+      ],
+      "campaign_enemy_id": 5,
+      "campaign_description": "Отряд: волк на передней линии",
+      "campaign_composition_names": [
+        "Волк"
+      ]
+    },
+    {
+      "stack_id": "S001KC002d",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 34,
+      "y": 25,
+      "composition_names": [
+        "Оборотнь",
+        "Тень"
+      ],
+      "signature": [
+        "оборотень",
+        "тень"
+      ],
+      "campaign_enemy_id": 26,
+      "campaign_description": "Отряд: оборотень спереди и тень сзади",
+      "campaign_composition_names": [
+        "Оборотень",
+        "Тень"
+      ]
+    },
+    {
+      "stack_id": "S001KC0024",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 7,
+      "y": 26,
+      "composition_names": [
+        "Гоблин",
+        "Гоблин-лучник",
+        "Гоблин"
+      ],
+      "signature": [
+        "гоблин",
+        "гоблин",
+        "гоблин лучник"
+      ],
+      "campaign_enemy_id": 2,
+      "campaign_description": "Отряд: 2 гоблина и гоблин лучник в центре передней линии",
+      "campaign_composition_names": [
+        "Гоблин",
+        "Гоблин лучник",
+        "Гоблин"
+      ]
+    },
+    {
+      "stack_id": "S001KC0031",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 31,
+      "y": 26,
+      "composition_names": [
+        "Зомби",
+        "Зомби",
+        "Привидение"
+      ],
+      "signature": [
+        "зомби",
+        "зомби",
+        "привидение"
+      ],
+      "campaign_enemy_id": 24,
+      "campaign_description": "Отряд: 2 зомби спереди и привидение сзади",
+      "campaign_composition_names": [
+        "Зомби",
+        "Зомби",
+        "Привидение"
+      ]
+    },
+    {
+      "stack_id": "S001KC002b",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 18,
+      "y": 27,
+      "composition_names": [
+        "Орк-багатур"
+      ],
+      "signature": [
+        "орк чемпион"
+      ],
+      "campaign_enemy_id": 13,
+      "campaign_description": "Отряд: орк чемпион на передней линии",
+      "campaign_composition_names": [
+        "Орк чемпион"
+      ]
+    },
+    {
+      "stack_id": "S001KC005a",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 22,
+      "y": 28,
+      "composition_names": [
+        "Вампир",
+        "Привидение",
+        "Привидение"
+      ],
+      "signature": [
+        "вампир",
+        "привидение",
+        "привидение"
+      ],
+      "campaign_enemy_id": 17,
+      "campaign_description": "Отряд: 2 привидения спереди, вампир сзади",
+      "campaign_composition_names": [
+        "Привидение",
+        "Привидение",
+        "Вампир"
+      ]
+    },
+    {
+      "stack_id": "S001KC0023",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 4,
+      "y": 31,
+      "composition_names": [
+        "Гоблин",
+        "Гоблин",
+        "Гоблин"
+      ],
+      "signature": [
+        "гоблин",
+        "гоблин",
+        "гоблин"
+      ],
+      "campaign_enemy_id": 1,
+      "campaign_description": "Отряд: 3 гоблина на передней линии",
+      "campaign_composition_names": [
+        "Гоблин",
+        "Гоблин",
+        "Гоблин"
+      ]
+    },
+    {
+      "stack_id": "S001KC0029",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 22,
+      "y": 31,
+      "composition_names": [
+        "Призрак",
+        "Привидение",
+        "Воин",
+        "Призрак"
+      ],
+      "signature": [
+        "воин",
+        "привидение",
+        "призрак",
+        "призрак"
+      ],
+      "campaign_enemy_id": 15,
+      "campaign_description": "Отряд: воин спереди, 2 призрака и привидение сзади",
+      "campaign_composition_names": [
+        "Воин",
+        "Призрак",
+        "Привидение",
+        "Призрак"
+      ]
+    },
+    {
+      "stack_id": "S001KC005b",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 14,
+      "y": 32,
+      "composition_names": [
+        "Людоед"
+      ],
+      "signature": [
+        "людоед"
+      ],
+      "campaign_enemy_id": 7,
+      "campaign_description": "Отряд: людоед на передней линии",
+      "campaign_composition_names": [
+        "Людоед"
+      ]
+    },
+    {
+      "stack_id": "S001KC0069",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 45,
+      "y": 32,
+      "composition_names": [
+        "Зомби",
+        "Привидение"
+      ],
+      "signature": [
+        "зомби",
+        "привидение"
+      ],
+      "campaign_enemy_id": 14,
+      "campaign_description": "Отряд: зомби спереди, привидение сзади",
+      "campaign_composition_names": [
+        "Зомби",
+        "Привидение"
+      ]
+    },
+    {
+      "stack_id": "S001KC003b",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 29,
+      "y": 33,
+      "composition_names": [
+        "Призрак",
+        "Привидение",
+        "Воин",
+        "Воин"
+      ],
+      "signature": [
+        "воин",
+        "воин",
+        "привидение",
+        "призрак"
+      ],
+      "campaign_enemy_id": 18,
+      "campaign_description": "Отряд: 2 воина спереди, призрак и привидение сзади",
+      "campaign_composition_names": [
+        "Воин",
+        "Воин",
+        "Призрак",
+        "Привидение"
+      ]
+    },
+    {
+      "stack_id": "S001KC0016",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 25,
+      "y": 35,
+      "composition_names": [
+        "Зомби",
+        "Привидение"
+      ],
+      "signature": [
+        "зомби",
+        "привидение"
+      ],
+      "campaign_enemy_id": 14,
+      "campaign_description": "Отряд: зомби спереди, привидение сзади",
+      "campaign_composition_names": [
+        "Зомби",
+        "Привидение"
+      ]
+    },
+    {
+      "stack_id": "S001KC005e",
+      "owner": "S001PL0000",
+      "inside": "S001FT0003",
+      "x": 1,
+      "y": 37,
+      "composition_names": [
+        "Titan",
+        "Сквайр",
+        "Сквайр"
+      ],
+      "signature": [
+        "скваер",
+        "скваер",
+        "титан"
+      ],
+      "campaign_enemy_id": 4,
+      "campaign_description": "Отряд: титан и 2 скваера на передней линии",
+      "campaign_composition_names": [
+        "Скваер",
+        "Титан",
+        "Скваер"
+      ]
+    },
+    {
+      "stack_id": "S001KC0044",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 10,
+      "y": 37,
+      "composition_names": [
+        "Wolf"
+      ],
+      "signature": [
+        "волк"
+      ],
+      "campaign_enemy_id": 5,
+      "campaign_description": "Отряд: волк на передней линии",
+      "campaign_composition_names": [
+        "Волк"
+      ]
+    },
+    {
+      "stack_id": "S001KC0072",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 14,
+      "y": 37,
+      "composition_names": [
+        "Волк",
+        "Волк"
+      ],
+      "signature": [
+        "волк",
+        "волк"
+      ],
+      "campaign_enemy_id": 6,
+      "campaign_description": "Отряд: волк спереди и волк сзади",
+      "campaign_composition_names": [
+        "Волк",
+        "Волк"
+      ]
+    },
+    {
+      "stack_id": "S001KC005f",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 10,
+      "y": 40,
+      "composition_names": [
+        "Копeйщик",
+        "Послушница"
+      ],
+      "signature": [
+        "копейщик",
+        "служка"
+      ],
+      "campaign_enemy_id": 8,
+      "campaign_description": "Отряд: копейщик спереди и служка сзади",
+      "campaign_composition_names": [
+        "Копейщик",
+        "Служка"
+      ]
+    },
+    {
+      "stack_id": "S001KC0070",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 20,
+      "y": 40,
+      "composition_names": [
+        "Орк",
+        "Гоблин-лучник"
+      ],
+      "signature": [
+        "гоблин лучник",
+        "орк"
+      ],
+      "campaign_enemy_id": 12,
+      "campaign_description": "Отряд: орк в центре передней линии и гоблин лучник на задней линии",
+      "campaign_composition_names": [
+        "Орк",
+        "Гоблин лучник"
+      ]
+    },
+    {
+      "stack_id": "S001KC0067",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 9,
+      "y": 41,
+      "composition_names": [
+        "Крестьянин",
+        "Крестьянин",
+        "Сквайр"
+      ],
+      "signature": [
+        "крестьянин",
+        "крестьянин",
+        "скваер"
+      ],
+      "campaign_enemy_id": 11,
+      "campaign_description": "Отряд: скваер в центре и 2 крестьянина на передней линии",
+      "campaign_composition_names": [
+        "Крестьянин",
+        "Скваер",
+        "Крестьянин"
+      ]
+    },
+    {
+      "stack_id": "S001KC005c",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 14,
+      "y": 42,
+      "composition_names": [
+        "Орк",
+        "Гоблин",
+        "Гоблин"
+      ],
+      "signature": [
+        "гоблин",
+        "гоблин",
+        "орк"
+      ],
+      "campaign_enemy_id": 9,
+      "campaign_description": "Отряд: орк в центре и 2 гоблина на передней линии",
+      "campaign_composition_names": [
+        "Гоблин",
+        "Орк",
+        "Гоблин"
+      ]
+    },
+    {
+      "stack_id": "S001KC0060",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 7,
+      "y": 43,
+      "composition_names": [
+        "Cквайр",
+        "Сквайр",
+        "Сквайр"
+      ],
+      "signature": [
+        "скваер",
+        "скваер",
+        "скваер"
+      ],
+      "campaign_enemy_id": 10,
+      "campaign_description": "Отряд: 3 скваера на передней линии",
+      "campaign_composition_names": [
+        "Скваер",
+        "Скваер",
+        "Скваер"
+      ]
+    },
+    {
+      "stack_id": "S001KC002a",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 18,
+      "y": 44,
+      "composition_names": [
+        "Орк-багатур"
+      ],
+      "signature": [
+        "орк чемпион"
+      ],
+      "campaign_enemy_id": 13,
+      "campaign_description": "Отряд: орк чемпион на передней линии",
+      "campaign_composition_names": [
+        "Орк чемпион"
+      ]
+    },
+    {
+      "stack_id": "S001KC0007",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 30,
+      "y": 46,
+      "composition_names": [
+        "Зeлeный дракон"
+      ],
+      "signature": [
+        "зеленый дракон"
+      ],
+      "campaign_enemy_id": 30,
+      "campaign_description": "Отряд: зеленый дракон",
+      "campaign_composition_names": [
+        "Зелёный дракон"
+      ]
+    }
+  ],
+  "unmatched_map_stacks": [
+    {
+      "stack_id": "S001KC0006",
+      "owner": "S001PL0000",
+      "inside": "S001FT0002",
+      "x": 3,
+      "y": 1,
+      "composition_names": [
+        "Сeгeрик",
+        "Холмовой великан",
+        "Гном"
+      ],
+      "signature": [
+        "гном",
+        "сeгeрик",
+        "холмовой великан"
+      ]
+    },
+    {
+      "stack_id": "S001KC0011",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 7,
+      "y": 2,
+      "composition_names": [
+        "Холмовой вeликан"
+      ],
+      "signature": [
+        "холмовой вeликан"
+      ]
+    },
+    {
+      "stack_id": "S001KC000c",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 19,
+      "y": 2,
+      "composition_names": [
+        "Гном",
+        "Травница",
+        "Алхимик"
+      ],
+      "signature": [
+        "алхимик",
+        "гном",
+        "травница"
+      ]
+    },
+    {
+      "stack_id": "S001KC0036",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 39,
+      "y": 3,
+      "composition_names": [
+        "Призрак",
+        "Колдун",
+        "Воин"
+      ],
+      "signature": [
+        "воин",
+        "колдун",
+        "призрак"
+      ]
+    },
+    {
+      "stack_id": "S001KC0010",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 2,
+      "y": 4,
+      "composition_names": [
+        "Волк",
+        "Варвар"
+      ],
+      "signature": [
+        "варвар",
+        "волк"
+      ]
+    },
+    {
+      "stack_id": "S001KC000f",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 7,
+      "y": 4,
+      "composition_names": [
+        "Гном",
+        "Метатель топоров",
+        "Травница"
+      ],
+      "signature": [
+        "гном",
+        "метатель топоров",
+        "травница"
+      ]
+    },
+    {
+      "stack_id": "S001KC0055",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 16,
+      "y": 5,
+      "composition_names": [
+        "Гном",
+        "Метатель топоров"
+      ],
+      "signature": [
+        "гном",
+        "метатель топоров"
+      ]
+    },
+    {
+      "stack_id": "S001KC0020",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 25,
+      "y": 5,
+      "composition_names": [
+        "Разбойник"
+      ],
+      "signature": [
+        "разбойник"
+      ]
+    },
+    {
+      "stack_id": "S001KC0033",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 45,
+      "y": 5,
+      "composition_names": [
+        "Призрак",
+        "Тамплиер"
+      ],
+      "signature": [
+        "призрак",
+        "тамплиер"
+      ]
+    },
+    {
+      "stack_id": "S001KC000a",
+      "owner": "S001PL0000",
+      "inside": "S001FT0004",
+      "x": 37,
+      "y": 6,
+      "composition_names": [
+        "Тифаc",
+        "Злой дух",
+        "Призрак",
+        "Привидение"
+      ],
+      "signature": [
+        "злой дух",
+        "привидение",
+        "призрак",
+        "тифаc"
+      ]
+    },
+    {
+      "stack_id": "S001KC000d",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 14,
+      "y": 7,
+      "composition_names": [
+        "Гном",
+        "Гном"
+      ],
+      "signature": [
+        "гном",
+        "гном"
+      ]
+    },
+    {
+      "stack_id": "S001KC0021",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 29,
+      "y": 9,
+      "composition_names": [
+        "Головорeз"
+      ],
+      "signature": [
+        "головорeз"
+      ]
+    },
+    {
+      "stack_id": "S001KC0003",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 7,
+      "y": 10,
+      "composition_names": [
+        "Гигантcкмй чeрный паук"
+      ],
+      "signature": [
+        "гигантcкмй чeрный паук"
+      ]
+    },
+    {
+      "stack_id": "S001KC003a",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 41,
+      "y": 10,
+      "composition_names": [
+        "Призрак",
+        "Привидение",
+        "Привидение",
+        "Воин"
+      ],
+      "signature": [
+        "воин",
+        "привидение",
+        "привидение",
+        "призрак"
+      ]
+    },
+    {
+      "stack_id": "S001KC0035",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 32,
+      "y": 11,
+      "composition_names": [
+        "Жрец",
+        "Копейщик"
+      ],
+      "signature": [
+        "жрец",
+        "копейщик"
+      ]
+    },
+    {
+      "stack_id": "S001KC000b",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 18,
+      "y": 12,
+      "composition_names": [
+        "Dwarf"
+      ],
+      "signature": [
+        "гном"
+      ]
+    },
+    {
+      "stack_id": "S001KC0015",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 40,
+      "y": 13,
+      "composition_names": [
+        "Зомби"
+      ],
+      "signature": [
+        "зомби"
+      ]
+    },
+    {
+      "stack_id": "S001KC001a",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 29,
+      "y": 14,
+      "composition_names": [
+        "Peasant",
+        "Крестьянин",
+        "Крестьянин"
+      ],
+      "signature": [
+        "крестьянин",
+        "крестьянин",
+        "крестьянин"
+      ]
+    },
+    {
+      "stack_id": "S001KC000e",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 23,
+      "y": 16,
+      "composition_names": [
+        "Орк"
+      ],
+      "signature": [
+        "орк"
+      ]
+    },
+    {
+      "stack_id": "S001KC001d",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 28,
+      "y": 16,
+      "composition_names": [
+        "Squire",
+        "Ополченец"
+      ],
+      "signature": [
+        "ополченец",
+        "скваер"
+      ]
+    },
+    {
+      "stack_id": "S001KC004f",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 40,
+      "y": 20,
+      "composition_names": [
+        "Дракон Рока"
+      ],
+      "signature": [
+        "дракон рока"
+      ]
+    },
+    {
+      "stack_id": "S001KC0008",
+      "owner": "S001PL0000",
+      "inside": "S001FT0006",
+      "x": 37,
+      "y": 22,
+      "composition_names": [
+        "Унфeгра",
+        "Виверна"
+      ],
+      "signature": [
+        "виверна",
+        "унфeгра"
+      ]
+    },
+    {
+      "stack_id": "S001KC0030",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 41,
+      "y": 25,
+      "composition_names": [
+        "Скeлeт-рыцарь",
+        "Привидение",
+        "Привидение",
+        "Привидение",
+        "Привидение",
+        "Привидение"
+      ],
+      "signature": [
+        "привидение",
+        "привидение",
+        "привидение",
+        "привидение",
+        "привидение",
+        "скeлeт рыцарь"
+      ]
+    },
+    {
+      "stack_id": "S001KC0050",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 26,
+      "y": 26,
+      "composition_names": [
+        "Призрак",
+        "Воин"
+      ],
+      "signature": [
+        "воин",
+        "призрак"
+      ]
+    },
+    {
+      "stack_id": "S001KC0040",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 35,
+      "y": 29,
+      "composition_names": [
+        "Призрак",
+        "Привидение",
+        "Воин"
+      ],
+      "signature": [
+        "воин",
+        "привидение",
+        "призрак"
+      ]
+    },
+    {
+      "stack_id": "S001KC0009",
+      "owner": "S001PL0000",
+      "inside": "S001FT0005",
+      "x": 25,
+      "y": 30,
+      "composition_names": [
+        "Нигош",
+        "Колдун",
+        "Воин",
+        "Привидение"
+      ],
+      "signature": [
+        "воин",
+        "колдун",
+        "нигош",
+        "привидение"
+      ]
+    },
+    {
+      "stack_id": "S001KC0019",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 37,
+      "y": 31,
+      "composition_names": [
+        "Зомби"
+      ],
+      "signature": [
+        "зомби"
+      ]
+    },
+    {
+      "stack_id": "S001KC006d",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 30,
+      "y": 33,
+      "composition_names": [
+        "Зомби"
+      ],
+      "signature": [
+        "зомби"
+      ]
+    },
+    {
+      "stack_id": "S001KC006a",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 41,
+      "y": 34,
+      "composition_names": [
+        "Зомби"
+      ],
+      "signature": [
+        "зомби"
+      ]
+    },
+    {
+      "stack_id": "S001KC004a",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 33,
+      "y": 37,
+      "composition_names": [
+        "Зомби",
+        "Призрак"
+      ],
+      "signature": [
+        "зомби",
+        "призрак"
+      ]
+    },
+    {
+      "stack_id": "S001KC003e",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 44,
+      "y": 37,
+      "composition_names": [
+        "Призрак",
+        "Привидение",
+        "Зомби",
+        "Воин"
+      ],
+      "signature": [
+        "воин",
+        "зомби",
+        "привидение",
+        "призрак"
+      ]
+    },
+    {
+      "stack_id": "S001KC0063",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 4,
+      "y": 41,
+      "composition_names": [
+        "Головорeз"
+      ],
+      "signature": [
+        "головорeз"
+      ]
+    },
+    {
+      "stack_id": "S001KC0042",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 28,
+      "y": 41,
+      "composition_names": [
+        "Forest Elf",
+        "Эльф-следопыт"
+      ],
+      "signature": [
+        "forest elf",
+        "рейнджер"
+      ]
+    },
+    {
+      "stack_id": "S001KC0071",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 30,
+      "y": 41,
+      "composition_names": [
+        "Кeнтавр-копeйщик",
+        "Эльф-следопыт"
+      ],
+      "signature": [
+        "кeнтавр копeйщик",
+        "рейнджер"
+      ]
+    },
+    {
+      "stack_id": "S001KC0002",
+      "owner": "S001PL0000",
+      "inside": "G000000000",
+      "x": 41,
+      "y": 44,
+      "composition_names": [
+        "Дeмон",
+        "Привидение",
+        "Привидение"
+      ],
+      "signature": [
+        "дeмон",
+        "привидение",
+        "привидение"
+      ]
+    }
+  ],
+  "other_owner_stacks": [
+    {
+      "stack_id": "S001KC0000",
+      "owner": "S001PL0001",
+      "inside": "S001FT0000",
+      "x": 22,
+      "y": 8,
+      "composition_names": [
+        "Едвин"
+      ]
+    },
+    {
+      "stack_id": "S001KC0001",
+      "owner": "S001PL0002",
+      "inside": "S001FT0001",
+      "x": 1,
+      "y": 25,
+      "composition_names": [
+        "Заориш"
+      ]
+    }
+  ],
+  "matched_campaign_enemy_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    17,
+    18,
+    20,
+    21,
+    23,
+    24,
+    26,
+    30
+  ],
+  "unmatched_campaign_templates": [
+    {
+      "enemy_id": 16,
+      "description": "Отряд: кентавр спереди, рейнджер сзади",
+      "composition_names": [
+        "Кентавр",
+        "Рейнджер"
+      ],
+      "signature": [
+        "кентавр",
+        "рейнджер"
+      ]
+    },
+    {
+      "enemy_id": 19,
+      "description": "Отряд: воин спереди, колдун сзади",
+      "composition_names": [
+        "Воин",
+        "Колдун"
+      ],
+      "signature": [
+        "воин",
+        "колдун"
+      ]
+    },
+    {
+      "enemy_id": 22,
+      "description": "Отряд: виверна в центре спереди, 2 привидения сзади (не в центре)",
+      "composition_names": [
+        "Виверна",
+        "Привидение",
+        "Привидение"
+      ],
+      "signature": [
+        "виверна",
+        "привидение",
+        "привидение"
+      ]
+    },
+    {
+      "enemy_id": 25,
+      "description": "Отряд: виверна слева спереди, королева лич в центре сзади",
+      "composition_names": [
+        "Виверна",
+        "Королева лич"
+      ],
+      "signature": [
+        "виверна",
+        "королева лич"
+      ]
+    },
+    {
+      "enemy_id": 27,
+      "description": "Отряд: лорд тьмы спереди и лич сзади",
+      "composition_names": [
+        "Лорд тьмы",
+        "Лич"
+      ],
+      "signature": [
+        "лич",
+        "лорд тьмы"
+      ]
+    },
+    {
+      "enemy_id": 28,
+      "description": "Отряд: виверна и оборотень спереди, королева лич сзади",
+      "composition_names": [
+        "Виверна",
+        "Оборотень",
+        "Королева лич"
+      ],
+      "signature": [
+        "виверна",
+        "королева лич",
+        "оборотень"
+      ]
+    },
+    {
+      "enemy_id": 29,
+      "description": "Отряд: рыцарь на пегасе и рыцарь спереди, 2 стрелка сзади",
+      "composition_names": [
+        "Рыцарь на пегасе",
+        "Рыцарь",
+        "Стрелок",
+        "Стрелок"
+      ],
+      "signature": [
+        "рыцарь",
+        "рыцарь на пегасе",
+        "стрелок",
+        "стрелок"
+      ]
+    }
+  ]
+}
