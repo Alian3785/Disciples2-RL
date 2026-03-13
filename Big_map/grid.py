@@ -16,7 +16,7 @@ from collections import deque
 from typing import Dict, Optional, Tuple
 
 DEFAULT_GRID_SIZE = 48
-DEFAULT_HERO_GRID_POSITION: Tuple[int, int] = (22, 7)
+DEFAULT_HERO_GRID_POSITION: Tuple[int, int] = (5, 27)
 HEAL_TILE_COUNT = 1
 OBSTACLE_COVERAGE_RATIO = 0.0
 OBSTACLE_EDGE_MARGIN = 2

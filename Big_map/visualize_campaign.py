@@ -13,6 +13,7 @@ import time
 import re
 import math
 import argparse
+from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import patches
@@ -38,8 +39,36 @@ from battle_env import (
 )
 from console_encoding import setup_utf8_console
 
+try:
+    from tools.inspect_sg_map import (
+        RENDER_OBJECT_SPECS,
+        extract_render_objects,
+        parse_settlement_objects,
+        parse_stacks,
+    )
+except Exception:
+    RENDER_OBJECT_SPECS = {}
+    extract_render_objects = None
+    parse_settlement_objects = None
+    parse_stacks = None
+
 
 setup_utf8_console()
+
+
+DEFAULT_SCENARIO_PATH = Path(
+    "D:/Disciples II "
+    "\u0412\u043e\u0441\u0441\u0442\u0430\u043d\u0438\u0435 "
+    "\u042d\u043b\u044c\u0444\u043e\u0432/Exports/A Return To Simpler Times.sg"
+)
+DEFAULT_MAP_PNG_PATH = Path("./outputs/a_return_to_simpler_times_entries.png")
+
+
+def _existing_path_or_none(path_value: str | os.PathLike | None) -> str | None:
+    if not path_value:
+        return None
+    path = Path(path_value)
+    return str(path) if path.exists() else None
 
 
 def mask_fn(env: CampaignEnv) -> np.ndarray:
@@ -710,22 +739,294 @@ class CampaignVisualizer:
     COLOR_AGENT = (0.2, 0.5, 0.9, 0.9)
     COLOR_ENEMY_ALIVE = (0.9, 0.3, 0.3, 0.8)
     COLOR_ENEMY_DEAD = (0.5, 0.5, 0.5, 0.4)
+    COLOR_DRAGON_TILE = (0.10, 0.75, 0.32, 0.28)
+    COLOR_DRAGON_ALIVE = (0.10, 0.68, 0.22, 0.95)
+    COLOR_DRAGON_DEAD = (0.35, 0.50, 0.35, 0.55)
     COLOR_VISITED = (0.7, 0.85, 0.7, 0.3)
     COLOR_UNVISITED = (0.95, 0.95, 0.95, 1.0)
     COLOR_PATH = (0.3, 0.6, 0.9, 0.6)
     COLOR_CASTLE = (1.0, 0.92, 0.2, 0.55)
     COLOR_OBSTACLE = (0.55, 0.55, 0.55, 0.9)
+    COLOR_CAPITAL_FILL = (0.08, 0.30, 0.82, 0.18)
+    COLOR_CAPITAL_EDGE = (0.05, 0.20, 0.62, 0.98)
+    COLOR_VILLAGE_FILL = (0.00, 0.72, 0.78, 0.18)
+    COLOR_VILLAGE_EDGE = (0.00, 0.50, 0.58, 0.98)
     CASTLE_POS = DEFAULT_HERO_GRID_POSITION
 
-    def __init__(self, grid_size: int = DEFAULT_GRID_SIZE, cell_size: float = 0.8):
+    def __init__(
+        self,
+        grid_size: int = DEFAULT_GRID_SIZE,
+        cell_size: float = 0.8,
+        background_map_path: str | None = None,
+        scenario_path: str | None = None,
+    ):
         self.grid_size = grid_size
         self.cell_size = cell_size
         self.path_history = []
+        self.background_map_path = _existing_path_or_none(background_map_path)
+        self.scenario_path = _existing_path_or_none(scenario_path)
+        self.background_image = None
+        self.capital_overlays: list[dict] = []
+        self.village_overlays: list[dict] = []
+        self._load_background_image()
+        self._load_settlement_overlays()
 
         # Создаём фигуру
         self.fig, self.ax = plt.subplots(figsize=(10, 10))
         plt.ion()
-        self.fig.show()
+        if plt.get_backend().lower() != "agg":
+            self.fig.show()
+
+    def _load_background_image(self) -> None:
+        if not self.background_map_path:
+            return
+        try:
+            image = plt.imread(self.background_map_path)
+        except Exception as exc:
+            print(f"[WARN] Failed to load background map {self.background_map_path}: {exc}")
+            return
+
+        if image.ndim < 2:
+            return
+
+        height = int(image.shape[0])
+        width = int(image.shape[1])
+        if width > height:
+            image = image[:, :height].copy()
+        elif height > width:
+            image = image[:width, :, :].copy()
+
+        self.background_image = self._sanitize_background_image(image)
+
+    def _display_tile(self, x: int, y: int) -> tuple[int, int]:
+        return self.grid_size - 1 - int(y), int(x)
+
+    def _display_rect(
+        self,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+    ) -> tuple[int, int, int, int]:
+        return (
+            self.grid_size - int(y) - int(height),
+            int(x),
+            int(height),
+            int(width),
+        )
+
+    def _sanitize_background_image(self, image: np.ndarray) -> np.ndarray:
+        if not self.scenario_path:
+            return image
+        try:
+            data = Path(self.scenario_path).read_bytes()
+        except Exception as exc:
+            print(f"[WARN] Failed to preprocess background objects from {self.scenario_path}: {exc}")
+            return image
+
+        erase_tiles: set[tuple[int, int]] = set()
+
+        if parse_stacks is not None:
+            try:
+                for stack in parse_stacks(data):
+                    erase_tiles.add((int(stack["x"]), int(stack["y"])))
+            except Exception as exc:
+                print(f"[WARN] Failed to parse stacks from {self.scenario_path}: {exc}")
+
+        if extract_render_objects is not None:
+            try:
+                render_objects = extract_render_objects(data)
+                for class_name, objects in render_objects.items():
+                    spec = RENDER_OBJECT_SPECS.get(class_name, {})
+                    width, height = spec.get("footprint", (1, 1))
+                    for obj in objects:
+                        ox = int(obj["x"])
+                        oy = int(obj["y"])
+                        for tx in range(ox, min(self.grid_size, ox + int(width))):
+                            for ty in range(oy, min(self.grid_size, oy + int(height))):
+                                erase_tiles.add((tx, ty))
+            except Exception as exc:
+                print(f"[WARN] Failed to parse map objects from {self.scenario_path}: {exc}")
+
+        erase_tiles = {
+            self._display_tile(x, y)
+            for x, y in erase_tiles
+            if 0 <= x < self.grid_size and 0 <= y < self.grid_size
+        }
+
+        if not erase_tiles:
+            return image
+
+        cleaned = np.array(image, copy=True)
+        source = np.array(image, copy=True)
+        cell_h = max(1, cleaned.shape[0] // self.grid_size)
+        cell_w = max(1, cleaned.shape[1] // self.grid_size)
+        tile_median_cache: dict[tuple[int, int], np.ndarray] = {}
+
+        def tile_bounds(tx: int, ty: int) -> tuple[int, int, int, int]:
+            x0 = tx * cell_w
+            y0 = ty * cell_h
+            x1 = min(cleaned.shape[1], x0 + cell_w)
+            y1 = min(cleaned.shape[0], y0 + cell_h)
+            return x0, y0, x1, y1
+
+        def tile_median(tx: int, ty: int) -> np.ndarray | None:
+            key = (tx, ty)
+            cached = tile_median_cache.get(key)
+            if cached is not None:
+                return cached
+            x0, y0, x1, y1 = tile_bounds(tx, ty)
+            tile = source[y0:y1, x0:x1]
+            if tile.size == 0:
+                return None
+            median = np.median(tile.reshape(-1, tile.shape[-1]), axis=0)
+            tile_median_cache[key] = median
+            return median
+
+        for x, y in sorted(erase_tiles):
+            if not (0 <= x < self.grid_size and 0 <= y < self.grid_size):
+                continue
+
+            samples = []
+            for radius in range(1, 6):
+                for nx in range(max(0, x - radius), min(self.grid_size, x + radius + 1)):
+                    for ny in range(max(0, y - radius), min(self.grid_size, y + radius + 1)):
+                        if max(abs(nx - x), abs(ny - y)) != radius:
+                            continue
+                        if (nx, ny) in erase_tiles:
+                            continue
+                        sample = tile_median(nx, ny)
+                        if sample is not None:
+                            samples.append(sample)
+                if samples:
+                    break
+
+            fill_color = (
+                np.median(np.stack(samples, axis=0), axis=0)
+                if samples
+                else tile_median(x, y)
+            )
+            if fill_color is None:
+                continue
+            x0, y0, x1, y1 = tile_bounds(x, y)
+            cleaned[y0:y1, x0:x1] = fill_color
+
+        return cleaned
+
+    def _load_settlement_overlays(self) -> None:
+        if not self.scenario_path or parse_settlement_objects is None:
+            return
+        try:
+            data = Path(self.scenario_path).read_bytes()
+            settlement_objects = parse_settlement_objects(data)
+        except Exception as exc:
+            print(f"[WARN] Failed to load settlement overlays from {self.scenario_path}: {exc}")
+            return
+
+        overlays = []
+        for settlement in settlement_objects.values():
+            class_name = str(settlement.get("class") or "")
+            spec = RENDER_OBJECT_SPECS.get(class_name, {})
+            width, height = spec.get("footprint", (1, 1))
+            try:
+                x = int(settlement["x"])
+                y = int(settlement["y"])
+            except Exception:
+                continue
+            overlays.append(
+                {
+                    "class": class_name,
+                    "x": x,
+                    "y": y,
+                    "width": int(width),
+                    "height": int(height),
+                    "entry_x": x,
+                    "entry_y": y + max(0, int(height) - 1),
+                }
+            )
+
+        self.capital_overlays = [
+            overlay for overlay in overlays if overlay["class"] == ".?AVCCapital@@"
+        ]
+        self.village_overlays = [
+            overlay for overlay in overlays if overlay["class"] == ".?AVCMidVillage@@"
+        ]
+
+    def _draw_background_map(self) -> None:
+        if self.background_image is None:
+            return
+        self.ax.imshow(
+            self.background_image,
+            extent=(-0.5, self.grid_size - 0.5, -0.5, self.grid_size - 0.5),
+            origin="lower",
+            interpolation="nearest",
+            zorder=0,
+        )
+
+    def _draw_settlement_overlays(self) -> None:
+        for overlay in self.capital_overlays:
+            x = int(overlay["x"])
+            y = int(overlay["y"])
+            width = int(overlay["width"])
+            height = int(overlay["height"])
+            draw_x, draw_y, draw_w, draw_h = self._display_rect(x, y, width, height)
+
+            rect = patches.Rectangle(
+                (draw_x - 0.5, draw_y - 0.5),
+                draw_w,
+                draw_h,
+                facecolor=self.COLOR_CAPITAL_FILL,
+                edgecolor=self.COLOR_CAPITAL_EDGE,
+                linewidth=2.5,
+                zorder=2.2,
+            )
+            self.ax.add_patch(rect)
+
+            center_x = draw_x + (draw_w - 1) / 2.0
+            center_y = draw_y + (draw_h - 1) / 2.0
+            self.ax.text(
+                center_x,
+                center_y,
+                "CAP",
+                ha="center",
+                va="center",
+                fontsize=9,
+                fontweight="bold",
+                color="white",
+                zorder=2.5,
+            )
+
+        for overlay in self.village_overlays:
+            x = int(overlay["x"])
+            y = int(overlay["y"])
+            width = int(overlay["width"])
+            height = int(overlay["height"])
+            draw_x, draw_y, draw_w, draw_h = self._display_rect(x, y, width, height)
+
+            rect = patches.Rectangle(
+                (draw_x - 0.5, draw_y - 0.5),
+                draw_w,
+                draw_h,
+                facecolor=self.COLOR_VILLAGE_FILL,
+                edgecolor=self.COLOR_VILLAGE_EDGE,
+                linewidth=2.3,
+                zorder=2.15,
+            )
+            self.ax.add_patch(rect)
+
+            center_x = draw_x + (draw_w - 1) / 2.0
+            center_y = draw_y + (draw_h - 1) / 2.0
+            self.ax.text(
+                center_x,
+                center_y,
+                "CITY",
+                ha="center",
+                va="center",
+                fontsize=8,
+                fontweight="bold",
+                color="white",
+                zorder=2.45,
+            )
 
     def draw_grid(
         self,
@@ -754,17 +1055,21 @@ class CampaignVisualizer:
         self.ax.set_xlim(-0.5, self.grid_size - 0.5)
         self.ax.set_ylim(-0.5, self.grid_size - 0.5)
         self.ax.set_aspect("equal")
+        self.ax.set_facecolor((0.95, 0.95, 0.95))
         self.ax.invert_yaxis()  # Y растёт вниз
 
         # Сетка
+        self._draw_background_map()
+
         for i in range(self.grid_size + 1):
-            self.ax.axhline(y=i - 0.5, color="gray", linewidth=0.5, alpha=0.5)
-            self.ax.axvline(x=i - 0.5, color="gray", linewidth=0.5, alpha=0.5)
+            self.ax.axhline(y=i - 0.5, color="gray", linewidth=0.5, alpha=0.35, zorder=1)
+            self.ax.axvline(x=i - 0.5, color="gray", linewidth=0.5, alpha=0.35, zorder=1)
 
         # Посещённые клетки
         for (x, y) in visited_cells:
+            draw_x, draw_y = self._display_tile(int(x), int(y))
             rect = patches.Rectangle(
-                (x - 0.45, y - 0.45), 0.9, 0.9,
+                (draw_x - 0.45, draw_y - 0.45), 0.9, 0.9,
                 facecolor=self.COLOR_VISITED,
                 edgecolor="none",
             )
@@ -776,13 +1081,16 @@ class CampaignVisualizer:
                     ox, oy = int(tile[0]), int(tile[1])
                 except Exception:
                     continue
+                draw_x, draw_y = self._display_tile(ox, oy)
                 obstacle_rect = patches.Rectangle(
-                    (ox - 0.45, oy - 0.45), 0.9, 0.9,
+                    (draw_x - 0.45, draw_y - 0.45), 0.9, 0.9,
                     facecolor=self.COLOR_OBSTACLE,
                     edgecolor=(0.25, 0.25, 0.25),
                     linewidth=1.5,
                 )
                 self.ax.add_patch(obstacle_rect)
+
+        self._draw_settlement_overlays()
 
         # Heal tiles on the map — highlight in yellow.
         if castle_heal_tiles is None:
@@ -797,18 +1105,19 @@ class CampaignVisualizer:
                 cx, cy = int(tile[0]), int(tile[1])
             except Exception:
                 continue
-            if (cx, cy) in seen_tiles:
+            draw_x, draw_y = self._display_tile(cx, cy)
+            if (draw_x, draw_y) in seen_tiles:
                 continue
-            seen_tiles.add((cx, cy))
+            seen_tiles.add((draw_x, draw_y))
             castle_rect = patches.Rectangle(
-                (cx - 0.45, cy - 0.45), 0.9, 0.9,
+                (draw_x - 0.45, draw_y - 0.45), 0.9, 0.9,
                 facecolor=self.COLOR_CASTLE,
                 edgecolor=(0.9, 0.6, 0.0),
                 linewidth=2.0,
             )
             self.ax.add_patch(castle_rect)
             self.ax.text(
-                cx, cy, "C",
+                draw_x, draw_y, "C",
                 ha="center", va="center",
                 fontsize=10, fontweight="bold",
                 color=(0.35, 0.25, 0.0),
@@ -819,8 +1128,10 @@ class CampaignVisualizer:
             for i in range(len(self.path_history) - 1):
                 x1, y1 = self.path_history[i]
                 x2, y2 = self.path_history[i + 1]
+                draw_x1, draw_y1 = self._display_tile(int(x1), int(y1))
+                draw_x2, draw_y2 = self._display_tile(int(x2), int(y2))
                 self.ax.plot(
-                    [x1, x2], [y1, y2],
+                    [draw_x1, draw_x2], [draw_y1, draw_y2],
                     color=self.COLOR_PATH,
                     linewidth=2,
                     alpha=0.7,
@@ -828,41 +1139,60 @@ class CampaignVisualizer:
 
         # Враги
         for enemy_id, (ex, ey) in enemy_positions.items():
+            draw_x, draw_y = self._display_tile(int(ex), int(ey))
             is_alive = enemies_alive.get(enemy_id, False)
-            color = self.COLOR_ENEMY_ALIVE if is_alive else self.COLOR_ENEMY_DEAD
+            is_green_dragon = int(enemy_id) == int(CampaignEnv.GREEN_DRAGON_ENEMY_ID)
+            if is_green_dragon:
+                dragon_tile = patches.Rectangle(
+                    (draw_x - 0.48, draw_y - 0.48),
+                    0.96,
+                    0.96,
+                    facecolor=self.COLOR_DRAGON_TILE,
+                    edgecolor=(0.05, 0.45, 0.12),
+                    linewidth=1.8,
+                    zorder=2.6,
+                )
+                self.ax.add_patch(dragon_tile)
+            color = (
+                self.COLOR_DRAGON_ALIVE if (is_alive and is_green_dragon)
+                else self.COLOR_DRAGON_DEAD if is_green_dragon
+                else self.COLOR_ENEMY_ALIVE if is_alive
+                else self.COLOR_ENEMY_DEAD
+            )
 
             # Подсветка текущего боя
             if highlight_battle == enemy_id:
                 circle = plt.Circle(
-                    (ex, ey), 0.55,
+                    (draw_x, draw_y), 0.55,
                     facecolor="none",
                     edgecolor=(1.0, 0.8, 0.0),
                     linewidth=4,
                 )
                 self.ax.add_patch(circle)
 
-            circle = plt.Circle((ex, ey), 0.35, facecolor=color, edgecolor="black", linewidth=1.5)
+            circle = plt.Circle((draw_x, draw_y), 0.35, facecolor=color, edgecolor="black", linewidth=1.5)
             self.ax.add_patch(circle)
 
             # Номер врага
             status = "OK" if not is_alive else ""
             self.ax.text(
-                ex, ey, f"E{enemy_id}{status}",
+                draw_x, draw_y, f"E{enemy_id}{status}",
                 ha="center", va="center",
                 fontsize=10, fontweight="bold",
                 color="white" if is_alive else "gray",
             )
 
         # Агент
+        draw_agent_x, draw_agent_y = self._display_tile(int(agent_pos[0]), int(agent_pos[1]))
         agent_circle = plt.Circle(
-            agent_pos, 0.3,
+            (draw_agent_x, draw_agent_y), 0.3,
             facecolor=self.COLOR_AGENT,
             edgecolor="darkblue",
             linewidth=2,
         )
         self.ax.add_patch(agent_circle)
         self.ax.text(
-            agent_pos[0], agent_pos[1], "A",
+            draw_agent_x, draw_agent_y, "A",
             ha="center", va="center",
             fontsize=12, fontweight="bold",
             color="white",
@@ -974,6 +1304,9 @@ def run_campaign_visualization(
     model_path: str,
     delay: float = 0.3,
     battle_speed: float = 1.0,
+    deterministic: bool = False,
+    map_png_path: str | None = None,
+    scenario_path: str | None = None,
 ):
     """Запускает визуализацию кампании."""
 
@@ -998,7 +1331,11 @@ def run_campaign_visualization(
     env = ActionMasker(env_base, mask_fn)
 
     # Визуализаторы
-    grid_viz = CampaignVisualizer(grid_size=env_base.grid_size)
+    grid_viz = CampaignVisualizer(
+        grid_size=env_base.grid_size,
+        background_map_path=map_png_path or _existing_path_or_none(DEFAULT_MAP_PNG_PATH),
+        scenario_path=scenario_path or _existing_path_or_none(DEFAULT_SCENARIO_PATH),
+    )
     battle_viz = None  # Создаётся при входе в бой
 
     print("\n" + "=" * 60)
@@ -1090,7 +1427,11 @@ def run_campaign_visualization(
         except Exception:
             obs_for_model = obs
 
-        action, _ = model.predict(obs_for_model, deterministic=True, action_masks=mask)
+        action, _ = model.predict(
+            obs_for_model,
+            deterministic=deterministic,
+            action_masks=mask,
+        )
 
         # Логируем действие агента в режиме боя
         action_idx = int(action)
@@ -1370,6 +1711,23 @@ if __name__ == "__main__":
         default=1.0,
         help="Battle animation speed multiplier (>1 faster, <1 slower)",
     )
+    parser.add_argument(
+        "--deterministic",
+        action="store_true",
+        help="Use deterministic actions (default: stochastic)",
+    )
+    parser.add_argument(
+        "--map-png",
+        type=str,
+        default=_existing_path_or_none(DEFAULT_MAP_PNG_PATH),
+        help="Path to campaign background PNG. Defaults to outputs/a_return_to_simpler_times_entries.png if present.",
+    )
+    parser.add_argument(
+        "--scenario-path",
+        type=str,
+        default=_existing_path_or_none(DEFAULT_SCENARIO_PATH),
+        help="Path to scenario .sg used to highlight capitals and villages.",
+    )
     args = parser.parse_args()
 
     # Ищем модель
@@ -1383,4 +1741,7 @@ if __name__ == "__main__":
         model_path,
         delay=args.delay,
         battle_speed=args.battle_speed,
+        deterministic=args.deterministic,
+        map_png_path=args.map_png,
+        scenario_path=args.scenario_path,
     )

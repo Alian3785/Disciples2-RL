@@ -210,7 +210,7 @@ def make_env(log_enabled: bool = False):
         **REWARD_CONFIG,
         persist_blue_hp=True,
         log_enabled=log_enabled,
-        max_grid_steps=1500,
+        max_grid_steps=1800,
         realcapital=2,
     )
     masked = ActionMasker(base, mask_fn)

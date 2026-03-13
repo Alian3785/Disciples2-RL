@@ -166,6 +166,7 @@ class GridWorldEnv(gym.Env):
             "battle_triggered": False,
             "rest_action": False,
             "blocked_by_obstacle": False,
+            "blocked_by_boundary": False,
             "blocked_target": None,
             "enemy_id": None,
             "agent_pos": self.agent_pos,
@@ -175,11 +176,11 @@ class GridWorldEnv(gym.Env):
         if action == self.ACTION_REST:
             info["rest_action"] = True
         else:
-            dx, dy = self._action_to_delta(action)
-            new_x = max(0, min(self.grid_size - 1, self.agent_pos[0] + dx))
-            new_y = max(0, min(self.grid_size - 1, self.agent_pos[1] + dy))
-            target_pos = (new_x, new_y)
-            if target_pos in self.obstacle_positions:
+            target_pos = self._target_pos_for_action(action)
+            if not self._is_within_grid(target_pos):
+                info["blocked_by_boundary"] = True
+                info["blocked_target"] = target_pos
+            elif target_pos in self.obstacle_positions:
                 reward += self.obstacle_penalty
                 info["blocked_by_obstacle"] = True
                 info["blocked_target"] = target_pos
@@ -216,6 +217,13 @@ class GridWorldEnv(gym.Env):
             self.ACTION_REST: (0, 0),
         }
         return deltas.get(action, (0, 0))
+
+    def _target_pos_for_action(self, action: int) -> Tuple[int, int]:
+        dx, dy = self._action_to_delta(action)
+        return self.agent_pos[0] + dx, self.agent_pos[1] + dy
+
+    def _is_within_grid(self, pos: Tuple[int, int]) -> bool:
+        return 0 <= int(pos[0]) < self.grid_size and 0 <= int(pos[1]) < self.grid_size
 
     def _get_obs(self) -> np.ndarray:
         x_norm = self.agent_pos[0] / max(1, self.grid_size - 1)
@@ -292,4 +300,13 @@ class GridWorldEnv(gym.Env):
         return result
 
     def compute_action_mask(self) -> np.ndarray:
-        return np.ones(9, dtype=bool)
+        mask = np.zeros(self.action_space.n, dtype=bool)
+        mask[self.ACTION_REST] = True
+
+        for action in range(self.ACTION_REST):
+            target_pos = self._target_pos_for_action(action)
+            mask[action] = self._is_within_grid(target_pos) and (
+                target_pos not in self.obstacle_positions
+            )
+
+        return mask

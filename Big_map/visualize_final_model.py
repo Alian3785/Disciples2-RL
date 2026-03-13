@@ -77,13 +77,33 @@ def main():
         action="store_true",
         help="Включить графическую визуализацию (matplotlib из visualize_campaign.py)",
     )
+    parser.add_argument(
+        "--map-png",
+        default="./outputs/a_return_to_simpler_times_entries.png",
+        help="Путь к PNG-фону карты для режима --viz",
+    )
+    parser.add_argument(
+        "--scenario-path",
+        default=(
+            "D:/Disciples II "
+            "\u0412\u043e\u0441\u0441\u0442\u0430\u043d\u0438\u0435 "
+            "\u042d\u043b\u044c\u0444\u043e\u0432/Exports/A Return To Simpler Times.sg"
+        ),
+        help="Путь к .sg сценарию для подсветки столиц и городов в режиме --viz",
+    )
     args = parser.parse_args()
 
     # Графическая визуализация (matplotlib)
     if args.viz:
         from visualize_campaign import run_campaign_visualization
 
-        run_campaign_visualization(model_path=args.model_path, delay=args.sleep or 0.3)
+        run_campaign_visualization(
+            model_path=args.model_path,
+            delay=args.sleep or 0.3,
+            deterministic=args.deterministic,
+            map_png_path=args.map_png,
+            scenario_path=args.scenario_path,
+        )
         return
 
     env = Monitor(ActionMasker(CampaignEnv(log_enabled=True, realcapital=2), mask_fn))

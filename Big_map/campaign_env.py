@@ -144,7 +144,7 @@ class CampaignEnv(gym.Env):
         reward_unit_upgrade: float = 1.0,
         persist_blue_hp: bool = True,
         log_enabled: bool = False,
-        max_grid_steps: int = 1500,
+        max_grid_steps: int = 1800,
         realcapital: int = 1,
     ):
         super().__init__()
@@ -345,6 +345,10 @@ class CampaignEnv(gym.Env):
             self._log(
                 f"Препятствие: переход {old_pos} -> {grid_info.get('blocked_target')} заблокирован"
             )
+        elif grid_info.get("blocked_by_boundary"):
+            self._log(
+                f"Граница карты: переход {old_pos} -> {grid_info.get('blocked_target')} заблокирован"
+            )
 
         if 0 <= grid_action <= 7:
             if not grid_info.get("blocked_by_obstacle", False):
@@ -366,6 +370,7 @@ class CampaignEnv(gym.Env):
             "battle_triggered": grid_info.get("battle_triggered", False),
             "rest_action": grid_info.get("rest_action", False),
             "blocked_by_obstacle": grid_info.get("blocked_by_obstacle", False),
+            "blocked_by_boundary": grid_info.get("blocked_by_boundary", False),
             "blocked_obstacle_pos": grid_info.get("blocked_target"),
             "grid_reward_raw": float(_grid_reward),
             "grid_reward_scaled": float(reward),
@@ -1658,8 +1663,9 @@ class CampaignEnv(gym.Env):
         if self.mode == self.MODE_GRID:
             # В grid режиме движение доступно только при moves > 0.
             # REST (8) доступен при ранении или когда очки перемещения закончились.
-            mask[:8] = self.moves > 0
-            mask[8] = self._has_wounded_blue() or self.moves <= 0
+            grid_mask = self.grid_env.compute_action_mask()
+            mask[:8] = bool(self.moves > 0) & grid_mask[:8]
+            mask[8] = bool(grid_mask[8]) and (self._has_wounded_blue() or self.moves <= 0)
             # Бутыли лечения на позиции 7-12.
             if self.heal_bottles_used < self.MAX_HEAL_BOTTLES:
                 for idx, pos in enumerate(self.GRID_BOTTLE_POSITIONS):
