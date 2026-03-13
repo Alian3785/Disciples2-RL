@@ -32,7 +32,7 @@ def make_env() -> Monitor:
         reward_timeout=-3.0,
         persist_blue_hp=True,
         log_enabled=False,
-        max_grid_steps=1500,
+        max_grid_steps=1800,
         realcapital=2,
     )
     return Monitor(ActionMasker(base, mask_fn))

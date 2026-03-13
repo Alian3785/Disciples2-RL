@@ -79,7 +79,7 @@ def test_default_layout_uses_static_obstacles_and_keeps_targets_reachable():
 
     obstacle_tiles = set(env.grid_env.obstacle_positions)
     assert obstacle_tiles
-    assert len(obstacle_tiles) == 837
+    assert len(obstacle_tiles) == 836
     assert obstacle_tiles.isdisjoint(set(env.castle_heal_tiles))
     assert obstacle_tiles.isdisjoint(set(env.grid_env.enemy_positions.values()))
     assert env.grid_env.start_position not in obstacle_tiles
@@ -93,25 +93,20 @@ def test_default_layout_uses_static_obstacles_and_keeps_targets_reachable():
     )
 
 
-def test_hero_start_is_empty_and_adjacent_to_legions_capital_obstacles():
+def test_hero_start_is_empty_and_inside_legions_capital_area():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
 
     start_x, start_y = env.grid_env.start_position
     capital_tiles = {
         (x, y)
-        for x in range(22, 27)
-        for y in range(8, 13)
+        for x in range(1, 6)
+        for y in range(25, 30)
     }
 
     assert env.grid_env.start_position == DEFAULT_HERO_GRID_POSITION
     assert env.grid_env.start_position not in env.grid_env.obstacle_positions
-    assert any(
-        (start_x + dx, start_y + dy) in capital_tiles
-        for dx in (-1, 0, 1)
-        for dy in (-1, 0, 1)
-        if dx or dy
-    )
+    assert (start_x, start_y) in capital_tiles
 
 
 def test_obstacle_blocks_movement_with_configured_penalty():
@@ -127,6 +122,9 @@ def test_obstacle_blocks_movement_with_configured_penalty():
     env.grid_env.visited_cells = {origin_tile}
     env.grid_visit_counts = {}
     env.recent_positions = []
+
+    mask = env.compute_action_mask()
+    assert bool(mask[move_action]) is False
 
     _, reward, _, _, info = env.step(move_action)
 
@@ -151,6 +149,35 @@ def test_grid_world_render_marks_obstacles():
     rendered = env.render(mode="ansi")
     assert rendered is not None
     assert "# " in rendered
+
+
+def test_grid_world_action_mask_blocks_edges_and_obstacles():
+    env = GridWorldEnv(
+        grid_size=3,
+        enemy_positions={},
+        obstacle_positions={(1, 0)},
+        start_position=(0, 0),
+    )
+    env.reset(seed=123)
+
+    mask = env.compute_action_mask()
+
+    assert mask.tolist() == [False, True, False, False, False, False, False, True, True]
+
+
+def test_campaign_grid_mask_respects_edges_and_obstacles():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    env.grid_env.agent_pos = (0, 0)
+    env.grid_env.visited_cells = {(0, 0)}
+    env.grid_env.obstacle_positions = {(1, 0)}
+    env.moves = env.moves_per_turn
+
+    mask = env.compute_action_mask()
+
+    assert mask[:8].tolist() == [False, True, False, False, False, False, False, True]
+    assert bool(mask[8]) is False
 
 
 def test_castle_heal_actions_available_on_all_heal_tiles():
