@@ -11,7 +11,7 @@
 import os
 import re
 import time
-import subprocess
+from collections import Counter, deque
 from pathlib import Path
 from typing import Any
 import numpy as np
@@ -23,9 +23,12 @@ os.environ.setdefault("TORCH_DISABLE_DYNAMO", "1")
 setup_utf8_console()
 
 try:
-    import wandb
+    import comet_ml
+    from comet_ml import Experiment, OfflineExperiment
 except ImportError:
-    wandb = None
+    comet_ml = None
+    Experiment = None
+    OfflineExperiment = None
 
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.monitor import Monitor
@@ -33,12 +36,6 @@ from stable_baselines3.common.callbacks import CallbackList, EvalCallback, BaseC
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.evaluation import evaluate_policy as sb3_evaluate_policy
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize, sync_envs_normalization
-
-try:
-    from wandb.integration.sb3 import WandbCallback
-    
-except ImportError:
-    WandbCallback = None
 
 from sb3_contrib.ppo_mask import MaskablePPO
 from sb3_contrib.common.wrappers import ActionMasker
@@ -54,10 +51,6 @@ except ImportError:
 
 from campaign_env import CampaignEnv
 from grid import DEFAULT_GRID_SIZE
-
-# Для Windows и симлинков W&B
-if os.name == "nt":
-    os.environ.setdefault("WANDB_DISABLE_SYMLINKS", "true")
 
 # Директория этого файла (чтобы пути были стабильны независимо от cwd)
 BASE_DIR = Path(__file__).resolve().parent
@@ -79,30 +72,30 @@ REWARD_CONFIG = {
     "reward_unit_upgrade": 0.25,
 }
 
-REQUIRED_WANDB_VERSION = (0, 25, 0)
+REQUIRED_COMET_VERSION = (3, 57, 0)
 
 
-def _wandb_version_tuple(raw_version: str) -> tuple[int, int, int] | None:
-    """Parse semantic version (major.minor.patch) from a W&B version string."""
+def _comet_version_tuple(raw_version: str) -> tuple[int, int, int] | None:
+    """Parse semantic version (major.minor.patch) from a Comet version string."""
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)", raw_version or "")
     if not match:
         return None
     return tuple(int(part) for part in match.groups())
 
 
-def _wandb_version_is_supported() -> bool:
-    """Require wandb>=0.25.0 for stable training integration."""
-    if wandb is None:
+def _comet_version_is_supported() -> bool:
+    """Require comet_ml>=3.57.0 for stable training integration."""
+    if comet_ml is None:
         return False
-    parsed = _wandb_version_tuple(getattr(wandb, "__version__", ""))
-    return parsed is not None and parsed >= REQUIRED_WANDB_VERSION
+    parsed = _comet_version_tuple(getattr(comet_ml, "__version__", ""))
+    return parsed is not None and parsed >= REQUIRED_COMET_VERSION
 
 
-def _normalize_wandb_entity(entity: str | None) -> str | None:
-    """Normalize optional entity value from CLI/env."""
-    if entity is None:
+def _normalize_optional_name(value: str | None) -> str | None:
+    """Normalize optional CLI/env value."""
+    if value is None:
         return None
-    cleaned = str(entity).strip()
+    cleaned = str(value).strip()
     if not cleaned:
         return None
     if cleaned.lower() in {"none", "null", "default", "-"}:
@@ -110,91 +103,72 @@ def _normalize_wandb_entity(entity: str | None) -> str | None:
     return cleaned
 
 
-def _set_wandb_online_mode() -> None:
-    """
-    Force online mode for this process and best-effort update local wandb CLI mode.
-    Avoids accidental sticky offline runs from previous sessions.
-    """
-    os.environ["WANDB_MODE"] = "online"
-    try:
-        subprocess.run(
-            ["wandb", "online"],
-            check=False,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-    except Exception:
-        # Non-fatal: env var still forces online mode for this process.
-        pass
-
-
-def _login_wandb_non_interactive() -> None:
-    """
-    Non-interactive W&B login.
-    Uses WANDB_API_KEY when provided, otherwise relies on existing local credentials.
-    Never prompts for input.
-    """
-    key = os.getenv("WANDB_API_KEY", "").strip()
-    if not key:
-        return
-    wandb.login(key=key, relogin=False, verify=True)
-
-
-def _init_wandb_run(project: str, name: str, config: dict, entity: str | None = None):
-    """
-    Initialize W&B strictly in online mode.
-    Retries without entity on 403 because stale/invalid entity is a common cause.
-    """
-    _set_wandb_online_mode()
-    normalized_entity = _normalize_wandb_entity(entity)
-
-    init_kwargs = {
-        "project": project,
-        "name": name,
-        "config": config,
-        "sync_tensorboard": True,
-        "save_code": True,
-        "mode": "online",
+def _init_comet_experiment(
+    *,
+    project: str,
+    name: str,
+    config: dict[str, Any],
+    workspace: str | None = None,
+    offline: bool = False,
+    offline_directory: str | None = None,
+):
+    """Initialize Comet online or offline and log the base config."""
+    normalized_workspace = _normalize_optional_name(workspace)
+    api_key = os.getenv("COMET_API_KEY", "").strip() or None
+    common_kwargs = {
+        "project_name": project,
+        "workspace": normalized_workspace,
+        "log_code": True,
+        "log_graph": True,
+        "auto_param_logging": True,
+        "auto_metric_logging": True,
+        "auto_histogram_tensorboard_logging": True,
+        "parse_args": False,
+        "display_summary_level": 0,
     }
 
-    if os.name == "nt":
-        try:
-            init_kwargs["settings"] = wandb.Settings(symlink=False)
-        except Exception:
-            # Keep env-var fallback when Settings API is unavailable.
-            pass
+    if offline:
+        experiment = OfflineExperiment(
+            api_key=api_key,
+            offline_directory=offline_directory,
+            **common_kwargs,
+        )
+    else:
+        if not api_key:
+            raise RuntimeError(
+                "COMET_API_KEY is not set. Provide it in the environment or use --comet-offline."
+            )
+        experiment = Experiment(
+            api_key=api_key,
+            **common_kwargs,
+        )
 
-    def _try_init(entity_value: str | None):
-        kwargs = dict(init_kwargs)
-        if entity_value:
-            kwargs["entity"] = entity_value
-        return wandb.init(**kwargs)
+    experiment.set_name(name)
+    experiment.log_parameters(config)
+    experiment.log_other("tracking_backend", "comet")
+    experiment.add_tag("campaign")
+    experiment.add_tag("maskable_ppo")
+    return experiment
 
-    last_exc: Exception | None = None
 
-    # Attempt 1: requested/default entity.
-    try:
-        return _try_init(normalized_entity)
-    except Exception as exc:
-        last_exc = exc
-        msg = str(exc)
-        print(f"[WARN] W&B online init failed: {msg}")
+def _safe_mean(values) -> float:
+    """Return float mean for a sequence-like container, or 0.0 when empty."""
+    if not values:
+        return 0.0
+    return float(np.mean(list(values)))
 
-        # Attempt 2: no explicit entity (uses account default).
-        if normalized_entity and ("403" in msg or "permission" in msg.lower()):
-            print("[WARN] Retrying W&B init without explicit entity...")
-            try:
-                return _try_init(None)
-            except Exception as retry_exc:
-                last_exc = retry_exc
-                print(f"[WARN] Retry without entity failed: {retry_exc}")
 
-    assert last_exc is not None
-    raise RuntimeError(
-        "W&B online init failed. "
-        "Run `wandb login --relogin --verify` and ensure the API key has access "
-        "to the selected project/entity."
-    ) from last_exc
+def _safe_rate(numerator: int, denominator: int) -> float:
+    """Return a safe fraction for counters."""
+    if denominator <= 0:
+        return 0.0
+    return float(numerator) / float(denominator)
+
+
+def _metric_token(value: Any) -> str:
+    """Normalize dynamic metric suffixes to a predictable ASCII token."""
+    token = re.sub(r"[^0-9A-Za-z_]+", "_", str(value).strip()).strip("_").lower()
+    return token or "unknown"
 
 
 def mask_fn(env: CampaignEnv) -> np.ndarray:
@@ -221,11 +195,16 @@ class CampaignCheckpointCallback(BaseCallback):
     """Сохраняет модель каждые N шагов."""
 
     def __init__(
-        self, save_dir: str, milestone_steps: int = 500_000, verbose: int = 1
+        self,
+        save_dir: str,
+        milestone_steps: int = 500_000,
+        experiment: Any | None = None,
+        verbose: int = 1,
     ):
         super().__init__(verbose)
         self.save_dir = save_dir
         self.milestone_steps = int(milestone_steps)
+        self.experiment = experiment
         self.next_milestone = self.milestone_steps
         os.makedirs(self.save_dir, exist_ok=True)
 
@@ -241,8 +220,12 @@ class CampaignCheckpointCallback(BaseCallback):
                 vec_norm.save(vec_path)
             if self.verbose:
                 print(f"[Checkpoint] Saved at {self.next_milestone} steps > {path}")
-            if wandb and wandb.run:
-                wandb.log({"checkpoint_saved_at": self.next_milestone})
+            if self.experiment is not None:
+                self.experiment.log_metric(
+                    "checkpoint_saved_at",
+                    self.next_milestone,
+                    step=self.num_timesteps,
+                )
             self.next_milestone += self.milestone_steps
         return True
 
@@ -478,42 +461,285 @@ class CampaignVictoryEvalCallback(EvalCallback):
 
 
 class CampaignMetricsCallback(BaseCallback):
-    """Логирует метрики кампании в W&B."""
+    """Логирует расширенные метрики кампании в Comet во время обучения."""
 
-    def __init__(self, verbose: int = 0):
+    def __init__(
+        self,
+        log_freq: int = 1000,
+        episode_window: int = 100,
+        experiment: Any | None = None,
+        verbose: int = 0,
+    ):
         super().__init__(verbose)
-        self.episode_rewards = []
-        self.episode_lengths = []
+        self.log_freq = max(1, int(log_freq))
+        self.episode_window = max(1, int(episode_window))
+        self.step_window = max(16, min(self.log_freq, 256))
+        self.experiment = experiment
+
+        self.episode_rewards: list[float] = []
+        self.episode_lengths: list[int] = []
+        self.recent_episode_rewards = deque(maxlen=self.episode_window)
+        self.recent_episode_lengths = deque(maxlen=self.episode_window)
+        self.recent_blue_hp_ratios = deque(maxlen=self.episode_window)
+        self.recent_unit_upgrades = deque(maxlen=self.episode_window)
+        self.recent_enemy_defeat_rewards = deque(maxlen=self.episode_window)
+        self.recent_blue_exp_rewards = deque(maxlen=self.episode_window)
+        self.recent_green_dragon_rewards = deque(maxlen=self.episode_window)
+        self.recent_turns = deque(maxlen=self.step_window)
+        self.recent_gold = deque(maxlen=self.step_window)
+        self.recent_moves = deque(maxlen=self.step_window)
+
+        self.result_counter: Counter[str] = Counter()
+        self.window_result_counter: Counter[str] = Counter()
+        self.battle_counter: Counter[str] = Counter()
+        self.window_battle_counter: Counter[str] = Counter()
+        self.enemy_encounter_counter: Counter[int] = Counter()
+        self.window_enemy_encounter_counter: Counter[int] = Counter()
+        self.enemy_victory_counter: Counter[int] = Counter()
+        self.window_enemy_victory_counter: Counter[int] = Counter()
+        self.enemy_defeat_counter: Counter[int] = Counter()
+        self.window_enemy_defeat_counter: Counter[int] = Counter()
+        self.victory_reason_counter: Counter[str] = Counter()
+        self.window_victory_reason_counter: Counter[str] = Counter()
+
         self.victories = 0
         self.defeats = 0
         self.timeouts = 0
+        self.total_unit_upgrades = 0
+        self.best_recent_victory_rate = 0.0
+        self._last_logged_step = 0
 
-    def _on_step(self) -> bool:
-        # Проверяем завершённые эпизоды
-        for info in self.locals.get("infos", []):
-            if "episode" in info:
-                self.episode_rewards.append(info["episode"]["r"])
-                self.episode_lengths.append(info["episode"]["l"])
+    def _append_recent_stat(self, info: dict[str, Any], key: str, target: deque) -> None:
+        value = info.get(key)
+        if value is None:
+            return
+        try:
+            target.append(float(value))
+        except (TypeError, ValueError):
+            return
 
-            if info.get("campaign_result") == "victory":
+    def _record_window_metrics(self, infos: list[dict[str, Any]]) -> None:
+        turns = []
+        gold = []
+        moves = []
+        for info in infos:
+            if not isinstance(info, dict):
+                continue
+            if "turns" in info:
+                try:
+                    turns.append(float(info["turns"]))
+                except (TypeError, ValueError):
+                    pass
+            if "gold" in info:
+                try:
+                    gold.append(float(info["gold"]))
+                except (TypeError, ValueError):
+                    pass
+            if "moves" in info:
+                try:
+                    moves.append(float(info["moves"]))
+                except (TypeError, ValueError):
+                    pass
+
+        if turns:
+            self.recent_turns.append(float(np.mean(turns)))
+        if gold:
+            self.recent_gold.append(float(np.mean(gold)))
+        if moves:
+            self.recent_moves.append(float(np.mean(moves)))
+
+    def _consume_info(self, info: dict[str, Any]) -> None:
+        episode = info.get("episode")
+        if isinstance(episode, dict):
+            reward = episode.get("r")
+            length = episode.get("l")
+            if reward is not None:
+                reward = float(reward)
+                self.episode_rewards.append(reward)
+                self.recent_episode_rewards.append(reward)
+            if length is not None:
+                length = int(length)
+                self.episode_lengths.append(length)
+                self.recent_episode_lengths.append(length)
+
+        campaign_result = info.get("campaign_result")
+        if campaign_result:
+            result_key = str(campaign_result)
+            self.result_counter[result_key] += 1
+            self.window_result_counter[result_key] += 1
+            if result_key == "victory":
                 self.victories += 1
-            elif info.get("campaign_result") == "defeat":
+            elif result_key == "defeat":
                 self.defeats += 1
-            elif info.get("campaign_result") == "timeout":
+            elif result_key == "timeout":
                 self.timeouts += 1
 
-        # Логируем каждые 1000 шагов
-        if self.num_timesteps % 1000 == 0 and wandb and wandb.run:
-            total_episodes = self.victories + self.defeats + self.timeouts
-            if total_episodes > 0:
-                wandb.log({
-                    "campaign/victory_rate": self.victories / total_episodes,
-                    "campaign/defeat_rate": self.defeats / total_episodes,
-                    "campaign/timeout_rate": self.timeouts / total_episodes,
-                    "campaign/total_episodes": total_episodes,
-                })
+        battle_result = info.get("battle_result")
+        if battle_result:
+            battle_key = str(battle_result)
+            self.battle_counter[battle_key] += 1
+            self.window_battle_counter[battle_key] += 1
 
+        enemy_id = info.get("enemy_id")
+        if (
+            enemy_id is not None
+            and info.get("mode") == "battle"
+            and not info.get("battle_step", False)
+            and info.get("battle_result") is None
+        ):
+            try:
+                enemy_key = int(enemy_id)
+            except (TypeError, ValueError):
+                enemy_key = enemy_id
+            self.enemy_encounter_counter[enemy_key] += 1
+            self.window_enemy_encounter_counter[enemy_key] += 1
+
+        if enemy_id is not None and battle_result:
+            try:
+                enemy_key = int(enemy_id)
+            except (TypeError, ValueError):
+                enemy_key = enemy_id
+            if battle_result == "victory":
+                self.enemy_victory_counter[enemy_key] += 1
+                self.window_enemy_victory_counter[enemy_key] += 1
+            elif battle_result == "defeat":
+                self.enemy_defeat_counter[enemy_key] += 1
+                self.window_enemy_defeat_counter[enemy_key] += 1
+
+        victory_reason = info.get("campaign_victory_reason")
+        if victory_reason:
+            reason_key = str(victory_reason)
+            self.victory_reason_counter[reason_key] += 1
+            self.window_victory_reason_counter[reason_key] += 1
+
+        if battle_result == "victory":
+            self._append_recent_stat(info, "blue_hp_ratio", self.recent_blue_hp_ratios)
+            self._append_recent_stat(info, "enemy_defeat_reward", self.recent_enemy_defeat_rewards)
+            self._append_recent_stat(info, "blue_exp_reward", self.recent_blue_exp_rewards)
+            unit_upgrades = info.get("unit_upgrades")
+            if unit_upgrades is not None:
+                try:
+                    upgrade_count = int(unit_upgrades)
+                except (TypeError, ValueError):
+                    upgrade_count = 0
+                self.total_unit_upgrades += upgrade_count
+                self.recent_unit_upgrades.append(float(upgrade_count))
+            self._append_recent_stat(info, "green_dragon_reward", self.recent_green_dragon_rewards)
+
+    def _build_log_payload(self) -> dict[str, float]:
+        total_episodes = int(sum(self.result_counter.values()))
+        total_battles = int(sum(self.battle_counter.values()))
+        window_episodes = int(sum(self.window_result_counter.values()))
+        window_battles = int(sum(self.window_battle_counter.values()))
+
+        recent_victory_rate = _safe_rate(
+            self.window_result_counter.get("victory", 0),
+            window_episodes,
+        )
+        self.best_recent_victory_rate = max(self.best_recent_victory_rate, recent_victory_rate)
+
+        payload: dict[str, float] = {
+            "campaign/episodes_total": total_episodes,
+            "campaign/victories_total": float(self.victories),
+            "campaign/defeats_total": float(self.defeats),
+            "campaign/timeouts_total": float(self.timeouts),
+            "campaign/victory_rate": _safe_rate(self.victories, total_episodes),
+            "campaign/defeat_rate": _safe_rate(self.defeats, total_episodes),
+            "campaign/timeout_rate": _safe_rate(self.timeouts, total_episodes),
+            "campaign/battles_total": total_battles,
+            "campaign/battle_victories_total": float(self.battle_counter.get("victory", 0)),
+            "campaign/battle_defeats_total": float(self.battle_counter.get("defeat", 0)),
+            "campaign/battle_win_rate": _safe_rate(
+                self.battle_counter.get("victory", 0),
+                total_battles,
+            ),
+            "campaign/unit_upgrades_total": float(self.total_unit_upgrades),
+            "campaign/recent_episodes": float(len(self.recent_episode_rewards)),
+            "campaign/recent_episode_reward_mean": _safe_mean(self.recent_episode_rewards),
+            "campaign/recent_episode_length_mean": _safe_mean(self.recent_episode_lengths),
+            "campaign/recent_blue_hp_ratio_mean": _safe_mean(self.recent_blue_hp_ratios),
+            "campaign/recent_unit_upgrades_mean": _safe_mean(self.recent_unit_upgrades),
+            "campaign/recent_enemy_defeat_reward_mean": _safe_mean(self.recent_enemy_defeat_rewards),
+            "campaign/recent_blue_exp_reward_mean": _safe_mean(self.recent_blue_exp_rewards),
+            "campaign/recent_green_dragon_reward_mean": _safe_mean(self.recent_green_dragon_rewards),
+            "campaign/recent_turns_mean": _safe_mean(self.recent_turns),
+            "campaign/recent_gold_mean": _safe_mean(self.recent_gold),
+            "campaign/recent_moves_mean": _safe_mean(self.recent_moves),
+            "campaign/window/episodes": float(window_episodes),
+            "campaign/window/victory_rate": recent_victory_rate,
+            "campaign/window/defeat_rate": _safe_rate(
+                self.window_result_counter.get("defeat", 0),
+                window_episodes,
+            ),
+            "campaign/window/timeout_rate": _safe_rate(
+                self.window_result_counter.get("timeout", 0),
+                window_episodes,
+            ),
+            "campaign/window/battles": float(window_battles),
+            "campaign/window/battle_win_rate": _safe_rate(
+                self.window_battle_counter.get("victory", 0),
+                window_battles,
+            ),
+            "campaign/best_recent_victory_rate": self.best_recent_victory_rate,
+        }
+
+        for enemy_id, count in sorted(self.window_enemy_encounter_counter.items()):
+            payload[f"campaign/window_enemy_encounters/enemy_{_metric_token(enemy_id)}"] = float(count)
+        for enemy_id, count in sorted(self.window_enemy_victory_counter.items()):
+            payload[f"campaign/window_enemy_victories/enemy_{_metric_token(enemy_id)}"] = float(count)
+        for enemy_id, count in sorted(self.window_enemy_defeat_counter.items()):
+            payload[f"campaign/window_enemy_defeats/enemy_{_metric_token(enemy_id)}"] = float(count)
+        for reason, count in sorted(self.window_victory_reason_counter.items()):
+            payload[f"campaign/window_victory_reasons/{_metric_token(reason)}"] = float(count)
+
+        return payload
+
+    def _reset_log_window(self) -> None:
+        self.window_result_counter.clear()
+        self.window_battle_counter.clear()
+        self.window_enemy_encounter_counter.clear()
+        self.window_enemy_victory_counter.clear()
+        self.window_enemy_defeat_counter.clear()
+        self.window_victory_reason_counter.clear()
+
+    def _log_to_experiment(self, *, force: bool = False) -> None:
+        if self.experiment is None:
+            return
+        if not force and self.num_timesteps - self._last_logged_step < self.log_freq:
+            return
+
+        payload = self._build_log_payload()
+        self.experiment.log_metrics(payload, step=self.num_timesteps)
+        self._last_logged_step = self.num_timesteps
+
+        self.experiment.log_other(
+            "summary_campaign_episodes_total",
+            int(sum(self.result_counter.values())),
+        )
+        self.experiment.log_other(
+            "summary_campaign_victory_rate",
+            payload["campaign/victory_rate"],
+        )
+        self.experiment.log_other(
+            "summary_campaign_battle_win_rate",
+            payload["campaign/battle_win_rate"],
+        )
+        self.experiment.log_other(
+            "summary_campaign_best_recent_victory_rate",
+            self.best_recent_victory_rate,
+        )
+        self._reset_log_window()
+
+    def _on_step(self) -> bool:
+        infos = [info for info in self.locals.get("infos", []) if isinstance(info, dict)]
+        self._record_window_metrics(infos)
+        for info in infos:
+            self._consume_info(info)
+        self._log_to_experiment()
         return True
+
+    def _on_training_end(self) -> None:
+        self._log_to_experiment(force=True)
 
 
 if __name__ == "__main__":
@@ -524,20 +750,43 @@ if __name__ == "__main__":
     parser.add_argument("--n-envs", type=int, default=8, help="Number of parallel environments")
     parser.add_argument("--checkpoint-freq", type=int, default=500_000, help="Checkpoint frequency")
     parser.add_argument("--eval-freq", type=int, default=50_000, help="Evaluation frequency")
-    parser.add_argument("--no-wandb", action="store_true", help="Disable W&B logging")
+    parser.add_argument("--no-comet", action="store_true", help="Disable Comet logging")
     parser.add_argument(
-        "--wandb-project",
+        "--comet-project",
         type=str,
-        default=os.getenv("WANDB_PROJECT", "disciples-campaign"),
-        help="W&B project name",
+        default=os.getenv("COMET_PROJECT_NAME", "disciples-campaign"),
+        help="Comet project name",
     )
     parser.add_argument(
-        "--wandb-entity",
+        "--comet-workspace",
         type=str,
-        default=os.getenv("WANDB_ENTITY", None),
-        help="W&B entity (username or team)",
+        default=os.getenv("COMET_WORKSPACE", None),
+        help="Comet workspace",
+    )
+    parser.add_argument(
+        "--comet-offline",
+        action="store_true",
+        help="Use Comet OfflineExperiment instead of online logging",
     )
     parser.add_argument("--run-name", type=str, default=None, help="Custom run name")
+    parser.add_argument(
+        "--comet-log-freq",
+        type=int,
+        default=1000,
+        help="How often to send custom campaign metrics to Comet",
+    )
+    parser.add_argument(
+        "--comet-window-episodes",
+        type=int,
+        default=100,
+        help="Rolling episode window used for custom Comet analytics",
+    )
+    parser.add_argument(
+        "--comet-offline-dir",
+        type=str,
+        default=str(BASE_DIR / "comet_offline"),
+        help="Directory for Comet offline experiment files",
+    )
     args = parser.parse_args()
 
     # Проверка среды
@@ -560,26 +809,18 @@ if __name__ == "__main__":
     VECNORM_NORM_REWARD = True
     VECNORM_CLIP_REWARD = 10.0
 
-    # -------------------- Инициализация W&B --------------------
-    WANDB_AVAILABLE = wandb is not None and WandbCallback is not None and not args.no_wandb
-    if WANDB_AVAILABLE and not _wandb_version_is_supported():
-        detected = getattr(wandb, "__version__", "unknown")
-        required = ".".join(str(v) for v in REQUIRED_WANDB_VERSION)
-        print(f"[WARN] wandb>={required} is required, found {detected}. W&B logging disabled.")
-        WANDB_AVAILABLE = False
+    # -------------------- Инициализация Comet --------------------
+    COMET_AVAILABLE = Experiment is not None and OfflineExperiment is not None and not args.no_comet
+    if COMET_AVAILABLE and not _comet_version_is_supported():
+        detected = getattr(comet_ml, "__version__", "unknown")
+        required = ".".join(str(v) for v in REQUIRED_COMET_VERSION)
+        print(f"[WARN] comet_ml>={required} is required, found {detected}. Comet logging disabled.")
+        COMET_AVAILABLE = False
 
     run_name = args.run_name or f"campaign-ppo-{TOTAL_STEPS // 1000}k"
 
-    if WANDB_AVAILABLE:
-        try:
-            _login_wandb_non_interactive()
-        except Exception as exc:
-            WANDB_AVAILABLE = False
-            run_id = f"offline-{int(time.time())}"
-            print(f"[WARN] W&B auth failed, training will continue without W&B: {exc}")
-
-    if WANDB_AVAILABLE:
-        wandb_config = {
+    comet_experiment = None
+    comet_config = {
             "algo": "MaskablePPO",
             "total_timesteps": TOTAL_STEPS,
             "n_envs": N_ENVS,
@@ -592,6 +833,9 @@ if __name__ == "__main__":
             "ent_coef": 0.01,
             "checkpoint_freq": CHECKPOINT_FREQ,
             "eval_freq": EVAL_FREQ,
+            "comet_log_freq": args.comet_log_freq,
+            "comet_window_episodes": args.comet_window_episodes,
+            "comet_offline": bool(args.comet_offline),
             "grid_size": DEFAULT_GRID_SIZE,
             "num_enemies": len(test_env.grid_env.enemy_positions),
             "persist_blue_hp": True,
@@ -600,32 +844,55 @@ if __name__ == "__main__":
             "vecnormalize_norm_reward": VECNORM_NORM_REWARD,
             "vecnormalize_clip_reward": VECNORM_CLIP_REWARD,
         }
+
+    if COMET_AVAILABLE:
         try:
-            run = _init_wandb_run(
-                project=args.wandb_project,
+            comet_experiment = _init_comet_experiment(
+                project=args.comet_project,
                 name=run_name,
-                config=wandb_config,
-                entity=args.wandb_entity,
+                config=comet_config,
+                workspace=args.comet_workspace,
+                offline=args.comet_offline,
+                offline_directory=args.comet_offline_dir,
             )
-            run_id = run.id
-            print(f"[INFO] W&B enabled (wandb={wandb.__version__}, mode={run.settings.mode})")
+            run_id = comet_experiment.get_key()
+            mode = "offline" if args.comet_offline else "online"
+            print(f"[INFO] Comet enabled (comet_ml={comet_ml.__version__}, mode={mode})")
+            if getattr(comet_experiment, "url", None):
+                print(f"[INFO] Comet run: {comet_experiment.url}")
         except Exception as exc:
-            WANDB_AVAILABLE = False
+            COMET_AVAILABLE = False
             run_id = f"offline-{int(time.time())}"
-            print(f"[WARN] W&B init failed, training will continue without W&B: {exc}")
+            print(f"[WARN] Comet init failed, training will continue without Comet: {exc}")
     else:
         run_id = f"offline-{int(time.time())}"
-        print("[INFO] W&B disabled, running in offline mode")
+        print("[INFO] Comet disabled, running without experiment tracking")
 
     # Директории
     CHECKPOINT_DIR = str(BASE_DIR / "campaign_checkpoints" / run_id)
     MODEL_DIR = f"./campaign_models/{run_id}"
     EVAL_DIR = f"./campaign_eval/{run_id}"
     TB_LOG_DIR = f"./campaign_tb_logs/{run_id}"
+    COMET_OFFLINE_DIR = args.comet_offline_dir
 
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     os.makedirs(MODEL_DIR, exist_ok=True)
     os.makedirs(EVAL_DIR, exist_ok=True)
+    os.makedirs(TB_LOG_DIR, exist_ok=True)
+    os.makedirs(COMET_OFFLINE_DIR, exist_ok=True)
+
+    if COMET_AVAILABLE and comet_experiment is not None:
+        comet_experiment.log_parameters(
+            {
+                "run_id": run_id,
+                "checkpoint_dir": CHECKPOINT_DIR,
+                "model_dir": MODEL_DIR,
+                "eval_dir": EVAL_DIR,
+                "tb_log_dir": TB_LOG_DIR,
+                "comet_offline_dir": COMET_OFFLINE_DIR,
+            },
+            prefix="paths",
+        )
 
     # -------------------- Создание сред --------------------
     print(f"Создание {N_ENVS} параллельных сред...")
@@ -677,21 +944,19 @@ if __name__ == "__main__":
     checkpoint_cb = CampaignCheckpointCallback(
         save_dir=CHECKPOINT_DIR,
         milestone_steps=CHECKPOINT_FREQ,
+        experiment=comet_experiment,
         verbose=1,
     )
     callbacks.append(checkpoint_cb)
 
     # Метрики кампании
-    metrics_cb = CampaignMetricsCallback(verbose=0)
+    metrics_cb = CampaignMetricsCallback(
+        log_freq=args.comet_log_freq,
+        episode_window=args.comet_window_episodes,
+        experiment=comet_experiment,
+        verbose=0,
+    )
     callbacks.append(metrics_cb)
-
-    # W&B callback (без сохранения модели — на Windows symlink требует прав админа)
-    if WANDB_AVAILABLE and WandbCallback:
-        wandb_cb = WandbCallback(
-            gradient_save_freq=10000,
-            verbose=2,
-        )
-        callbacks.append(wandb_cb)
 
     # Evaluation callback
     best_vecnorm_cb = SaveVecNormalizeOnBestCallback(
@@ -747,5 +1012,23 @@ if __name__ == "__main__":
         print(f"  Winrate: {100 * metrics_cb.victories / total:.1f}%")
     print(f"{'='*60}")
 
-    if WANDB_AVAILABLE and wandb.run:
-        wandb.finish()
+    if COMET_AVAILABLE and comet_experiment is not None:
+        try:
+            comet_experiment.log_tensorboard_folder(TB_LOG_DIR)
+        except Exception as exc:
+            print(f"[WARN] Failed to upload TensorBoard logs to Comet: {exc}")
+        try:
+            comet_experiment.log_other(
+                "final_campaign_victories",
+                int(metrics_cb.victories),
+            )
+            comet_experiment.log_other(
+                "final_campaign_defeats",
+                int(metrics_cb.defeats),
+            )
+            comet_experiment.log_other(
+                "final_campaign_timeouts",
+                int(metrics_cb.timeouts),
+            )
+        finally:
+            comet_experiment.end()
