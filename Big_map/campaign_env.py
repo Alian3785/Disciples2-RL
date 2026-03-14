@@ -82,7 +82,8 @@ class CampaignEnv(gym.Env):
         - В режиме grid:
           - 0-7: движение в 8 направлениях
           - 8: отдых (REST) — восстановление 5% HP раненым юнитам
-          - 9-14: применить бутыль лечения к позициям BLUE 7-12 (+150 HP, не выше максимума)
+          - 9-14: применить подходящую банку лечения к позициям BLUE 7-12
+            (автовыбор +50 HP или +100 HP в зависимости от недостающего здоровья и запасов)
           - 15-20: применить бутыль воскрешения к позициям BLUE 7-12 (оживляет с 1 HP)
           - 21-26: лечение на специальных клетках карты по позициям BLUE 7-12
             (стоимость за 1 HP зависит от Level)
@@ -108,11 +109,13 @@ class CampaignEnv(gym.Env):
     GOLD_PER_TURN = 1.5
     GRID_BOTTLE_ACTION_START = 9
     GRID_BOTTLE_POSITIONS = list(range(7, 13))  # 6 позиций BLUE
-    HEAL_BOTTLE_AMOUNT = 150.0
-    MAX_HEAL_BOTTLES = 40
+    HEAL_BOTTLE_AMOUNT = 100.0
+    MAX_HEAL_BOTTLES = 3
+    HEALING_BOTTLE_AMOUNT = 50.0
+    MAX_HEALING_BOTTLES = 3
     GRID_REVIVE_ACTION_START = GRID_BOTTLE_ACTION_START + len(GRID_BOTTLE_POSITIONS)  # 15
     REVIVE_BOTTLE_POSITIONS = GRID_BOTTLE_POSITIONS
-    MAX_REVIVE_BOTTLES = 40
+    MAX_REVIVE_BOTTLES = 3
     CASTLE_POS = DEFAULT_HERO_GRID_POSITION
     CASTLE_HEAL_TILE_COUNT = HEAL_TILE_COUNT
     GRID_CASTLE_HEAL_ACTION_START = GRID_REVIVE_ACTION_START + len(REVIVE_BOTTLE_POSITIONS)  # 21
@@ -212,10 +215,12 @@ class CampaignEnv(gym.Env):
         # Текущий режим
         self.mode = self.MODE_GRID
         self.current_enemy_id: Optional[int] = None
+        self.battle_origin_pos: Optional[Tuple[int, int]] = None
 
         # Сохраняем состояние BLUE команды между боями
         self.blue_team_state: Optional[List[Dict]] = None
         self.heal_bottles_used: int = 0
+        self.healing_bottles_used: int = 0
         self.revive_bottles_used: int = 0
         self.turns: int = 0
         self.gold: float = 0.0
@@ -248,10 +253,12 @@ class CampaignEnv(gym.Env):
         self.building_keys = self._get_building_keys(self.active_buildings)
         self.mode = self.MODE_GRID
         self.current_enemy_id = None
+        self.battle_origin_pos = None
         # Стартовое состояние BLUE — копия базовых юнитов, чтобы
         # вне боя можно было применять лечение до первого боя.
         self.blue_team_state = deepcopy(UNITS_BLUE)
         self.heal_bottles_used = 0
+        self.healing_bottles_used = 0
         self.revive_bottles_used = 0
         self.turns = 0
         self.gold = 0.0
@@ -296,7 +303,7 @@ class CampaignEnv(gym.Env):
         """Шаг в режиме перемещения по карте."""
         # В grid режиме:
         #   0-7 — движение, 8 — отдых,
-        #   9-14 — применить бутыль лечения к позициям 7-12 соответственно.
+        #   9-14 — применить подходящую банку лечения к позициям 7-12 соответственно.
         #   15-20 — применить бутыль воскрешения к позициям 7-12 соответственно.
         #   21-26 — лечение на специальных клетках карты по позициям 7-12.
         #   27-32 — воскрешение на специальных клетках карты по позициям 7-12.
@@ -399,6 +406,7 @@ class CampaignEnv(gym.Env):
         if grid_info.get("battle_triggered"):
             enemy_id = grid_info["enemy_id"]
             self.current_enemy_id = enemy_id
+            self.battle_origin_pos = (int(old_pos[0]), int(old_pos[1]))
             self.mode = self.MODE_BATTLE
 
             self._log(f"!!! СТОЛКНОВЕНИЕ С ВРАГОМ {enemy_id} !!!")
@@ -904,7 +912,7 @@ class CampaignEnv(gym.Env):
         return self._build_obs(grid_obs=grid_obs), reward, terminated, truncated, info
 
     def _step_heal_with_bottle(self, action: int):
-        """Применяет бутыль лечения к указанной позиции BLUE в режиме grid."""
+        """Применяет подходящую банку лечения к указанной позиции BLUE в режиме grid."""
         idx = action - self.GRID_BOTTLE_ACTION_START
         target_pos = self.GRID_BOTTLE_POSITIONS[idx] if 0 <= idx < len(self.GRID_BOTTLE_POSITIONS) else None
 
@@ -914,14 +922,31 @@ class CampaignEnv(gym.Env):
         terminated = False
         truncated = False
 
-        # Считаем использование бутыли независимо от успешности лечения
-        self.heal_bottles_used = min(self.heal_bottles_used + 1, self.MAX_HEAL_BOTTLES)
-
         healed_amount, unit_name = (0.0, None)
+        selected_heal_amount = 0.0
+        selected_bottle_kind = None
         if target_pos is not None:
-            healed_amount, unit_name = self._heal_unit_at_position(
-                position=target_pos, heal_amount=self.HEAL_BOTTLE_AMOUNT
+            selected_heal_amount, selected_bottle_kind = self._select_heal_bottle_for_position(
+                target_pos
             )
+        if target_pos is not None and selected_bottle_kind is not None:
+            healed_amount, unit_name = self._heal_unit_at_position(
+                position=target_pos,
+                heal_amount=selected_heal_amount,
+                source_label=(
+                    "Банка исцеления"
+                    if selected_bottle_kind == "small"
+                    else "Бутыль лечения"
+                ),
+            )
+            if healed_amount > 0.0:
+                if selected_bottle_kind == "large":
+                    self.heal_bottles_used = min(self.heal_bottles_used + 1, self.MAX_HEAL_BOTTLES)
+                else:
+                    self.healing_bottles_used = min(
+                        self.healing_bottles_used + 1,
+                        self.MAX_HEALING_BOTTLES,
+                    )
 
         info = {
             "mode": "grid",
@@ -932,8 +957,14 @@ class CampaignEnv(gym.Env):
             "heal_target_pos": target_pos,
             "healed_amount": healed_amount,
             "healed_unit_name": unit_name,
+            "selected_heal_bottle_kind": selected_bottle_kind,
+            "selected_heal_bottle_amount": selected_heal_amount,
             "heal_bottles_used": self.heal_bottles_used,
             "heal_bottles_left": max(0, self.MAX_HEAL_BOTTLES - self.heal_bottles_used),
+            "healing_bottles_used": self.healing_bottles_used,
+            "healing_bottles_left": max(
+                0, self.MAX_HEALING_BOTTLES - self.healing_bottles_used
+            ),
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
@@ -1055,6 +1086,8 @@ class CampaignEnv(gym.Env):
                 self.battle_env = None
                 info["battle_result"] = "victory"
                 info["mode"] = "grid"
+                info["agent_pos"] = self._restore_agent_to_battle_origin()
+                info["enemies_alive"] = dict(self.grid_env.enemies_alive)
 
                 if self._is_green_dragon_enemy(self.current_enemy_id):
                     green_dragon_reward = self._compute_green_dragon_victory_reward(
@@ -1077,13 +1110,12 @@ class CampaignEnv(gym.Env):
                     return self._build_obs(grid_obs=grid_obs), reward, True, False, info
 
                 grid_obs = self._get_grid_obs()
-                info["agent_pos"] = self.grid_env.agent_pos
-                info["enemies_alive"] = dict(self.grid_env.enemies_alive)
                 return self._build_obs(grid_obs=grid_obs), reward, False, False, info
 
             else:
                 # Поражение: конец эпизода
                 reward += self.reward_loss
+                self._clear_battle_origin()
                 self._log(f"=== ПОРАЖЕНИЕ В БОЮ ПРОТИВ ВРАГА {self.current_enemy_id}! ===")
                 self._log("=== КАМПАНИЯ ПРОВАЛЕНА ===")
                 info["battle_result"] = "defeat"
@@ -1097,6 +1129,18 @@ class CampaignEnv(gym.Env):
 
         info["battle_ongoing"] = True
         return self._build_obs(battle_obs=obs), reward, terminated, truncated, info
+
+    def _restore_agent_to_battle_origin(self) -> Tuple[int, int]:
+        """Возвращает агента на клетку, с которой был инициирован текущий бой."""
+        if self.battle_origin_pos is None:
+            return tuple(self.grid_env.agent_pos)
+        origin = (int(self.battle_origin_pos[0]), int(self.battle_origin_pos[1]))
+        self.grid_env.agent_pos = origin
+        self.battle_origin_pos = None
+        return origin
+
+    def _clear_battle_origin(self) -> None:
+        self.battle_origin_pos = None
 
     def _init_battle(self, enemy_id: int):
         """Инициализирует бой с конкретной RED командой."""
@@ -1363,7 +1407,12 @@ class CampaignEnv(gym.Env):
                 
         return healed_count
 
-    def _heal_unit_at_position(self, position: int, heal_amount: float) -> Tuple[float, Optional[str]]:
+    def _heal_unit_at_position(
+        self,
+        position: int,
+        heal_amount: float,
+        source_label: str = "Бутыль лечения",
+    ) -> Tuple[float, Optional[str]]:
         """
         Лечит конкретную позицию BLUE команды, возвращает фактический объём лечения и имя юнита.
         """
@@ -1385,10 +1434,54 @@ class CampaignEnv(gym.Env):
 
             name = unit.get("name", f"pos_{position}")
             self._log(
-                f"Бутыль лечения: {name} (pos {position}) HP {hp:.1f} -> {new_hp:.1f} (+{healed:.1f})"
+                f"{source_label}: {name} (pos {position}) HP {hp:.1f} -> {new_hp:.1f} (+{healed:.1f})"
             )
             return healed, name
 
+        return 0.0, None
+
+    def _missing_hp_at_position(self, position: int) -> float:
+        """Возвращает недостающее здоровье живого юнита BLUE на позиции или 0.0."""
+        state = self._get_blue_state()
+        for unit in state:
+            if int(unit.get("position", -1)) != position:
+                continue
+            hp = float(unit.get("hp", 0) or unit.get("health", 0))
+            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or hp)
+            if max_hp <= 0 or hp <= 0 or hp >= max_hp:
+                return 0.0
+            return max_hp - hp
+        return 0.0
+
+    def _has_any_heal_bottle_left(self) -> bool:
+        """True, если доступна хотя бы одна банка лечения любого типа."""
+        return (
+            self.heal_bottles_used < self.MAX_HEAL_BOTTLES
+            or self.healing_bottles_used < self.MAX_HEALING_BOTTLES
+        )
+
+    def _select_heal_bottle_for_position(self, position: int) -> Tuple[float, Optional[str]]:
+        """
+        Выбирает, какую банку применить к юниту:
+        - при наличии обеих: +50 HP, если этого достаточно для полного лечения, иначе +100 HP;
+        - если один тип закончился: использует другой;
+        - если лечить нельзя: возвращает (0.0, None).
+        """
+        missing_hp = self._missing_hp_at_position(position)
+        if missing_hp <= 0.0:
+            return 0.0, None
+
+        has_large = self.heal_bottles_used < self.MAX_HEAL_BOTTLES
+        has_small = self.healing_bottles_used < self.MAX_HEALING_BOTTLES
+
+        if has_large and has_small:
+            if missing_hp <= self.HEALING_BOTTLE_AMOUNT:
+                return self.HEALING_BOTTLE_AMOUNT, "small"
+            return self.HEAL_BOTTLE_AMOUNT, "large"
+        if has_large:
+            return self.HEAL_BOTTLE_AMOUNT, "large"
+        if has_small:
+            return self.HEALING_BOTTLE_AMOUNT, "small"
         return 0.0, None
 
     def _get_blue_state(self) -> List[Dict]:
@@ -1666,8 +1759,8 @@ class CampaignEnv(gym.Env):
             grid_mask = self.grid_env.compute_action_mask()
             mask[:8] = bool(self.moves > 0) & grid_mask[:8]
             mask[8] = bool(grid_mask[8]) and (self._has_wounded_blue() or self.moves <= 0)
-            # Бутыли лечения на позиции 7-12.
-            if self.heal_bottles_used < self.MAX_HEAL_BOTTLES:
+            # Общее действие лечения банками на позиции 7-12.
+            if self._has_any_heal_bottle_left():
                 for idx, pos in enumerate(self.GRID_BOTTLE_POSITIONS):
                     mask[self.GRID_BOTTLE_ACTION_START + idx] = self._can_heal_position(pos)
             # Бутыли воскрешения на позиции 7-12.

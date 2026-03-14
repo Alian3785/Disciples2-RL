@@ -485,6 +485,9 @@ class CampaignMetricsCallback(BaseCallback):
         self.recent_enemy_defeat_rewards = deque(maxlen=self.episode_window)
         self.recent_blue_exp_rewards = deque(maxlen=self.episode_window)
         self.recent_green_dragon_rewards = deque(maxlen=self.episode_window)
+        self.recent_castle_heal_uses = deque(maxlen=self.episode_window)
+        self.recent_castle_heal_episode_flags = deque(maxlen=self.episode_window)
+        self.recent_castle_healed_hp = deque(maxlen=self.episode_window)
         self.recent_turns = deque(maxlen=self.step_window)
         self.recent_gold = deque(maxlen=self.step_window)
         self.recent_moves = deque(maxlen=self.step_window)
@@ -493,12 +496,6 @@ class CampaignMetricsCallback(BaseCallback):
         self.window_result_counter: Counter[str] = Counter()
         self.battle_counter: Counter[str] = Counter()
         self.window_battle_counter: Counter[str] = Counter()
-        self.enemy_encounter_counter: Counter[int] = Counter()
-        self.window_enemy_encounter_counter: Counter[int] = Counter()
-        self.enemy_victory_counter: Counter[int] = Counter()
-        self.window_enemy_victory_counter: Counter[int] = Counter()
-        self.enemy_defeat_counter: Counter[int] = Counter()
-        self.window_enemy_defeat_counter: Counter[int] = Counter()
         self.victory_reason_counter: Counter[str] = Counter()
         self.window_victory_reason_counter: Counter[str] = Counter()
 
@@ -506,8 +503,14 @@ class CampaignMetricsCallback(BaseCallback):
         self.defeats = 0
         self.timeouts = 0
         self.total_unit_upgrades = 0
+        self.total_castle_heal_uses = 0
+        self.total_castle_healed_hp = 0.0
+        self.castle_heal_episodes = 0
         self.best_recent_victory_rate = 0.0
         self._last_logged_step = 0
+        self._episode_castle_heal_uses: list[int] = []
+        self._episode_castle_heal_flags: list[bool] = []
+        self._episode_castle_healed_hp: list[float] = []
 
     def _append_recent_stat(self, info: dict[str, Any], key: str, target: deque) -> None:
         value = info.get(key)
@@ -517,6 +520,45 @@ class CampaignMetricsCallback(BaseCallback):
             target.append(float(value))
         except (TypeError, ValueError):
             return
+
+    def _ensure_env_trackers(self, env_count: int) -> None:
+        if env_count <= len(self._episode_castle_heal_uses):
+            return
+        missing = env_count - len(self._episode_castle_heal_uses)
+        self._episode_castle_heal_uses.extend([0] * missing)
+        self._episode_castle_heal_flags.extend([False] * missing)
+        self._episode_castle_healed_hp.extend([0.0] * missing)
+
+    def _consume_castle_heal(self, info: dict[str, Any], env_index: int) -> None:
+        if not info.get("castle_heal_action"):
+            return
+        try:
+            healed_amount = float(info.get("healed_amount", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            healed_amount = 0.0
+        if healed_amount <= 0.0:
+            return
+
+        self.total_castle_heal_uses += 1
+        self.total_castle_healed_hp += healed_amount
+        self._episode_castle_heal_uses[env_index] += 1
+        self._episode_castle_healed_hp[env_index] += healed_amount
+        self._episode_castle_heal_flags[env_index] = True
+
+    def _finalize_episode_castle_heal(self, env_index: int) -> None:
+        uses = float(self._episode_castle_heal_uses[env_index])
+        healed_hp = float(self._episode_castle_healed_hp[env_index])
+        used_flag = bool(self._episode_castle_heal_flags[env_index])
+
+        self.recent_castle_heal_uses.append(uses)
+        self.recent_castle_heal_episode_flags.append(1.0 if used_flag else 0.0)
+        self.recent_castle_healed_hp.append(healed_hp)
+        if used_flag:
+            self.castle_heal_episodes += 1
+
+        self._episode_castle_heal_uses[env_index] = 0
+        self._episode_castle_heal_flags[env_index] = False
+        self._episode_castle_healed_hp[env_index] = 0.0
 
     def _record_window_metrics(self, infos: list[dict[str, Any]]) -> None:
         turns = []
@@ -548,7 +590,10 @@ class CampaignMetricsCallback(BaseCallback):
         if moves:
             self.recent_moves.append(float(np.mean(moves)))
 
-    def _consume_info(self, info: dict[str, Any]) -> None:
+    def _consume_info(self, info: dict[str, Any], env_index: int | None = None) -> None:
+        if env_index is not None:
+            self._consume_castle_heal(info, env_index)
+
         episode = info.get("episode")
         if isinstance(episode, dict):
             reward = episode.get("r")
@@ -561,6 +606,8 @@ class CampaignMetricsCallback(BaseCallback):
                 length = int(length)
                 self.episode_lengths.append(length)
                 self.recent_episode_lengths.append(length)
+            if env_index is not None:
+                self._finalize_episode_castle_heal(env_index)
 
         campaign_result = info.get("campaign_result")
         if campaign_result:
@@ -579,32 +626,6 @@ class CampaignMetricsCallback(BaseCallback):
             battle_key = str(battle_result)
             self.battle_counter[battle_key] += 1
             self.window_battle_counter[battle_key] += 1
-
-        enemy_id = info.get("enemy_id")
-        if (
-            enemy_id is not None
-            and info.get("mode") == "battle"
-            and not info.get("battle_step", False)
-            and info.get("battle_result") is None
-        ):
-            try:
-                enemy_key = int(enemy_id)
-            except (TypeError, ValueError):
-                enemy_key = enemy_id
-            self.enemy_encounter_counter[enemy_key] += 1
-            self.window_enemy_encounter_counter[enemy_key] += 1
-
-        if enemy_id is not None and battle_result:
-            try:
-                enemy_key = int(enemy_id)
-            except (TypeError, ValueError):
-                enemy_key = enemy_id
-            if battle_result == "victory":
-                self.enemy_victory_counter[enemy_key] += 1
-                self.window_enemy_victory_counter[enemy_key] += 1
-            elif battle_result == "defeat":
-                self.enemy_defeat_counter[enemy_key] += 1
-                self.window_enemy_defeat_counter[enemy_key] += 1
 
         victory_reason = info.get("campaign_victory_reason")
         if victory_reason:
@@ -654,6 +675,12 @@ class CampaignMetricsCallback(BaseCallback):
                 total_battles,
             ),
             "campaign/unit_upgrades_total": float(self.total_unit_upgrades),
+            "campaign/castle_heal_uses_total": float(self.total_castle_heal_uses),
+            "campaign/castle_healed_hp_total": float(self.total_castle_healed_hp),
+            "campaign/castle_heal_episodes_rate": _safe_rate(
+                self.castle_heal_episodes,
+                total_episodes,
+            ),
             "campaign/recent_episodes": float(len(self.recent_episode_rewards)),
             "campaign/recent_episode_reward_mean": _safe_mean(self.recent_episode_rewards),
             "campaign/recent_episode_length_mean": _safe_mean(self.recent_episode_lengths),
@@ -662,6 +689,11 @@ class CampaignMetricsCallback(BaseCallback):
             "campaign/recent_enemy_defeat_reward_mean": _safe_mean(self.recent_enemy_defeat_rewards),
             "campaign/recent_blue_exp_reward_mean": _safe_mean(self.recent_blue_exp_rewards),
             "campaign/recent_green_dragon_reward_mean": _safe_mean(self.recent_green_dragon_rewards),
+            "campaign/recent_castle_heal_uses_mean": _safe_mean(self.recent_castle_heal_uses),
+            "campaign/recent_castle_heal_episodes_rate": _safe_mean(
+                self.recent_castle_heal_episode_flags
+            ),
+            "campaign/recent_castle_healed_hp_mean": _safe_mean(self.recent_castle_healed_hp),
             "campaign/recent_turns_mean": _safe_mean(self.recent_turns),
             "campaign/recent_gold_mean": _safe_mean(self.recent_gold),
             "campaign/recent_moves_mean": _safe_mean(self.recent_moves),
@@ -683,12 +715,6 @@ class CampaignMetricsCallback(BaseCallback):
             "campaign/best_recent_victory_rate": self.best_recent_victory_rate,
         }
 
-        for enemy_id, count in sorted(self.window_enemy_encounter_counter.items()):
-            payload[f"campaign/window_enemy_encounters/enemy_{_metric_token(enemy_id)}"] = float(count)
-        for enemy_id, count in sorted(self.window_enemy_victory_counter.items()):
-            payload[f"campaign/window_enemy_victories/enemy_{_metric_token(enemy_id)}"] = float(count)
-        for enemy_id, count in sorted(self.window_enemy_defeat_counter.items()):
-            payload[f"campaign/window_enemy_defeats/enemy_{_metric_token(enemy_id)}"] = float(count)
         for reason, count in sorted(self.window_victory_reason_counter.items()):
             payload[f"campaign/window_victory_reasons/{_metric_token(reason)}"] = float(count)
 
@@ -697,9 +723,6 @@ class CampaignMetricsCallback(BaseCallback):
     def _reset_log_window(self) -> None:
         self.window_result_counter.clear()
         self.window_battle_counter.clear()
-        self.window_enemy_encounter_counter.clear()
-        self.window_enemy_victory_counter.clear()
-        self.window_enemy_defeat_counter.clear()
         self.window_victory_reason_counter.clear()
 
     def _log_to_experiment(self, *, force: bool = False) -> None:
@@ -733,8 +756,9 @@ class CampaignMetricsCallback(BaseCallback):
     def _on_step(self) -> bool:
         infos = [info for info in self.locals.get("infos", []) if isinstance(info, dict)]
         self._record_window_metrics(infos)
-        for info in infos:
-            self._consume_info(info)
+        self._ensure_env_trackers(len(infos))
+        for env_index, info in enumerate(infos):
+            self._consume_info(info, env_index=env_index)
         self._log_to_experiment()
         return True
 

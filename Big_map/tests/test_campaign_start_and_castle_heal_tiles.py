@@ -22,6 +22,10 @@ def _castle_revive_action_slice(env: CampaignEnv):
     return slice(start, stop)
 
 
+def _heal_bottle_action_index(env: CampaignEnv, target_pos: int) -> int:
+    return env.GRID_BOTTLE_ACTION_START + env.GRID_BOTTLE_POSITIONS.index(target_pos)
+
+
 def _pairwise_manhattan_distances(tiles):
     distances = []
     for index, (x1, y1) in enumerate(tiles):
@@ -349,3 +353,136 @@ def test_castle_revive_action_is_blocked_when_gold_is_below_required_cost():
     assert info.get("revived") is False
     assert float(info.get("revive_cost", 0.0)) == pytest.approx(600.0)
     assert float(info.get("gold_spent", 0.0)) == pytest.approx(0.0)
+
+
+def test_combined_heal_action_prefers_50_hp_bottle_when_it_is_enough():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    target_pos = 7
+    action = _heal_bottle_action_index(env, target_pos)
+    unit = next(u for u in env.blue_team_state if int(u.get("position", -1)) == target_pos)
+    max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0))
+
+    unit["hp"] = max_hp - 40.0
+    unit["health"] = unit["hp"]
+
+    _, _, terminated, truncated, info = env.step(action)
+
+    assert terminated is False
+    assert truncated is False
+    assert info.get("heal_action") is True
+    assert info.get("heal_target_pos") == target_pos
+    assert info.get("selected_heal_bottle_kind") == "small"
+    assert float(info.get("selected_heal_bottle_amount", 0.0)) == pytest.approx(50.0)
+    assert float(info.get("healed_amount", 0.0)) == pytest.approx(40.0)
+    assert float(unit.get("hp", 0) or 0.0) == pytest.approx(max_hp)
+    assert float(unit.get("health", 0) or 0.0) == pytest.approx(max_hp)
+    assert env.heal_bottles_used == 0
+    assert env.healing_bottles_used == 1
+    assert int(info.get("healing_bottles_used", -1)) == 1
+    assert int(info.get("healing_bottles_left", -1)) == 2
+    assert int(info.get("heal_bottles_left", -1)) == 3
+
+
+def test_combined_heal_action_prefers_100_hp_bottle_when_50_is_not_enough():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    target_pos = 7
+    action = _heal_bottle_action_index(env, target_pos)
+    unit = next(u for u in env.blue_team_state if int(u.get("position", -1)) == target_pos)
+    max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0))
+
+    unit["hp"] = max_hp - 60.0
+    unit["health"] = unit["hp"]
+
+    _, _, terminated, truncated, info = env.step(action)
+
+    assert terminated is False
+    assert truncated is False
+    assert info.get("heal_action") is True
+    assert info.get("heal_target_pos") == target_pos
+    assert info.get("selected_heal_bottle_kind") == "large"
+    assert float(info.get("selected_heal_bottle_amount", 0.0)) == pytest.approx(100.0)
+    assert float(info.get("healed_amount", 0.0)) == pytest.approx(60.0)
+    assert float(unit.get("hp", 0) or 0.0) == pytest.approx(max_hp)
+    assert float(unit.get("health", 0) or 0.0) == pytest.approx(max_hp)
+    assert env.heal_bottles_used == 1
+    assert env.healing_bottles_used == 0
+    assert int(info.get("heal_bottles_left", -1)) == 2
+    assert int(info.get("healing_bottles_left", -1)) == 3
+
+
+@pytest.mark.parametrize(
+    ("large_used", "small_used", "missing_hp", "expected_kind", "expected_healed"),
+    [
+        (3, 0, 40.0, "small", 40.0),
+        (0, 3, 80.0, "large", 80.0),
+    ],
+)
+def test_combined_heal_action_falls_back_to_other_available_bottle(
+    large_used,
+    small_used,
+    missing_hp,
+    expected_kind,
+    expected_healed,
+):
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    target_pos = 7
+    action = _heal_bottle_action_index(env, target_pos)
+    unit = next(u for u in env.blue_team_state if int(u.get("position", -1)) == target_pos)
+    max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0))
+
+    env.heal_bottles_used = large_used
+    env.healing_bottles_used = small_used
+    unit["hp"] = max_hp - missing_hp
+    unit["health"] = unit["hp"]
+
+    _, _, _, _, info = env.step(action)
+
+    assert info.get("selected_heal_bottle_kind") == expected_kind
+    assert float(info.get("healed_amount", 0.0)) == pytest.approx(expected_healed)
+    assert float(unit.get("hp", 0) or 0.0) == pytest.approx(max_hp)
+
+
+def test_combined_heal_action_mask_requires_alive_wounded_unit_and_any_stock():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    target_pos = 7
+    action = _heal_bottle_action_index(env, target_pos)
+    unit = next(u for u in env.blue_team_state if int(u.get("position", -1)) == target_pos)
+    max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0))
+    empty_action = _heal_bottle_action_index(env, 10)
+
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is False
+    assert bool(mask[empty_action]) is False
+
+    unit["hp"] = max_hp - 1.0
+    unit["health"] = unit["hp"]
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is True
+
+    unit["hp"] = 0.0
+    unit["health"] = 0.0
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is False
+
+    unit["hp"] = max_hp
+    unit["health"] = max_hp
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is False
+
+    unit["hp"] = max_hp - 5.0
+    unit["health"] = unit["hp"]
+    env.healing_bottles_used = env.MAX_HEALING_BOTTLES
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is True
+
+    env.heal_bottles_used = env.MAX_HEAL_BOTTLES
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is False

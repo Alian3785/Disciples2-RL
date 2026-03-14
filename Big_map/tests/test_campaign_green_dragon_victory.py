@@ -75,3 +75,36 @@ def test_all_enemies_victory_has_no_extra_final_reward():
     assert info.get("campaign_victory_reason") == "all_enemies_defeated"
     assert reward == 0.0
     assert "green_dragon_reward" not in info
+
+
+def test_agent_returns_to_attack_origin_after_battle_victory():
+    env = _make_reward_isolated_env()
+    env.reset(seed=123)
+
+    move_mask = env.grid_env.compute_action_mask()
+    move_action = next(index for index, allowed in enumerate(move_mask[:8]) if allowed)
+    attack_origin = tuple(env.grid_env.agent_pos)
+    enemy_pos = tuple(env.grid_env._target_pos_for_action(move_action))
+    enemy_id = next(iter(env.grid_env.enemy_positions.keys()))
+
+    env.grid_env.enemy_positions[enemy_id] = enemy_pos
+    for eid in list(env.grid_env.enemies_alive.keys()):
+        env.grid_env.enemies_alive[eid] = False
+    env.grid_env.enemies_alive[enemy_id] = True
+
+    _, _, terminated, truncated, info = env.step(move_action)
+
+    assert terminated is False
+    assert truncated is False
+    assert env.mode == env.MODE_BATTLE
+    assert env.current_enemy_id == enemy_id
+    assert info.get("battle_triggered") is True
+
+    env.battle_env = _DummyBattleEnv()
+    _, _, terminated, truncated, info = env.step(0)
+
+    assert terminated is True
+    assert truncated is False
+    assert info.get("battle_result") == "victory"
+    assert tuple(env.grid_env.agent_pos) == attack_origin
+    assert tuple(info.get("agent_pos")) == attack_origin
