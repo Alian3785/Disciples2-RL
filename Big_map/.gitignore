@@ -4,6 +4,7 @@
 __pycache__/
 *.pyc
 wandb/
+comet_offline/
 campaign_checkpoints/
 campaign_eval/
 campaign_models/
