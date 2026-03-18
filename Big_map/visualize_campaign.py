@@ -747,10 +747,14 @@ class CampaignVisualizer:
     COLOR_PATH = (0.3, 0.6, 0.9, 0.6)
     COLOR_CASTLE = (1.0, 0.92, 0.2, 0.55)
     COLOR_OBSTACLE = (0.55, 0.55, 0.55, 0.9)
+    COLOR_CHEST_FILL = (0.62, 0.40, 0.12, 0.95)
+    COLOR_CHEST_EDGE = (0.30, 0.16, 0.02, 1.0)
     COLOR_CAPITAL_FILL = (0.08, 0.30, 0.82, 0.18)
     COLOR_CAPITAL_EDGE = (0.05, 0.20, 0.62, 0.98)
     COLOR_VILLAGE_FILL = (0.00, 0.72, 0.78, 0.18)
     COLOR_VILLAGE_EDGE = (0.00, 0.50, 0.58, 0.98)
+    COLOR_SETTLEMENT_CORNER_FILL = (1.0, 0.25, 0.62, 0.82)
+    COLOR_SETTLEMENT_CORNER_EDGE = (0.58, 0.05, 0.30, 0.98)
     CASTLE_POS = DEFAULT_HERO_GRID_POSITION
 
     def __init__(
@@ -942,6 +946,8 @@ class CampaignVisualizer:
                     "height": int(height),
                     "entry_x": x,
                     "entry_y": y + max(0, int(height) - 1),
+                    "diagonal_x": x + max(0, int(width) - 1),
+                    "diagonal_y": y,
                 }
             )
 
@@ -996,38 +1002,6 @@ class CampaignVisualizer:
                 zorder=2.5,
             )
 
-        for overlay in self.village_overlays:
-            x = int(overlay["x"])
-            y = int(overlay["y"])
-            width = int(overlay["width"])
-            height = int(overlay["height"])
-            draw_x, draw_y, draw_w, draw_h = self._display_rect(x, y, width, height)
-
-            rect = patches.Rectangle(
-                (draw_x - 0.5, draw_y - 0.5),
-                draw_w,
-                draw_h,
-                facecolor=self.COLOR_VILLAGE_FILL,
-                edgecolor=self.COLOR_VILLAGE_EDGE,
-                linewidth=2.3,
-                zorder=2.15,
-            )
-            self.ax.add_patch(rect)
-
-            center_x = draw_x + (draw_w - 1) / 2.0
-            center_y = draw_y + (draw_h - 1) / 2.0
-            self.ax.text(
-                center_x,
-                center_y,
-                "CITY",
-                ha="center",
-                va="center",
-                fontsize=8,
-                fontweight="bold",
-                color="white",
-                zorder=2.45,
-            )
-
     def draw_grid(
         self,
         agent_pos: tuple,
@@ -1038,6 +1012,7 @@ class CampaignVisualizer:
         highlight_battle: int = None,
         castle_heal_tiles: list | tuple | None = None,
         obstacle_tiles: list | tuple | set | None = None,
+        chest_positions: list | tuple | set | dict | None = None,
         turns: int = 0,
         gold: float = 0.0,
         steps: int = 0,
@@ -1048,6 +1023,7 @@ class CampaignVisualizer:
         revive_bottles_left: int = 0,
         max_revive_bottles: int = 0,
         built_buildings: list = None,
+        heroitems: list | None = None,
         hero_name: str = "",
         hero_level: int = 0,
         hero_abilities: list | None = None,
@@ -1126,6 +1102,34 @@ class CampaignVisualizer:
             )
 
         # Путь агента
+        if chest_positions:
+            raw_chest_tiles = (
+                chest_positions.keys()
+                if isinstance(chest_positions, dict)
+                else chest_positions
+            )
+            for tile in raw_chest_tiles:
+                try:
+                    cx, cy = int(tile[0]), int(tile[1])
+                except Exception:
+                    continue
+                draw_x, draw_y = self._display_tile(cx, cy)
+                chest_rect = patches.Rectangle(
+                    (draw_x - 0.35, draw_y - 0.30), 0.70, 0.60,
+                    facecolor=self.COLOR_CHEST_FILL,
+                    edgecolor=self.COLOR_CHEST_EDGE,
+                    linewidth=1.8,
+                    zorder=2.7,
+                )
+                self.ax.add_patch(chest_rect)
+                self.ax.text(
+                    draw_x, draw_y, "T",
+                    ha="center", va="center",
+                    fontsize=10, fontweight="bold",
+                    color=(1.0, 0.96, 0.72),
+                    zorder=2.8,
+                )
+
         if len(self.path_history) > 1:
             for i in range(len(self.path_history) - 1):
                 x1, y1 = self.path_history[i]
@@ -1218,6 +1222,14 @@ class CampaignVisualizer:
             info_lines.extend(f"- {name}" for name in built_buildings)
         else:
             info_lines.append("Постройки: нет")
+        chest_count = len(chest_positions) if chest_positions else 0
+        info_lines.append(f"Сундуки: {chest_count}")
+        heroitems = list(heroitems or [])
+        if heroitems:
+            info_lines.append("Hero items:")
+            info_lines.extend(f"- {item_name}" for item_name in heroitems)
+        else:
+            info_lines.append("Hero items: none")
         hero_name = str(hero_name or "").strip()
         hero_abilities = list(hero_abilities or [])
         if hero_name:
@@ -1379,6 +1391,17 @@ def run_campaign_visualization(
     prev_blue_names = snapshot_blue_names_by_pos()
 
     def get_bottle_counters():
+        if hasattr(env_base, "get_bottle_inventory_counters"):
+            counters = env_base.get_bottle_inventory_counters()
+            return (
+                int(counters.get("heal_left", 0) or 0),
+                int(counters.get("max_heal", 0) or 0),
+                int(counters.get("healing_left", 0) or 0),
+                int(counters.get("max_healing", 0) or 0),
+                int(counters.get("revive_left", 0) or 0),
+                int(counters.get("max_revive", 0) or 0),
+            )
+
         max_heal = int(getattr(env_base, "MAX_HEAL_BOTTLES", 0) or 0)
         max_healing = int(getattr(env_base, "MAX_HEALING_BOTTLES", 0) or 0)
         max_revive = int(getattr(env_base, "MAX_REVIVE_BOTTLES", 0) or 0)
@@ -1501,6 +1524,8 @@ def run_campaign_visualization(
                 revive_bottles_left=revive_left,
                 max_revive_bottles=max_revive,
                 built_buildings=env_base.get_built_building_names(),
+                chest_positions=getattr(env_base, "chests", None),
+                heroitems=getattr(env_base, "heroitems", None),
                 hero_name=hero_name,
                 hero_level=hero_level,
                 hero_abilities=hero_abilities,
@@ -1559,6 +1584,8 @@ def run_campaign_visualization(
                     revive_bottles_left=revive_left,
                     max_revive_bottles=max_revive,
                     built_buildings=env_base.get_built_building_names(),
+                    chest_positions=getattr(env_base, "chests", None),
+                    heroitems=getattr(env_base, "heroitems", None),
                     hero_name=hero_name,
                     hero_level=hero_level,
                     hero_abilities=hero_abilities,
@@ -1688,6 +1715,8 @@ def run_campaign_visualization(
         revive_bottles_left=revive_left,
         max_revive_bottles=max_revive,
         built_buildings=env_base.get_built_building_names(),
+        chest_positions=getattr(env_base, "chests", None),
+        heroitems=getattr(env_base, "heroitems", None),
         hero_name=hero_name,
         hero_level=hero_level,
         hero_abilities=hero_abilities,

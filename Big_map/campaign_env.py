@@ -30,6 +30,7 @@ from grid import (
     DEFAULT_GRID_SIZE,
     DEFAULT_HERO_GRID_POSITION,
     HEAL_TILE_COUNT,
+    resolve_chests,
     resolve_obstacle_tiles,
     resolve_heal_tiles,
     scale_enemy_positions,
@@ -66,6 +67,9 @@ class CampaignEnv(gym.Env):
         - Награда за участие в битве (нашёл врага): +0.1
         - Награда за победу в каждой битве: +0.3
         - Финальный бонус за победу над зелёным драконом: reward_all_enemies * 10
+        - Масштабированная награда из BattleEnv: battle_reward_scale * battle_reward
+        - Награда за лечение на специальных клетках: reward_castle_heal_per_hp * restored_hp
+        - Награда за успешное воскрешение на специальных клетках: reward_castle_revive
         - Штраф за поражение: -1.0
         - Штраф за таймаут (лимит шагов на карте): -6.0
 
@@ -125,6 +129,11 @@ class CampaignEnv(gym.Env):
     GRID_BUILD_ACTION_START = GRID_CASTLE_REVIVE_ACTION_START + len(CASTLE_REVIVE_POSITIONS)  # 33
     GREEN_DRAGON_ENEMY_ID = 31
     GREEN_DRAGON_REWARD_MULTIPLIER = 10.0
+    CHEST_PICKUP_RADIUS = 1
+    BONUS_SMALL_HEAL_SOURCE_ITEM = "Potion of Healing"
+    BONUS_SMALL_HEAL_ITEM_NAME = "Банка исцеления (+50 HP)"
+    BONUS_REVIVE_SOURCE_ITEM = "Life Potion"
+    BONUS_REVIVE_ITEM_NAME = "Зелье воскрешения (+1)"
     ENEMY_REWARD_MULTIPLIERS = {}
 
     def __init__(
@@ -145,6 +154,12 @@ class CampaignEnv(gym.Env):
         reward_survival_alive_weight: float = 0.5,  # Вес доли выживших BLUE
         reward_survival_hp_weight: float = 0.5,     # Вес средней доли HP BLUE
         reward_unit_upgrade: float = 1.0,
+        battle_reward_scale: float = 0.25,
+        battle_reward_win: float = 2.0,
+        battle_reward_loss: float = -1.0,
+        battle_reward_step: float = 0.01,
+        reward_castle_heal_per_hp: float = 0.01,
+        reward_castle_revive: float = 0.5,
         persist_blue_hp: bool = True,
         log_enabled: bool = False,
         max_grid_steps: int = 1800,
@@ -168,6 +183,12 @@ class CampaignEnv(gym.Env):
         self.reward_survival_alive_weight = max(0.0, float(reward_survival_alive_weight))
         self.reward_survival_hp_weight = max(0.0, float(reward_survival_hp_weight))
         self.reward_unit_upgrade = max(0.0, float(reward_unit_upgrade))
+        self.battle_reward_scale = max(0.0, float(battle_reward_scale))
+        self.battle_reward_win = float(battle_reward_win)
+        self.battle_reward_loss = float(battle_reward_loss)
+        self.battle_reward_step = float(battle_reward_step)
+        self.reward_castle_heal_per_hp = max(0.0, float(reward_castle_heal_per_hp))
+        self.reward_castle_revive = max(0.0, float(reward_castle_revive))
         self.persist_blue_hp = persist_blue_hp
         self.log_enabled = log_enabled
         self.max_grid_steps = max_grid_steps
@@ -194,9 +215,17 @@ class CampaignEnv(gym.Env):
             heal_tiles=self.castle_heal_tiles,
             start_position=self.CASTLE_POS,
         )
+        chest_contents = resolve_chests(
+            self.grid_size,
+            enemy_positions,
+            heal_tiles=self.castle_heal_tiles,
+            obstacle_tiles=obstacle_tiles,
+            start_position=self.CASTLE_POS,
+        )
         self._static_enemy_positions = dict(enemy_positions)
         self._static_castle_heal_tiles: Tuple[Tuple[int, int], ...] = tuple(self.castle_heal_tiles)
         self._static_obstacle_tiles: Tuple[Tuple[int, int], ...] = tuple(obstacle_tiles)
+        self._static_chests: Dict[Tuple[int, int], Tuple[str, ...]] = dict(chest_contents)
 
         # Подсреда grid: враги и препятствия автоматически масштабируются под размер карты.
         self.grid_env = GridWorldEnv(
@@ -227,6 +256,11 @@ class CampaignEnv(gym.Env):
         self.moves: int = self.moves_per_turn
         self.active_buildings = self._get_buildings_for_capital(self.Realcapital)
         self.building_keys = self._get_building_keys(self.active_buildings)
+        self.chests: Dict[Tuple[int, int], Tuple[str, ...]] = dict(self._static_chests)
+        self.heroitems: List[str] = []
+        self.extra_healing_bottles: int = 0
+        self.extra_revive_bottles: int = 0
+        self._sync_grid_chest_positions()
         total_actions = self.GRID_BUILD_ACTION_START + len(self.building_keys)
         # Action space: максимум из двух режимов (battle = 15 действий, grid расширен для бутылей и построек)
         self.action_space = spaces.Discrete(total_actions)
@@ -265,9 +299,14 @@ class CampaignEnv(gym.Env):
         self._sync_moves_per_turn_with_hero(units=self.blue_team_state, refill=True)
         self.battle_env = None
         self._campaign_logs = []
+        self.heroitems = []
+        self.extra_healing_bottles = 0
+        self.extra_revive_bottles = 0
+        self.chests = dict(self._static_chests)
         self.castle_heal_tiles = self._static_castle_heal_tiles
         self.grid_env.enemy_positions = dict(self._static_enemy_positions)
         self.grid_env.obstacle_positions = set(self._static_obstacle_tiles)
+        self._sync_grid_chest_positions()
 
         grid_obs, grid_info = self.grid_env.reset(seed=seed)
         grid_obs = self._augment_grid_obs(grid_obs)
@@ -278,6 +317,7 @@ class CampaignEnv(gym.Env):
         self._log(f"Клетки лечения на карте: {self.castle_heal_tiles}")
         self._log(f"Препятствия на карте: {sorted(self.grid_env.obstacle_positions)}")
         self._log(f"Враги на карте: {list(self.grid_env.enemy_positions.items())}")
+        self._log(f"Сундуки на карте: {list(self.chests.items())}")
 
         info = {
             "mode": "grid",
@@ -286,6 +326,10 @@ class CampaignEnv(gym.Env):
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
+            "heroitems": list(self.heroitems),
+            "extra_healing_bottles": int(self.extra_healing_bottles or 0),
+            "extra_revive_bottles": int(self.extra_revive_bottles or 0),
+            "chests_remaining": len(self.chests),
         }
 
         return self._build_obs(grid_obs=grid_obs), info
@@ -330,6 +374,11 @@ class CampaignEnv(gym.Env):
                 "turns": self.turns,
                 "gold": self.gold,
                 "moves": self.moves,
+                "heroitems": list(self.heroitems),
+                "extra_healing_bottles": int(self.extra_healing_bottles or 0),
+                "extra_revive_bottles": int(self.extra_revive_bottles or 0),
+                "collected_chests": [],
+                "chests_remaining": len(self.chests),
             }
             return self._build_obs(grid_obs=grid_obs), 0.0, False, False, info
 
@@ -369,6 +418,7 @@ class CampaignEnv(gym.Env):
                 battle_engage_bonus = float(self.reward_engage_battle)
                 reward += battle_engage_bonus
             self._apply_battle_grid_steps(extra_steps=10)
+        collected_chests = self._collect_adjacent_chests()
 
         info = {
             "mode": "grid",
@@ -386,6 +436,18 @@ class CampaignEnv(gym.Env):
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
+            "heroitems": list(self.heroitems),
+            "extra_healing_bottles": int(self.extra_healing_bottles or 0),
+            "extra_revive_bottles": int(self.extra_revive_bottles or 0),
+            "collected_chests": [
+                {
+                    "pos": tuple(chest_data["pos"]),
+                    "items": list(chest_data["items"]),
+                    "granted_items": list(chest_data.get("granted_items", [])),
+                }
+                for chest_data in collected_chests
+            ],
+            "chests_remaining": len(self.chests),
         }
 
         # Обработка действия REST — восстановление 5% HP
@@ -533,6 +595,96 @@ class CampaignEnv(gym.Env):
             "abilities": abilities,
         }
 
+    def _sync_grid_chest_positions(self) -> None:
+        self.grid_env.chest_positions = set(self.chests.keys())
+
+    def _max_healing_bottles_available(self) -> int:
+        return int(self.MAX_HEALING_BOTTLES) + max(0, int(self.extra_healing_bottles or 0))
+
+    def _healing_bottles_left(self) -> int:
+        return max(0, self._max_healing_bottles_available() - int(self.healing_bottles_used or 0))
+
+    def _max_revive_bottles_available(self) -> int:
+        return int(self.MAX_REVIVE_BOTTLES) + max(0, int(self.extra_revive_bottles or 0))
+
+    def _revive_bottles_left(self) -> int:
+        return max(0, self._max_revive_bottles_available() - int(self.revive_bottles_used or 0))
+
+    def get_bottle_inventory_counters(self) -> Dict[str, int]:
+        max_heal = int(self.MAX_HEAL_BOTTLES)
+        max_healing = self._max_healing_bottles_available()
+        max_revive = self._max_revive_bottles_available()
+        heal_used = int(self.heal_bottles_used or 0)
+        healing_used = int(self.healing_bottles_used or 0)
+        revive_used = int(self.revive_bottles_used or 0)
+        return {
+            "max_heal": max_heal,
+            "heal_left": max(0, max_heal - heal_used),
+            "max_healing": max_healing,
+            "healing_left": max(0, max_healing - healing_used),
+            "max_revive": max_revive,
+            "revive_left": max(0, max_revive - revive_used),
+        }
+
+    @classmethod
+    def _is_within_chest_pickup_range(
+        cls,
+        agent_pos: Tuple[int, int],
+        chest_pos: Tuple[int, int],
+    ) -> bool:
+        dx = abs(int(agent_pos[0]) - int(chest_pos[0]))
+        dy = abs(int(agent_pos[1]) - int(chest_pos[1]))
+        return max(dx, dy) <= int(cls.CHEST_PICKUP_RADIUS)
+
+    def _apply_chest_item_rewards(self, item_name: str) -> List[str]:
+        granted_items: List[str] = []
+        if item_name == self.BONUS_SMALL_HEAL_SOURCE_ITEM:
+            self.extra_healing_bottles = max(0, int(self.extra_healing_bottles or 0)) + 1
+            granted_items.append(self.BONUS_SMALL_HEAL_ITEM_NAME)
+        if item_name == self.BONUS_REVIVE_SOURCE_ITEM:
+            self.extra_revive_bottles = max(0, int(self.extra_revive_bottles or 0)) + 1
+            granted_items.append(self.BONUS_REVIVE_ITEM_NAME)
+        return granted_items
+
+    def _collect_adjacent_chests(self) -> List[Dict]:
+        if not self.chests:
+            return []
+
+        agent_pos = tuple(self.grid_env.agent_pos)
+        collected: List[Dict] = []
+        for chest_pos, item_names in sorted(self.chests.items(), key=lambda entry: entry[0]):
+            if not self._is_within_chest_pickup_range(agent_pos, chest_pos):
+                continue
+            loot_items = [str(item_name) for item_name in item_names if str(item_name)]
+            collected.append(
+                {
+                    "pos": tuple(chest_pos),
+                    "items": loot_items,
+                    "granted_items": [],
+                }
+            )
+
+        if not collected:
+            return []
+
+        for chest_data in collected:
+            chest_pos = tuple(chest_data["pos"])
+            self.chests.pop(chest_pos, None)
+            granted_items: List[str] = []
+            for item_name in chest_data["items"]:
+                self.heroitems.append(item_name)
+                granted_items.extend(self._apply_chest_item_rewards(item_name))
+                self._log(f"Сундук на {chest_pos}: получен предмет '{item_name}'")
+            for granted_item in granted_items:
+                self.heroitems.append(granted_item)
+                self._log(
+                    f"Сундук на {chest_pos}: бонусом получен предмет '{granted_item}'"
+                )
+            chest_data["granted_items"] = granted_items
+
+        self._sync_grid_chest_positions()
+        return collected
+
     def _sync_moves_per_turn_with_hero(
         self,
         units: Optional[List[Dict]] = None,
@@ -605,7 +757,6 @@ class CampaignEnv(gym.Env):
         )
 
         grid_obs = self._get_grid_obs()
-        reward = 0.0
         terminated = False
         truncated = False
 
@@ -615,6 +766,7 @@ class CampaignEnv(gym.Env):
         if self._is_at_castle() and target_pos is not None:
             healed_amount, unit_name = self._heal_unit_to_full_at_position(position=target_pos)
             gold_spent = max(0.0, gold_before - float(self.gold))
+        reward = max(0.0, float(healed_amount)) * self.reward_castle_heal_per_hp
 
         info = {
             "mode": "grid",
@@ -629,6 +781,7 @@ class CampaignEnv(gym.Env):
             "healed_amount": healed_amount,
             "healed_unit_name": unit_name,
             "gold_spent": gold_spent,
+            "castle_heal_reward": reward,
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
@@ -641,10 +794,7 @@ class CampaignEnv(gym.Env):
         heal_tiles = {tuple(tile) for tile in self.castle_heal_tiles}
         enemy_tiles = {tuple(pos) for pos in self.grid_env.enemy_positions.values()}
         obstacle_tiles = {tuple(pos) for pos in self.grid_env.obstacle_positions}
-
-        heal_enemy_overlap = heal_tiles & enemy_tiles
-        if heal_enemy_overlap:
-            raise ValueError(f"Heal tiles overlap enemy tiles: {sorted(heal_enemy_overlap)}")
+        chest_tiles = {tuple(pos) for pos in getattr(self, "_static_chests", {}).keys()}
 
         obstacle_enemy_overlap = obstacle_tiles & enemy_tiles
         if obstacle_enemy_overlap:
@@ -658,8 +808,27 @@ class CampaignEnv(gym.Env):
                 f"Obstacle tiles overlap heal tiles: {sorted(obstacle_heal_overlap)}"
             )
 
+        chest_enemy_overlap = chest_tiles & enemy_tiles
+        if chest_enemy_overlap:
+            raise ValueError(
+                f"Chest tiles overlap enemy tiles: {sorted(chest_enemy_overlap)}"
+            )
+
+        chest_heal_overlap = chest_tiles & heal_tiles
+        if chest_heal_overlap:
+            raise ValueError(
+                f"Chest tiles overlap heal tiles: {sorted(chest_heal_overlap)}"
+            )
+
+        chest_obstacle_overlap = chest_tiles & obstacle_tiles
+        if chest_obstacle_overlap:
+            raise ValueError(
+                f"Chest tiles overlap obstacle tiles: {sorted(chest_obstacle_overlap)}"
+            )
+
         reachable_targets = set(enemy_tiles)
         reachable_targets.update(heal_tiles)
+        reachable_targets.update(chest_tiles)
         if not are_targets_reachable(
             self.grid_size,
             self.CASTLE_POS,
@@ -723,7 +892,6 @@ class CampaignEnv(gym.Env):
         )
 
         grid_obs = self._get_grid_obs()
-        reward = 0.0
         terminated = False
         truncated = False
 
@@ -741,6 +909,7 @@ class CampaignEnv(gym.Env):
             revived, revived_unit_name, gold_spent = self._revive_unit_with_gold_at_position(
                 position=target_pos
             )
+        reward = self.reward_castle_revive if revived else 0.0
 
         info = {
             "mode": "grid",
@@ -760,6 +929,7 @@ class CampaignEnv(gym.Env):
             "revived_unit_name": revived_unit_name,
             "revive_cost": revive_cost,
             "gold_spent": gold_spent,
+            "castle_revive_reward": reward,
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
@@ -945,7 +1115,7 @@ class CampaignEnv(gym.Env):
                 else:
                     self.healing_bottles_used = min(
                         self.healing_bottles_used + 1,
-                        self.MAX_HEALING_BOTTLES,
+                        self._max_healing_bottles_available(),
                     )
 
         info = {
@@ -962,9 +1132,11 @@ class CampaignEnv(gym.Env):
             "heal_bottles_used": self.heal_bottles_used,
             "heal_bottles_left": max(0, self.MAX_HEAL_BOTTLES - self.heal_bottles_used),
             "healing_bottles_used": self.healing_bottles_used,
+            "extra_healing_bottles": self.extra_healing_bottles,
             "healing_bottles_left": max(
-                0, self.MAX_HEALING_BOTTLES - self.healing_bottles_used
+                0, self._max_healing_bottles_available() - self.healing_bottles_used
             ),
+            "max_healing_bottles": self._max_healing_bottles_available(),
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
@@ -987,7 +1159,10 @@ class CampaignEnv(gym.Env):
         terminated = False
         truncated = False
 
-        self.revive_bottles_used = min(self.revive_bottles_used + 1, self.MAX_REVIVE_BOTTLES)
+        self.revive_bottles_used = min(
+            self.revive_bottles_used + 1,
+            self._max_revive_bottles_available(),
+        )
 
         revived, unit_name = (False, None)
         if target_pos is not None:
@@ -1003,7 +1178,9 @@ class CampaignEnv(gym.Env):
             "revived": revived,
             "revived_unit_name": unit_name,
             "revive_bottles_used": self.revive_bottles_used,
-            "revive_bottles_left": max(0, self.MAX_REVIVE_BOTTLES - self.revive_bottles_used),
+            "extra_revive_bottles": self.extra_revive_bottles,
+            "revive_bottles_left": self._revive_bottles_left(),
+            "max_revive_bottles": self._max_revive_bottles_available(),
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
@@ -1024,6 +1201,7 @@ class CampaignEnv(gym.Env):
             winner = self.battle_env.winner
             obs = self.battle_env._obs()
             reward = 0.0
+            battle_reward_raw = 0.0
             terminated = True
             truncated = False
         else:
@@ -1033,13 +1211,15 @@ class CampaignEnv(gym.Env):
                 action = 0
             if action >= self.battle_env.action_space.n:
                 action = self.battle_env.action_space.n - 1
-            obs, _battle_reward, terminated, truncated, battle_info = self.battle_env.step(action)
-            reward = 0.0
+            obs, battle_reward_raw, terminated, truncated, battle_info = self.battle_env.step(action)
+            reward = self.battle_reward_scale * float(battle_reward_raw)
 
         info = {
             "mode": "battle",
             "enemy_id": self.current_enemy_id,
             "battle_step": True,
+            "battle_reward_raw": float(battle_reward_raw),
+            "battle_reward_scaled": float(reward),
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
@@ -1154,7 +1334,12 @@ class CampaignEnv(gym.Env):
             blue_team = deepcopy(UNITS_BLUE)
             self._log("Используется дефолтная BLUE команда")
 
-        self.battle_env = BattleEnv(log_enabled=self.log_enabled)
+        self.battle_env = BattleEnv(
+            reward_win=self.battle_reward_win,
+            reward_loss=self.battle_reward_loss,
+            reward_step=self.battle_reward_step,
+            log_enabled=self.log_enabled,
+        )
 
         # Инициализируем бой с кастомными командами
         self.battle_env._init_with_custom_teams(red_team, blue_team)
@@ -1457,7 +1642,7 @@ class CampaignEnv(gym.Env):
         """True, если доступна хотя бы одна банка лечения любого типа."""
         return (
             self.heal_bottles_used < self.MAX_HEAL_BOTTLES
-            or self.healing_bottles_used < self.MAX_HEALING_BOTTLES
+            or self.healing_bottles_used < self._max_healing_bottles_available()
         )
 
     def _select_heal_bottle_for_position(self, position: int) -> Tuple[float, Optional[str]]:
@@ -1472,7 +1657,7 @@ class CampaignEnv(gym.Env):
             return 0.0, None
 
         has_large = self.heal_bottles_used < self.MAX_HEAL_BOTTLES
-        has_small = self.healing_bottles_used < self.MAX_HEALING_BOTTLES
+        has_small = self.healing_bottles_used < self._max_healing_bottles_available()
 
         if has_large and has_small:
             if missing_hp <= self.HEALING_BOTTLE_AMOUNT:
@@ -1764,7 +1949,7 @@ class CampaignEnv(gym.Env):
                 for idx, pos in enumerate(self.GRID_BOTTLE_POSITIONS):
                     mask[self.GRID_BOTTLE_ACTION_START + idx] = self._can_heal_position(pos)
             # Бутыли воскрешения на позиции 7-12.
-            if self.revive_bottles_used < self.MAX_REVIVE_BOTTLES:
+            if self.revive_bottles_used < self._max_revive_bottles_available():
                 for idx, pos in enumerate(self.REVIVE_BOTTLE_POSITIONS):
                     mask[self.GRID_REVIVE_ACTION_START + idx] = self._can_revive_position(pos)
 
@@ -1906,6 +2091,20 @@ class CampaignEnv(gym.Env):
             lines.append(f"Описание: {ENEMY_DESCRIPTIONS.get(self.current_enemy_id, '?')}")
             lines.append(f"Ход: {self.turns} | Золото: {self.gold:g} | Шаги: {self.moves}")
 
+        if self.chests:
+            chest_text = ", ".join(
+                f"{pos}:{list(item_names)}" for pos, item_names in sorted(self.chests.items())
+            )
+            lines.append(f"Сундуки: {chest_text}")
+        else:
+            lines.append("Сундуки: нет")
+        if self.heroitems:
+            lines.append(f"Предметы героя: {', '.join(self.heroitems)}")
+        else:
+            lines.append("Предметы героя: нет")
+        lines.append(f"Доп. банок исцеления: {max(0, int(self.extra_healing_bottles or 0))}")
+        lines.append(f"Доп. зелий воскрешения: {max(0, int(self.extra_revive_bottles or 0))}")
+
         result = "\n".join(lines)
         print(result)
         return result
@@ -1926,4 +2125,11 @@ class CampaignEnv(gym.Env):
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
+            "heroitems": list(self.heroitems),
+            "extra_healing_bottles": int(self.extra_healing_bottles or 0),
+            "extra_revive_bottles": int(self.extra_revive_bottles or 0),
+            "chests_remaining": [
+                {"pos": pos, "items": list(item_names)}
+                for pos, item_names in sorted(self.chests.items())
+            ],
         }

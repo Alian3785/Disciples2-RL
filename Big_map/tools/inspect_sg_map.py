@@ -791,16 +791,23 @@ def build_settlement_entry_cells(
     for settlement in settlement_objects.values():
         spec = RENDER_OBJECT_SPECS.get(settlement["class"], {})
         footprint_w, footprint_h = spec.get("footprint", (1, 1))
-        tile = (
-            int(settlement["x"]),
-            int(settlement["y"]) + max(0, int(footprint_h) - 1),
-        )
-        entry_cells[tile] = {
-            "class": settlement["class"],
-            "label": spec.get("label", "Settlement"),
-            "x": tile[0],
-            "y": tile[1],
-        }
+        corner_tiles = [
+            (
+                int(settlement["x"]),
+                int(settlement["y"]) + max(0, int(footprint_h) - 1),
+            ),
+            (
+                int(settlement["x"]) + max(0, int(footprint_w) - 1),
+                int(settlement["y"]),
+            ),
+        ]
+        for tile in corner_tiles:
+            entry_cells[tile] = {
+                "class": settlement["class"],
+                "label": spec.get("label", "Settlement"),
+                "x": tile[0],
+                "y": tile[1],
+            }
     return entry_cells
 
 
@@ -994,7 +1001,6 @@ def render_png_map(
     render_objects = extract_render_objects(data)
     settlement_objects = parse_settlement_objects(data)
     settlement_entry_cells = build_settlement_entry_cells(settlement_objects)
-    rendered_settlement_entry_tiles: set[tuple[int, int]] = set()
     rendered_ruin_interaction_tiles: set[tuple[int, int]] = set()
     suppressed_stack_cells = {
         (info["x"], info["y"])
@@ -1018,8 +1024,6 @@ def render_png_map(
                     len(rows),
                 )
             )
-    if settlement_entry_cells:
-        legend_items.append(("I", "Capital / village entry", SETTLEMENT_ENTRY_COLOR, len(settlement_entry_cells)))
     ruin_count = len(render_objects.get(".?AVCMidRuin@@", []))
     if ruin_count:
         legend_items.append(("RI", "Ruin interaction", RUIN_INTERACTION_COLOR, ruin_count * 3))
@@ -1094,8 +1098,6 @@ def render_png_map(
                     (x0 + inset, y0 + inset, x1 - inset, y1 - inset),
                 )
             )
-            if (cls, obj["x"], obj["y"]) in settlement_objects:
-                rendered_settlement_entry_tiles.add((draw_x, draw_y + draw_h - 1))
             if cls == ".?AVCMidRuin@@":
                 rendered_ruin_interaction_tiles.add((draw_x, draw_y + draw_h - 1))
                 if draw_h >= 2:
@@ -1126,13 +1128,6 @@ def render_png_map(
             draw.line((0, y, map_pixel_width - 1, y), fill=grid_color, width=1)
 
     entry_inset = max(1, cell_size // 8)
-    for draw_x, draw_y in rendered_settlement_entry_tiles:
-        x0 = draw_x * cell_size + entry_inset
-        y0 = draw_y * cell_size + entry_inset
-        x1 = x0 + cell_size - 2 * entry_inset - 1
-        y1 = y0 + cell_size - 2 * entry_inset - 1
-        draw.rectangle((x0, y0, x1, y1), fill=SETTLEMENT_ENTRY_COLOR, outline=outline_color, width=1)
-
     for draw_x, draw_y in rendered_ruin_interaction_tiles:
         x0 = draw_x * cell_size + entry_inset
         y0 = draw_y * cell_size + entry_inset
@@ -1160,12 +1155,6 @@ def render_png_map(
         cursor_y += 22
     draw.text(
         (legend_x, cursor_y + 4),
-        "I = lower-left entry tile. RI = ruin interaction cells.",
-        fill=(0, 0, 0),
-        font=font,
-    )
-    draw.text(
-        (legend_x, cursor_y + 20),
         "On C/V tiles: G = garrison, S = linked stack, G+S = both",
         fill=(0, 0, 0),
         font=font,
