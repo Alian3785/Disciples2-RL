@@ -3,6 +3,7 @@ from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -20,6 +21,27 @@ class _DummyBattleEnv:
 
     def _obs(self):
         return np.zeros(FEATURES_PER_UNIT * 12, dtype=np.float32)
+
+
+class _StepRewardBattleEnv:
+    def __init__(self, reward: float, *, terminated: bool = False, winner: str | None = None):
+        self.winner = None
+        self.action_space = type("ActionSpace", (), {"n": 15})()
+        self.last_battle_exp = 0.0
+        self.last_levelups = []
+        self.combined = deepcopy(UNITS_BLUE)
+        self._reward = float(reward)
+        self._terminated = bool(terminated)
+        self._winner_after_step = winner
+
+    def _obs(self):
+        return np.zeros(FEATURES_PER_UNIT * 12, dtype=np.float32)
+
+    def step(self, action):
+        del action
+        if self._terminated:
+            self.winner = self._winner_after_step
+        return self._obs(), self._reward, self._terminated, False, {}
 
 
 def _make_reward_isolated_env() -> CampaignEnv:
@@ -108,3 +130,40 @@ def test_agent_returns_to_attack_origin_after_battle_victory():
     assert info.get("battle_result") == "victory"
     assert tuple(env.grid_env.agent_pos) == attack_origin
     assert tuple(info.get("agent_pos")) == attack_origin
+
+
+def test_campaign_battle_step_uses_scaled_battle_reward():
+    env = _make_reward_isolated_env()
+    env.reset(seed=123)
+    env.mode = env.MODE_BATTLE
+    env.current_enemy_id = 1
+    env.battle_reward_scale = 0.25
+    env.battle_env = _StepRewardBattleEnv(reward=2.4, terminated=False)
+
+    _, reward, terminated, truncated, info = env.step(0)
+
+    assert terminated is False
+    assert truncated is False
+    assert reward == pytest.approx(0.6)
+    assert info.get("battle_ongoing") is True
+    assert float(info.get("battle_reward_raw", 0.0)) == pytest.approx(2.4)
+    assert float(info.get("battle_reward_scaled", 0.0)) == pytest.approx(0.6)
+
+
+def test_init_battle_passes_campaign_battle_reward_settings_to_battle_env():
+    env = CampaignEnv(
+        log_enabled=False,
+        persist_blue_hp=False,
+        realcapital=2,
+        battle_reward_win=3.5,
+        battle_reward_loss=-2.25,
+        battle_reward_step=0.125,
+    )
+    env.reset(seed=123)
+
+    env._init_battle(enemy_id=1)
+
+    assert env.battle_env is not None
+    assert env.battle_env.reward_win == pytest.approx(3.5)
+    assert env.battle_env.reward_loss == pytest.approx(-2.25)
+    assert env.battle_env.reward_step == pytest.approx(0.125)

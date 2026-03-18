@@ -17,7 +17,6 @@ from typing import Dict, Optional, Tuple
 
 DEFAULT_GRID_SIZE = 48
 DEFAULT_HERO_GRID_POSITION: Tuple[int, int] = (5, 27)
-HEAL_TILE_COUNT = 1
 OBSTACLE_COVERAGE_RATIO = 0.0
 OBSTACLE_EDGE_MARGIN = 2
 BASE_OBSTACLE_RIDGE_POLYLINES: Tuple[Tuple[Tuple[int, int], ...], ...] = ()
@@ -131,7 +130,6 @@ BASE_STATIC_OBSTACLE_BLOCKS: Tuple[Tuple[int, int, int, int], ...] = (
 )
 BASE_STATIC_EMPTY_TILES: Tuple[Tuple[int, int], ...] = (
     # Neutral map stacks that do not match any campaign enemy template stay empty.
-    (3, 1),
     (7, 2),
     (19, 2),
     (39, 3),
@@ -140,7 +138,6 @@ BASE_STATIC_EMPTY_TILES: Tuple[Tuple[int, int], ...] = (
     (16, 5),
     (25, 5),
     (45, 5),
-    (37, 6),
     (14, 7),
     (29, 9),
     (7, 10),
@@ -152,11 +149,9 @@ BASE_STATIC_EMPTY_TILES: Tuple[Tuple[int, int], ...] = (
     (23, 16),
     (28, 16),
     (40, 20),
-    (37, 22),
     (41, 25),
     (26, 26),
     (35, 29),
-    (25, 30),
     (37, 31),
     (30, 33),
     (41, 34),
@@ -167,6 +162,45 @@ BASE_STATIC_EMPTY_TILES: Tuple[Tuple[int, int], ...] = (
     (30, 41),
     (41, 44),
 )
+BASE_VILLAGE_HEAL_TILES: Tuple[Tuple[int, int], ...] = (
+    (6, 4),
+    (4, 40),
+    (40, 9),
+    (28, 33),
+    (40, 25),
+)
+BASE_VILLAGE_PREVIOUS_CORNER_TILES: Tuple[Tuple[int, int], ...] = (
+    (3, 1),
+    (1, 37),
+    (37, 6),
+    (25, 30),
+    (37, 22),
+)
+BASE_STATIC_HEAL_TILES: Tuple[Tuple[int, int], ...] = (
+    DEFAULT_HERO_GRID_POSITION,
+    *BASE_VILLAGE_HEAL_TILES,
+)
+HEAL_TILE_COUNT = len(BASE_STATIC_HEAL_TILES)
+BASE_STATIC_CHESTS: Tuple[Tuple[Tuple[int, int], Tuple[str, ...]], ...] = (
+    ((28, 46), ("Banner of War",)),
+    ((36, 38), ("Potion of Healing", "Life Potion")),
+    ((19, 0), ("Potion of Healing", "Life Potion")),
+    ((43, 17), ("Potion of Strength",)),
+    ((22, 21), ("Potion of Invulnerability",)),
+    ((6, 10), ("Banner of Might",)),
+    ((5, 17), ("Tome of Arcanum",)),
+    ((22, 27), ("Vampire Orb",)),
+    ((46, 6), ("Orb of Life",)),
+    ((45, 40), ("Lich Orb",)),
+    ((11, 11), ("Ruby (Valuable)",)),
+    ((13, 19), ("Ruby (Valuable)",)),
+    ((32, 41), ("Potion of Healing", "Diamond (Valuable)")),
+    ((1, 32), ("Mind ward scroll",)),
+    ((2, 3), ("Mind ward scroll",)),
+    ((34, 10), ("Potion of Healing", "Bronze Ring (Valuable)")),
+    ((24, 30), ("Potion of Healing", "Bronze Ring (Valuable)")),
+)
+CHEST_COUNT = len(BASE_STATIC_CHESTS)
 
 # Base campaign layout mirrors the 48x48 scenario coordinates directly.
 BASE_GRID_SIZE = DEFAULT_GRID_SIZE
@@ -390,11 +424,137 @@ MATCHED_MAP_STACKS: tuple[dict[str, object], ...] = (
     {"enemy_id": 30, "position": (18, 44), "description": "Отряд: орк чемпион на передней линии", "front": [None, "Орк чемпион", None], "back": [None, None, None]},
     {"enemy_id": 31, "position": (30, 46), "description": "Отряд: зеленый дракон", "front": [None, "Зелёный дракон", None], "back": [None, None, None]},
 )
+VILLAGE_LINKED_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
+    {
+        "enemy_id": 22,
+        "position": (4, 40),
+        "description": "Отряд Порта Бирмингем: титан и 2 скваера",
+        "front": ["Скваер", "Титан", "Скваер"],
+        "back": [None, None, None],
+    },
+    {
+        "enemy_id": 32,
+        "position": (6, 4),
+        "description": "Отряд Стагириаса: Сегерик (Королевский страж), Холмовой великан, Гном",
+        "front": ["Холмовой гигант", "Королевский страж", "Гном"],
+        "back": [None, None, None],
+    },
+    {
+        "enemy_id": 33,
+        "position": (40, 9),
+        "description": "Отряд Кордилии: Тифас (Рыцарь смерти), Злой дух, Призрак, Привидение",
+        "front": ["Дух", "Рыцарь смерти", "Призрак"],
+        "back": [None, "Привидение", None],
+    },
+    {
+        "enemy_id": 34,
+        "position": (28, 33),
+        "description": "Отряд Порта Полонис: Нигош (Носферату), Колдун, Воин, Привидение",
+        "front": ["Колдун", "Носферату", "Воин"],
+        "back": [None, "Привидение", None],
+    },
+    {
+        "enemy_id": 35,
+        "position": (40, 25),
+        "description": "Отряд Соругириллы: Унфегра (Королева личей), Виверна",
+        "front": [None, "Королева лич", None],
+        "back": [None, "Виверна", None],
+    },
+)
+def _pack_stack_units(units: Tuple[str, ...]) -> Tuple[list[str | None], list[str | None]]:
+    unit_list = [str(name) for name in units if isinstance(name, str) and name][:6]
+    slots: list[str | None] = [None, None, None, None, None, None]
+    count = len(unit_list)
+
+    if count <= 0:
+        return list(slots[:3]), list(slots[3:])
+    if count == 1:
+        slots[1] = unit_list[0]
+    elif count == 2:
+        slots[1] = unit_list[0]
+        slots[4] = unit_list[1]
+    elif count == 3:
+        slots[:3] = unit_list
+    elif count == 4:
+        slots[:3] = unit_list[:3]
+        slots[4] = unit_list[3]
+    elif count == 5:
+        slots[:3] = unit_list[:3]
+        slots[3] = unit_list[3]
+        slots[5] = unit_list[4]
+    else:
+        slots = unit_list[:6]
+
+    return list(slots[:3]), list(slots[3:])
+
+
+def _make_stack_override(
+    enemy_id: int,
+    position: Tuple[int, int],
+    units: Tuple[str, ...],
+) -> dict[str, object]:
+    front, back = _pack_stack_units(units)
+    composition = ", ".join(units) if units else "(empty)"
+    return {
+        "enemy_id": int(enemy_id),
+        "position": tuple(position),
+        "description": f"Отряд: {composition}",
+        "front": front,
+        "back": back,
+    }
+
+
+ADDITIONAL_MAP_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
+    _make_stack_override(36, (7, 2), ("Холмовой гигант",)),
+    _make_stack_override(37, (19, 2), ("Гном", "Травница", "Алхимик")),
+    _make_stack_override(38, (39, 3), ("Призрак", "Колдун", "Воин")),
+    _make_stack_override(39, (2, 4), ("Волк", "Варвар")),
+    _make_stack_override(40, (7, 4), ("Гном", "Метатель топоров", "Травница")),
+    _make_stack_override(41, (16, 5), ("Гном", "Метатель топоров")),
+    _make_stack_override(42, (25, 5), ("Разбойник",)),
+    _make_stack_override(43, (45, 5), ("Призрак", "Тамплиер")),
+    _make_stack_override(44, (14, 7), ("Гном", "Гном")),
+    _make_stack_override(45, (29, 9), ("Головорез",)),
+    _make_stack_override(46, (7, 10), ("Гигантский чёрный паук",)),
+    _make_stack_override(47, (41, 10), ("Призрак", "Привидение", "Привидение", "Воин")),
+    _make_stack_override(48, (32, 11), ("Жрец", "Копейщик")),
+    _make_stack_override(49, (18, 12), ("Гном",)),
+    _make_stack_override(50, (40, 13), ("Зомби",)),
+    _make_stack_override(51, (29, 14), ("Крестьянин", "Крестьянин", "Крестьянин")),
+    _make_stack_override(52, (23, 16), ("Орк",)),
+    _make_stack_override(53, (28, 16), ("Скваер", "Ополченец")),
+    _make_stack_override(54, (40, 20), ("Дракон Рока",)),
+    _make_stack_override(
+        55,
+        (41, 25),
+        ("Скелет рыцарь", "Привидение", "Привидение", "Привидение", "Привидение", "Привидение"),
+    ),
+    _make_stack_override(56, (26, 26), ("Призрак", "Воин")),
+    _make_stack_override(57, (35, 29), ("Призрак", "Привидение", "Воин")),
+    _make_stack_override(58, (37, 31), ("Зомби",)),
+    _make_stack_override(59, (30, 33), ("Зомби",)),
+    _make_stack_override(60, (41, 34), ("Зомби",)),
+    _make_stack_override(61, (33, 37), ("Зомби", "Призрак")),
+    _make_stack_override(62, (44, 37), ("Призрак", "Привидение", "Зомби", "Воин")),
+    _make_stack_override(63, (4, 41), ("Разбойник",)),
+    _make_stack_override(64, (28, 41), ("Лесной эльф", "Рейнджер")),
+    _make_stack_override(65, (30, 41), ("Кентавр копейщик", "Рейнджер")),
+    _make_stack_override(66, (41, 44), ("Демон", "Привидение", "Привидение")),
+)
+ALL_MAP_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
+    VILLAGE_LINKED_STACK_OVERRIDES + ADDITIONAL_MAP_STACK_OVERRIDES
+)
 
 BASE_ENEMY_POSITIONS = {
     int(row["enemy_id"]): tuple(row["position"])
     for row in MATCHED_MAP_STACKS
 }
+BASE_ENEMY_POSITIONS.update(
+    {
+        int(row["enemy_id"]): tuple(row["position"])
+        for row in ALL_MAP_STACK_OVERRIDES
+    }
+)
 
 ENEMY_TEAM_SPECS: dict[int, dict[str, object]] = {
     int(row["enemy_id"]): {
@@ -404,6 +564,16 @@ ENEMY_TEAM_SPECS: dict[int, dict[str, object]] = {
     }
     for row in MATCHED_MAP_STACKS
 }
+ENEMY_TEAM_SPECS.update(
+    {
+        int(row["enemy_id"]): {
+            "description": str(row["description"]),
+            "front": list(row["front"]),
+            "back": list(row["back"]),
+        }
+        for row in ALL_MAP_STACK_OVERRIDES
+    }
+)
 
 
 def clamp_grid_pos(pos: Tuple[int, int], grid_size: int) -> Tuple[int, int]:
@@ -689,7 +859,28 @@ def resolve_heal_tiles(
     start_position: Tuple[int, int] = DEFAULT_HERO_GRID_POSITION,
     heal_tile_count: int = HEAL_TILE_COUNT,
 ) -> Tuple[Tuple[int, int], ...]:
-    """Choose free heal/revive tiles far apart from each other on the campaign map."""
+    """Use the fixed scenario heal tiles first, then fill extra slots deterministically."""
+    desired_count = max(0, int(heal_tile_count))
+    if desired_count == 0:
+        return ()
+
+    heal_tiles: list[Tuple[int, int]] = []
+    heal_seen: set[Tuple[int, int]] = set()
+    static_heal_tiles = scale_static_tiles(
+        grid_size,
+        BASE_STATIC_HEAL_TILES,
+        base_grid_size=BASE_GRID_SIZE,
+    )
+
+    for raw_tile in static_heal_tiles:
+        tile = clamp_grid_pos(raw_tile, grid_size)
+        if tile in heal_seen:
+            continue
+        heal_tiles.append(tile)
+        heal_seen.add(tile)
+        if len(heal_tiles) >= desired_count:
+            return tuple(heal_tiles)
+
     enemy_tiles = {tuple(pos) for pos in enemy_positions.values()}
 
     if grid_size >= 4:
@@ -706,8 +897,8 @@ def resolve_heal_tiles(
         (far_edge, far_edge),
     )
 
-    heal_tiles: list[Tuple[int, int]] = []
     blocked_tiles = set(enemy_tiles)
+    blocked_tiles.update(heal_tiles)
 
     for anchor in preferred_anchors:
         tile = _nearest_free_tile(anchor, blocked_tiles, grid_size)
@@ -715,10 +906,10 @@ def resolve_heal_tiles(
             continue
         heal_tiles.append(tile)
         blocked_tiles.add(tile)
-        if len(heal_tiles) >= int(heal_tile_count):
+        if len(heal_tiles) >= desired_count:
             break
 
-    while len(heal_tiles) < int(heal_tile_count):
+    while len(heal_tiles) < desired_count:
         tile = _farthest_free_tile(blocked_tiles, tuple(heal_tiles), grid_size)
         if tile is None:
             break
@@ -726,6 +917,48 @@ def resolve_heal_tiles(
         blocked_tiles.add(tile)
 
     return tuple(heal_tiles)
+
+
+def resolve_chests(
+    grid_size: int,
+    enemy_positions: Dict[int, Tuple[int, int]],
+    *,
+    heal_tiles: Tuple[Tuple[int, int], ...] | list[Tuple[int, int]] = (),
+    obstacle_tiles: Tuple[Tuple[int, int], ...] | list[Tuple[int, int]] | set[Tuple[int, int]] = (),
+    start_position: Tuple[int, int] = DEFAULT_HERO_GRID_POSITION,
+    base_static_chests: Tuple[Tuple[Tuple[int, int], Tuple[str, ...]], ...] = BASE_STATIC_CHESTS,
+) -> Dict[Tuple[int, int], Tuple[str, ...]]:
+    """Resolve deterministic treasure chest tiles and the items stored in each chest."""
+    if not base_static_chests:
+        return {}
+
+    base_tiles = tuple(pos for pos, _ in base_static_chests)
+    scaled_tiles = scale_static_tiles(
+        grid_size,
+        base_tiles,
+        base_grid_size=BASE_GRID_SIZE,
+    )
+    reserved_tiles = {tuple(pos) for pos in enemy_positions.values()}
+    reserved_tiles.update(tuple(tile) for tile in heal_tiles)
+    reserved_tiles.update(clamp_grid_pos(tile, grid_size) for tile in obstacle_tiles)
+    reserved_tiles.add(clamp_grid_pos(start_position, grid_size))
+
+    resolved: Dict[Tuple[int, int], Tuple[str, ...]] = {}
+    for raw_entry, raw_tile in zip(base_static_chests, scaled_tiles):
+        _, item_names = raw_entry
+        tile = clamp_grid_pos(raw_tile, grid_size)
+        if tile in reserved_tiles or tile in resolved:
+            tile = _nearest_free_tile(
+                tile,
+                reserved_tiles | set(resolved.keys()),
+                grid_size,
+            )
+            if tile is None:
+                continue
+        resolved[tile] = tuple(str(item_name) for item_name in item_names if str(item_name))
+        reserved_tiles.add(tile)
+
+    return resolved
 
 
 def resolve_obstacle_tiles(

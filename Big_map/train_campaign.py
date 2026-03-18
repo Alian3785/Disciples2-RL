@@ -70,6 +70,10 @@ REWARD_CONFIG = {
     "reward_survival_alive_weight": 0.4,
     "reward_survival_hp_weight": 0.4,
     "reward_unit_upgrade": 0.25,
+    "battle_reward_scale": 0.25,
+    "battle_reward_win": 2.0,
+    "battle_reward_loss": -1.0,
+    "battle_reward_step": 0.01,
 }
 
 REQUIRED_COMET_VERSION = (3, 57, 0)
@@ -488,6 +492,9 @@ class CampaignMetricsCallback(BaseCallback):
         self.recent_castle_heal_uses = deque(maxlen=self.episode_window)
         self.recent_castle_heal_episode_flags = deque(maxlen=self.episode_window)
         self.recent_castle_healed_hp = deque(maxlen=self.episode_window)
+        self.episode_chests_collected: list[float] = []
+        self.recent_chests_collected = deque(maxlen=self.episode_window)
+        self.recent_chest_episode_flags = deque(maxlen=self.episode_window)
         self.recent_turns = deque(maxlen=self.step_window)
         self.recent_gold = deque(maxlen=self.step_window)
         self.recent_moves = deque(maxlen=self.step_window)
@@ -506,11 +513,14 @@ class CampaignMetricsCallback(BaseCallback):
         self.total_castle_heal_uses = 0
         self.total_castle_healed_hp = 0.0
         self.castle_heal_episodes = 0
+        self.total_chests_collected = 0
+        self.chest_collection_episodes = 0
         self.best_recent_victory_rate = 0.0
         self._last_logged_step = 0
         self._episode_castle_heal_uses: list[int] = []
         self._episode_castle_heal_flags: list[bool] = []
         self._episode_castle_healed_hp: list[float] = []
+        self._episode_chests_collected: list[int] = []
 
     def _append_recent_stat(self, info: dict[str, Any], key: str, target: deque) -> None:
         value = info.get(key)
@@ -528,6 +538,7 @@ class CampaignMetricsCallback(BaseCallback):
         self._episode_castle_heal_uses.extend([0] * missing)
         self._episode_castle_heal_flags.extend([False] * missing)
         self._episode_castle_healed_hp.extend([0.0] * missing)
+        self._episode_chests_collected.extend([0] * missing)
 
     def _consume_castle_heal(self, info: dict[str, Any], env_index: int) -> None:
         if not info.get("castle_heal_action"):
@@ -559,6 +570,37 @@ class CampaignMetricsCallback(BaseCallback):
         self._episode_castle_heal_uses[env_index] = 0
         self._episode_castle_heal_flags[env_index] = False
         self._episode_castle_healed_hp[env_index] = 0.0
+
+    def _consume_chests(self, info: dict[str, Any], env_index: int) -> None:
+        collected = info.get("collected_chests")
+        if not isinstance(collected, (list, tuple)):
+            return
+        chest_count = len(collected)
+        if chest_count <= 0:
+            return
+        self.total_chests_collected += chest_count
+        self._episode_chests_collected[env_index] += chest_count
+
+    def _finalize_episode_chests(self, env_index: int) -> None:
+        chest_count = float(self._episode_chests_collected[env_index])
+        self.episode_chests_collected.append(chest_count)
+        self.recent_chests_collected.append(chest_count)
+        self.recent_chest_episode_flags.append(1.0 if chest_count > 0.0 else 0.0)
+        if chest_count > 0.0:
+            self.chest_collection_episodes += 1
+
+        if self.experiment is not None:
+            self.experiment.log_metric(
+                "campaign/episode_chests_collected",
+                chest_count,
+                step=self.num_timesteps,
+            )
+        model = getattr(self, "model", None)
+        logger = getattr(model, "logger", None)
+        if logger is not None:
+            logger.record("campaign/episode_chests_collected", chest_count)
+
+        self._episode_chests_collected[env_index] = 0
 
     def _record_window_metrics(self, infos: list[dict[str, Any]]) -> None:
         turns = []
@@ -593,6 +635,7 @@ class CampaignMetricsCallback(BaseCallback):
     def _consume_info(self, info: dict[str, Any], env_index: int | None = None) -> None:
         if env_index is not None:
             self._consume_castle_heal(info, env_index)
+            self._consume_chests(info, env_index)
 
         episode = info.get("episode")
         if isinstance(episode, dict):
@@ -608,6 +651,7 @@ class CampaignMetricsCallback(BaseCallback):
                 self.recent_episode_lengths.append(length)
             if env_index is not None:
                 self._finalize_episode_castle_heal(env_index)
+                self._finalize_episode_chests(env_index)
 
         campaign_result = info.get("campaign_result")
         if campaign_result:
@@ -670,6 +714,10 @@ class CampaignMetricsCallback(BaseCallback):
             "campaign/battles_total": total_battles,
             "campaign/battle_victories_total": float(self.battle_counter.get("victory", 0)),
             "campaign/battle_defeats_total": float(self.battle_counter.get("defeat", 0)),
+            "campaign/battle_victories_per_episode_mean": _safe_rate(
+                self.battle_counter.get("victory", 0),
+                total_episodes,
+            ),
             "campaign/battle_win_rate": _safe_rate(
                 self.battle_counter.get("victory", 0),
                 total_battles,
@@ -679,6 +727,15 @@ class CampaignMetricsCallback(BaseCallback):
             "campaign/castle_healed_hp_total": float(self.total_castle_healed_hp),
             "campaign/castle_heal_episodes_rate": _safe_rate(
                 self.castle_heal_episodes,
+                total_episodes,
+            ),
+            "campaign/chests_collected_total": float(self.total_chests_collected),
+            "campaign/chests_collected_per_episode_mean": _safe_rate(
+                self.total_chests_collected,
+                total_episodes,
+            ),
+            "campaign/chest_collection_episodes_rate": _safe_rate(
+                self.chest_collection_episodes,
                 total_episodes,
             ),
             "campaign/recent_episodes": float(len(self.recent_episode_rewards)),
@@ -694,6 +751,10 @@ class CampaignMetricsCallback(BaseCallback):
                 self.recent_castle_heal_episode_flags
             ),
             "campaign/recent_castle_healed_hp_mean": _safe_mean(self.recent_castle_healed_hp),
+            "campaign/recent_chests_collected_mean": _safe_mean(self.recent_chests_collected),
+            "campaign/recent_chest_collection_episodes_rate": _safe_mean(
+                self.recent_chest_episode_flags
+            ),
             "campaign/recent_turns_mean": _safe_mean(self.recent_turns),
             "campaign/recent_gold_mean": _safe_mean(self.recent_gold),
             "campaign/recent_moves_mean": _safe_mean(self.recent_moves),
@@ -712,6 +773,7 @@ class CampaignMetricsCallback(BaseCallback):
                 self.window_battle_counter.get("victory", 0),
                 window_battles,
             ),
+            "campaign/window/chests_collected_mean": _safe_mean(self.recent_chests_collected),
             "campaign/best_recent_victory_rate": self.best_recent_victory_rate,
         }
 
@@ -726,14 +788,33 @@ class CampaignMetricsCallback(BaseCallback):
         self.window_victory_reason_counter.clear()
 
     def _log_to_experiment(self, *, force: bool = False) -> None:
-        if self.experiment is None:
-            return
         if not force and self.num_timesteps - self._last_logged_step < self.log_freq:
             return
 
         payload = self._build_log_payload()
-        self.experiment.log_metrics(payload, step=self.num_timesteps)
+        model = getattr(self, "model", None)
+        logger = getattr(model, "logger", None)
+        if logger is not None:
+            logger.record(
+                "campaign/recent_chests_collected_mean",
+                payload["campaign/recent_chests_collected_mean"],
+            )
+            logger.record(
+                "campaign/chests_collected_per_episode_mean",
+                payload["campaign/chests_collected_per_episode_mean"],
+            )
+            logger.record(
+                "campaign/chest_collection_episodes_rate",
+                payload["campaign/chest_collection_episodes_rate"],
+            )
+
+        if self.experiment is not None:
+            self.experiment.log_metrics(payload, step=self.num_timesteps)
         self._last_logged_step = self.num_timesteps
+
+        if self.experiment is None:
+            self._reset_log_window()
+            return
 
         self.experiment.log_other(
             "summary_campaign_episodes_total",
@@ -764,6 +845,45 @@ class CampaignMetricsCallback(BaseCallback):
 
     def _on_training_end(self) -> None:
         self._log_to_experiment(force=True)
+
+    def save_chests_per_episode_plot(self, path: str | os.PathLike[str]) -> Path | None:
+        if not self.episode_chests_collected:
+            return None
+
+        import matplotlib.pyplot as plt
+
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+        episodes = np.arange(1, len(self.episode_chests_collected) + 1)
+        chest_counts = np.asarray(self.episode_chests_collected, dtype=float)
+
+        fig, ax = plt.subplots(figsize=(10, 4.5))
+        ax.plot(episodes, chest_counts, color="#8B5A2B", linewidth=1.6, label="Chests per episode")
+        ax.fill_between(episodes, chest_counts, color="#D9B36C", alpha=0.35)
+
+        if len(chest_counts) >= 5:
+            window = min(25, len(chest_counts))
+            kernel = np.ones(window, dtype=float) / float(window)
+            rolling = np.convolve(chest_counts, kernel, mode="valid")
+            rolling_x = episodes[window - 1 :]
+            ax.plot(
+                rolling_x,
+                rolling,
+                color="#2F4858",
+                linewidth=2.0,
+                label=f"Rolling mean ({window})",
+            )
+
+        ax.set_title("Collected Chests Per Episode")
+        ax.set_xlabel("Episode")
+        ax.set_ylabel("Chests")
+        ax.grid(True, alpha=0.25, linewidth=0.6)
+        ax.legend(loc="upper right")
+        fig.tight_layout()
+        fig.savefig(target, dpi=160)
+        plt.close(fig)
+        return target
 
 
 if __name__ == "__main__":
@@ -1035,6 +1155,11 @@ if __name__ == "__main__":
     if total > 0:
         print(f"  Winrate: {100 * metrics_cb.victories / total:.1f}%")
     print(f"{'='*60}")
+
+    chests_plot_path = BASE_DIR / "outputs" / "campaign_chests_per_episode.png"
+    saved_chests_plot = metrics_cb.save_chests_per_episode_plot(chests_plot_path)
+    if saved_chests_plot is not None:
+        print(f"  График сундуков: {saved_chests_plot}")
 
     if COMET_AVAILABLE and comet_experiment is not None:
         try:

@@ -107,6 +107,7 @@ class GridWorldEnv(gym.Env):
         self.enemies_alive: Dict[int, bool] = {eid: True for eid in self.enemy_positions.keys()}
         self.visited_cells: Set[Tuple[int, int]] = set()
         self.current_enemy_encounter: Optional[int] = None
+        self.chest_positions: Set[Tuple[int, int]] = set()
         self.step_count = 0
 
     def _clamp_to_grid(self, pos: Tuple[int, int]) -> Tuple[int, int]:
@@ -269,6 +270,10 @@ class GridWorldEnv(gym.Env):
             return None
 
         enemy_ids = sorted(self.enemy_positions.keys())
+        chest_positions = {
+            self._clamp_to_grid(pos)
+            for pos in getattr(self, "chest_positions", set()) or set()
+        }
 
         lines = []
         lines.append("+" + "-" * (self.grid_size * 2 + 1) + "+")
@@ -280,6 +285,8 @@ class GridWorldEnv(gym.Env):
                     row += "A "
                 elif pos in self.obstacle_positions:
                     row += "# "
+                elif pos in chest_positions:
+                    row += "T "
                 elif pos in [self.enemy_positions.get(i) for i in enemy_ids]:
                     enemy_id = self.get_enemy_at_position(pos)
                     row += f"{enemy_id} " if enemy_id is not None else "x "
@@ -293,6 +300,7 @@ class GridWorldEnv(gym.Env):
         lines.append("+" + "-" * (self.grid_size * 2 + 1) + "+")
         lines.append(f"Agent: {self.agent_pos}")
         lines.append(f"Enemies alive: {[k for k, v in self.enemies_alive.items() if v]}")
+        lines.append(f"Chests: {sorted(chest_positions)}")
         lines.append(f"Visited: {len(self.visited_cells)}/{self.grid_size**2}")
 
         result = "\n".join(lines)
