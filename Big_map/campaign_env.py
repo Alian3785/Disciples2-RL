@@ -26,10 +26,13 @@ from copy import deepcopy
 from battle_env import BattleEnv, UNITS_BLUE, FEATURES_PER_UNIT
 from enemy_configs import ENEMY_CONFIGS, ENEMY_DESCRIPTIONS
 from grid import (
+    CAPITAL_HEAL_TILE_ARMOR_BONUS,
     are_targets_reachable,
     DEFAULT_GRID_SIZE,
     DEFAULT_HERO_GRID_POSITION,
     HEAL_TILE_COUNT,
+    SETTLEMENT_ARMOR_BONUS_BY_LEVEL,
+    SETTLEMENT_DEFENDER_LEVEL_BY_ENEMY_ID,
     resolve_chests,
     resolve_obstacle_tiles,
     resolve_heal_tiles,
@@ -66,7 +69,8 @@ class CampaignEnv(gym.Env):
     Награды:
         - Награда за участие в битве (нашёл врага): +0.1
         - Награда за победу в каждой битве: +0.3
-        - Финальный бонус за победу над зелёным драконом: reward_all_enemies * 10
+        - Награда за захват каждого целевого города: reward_all_enemies * 5
+        - Победа в кампании после захвата Порта Полонис и Соругириллы
         - Масштабированная награда из BattleEnv: battle_reward_scale * battle_reward
         - Награда за лечение на специальных клетках: reward_castle_heal_per_hp * restored_hp
         - Награда за успешное воскрешение на специальных клетках: reward_castle_revive
@@ -82,18 +86,20 @@ class CampaignEnv(gym.Env):
         - [...]: ход и золото
 
     Action Space:
-        Discrete(58):
+        Discrete(...):
         - В режиме grid:
           - 0-7: движение в 8 направлениях
           - 8: отдых (REST) — восстановление 5% HP раненым юнитам
           - 9-14: применить подходящую банку лечения к позициям BLUE 7-12
             (автовыбор +50 HP или +100 HP в зависимости от недостающего здоровья и запасов)
           - 15-20: применить бутыль воскрешения к позициям BLUE 7-12 (оживляет с 1 HP)
-          - 21-26: лечение на специальных клетках карты по позициям BLUE 7-12
+          - 21-26: применить зелье неуязвимости к позициям BLUE 7-12 (+50 брони на 1 ход)
+          - 27-32: применить зелье силы к позициям BLUE 7-12 (+30% урона на 1 ход)
+          - 33-38: лечение на специальных клетках карты по позициям BLUE 7-12
             (стоимость за 1 HP зависит от Level)
-          - 27-32: воскрешение на специальных клетках карты по позициям BLUE 7-12
+          - 39-44: воскрешение на специальных клетках карты по позициям BLUE 7-12
             (стоимость зависит от Level)
-          - 33-57: ????????? ????????? ??????? (25 ????????)
+          - 45-...: постройка зданий активной фракции
         - В режиме battle: используются действия 0-14 (атака/защита/ожидание)
 
         Action masking применяется для блокировки недопустимых действий.
@@ -120,20 +126,37 @@ class CampaignEnv(gym.Env):
     GRID_REVIVE_ACTION_START = GRID_BOTTLE_ACTION_START + len(GRID_BOTTLE_POSITIONS)  # 15
     REVIVE_BOTTLE_POSITIONS = GRID_BOTTLE_POSITIONS
     MAX_REVIVE_BOTTLES = 3
+    GRID_INVULNERABILITY_ACTION_START = GRID_REVIVE_ACTION_START + len(REVIVE_BOTTLE_POSITIONS)  # 21
+    INVULNERABILITY_POTION_POSITIONS = GRID_BOTTLE_POSITIONS
+    INVULNERABILITY_POTION_ITEM_NAME = "Potion of Invulnerability"
+    INVULNERABILITY_POTION_ARMOR_BONUS = 50
+    GRID_STRENGTH_ACTION_START = (
+        GRID_INVULNERABILITY_ACTION_START + len(INVULNERABILITY_POTION_POSITIONS)
+    )  # 27
+    STRENGTH_POTION_POSITIONS = GRID_BOTTLE_POSITIONS
+    STRENGTH_POTION_ITEM_NAME = "Potion of Strength"
+    STRENGTH_POTION_DAMAGE_MULTIPLIER = 1.30
     CASTLE_POS = DEFAULT_HERO_GRID_POSITION
     CASTLE_HEAL_TILE_COUNT = HEAL_TILE_COUNT
-    GRID_CASTLE_HEAL_ACTION_START = GRID_REVIVE_ACTION_START + len(REVIVE_BOTTLE_POSITIONS)  # 21
+    GRID_CASTLE_HEAL_ACTION_START = GRID_STRENGTH_ACTION_START + len(STRENGTH_POTION_POSITIONS)  # 33
     CASTLE_HEAL_POSITIONS = GRID_BOTTLE_POSITIONS
-    GRID_CASTLE_REVIVE_ACTION_START = GRID_CASTLE_HEAL_ACTION_START + len(CASTLE_HEAL_POSITIONS)  # 27
+    GRID_CASTLE_REVIVE_ACTION_START = GRID_CASTLE_HEAL_ACTION_START + len(CASTLE_HEAL_POSITIONS)  # 39
     CASTLE_REVIVE_POSITIONS = REVIVE_BOTTLE_POSITIONS
-    GRID_BUILD_ACTION_START = GRID_CASTLE_REVIVE_ACTION_START + len(CASTLE_REVIVE_POSITIONS)  # 33
-    GREEN_DRAGON_ENEMY_ID = 31
-    GREEN_DRAGON_REWARD_MULTIPLIER = 10.0
+    GRID_BUILD_ACTION_START = GRID_CASTLE_REVIVE_ACTION_START + len(CASTLE_REVIVE_POSITIONS)  # 45
+    FINAL_OBJECTIVE_CITIES = {
+        "Порт Полонис": (34, 68),
+        "Соругирилла": (35, 69),
+    }
+    FINAL_OBJECTIVE_CITY_REWARD_MULTIPLIER = 5.0
     CHEST_PICKUP_RADIUS = 1
     BONUS_SMALL_HEAL_SOURCE_ITEM = "Potion of Healing"
     BONUS_SMALL_HEAL_ITEM_NAME = "Банка исцеления (+50 HP)"
     BONUS_REVIVE_SOURCE_ITEM = "Life Potion"
     BONUS_REVIVE_ITEM_NAME = "Зелье воскрешения (+1)"
+    AUTO_CONSUMED_CHEST_ITEMS = (
+        BONUS_SMALL_HEAL_SOURCE_ITEM,
+        BONUS_REVIVE_SOURCE_ITEM,
+    )
     ENEMY_REWARD_MULTIPLIERS = {}
 
     def __init__(
@@ -141,7 +164,7 @@ class CampaignEnv(gym.Env):
         grid_size: int = DEFAULT_GRID_SIZE,
         reward_engage_battle: float = 0.2,  # Бонус за вход в бой с живым врагом.
         reward_defeat_enemy: float = 1.0,   # Награда за победу в бою против каждого отряда
-        reward_all_enemies: float = 10.0,   # Базовая финальная награда (зелёный дракон получает x10)
+        reward_all_enemies: float = 10.0,   # Базовая награда за захват одного целевого города (x5)
         reward_loss: float = -5.0,          # Штраф за поражение кампании
         reward_timeout: float = -3.0,       # Штраф за таймаут (лимит шагов)
         reward_turn_penalty: float = 0.02,  # Штраф за завершение хода (REST)
@@ -170,7 +193,7 @@ class CampaignEnv(gym.Env):
         self.grid_size = grid_size
         self.reward_engage_battle = reward_engage_battle  # Награда за участие в битве
         self.reward_defeat_enemy = reward_defeat_enemy    # Награда за победу в битве
-        self.reward_all_enemies = reward_all_enemies      # База для финального бонуса за зелёного дракона
+        self.reward_all_enemies = reward_all_enemies      # База награды за захват целевого города
         self.reward_loss = reward_loss
         self.reward_timeout = reward_timeout
         self.reward_turn_penalty = reward_turn_penalty
@@ -260,6 +283,9 @@ class CampaignEnv(gym.Env):
         self.heroitems: List[str] = []
         self.extra_healing_bottles: int = 0
         self.extra_revive_bottles: int = 0
+        self.active_invulnerability_potion_positions: set[int] = set()
+        self.active_strength_potion_positions: set[int] = set()
+        self.captured_objective_cities: set[str] = set()
         self._sync_grid_chest_positions()
         total_actions = self.GRID_BUILD_ACTION_START + len(self.building_keys)
         # Action space: максимум из двух режимов (battle = 15 действий, grid расширен для бутылей и построек)
@@ -302,6 +328,9 @@ class CampaignEnv(gym.Env):
         self.heroitems = []
         self.extra_healing_bottles = 0
         self.extra_revive_bottles = 0
+        self.active_invulnerability_potion_positions = set()
+        self.active_strength_potion_positions = set()
+        self.captured_objective_cities = set()
         self.chests = dict(self._static_chests)
         self.castle_heal_tiles = self._static_castle_heal_tiles
         self.grid_env.enemy_positions = dict(self._static_enemy_positions)
@@ -329,6 +358,10 @@ class CampaignEnv(gym.Env):
             "heroitems": list(self.heroitems),
             "extra_healing_bottles": int(self.extra_healing_bottles or 0),
             "extra_revive_bottles": int(self.extra_revive_bottles or 0),
+            "invulnerability_potions_left": self._count_hero_item(self.INVULNERABILITY_POTION_ITEM_NAME),
+            "strength_potions_left": self._count_hero_item(self.STRENGTH_POTION_ITEM_NAME),
+            "active_invulnerability_positions": sorted(self.active_invulnerability_potion_positions),
+            "active_strength_positions": sorted(self.active_strength_potion_positions),
             "chests_remaining": len(self.chests),
         }
 
@@ -349,15 +382,21 @@ class CampaignEnv(gym.Env):
         #   0-7 — движение, 8 — отдых,
         #   9-14 — применить подходящую банку лечения к позициям 7-12 соответственно.
         #   15-20 — применить бутыль воскрешения к позициям 7-12 соответственно.
-        #   21-26 — лечение на специальных клетках карты по позициям 7-12.
-        #   27-32 — воскрешение на специальных клетках карты по позициям 7-12.
-        #   33-57 ? ????????? ?????? ????????? ??????? (25 ????????).
+        #   21-26 — применить зелье неуязвимости к позициям 7-12 соответственно.
+        #   27-32 — применить зелье силы к позициям 7-12 соответственно.
+        #   33-38 — лечение на специальных клетках карты по позициям 7-12.
+        #   39-44 — воскрешение на специальных клетках карты по позициям 7-12.
+        #   45-... — постройка зданий активной фракции.
         if action >= self.GRID_BUILD_ACTION_START:
             return self._step_building(action)
         if action >= self.GRID_CASTLE_REVIVE_ACTION_START:
             return self._step_revive_in_castle(action)
         if action >= self.GRID_CASTLE_HEAL_ACTION_START:
             return self._step_heal_in_castle(action)
+        if action >= self.GRID_STRENGTH_ACTION_START:
+            return self._step_apply_strength_potion(action)
+        if action >= self.GRID_INVULNERABILITY_ACTION_START:
+            return self._step_apply_invulnerability_potion(action)
         if action >= self.GRID_REVIVE_ACTION_START:
             return self._step_revive_with_bottle(action)
         if action >= self.GRID_BOTTLE_ACTION_START:
@@ -377,6 +416,8 @@ class CampaignEnv(gym.Env):
                 "heroitems": list(self.heroitems),
                 "extra_healing_bottles": int(self.extra_healing_bottles or 0),
                 "extra_revive_bottles": int(self.extra_revive_bottles or 0),
+                "active_invulnerability_positions": sorted(self.active_invulnerability_potion_positions),
+                "active_strength_positions": sorted(self.active_strength_potion_positions),
                 "collected_chests": [],
                 "chests_remaining": len(self.chests),
             }
@@ -419,6 +460,11 @@ class CampaignEnv(gym.Env):
                 reward += battle_engage_bonus
             self._apply_battle_grid_steps(extra_steps=10)
         collected_chests = self._collect_adjacent_chests()
+        collected_combat_potions = self._count_collected_combat_potions(collected_chests)
+        combat_potion_pickup_reward = (
+            float(collected_combat_potions) * self._combat_potion_reward_value()
+        )
+        reward += combat_potion_pickup_reward
 
         info = {
             "mode": "grid",
@@ -439,6 +485,10 @@ class CampaignEnv(gym.Env):
             "heroitems": list(self.heroitems),
             "extra_healing_bottles": int(self.extra_healing_bottles or 0),
             "extra_revive_bottles": int(self.extra_revive_bottles or 0),
+            "active_invulnerability_positions": sorted(self.active_invulnerability_potion_positions),
+            "active_strength_positions": sorted(self.active_strength_potion_positions),
+            "collected_combat_potions": int(collected_combat_potions),
+            "combat_potion_pickup_reward": float(combat_potion_pickup_reward),
             "collected_chests": [
                 {
                     "pos": tuple(chest_data["pos"]),
@@ -610,6 +660,73 @@ class CampaignEnv(gym.Env):
     def _revive_bottles_left(self) -> int:
         return max(0, self._max_revive_bottles_available() - int(self.revive_bottles_used or 0))
 
+    @staticmethod
+    def _normalize_damage_value(value: object) -> int:
+        try:
+            return max(0, int(round(float(value or 0))))
+        except (TypeError, ValueError):
+            return 0
+
+    def _count_hero_item(self, item_name: str) -> int:
+        if not item_name:
+            return 0
+        return sum(1 for entry in self.heroitems if str(entry or "") == str(item_name))
+
+    def _hero_item_available(self, item_name: str) -> bool:
+        return self._count_hero_item(item_name) > 0
+
+    def _consume_hero_item(self, item_name: str) -> bool:
+        if not item_name:
+            return False
+        for idx, entry in enumerate(self.heroitems):
+            if str(entry or "") == str(item_name):
+                del self.heroitems[idx]
+                return True
+        return False
+
+    def _combat_potion_reward_value(self) -> float:
+        return float(self.reward_defeat_enemy)
+
+    def _count_collected_combat_potions(self, collected_chests: List[Dict]) -> int:
+        tracked_items = {
+            self.INVULNERABILITY_POTION_ITEM_NAME,
+            self.STRENGTH_POTION_ITEM_NAME,
+        }
+        count = 0
+        for chest_data in collected_chests:
+            for item_name in chest_data.get("items", []):
+                if str(item_name or "") in tracked_items:
+                    count += 1
+        return int(count)
+
+    def _active_invulnerability_bonus_for_position(self, position: int) -> int:
+        return (
+            int(self.INVULNERABILITY_POTION_ARMOR_BONUS)
+            if int(position) in self.active_invulnerability_potion_positions
+            else 0
+        )
+
+    def _active_strength_multiplier_for_position(self, position: int) -> float:
+        return (
+            float(self.STRENGTH_POTION_DAMAGE_MULTIPLIER)
+            if int(position) in self.active_strength_potion_positions
+            else 1.0
+        )
+
+    def _clear_expired_combat_potion_effects(self) -> None:
+        if self.active_invulnerability_potion_positions:
+            self._log(
+                "Эффект зелья неуязвимости завершён на позициях "
+                f"{sorted(self.active_invulnerability_potion_positions)}"
+            )
+        if self.active_strength_potion_positions:
+            self._log(
+                "Эффект зелья силы завершён на позициях "
+                f"{sorted(self.active_strength_potion_positions)}"
+            )
+        self.active_invulnerability_potion_positions.clear()
+        self.active_strength_potion_positions.clear()
+
     def get_bottle_inventory_counters(self) -> Dict[str, int]:
         max_heal = int(self.MAX_HEAL_BOTTLES)
         max_healing = self._max_healing_bottles_available()
@@ -624,6 +741,8 @@ class CampaignEnv(gym.Env):
             "healing_left": max(0, max_healing - healing_used),
             "max_revive": max_revive,
             "revive_left": max(0, max_revive - revive_used),
+            "invulnerability_left": self._count_hero_item(self.INVULNERABILITY_POTION_ITEM_NAME),
+            "strength_left": self._count_hero_item(self.STRENGTH_POTION_ITEM_NAME),
         }
 
     @classmethod
@@ -645,6 +764,10 @@ class CampaignEnv(gym.Env):
             self.extra_revive_bottles = max(0, int(self.extra_revive_bottles or 0)) + 1
             granted_items.append(self.BONUS_REVIVE_ITEM_NAME)
         return granted_items
+
+    @classmethod
+    def _is_auto_consumed_chest_item(cls, item_name: str) -> bool:
+        return str(item_name or "") in cls.AUTO_CONSUMED_CHEST_ITEMS
 
     def _collect_adjacent_chests(self) -> List[Dict]:
         if not self.chests:
@@ -672,7 +795,8 @@ class CampaignEnv(gym.Env):
             self.chests.pop(chest_pos, None)
             granted_items: List[str] = []
             for item_name in chest_data["items"]:
-                self.heroitems.append(item_name)
+                if not self._is_auto_consumed_chest_item(item_name):
+                    self.heroitems.append(item_name)
                 granted_items.extend(self._apply_chest_item_rewards(item_name))
                 self._log(f"Сундук на {chest_pos}: получен предмет '{item_name}'")
             for granted_item in granted_items:
@@ -1188,6 +1312,152 @@ class CampaignEnv(gym.Env):
 
         return self._build_obs(grid_obs=grid_obs), reward, terminated, truncated, info
 
+    def _apply_invulnerability_potion_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
+        state = self._get_blue_state()
+        for unit in state:
+            if int(unit.get("position", -1)) != int(position):
+                continue
+            hp = float(unit.get("hp", 0) or unit.get("health", 0))
+            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
+            if max_hp <= 0 or hp <= 0:
+                return False, None
+            if int(position) in self.active_invulnerability_potion_positions:
+                return False, None
+            self.active_invulnerability_potion_positions.add(int(position))
+            name = str(unit.get("name", f"pos_{position}") or f"pos_{position}")
+            self._log(
+                f"Зелье неуязвимости: {name} (pos {position}) получает "
+                f"+{self.INVULNERABILITY_POTION_ARMOR_BONUS} брони до конца текущего хода"
+            )
+            return True, name
+        return False, None
+
+    def _apply_strength_potion_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
+        state = self._get_blue_state()
+        for unit in state:
+            if int(unit.get("position", -1)) != int(position):
+                continue
+            hp = float(unit.get("hp", 0) or unit.get("health", 0))
+            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
+            if max_hp <= 0 or hp <= 0:
+                return False, None
+            if int(position) in self.active_strength_potion_positions:
+                return False, None
+            self.active_strength_potion_positions.add(int(position))
+            name = str(unit.get("name", f"pos_{position}") or f"pos_{position}")
+            self._log(
+                f"Зелье силы: {name} (pos {position}) получает +30% урона "
+                "до конца текущего хода"
+            )
+            return True, name
+        return False, None
+
+    def _step_apply_invulnerability_potion(self, action: int):
+        idx = action - self.GRID_INVULNERABILITY_ACTION_START
+        target_pos = (
+            self.INVULNERABILITY_POTION_POSITIONS[idx]
+            if 0 <= idx < len(self.INVULNERABILITY_POTION_POSITIONS)
+            else None
+        )
+        grid_obs = self._get_grid_obs()
+        reward = 0.0
+        terminated = False
+        truncated = False
+
+        applied = False
+        consumed = False
+        unit_name = None
+        if (
+            target_pos is not None
+            and self._can_apply_invulnerability_potion_position(target_pos)
+            and self._consume_hero_item(self.INVULNERABILITY_POTION_ITEM_NAME)
+        ):
+            consumed = True
+            applied, unit_name = self._apply_invulnerability_potion_to_position(target_pos)
+            if not applied:
+                self.heroitems.append(self.INVULNERABILITY_POTION_ITEM_NAME)
+                consumed = False
+            else:
+                reward = self._combat_potion_reward_value()
+
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            "invulnerability_potion_action": True,
+            "combat_potion_action": True,
+            "combat_potion_item": self.INVULNERABILITY_POTION_ITEM_NAME,
+            "combat_potion_target_pos": target_pos,
+            "combat_potion_applied": applied,
+            "combat_potion_consumed": consumed,
+            "combat_potion_unit_name": unit_name,
+            "combat_potion_reward": float(reward),
+            "invulnerability_potions_left": self._count_hero_item(self.INVULNERABILITY_POTION_ITEM_NAME),
+            "strength_potions_left": self._count_hero_item(self.STRENGTH_POTION_ITEM_NAME),
+            "active_invulnerability_positions": sorted(self.active_invulnerability_potion_positions),
+            "active_strength_positions": sorted(self.active_strength_potion_positions),
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+            "heroitems": list(self.heroitems),
+        }
+
+        return self._build_obs(grid_obs=grid_obs), reward, terminated, truncated, info
+
+    def _step_apply_strength_potion(self, action: int):
+        idx = action - self.GRID_STRENGTH_ACTION_START
+        target_pos = (
+            self.STRENGTH_POTION_POSITIONS[idx]
+            if 0 <= idx < len(self.STRENGTH_POTION_POSITIONS)
+            else None
+        )
+        grid_obs = self._get_grid_obs()
+        reward = 0.0
+        terminated = False
+        truncated = False
+
+        applied = False
+        consumed = False
+        unit_name = None
+        if (
+            target_pos is not None
+            and self._can_apply_strength_potion_position(target_pos)
+            and self._consume_hero_item(self.STRENGTH_POTION_ITEM_NAME)
+        ):
+            consumed = True
+            applied, unit_name = self._apply_strength_potion_to_position(target_pos)
+            if not applied:
+                self.heroitems.append(self.STRENGTH_POTION_ITEM_NAME)
+                consumed = False
+            else:
+                reward = self._combat_potion_reward_value()
+
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            "strength_potion_action": True,
+            "combat_potion_action": True,
+            "combat_potion_item": self.STRENGTH_POTION_ITEM_NAME,
+            "combat_potion_target_pos": target_pos,
+            "combat_potion_applied": applied,
+            "combat_potion_consumed": consumed,
+            "combat_potion_unit_name": unit_name,
+            "combat_potion_reward": float(reward),
+            "invulnerability_potions_left": self._count_hero_item(self.INVULNERABILITY_POTION_ITEM_NAME),
+            "strength_potions_left": self._count_hero_item(self.STRENGTH_POTION_ITEM_NAME),
+            "active_invulnerability_positions": sorted(self.active_invulnerability_potion_positions),
+            "active_strength_positions": sorted(self.active_strength_potion_positions),
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+            "heroitems": list(self.heroitems),
+        }
+
+        return self._build_obs(grid_obs=grid_obs), reward, terminated, truncated, info
+
     def _step_battle(self, action: int):
         """Шаг в режиме боя."""
         if self.battle_env is None:
@@ -1269,16 +1539,26 @@ class CampaignEnv(gym.Env):
                 info["agent_pos"] = self._restore_agent_to_battle_origin()
                 info["enemies_alive"] = dict(self.grid_env.enemies_alive)
 
-                if self._is_green_dragon_enemy(self.current_enemy_id):
-                    green_dragon_reward = self._compute_green_dragon_victory_reward(
-                        self.current_enemy_id
+                newly_captured_objective_cities = self._capture_objective_city_if_cleared(
+                    self.current_enemy_id
+                )
+                info["objective_cities_captured_total"] = sorted(self.captured_objective_cities)
+
+                if newly_captured_objective_cities:
+                    final_objective_reward = self._compute_final_objective_reward(
+                        len(newly_captured_objective_cities)
                     )
-                    reward += green_dragon_reward
-                    self._log("=== ПОБЕЖДЁН ЗЕЛЁНЫЙ ДРАКОН: ДОСРОЧНАЯ ПОБЕДА В КАМПАНИИ ===")
+                    reward += final_objective_reward
+                    info["captured_objective_cities"] = list(newly_captured_objective_cities)
+                    info["final_objective_reward"] = float(final_objective_reward)
+                    for city_name in newly_captured_objective_cities:
+                        self._log(f"=== ЗАХВАЧЕН ГОРОД {city_name}: НАГРАДА {final_objective_reward:g} ===")
+
+                if self._all_objective_cities_captured():
+                    self._log("=== ЗАХВАЧЕНЫ ВСЕ ЦЕЛЕВЫЕ ГОРОДА: ПОБЕДА В КАМПАНИИ ===")
                     grid_obs = self._get_grid_obs()
                     info["campaign_result"] = "victory"
-                    info["campaign_victory_reason"] = "green_dragon_defeated"
-                    info["green_dragon_reward"] = float(green_dragon_reward)
+                    info["campaign_victory_reason"] = "objective_cities_cleared"
                     return self._build_obs(grid_obs=grid_obs), reward, True, False, info
 
                 # Проверяем полную победу
@@ -1322,9 +1602,135 @@ class CampaignEnv(gym.Env):
     def _clear_battle_origin(self) -> None:
         self.battle_origin_pos = None
 
+    @staticmethod
+    def _normalize_armor_value(value: object) -> int:
+        try:
+            return max(0, int(round(float(value or 0))))
+        except (TypeError, ValueError):
+            return 0
+
+    def _resolve_settlement_defender_armor_bonus(
+        self,
+        enemy_id: Optional[int],
+    ) -> tuple[int, str]:
+        if enemy_id is None:
+            return 0, ""
+
+        try:
+            normalized_enemy_id = int(enemy_id)
+        except (TypeError, ValueError):
+            return 0, ""
+
+        bonus = 0
+        source = ""
+
+        settlement_level = SETTLEMENT_DEFENDER_LEVEL_BY_ENEMY_ID.get(normalized_enemy_id)
+        if settlement_level is not None:
+            bonus = int(SETTLEMENT_ARMOR_BONUS_BY_LEVEL.get(int(settlement_level), 0))
+            source = f"settlement_level_{int(settlement_level)}"
+
+        enemy_pos = self.grid_env.enemy_positions.get(normalized_enemy_id)
+        if enemy_pos is not None and tuple(enemy_pos) == tuple(self.CASTLE_POS):
+            capital_bonus = int(CAPITAL_HEAL_TILE_ARMOR_BONUS)
+            if capital_bonus >= bonus:
+                bonus = capital_bonus
+                source = "capital"
+
+        return max(0, int(bonus)), source
+
+    def _apply_settlement_defender_armor_bonus(
+        self,
+        enemy_id: Optional[int],
+        red_team: List[Dict],
+    ) -> None:
+        bonus, source = self._resolve_settlement_defender_armor_bonus(enemy_id)
+        if bonus <= 0:
+            return
+
+        affected_units = 0
+        for unit in red_team:
+            if self._is_empty_enemy_unit(unit):
+                continue
+            base_armor = self._normalize_armor_value(unit.get("armor", 0))
+            unit["armor"] = base_armor + bonus
+            unit["settlement_armor_bonus"] = int(bonus)
+            if source.startswith("settlement_level_"):
+                try:
+                    unit["settlement_level"] = int(source.rsplit("_", 1)[-1])
+                except (TypeError, ValueError):
+                    pass
+            elif source == "capital":
+                unit["settlement_level"] = "capital"
+            affected_units += 1
+
+        if affected_units <= 0:
+            return
+
+        if source == "capital":
+            self._log(
+                f"Бонус столицы: RED-отряд {enemy_id} получает +{bonus} брони на каждого юнита "
+                f"({affected_units} юнитов)."
+            )
+        else:
+            self._log(
+                f"Бонус города: RED-отряд {enemy_id} получает +{bonus} брони на каждого юнита "
+                f"({affected_units} юнитов, {source})."
+            )
+
+    def _apply_active_blue_potion_effects(self, blue_team: List[Dict]) -> None:
+        if not blue_team:
+            return
+
+        buffed_invulnerability: List[int] = []
+        buffed_strength: List[int] = []
+
+        for unit in blue_team:
+            position = int(unit.get("position", -1) or -1)
+            hp = float(unit.get("hp", 0) or unit.get("health", 0) or 0)
+            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
+            if position <= 0 or max_hp <= 0 or hp <= 0:
+                continue
+
+            if position in self.active_invulnerability_potion_positions:
+                base_armor = self._normalize_armor_value(unit.get("armor", 0))
+                unit["campaign_potion_base_armor"] = int(base_armor)
+                unit["armor"] = int(base_armor) + int(self.INVULNERABILITY_POTION_ARMOR_BONUS)
+                unit["campaign_invulnerability_potion_bonus"] = int(
+                    self.INVULNERABILITY_POTION_ARMOR_BONUS
+                )
+                buffed_invulnerability.append(position)
+
+            if position in self.active_strength_potion_positions:
+                base_damage = self._normalize_damage_value(unit.get("damage", 0))
+                base_damage_secondary = self._normalize_damage_value(unit.get("damage_secondary", 0))
+                unit["campaign_potion_base_damage"] = int(base_damage)
+                unit["campaign_potion_base_damage_secondary"] = int(base_damage_secondary)
+                unit["damage"] = self._normalize_damage_value(
+                    float(base_damage) * float(self.STRENGTH_POTION_DAMAGE_MULTIPLIER)
+                )
+                unit["damage_secondary"] = self._normalize_damage_value(
+                    float(base_damage_secondary) * float(self.STRENGTH_POTION_DAMAGE_MULTIPLIER)
+                )
+                unit["campaign_strength_potion_multiplier"] = float(
+                    self.STRENGTH_POTION_DAMAGE_MULTIPLIER
+                )
+                buffed_strength.append(position)
+
+        if buffed_invulnerability:
+            self._log(
+                "Активно зелье неуязвимости для позиций "
+                f"{sorted(buffed_invulnerability)} перед началом боя"
+            )
+        if buffed_strength:
+            self._log(
+                "Активно зелье силы для позиций "
+                f"{sorted(buffed_strength)} перед началом боя"
+            )
+
     def _init_battle(self, enemy_id: int):
         """Инициализирует бой с конкретной RED командой."""
         red_team = deepcopy(ENEMY_CONFIGS.get(enemy_id, ENEMY_CONFIGS[1]))
+        self._apply_settlement_defender_armor_bonus(enemy_id, red_team)
 
         # Восстанавливаем состояние BLUE или берём дефолтное
         if self.persist_blue_hp and self.blue_team_state is not None:
@@ -1333,6 +1739,7 @@ class CampaignEnv(gym.Env):
         else:
             blue_team = deepcopy(UNITS_BLUE)
             self._log("Используется дефолтная BLUE команда")
+        self._apply_active_blue_potion_effects(blue_team)
 
         self.battle_env = BattleEnv(
             reward_win=self.battle_reward_win,
@@ -1389,10 +1796,39 @@ class CampaignEnv(gym.Env):
             restored_unit["powerup"] = 0
             restored_unit["bonusturn"] = 0
             restored_unit.pop("resilience_used_types", None)
+            position = int(restored_unit.get("position", -1) or -1)
+            if position in self.active_strength_potion_positions:
+                base_damage = self._normalize_damage_value(
+                    restored_unit.get(
+                        "campaign_potion_base_damage",
+                        restored_unit.get("damage", 0),
+                    )
+                )
+                base_damage_secondary = self._normalize_damage_value(
+                    restored_unit.get(
+                        "campaign_potion_base_damage_secondary",
+                        restored_unit.get("damage_secondary", 0),
+                    )
+                )
+                restored_unit["damage"] = int(base_damage)
+                restored_unit["damage_secondary"] = int(base_damage_secondary)
             restored_unit.pop("original_damage", None)
-            # Armor must be restored to the unit's battle-start value.
-            base_armor = int(restored_unit.get("base_armor", restored_unit.get("armor", 0)) or 0)
+            restored_unit.pop("campaign_potion_base_damage", None)
+            restored_unit.pop("campaign_potion_base_damage_secondary", None)
+            restored_unit.pop("campaign_strength_potion_multiplier", None)
+            if position in self.active_invulnerability_potion_positions:
+                base_armor = self._normalize_armor_value(
+                    restored_unit.get(
+                        "campaign_potion_base_armor",
+                        restored_unit.get("armor", 0),
+                    )
+                )
+            else:
+                # Armor must be restored to the unit's battle-start value.
+                base_armor = int(restored_unit.get("base_armor", restored_unit.get("armor", 0)) or 0)
             restored_unit["armor"] = max(0, base_armor)
+            restored_unit.pop("campaign_potion_base_armor", None)
+            restored_unit.pop("campaign_invulnerability_potion_bonus", None)
             
             # Восстанавливаем initiative к базовому значению
             restored_unit["initiative"] = restored_unit.get("initiative_base", 0)
@@ -1738,18 +2174,69 @@ class CampaignEnv(gym.Env):
         """Фиксированная награда за победу над каждым вражеским отрядом."""
         return float(self.reward_defeat_enemy)
 
-    def _is_green_dragon_enemy(self, enemy_id: Optional[int]) -> bool:
-        """True, если enemy_id соответствует отряду с зелёным драконом."""
+    @classmethod
+    def is_final_objective_enemy_id(cls, enemy_id: Optional[int]) -> bool:
+        """True, если enemy_id относится к финальной цели кампании."""
         try:
-            return int(enemy_id) == int(self.GREEN_DRAGON_ENEMY_ID)
+            objective_enemy_ids = {
+                int(objective_enemy_id)
+                for enemy_ids in cls.FINAL_OBJECTIVE_CITIES.values()
+                for objective_enemy_id in enemy_ids
+            }
+            return int(enemy_id) in objective_enemy_ids
         except (TypeError, ValueError):
             return False
 
-    def _compute_green_dragon_victory_reward(self, enemy_id: Optional[int]) -> float:
-        """Финальный бонус за победу над зелёным драконом (x10 от базовой финальной награды)."""
-        if not self._is_green_dragon_enemy(enemy_id):
+    def _is_final_objective_enemy(self, enemy_id: Optional[int]) -> bool:
+        return self.is_final_objective_enemy_id(enemy_id)
+
+    def _objective_city_for_enemy(self, enemy_id: Optional[int]) -> Optional[str]:
+        try:
+            normalized_enemy_id = int(enemy_id)
+        except (TypeError, ValueError):
+            return None
+        for city_name, enemy_ids in self.FINAL_OBJECTIVE_CITIES.items():
+            if normalized_enemy_id in {int(value) for value in enemy_ids}:
+                return city_name
+        return None
+
+    def _is_objective_city_cleared(self, city_name: str) -> bool:
+        """True, если оба отряда указанного целевого города уже побеждены."""
+        enemies_alive = getattr(self.grid_env, "enemies_alive", {}) or {}
+        city_enemy_ids = self.FINAL_OBJECTIVE_CITIES.get(city_name)
+        if not city_enemy_ids:
+            return False
+        for enemy_id in city_enemy_ids:
+            if enemy_id not in enemies_alive:
+                return False
+            if bool(enemies_alive.get(enemy_id, False)):
+                return False
+        return True
+
+    def _capture_objective_city_if_cleared(self, enemy_id: Optional[int]) -> List[str]:
+        """Помечает город как захваченный, если текущий бой зачистил его полностью."""
+        city_name = self._objective_city_for_enemy(enemy_id)
+        if city_name is None:
+            return []
+        if city_name in self.captured_objective_cities:
+            return []
+        if not self._is_objective_city_cleared(city_name):
+            return []
+        self.captured_objective_cities.add(city_name)
+        return [city_name]
+
+    def _all_objective_cities_captured(self) -> bool:
+        return len(self.captured_objective_cities) == len(self.FINAL_OBJECTIVE_CITIES)
+
+    def _compute_final_objective_reward(self, city_count: int = 1) -> float:
+        """Награда за захват одного или нескольких целевых городов."""
+        if city_count <= 0:
             return 0.0
-        return float(self.reward_all_enemies) * float(self.GREEN_DRAGON_REWARD_MULTIPLIER)
+        return (
+            float(self.reward_all_enemies)
+            * float(self.FINAL_OBJECTIVE_CITY_REWARD_MULTIPLIER)
+            * float(city_count)
+        )
 
     def _compute_blue_exp_reward(self) -> Tuple[float, float]:
         """Возвращает (reward, raw_exp) за опыт BLUE в завершённом бою."""
@@ -1816,6 +2303,7 @@ class CampaignEnv(gym.Env):
         if delta_turns <= 0:
             return 0.0
         self.turns += int(delta_turns)
+        self._clear_expired_combat_potion_effects()
         self.gold += float(delta_turns) * self.GOLD_PER_TURN
         self.moves = self.moves_per_turn
         self.active_buildings["alredybuilt"] = 0
@@ -1952,6 +2440,16 @@ class CampaignEnv(gym.Env):
             if self.revive_bottles_used < self._max_revive_bottles_available():
                 for idx, pos in enumerate(self.REVIVE_BOTTLE_POSITIONS):
                     mask[self.GRID_REVIVE_ACTION_START + idx] = self._can_revive_position(pos)
+            if self._hero_item_available(self.INVULNERABILITY_POTION_ITEM_NAME):
+                for idx, pos in enumerate(self.INVULNERABILITY_POTION_POSITIONS):
+                    mask[self.GRID_INVULNERABILITY_ACTION_START + idx] = (
+                        self._can_apply_invulnerability_potion_position(pos)
+                    )
+            if self._hero_item_available(self.STRENGTH_POTION_ITEM_NAME):
+                for idx, pos in enumerate(self.STRENGTH_POTION_POSITIONS):
+                    mask[self.GRID_STRENGTH_ACTION_START + idx] = (
+                        self._can_apply_strength_potion_position(pos)
+                    )
 
             # Лечение и воскрешение за золото доступны только на специальных клетках лечения.
             if self._is_at_castle() and float(self.gold) > 0.0:
@@ -2032,6 +2530,38 @@ class CampaignEnv(gym.Env):
             return max_hp > 0 and hp <= 0
         return False
 
+    def _can_apply_invulnerability_potion_position(self, position: int) -> bool:
+        if not self._hero_item_available(self.INVULNERABILITY_POTION_ITEM_NAME):
+            return False
+        state = self._get_blue_state()
+        for unit in state:
+            if int(unit.get("position", -1)) != int(position):
+                continue
+            hp = float(unit.get("hp", 0) or unit.get("health", 0))
+            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
+            return (
+                max_hp > 0
+                and hp > 0
+                and int(position) not in self.active_invulnerability_potion_positions
+            )
+        return False
+
+    def _can_apply_strength_potion_position(self, position: int) -> bool:
+        if not self._hero_item_available(self.STRENGTH_POTION_ITEM_NAME):
+            return False
+        state = self._get_blue_state()
+        for unit in state:
+            if int(unit.get("position", -1)) != int(position):
+                continue
+            hp = float(unit.get("hp", 0) or unit.get("health", 0))
+            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
+            return (
+                max_hp > 0
+                and hp > 0
+                and int(position) not in self.active_strength_potion_positions
+            )
+        return False
+
     def _can_castle_revive_position(self, position: int) -> bool:
         """Можно ли воскресить юнита за золото на клетке лечения."""
         revive_cost = self._castle_revive_cost_at_position(position)
@@ -2104,6 +2634,24 @@ class CampaignEnv(gym.Env):
             lines.append("Предметы героя: нет")
         lines.append(f"Доп. банок исцеления: {max(0, int(self.extra_healing_bottles or 0))}")
         lines.append(f"Доп. зелий воскрешения: {max(0, int(self.extra_revive_bottles or 0))}")
+        lines.append(
+            "Зелий неуязвимости: "
+            f"{self._count_hero_item(self.INVULNERABILITY_POTION_ITEM_NAME)}"
+        )
+        lines.append(
+            "Зелий силы: "
+            f"{self._count_hero_item(self.STRENGTH_POTION_ITEM_NAME)}"
+        )
+        if self.active_invulnerability_potion_positions:
+            lines.append(
+                "Активное зелье неуязвимости на позициях: "
+                f"{sorted(self.active_invulnerability_potion_positions)}"
+            )
+        if self.active_strength_potion_positions:
+            lines.append(
+                "Активное зелье силы на позициях: "
+                f"{sorted(self.active_strength_potion_positions)}"
+            )
 
         result = "\n".join(lines)
         print(result)
@@ -2128,6 +2676,10 @@ class CampaignEnv(gym.Env):
             "heroitems": list(self.heroitems),
             "extra_healing_bottles": int(self.extra_healing_bottles or 0),
             "extra_revive_bottles": int(self.extra_revive_bottles or 0),
+            "invulnerability_potions_left": self._count_hero_item(self.INVULNERABILITY_POTION_ITEM_NAME),
+            "strength_potions_left": self._count_hero_item(self.STRENGTH_POTION_ITEM_NAME),
+            "active_invulnerability_positions": sorted(self.active_invulnerability_potion_positions),
+            "active_strength_positions": sorted(self.active_strength_potion_positions),
             "chests_remaining": [
                 {"pos": pos, "items": list(item_names)}
                 for pos, item_names in sorted(self.chests.items())

@@ -1147,8 +1147,8 @@ class CampaignVisualizer:
         for enemy_id, (ex, ey) in enemy_positions.items():
             draw_x, draw_y = self._display_tile(int(ex), int(ey))
             is_alive = enemies_alive.get(enemy_id, False)
-            is_green_dragon = int(enemy_id) == int(CampaignEnv.GREEN_DRAGON_ENEMY_ID)
-            if is_green_dragon:
+            is_final_objective = CampaignEnv.is_final_objective_enemy_id(enemy_id)
+            if is_final_objective:
                 dragon_tile = patches.Rectangle(
                     (draw_x - 0.48, draw_y - 0.48),
                     0.96,
@@ -1160,8 +1160,8 @@ class CampaignVisualizer:
                 )
                 self.ax.add_patch(dragon_tile)
             color = (
-                self.COLOR_DRAGON_ALIVE if (is_alive and is_green_dragon)
-                else self.COLOR_DRAGON_DEAD if is_green_dragon
+                self.COLOR_DRAGON_ALIVE if (is_alive and is_final_objective)
+                else self.COLOR_DRAGON_DEAD if is_final_objective
                 else self.COLOR_ENEMY_ALIVE if is_alive
                 else self.COLOR_ENEMY_DEAD
             )

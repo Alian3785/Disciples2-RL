@@ -488,7 +488,7 @@ class CampaignMetricsCallback(BaseCallback):
         self.recent_unit_upgrades = deque(maxlen=self.episode_window)
         self.recent_enemy_defeat_rewards = deque(maxlen=self.episode_window)
         self.recent_blue_exp_rewards = deque(maxlen=self.episode_window)
-        self.recent_green_dragon_rewards = deque(maxlen=self.episode_window)
+        self.recent_final_objective_rewards = deque(maxlen=self.episode_window)
         self.recent_castle_heal_uses = deque(maxlen=self.episode_window)
         self.recent_castle_heal_episode_flags = deque(maxlen=self.episode_window)
         self.recent_castle_healed_hp = deque(maxlen=self.episode_window)
@@ -689,7 +689,7 @@ class CampaignMetricsCallback(BaseCallback):
                     upgrade_count = 0
                 self.total_unit_upgrades += upgrade_count
                 self.recent_unit_upgrades.append(float(upgrade_count))
-            self._append_recent_stat(info, "green_dragon_reward", self.recent_green_dragon_rewards)
+            self._append_recent_stat(info, "final_objective_reward", self.recent_final_objective_rewards)
 
     def _build_log_payload(self) -> dict[str, float]:
         total_episodes = int(sum(self.result_counter.values()))
@@ -745,7 +745,7 @@ class CampaignMetricsCallback(BaseCallback):
             "campaign/recent_unit_upgrades_mean": _safe_mean(self.recent_unit_upgrades),
             "campaign/recent_enemy_defeat_reward_mean": _safe_mean(self.recent_enemy_defeat_rewards),
             "campaign/recent_blue_exp_reward_mean": _safe_mean(self.recent_blue_exp_rewards),
-            "campaign/recent_green_dragon_reward_mean": _safe_mean(self.recent_green_dragon_rewards),
+            "campaign/recent_final_objective_reward_mean": _safe_mean(self.recent_final_objective_rewards),
             "campaign/recent_castle_heal_uses_mean": _safe_mean(self.recent_castle_heal_uses),
             "campaign/recent_castle_heal_episodes_rate": _safe_mean(
                 self.recent_castle_heal_episode_flags
@@ -949,6 +949,7 @@ if __name__ == "__main__":
     N_ENVS = args.n_envs
     CHECKPOINT_FREQ = args.checkpoint_freq
     EVAL_FREQ = args.eval_freq
+    EVAL_EPISODES = 20
     VECNORM_NORM_OBS = False
     VECNORM_NORM_REWARD = True
     VECNORM_CLIP_REWARD = 10.0
@@ -978,6 +979,7 @@ if __name__ == "__main__":
             "checkpoint_freq": CHECKPOINT_FREQ,
             "eval_freq": EVAL_FREQ,
             "comet_log_freq": args.comet_log_freq,
+            "eval_episodes": EVAL_EPISODES,
             "comet_window_episodes": args.comet_window_episodes,
             "comet_offline": bool(args.comet_offline),
             "grid_size": DEFAULT_GRID_SIZE,
@@ -1112,7 +1114,7 @@ if __name__ == "__main__":
         best_model_save_path=f"{MODEL_DIR}/best",
         log_path=EVAL_DIR,
         eval_freq=EVAL_FREQ,
-        n_eval_episodes=10,
+        n_eval_episodes=EVAL_EPISODES,
         deterministic=True,
         render=False,
         callback_on_new_best=best_vecnorm_cb,
@@ -1127,6 +1129,7 @@ if __name__ == "__main__":
     print(f"Параллельных сред: {N_ENVS}")
     print(f"Checkpoint каждые: {CHECKPOINT_FREQ:,} шагов")
     print(f"Evaluation каждые: {EVAL_FREQ:,} шагов")
+    print(f"Eval эпизодов на режим: {EVAL_EPISODES}")
     print(f"Run ID: {run_id}")
     print(f"{'='*60}\n")
 

@@ -57,36 +57,56 @@ def _make_reward_isolated_env() -> CampaignEnv:
     )
 
 
-def test_green_dragon_victory_ends_episode_and_gives_x10_final_reward():
+def test_port_polonis_capture_gives_40_reward_but_does_not_end_episode():
+    env = _make_reward_isolated_env()
+    env.reward_all_enemies = 8.0
+    env.reset(seed=123)
+    env.grid_env.enemies_alive[34] = False
+    env.grid_env.enemies_alive[68] = True
+    env.mode = env.MODE_BATTLE
+    env.current_enemy_id = 68
+    env.battle_env = _DummyBattleEnv()
+
+    _, reward, terminated, truncated, info = env.step(0)
+
+    assert terminated is False
+    assert truncated is False
+    assert "campaign_result" not in info
+    assert info.get("captured_objective_cities") == ["Порт Полонис"]
+    assert info.get("objective_cities_captured_total") == ["Порт Полонис"]
+    assert reward == 40.0
+    assert info.get("final_objective_reward") == 40.0
+    assert env.grid_env.enemies_alive[68] is False
+
+
+def test_green_dragon_has_no_special_final_reward():
     env = _make_reward_isolated_env()
     env.reward_all_enemies = 9.0
     env.reset(seed=123)
     env.mode = env.MODE_BATTLE
-    env.current_enemy_id = env.GREEN_DRAGON_ENEMY_ID
+    env.current_enemy_id = 31
     env.battle_env = _DummyBattleEnv()
 
     _, reward, terminated, truncated, info = env.step(0)
 
-    assert terminated is True
+    assert terminated is False
     assert truncated is False
-    assert info.get("campaign_result") == "victory"
-    assert info.get("campaign_victory_reason") == "green_dragon_defeated"
-    assert reward == 90.0
-    assert info.get("green_dragon_reward") == 90.0
-    assert env.grid_env.enemies_alive[env.GREEN_DRAGON_ENEMY_ID] is False
+    assert info.get("battle_result") == "victory"
+    assert "campaign_result" not in info
+    assert "final_objective_reward" not in info
+    assert reward == 0.0
 
 
-def test_all_enemies_victory_has_no_extra_final_reward():
+def test_second_objective_city_capture_ends_episode_and_gives_40_reward():
     env = _make_reward_isolated_env()
-    env.reward_all_enemies = 13.0
+    env.reward_all_enemies = 8.0
     env.reset(seed=123)
-
-    for enemy_id in list(env.grid_env.enemies_alive.keys()):
-        env.grid_env.enemies_alive[enemy_id] = False
-    env.grid_env.enemies_alive[1] = True
+    env.captured_objective_cities = {"Порт Полонис"}
+    env.grid_env.enemies_alive[35] = False
+    env.grid_env.enemies_alive[69] = True
 
     env.mode = env.MODE_BATTLE
-    env.current_enemy_id = 1
+    env.current_enemy_id = 69
     env.battle_env = _DummyBattleEnv()
 
     _, reward, terminated, truncated, info = env.step(0)
@@ -94,9 +114,11 @@ def test_all_enemies_victory_has_no_extra_final_reward():
     assert terminated is True
     assert truncated is False
     assert info.get("campaign_result") == "victory"
-    assert info.get("campaign_victory_reason") == "all_enemies_defeated"
-    assert reward == 0.0
-    assert "green_dragon_reward" not in info
+    assert info.get("campaign_victory_reason") == "objective_cities_cleared"
+    assert info.get("captured_objective_cities") == ["Соругирилла"]
+    assert info.get("objective_cities_captured_total") == ["Порт Полонис", "Соругирилла"]
+    assert reward == 40.0
+    assert info.get("final_objective_reward") == 40.0
 
 
 def test_agent_returns_to_attack_origin_after_battle_victory():
@@ -167,3 +189,73 @@ def test_init_battle_passes_campaign_battle_reward_settings_to_battle_env():
     assert env.battle_env.reward_win == pytest.approx(3.5)
     assert env.battle_env.reward_loss == pytest.approx(-2.25)
     assert env.battle_env.reward_step == pytest.approx(0.125)
+
+
+def test_city_internal_garrison_stays_on_tile_after_outer_stack_is_defeated():
+    env = _make_reward_isolated_env()
+    env.reset(seed=123)
+
+    outer_enemy_id = 34
+    inner_enemy_id = 68
+    move_mask = env.grid_env.compute_action_mask()
+    move_action = next(index for index, allowed in enumerate(move_mask[:8]) if allowed)
+    attack_origin = tuple(env.grid_env.agent_pos)
+    target_tile = tuple(env.grid_env._target_pos_for_action(move_action))
+
+    env.grid_env.enemy_positions[outer_enemy_id] = target_tile
+    env.grid_env.enemy_positions[inner_enemy_id] = target_tile
+    for enemy_id in list(env.grid_env.enemies_alive.keys()):
+        env.grid_env.enemies_alive[enemy_id] = False
+    env.grid_env.enemies_alive[outer_enemy_id] = True
+    env.grid_env.enemies_alive[inner_enemy_id] = True
+
+    _, _, terminated, truncated, info = env.step(move_action)
+
+    assert terminated is False
+    assert truncated is False
+    assert env.mode == env.MODE_BATTLE
+    assert env.current_enemy_id == outer_enemy_id
+    assert info.get("battle_triggered") is True
+
+    env.battle_env = _DummyBattleEnv()
+    _, _, terminated, truncated, info = env.step(0)
+
+    assert terminated is False
+    assert truncated is False
+    assert info.get("battle_result") == "victory"
+    assert tuple(env.grid_env.agent_pos) == attack_origin
+    assert env.grid_env.enemies_alive[outer_enemy_id] is False
+    assert env.grid_env.enemies_alive[inner_enemy_id] is True
+    assert env.grid_env.get_enemy_at_position(target_tile) == inner_enemy_id
+
+    _, _, terminated, truncated, info = env.step(move_action)
+
+    assert terminated is False
+    assert truncated is False
+    assert env.mode == env.MODE_BATTLE
+    assert env.current_enemy_id == inner_enemy_id
+    assert info.get("battle_triggered") is True
+
+
+def test_city_with_only_internal_garrison_starts_battle_against_it_immediately():
+    env = _make_reward_isolated_env()
+    env.reset(seed=123)
+
+    inner_enemy_id = 69
+    move_mask = env.grid_env.compute_action_mask()
+    move_action = next(index for index, allowed in enumerate(move_mask[:8]) if allowed)
+    target_tile = tuple(env.grid_env._target_pos_for_action(move_action))
+
+    env.grid_env.enemy_positions[35] = target_tile
+    env.grid_env.enemy_positions[inner_enemy_id] = target_tile
+    for enemy_id in list(env.grid_env.enemies_alive.keys()):
+        env.grid_env.enemies_alive[enemy_id] = False
+    env.grid_env.enemies_alive[inner_enemy_id] = True
+
+    _, _, terminated, truncated, info = env.step(move_action)
+
+    assert terminated is False
+    assert truncated is False
+    assert env.mode == env.MODE_BATTLE
+    assert env.current_enemy_id == inner_enemy_id
+    assert info.get("battle_triggered") is True
