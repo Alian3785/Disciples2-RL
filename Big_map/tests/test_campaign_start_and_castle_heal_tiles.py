@@ -283,7 +283,7 @@ def test_castle_revive_actions_available_on_all_heal_tiles_when_gold_is_enough()
         assert mask[castle_revive_slice].any()
 
 
-def test_campaign_collects_chest_from_adjacent_tile_and_updates_heroitems():
+def _legacy_test_campaign_collects_chest_from_adjacent_tile_and_updates_heroitems():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
 
@@ -337,6 +337,62 @@ def test_campaign_collects_chest_from_adjacent_tile_and_updates_heroitems():
     assert (
         "Предметы героя: Potion of Healing, Life Potion, Test Relic, "
         "Банка исцеления (+50 HP), Зелье воскрешения (+1)"
+    ) in rendered
+    assert "Сундуки: нет" in rendered
+
+
+def test_campaign_collects_chest_from_adjacent_tile_and_hides_auto_consumed_loot_in_heroitems():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    start_x, start_y = env.grid_env.agent_pos
+    chest_tile = (start_x + 2, start_y)
+    move_target = (start_x + 1, start_y)
+    env.grid_env.obstacle_positions.discard(move_target)
+    env.grid_env.obstacle_positions.discard(chest_tile)
+    env.chests = {chest_tile: ("Potion of Healing", "Life Potion", "Test Relic")}
+    env.heroitems = []
+    env.extra_healing_bottles = 0
+    env.extra_revive_bottles = 0
+    env._sync_grid_chest_positions()
+
+    _, _, terminated, truncated, info = env.step(env.grid_env.ACTION_RIGHT)
+
+    assert terminated is False
+    assert truncated is False
+    assert env.grid_env.agent_pos == move_target
+    assert env.heroitems == [
+        "Test Relic",
+        env.BONUS_SMALL_HEAL_ITEM_NAME,
+        env.BONUS_REVIVE_ITEM_NAME,
+    ]
+    assert env.chests == {}
+    assert env.grid_env.chest_positions == set()
+    assert env.extra_healing_bottles == 1
+    assert env.extra_revive_bottles == 1
+    assert info["collected_chests"] == [
+        {
+            "pos": chest_tile,
+            "items": ["Potion of Healing", "Life Potion", "Test Relic"],
+            "granted_items": [env.BONUS_SMALL_HEAL_ITEM_NAME, env.BONUS_REVIVE_ITEM_NAME],
+        }
+    ]
+    assert info["heroitems"] == env.heroitems
+    assert info["extra_healing_bottles"] == 1
+    assert info["extra_revive_bottles"] == 1
+    assert info["chests_remaining"] == 0
+
+    counters = env.get_bottle_inventory_counters()
+    assert counters["max_healing"] == env.MAX_HEALING_BOTTLES + 1
+    assert counters["healing_left"] == env.MAX_HEALING_BOTTLES + 1
+    assert counters["max_revive"] == env.MAX_REVIVE_BOTTLES + 1
+    assert counters["revive_left"] == env.MAX_REVIVE_BOTTLES + 1
+
+    rendered = env.render(mode="ansi")
+    assert rendered is not None
+    assert (
+        f"Предметы героя: Test Relic, {env.BONUS_SMALL_HEAL_ITEM_NAME}, "
+        f"{env.BONUS_REVIVE_ITEM_NAME}"
     ) in rendered
     assert "Сундуки: нет" in rendered
 

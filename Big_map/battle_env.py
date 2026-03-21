@@ -508,7 +508,9 @@ INIT_BASE_NORM_MAX = 80.0
 INIT_CUR_NORM_MAX = 89.0
 DMG_NORM_MAX = 250.0
 DMG2_NORM_MAX = 35.0
-ARMOR_NORM_MAX = 100.0
+# Armor can temporarily exceed 100 because of settlement/capital defense bonuses
+# on battle start (+30/+50) and the in-battle DEFEND action (+50).
+ARMOR_NORM_MAX = 165.0
 ACC_NORM_MAX = 100.0
 BONUS_NORM_MAX = 10.0
 EXP_KILL_NORM_MAX = 120.0

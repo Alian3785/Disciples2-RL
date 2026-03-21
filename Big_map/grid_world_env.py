@@ -193,12 +193,11 @@ class GridWorldEnv(gym.Env):
                     self.visited_cells.add(self.agent_pos)
                     reward += self.exploration_bonus
 
-                for enemy_id, pos in self.enemy_positions.items():
-                    if pos == self.agent_pos and self.enemies_alive[enemy_id]:
-                        self.current_enemy_encounter = enemy_id
-                        info["battle_triggered"] = True
-                        info["enemy_id"] = enemy_id
-                        break
+                enemy_id = self.get_enemy_at_position(self.agent_pos)
+                if enemy_id is not None:
+                    self.current_enemy_encounter = enemy_id
+                    info["battle_triggered"] = True
+                    info["enemy_id"] = enemy_id
 
         if self.step_count >= self.max_steps:
             truncated = True

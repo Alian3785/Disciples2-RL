@@ -180,6 +180,35 @@ BASE_STATIC_HEAL_TILES: Tuple[Tuple[int, int], ...] = (
     DEFAULT_HERO_GRID_POSITION,
     *BASE_VILLAGE_HEAL_TILES,
 )
+BASE_SETTLEMENT_LEVEL_BY_HEAL_TILE: Dict[Tuple[int, int], int] = {
+    (6, 4): 1,
+    (4, 40): 1,
+    (40, 9): 2,
+    (28, 33): 2,
+    (40, 25): 2,
+}
+SETTLEMENT_ARMOR_BONUS_BY_LEVEL: Dict[int, int] = {
+    1: 10,
+    2: 15,
+    3: 20,
+    4: 25,
+    5: 30,
+}
+CAPITAL_HEAL_TILE_ARMOR_BONUS = 50
+SETTLEMENT_DEFENDER_HEAL_TILE_BY_ENEMY_ID: Dict[int, Tuple[int, int]] = {
+    22: (4, 40),
+    32: (6, 4),
+    33: (40, 9),
+    34: (28, 33),
+    35: (40, 25),
+    67: (6, 4),
+    68: (28, 33),
+    69: (40, 25),
+}
+SETTLEMENT_DEFENDER_LEVEL_BY_ENEMY_ID: Dict[int, int] = {
+    enemy_id: BASE_SETTLEMENT_LEVEL_BY_HEAL_TILE[heal_tile]
+    for enemy_id, heal_tile in SETTLEMENT_DEFENDER_HEAL_TILE_BY_ENEMY_ID.items()
+}
 HEAL_TILE_COUNT = len(BASE_STATIC_HEAL_TILES)
 BASE_STATIC_CHESTS: Tuple[Tuple[Tuple[int, int], Tuple[str, ...]], ...] = (
     ((28, 46), ("Banner of War",)),
@@ -461,6 +490,8 @@ VILLAGE_LINKED_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
         "back": [None, "Виверна", None],
     },
 )
+
+
 def _pack_stack_units(units: Tuple[str, ...]) -> Tuple[list[str | None], list[str | None]]:
     unit_list = [str(name) for name in units if isinstance(name, str) and name][:6]
     slots: list[str | None] = [None, None, None, None, None, None]
@@ -504,6 +535,31 @@ def _make_stack_override(
     }
 
 
+VILLAGE_INTERNAL_GARRISON_OVERRIDES: tuple[dict[str, object], ...] = (
+    {
+        "enemy_id": 67,
+        "position": (6, 4),
+        "description": "Внутренний гарнизон Стагириаса: Хранитель кузни",
+        "front": [None, "Хранитель кузни", None],
+        "back": [None, None, None],
+    },
+    {
+        "enemy_id": 68,
+        "position": (28, 33),
+        "description": "Внутренний гарнизон Порта Полонис: Зомби, Воин",
+        "front": [None, "Зомби", None],
+        "back": [None, "Воин", None],
+    },
+    {
+        "enemy_id": 69,
+        "position": (40, 25),
+        "description": "Внутренний гарнизон Соругириллы: Зомби, Воин",
+        "front": [None, "Зомби", None],
+        "back": [None, "Воин", None],
+    },
+)
+
+
 ADDITIONAL_MAP_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
     _make_stack_override(36, (7, 2), ("Холмовой гигант",)),
     _make_stack_override(37, (19, 2), ("Гном", "Травница", "Алхимик")),
@@ -542,7 +598,9 @@ ADDITIONAL_MAP_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
     _make_stack_override(66, (41, 44), ("Демон", "Привидение", "Привидение")),
 )
 ALL_MAP_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
-    VILLAGE_LINKED_STACK_OVERRIDES + ADDITIONAL_MAP_STACK_OVERRIDES
+    VILLAGE_LINKED_STACK_OVERRIDES
+    + VILLAGE_INTERNAL_GARRISON_OVERRIDES
+    + ADDITIONAL_MAP_STACK_OVERRIDES
 )
 
 BASE_ENEMY_POSITIONS = {

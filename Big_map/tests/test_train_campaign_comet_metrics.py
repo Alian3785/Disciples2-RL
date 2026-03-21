@@ -35,17 +35,17 @@ def test_campaign_metrics_callback_logs_custom_metrics(monkeypatch):
         "infos": [
             {
                 "mode": "battle",
-                "enemy_id": 31,
+                "enemy_id": 68,
                 "turns": 10,
                 "gold": 125,
                 "moves": 4,
             },
             {
                 "mode": "grid",
-                "enemy_id": 31,
+                "enemy_id": 68,
                 "battle_result": "victory",
                 "campaign_result": "victory",
-                "campaign_victory_reason": "green_dragon_defeated",
+                "campaign_victory_reason": "objective_cities_cleared",
                 "collected_chests": [
                     {"pos": (1, 1), "items": ["Potion of Healing"], "granted_items": []},
                     {"pos": (2, 2), "items": ["Life Potion"], "granted_items": []},
@@ -57,7 +57,7 @@ def test_campaign_metrics_callback_logs_custom_metrics(monkeypatch):
                 "unit_upgrades": 2,
                 "enemy_defeat_reward": 4.0,
                 "blue_exp_reward": 1.5,
-                "green_dragon_reward": 2.5,
+                "final_objective_reward": 2.5,
                 "episode": {"r": 12.0, "l": 123},
                 "turns": 12,
                 "gold": 120,
@@ -92,7 +92,7 @@ def test_campaign_metrics_callback_logs_custom_metrics(monkeypatch):
     assert payload["campaign/window/chests_collected_mean"] == 2.0
     assert "campaign/window_enemy_encounters/enemy_31" not in payload
     assert "campaign/window_enemy_victories/enemy_31" not in payload
-    assert payload["campaign/window_victory_reasons/green_dragon_defeated"] == 1.0
+    assert payload["campaign/window_victory_reasons/objective_cities_cleared"] == 1.0
     assert ("campaign/episode_chests_collected", 2.0, 1000) in dummy_experiment.metric_logged
     assert dummy_experiment.others["summary_campaign_victory_rate"] == 1.0
 
