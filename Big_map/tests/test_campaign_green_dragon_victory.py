@@ -57,7 +57,7 @@ def _make_reward_isolated_env() -> CampaignEnv:
     )
 
 
-def test_port_polonis_capture_gives_40_reward_but_does_not_end_episode():
+def test_first_objective_city_capture_gives_reduced_reward_but_does_not_end_episode():
     env = _make_reward_isolated_env()
     env.reward_all_enemies = 8.0
     env.reset(seed=123)
@@ -74,8 +74,8 @@ def test_port_polonis_capture_gives_40_reward_but_does_not_end_episode():
     assert "campaign_result" not in info
     assert info.get("captured_objective_cities") == ["Порт Полонис"]
     assert info.get("objective_cities_captured_total") == ["Порт Полонис"]
-    assert reward == 40.0
-    assert info.get("final_objective_reward") == 40.0
+    assert reward == 8.0
+    assert info.get("final_objective_reward") == 8.0
     assert env.grid_env.enemies_alive[68] is False
 
 
@@ -97,7 +97,7 @@ def test_green_dragon_has_no_special_final_reward():
     assert reward == 0.0
 
 
-def test_second_objective_city_capture_ends_episode_and_gives_40_reward():
+def test_second_objective_city_capture_ends_episode_and_keeps_full_reward():
     env = _make_reward_isolated_env()
     env.reward_all_enemies = 8.0
     env.reset(seed=123)

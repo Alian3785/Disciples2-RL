@@ -749,6 +749,12 @@ class CampaignVisualizer:
     COLOR_OBSTACLE = (0.55, 0.55, 0.55, 0.9)
     COLOR_CHEST_FILL = (0.62, 0.40, 0.12, 0.95)
     COLOR_CHEST_EDGE = (0.30, 0.16, 0.02, 1.0)
+    COLOR_MERCHANT_FILL = (0.96, 0.74, 0.16, 0.10)
+    COLOR_MERCHANT_EDGE = (0.55, 0.28, 0.02, 0.32)
+    COLOR_MERCHANT_SITE_FILL = (0.92, 0.18, 0.12, 0.06)
+    COLOR_MERCHANT_SITE_EDGE = (0.88, 0.15, 0.08, 0.95)
+    COLOR_MERCHANT_ANCHOR_FILL = (0.88, 0.10, 0.08, 0.34)
+    COLOR_MERCHANT_ANCHOR_EDGE = (0.82, 0.05, 0.04, 0.98)
     COLOR_CAPITAL_FILL = (0.08, 0.30, 0.82, 0.18)
     COLOR_CAPITAL_EDGE = (0.05, 0.20, 0.62, 0.98)
     COLOR_VILLAGE_FILL = (0.00, 0.72, 0.78, 0.18)
@@ -1012,6 +1018,8 @@ class CampaignVisualizer:
         highlight_battle: int = None,
         castle_heal_tiles: list | tuple | None = None,
         obstacle_tiles: list | tuple | set | None = None,
+        merchant_positions: list | tuple | set | dict | None = None,
+        merchant_site_anchors: list | tuple | set | dict | None = None,
         chest_positions: list | tuple | set | dict | None = None,
         turns: int = 0,
         gold: float = 0.0,
@@ -1101,7 +1109,76 @@ class CampaignVisualizer:
                 color=(0.35, 0.25, 0.0),
             )
 
+        if merchant_site_anchors:
+            raw_merchant_anchors = (
+                merchant_site_anchors.values()
+                if isinstance(merchant_site_anchors, dict)
+                else merchant_site_anchors
+            )
+            for anchor in raw_merchant_anchors:
+                try:
+                    anchor_x, anchor_y = int(anchor[0]), int(anchor[1])
+                except Exception:
+                    continue
+                draw_y, draw_x, draw_h, draw_w = self._display_rect(anchor_x, anchor_y, 3, 3)
+                merchant_site_rect = patches.Rectangle(
+                    (draw_x - 0.5, draw_y - 0.5),
+                    draw_w,
+                    draw_h,
+                    facecolor=self.COLOR_MERCHANT_SITE_FILL,
+                    edgecolor=self.COLOR_MERCHANT_SITE_EDGE,
+                    linewidth=2.4,
+                    zorder=2.58,
+                )
+                self.ax.add_patch(merchant_site_rect)
+                marker_x = anchor_x + 2
+                marker_y = anchor_y + 2
+                anchor_draw_x, anchor_draw_y = self._display_tile(marker_x, marker_y)
+                merchant_anchor_rect = patches.Rectangle(
+                    (anchor_draw_x - 0.45, anchor_draw_y - 0.45),
+                    0.9,
+                    0.9,
+                    facecolor=self.COLOR_MERCHANT_ANCHOR_FILL,
+                    edgecolor=self.COLOR_MERCHANT_ANCHOR_EDGE,
+                    linewidth=2.2,
+                    zorder=2.74,
+                )
+                self.ax.add_patch(merchant_anchor_rect)
+                self.ax.text(
+                    anchor_draw_x,
+                    anchor_draw_y,
+                    "T",
+                    ha="center",
+                    va="center",
+                    fontsize=10,
+                    fontweight="bold",
+                    color="white",
+                    zorder=2.82,
+                )
+
         # Путь агента
+        if merchant_positions:
+            raw_merchant_tiles = (
+                merchant_positions.keys()
+                if isinstance(merchant_positions, dict)
+                else merchant_positions
+            )
+            for tile in raw_merchant_tiles:
+                try:
+                    mx, my = int(tile[0]), int(tile[1])
+                except Exception:
+                    continue
+                draw_x, draw_y = self._display_tile(mx, my)
+                merchant_rect = patches.Rectangle(
+                    (draw_x - 0.40, draw_y - 0.40), 0.80, 0.80,
+                    facecolor=self.COLOR_MERCHANT_FILL,
+                    edgecolor=self.COLOR_MERCHANT_EDGE,
+                    linewidth=1.2,
+                    linestyle="--",
+                    zorder=2.65,
+                )
+                self.ax.add_patch(merchant_rect)
+
         if chest_positions:
             raw_chest_tiles = (
                 chest_positions.keys()
@@ -1222,12 +1299,19 @@ class CampaignVisualizer:
             info_lines.extend(f"- {name}" for name in built_buildings)
         else:
             info_lines.append("Постройки: нет")
+        merchant_count = len(merchant_positions) if merchant_positions else 0
+        info_lines.append(f"Merchant tiles: {merchant_count}")
         chest_count = len(chest_positions) if chest_positions else 0
         info_lines.append(f"Сундуки: {chest_count}")
         heroitems = list(heroitems or [])
         if heroitems:
+            def _hero_item_label(entry):
+                if isinstance(entry, dict):
+                    return str(entry.get("name", "") or "")
+                return str(entry or "")
+
             info_lines.append("Hero items:")
-            info_lines.extend(f"- {item_name}" for item_name in heroitems)
+            info_lines.extend(f"- {_hero_item_label(item_name)}" for item_name in heroitems)
         else:
             info_lines.append("Hero items: none")
         hero_name = str(hero_name or "").strip()
@@ -1514,6 +1598,8 @@ def run_campaign_visualization(
                 title=title,
                 castle_heal_tiles=getattr(env_base, "castle_heal_tiles", None),
                 obstacle_tiles=getattr(env_base.grid_env, "obstacle_positions", None),
+                merchant_positions=getattr(env_base.grid_env, "merchant_positions", None),
+                merchant_site_anchors=getattr(env_base, "merchant_site_anchors", None),
                 turns=env_base.turns,
                 gold=env_base.gold,
                 steps=env_base.moves,
@@ -1574,6 +1660,8 @@ def run_campaign_visualization(
                     highlight_battle=enemy_id,
                     castle_heal_tiles=getattr(env_base, "castle_heal_tiles", None),
                     obstacle_tiles=getattr(env_base.grid_env, "obstacle_positions", None),
+                    merchant_positions=getattr(env_base.grid_env, "merchant_positions", None),
+                    merchant_site_anchors=getattr(env_base, "merchant_site_anchors", None),
                     turns=env_base.turns,
                     gold=env_base.gold,
                     steps=env_base.moves,
@@ -1705,6 +1793,8 @@ def run_campaign_visualization(
         title=f"CAMPAIGN {'VICTORY' if battles_won == total_enemies else 'ENDED'} | Reward: {total_reward:.2f}",
         castle_heal_tiles=getattr(env_base, "castle_heal_tiles", None),
         obstacle_tiles=getattr(env_base.grid_env, "obstacle_positions", None),
+        merchant_positions=getattr(env_base.grid_env, "merchant_positions", None),
+        merchant_site_anchors=getattr(env_base, "merchant_site_anchors", None),
         turns=env_base.turns,
         gold=env_base.gold,
         steps=env_base.moves,

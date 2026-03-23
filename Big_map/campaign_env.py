@@ -36,6 +36,7 @@ from grid import (
     resolve_chests,
     resolve_obstacle_tiles,
     resolve_heal_tiles,
+    scale_static_tiles,
     scale_enemy_positions,
 )
 from grid_world_env import GridWorldEnv
@@ -58,6 +59,18 @@ BUILDINGS_D2 = {
 BUILDINGS_D2_TEMPLATE = {key: deepcopy(value) for key, value in BUILDINGS_D2.items()}
 
 
+class HeroInventoryItem(str):
+    """String-compatible inventory entry that also stores gold value."""
+
+    def __new__(cls, name: str, gold: int = 0):
+        obj = str.__new__(cls, str(name or ""))
+        obj.gold = max(0, int(gold or 0))
+        return obj
+
+    def __repr__(self) -> str:
+        return f"HeroInventoryItem(name={str.__repr__(self)}, gold={int(self.gold)})"
+
+
 class CampaignEnv(gym.Env):
     """
     Двухуровневая среда: Grid World + Battle.
@@ -69,11 +82,13 @@ class CampaignEnv(gym.Env):
     Награды:
         - Награда за участие в битве (нашёл врага): +0.1
         - Награда за победу в каждой битве: +0.3
-        - Награда за захват каждого целевого города: reward_all_enemies * 5
+        - Награда за первый захваченный целевой город: reward_all_enemies
+        - Награда за второй захваченный целевой город: reward_all_enemies * 5
         - Победа в кампании после захвата Порта Полонис и Соругириллы
         - Масштабированная награда из BattleEnv: battle_reward_scale * battle_reward
         - Награда за лечение на специальных клетках: reward_castle_heal_per_hp * restored_hp
         - Награда за успешное воскрешение на специальных клетках: reward_castle_revive
+        - Минимальная награда за продажу бесполезного предмета у торговца
         - Штраф за поражение: -1.0
         - Штраф за таймаут (лимит шагов на карте): -6.0
 
@@ -81,7 +96,8 @@ class CampaignEnv(gym.Env):
         Объединённое наблюдение:
         - [0]: режим (0 = grid, 1 = battle)
         - [1:1+GRID_OBS_SIZE]: grid observation
-          (базовые признаки + координаты вражеских отрядов + тип/HP юнитов)
+          (базовые признаки + все enemy stacks + BLUE roster + ресурсы/инвентарь
+           + постройки + сундуки + клетки лечения + прогресс по целевым городам)
         - [...]: battle observation (когда в бою) или нули
         - [...]: ход и золото
 
@@ -99,7 +115,16 @@ class CampaignEnv(gym.Env):
             (стоимость за 1 HP зависит от Level)
           - 39-44: воскрешение на специальных клетках карты по позициям BLUE 7-12
             (стоимость зависит от Level)
-          - 45-...: постройка зданий активной фракции
+          - 45-54: покупка товаров у торговца
+          - 55-60: применить Эликсир энергии к позициям 7-12
+          - 61-66: применить Эликсир быстроты к позициям 7-12
+          - 67-72: применить защиту от магии Огня к позициям 7-12
+          - 73-78: применить защиту от магии Земли к позициям 7-12
+          - 79-84: применить защиту от магии Воды к позициям 7-12
+          - 85-90: применить защиту от магии Воздуха к позициям 7-12
+          - 91-96: применить Эликсир Силы титана к позициям 7-12
+          - 97-102: применить Эликсир Всевышнего к позициям 7-12
+          - 103-...: постройка зданий активной фракции
         - В режиме battle: используются действия 0-14 (атака/защита/ожидание)
 
         Action masking применяется для блокировки недопустимых действий.
@@ -123,6 +148,7 @@ class CampaignEnv(gym.Env):
     MAX_HEAL_BOTTLES = 3
     HEALING_BOTTLE_AMOUNT = 50.0
     MAX_HEALING_BOTTLES = 3
+    HEALING_OINTMENT_AMOUNT = 200.0
     GRID_REVIVE_ACTION_START = GRID_BOTTLE_ACTION_START + len(GRID_BOTTLE_POSITIONS)  # 15
     REVIVE_BOTTLE_POSITIONS = GRID_BOTTLE_POSITIONS
     MAX_REVIVE_BOTTLES = 3
@@ -142,17 +168,107 @@ class CampaignEnv(gym.Env):
     CASTLE_HEAL_POSITIONS = GRID_BOTTLE_POSITIONS
     GRID_CASTLE_REVIVE_ACTION_START = GRID_CASTLE_HEAL_ACTION_START + len(CASTLE_HEAL_POSITIONS)  # 39
     CASTLE_REVIVE_POSITIONS = REVIVE_BOTTLE_POSITIONS
-    GRID_BUILD_ACTION_START = GRID_CASTLE_REVIVE_ACTION_START + len(CASTLE_REVIVE_POSITIONS)  # 45
+    GRID_MERCHANT_BUY_ACTION_START = (
+        GRID_CASTLE_REVIVE_ACTION_START + len(CASTLE_REVIVE_POSITIONS)
+    )  # 45
+    ENERGY_ELIXIR_POSITIONS = GRID_BOTTLE_POSITIONS
+    GRID_ENERGY_ACTION_START = GRID_MERCHANT_BUY_ACTION_START + 10  # 55
+    HASTE_ELIXIR_POSITIONS = GRID_BOTTLE_POSITIONS
+    GRID_HASTE_ACTION_START = GRID_ENERGY_ACTION_START + len(ENERGY_ELIXIR_POSITIONS)  # 61
+    FIRE_WARD_POSITIONS = GRID_BOTTLE_POSITIONS
+    GRID_FIRE_WARD_ACTION_START = GRID_HASTE_ACTION_START + len(HASTE_ELIXIR_POSITIONS)  # 67
+    EARTH_WARD_POSITIONS = GRID_BOTTLE_POSITIONS
+    GRID_EARTH_WARD_ACTION_START = GRID_FIRE_WARD_ACTION_START + len(FIRE_WARD_POSITIONS)  # 73
+    WATER_WARD_POSITIONS = GRID_BOTTLE_POSITIONS
+    GRID_WATER_WARD_ACTION_START = GRID_EARTH_WARD_ACTION_START + len(EARTH_WARD_POSITIONS)  # 79
+    AIR_WARD_POSITIONS = GRID_BOTTLE_POSITIONS
+    GRID_AIR_WARD_ACTION_START = GRID_WATER_WARD_ACTION_START + len(WATER_WARD_POSITIONS)  # 85
+    TITAN_ELIXIR_POSITIONS = GRID_BOTTLE_POSITIONS
+    GRID_TITAN_ELIXIR_ACTION_START = GRID_AIR_WARD_ACTION_START + len(AIR_WARD_POSITIONS)  # 91
+    SUPREME_ELIXIR_POSITIONS = GRID_BOTTLE_POSITIONS
+    GRID_SUPREME_ELIXIR_ACTION_START = (
+        GRID_TITAN_ELIXIR_ACTION_START + len(TITAN_ELIXIR_POSITIONS)
+    )  # 97
     FINAL_OBJECTIVE_CITIES = {
         "Порт Полонис": (34, 68),
         "Соругирилла": (35, 69),
+    }
+    BASE_MERCHANT_SITE_DATA = {
+        "Лавка Алара": {
+            "anchor": (21, 34),
+            "interaction_tiles": (
+                (24, 35),
+                (24, 36),
+                (22, 37),
+                (23, 37),
+                (24, 37),
+            ),
+        },
+        "Лавка Тралара": {
+            "anchor": (36, 1),
+            "interaction_tiles": (
+                (39, 2),
+                (39, 3),
+                (37, 4),
+                (38, 4),
+                (39, 4),
+            ),
+        },
     }
     FINAL_OBJECTIVE_CITY_REWARD_MULTIPLIER = 5.0
     CHEST_PICKUP_RADIUS = 1
     BONUS_SMALL_HEAL_SOURCE_ITEM = "Potion of Healing"
     BONUS_SMALL_HEAL_ITEM_NAME = "Банка исцеления (+50 HP)"
+    BONUS_LARGE_HEAL_ITEM_NAME = "Бутыль лечения (+100 HP)"
+    HEALING_OINTMENT_ITEM_NAME = "Целебная мазь"
     BONUS_REVIVE_SOURCE_ITEM = "Life Potion"
     BONUS_REVIVE_ITEM_NAME = "Зелье воскрешения (+1)"
+    ENERGY_ELIXIR_ITEM_NAME = "Эликсир энергии"
+    FIRE_WARD_ITEM_NAME = "Эликсир защиты от магии Огня"
+    EARTH_WARD_ITEM_NAME = "Эликсир защиты от магии Земли"
+    WATER_WARD_ITEM_NAME = "Эликсир защиты от магии Воды"
+    AIR_WARD_ITEM_NAME = "Эликсир защиты от магии Воздуха"
+    HASTE_ELIXIR_ITEM_NAME = "Эликсир быстроты"
+    TITAN_ELIXIR_ITEM_NAME = "Эликсир Силы титана"
+    SUPREME_ELIXIR_ITEM_NAME = "Эликсир Всевышнего"
+    ENERGY_ELIXIR_INITIATIVE_MULTIPLIER = 1.30
+    HASTE_ELIXIR_INITIATIVE_MULTIPLIER = 1.60
+    TITAN_ELIXIR_DAMAGE_MULTIPLIER = 1.10
+    SUPREME_ELIXIR_HEALTH_MULTIPLIER = 1.15
+    MERCHANT_BUY_ITEMS = (
+        {"name": "Эликсир Жизни", "price": 400.0, "stock": 10, "grant": "revive_bonus"},
+        {"name": "Эликсир исцеления", "price": 150.0, "stock": 10, "grant": "small_heal_bonus"},
+        {"name": "Эликсир восстановления", "price": 300.0, "stock": 10, "grant": "large_heal_bonus"},
+        {"name": "Целебная мазь", "price": 600.0, "stock": 10, "grant": "inventory"},
+        {"name": "Эликсир энергии", "price": 200.0, "stock": 1, "grant": "inventory"},
+        {"name": "Эликсир защиты от магии Огня", "price": 400.0, "stock": 1, "grant": "inventory"},
+        {"name": "Эликсир защиты от магии Земли", "price": 400.0, "stock": 1, "grant": "inventory"},
+        {"name": "Эликсир защиты от магии Воды", "price": 400.0, "stock": 1, "grant": "inventory"},
+        {"name": "Эликсир защиты от магии Воздуха", "price": 400.0, "stock": 1, "grant": "inventory"},
+        {"name": "Эликсир быстроты", "price": 600.0, "stock": 1, "grant": "inventory"},
+    )
+    GRID_BUILD_ACTION_START = (
+        GRID_SUPREME_ELIXIR_ACTION_START + len(SUPREME_ELIXIR_POSITIONS)
+    )  # 103
+    CHEST_ITEM_GOLD_VALUES = {
+        "Potion of Healing": 150,
+        "Life Potion": 400,
+        "Potion of Strength": 450,
+        "Potion of Invulnerability": 700,
+        "Banner of Might": 1000,
+        "Banner of War": 5000,
+        "Tome of Arcanum": 900,
+        "Vampire Orb": 800,
+        "Orb of Life": 800,
+        "Lich Orb": 800,
+        "Mind ward scroll": 600,
+        "Bronze Ring (Valuable)": 250,
+        "Ruby (Valuable)": 1250,
+        "Diamond (Valuable)": 1750,
+        BONUS_SMALL_HEAL_ITEM_NAME: 150,
+        BONUS_LARGE_HEAL_ITEM_NAME: 300,
+        BONUS_REVIVE_ITEM_NAME: 400,
+    }
     AUTO_CONSUMED_CHEST_ITEMS = (
         BONUS_SMALL_HEAL_SOURCE_ITEM,
         BONUS_REVIVE_SOURCE_ITEM,
@@ -164,7 +280,7 @@ class CampaignEnv(gym.Env):
         grid_size: int = DEFAULT_GRID_SIZE,
         reward_engage_battle: float = 0.2,  # Бонус за вход в бой с живым врагом.
         reward_defeat_enemy: float = 1.0,   # Награда за победу в бою против каждого отряда
-        reward_all_enemies: float = 10.0,   # Базовая награда за захват одного целевого города (x5)
+        reward_all_enemies: float = 10.0,   # База: 1-й целевой город = x1, 2-й = x5
         reward_loss: float = -5.0,          # Штраф за поражение кампании
         reward_timeout: float = -3.0,       # Штраф за таймаут (лимит шагов)
         reward_turn_penalty: float = 0.02,  # Штраф за завершение хода (REST)
@@ -181,6 +297,8 @@ class CampaignEnv(gym.Env):
         battle_reward_win: float = 2.0,
         battle_reward_loss: float = -1.0,
         battle_reward_step: float = 0.01,
+        reward_combat_potion_battle_participation: float = 0.05,
+        reward_sell_junk_item: float = 0.05,
         reward_castle_heal_per_hp: float = 0.01,
         reward_castle_revive: float = 0.5,
         persist_blue_hp: bool = True,
@@ -210,11 +328,16 @@ class CampaignEnv(gym.Env):
         self.battle_reward_win = float(battle_reward_win)
         self.battle_reward_loss = float(battle_reward_loss)
         self.battle_reward_step = float(battle_reward_step)
+        self.reward_combat_potion_battle_participation = max(
+            0.0,
+            float(reward_combat_potion_battle_participation),
+        )
+        self.reward_sell_junk_item = max(0.0, float(reward_sell_junk_item))
         self.reward_castle_heal_per_hp = max(0.0, float(reward_castle_heal_per_hp))
         self.reward_castle_revive = max(0.0, float(reward_castle_revive))
         self.persist_blue_hp = persist_blue_hp
         self.log_enabled = log_enabled
-        self.max_grid_steps = max_grid_steps
+        self.max_grid_steps = max(1, int(max_grid_steps))
         # Базовый лимит шагов внутри одного хода кампании.
         self.moves_per_turn = int(self.MOVES_PER_TURN)
         self.turn_norm_k = max(
@@ -249,6 +372,7 @@ class CampaignEnv(gym.Env):
         self._static_castle_heal_tiles: Tuple[Tuple[int, int], ...] = tuple(self.castle_heal_tiles)
         self._static_obstacle_tiles: Tuple[Tuple[int, int], ...] = tuple(obstacle_tiles)
         self._static_chests: Dict[Tuple[int, int], Tuple[str, ...]] = dict(chest_contents)
+        self._init_merchant_site_metadata()
 
         # Подсреда grid: враги и препятствия автоматически масштабируются под размер карты.
         self.grid_env = GridWorldEnv(
@@ -258,11 +382,11 @@ class CampaignEnv(gym.Env):
             start_position=self.CASTLE_POS,
             max_steps=max_grid_steps,
         )
+        self._sync_grid_merchant_positions()
         self._ensure_map_layout_consistency()
         self.battle_env: Optional[BattleEnv] = None
         self.grid_obs_base_size = int(self.grid_env.observation_space.shape[0])
         self._init_enemy_obs_metadata()
-        self.GRID_OBS_SIZE = self.grid_obs_base_size + self.grid_enemy_obs_size
 
         # Текущий режим
         self.mode = self.MODE_GRID
@@ -280,13 +404,28 @@ class CampaignEnv(gym.Env):
         self.active_buildings = self._get_buildings_for_capital(self.Realcapital)
         self.building_keys = self._get_building_keys(self.active_buildings)
         self.chests: Dict[Tuple[int, int], Tuple[str, ...]] = dict(self._static_chests)
-        self.heroitems: List[str] = []
+        self.heroitems: List[object] = []
+        self.extra_heal_bottles: int = 0
         self.extra_healing_bottles: int = 0
         self.extra_revive_bottles: int = 0
+        self.merchant_stocks: Dict[str, Dict[str, int]] = self._create_initial_merchant_stocks()
         self.active_invulnerability_potion_positions: set[int] = set()
         self.active_strength_potion_positions: set[int] = set()
+        self.active_energy_elixir_positions: set[int] = set()
+        self.active_haste_elixir_positions: set[int] = set()
+        self.active_fire_ward_positions: set[int] = set()
+        self.active_earth_ward_positions: set[int] = set()
+        self.active_water_ward_positions: set[int] = set()
+        self.active_air_ward_positions: set[int] = set()
         self.captured_objective_cities: set[str] = set()
         self._sync_grid_chest_positions()
+        self._sync_grid_merchant_positions()
+        self._init_campaign_grid_obs_metadata()
+        self.GRID_OBS_SIZE = (
+            self.grid_obs_base_size
+            + self.grid_enemy_obs_size
+            + self.grid_campaign_obs_size
+        )
         total_actions = self.GRID_BUILD_ACTION_START + len(self.building_keys)
         # Action space: максимум из двух режимов (battle = 15 действий, grid расширен для бутылей и построек)
         self.action_space = spaces.Discrete(total_actions)
@@ -326,16 +465,26 @@ class CampaignEnv(gym.Env):
         self.battle_env = None
         self._campaign_logs = []
         self.heroitems = []
+        self.extra_heal_bottles = 0
         self.extra_healing_bottles = 0
         self.extra_revive_bottles = 0
+        self.merchant_stocks = self._create_initial_merchant_stocks()
         self.active_invulnerability_potion_positions = set()
         self.active_strength_potion_positions = set()
+        self.active_energy_elixir_positions = set()
+        self.active_haste_elixir_positions = set()
+        self.active_fire_ward_positions = set()
+        self.active_earth_ward_positions = set()
+        self.active_water_ward_positions = set()
+        self.active_air_ward_positions = set()
+        self.combat_potion_battle_bonus_pending = False
         self.captured_objective_cities = set()
         self.chests = dict(self._static_chests)
         self.castle_heal_tiles = self._static_castle_heal_tiles
         self.grid_env.enemy_positions = dict(self._static_enemy_positions)
         self.grid_env.obstacle_positions = set(self._static_obstacle_tiles)
         self._sync_grid_chest_positions()
+        self._sync_grid_merchant_positions()
 
         grid_obs, grid_info = self.grid_env.reset(seed=seed)
         grid_obs = self._augment_grid_obs(grid_obs)
@@ -356,14 +505,23 @@ class CampaignEnv(gym.Env):
             "gold": self.gold,
             "moves": self.moves,
             "heroitems": list(self.heroitems),
+            "extra_heal_bottles": int(self.extra_heal_bottles or 0),
             "extra_healing_bottles": int(self.extra_healing_bottles or 0),
             "extra_revive_bottles": int(self.extra_revive_bottles or 0),
             "invulnerability_potions_left": self._count_hero_item(self.INVULNERABILITY_POTION_ITEM_NAME),
             "strength_potions_left": self._count_hero_item(self.STRENGTH_POTION_ITEM_NAME),
             "active_invulnerability_positions": sorted(self.active_invulnerability_potion_positions),
             "active_strength_positions": sorted(self.active_strength_potion_positions),
+            "active_energy_positions": sorted(self.active_energy_elixir_positions),
+            "active_haste_positions": sorted(self.active_haste_elixir_positions),
+            "active_fire_ward_positions": sorted(self.active_fire_ward_positions),
+            "active_earth_ward_positions": sorted(self.active_earth_ward_positions),
+            "active_water_ward_positions": sorted(self.active_water_ward_positions),
+            "active_air_ward_positions": sorted(self.active_air_ward_positions),
+            "combat_potion_battle_bonus_pending": bool(self.combat_potion_battle_bonus_pending),
             "chests_remaining": len(self.chests),
         }
+        info.update(self._merchant_context_info(self.grid_env.agent_pos))
 
         return self._build_obs(grid_obs=grid_obs), info
 
@@ -386,9 +544,36 @@ class CampaignEnv(gym.Env):
         #   27-32 — применить зелье силы к позициям 7-12 соответственно.
         #   33-38 — лечение на специальных клетках карты по позициям 7-12.
         #   39-44 — воскрешение на специальных клетках карты по позициям 7-12.
-        #   45-... — постройка зданий активной фракции.
+        #   45-54 — купить товар у торговца.
+        #   55-60 — Эликсир энергии по позициям 7-12.
+        #   61-66 — Эликсир быстроты по позициям 7-12.
+        #   67-72 — защита от магии Огня по позициям 7-12.
+        #   73-78 — защита от магии Земли по позициям 7-12.
+        #   79-84 — защита от магии Воды по позициям 7-12.
+        #   85-90 — защита от магии Воздуха по позициям 7-12.
+        #   91-96 — Эликсир Силы титана по позициям 7-12.
+        #   97-102 — Эликсир Всевышнего по позициям 7-12.
+        #   103-... — постройка зданий активной фракции.
         if action >= self.GRID_BUILD_ACTION_START:
             return self._step_building(action)
+        if action >= self.GRID_SUPREME_ELIXIR_ACTION_START:
+            return self._step_apply_supreme_elixir(action)
+        if action >= self.GRID_TITAN_ELIXIR_ACTION_START:
+            return self._step_apply_titan_elixir(action)
+        if action >= self.GRID_AIR_WARD_ACTION_START:
+            return self._step_apply_air_ward(action)
+        if action >= self.GRID_WATER_WARD_ACTION_START:
+            return self._step_apply_water_ward(action)
+        if action >= self.GRID_EARTH_WARD_ACTION_START:
+            return self._step_apply_earth_ward(action)
+        if action >= self.GRID_FIRE_WARD_ACTION_START:
+            return self._step_apply_fire_ward(action)
+        if action >= self.GRID_HASTE_ACTION_START:
+            return self._step_apply_haste_elixir(action)
+        if action >= self.GRID_ENERGY_ACTION_START:
+            return self._step_apply_energy_elixir(action)
+        if action >= self.GRID_MERCHANT_BUY_ACTION_START:
+            return self._step_buy_merchant_item(action)
         if action >= self.GRID_CASTLE_REVIVE_ACTION_START:
             return self._step_revive_in_castle(action)
         if action >= self.GRID_CASTLE_HEAL_ACTION_START:
@@ -418,10 +603,18 @@ class CampaignEnv(gym.Env):
                 "extra_revive_bottles": int(self.extra_revive_bottles or 0),
                 "active_invulnerability_positions": sorted(self.active_invulnerability_potion_positions),
                 "active_strength_positions": sorted(self.active_strength_potion_positions),
+                "combat_potion_battle_bonus_pending": bool(self.combat_potion_battle_bonus_pending),
                 "collected_chests": [],
                 "chests_remaining": len(self.chests),
             }
-            return self._build_obs(grid_obs=grid_obs), 0.0, False, False, info
+            info.update(self._merchant_context_info(self.grid_env.agent_pos))
+            return self._finalize_grid_step_result(
+                grid_obs=grid_obs,
+                reward=0.0,
+                terminated=False,
+                truncated=False,
+                info=info,
+            )
 
         grid_action = min(action, 8)
 
@@ -435,6 +628,7 @@ class CampaignEnv(gym.Env):
         new_pos = self.grid_env.agent_pos
         stagnation_penalty = 0.0
         battle_engage_bonus = 0.0
+        combat_potion_battle_bonus = 0.0
 
         if old_pos != new_pos:
             self._log(f"Перемещение: {old_pos} -> {new_pos}")
@@ -458,6 +652,12 @@ class CampaignEnv(gym.Env):
             if enemy_id is not None and self.grid_env.enemies_alive.get(enemy_id, False):
                 battle_engage_bonus = float(self.reward_engage_battle)
                 reward += battle_engage_bonus
+            if self.combat_potion_battle_bonus_pending:
+                combat_potion_battle_bonus = float(
+                    self.reward_combat_potion_battle_participation
+                )
+                reward += combat_potion_battle_bonus
+                self.combat_potion_battle_bonus_pending = False
             self._apply_battle_grid_steps(extra_steps=10)
         collected_chests = self._collect_adjacent_chests()
         collected_combat_potions = self._count_collected_combat_potions(collected_chests)
@@ -479,6 +679,7 @@ class CampaignEnv(gym.Env):
             "grid_reward_scaled": float(reward),
             "stagnation_penalty": float(stagnation_penalty),
             "battle_engage_bonus": float(battle_engage_bonus),
+            "combat_potion_battle_bonus": float(combat_potion_battle_bonus),
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
@@ -487,6 +688,7 @@ class CampaignEnv(gym.Env):
             "extra_revive_bottles": int(self.extra_revive_bottles or 0),
             "active_invulnerability_positions": sorted(self.active_invulnerability_potion_positions),
             "active_strength_positions": sorted(self.active_strength_potion_positions),
+            "combat_potion_battle_bonus_pending": bool(self.combat_potion_battle_bonus_pending),
             "collected_combat_potions": int(collected_combat_potions),
             "combat_potion_pickup_reward": float(combat_potion_pickup_reward),
             "collected_chests": [
@@ -499,6 +701,7 @@ class CampaignEnv(gym.Env):
             ],
             "chests_remaining": len(self.chests),
         }
+        info.update(self._merchant_context_info(new_pos))
 
         # Обработка действия REST — восстановление 5% HP
         if grid_info.get("rest_action"):
@@ -539,7 +742,13 @@ class CampaignEnv(gym.Env):
             self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")
             info["campaign_result"] = "victory"
             info["campaign_victory_reason"] = "all_enemies_defeated"
-            return self._build_obs(grid_obs=grid_obs), reward, True, False, info
+            return self._finalize_grid_step_result(
+                grid_obs=grid_obs,
+                reward=reward,
+                terminated=True,
+                truncated=False,
+                info=info,
+            )
 
         # Проверяем лимит шагов на карте
         if truncated:
@@ -547,11 +756,105 @@ class CampaignEnv(gym.Env):
             reward += self.reward_timeout
             info["campaign_result"] = "timeout"
 
-        return self._build_obs(grid_obs=grid_obs), reward, terminated, truncated, info
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
 
     def _is_at_castle(self) -> bool:
         """True если агент стоит на одной из клеток лечения в grid-режиме."""
         return tuple(self.grid_env.agent_pos) in self.castle_heal_tiles
+
+    def _finalize_grid_step_result(
+        self,
+        *,
+        grid_obs: np.ndarray,
+        reward: float,
+        terminated: bool,
+        truncated: bool,
+        info: Dict[str, object],
+    ):
+        position_raw = info.get("agent_pos", self.grid_env.agent_pos)
+        if isinstance(position_raw, (list, tuple)) and len(position_raw) >= 2:
+            position = (int(position_raw[0]), int(position_raw[1]))
+        else:
+            position = tuple(self.grid_env.agent_pos)
+
+        finalized_info: Dict[str, object] = dict(info)
+        finalized_info["mode"] = "grid"
+
+        sale_info = self._sell_sell_only_heroitems_at_merchant(position=position)
+        finalized_reward = float(reward) + float(sale_info["merchant_sale_reward"])
+        finalized_info.update(sale_info)
+
+        if "grid_reward_scaled" in finalized_info:
+            try:
+                finalized_info["grid_reward_scaled"] = (
+                    float(finalized_info.get("grid_reward_scaled", 0.0))
+                    + float(sale_info["merchant_sale_reward"])
+                )
+            except (TypeError, ValueError):
+                finalized_info["grid_reward_scaled"] = float(finalized_reward)
+
+        finalized_info["agent_pos"] = position
+        finalized_info["turns"] = self.turns
+        finalized_info["gold"] = self.gold
+        finalized_info["moves"] = self.moves
+        finalized_info["heroitems"] = list(self.heroitems)
+        finalized_info["extra_heal_bottles"] = int(self.extra_heal_bottles or 0)
+        finalized_info["extra_healing_bottles"] = int(self.extra_healing_bottles or 0)
+        finalized_info["extra_revive_bottles"] = int(self.extra_revive_bottles or 0)
+        finalized_info["invulnerability_potions_left"] = self._count_hero_item(
+            self.INVULNERABILITY_POTION_ITEM_NAME
+        )
+        finalized_info["strength_potions_left"] = self._count_hero_item(
+            self.STRENGTH_POTION_ITEM_NAME
+        )
+        finalized_info["energy_elixirs_left"] = self._count_hero_item(
+            self.ENERGY_ELIXIR_ITEM_NAME
+        )
+        finalized_info["haste_elixirs_left"] = self._count_hero_item(
+            self.HASTE_ELIXIR_ITEM_NAME
+        )
+        finalized_info["titan_elixirs_left"] = self._count_hero_item(
+            self.TITAN_ELIXIR_ITEM_NAME
+        )
+        finalized_info["supreme_elixirs_left"] = self._count_hero_item(
+            self.SUPREME_ELIXIR_ITEM_NAME
+        )
+        finalized_info["fire_wards_left"] = self._count_hero_item(self.FIRE_WARD_ITEM_NAME)
+        finalized_info["earth_wards_left"] = self._count_hero_item(self.EARTH_WARD_ITEM_NAME)
+        finalized_info["water_wards_left"] = self._count_hero_item(self.WATER_WARD_ITEM_NAME)
+        finalized_info["air_wards_left"] = self._count_hero_item(self.AIR_WARD_ITEM_NAME)
+        finalized_info["active_invulnerability_positions"] = sorted(
+            self.active_invulnerability_potion_positions
+        )
+        finalized_info["active_strength_positions"] = sorted(
+            self.active_strength_potion_positions
+        )
+        finalized_info["active_energy_positions"] = sorted(self.active_energy_elixir_positions)
+        finalized_info["active_haste_positions"] = sorted(self.active_haste_elixir_positions)
+        finalized_info["active_fire_ward_positions"] = sorted(self.active_fire_ward_positions)
+        finalized_info["active_earth_ward_positions"] = sorted(self.active_earth_ward_positions)
+        finalized_info["active_water_ward_positions"] = sorted(self.active_water_ward_positions)
+        finalized_info["active_air_ward_positions"] = sorted(self.active_air_ward_positions)
+        finalized_info["combat_potion_battle_bonus_pending"] = bool(
+            self.combat_potion_battle_bonus_pending
+        )
+        finalized_info.setdefault("collected_chests", [])
+        finalized_info["chests_remaining"] = len(self.chests)
+        finalized_info.update(self._merchant_context_info(position))
+
+        return (
+            self._build_obs(grid_obs=grid_obs),
+            float(finalized_reward),
+            bool(terminated),
+            bool(truncated),
+            finalized_info,
+        )
 
     @staticmethod
     def _castle_heal_gold_per_hp(unit: Dict) -> float:
@@ -648,6 +951,15 @@ class CampaignEnv(gym.Env):
     def _sync_grid_chest_positions(self) -> None:
         self.grid_env.chest_positions = set(self.chests.keys())
 
+    def _sync_grid_merchant_positions(self) -> None:
+        self.grid_env.merchant_positions = set(self.merchant_interaction_tiles)
+
+    def _max_heal_bottles_available(self) -> int:
+        return int(self.MAX_HEAL_BOTTLES) + max(0, int(self.extra_heal_bottles or 0))
+
+    def _heal_bottles_left(self) -> int:
+        return max(0, self._max_heal_bottles_available() - int(self.heal_bottles_used or 0))
+
     def _max_healing_bottles_available(self) -> int:
         return int(self.MAX_HEALING_BOTTLES) + max(0, int(self.extra_healing_bottles or 0))
 
@@ -667,10 +979,58 @@ class CampaignEnv(gym.Env):
         except (TypeError, ValueError):
             return 0
 
+    @staticmethod
+    def _normalize_health_value(value: object) -> int:
+        try:
+            return max(0, int(round(float(value or 0))))
+        except (TypeError, ValueError):
+            return 0
+
+    @staticmethod
+    def _hero_item_name(entry: object) -> str:
+        if isinstance(entry, HeroInventoryItem):
+            return str(entry)
+        if isinstance(entry, dict):
+            return str(entry.get("name", "") or "")
+        return str(entry or "")
+
+    @staticmethod
+    def _hero_item_gold(entry: object) -> int:
+        if isinstance(entry, HeroInventoryItem):
+            try:
+                return max(0, int(getattr(entry, "gold", 0) or 0))
+            except (TypeError, ValueError):
+                return 0
+        if isinstance(entry, dict):
+            try:
+                return max(0, int(entry.get("gold", 0) or 0))
+            except (TypeError, ValueError):
+                return 0
+        return 0
+
+    @classmethod
+    def _hero_item_gold_value_by_name(cls, item_name: str) -> int:
+        try:
+            return max(0, int(cls.CHEST_ITEM_GOLD_VALUES.get(str(item_name or ""), 0) or 0))
+        except (TypeError, ValueError):
+            return 0
+
+    @classmethod
+    def _make_hero_item_entry(cls, item_name: str) -> HeroInventoryItem:
+        normalized_name = str(item_name or "")
+        return HeroInventoryItem(
+            normalized_name,
+            cls._hero_item_gold_value_by_name(normalized_name),
+        )
+
+    def _hero_item_display_name(self, entry: object) -> str:
+        return self._hero_item_name(entry)
+
     def _count_hero_item(self, item_name: str) -> int:
         if not item_name:
             return 0
-        return sum(1 for entry in self.heroitems if str(entry or "") == str(item_name))
+        normalized_name = str(item_name)
+        return sum(1 for entry in self.heroitems if self._hero_item_name(entry) == normalized_name)
 
     def _hero_item_available(self, item_name: str) -> bool:
         return self._count_hero_item(item_name) > 0
@@ -679,10 +1039,91 @@ class CampaignEnv(gym.Env):
         if not item_name:
             return False
         for idx, entry in enumerate(self.heroitems):
-            if str(entry or "") == str(item_name):
+            if self._hero_item_name(entry) == str(item_name):
                 del self.heroitems[idx]
                 return True
         return False
+
+    def _hero_item_sell_value(self, entry: object) -> int:
+        gold_value = self._hero_item_gold(entry)
+        if gold_value > 0:
+            return gold_value
+        return self._hero_item_gold_value_by_name(self._hero_item_name(entry))
+
+    def _is_useful_hero_item_name(self, item_name: str) -> bool:
+        normalized_name = str(item_name or "")
+        return normalized_name in {
+            self.BONUS_SMALL_HEAL_ITEM_NAME,
+            self.BONUS_LARGE_HEAL_ITEM_NAME,
+            self.HEALING_OINTMENT_ITEM_NAME,
+            self.BONUS_REVIVE_ITEM_NAME,
+            self.INVULNERABILITY_POTION_ITEM_NAME,
+            self.STRENGTH_POTION_ITEM_NAME,
+            self.TITAN_ELIXIR_ITEM_NAME,
+            self.SUPREME_ELIXIR_ITEM_NAME,
+            *[str(item_data.get("name", "") or "") for item_data in self.MERCHANT_BUY_ITEMS],
+        }
+
+    def _is_sell_only_hero_item(self, entry: object) -> bool:
+        item_name = self._hero_item_name(entry)
+        if not item_name or self._is_useful_hero_item_name(item_name):
+            return False
+        return self._hero_item_sell_value(entry) > 0
+
+    def _sell_sell_only_heroitems_at_merchant(
+        self,
+        position: Optional[Tuple[int, int]] = None,
+    ) -> Dict[str, object]:
+        site_names = self._merchant_sites_at_position(position)
+        sale_info: Dict[str, object] = {
+            "merchant_auto_sale": False,
+            "merchant_sold_items": [],
+            "merchant_sold_items_count": 0,
+            "merchant_sale_gold": 0.0,
+            "merchant_sale_reward": 0.0,
+        }
+        if not site_names or not self.heroitems:
+            return sale_info
+
+        sold_items: List[Dict[str, object]] = []
+        kept_items: List[object] = []
+        total_gold = 0
+        for entry in self.heroitems:
+            if not self._is_sell_only_hero_item(entry):
+                kept_items.append(entry)
+                continue
+
+            item_name = self._hero_item_name(entry)
+            gold_value = self._hero_item_sell_value(entry)
+            if gold_value <= 0:
+                kept_items.append(entry)
+                continue
+
+            sold_items.append({"name": item_name, "gold": int(gold_value)})
+            total_gold += int(gold_value)
+
+        if not sold_items:
+            return sale_info
+
+        self.heroitems = kept_items
+        self.gold = max(0.0, float(self.gold or 0.0)) + float(total_gold)
+        sale_reward = float(len(sold_items)) * float(self.reward_sell_junk_item)
+        sale_info.update(
+            {
+                "merchant_auto_sale": True,
+                "merchant_sold_items": sold_items,
+                "merchant_sold_items_count": int(len(sold_items)),
+                "merchant_sale_gold": float(total_gold),
+                "merchant_sale_reward": float(sale_reward),
+            }
+        )
+
+        sold_names = ", ".join(str(item["name"]) for item in sold_items)
+        self._log(
+            f"Торговец {', '.join(site_names)}: продано {len(sold_items)} предметов "
+            f"на {total_gold} gold ({sold_names})"
+        )
+        return sale_info
 
     def _combat_potion_reward_value(self) -> float:
         return float(self.reward_defeat_enemy)
@@ -724,11 +1165,47 @@ class CampaignEnv(gym.Env):
                 "Эффект зелья силы завершён на позициях "
                 f"{sorted(self.active_strength_potion_positions)}"
             )
+        if self.active_energy_elixir_positions:
+            self._log(
+                "Эффект эликсира энергии завершён на позициях "
+                f"{sorted(self.active_energy_elixir_positions)}"
+            )
+        if self.active_haste_elixir_positions:
+            self._log(
+                "Эффект эликсира быстроты завершён на позициях "
+                f"{sorted(self.active_haste_elixir_positions)}"
+            )
+        if self.active_fire_ward_positions:
+            self._log(
+                "Эффект защиты от магии Огня завершён на позициях "
+                f"{sorted(self.active_fire_ward_positions)}"
+            )
+        if self.active_earth_ward_positions:
+            self._log(
+                "Эффект защиты от магии Земли завершён на позициях "
+                f"{sorted(self.active_earth_ward_positions)}"
+            )
+        if self.active_water_ward_positions:
+            self._log(
+                "Эффект защиты от магии Воды завершён на позициях "
+                f"{sorted(self.active_water_ward_positions)}"
+            )
+        if self.active_air_ward_positions:
+            self._log(
+                "Эффект защиты от магии Воздуха завершён на позициях "
+                f"{sorted(self.active_air_ward_positions)}"
+            )
         self.active_invulnerability_potion_positions.clear()
         self.active_strength_potion_positions.clear()
+        self.active_energy_elixir_positions.clear()
+        self.active_haste_elixir_positions.clear()
+        self.active_fire_ward_positions.clear()
+        self.active_earth_ward_positions.clear()
+        self.active_water_ward_positions.clear()
+        self.active_air_ward_positions.clear()
 
     def get_bottle_inventory_counters(self) -> Dict[str, int]:
-        max_heal = int(self.MAX_HEAL_BOTTLES)
+        max_heal = self._max_heal_bottles_available()
         max_healing = self._max_healing_bottles_available()
         max_revive = self._max_revive_bottles_available()
         heal_used = int(self.heal_bottles_used or 0)
@@ -739,6 +1216,7 @@ class CampaignEnv(gym.Env):
             "heal_left": max(0, max_heal - heal_used),
             "max_healing": max_healing,
             "healing_left": max(0, max_healing - healing_used),
+            "ointment_left": self._count_hero_item(self.HEALING_OINTMENT_ITEM_NAME),
             "max_revive": max_revive,
             "revive_left": max(0, max_revive - revive_used),
             "invulnerability_left": self._count_hero_item(self.INVULNERABILITY_POTION_ITEM_NAME),
@@ -796,11 +1274,11 @@ class CampaignEnv(gym.Env):
             granted_items: List[str] = []
             for item_name in chest_data["items"]:
                 if not self._is_auto_consumed_chest_item(item_name):
-                    self.heroitems.append(item_name)
+                    self.heroitems.append(self._make_hero_item_entry(item_name))
                 granted_items.extend(self._apply_chest_item_rewards(item_name))
                 self._log(f"Сундук на {chest_pos}: получен предмет '{item_name}'")
             for granted_item in granted_items:
-                self.heroitems.append(granted_item)
+                self.heroitems.append(self._make_hero_item_entry(granted_item))
                 self._log(
                     f"Сундук на {chest_pos}: бонусом получен предмет '{granted_item}'"
                 )
@@ -911,7 +1389,13 @@ class CampaignEnv(gym.Env):
             "moves": self.moves,
         }
 
-        return self._build_obs(grid_obs=grid_obs), reward, terminated, truncated, info
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
 
     def _ensure_map_layout_consistency(self) -> None:
         """Fail fast if generated map features overlap on forbidden tiles."""
@@ -1059,7 +1543,13 @@ class CampaignEnv(gym.Env):
             "moves": self.moves,
         }
 
-        return self._build_obs(grid_obs=grid_obs), reward, terminated, truncated, info
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
 
     def _normalize_realcapital(self, value: int) -> int:
         """??????????? Realcapital: ????????? ?????? ???????? 1-5, ????? ?????? 1 (???????)."""
@@ -1108,6 +1598,89 @@ class CampaignEnv(gym.Env):
             if name:
                 built_names.append(name)
         return built_names
+
+    def _grant_merchant_item(self, item_name: str) -> List[str]:
+        granted_items: List[str] = []
+        item_data = self._merchant_item_definition(item_name)
+        grant_kind = str((item_data or {}).get("grant", "") or "")
+
+        if grant_kind == "small_heal_bonus":
+            self.extra_healing_bottles = max(0, int(self.extra_healing_bottles or 0)) + 1
+            granted_items.append(self.BONUS_SMALL_HEAL_ITEM_NAME)
+        elif grant_kind == "large_heal_bonus":
+            self.extra_heal_bottles = max(0, int(self.extra_heal_bottles or 0)) + 1
+            granted_items.append(self.BONUS_LARGE_HEAL_ITEM_NAME)
+        elif grant_kind == "revive_bonus":
+            self.extra_revive_bottles = max(0, int(self.extra_revive_bottles or 0)) + 1
+            granted_items.append(self.BONUS_REVIVE_ITEM_NAME)
+        else:
+            granted_items.append(str(item_name or ""))
+
+        for granted_item in granted_items:
+            self.heroitems.append(self._make_hero_item_entry(granted_item))
+        return granted_items
+
+    def _step_buy_merchant_item(self, action: int):
+        idx = action - self.GRID_MERCHANT_BUY_ACTION_START
+        grid_obs = self._get_grid_obs()
+        reward = 0.0
+        terminated = False
+        truncated = False
+
+        item_data = self.MERCHANT_BUY_ITEMS[idx] if 0 <= idx < len(self.MERCHANT_BUY_ITEMS) else {}
+        item_name = str(item_data.get("name", "") or "")
+        item_price = float(item_data.get("price", 0.0) or 0.0)
+        site_names = self._merchant_sites_at_position(self.grid_env.agent_pos)
+        site_name = self._merchant_site_for_item(item_name, position=self.grid_env.agent_pos)
+        stock_before = self._merchant_item_stock(site_name, item_name) if site_name else 0
+
+        purchased = False
+        insufficient_gold = False
+        not_at_merchant = not bool(site_names)
+        out_of_stock = bool(site_names) and not bool(site_name)
+        granted_items: List[str] = []
+
+        if site_name is not None and item_name:
+            if float(self.gold or 0.0) < item_price:
+                insufficient_gold = True
+            elif stock_before > 0:
+                self.gold = max(0.0, float(self.gold or 0.0) - item_price)
+                self.merchant_stocks[site_name][item_name] = max(0, stock_before - 1)
+                granted_items = self._grant_merchant_item(item_name)
+                purchased = True
+                self._log(
+                    f"Торговец {site_name}: куплен предмет '{item_name}' за {item_price:.1f} gold"
+                )
+
+        stock_after = self._merchant_item_stock(site_name, item_name) if site_name else 0
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            "merchant_buy_action": True,
+            "merchant_buy_item": item_name,
+            "merchant_buy_price": item_price,
+            "merchant_buy_site": site_name,
+            "merchant_buy_purchased": purchased,
+            "merchant_buy_stock_before": int(stock_before),
+            "merchant_buy_stock_after": int(stock_after),
+            "merchant_buy_granted_items": list(granted_items),
+            "merchant_buy_not_at_merchant": not_at_merchant,
+            "merchant_buy_out_of_stock": out_of_stock,
+            "merchant_buy_insufficient_gold": insufficient_gold,
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+        }
+
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
 
     def _step_building(self, action: int):
         """Выбирает здание активной фракции и отмечает его как построенное."""
@@ -1203,7 +1776,13 @@ class CampaignEnv(gym.Env):
             "moves": self.moves,
         }
 
-        return self._build_obs(grid_obs=grid_obs), reward, terminated, truncated, info
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
 
     def _step_heal_with_bottle(self, action: int):
         """Применяет подходящую банку лечения к указанной позиции BLUE в режиме grid."""
@@ -1224,23 +1803,41 @@ class CampaignEnv(gym.Env):
                 target_pos
             )
         if target_pos is not None and selected_bottle_kind is not None:
-            healed_amount, unit_name = self._heal_unit_at_position(
-                position=target_pos,
-                heal_amount=selected_heal_amount,
-                source_label=(
-                    "Банка исцеления"
-                    if selected_bottle_kind == "small"
-                    else "Бутыль лечения"
-                ),
-            )
-            if healed_amount > 0.0:
-                if selected_bottle_kind == "large":
-                    self.heal_bottles_used = min(self.heal_bottles_used + 1, self.MAX_HEAL_BOTTLES)
-                else:
-                    self.healing_bottles_used = min(
-                        self.healing_bottles_used + 1,
-                        self._max_healing_bottles_available(),
+            if selected_bottle_kind == "ointment":
+                if self._consume_hero_item(self.HEALING_OINTMENT_ITEM_NAME):
+                    healed_amount, unit_name = self._heal_unit_at_position(
+                        position=target_pos,
+                        heal_amount=selected_heal_amount,
+                        source_label=self.HEALING_OINTMENT_ITEM_NAME,
                     )
+                    if healed_amount <= 0.0:
+                        self.heroitems.append(
+                            self._make_hero_item_entry(self.HEALING_OINTMENT_ITEM_NAME)
+                        )
+                else:
+                    selected_bottle_kind = None
+                    selected_heal_amount = 0.0
+            else:
+                healed_amount, unit_name = self._heal_unit_at_position(
+                    position=target_pos,
+                    heal_amount=selected_heal_amount,
+                    source_label=(
+                        "Банка исцеления"
+                        if selected_bottle_kind == "small"
+                        else "Бутыль лечения"
+                    ),
+                )
+                if healed_amount > 0.0:
+                    if selected_bottle_kind == "large":
+                        self.heal_bottles_used = min(
+                            self.heal_bottles_used + 1,
+                            self._max_heal_bottles_available(),
+                        )
+                    else:
+                        self.healing_bottles_used = min(
+                            self.healing_bottles_used + 1,
+                            self._max_healing_bottles_available(),
+                        )
 
         info = {
             "mode": "grid",
@@ -1254,19 +1851,28 @@ class CampaignEnv(gym.Env):
             "selected_heal_bottle_kind": selected_bottle_kind,
             "selected_heal_bottle_amount": selected_heal_amount,
             "heal_bottles_used": self.heal_bottles_used,
-            "heal_bottles_left": max(0, self.MAX_HEAL_BOTTLES - self.heal_bottles_used),
+            "extra_heal_bottles": self.extra_heal_bottles,
+            "heal_bottles_left": self._heal_bottles_left(),
+            "max_heal_bottles": self._max_heal_bottles_available(),
             "healing_bottles_used": self.healing_bottles_used,
             "extra_healing_bottles": self.extra_healing_bottles,
             "healing_bottles_left": max(
                 0, self._max_healing_bottles_available() - self.healing_bottles_used
             ),
             "max_healing_bottles": self._max_healing_bottles_available(),
+            "healing_ointment_left": self._count_hero_item(self.HEALING_OINTMENT_ITEM_NAME),
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
         }
 
-        return self._build_obs(grid_obs=grid_obs), reward, terminated, truncated, info
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
 
     def _step_revive_with_bottle(self, action: int):
         """Применяет бутыль воскрешения к указанной позиции BLUE в режиме grid."""
@@ -1310,7 +1916,13 @@ class CampaignEnv(gym.Env):
             "moves": self.moves,
         }
 
-        return self._build_obs(grid_obs=grid_obs), reward, terminated, truncated, info
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
 
     def _apply_invulnerability_potion_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
         state = self._get_blue_state()
@@ -1352,6 +1964,320 @@ class CampaignEnv(gym.Env):
             return True, name
         return False, None
 
+    def _can_apply_single_turn_effect_position(
+        self,
+        position: int,
+        item_name: str,
+        active_positions: set[int],
+    ) -> bool:
+        if not self._hero_item_available(item_name):
+            return False
+        state = self._get_blue_state()
+        for unit in state:
+            if int(unit.get("position", -1)) != int(position):
+                continue
+            hp = float(unit.get("hp", 0) or unit.get("health", 0))
+            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
+            return max_hp > 0 and hp > 0 and int(position) not in active_positions
+        return False
+
+    def _can_apply_energy_elixir_position(self, position: int) -> bool:
+        return self._can_apply_single_turn_effect_position(
+            position,
+            self.ENERGY_ELIXIR_ITEM_NAME,
+            self.active_energy_elixir_positions | self.active_haste_elixir_positions,
+        )
+
+    def _can_apply_haste_elixir_position(self, position: int) -> bool:
+        return self._can_apply_single_turn_effect_position(
+            position,
+            self.HASTE_ELIXIR_ITEM_NAME,
+            self.active_energy_elixir_positions | self.active_haste_elixir_positions,
+        )
+
+    def _can_apply_fire_ward_position(self, position: int) -> bool:
+        return self._can_apply_single_turn_effect_position(
+            position,
+            self.FIRE_WARD_ITEM_NAME,
+            self.active_fire_ward_positions,
+        )
+
+    def _can_apply_earth_ward_position(self, position: int) -> bool:
+        return self._can_apply_single_turn_effect_position(
+            position,
+            self.EARTH_WARD_ITEM_NAME,
+            self.active_earth_ward_positions,
+        )
+
+    def _can_apply_water_ward_position(self, position: int) -> bool:
+        return self._can_apply_single_turn_effect_position(
+            position,
+            self.WATER_WARD_ITEM_NAME,
+            self.active_water_ward_positions,
+        )
+
+    def _can_apply_air_ward_position(self, position: int) -> bool:
+        return self._can_apply_single_turn_effect_position(
+            position,
+            self.AIR_WARD_ITEM_NAME,
+            self.active_air_ward_positions,
+        )
+
+    def _can_apply_permanent_elixir_position(self, position: int, item_name: str) -> bool:
+        if not self._hero_item_available(item_name):
+            return False
+        state = self._get_blue_state()
+        for unit in state:
+            if int(unit.get("position", -1)) != int(position):
+                continue
+            hp = float(unit.get("hp", 0) or unit.get("health", 0))
+            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
+            return max_hp > 0 and hp > 0
+        return False
+
+    def _can_apply_titan_elixir_position(self, position: int) -> bool:
+        return self._can_apply_permanent_elixir_position(
+            position,
+            self.TITAN_ELIXIR_ITEM_NAME,
+        )
+
+    def _can_apply_supreme_elixir_position(self, position: int) -> bool:
+        return self._can_apply_permanent_elixir_position(
+            position,
+            self.SUPREME_ELIXIR_ITEM_NAME,
+        )
+
+    def _apply_position_flag_effect(
+        self,
+        position: int,
+        active_positions: set[int],
+        log_message: str,
+    ) -> Tuple[bool, Optional[str]]:
+        state = self._get_blue_state()
+        for unit in state:
+            if int(unit.get("position", -1)) != int(position):
+                continue
+            hp = float(unit.get("hp", 0) or unit.get("health", 0))
+            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
+            if max_hp <= 0 or hp <= 0 or int(position) in active_positions:
+                return False, None
+            active_positions.add(int(position))
+            name = str(unit.get("name", f"pos_{position}") or f"pos_{position}")
+            self._log(log_message.format(name=name, position=int(position)))
+            return True, name
+        return False, None
+
+    def _apply_energy_elixir_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
+        if int(position) in self.active_haste_elixir_positions:
+            return False, None
+        return self._apply_position_flag_effect(
+            position,
+            self.active_energy_elixir_positions,
+            "Эликсир энергии: {name} (pos {position}) получает +30% инициативы до конца текущего хода",
+        )
+
+    def _apply_haste_elixir_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
+        if int(position) in self.active_energy_elixir_positions:
+            return False, None
+        return self._apply_position_flag_effect(
+            position,
+            self.active_haste_elixir_positions,
+            "Эликсир быстроты: {name} (pos {position}) получает +60% инициативы до конца текущего хода",
+        )
+
+    def _apply_fire_ward_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
+        return self._apply_position_flag_effect(
+            position,
+            self.active_fire_ward_positions,
+            "Защита от магии Огня: {name} (pos {position}) получает resistance Fire до конца текущего хода",
+        )
+
+    def _apply_earth_ward_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
+        return self._apply_position_flag_effect(
+            position,
+            self.active_earth_ward_positions,
+            "Защита от магии Земли: {name} (pos {position}) получает resistance Earth до конца текущего хода",
+        )
+
+    def _apply_water_ward_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
+        return self._apply_position_flag_effect(
+            position,
+            self.active_water_ward_positions,
+            "Защита от магии Воды: {name} (pos {position}) получает resistance Water до конца текущего хода",
+        )
+
+    def _apply_air_ward_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
+        return self._apply_position_flag_effect(
+            position,
+            self.active_air_ward_positions,
+            "Защита от магии Воздуха: {name} (pos {position}) получает resistance Air до конца текущего хода",
+        )
+
+    def _apply_titan_elixir_bonus_to_unit(
+        self,
+        unit: Dict,
+        *,
+        increment_uses: bool = True,
+    ) -> None:
+        base_damage = self._normalize_damage_value(unit.get("damage", 0))
+        base_damage_secondary = self._normalize_damage_value(unit.get("damage_secondary", 0))
+        unit["damage"] = self._normalize_damage_value(
+            float(base_damage) * float(self.TITAN_ELIXIR_DAMAGE_MULTIPLIER)
+        )
+        unit["damage_secondary"] = self._normalize_damage_value(
+            float(base_damage_secondary) * float(self.TITAN_ELIXIR_DAMAGE_MULTIPLIER)
+        )
+        unit["original_damage"] = int(unit["damage"])
+        if increment_uses:
+            unit["campaign_titan_elixir_uses"] = (
+                max(0, int(unit.get("campaign_titan_elixir_uses", 0) or 0)) + 1
+            )
+
+    def _apply_supreme_elixir_bonus_to_unit(
+        self,
+        unit: Dict,
+        *,
+        increment_uses: bool = True,
+    ) -> None:
+        hp = float(unit.get("hp", 0) or unit.get("health", 0) or 0)
+        max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
+        new_max_hp = self._normalize_health_value(
+            float(max_hp) * float(self.SUPREME_ELIXIR_HEALTH_MULTIPLIER)
+        )
+        if new_max_hp <= int(round(max_hp)):
+            new_max_hp = int(round(max_hp)) + 1
+        new_hp = min(
+            new_max_hp,
+            self._normalize_health_value(
+                float(hp) * float(self.SUPREME_ELIXIR_HEALTH_MULTIPLIER)
+            ),
+        )
+        unit["maxhp"] = int(new_max_hp)
+        unit["max_health"] = int(new_max_hp)
+        unit["hp"] = int(new_hp)
+        unit["health"] = int(new_hp)
+        if increment_uses:
+            unit["campaign_supreme_elixir_uses"] = (
+                max(0, int(unit.get("campaign_supreme_elixir_uses", 0) or 0)) + 1
+            )
+
+    def _reapply_persistent_elixir_bonuses_to_promoted_unit(
+        self,
+        source_unit: Dict,
+        upgraded_unit: Dict,
+    ) -> None:
+        upgraded_unit.pop("campaign_titan_elixir_uses", None)
+        upgraded_unit.pop("campaign_supreme_elixir_uses", None)
+
+        titan_uses = max(0, int(source_unit.get("campaign_titan_elixir_uses", 0) or 0))
+        supreme_uses = max(0, int(source_unit.get("campaign_supreme_elixir_uses", 0) or 0))
+
+        for _ in range(titan_uses):
+            self._apply_titan_elixir_bonus_to_unit(upgraded_unit, increment_uses=True)
+        for _ in range(supreme_uses):
+            self._apply_supreme_elixir_bonus_to_unit(upgraded_unit, increment_uses=True)
+
+    def _apply_titan_elixir_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
+        state = self._get_blue_state()
+        for unit in state:
+            if int(unit.get("position", -1)) != int(position):
+                continue
+            hp = float(unit.get("hp", 0) or unit.get("health", 0) or 0)
+            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
+            if max_hp <= 0 or hp <= 0:
+                return False, None
+
+            self._apply_titan_elixir_bonus_to_unit(unit, increment_uses=True)
+            name = str(unit.get("name", f"pos_{position}") or f"pos_{position}")
+            self._log(
+                f"Эликсир Силы титана: {name} (pos {position}) получает "
+                f"+10% к урону навсегда на эпизод"
+            )
+            return True, name
+        return False, None
+
+    def _apply_supreme_elixir_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
+        state = self._get_blue_state()
+        for unit in state:
+            if int(unit.get("position", -1)) != int(position):
+                continue
+            hp = float(unit.get("hp", 0) or unit.get("health", 0) or 0)
+            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
+            if max_hp <= 0 or hp <= 0:
+                return False, None
+
+            self._apply_supreme_elixir_bonus_to_unit(unit, increment_uses=True)
+            name = str(unit.get("name", f"pos_{position}") or f"pos_{position}")
+            self._log(
+                f"Эликсир Всевышнего: {name} (pos {position}) получает "
+                f"+15% к max HP навсегда на эпизод"
+            )
+            return True, name
+        return False, None
+
+    def _step_apply_single_turn_position_item(
+        self,
+        *,
+        action: int,
+        action_start: int,
+        positions: List[int],
+        item_name: str,
+        can_apply_fn,
+        apply_fn,
+        info_key: str,
+    ):
+        idx = action - action_start
+        target_pos = positions[idx] if 0 <= idx < len(positions) else None
+        grid_obs = self._get_grid_obs()
+        reward = 0.0
+        terminated = False
+        truncated = False
+
+        applied = False
+        consumed = False
+        unit_name = None
+        if (
+            target_pos is not None
+            and can_apply_fn(target_pos)
+            and self._consume_hero_item(item_name)
+        ):
+            consumed = True
+            applied, unit_name = apply_fn(target_pos)
+            if not applied:
+                self.heroitems.append(self._make_hero_item_entry(item_name))
+                consumed = False
+            else:
+                reward = self._combat_potion_reward_value()
+                self.combat_potion_battle_bonus_pending = True
+
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            info_key: True,
+            "combat_potion_action": True,
+            "combat_potion_item": item_name,
+            "combat_potion_target_pos": target_pos,
+            "combat_potion_applied": applied,
+            "combat_potion_consumed": consumed,
+            "combat_potion_unit_name": unit_name,
+            "combat_potion_reward": float(reward),
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+            "heroitems": list(self.heroitems),
+        }
+        info.update(self._merchant_context_info(self.grid_env.agent_pos))
+
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
+
     def _step_apply_invulnerability_potion(self, action: int):
         idx = action - self.GRID_INVULNERABILITY_ACTION_START
         target_pos = (
@@ -1375,10 +2301,13 @@ class CampaignEnv(gym.Env):
             consumed = True
             applied, unit_name = self._apply_invulnerability_potion_to_position(target_pos)
             if not applied:
-                self.heroitems.append(self.INVULNERABILITY_POTION_ITEM_NAME)
+                self.heroitems.append(
+                    self._make_hero_item_entry(self.INVULNERABILITY_POTION_ITEM_NAME)
+                )
                 consumed = False
             else:
                 reward = self._combat_potion_reward_value()
+                self.combat_potion_battle_bonus_pending = True
 
         info = {
             "mode": "grid",
@@ -1397,13 +2326,21 @@ class CampaignEnv(gym.Env):
             "strength_potions_left": self._count_hero_item(self.STRENGTH_POTION_ITEM_NAME),
             "active_invulnerability_positions": sorted(self.active_invulnerability_potion_positions),
             "active_strength_positions": sorted(self.active_strength_potion_positions),
+            "combat_potion_battle_bonus_pending": bool(self.combat_potion_battle_bonus_pending),
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
             "heroitems": list(self.heroitems),
         }
+        info.update(self._merchant_context_info(self.grid_env.agent_pos))
 
-        return self._build_obs(grid_obs=grid_obs), reward, terminated, truncated, info
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
 
     def _step_apply_strength_potion(self, action: int):
         idx = action - self.GRID_STRENGTH_ACTION_START
@@ -1428,10 +2365,13 @@ class CampaignEnv(gym.Env):
             consumed = True
             applied, unit_name = self._apply_strength_potion_to_position(target_pos)
             if not applied:
-                self.heroitems.append(self.STRENGTH_POTION_ITEM_NAME)
+                self.heroitems.append(
+                    self._make_hero_item_entry(self.STRENGTH_POTION_ITEM_NAME)
+                )
                 consumed = False
             else:
                 reward = self._combat_potion_reward_value()
+                self.combat_potion_battle_bonus_pending = True
 
         info = {
             "mode": "grid",
@@ -1450,13 +2390,168 @@ class CampaignEnv(gym.Env):
             "strength_potions_left": self._count_hero_item(self.STRENGTH_POTION_ITEM_NAME),
             "active_invulnerability_positions": sorted(self.active_invulnerability_potion_positions),
             "active_strength_positions": sorted(self.active_strength_potion_positions),
+            "combat_potion_battle_bonus_pending": bool(self.combat_potion_battle_bonus_pending),
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
             "heroitems": list(self.heroitems),
         }
+        info.update(self._merchant_context_info(self.grid_env.agent_pos))
 
-        return self._build_obs(grid_obs=grid_obs), reward, terminated, truncated, info
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
+
+    def _step_apply_energy_elixir(self, action: int):
+        return self._step_apply_single_turn_position_item(
+            action=action,
+            action_start=self.GRID_ENERGY_ACTION_START,
+            positions=self.ENERGY_ELIXIR_POSITIONS,
+            item_name=self.ENERGY_ELIXIR_ITEM_NAME,
+            can_apply_fn=self._can_apply_energy_elixir_position,
+            apply_fn=self._apply_energy_elixir_to_position,
+            info_key="energy_elixir_action",
+        )
+
+    def _step_apply_haste_elixir(self, action: int):
+        return self._step_apply_single_turn_position_item(
+            action=action,
+            action_start=self.GRID_HASTE_ACTION_START,
+            positions=self.HASTE_ELIXIR_POSITIONS,
+            item_name=self.HASTE_ELIXIR_ITEM_NAME,
+            can_apply_fn=self._can_apply_haste_elixir_position,
+            apply_fn=self._apply_haste_elixir_to_position,
+            info_key="haste_elixir_action",
+        )
+
+    def _step_apply_fire_ward(self, action: int):
+        return self._step_apply_single_turn_position_item(
+            action=action,
+            action_start=self.GRID_FIRE_WARD_ACTION_START,
+            positions=self.FIRE_WARD_POSITIONS,
+            item_name=self.FIRE_WARD_ITEM_NAME,
+            can_apply_fn=self._can_apply_fire_ward_position,
+            apply_fn=self._apply_fire_ward_to_position,
+            info_key="fire_ward_action",
+        )
+
+    def _step_apply_earth_ward(self, action: int):
+        return self._step_apply_single_turn_position_item(
+            action=action,
+            action_start=self.GRID_EARTH_WARD_ACTION_START,
+            positions=self.EARTH_WARD_POSITIONS,
+            item_name=self.EARTH_WARD_ITEM_NAME,
+            can_apply_fn=self._can_apply_earth_ward_position,
+            apply_fn=self._apply_earth_ward_to_position,
+            info_key="earth_ward_action",
+        )
+
+    def _step_apply_water_ward(self, action: int):
+        return self._step_apply_single_turn_position_item(
+            action=action,
+            action_start=self.GRID_WATER_WARD_ACTION_START,
+            positions=self.WATER_WARD_POSITIONS,
+            item_name=self.WATER_WARD_ITEM_NAME,
+            can_apply_fn=self._can_apply_water_ward_position,
+            apply_fn=self._apply_water_ward_to_position,
+            info_key="water_ward_action",
+        )
+
+    def _step_apply_air_ward(self, action: int):
+        return self._step_apply_single_turn_position_item(
+            action=action,
+            action_start=self.GRID_AIR_WARD_ACTION_START,
+            positions=self.AIR_WARD_POSITIONS,
+            item_name=self.AIR_WARD_ITEM_NAME,
+            can_apply_fn=self._can_apply_air_ward_position,
+            apply_fn=self._apply_air_ward_to_position,
+            info_key="air_ward_action",
+        )
+
+    def _step_apply_permanent_position_item(
+        self,
+        *,
+        action: int,
+        action_start: int,
+        positions: List[int],
+        item_name: str,
+        can_apply_fn,
+        apply_fn,
+        info_key: str,
+    ):
+        idx = action - action_start
+        target_pos = positions[idx] if 0 <= idx < len(positions) else None
+        grid_obs = self._get_grid_obs()
+        reward = 0.0
+        terminated = False
+        truncated = False
+
+        applied = False
+        consumed = False
+        unit_name = None
+        if (
+            target_pos is not None
+            and can_apply_fn(target_pos)
+            and self._consume_hero_item(item_name)
+        ):
+            consumed = True
+            applied, unit_name = apply_fn(target_pos)
+            if not applied:
+                self.heroitems.append(self._make_hero_item_entry(item_name))
+                consumed = False
+
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            info_key: True,
+            "persistent_elixir_action": True,
+            "persistent_elixir_item": item_name,
+            "persistent_elixir_target_pos": target_pos,
+            "persistent_elixir_applied": applied,
+            "persistent_elixir_consumed": consumed,
+            "persistent_elixir_unit_name": unit_name,
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+            "heroitems": list(self.heroitems),
+        }
+        info.update(self._merchant_context_info(self.grid_env.agent_pos))
+
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
+
+    def _step_apply_titan_elixir(self, action: int):
+        return self._step_apply_permanent_position_item(
+            action=action,
+            action_start=self.GRID_TITAN_ELIXIR_ACTION_START,
+            positions=self.TITAN_ELIXIR_POSITIONS,
+            item_name=self.TITAN_ELIXIR_ITEM_NAME,
+            can_apply_fn=self._can_apply_titan_elixir_position,
+            apply_fn=self._apply_titan_elixir_to_position,
+            info_key="titan_elixir_action",
+        )
+
+    def _step_apply_supreme_elixir(self, action: int):
+        return self._step_apply_permanent_position_item(
+            action=action,
+            action_start=self.GRID_SUPREME_ELIXIR_ACTION_START,
+            positions=self.SUPREME_ELIXIR_POSITIONS,
+            item_name=self.SUPREME_ELIXIR_ITEM_NAME,
+            can_apply_fn=self._can_apply_supreme_elixir_position,
+            apply_fn=self._apply_supreme_elixir_to_position,
+            info_key="supreme_elixir_action",
+        )
 
     def _step_battle(self, action: int):
         """Шаг в режиме боя."""
@@ -1464,7 +2559,13 @@ class CampaignEnv(gym.Env):
             # Защита от некорректного состояния
             self.mode = self.MODE_GRID
             grid_obs = self._get_grid_obs()
-            return self._build_obs(grid_obs=grid_obs), 0.0, False, False, {"error": "no_battle_env"}
+            return self._finalize_grid_step_result(
+                grid_obs=grid_obs,
+                reward=0.0,
+                terminated=False,
+                truncated=False,
+                info={"error": "no_battle_env", "agent_pos": self.grid_env.agent_pos},
+            )
 
         # Проверка: бой уже завершён (например, RED победил в свой ход)
         if self.battle_env.winner is not None:
@@ -1539,6 +2640,7 @@ class CampaignEnv(gym.Env):
                 info["agent_pos"] = self._restore_agent_to_battle_origin()
                 info["enemies_alive"] = dict(self.grid_env.enemies_alive)
 
+                objective_cities_captured_before = len(self.captured_objective_cities)
                 newly_captured_objective_cities = self._capture_objective_city_if_cleared(
                     self.current_enemy_id
                 )
@@ -1546,7 +2648,8 @@ class CampaignEnv(gym.Env):
 
                 if newly_captured_objective_cities:
                     final_objective_reward = self._compute_final_objective_reward(
-                        len(newly_captured_objective_cities)
+                        len(newly_captured_objective_cities),
+                        captured_before=objective_cities_captured_before,
                     )
                     reward += final_objective_reward
                     info["captured_objective_cities"] = list(newly_captured_objective_cities)
@@ -1559,7 +2662,13 @@ class CampaignEnv(gym.Env):
                     grid_obs = self._get_grid_obs()
                     info["campaign_result"] = "victory"
                     info["campaign_victory_reason"] = "objective_cities_cleared"
-                    return self._build_obs(grid_obs=grid_obs), reward, True, False, info
+                    return self._finalize_grid_step_result(
+                        grid_obs=grid_obs,
+                        reward=reward,
+                        terminated=True,
+                        truncated=False,
+                        info=info,
+                    )
 
                 # Проверяем полную победу
                 if self.grid_env.all_enemies_defeated():
@@ -1567,10 +2676,22 @@ class CampaignEnv(gym.Env):
                     grid_obs = self._get_grid_obs()
                     info["campaign_result"] = "victory"
                     info["campaign_victory_reason"] = "all_enemies_defeated"
-                    return self._build_obs(grid_obs=grid_obs), reward, True, False, info
+                    return self._finalize_grid_step_result(
+                        grid_obs=grid_obs,
+                        reward=reward,
+                        terminated=True,
+                        truncated=False,
+                        info=info,
+                    )
 
                 grid_obs = self._get_grid_obs()
-                return self._build_obs(grid_obs=grid_obs), reward, False, False, info
+                return self._finalize_grid_step_result(
+                    grid_obs=grid_obs,
+                    reward=reward,
+                    terminated=False,
+                    truncated=False,
+                    info=info,
+                )
 
             else:
                 # Поражение: конец эпизода
@@ -1683,6 +2804,12 @@ class CampaignEnv(gym.Env):
 
         buffed_invulnerability: List[int] = []
         buffed_strength: List[int] = []
+        buffed_energy: List[int] = []
+        buffed_haste: List[int] = []
+        buffed_fire: List[int] = []
+        buffed_earth: List[int] = []
+        buffed_water: List[int] = []
+        buffed_air: List[int] = []
 
         for unit in blue_team:
             position = int(unit.get("position", -1) or -1)
@@ -1716,6 +2843,48 @@ class CampaignEnv(gym.Env):
                 )
                 buffed_strength.append(position)
 
+            initiative_multiplier = 1.0
+            if position in self.active_haste_elixir_positions:
+                initiative_multiplier = max(
+                    initiative_multiplier,
+                    float(self.HASTE_ELIXIR_INITIATIVE_MULTIPLIER),
+                )
+            elif position in self.active_energy_elixir_positions:
+                initiative_multiplier = max(
+                    initiative_multiplier,
+                    float(self.ENERGY_ELIXIR_INITIATIVE_MULTIPLIER),
+                )
+            if initiative_multiplier > 1.0:
+                base_initiative = int(unit.get("initiative_base", unit.get("initiative", 0)) or 0)
+                unit["campaign_potion_base_initiative"] = int(base_initiative)
+                boosted_initiative = self._normalize_damage_value(
+                    float(base_initiative) * initiative_multiplier
+                )
+                unit["initiative_base"] = int(boosted_initiative)
+                unit["initiative"] = int(boosted_initiative)
+                unit["campaign_initiative_potion_multiplier"] = float(initiative_multiplier)
+                if position in self.active_haste_elixir_positions:
+                    buffed_haste.append(position)
+                else:
+                    buffed_energy.append(position)
+
+            added_resistance: List[str] = []
+            resistance = [str(res) for res in (unit.get("resistance") or [])]
+            for active_positions, element, bucket in (
+                (self.active_fire_ward_positions, "Fire", buffed_fire),
+                (self.active_earth_ward_positions, "Earth", buffed_earth),
+                (self.active_water_ward_positions, "Water", buffed_water),
+                (self.active_air_ward_positions, "Air", buffed_air),
+            ):
+                if position not in active_positions or element in resistance:
+                    continue
+                resistance.append(element)
+                added_resistance.append(element)
+                bucket.append(position)
+            if added_resistance:
+                unit["resistance"] = resistance
+                unit["campaign_potion_added_resistance"] = added_resistance
+
         if buffed_invulnerability:
             self._log(
                 "Активно зелье неуязвимости для позиций "
@@ -1725,6 +2894,36 @@ class CampaignEnv(gym.Env):
             self._log(
                 "Активно зелье силы для позиций "
                 f"{sorted(buffed_strength)} перед началом боя"
+            )
+        if buffed_energy:
+            self._log(
+                "Активен эликсир энергии для позиций "
+                f"{sorted(buffed_energy)} перед началом боя"
+            )
+        if buffed_haste:
+            self._log(
+                "Активен эликсир быстроты для позиций "
+                f"{sorted(buffed_haste)} перед началом боя"
+            )
+        if buffed_fire:
+            self._log(
+                "Активна защита от магии Огня для позиций "
+                f"{sorted(buffed_fire)} перед началом боя"
+            )
+        if buffed_earth:
+            self._log(
+                "Активна защита от магии Земли для позиций "
+                f"{sorted(buffed_earth)} перед началом боя"
+            )
+        if buffed_water:
+            self._log(
+                "Активна защита от магии Воды для позиций "
+                f"{sorted(buffed_water)} перед началом боя"
+            )
+        if buffed_air:
+            self._log(
+                "Активна защита от магии Воздуха для позиций "
+                f"{sorted(buffed_air)} перед началом боя"
             )
 
     def _init_battle(self, enemy_id: int):
@@ -1816,6 +3015,32 @@ class CampaignEnv(gym.Env):
             restored_unit.pop("campaign_potion_base_damage", None)
             restored_unit.pop("campaign_potion_base_damage_secondary", None)
             restored_unit.pop("campaign_strength_potion_multiplier", None)
+            if (
+                position in self.active_energy_elixir_positions
+                or position in self.active_haste_elixir_positions
+            ):
+                base_initiative = int(
+                    restored_unit.get(
+                        "campaign_potion_base_initiative",
+                        restored_unit.get("initiative_base", 0),
+                    )
+                    or 0
+                )
+                restored_unit["initiative_base"] = int(base_initiative)
+            restored_unit.pop("campaign_potion_base_initiative", None)
+            restored_unit.pop("campaign_initiative_potion_multiplier", None)
+            added_resistance = [
+                str(res)
+                for res in (restored_unit.get("campaign_potion_added_resistance") or [])
+                if str(res)
+            ]
+            if added_resistance:
+                restored_unit["resistance"] = [
+                    res
+                    for res in (restored_unit.get("resistance") or [])
+                    if str(res) not in set(added_resistance)
+                ]
+            restored_unit.pop("campaign_potion_added_resistance", None)
             if position in self.active_invulnerability_potion_positions:
                 base_armor = self._normalize_armor_value(
                     restored_unit.get(
@@ -1993,6 +3218,10 @@ class CampaignEnv(gym.Env):
                             unit.get("team", "blue"),
                             unit.get("position", pos),
                         )
+                        self._reapply_persistent_elixir_bonuses_to_promoted_unit(
+                            source_unit=unit,
+                            upgraded_unit=upgraded_unit,
+                        )
                         unit.clear()
                         unit.update(deepcopy(upgraded_unit))
                         self._replace_blue_unit(upgraded_unit)
@@ -2077,32 +3306,43 @@ class CampaignEnv(gym.Env):
     def _has_any_heal_bottle_left(self) -> bool:
         """True, если доступна хотя бы одна банка лечения любого типа."""
         return (
-            self.heal_bottles_used < self.MAX_HEAL_BOTTLES
+            self.heal_bottles_used < self._max_heal_bottles_available()
             or self.healing_bottles_used < self._max_healing_bottles_available()
+            or self._hero_item_available(self.HEALING_OINTMENT_ITEM_NAME)
         )
 
     def _select_heal_bottle_for_position(self, position: int) -> Tuple[float, Optional[str]]:
         """
-        Выбирает, какую банку применить к юниту:
-        - при наличии обеих: +50 HP, если этого достаточно для полного лечения, иначе +100 HP;
-        - если один тип закончился: использует другой;
+        Выбирает, какой тип лечения применить к юниту:
+        - предпочитает наименьшее достаточное лечение среди +50 / +100 / +200;
+        - если недостаёт более 200 HP и есть Целебная мазь, использует её;
+        - если +50/+100 закончились, но есть Целебная мазь, использует её как фолбэк;
         - если лечить нельзя: возвращает (0.0, None).
         """
         missing_hp = self._missing_hp_at_position(position)
         if missing_hp <= 0.0:
             return 0.0, None
 
-        has_large = self.heal_bottles_used < self.MAX_HEAL_BOTTLES
+        has_large = self.heal_bottles_used < self._max_heal_bottles_available()
         has_small = self.healing_bottles_used < self._max_healing_bottles_available()
+        has_ointment = self._hero_item_available(self.HEALING_OINTMENT_ITEM_NAME)
 
-        if has_large and has_small:
-            if missing_hp <= self.HEALING_BOTTLE_AMOUNT:
-                return self.HEALING_BOTTLE_AMOUNT, "small"
+        if has_small and missing_hp <= self.HEALING_BOTTLE_AMOUNT:
+            return self.HEALING_BOTTLE_AMOUNT, "small"
+        if has_large and missing_hp <= self.HEAL_BOTTLE_AMOUNT:
             return self.HEAL_BOTTLE_AMOUNT, "large"
+        if has_ointment and missing_hp > self.HEALING_OINTMENT_AMOUNT:
+            return self.HEALING_OINTMENT_AMOUNT, "ointment"
+        if has_ointment and not (has_small or has_large):
+            return self.HEALING_OINTMENT_AMOUNT, "ointment"
+        if has_ointment and not has_large and missing_hp > self.HEALING_BOTTLE_AMOUNT:
+            return self.HEALING_OINTMENT_AMOUNT, "ointment"
         if has_large:
             return self.HEAL_BOTTLE_AMOUNT, "large"
         if has_small:
             return self.HEALING_BOTTLE_AMOUNT, "small"
+        if has_ointment:
+            return self.HEALING_OINTMENT_AMOUNT, "ointment"
         return 0.0, None
 
     def _get_blue_state(self) -> List[Dict]:
@@ -2228,15 +3468,31 @@ class CampaignEnv(gym.Env):
     def _all_objective_cities_captured(self) -> bool:
         return len(self.captured_objective_cities) == len(self.FINAL_OBJECTIVE_CITIES)
 
-    def _compute_final_objective_reward(self, city_count: int = 1) -> float:
-        """Награда за захват одного или нескольких целевых городов."""
+    def _compute_final_objective_reward(
+        self,
+        city_count: int = 1,
+        *,
+        captured_before: int = 0,
+    ) -> float:
+        """
+        Награда за захват одного или нескольких целевых городов.
+
+        Первый захваченный целевой город даёт уменьшенную награду (x1),
+        последующие — полную (x5).
+        """
         if city_count <= 0:
             return 0.0
-        return (
-            float(self.reward_all_enemies)
-            * float(self.FINAL_OBJECTIVE_CITY_REWARD_MULTIPLIER)
-            * float(city_count)
-        )
+        total_reward = 0.0
+        captured_before = max(0, int(captured_before))
+        base_reward = float(self.reward_all_enemies)
+        full_multiplier = float(self.FINAL_OBJECTIVE_CITY_REWARD_MULTIPLIER)
+
+        for offset in range(int(city_count)):
+            capture_index = captured_before + offset
+            multiplier = 1.0 if capture_index == 0 else full_multiplier
+            total_reward += base_reward * multiplier
+
+        return float(total_reward)
 
     def _compute_blue_exp_reward(self) -> Tuple[float, float]:
         """Возвращает (reward, raw_exp) за опыт BLUE в завершённом бою."""
@@ -2304,10 +3560,123 @@ class CampaignEnv(gym.Env):
             return 0.0
         self.turns += int(delta_turns)
         self._clear_expired_combat_potion_effects()
+        self.combat_potion_battle_bonus_pending = False
         self.gold += float(delta_turns) * self.GOLD_PER_TURN
         self.moves = self.moves_per_turn
         self.active_buildings["alredybuilt"] = 0
         return -float(delta_turns) * self.reward_turn_penalty
+
+    def _init_merchant_site_metadata(self) -> None:
+        obstacle_tiles = set(self._static_obstacle_tiles)
+        self.merchant_site_anchors: Dict[str, Tuple[int, int]] = {}
+        self.merchant_site_interaction_tiles: Dict[str, Tuple[Tuple[int, int], ...]] = {}
+        all_tiles: List[Tuple[int, int]] = []
+        seen_tiles: set[Tuple[int, int]] = set()
+
+        for site_name, site_data in self.BASE_MERCHANT_SITE_DATA.items():
+            anchor = scale_static_tiles(
+                self.grid_size,
+                (tuple(site_data["anchor"]),),
+            )[0]
+            scaled_tiles = scale_static_tiles(
+                self.grid_size,
+                tuple(site_data["interaction_tiles"]),
+            )
+
+            site_tiles: List[Tuple[int, int]] = []
+            site_seen: set[Tuple[int, int]] = set()
+            for tile in scaled_tiles:
+                normalized_tile = (int(tile[0]), int(tile[1]))
+                if normalized_tile in obstacle_tiles or normalized_tile in site_seen:
+                    continue
+                site_seen.add(normalized_tile)
+                site_tiles.append(normalized_tile)
+                if normalized_tile not in seen_tiles:
+                    seen_tiles.add(normalized_tile)
+                    all_tiles.append(normalized_tile)
+
+            self.merchant_site_anchors[str(site_name)] = (int(anchor[0]), int(anchor[1]))
+            self.merchant_site_interaction_tiles[str(site_name)] = tuple(site_tiles)
+
+        self.merchant_interaction_tiles = tuple(all_tiles)
+
+    def _create_initial_merchant_stocks(self) -> Dict[str, Dict[str, int]]:
+        stocks: Dict[str, Dict[str, int]] = {
+            str(site_name): {} for site_name in self.BASE_MERCHANT_SITE_DATA.keys()
+        }
+        alara_stock: Dict[str, int] = {}
+        for item_data in self.MERCHANT_BUY_ITEMS:
+            item_name = str(item_data.get("name", "") or "")
+            if not item_name:
+                continue
+            alara_stock[item_name] = max(0, int(item_data.get("stock", 0) or 0))
+        stocks["Лавка Алара"] = alara_stock
+        stocks.setdefault("Лавка Тралара", {})
+        return stocks
+
+    @classmethod
+    def _merchant_item_definition(cls, item_name: str) -> Optional[Dict[str, object]]:
+        normalized_name = str(item_name or "")
+        for item_data in cls.MERCHANT_BUY_ITEMS:
+            if str(item_data.get("name", "") or "") == normalized_name:
+                return dict(item_data)
+        return None
+
+    def _merchant_item_stock(self, site_name: str, item_name: str) -> int:
+        site_stock = self.merchant_stocks.get(str(site_name), {})
+        try:
+            return max(0, int(site_stock.get(str(item_name), 0) or 0))
+        except (TypeError, ValueError):
+            return 0
+
+    def _merchant_site_for_item(
+        self,
+        item_name: str,
+        position: Optional[Tuple[int, int]] = None,
+    ) -> Optional[str]:
+        for site_name in self._merchant_sites_at_position(position):
+            if self._merchant_item_stock(site_name, item_name) > 0:
+                return site_name
+        return None
+
+    def _merchant_stock_snapshot(self, site_name: str) -> Dict[str, int]:
+        snapshot: Dict[str, int] = {}
+        for item_data in self.MERCHANT_BUY_ITEMS:
+            item_name = str(item_data.get("name", "") or "")
+            if not item_name:
+                continue
+            stock_left = self._merchant_item_stock(site_name, item_name)
+            if stock_left > 0:
+                snapshot[item_name] = stock_left
+        return snapshot
+
+    def _merchant_sites_at_position(
+        self,
+        position: Optional[Tuple[int, int]] = None,
+    ) -> List[str]:
+        if position is None:
+            position = tuple(self.grid_env.agent_pos)
+        normalized_pos = (int(position[0]), int(position[1]))
+        return [
+            site_name
+            for site_name, tiles in self.merchant_site_interaction_tiles.items()
+            if normalized_pos in tiles
+        ]
+
+    def _merchant_context_info(
+        self,
+        position: Optional[Tuple[int, int]] = None,
+    ) -> Dict[str, object]:
+        site_names = self._merchant_sites_at_position(position)
+        merchant_stock = {
+            site_name: self._merchant_stock_snapshot(site_name)
+            for site_name in site_names
+        }
+        return {
+            "is_at_merchant": bool(site_names),
+            "merchant_sites_in_range": list(site_names),
+            "merchant_stock": merchant_stock,
+        }
 
     @staticmethod
     def _is_empty_enemy_unit(unit: Dict) -> bool:
@@ -2335,17 +3704,122 @@ class CampaignEnv(gym.Env):
                     unit_types.add(unit_type)
 
         self.enemy_unit_types = sorted(unit_types)
-        self.enemy_unit_type_to_id = {t: i + 1 for i, t in enumerate(self.enemy_unit_types)}
-        self.enemy_unit_type_scale = max(1, len(self.enemy_unit_types))
+        self.enemy_unit_type_to_index = {t: i for i, t in enumerate(self.enemy_unit_types)}
+        self.grid_enemy_unit_type_feature_size = len(self.enemy_unit_types)
+        self.grid_enemy_unit_feature_size = self.grid_enemy_unit_type_feature_size + 1
         self.grid_enemy_unit_slots = max_units
         self.grid_enemy_count = len(self.grid_env.enemy_positions or {})
         self.grid_enemy_obs_size = self.grid_enemy_count * (
-            2 + self.grid_enemy_unit_slots * 2
+            2 + self.grid_enemy_unit_slots * self.grid_enemy_unit_feature_size
         )
 
-    def _normalize_enemy_unit_type(self, unit_type: Optional[str]) -> float:
-        type_id = self.enemy_unit_type_to_id.get(unit_type or "", 0)
-        return float(type_id) / float(self.enemy_unit_type_scale)
+    def _init_campaign_grid_obs_metadata(self) -> None:
+        """Готовит метаданные для grid-наблюдения о состоянии кампании."""
+        self.grid_blue_positions = tuple(int(pos) for pos in self.GRID_BOTTLE_POSITIONS)
+        self.grid_blue_features_per_unit = 8
+        self.grid_blue_obs_size = len(self.grid_blue_positions) * self.grid_blue_features_per_unit
+
+        self.grid_resource_obs_size = 11
+
+        self.grid_building_features_per_building = 3
+        self.grid_building_obs_size = (
+            len(self.building_keys) * self.grid_building_features_per_building
+        )
+
+        self.grid_chest_positions = tuple(sorted(tuple(pos) for pos in self._static_chests.keys()))
+        self.grid_chest_features_per_entry = 3
+        self.grid_chest_obs_size = (
+            len(self.grid_chest_positions) * self.grid_chest_features_per_entry
+        )
+
+        self.grid_heal_tile_positions = tuple(
+            sorted(tuple(pos) for pos in self._static_castle_heal_tiles)
+        )
+        self.grid_heal_tile_features_per_entry = 2
+        self.grid_heal_tile_obs_size = (
+            len(self.grid_heal_tile_positions) * self.grid_heal_tile_features_per_entry
+        )
+
+        self.grid_objective_city_names = tuple(self.FINAL_OBJECTIVE_CITIES.keys())
+        self.grid_objective_city_features_per_entry = 4
+        self.grid_objective_city_obs_size = (
+            len(self.grid_objective_city_names) * self.grid_objective_city_features_per_entry
+        )
+
+        merchant_small_heal_stock = int(
+            sum(
+                int(item_data.get("stock", 0) or 0)
+                for item_data in self.MERCHANT_BUY_ITEMS
+                if str(item_data.get("grant", "") or "") == "small_heal_bonus"
+            )
+        )
+        merchant_large_heal_stock = int(
+            sum(
+                int(item_data.get("stock", 0) or 0)
+                for item_data in self.MERCHANT_BUY_ITEMS
+                if str(item_data.get("grant", "") or "") == "large_heal_bonus"
+            )
+        )
+        merchant_revive_stock = int(
+            sum(
+                int(item_data.get("stock", 0) or 0)
+                for item_data in self.MERCHANT_BUY_ITEMS
+                if str(item_data.get("grant", "") or "") == "revive_bonus"
+            )
+        )
+        self.grid_max_heal_bottle_capacity = int(self.MAX_HEAL_BOTTLES) + merchant_large_heal_stock
+        self.grid_max_healing_bottle_capacity = int(self.MAX_HEALING_BOTTLES) + merchant_small_heal_stock + sum(
+            1
+            for chest_items in self._static_chests.values()
+            for item_name in chest_items
+            if str(item_name or "") == str(self.BONUS_SMALL_HEAL_SOURCE_ITEM)
+        )
+        self.grid_max_revive_bottle_capacity = int(self.MAX_REVIVE_BOTTLES) + merchant_revive_stock + sum(
+            1
+            for chest_items in self._static_chests.values()
+            for item_name in chest_items
+            if str(item_name or "") == str(self.BONUS_REVIVE_SOURCE_ITEM)
+        )
+        self.grid_max_invulnerability_potions = sum(
+            1
+            for chest_items in self._static_chests.values()
+            for item_name in chest_items
+            if str(item_name or "") == str(self.INVULNERABILITY_POTION_ITEM_NAME)
+        )
+        self.grid_max_strength_potions = sum(
+            1
+            for chest_items in self._static_chests.values()
+            for item_name in chest_items
+            if str(item_name or "") == str(self.STRENGTH_POTION_ITEM_NAME)
+        )
+        self.grid_max_build_price = 1.0
+        for build_key in self.building_keys:
+            building = self.active_buildings.get(build_key)
+            if not isinstance(building, dict):
+                continue
+            try:
+                price = float(building.get("gold", 0) or 0.0)
+            except (TypeError, ValueError):
+                price = 0.0
+            self.grid_max_build_price = max(self.grid_max_build_price, price)
+
+        self.grid_campaign_obs_size = (
+            self.grid_blue_obs_size
+            + self.grid_resource_obs_size
+            + self.grid_building_obs_size
+            + self.grid_chest_obs_size
+            + self.grid_heal_tile_obs_size
+            + self.grid_objective_city_obs_size
+        )
+
+    def _encode_enemy_unit_type(self, unit_type: Optional[str]) -> List[float]:
+        if self.grid_enemy_unit_type_feature_size <= 0:
+            return []
+        vec = [0.0] * self.grid_enemy_unit_type_feature_size
+        idx = self.enemy_unit_type_to_index.get(unit_type or "")
+        if idx is not None:
+            vec[idx] = 1.0
+        return vec
 
     @staticmethod
     def _normalize_unit_health(unit: Dict) -> float:
@@ -2355,6 +3829,26 @@ class CampaignEnv(gym.Env):
             return 0.0
         return max(0.0, min(1.0, hp / max_hp))
 
+    @staticmethod
+    def _normalize_ratio(value: object, max_value: object) -> float:
+        try:
+            value_f = float(value or 0.0)
+            max_f = float(max_value or 0.0)
+        except (TypeError, ValueError):
+            return 0.0
+        if max_f <= 0.0:
+            return 0.0
+        return float(np.clip(value_f / max_f, 0.0, 1.0))
+
+    @staticmethod
+    def _normalize_saturating_count(value: object, half_point: float = 1.0) -> float:
+        try:
+            value_f = max(0.0, float(value or 0.0))
+        except (TypeError, ValueError):
+            return 0.0
+        k = max(1e-6, float(half_point))
+        return float(np.clip(value_f / (value_f + k), 0.0, 1.0))
+
     def _build_enemy_grid_obs(self) -> np.ndarray:
         """Строит признаки врагов на карте для grid-наблюдения."""
         if self.grid_enemy_obs_size <= 0:
@@ -2362,6 +3856,7 @@ class CampaignEnv(gym.Env):
 
         grid_scale = max(1, self.grid_env.grid_size - 1)
         enemy_obs: List[float] = []
+        zero_enemy_slot = [0.0] * self.grid_enemy_unit_feature_size
 
         for enemy_id in sorted(self.grid_env.enemy_positions.keys()):
             ex, ey = self.grid_env.enemy_positions.get(enemy_id, (0, 0))
@@ -2373,25 +3868,226 @@ class CampaignEnv(gym.Env):
 
             for idx in range(self.grid_enemy_unit_slots):
                 if not is_alive or idx >= len(team_sorted):
-                    enemy_obs.extend([0.0, 0.0])
+                    enemy_obs.extend(zero_enemy_slot)
                     continue
 
                 unit = team_sorted[idx]
                 if self._is_empty_enemy_unit(unit):
-                    enemy_obs.extend([0.0, 0.0])
+                    enemy_obs.extend(zero_enemy_slot)
                     continue
 
-                type_norm = self._normalize_enemy_unit_type(unit.get("unit_type"))
+                type_one_hot = self._encode_enemy_unit_type(unit.get("unit_type"))
                 hp_norm = self._normalize_unit_health(unit)
-                enemy_obs.extend([type_norm, hp_norm])
+                enemy_obs.extend([*type_one_hot, hp_norm])
 
         return np.array(enemy_obs, dtype=np.float32)
 
+    def _build_blue_team_grid_obs(self) -> np.ndarray:
+        state_by_pos = {
+            int(unit.get("position", -1) or -1): unit for unit in (self._get_blue_state() or [])
+        }
+        blue_obs: List[float] = []
+
+        for position in self.grid_blue_positions:
+            unit = state_by_pos.get(int(position), {})
+            hp = float(unit.get("hp", 0) or unit.get("health", 0) or 0.0)
+            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0.0)
+            alive_v = 1.0 if max_hp > 0.0 and hp > 0.0 else 0.0
+            hp_ratio = self._normalize_unit_health(unit) if unit else 0.0
+            wounded_v = 1.0 if max_hp > 0.0 and hp > 0.0 and hp < max_hp else 0.0
+            revivable_v = 1.0 if max_hp > 0.0 and hp <= 0.0 else 0.0
+            invulnerability_v = 1.0 if int(position) in self.active_invulnerability_potion_positions else 0.0
+            strength_v = 1.0 if int(position) in self.active_strength_potion_positions else 0.0
+            hero_v = 1.0 if unit and self._is_hero_unit(unit) else 0.0
+            level_norm = self._normalize_saturating_count(unit.get("Level", 0) if unit else 0.0, half_point=3.0)
+
+            blue_obs.extend(
+                [
+                    alive_v,
+                    hp_ratio,
+                    wounded_v,
+                    revivable_v,
+                    invulnerability_v,
+                    strength_v,
+                    hero_v,
+                    level_norm,
+                ]
+            )
+
+        return np.array(blue_obs, dtype=np.float32)
+
+    def _build_resource_grid_obs(self) -> np.ndarray:
+        inventory = self.get_bottle_inventory_counters()
+        build_locked_flag = self.active_buildings.get("alredybuilt", 0)
+        try:
+            build_locked = 1.0 if int(build_locked_flag or 0) == 1 else 0.0
+        except (TypeError, ValueError):
+            build_locked = 0.0
+
+        resource_obs = [
+            self._normalize_ratio(self.moves, max(1, self.moves_per_turn)),
+            self._normalize_saturating_count(self.moves_per_turn, half_point=float(self.MOVES_PER_TURN)),
+            1.0 if self._is_at_castle() else 0.0,
+            build_locked,
+            self._normalize_ratio(
+                inventory.get("heal_left", 0),
+                max(1, int(self.grid_max_heal_bottle_capacity)),
+            ),
+            self._normalize_ratio(
+                inventory.get("healing_left", 0),
+                max(1, int(self.grid_max_healing_bottle_capacity)),
+            ),
+            self._normalize_ratio(
+                inventory.get("revive_left", 0),
+                max(1, int(self.grid_max_revive_bottle_capacity)),
+            ),
+            self._normalize_ratio(
+                inventory.get("invulnerability_left", 0),
+                max(1, int(self.grid_max_invulnerability_potions)),
+            ),
+            self._normalize_ratio(
+                inventory.get("strength_left", 0),
+                max(1, int(self.grid_max_strength_potions)),
+            ),
+            self._normalize_ratio(len(self.chests), max(1, len(self.grid_chest_positions))),
+            self._normalize_ratio(
+                len(self.captured_objective_cities),
+                max(1, len(self.grid_objective_city_names)),
+            ),
+        ]
+        return np.array(resource_obs, dtype=np.float32)
+
+    def _build_building_grid_obs(self) -> np.ndarray:
+        building_obs: List[float] = []
+        for build_key in self.building_keys:
+            building = self.active_buildings.get(build_key)
+            if not isinstance(building, dict):
+                building_obs.extend([0.0, 0.0, 0.0])
+                continue
+
+            built_flag = building.get("Build", building.get("built", 0))
+            blocked_flag = building.get("blocked", 0)
+            try:
+                built_v = 1.0 if int(built_flag or 0) == 1 else 0.0
+            except (TypeError, ValueError):
+                built_v = 0.0
+            try:
+                blocked_v = 1.0 if int(blocked_flag or 0) == 1 else 0.0
+            except (TypeError, ValueError):
+                blocked_v = 0.0
+            try:
+                price_v = float(building.get("gold", 0) or 0.0)
+            except (TypeError, ValueError):
+                price_v = 0.0
+
+            building_obs.extend(
+                [
+                    built_v,
+                    blocked_v,
+                    self._normalize_ratio(price_v, self.grid_max_build_price),
+                ]
+            )
+
+        return np.array(building_obs, dtype=np.float32)
+
+    def _build_chest_grid_obs(self) -> np.ndarray:
+        if self.grid_chest_obs_size <= 0:
+            return np.zeros(0, dtype=np.float32)
+
+        grid_scale = max(1, self.grid_env.grid_size - 1)
+        active_chests = {tuple(pos) for pos in self.chests.keys()}
+        chest_obs: List[float] = []
+        for chest_pos in self.grid_chest_positions:
+            chest_obs.extend(
+                [
+                    chest_pos[0] / grid_scale,
+                    chest_pos[1] / grid_scale,
+                    1.0 if tuple(chest_pos) in active_chests else 0.0,
+                ]
+            )
+        return np.array(chest_obs, dtype=np.float32)
+
+    def _build_heal_tiles_grid_obs(self) -> np.ndarray:
+        if self.grid_heal_tile_obs_size <= 0:
+            return np.zeros(0, dtype=np.float32)
+
+        grid_scale = max(1, self.grid_env.grid_size - 1)
+        heal_obs: List[float] = []
+        for tile_pos in self.grid_heal_tile_positions:
+            heal_obs.extend([tile_pos[0] / grid_scale, tile_pos[1] / grid_scale])
+        return np.array(heal_obs, dtype=np.float32)
+
+    def _build_objective_city_grid_obs(self) -> np.ndarray:
+        if self.grid_objective_city_obs_size <= 0:
+            return np.zeros(0, dtype=np.float32)
+
+        grid_scale = max(1, self.grid_env.grid_size - 1)
+        objective_obs: List[float] = []
+        enemy_positions = getattr(self.grid_env, "enemy_positions", {}) or {}
+        enemies_alive = getattr(self.grid_env, "enemies_alive", {}) or {}
+
+        for city_name in self.grid_objective_city_names:
+            city_enemy_ids = tuple(
+                int(enemy_id)
+                for enemy_id in self.FINAL_OBJECTIVE_CITIES.get(city_name, ())
+            )
+            city_positions = [
+                tuple(enemy_positions[enemy_id])
+                for enemy_id in city_enemy_ids
+                if enemy_id in enemy_positions
+            ]
+            if city_positions:
+                centroid_x = sum(pos[0] for pos in city_positions) / float(len(city_positions))
+                centroid_y = sum(pos[1] for pos in city_positions) / float(len(city_positions))
+            else:
+                centroid_x = 0.0
+                centroid_y = 0.0
+
+            captured_v = 1.0 if city_name in self.captured_objective_cities else 0.0
+            enemies_remaining = sum(
+                1.0 for enemy_id in city_enemy_ids if bool(enemies_alive.get(enemy_id, False))
+            )
+            remaining_ratio = self._normalize_ratio(
+                enemies_remaining,
+                max(1, len(city_enemy_ids)),
+            )
+
+            objective_obs.extend(
+                [
+                    centroid_x / grid_scale,
+                    centroid_y / grid_scale,
+                    captured_v,
+                    remaining_ratio,
+                ]
+            )
+
+        return np.array(objective_obs, dtype=np.float32)
+
+    def _build_campaign_grid_obs(self) -> np.ndarray:
+        campaign_obs = np.concatenate(
+            [
+                self._build_blue_team_grid_obs(),
+                self._build_resource_grid_obs(),
+                self._build_building_grid_obs(),
+                self._build_chest_grid_obs(),
+                self._build_heal_tiles_grid_obs(),
+                self._build_objective_city_grid_obs(),
+            ]
+        )
+        return campaign_obs.astype(np.float32, copy=False)
+
     def _augment_grid_obs(self, base_obs: np.ndarray) -> np.ndarray:
         enemy_obs = self._build_enemy_grid_obs()
-        if enemy_obs.size == 0:
+        campaign_obs = self._build_campaign_grid_obs()
+        if enemy_obs.size == 0 and campaign_obs.size == 0:
             return base_obs.astype(np.float32, copy=False)
-        return np.concatenate([base_obs.astype(np.float32, copy=False), enemy_obs])
+        return np.concatenate(
+            [
+                base_obs.astype(np.float32, copy=False),
+                enemy_obs,
+                campaign_obs,
+            ]
+        )
 
     def _get_grid_obs(self) -> np.ndarray:
         """Возвращает grid-наблюдение с признаками врагов."""
@@ -2449,6 +4145,59 @@ class CampaignEnv(gym.Env):
                 for idx, pos in enumerate(self.STRENGTH_POTION_POSITIONS):
                     mask[self.GRID_STRENGTH_ACTION_START + idx] = (
                         self._can_apply_strength_potion_position(pos)
+                    )
+            if self._merchant_sites_at_position(self.grid_env.agent_pos):
+                for idx, item_data in enumerate(self.MERCHANT_BUY_ITEMS):
+                    item_name = str(item_data.get("name", "") or "")
+                    item_price = float(item_data.get("price", 0.0) or 0.0)
+                    mask[self.GRID_MERCHANT_BUY_ACTION_START + idx] = (
+                        bool(item_name)
+                        and float(self.gold or 0.0) >= item_price
+                        and self._merchant_site_for_item(
+                            item_name,
+                            position=self.grid_env.agent_pos,
+                        )
+                        is not None
+                    )
+            if self._hero_item_available(self.ENERGY_ELIXIR_ITEM_NAME):
+                for idx, pos in enumerate(self.ENERGY_ELIXIR_POSITIONS):
+                    mask[self.GRID_ENERGY_ACTION_START + idx] = (
+                        self._can_apply_energy_elixir_position(pos)
+                    )
+            if self._hero_item_available(self.HASTE_ELIXIR_ITEM_NAME):
+                for idx, pos in enumerate(self.HASTE_ELIXIR_POSITIONS):
+                    mask[self.GRID_HASTE_ACTION_START + idx] = (
+                        self._can_apply_haste_elixir_position(pos)
+                    )
+            if self._hero_item_available(self.FIRE_WARD_ITEM_NAME):
+                for idx, pos in enumerate(self.FIRE_WARD_POSITIONS):
+                    mask[self.GRID_FIRE_WARD_ACTION_START + idx] = (
+                        self._can_apply_fire_ward_position(pos)
+                    )
+            if self._hero_item_available(self.EARTH_WARD_ITEM_NAME):
+                for idx, pos in enumerate(self.EARTH_WARD_POSITIONS):
+                    mask[self.GRID_EARTH_WARD_ACTION_START + idx] = (
+                        self._can_apply_earth_ward_position(pos)
+                    )
+            if self._hero_item_available(self.WATER_WARD_ITEM_NAME):
+                for idx, pos in enumerate(self.WATER_WARD_POSITIONS):
+                    mask[self.GRID_WATER_WARD_ACTION_START + idx] = (
+                        self._can_apply_water_ward_position(pos)
+                    )
+            if self._hero_item_available(self.AIR_WARD_ITEM_NAME):
+                for idx, pos in enumerate(self.AIR_WARD_POSITIONS):
+                    mask[self.GRID_AIR_WARD_ACTION_START + idx] = (
+                        self._can_apply_air_ward_position(pos)
+                    )
+            if self._hero_item_available(self.TITAN_ELIXIR_ITEM_NAME):
+                for idx, pos in enumerate(self.TITAN_ELIXIR_POSITIONS):
+                    mask[self.GRID_TITAN_ELIXIR_ACTION_START + idx] = (
+                        self._can_apply_titan_elixir_position(pos)
+                    )
+            if self._hero_item_available(self.SUPREME_ELIXIR_ITEM_NAME):
+                for idx, pos in enumerate(self.SUPREME_ELIXIR_POSITIONS):
+                    mask[self.GRID_SUPREME_ELIXIR_ACTION_START + idx] = (
+                        self._can_apply_supreme_elixir_position(pos)
                     )
 
             # Лечение и воскрешение за золото доступны только на специальных клетках лечения.
@@ -2629,9 +4378,13 @@ class CampaignEnv(gym.Env):
         else:
             lines.append("Сундуки: нет")
         if self.heroitems:
-            lines.append(f"Предметы героя: {', '.join(self.heroitems)}")
+            lines.append(
+                "Предметы героя: "
+                + ", ".join(self._hero_item_display_name(entry) for entry in self.heroitems)
+            )
         else:
             lines.append("Предметы героя: нет")
+        lines.append(f"Доп. бутылей лечения: {max(0, int(self.extra_heal_bottles or 0))}")
         lines.append(f"Доп. банок исцеления: {max(0, int(self.extra_healing_bottles or 0))}")
         lines.append(f"Доп. зелий воскрешения: {max(0, int(self.extra_revive_bottles or 0))}")
         lines.append(
@@ -2674,12 +4427,17 @@ class CampaignEnv(gym.Env):
             "gold": self.gold,
             "moves": self.moves,
             "heroitems": list(self.heroitems),
+            "extra_heal_bottles": int(self.extra_heal_bottles or 0),
             "extra_healing_bottles": int(self.extra_healing_bottles or 0),
             "extra_revive_bottles": int(self.extra_revive_bottles or 0),
             "invulnerability_potions_left": self._count_hero_item(self.INVULNERABILITY_POTION_ITEM_NAME),
             "strength_potions_left": self._count_hero_item(self.STRENGTH_POTION_ITEM_NAME),
             "active_invulnerability_positions": sorted(self.active_invulnerability_potion_positions),
             "active_strength_positions": sorted(self.active_strength_potion_positions),
+            "merchant_stocks": {
+                site_name: self._merchant_stock_snapshot(site_name)
+                for site_name in self.merchant_stocks.keys()
+            },
             "chests_remaining": [
                 {"pos": pos, "items": list(item_names)}
                 for pos, item_names in sorted(self.chests.items())
