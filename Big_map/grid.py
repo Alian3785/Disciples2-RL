@@ -523,13 +523,15 @@ def _make_stack_override(
     enemy_id: int,
     position: Tuple[int, int],
     units: Tuple[str, ...],
+    *,
+    label: Optional[str] = None,
 ) -> dict[str, object]:
     front, back = _pack_stack_units(units)
     composition = ", ".join(units) if units else "(empty)"
     return {
         "enemy_id": int(enemy_id),
         "position": tuple(position),
-        "description": f"Отряд: {composition}",
+        "description": str(label) if label else f"Отряд: {composition}",
         "front": front,
         "back": back,
     }
@@ -557,6 +559,40 @@ VILLAGE_INTERNAL_GARRISON_OVERRIDES: tuple[dict[str, object], ...] = (
         "front": [None, "Зомби", None],
         "back": [None, "Воин", None],
     },
+)
+
+
+RUIN_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
+    _make_stack_override(
+        70,
+        (17, 11),
+        ("Орк", "Гоблин", "Гоблин"),
+        label="Руины (15, 9): Орк, Гоблин, Гоблин",
+    ),
+    _make_stack_override(
+        71,
+        (5, 22),
+        ("Привидение", "Привидение", "Виверна"),
+        label="Руины (3, 20): Привидение, Привидение, Виверна",
+    ),
+    _make_stack_override(
+        72,
+        (32, 24),
+        ("Привидение", "Привидение", "Некромант", "Зомби"),
+        label="Руины (30, 22): Привидение, Привидение, Некромант, Зомби",
+    ),
+    _make_stack_override(
+        73,
+        (21, 31),
+        ("Колдун", "Воин"),
+        label="Руины (19, 29): Колдун, Воин",
+    ),
+    _make_stack_override(
+        74,
+        (45, 36),
+        ("Лорд Тьмы", "Лич"),
+        label="Руины (43, 34): Лорд Тьмы, Лич",
+    ),
 )
 
 
@@ -600,6 +636,7 @@ ADDITIONAL_MAP_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
 ALL_MAP_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
     VILLAGE_LINKED_STACK_OVERRIDES
     + VILLAGE_INTERNAL_GARRISON_OVERRIDES
+    + RUIN_STACK_OVERRIDES
     + ADDITIONAL_MAP_STACK_OVERRIDES
 )
 

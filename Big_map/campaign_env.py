@@ -97,7 +97,7 @@ class CampaignEnv(gym.Env):
         - [0]: режим (0 = grid, 1 = battle)
         - [1:1+GRID_OBS_SIZE]: grid observation
           (базовые признаки + все enemy stacks + BLUE roster + ресурсы/инвентарь
-           + постройки + сундуки + клетки лечения + прогресс по целевым городам)
+           + постройки + сундуки + клетки лечения + руины + прогресс по целевым городам)
         - [...]: battle observation (когда в бою) или нули
         - [...]: ход и золото
 
@@ -229,14 +229,17 @@ class CampaignEnv(gym.Env):
     WATER_WARD_ITEM_NAME = "Эликсир защиты от магии Воды"
     AIR_WARD_ITEM_NAME = "Эликсир защиты от магии Воздуха"
     HASTE_ELIXIR_ITEM_NAME = "Эликсир быстроты"
+    RUIN_LIFE_ELIXIR_ITEM_NAME = "Эликсир Жизни"
+    RUIN_INVULNERABILITY_ELIXIR_ITEM_NAME = "Эликсир неуязвимости"
     TITAN_ELIXIR_ITEM_NAME = "Эликсир Силы титана"
     SUPREME_ELIXIR_ITEM_NAME = "Эликсир Всевышнего"
+    RING_OF_AGES_ITEM_NAME = "Кольцо веков (Артефакт)"
     ENERGY_ELIXIR_INITIATIVE_MULTIPLIER = 1.30
     HASTE_ELIXIR_INITIATIVE_MULTIPLIER = 1.60
     TITAN_ELIXIR_DAMAGE_MULTIPLIER = 1.10
     SUPREME_ELIXIR_HEALTH_MULTIPLIER = 1.15
     MERCHANT_BUY_ITEMS = (
-        {"name": "Эликсир Жизни", "price": 400.0, "stock": 10, "grant": "revive_bonus"},
+        {"name": RUIN_LIFE_ELIXIR_ITEM_NAME, "price": 400.0, "stock": 10, "grant": "revive_bonus"},
         {"name": "Эликсир исцеления", "price": 150.0, "stock": 10, "grant": "small_heal_bonus"},
         {"name": "Эликсир восстановления", "price": 300.0, "stock": 10, "grant": "large_heal_bonus"},
         {"name": "Целебная мазь", "price": 600.0, "stock": 10, "grant": "inventory"},
@@ -268,18 +271,68 @@ class CampaignEnv(gym.Env):
         BONUS_SMALL_HEAL_ITEM_NAME: 150,
         BONUS_LARGE_HEAL_ITEM_NAME: 300,
         BONUS_REVIVE_ITEM_NAME: 400,
+        RUIN_LIFE_ELIXIR_ITEM_NAME: 400,
+        RUIN_INVULNERABILITY_ELIXIR_ITEM_NAME: 700,
+        TITAN_ELIXIR_ITEM_NAME: 800,
+        SUPREME_ELIXIR_ITEM_NAME: 800,
+        RING_OF_AGES_ITEM_NAME: 3750,
     }
     AUTO_CONSUMED_CHEST_ITEMS = (
         BONUS_SMALL_HEAL_SOURCE_ITEM,
         BONUS_REVIVE_SOURCE_ITEM,
     )
     ENEMY_REWARD_MULTIPLIERS = {}
+    RUIN_REWARD_BY_ENEMY_ID: Dict[int, Dict[str, object]] = {
+        70: {
+            "title": "Замок орка",
+            "ruin_pos": (15, 9),
+            "marker_pos": (17, 11),
+            "item": TITAN_ELIXIR_ITEM_NAME,
+            "gold": 200,
+        },
+        71: {
+            "title": "Храм Мараши",
+            "ruin_pos": (3, 20),
+            "marker_pos": (5, 22),
+            "item": RUIN_INVULNERABILITY_ELIXIR_ITEM_NAME,
+            "gold": 300,
+        },
+        72: {
+            "title": "Руины (30, 22)",
+            "ruin_pos": (30, 22),
+            "marker_pos": (32, 24),
+            "item": RUIN_LIFE_ELIXIR_ITEM_NAME,
+            "gold": 300,
+        },
+        73: {
+            "title": "Руины Бритона",
+            "ruin_pos": (19, 29),
+            "marker_pos": (21, 31),
+            "item": SUPREME_ELIXIR_ITEM_NAME,
+            "gold": 150,
+        },
+        74: {
+            "title": "Замок Ху'Ларша",
+            "ruin_pos": (43, 34),
+            "marker_pos": (45, 36),
+            "item": RING_OF_AGES_ITEM_NAME,
+            "gold": 400,
+        },
+    }
+    RUIN_REWARD_ITEM_NAMES = frozenset(
+        {
+            str(reward_data.get("item", "") or "")
+            for reward_data in RUIN_REWARD_BY_ENEMY_ID.values()
+            if str(reward_data.get("item", "") or "")
+        }
+    )
 
     def __init__(
         self,
         grid_size: int = DEFAULT_GRID_SIZE,
         reward_engage_battle: float = 0.2,  # Бонус за вход в бой с живым врагом.
         reward_defeat_enemy: float = 1.0,   # Награда за победу в бою против каждого отряда
+        reward_ruin_clear_bonus: Optional[float] = None,  # Небольшой бонус сверху за зачистку руин
         reward_all_enemies: float = 10.0,   # База: 1-й целевой город = x1, 2-й = x5
         reward_loss: float = -5.0,          # Штраф за поражение кампании
         reward_timeout: float = -3.0,       # Штраф за таймаут (лимит шагов)
@@ -311,6 +364,9 @@ class CampaignEnv(gym.Env):
         self.grid_size = grid_size
         self.reward_engage_battle = reward_engage_battle  # Награда за участие в битве
         self.reward_defeat_enemy = reward_defeat_enemy    # Награда за победу в битве
+        if reward_ruin_clear_bonus is None:
+            reward_ruin_clear_bonus = max(0.1, float(reward_defeat_enemy) * 0.25)
+        self.reward_ruin_clear_bonus = max(0.0, float(reward_ruin_clear_bonus))
         self.reward_all_enemies = reward_all_enemies      # База награды за захват целевого города
         self.reward_loss = reward_loss
         self.reward_timeout = reward_timeout
@@ -418,6 +474,8 @@ class CampaignEnv(gym.Env):
         self.active_water_ward_positions: set[int] = set()
         self.active_air_ward_positions: set[int] = set()
         self.captured_objective_cities: set[str] = set()
+        self.cleared_ruin_enemy_ids: set[int] = set()
+        self.last_ruin_reward: Optional[Dict[str, object]] = None
         self._sync_grid_chest_positions()
         self._sync_grid_merchant_positions()
         self._init_campaign_grid_obs_metadata()
@@ -479,6 +537,8 @@ class CampaignEnv(gym.Env):
         self.active_air_ward_positions = set()
         self.combat_potion_battle_bonus_pending = False
         self.captured_objective_cities = set()
+        self.cleared_ruin_enemy_ids = set()
+        self.last_ruin_reward = None
         self.chests = dict(self._static_chests)
         self.castle_heal_tiles = self._static_castle_heal_tiles
         self.grid_env.enemy_positions = dict(self._static_enemy_positions)
@@ -521,6 +581,7 @@ class CampaignEnv(gym.Env):
             "combat_potion_battle_bonus_pending": bool(self.combat_potion_battle_bonus_pending),
             "chests_remaining": len(self.chests),
         }
+        info.update(self._ruin_progress_info())
         info.update(self._merchant_context_info(self.grid_env.agent_pos))
 
         return self._build_obs(grid_obs=grid_obs), info
@@ -846,6 +907,7 @@ class CampaignEnv(gym.Env):
         )
         finalized_info.setdefault("collected_chests", [])
         finalized_info["chests_remaining"] = len(self.chests)
+        finalized_info.update(self._ruin_progress_info())
         finalized_info.update(self._merchant_context_info(position))
 
         return (
@@ -1026,11 +1088,21 @@ class CampaignEnv(gym.Env):
     def _hero_item_display_name(self, entry: object) -> str:
         return self._hero_item_name(entry)
 
+    @classmethod
+    def _hero_item_aliases(cls, item_name: str) -> Tuple[str, ...]:
+        normalized_name = str(item_name or "")
+        aliases = {normalized_name}
+        if normalized_name == cls.INVULNERABILITY_POTION_ITEM_NAME:
+            aliases.add(cls.RUIN_INVULNERABILITY_ELIXIR_ITEM_NAME)
+        elif normalized_name == cls.RUIN_INVULNERABILITY_ELIXIR_ITEM_NAME:
+            aliases.add(cls.INVULNERABILITY_POTION_ITEM_NAME)
+        return tuple(aliases)
+
     def _count_hero_item(self, item_name: str) -> int:
         if not item_name:
             return 0
-        normalized_name = str(item_name)
-        return sum(1 for entry in self.heroitems if self._hero_item_name(entry) == normalized_name)
+        normalized_names = set(self._hero_item_aliases(item_name))
+        return sum(1 for entry in self.heroitems if self._hero_item_name(entry) in normalized_names)
 
     def _hero_item_available(self, item_name: str) -> bool:
         return self._count_hero_item(item_name) > 0
@@ -1038,8 +1110,9 @@ class CampaignEnv(gym.Env):
     def _consume_hero_item(self, item_name: str) -> bool:
         if not item_name:
             return False
+        normalized_names = set(self._hero_item_aliases(item_name))
         for idx, entry in enumerate(self.heroitems):
-            if self._hero_item_name(entry) == str(item_name):
+            if self._hero_item_name(entry) in normalized_names:
                 del self.heroitems[idx]
                 return True
         return False
@@ -1058,10 +1131,80 @@ class CampaignEnv(gym.Env):
             self.HEALING_OINTMENT_ITEM_NAME,
             self.BONUS_REVIVE_ITEM_NAME,
             self.INVULNERABILITY_POTION_ITEM_NAME,
+            self.RUIN_INVULNERABILITY_ELIXIR_ITEM_NAME,
             self.STRENGTH_POTION_ITEM_NAME,
             self.TITAN_ELIXIR_ITEM_NAME,
             self.SUPREME_ELIXIR_ITEM_NAME,
+            *self.RUIN_REWARD_ITEM_NAMES,
             *[str(item_data.get("name", "") or "") for item_data in self.MERCHANT_BUY_ITEMS],
+        }
+
+    def _ruin_progress_info(self) -> Dict[str, object]:
+        last_reward = None
+        if isinstance(self.last_ruin_reward, dict):
+            last_reward = dict(self.last_ruin_reward)
+        return {
+            "ruins_cleared": int(len(self.cleared_ruin_enemy_ids)),
+            "ruins_total": int(len(self.RUIN_REWARD_BY_ENEMY_ID)),
+            "cleared_ruin_enemy_ids": sorted(int(enemy_id) for enemy_id in self.cleared_ruin_enemy_ids),
+            "last_ruin_reward": last_reward,
+        }
+
+    def _grant_ruin_reward(self, enemy_id: Optional[int]) -> Dict[str, object]:
+        reward_data = self.RUIN_REWARD_BY_ENEMY_ID.get(int(enemy_id or -1))
+        if reward_data is None:
+            return {
+                "ruin_cleared": False,
+                "ruin_reward_applied": False,
+                **self._ruin_progress_info(),
+            }
+
+        ruin_enemy_id = int(enemy_id or -1)
+        ruin_title = str(reward_data.get("title", "") or "")
+        item_name = str(reward_data.get("item", "") or "")
+        gold_reward = max(0.0, float(reward_data.get("gold", 0.0) or 0.0))
+        ruin_pos = tuple(int(v) for v in tuple(reward_data.get("ruin_pos", ())))
+        marker_pos = tuple(int(v) for v in tuple(reward_data.get("marker_pos", ())))
+
+        if ruin_enemy_id in self.cleared_ruin_enemy_ids:
+            return {
+                "ruin_cleared": False,
+                "ruin_reward_applied": False,
+                "ruin_reward_enemy_id": ruin_enemy_id,
+                "ruin_reward_title": ruin_title,
+                **self._ruin_progress_info(),
+            }
+
+        self.cleared_ruin_enemy_ids.add(ruin_enemy_id)
+        self.gold = max(0.0, float(self.gold or 0.0)) + gold_reward
+        if item_name:
+            self.heroitems.append(self._make_hero_item_entry(item_name))
+
+        self.last_ruin_reward = {
+            "enemy_id": ruin_enemy_id,
+            "title": ruin_title,
+            "item": item_name,
+            "gold": gold_reward,
+            "ruin_position": ruin_pos,
+            "marker_position": marker_pos,
+        }
+
+        ruin_label = ruin_title or f"Руины {ruin_pos}"
+        reward_parts = [f"+{gold_reward:g} gold"]
+        if item_name:
+            reward_parts.append(item_name)
+        self._log(f"{ruin_label}: получено {', '.join(reward_parts)}")
+
+        return {
+            "ruin_cleared": True,
+            "ruin_reward_applied": True,
+            "ruin_reward_enemy_id": ruin_enemy_id,
+            "ruin_reward_title": ruin_title,
+            "ruin_reward_item": item_name,
+            "ruin_reward_gold": gold_reward,
+            "ruin_reward_ruin_pos": ruin_pos,
+            "ruin_reward_marker_pos": marker_pos,
+            **self._ruin_progress_info(),
         }
 
     def _is_sell_only_hero_item(self, entry: object) -> bool:
@@ -2603,9 +2746,16 @@ class CampaignEnv(gym.Env):
             if winner == "blue":
                 exp_reward, exp_raw = self._compute_blue_exp_reward()
                 survival_reward, blue_alive_ratio, blue_hp_ratio = self._compute_blue_survival_reward()
+                ruin_clear_bonus_reward = (
+                    float(self.reward_ruin_clear_bonus)
+                    if int(self.current_enemy_id or -1) in self.RUIN_REWARD_BY_ENEMY_ID
+                    else 0.0
+                )
                 enemy_reward = self._compute_enemy_defeat_reward(self.current_enemy_id)
                 reward += enemy_reward + exp_reward + survival_reward
                 info["enemy_defeat_reward"] = enemy_reward
+                info["enemy_defeat_reward_base"] = float(self.reward_defeat_enemy)
+                info["ruin_clear_bonus_reward"] = float(ruin_clear_bonus_reward)
                 info["blue_exp_reward"] = exp_reward
                 info["blue_exp_raw"] = exp_raw
                 info["blue_survival_reward"] = survival_reward
@@ -2631,6 +2781,7 @@ class CampaignEnv(gym.Env):
                 reward += upgrade_reward
                 info["unit_upgrades"] = int(upgrade_count)
                 info["unit_upgrade_reward"] = float(upgrade_reward)
+                info.update(self._grant_ruin_reward(self.current_enemy_id))
 
                 # Возвращаемся в grid режим
                 self.mode = self.MODE_GRID
@@ -3412,7 +3563,14 @@ class CampaignEnv(gym.Env):
 
     def _compute_enemy_defeat_reward(self, enemy_id: Optional[int]) -> float:
         """Фиксированная награда за победу над каждым вражеским отрядом."""
-        return float(self.reward_defeat_enemy)
+        reward = float(self.reward_defeat_enemy)
+        try:
+            normalized_enemy_id = int(enemy_id)
+        except (TypeError, ValueError):
+            normalized_enemy_id = -1
+        if normalized_enemy_id in self.RUIN_REWARD_BY_ENEMY_ID:
+            reward += float(self.reward_ruin_clear_bonus)
+        return reward
 
     @classmethod
     def is_final_objective_enemy_id(cls, enemy_id: Optional[int]) -> bool:
@@ -3740,6 +3898,17 @@ class CampaignEnv(gym.Env):
             len(self.grid_heal_tile_positions) * self.grid_heal_tile_features_per_entry
         )
 
+        self.grid_ruin_positions = tuple(
+            sorted(
+                tuple(int(coord) for coord in tuple(reward_data.get("ruin_pos", (0, 0)))[:2])
+                for reward_data in self.RUIN_REWARD_BY_ENEMY_ID.values()
+            )
+        )
+        self.grid_ruin_features_per_entry = 2
+        self.grid_ruin_obs_size = (
+            len(self.grid_ruin_positions) * self.grid_ruin_features_per_entry
+        )
+
         self.grid_objective_city_names = tuple(self.FINAL_OBJECTIVE_CITIES.keys())
         self.grid_objective_city_features_per_entry = 4
         self.grid_objective_city_obs_size = (
@@ -3809,6 +3978,7 @@ class CampaignEnv(gym.Env):
             + self.grid_building_obs_size
             + self.grid_chest_obs_size
             + self.grid_heal_tile_obs_size
+            + self.grid_ruin_obs_size
             + self.grid_objective_city_obs_size
         )
 
@@ -4017,6 +4187,16 @@ class CampaignEnv(gym.Env):
             heal_obs.extend([tile_pos[0] / grid_scale, tile_pos[1] / grid_scale])
         return np.array(heal_obs, dtype=np.float32)
 
+    def _build_ruin_grid_obs(self) -> np.ndarray:
+        if self.grid_ruin_obs_size <= 0:
+            return np.zeros(0, dtype=np.float32)
+
+        grid_scale = max(1, self.grid_env.grid_size - 1)
+        ruin_obs: List[float] = []
+        for ruin_pos in self.grid_ruin_positions:
+            ruin_obs.extend([ruin_pos[0] / grid_scale, ruin_pos[1] / grid_scale])
+        return np.array(ruin_obs, dtype=np.float32)
+
     def _build_objective_city_grid_obs(self) -> np.ndarray:
         if self.grid_objective_city_obs_size <= 0:
             return np.zeros(0, dtype=np.float32)
@@ -4071,6 +4251,7 @@ class CampaignEnv(gym.Env):
                 self._build_building_grid_obs(),
                 self._build_chest_grid_obs(),
                 self._build_heal_tiles_grid_obs(),
+                self._build_ruin_grid_obs(),
                 self._build_objective_city_grid_obs(),
             ]
         )
