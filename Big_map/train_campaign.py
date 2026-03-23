@@ -74,6 +74,7 @@ REWARD_CONFIG = {
     "battle_reward_win": 2.0,
     "battle_reward_loss": -1.0,
     "battle_reward_step": 0.01,
+    "reward_sell_junk_item": 0.05,
 }
 
 REQUIRED_COMET_VERSION = (3, 57, 0)
@@ -495,6 +496,10 @@ class CampaignMetricsCallback(BaseCallback):
         self.episode_chests_collected: list[float] = []
         self.recent_chests_collected = deque(maxlen=self.episode_window)
         self.recent_chest_episode_flags = deque(maxlen=self.episode_window)
+        self.episode_sold_items: list[float] = []
+        self.recent_sold_items = deque(maxlen=self.episode_window)
+        self.recent_sale_episode_flags = deque(maxlen=self.episode_window)
+        self.recent_sale_gold = deque(maxlen=self.episode_window)
         self.recent_turns = deque(maxlen=self.step_window)
         self.recent_gold = deque(maxlen=self.step_window)
         self.recent_moves = deque(maxlen=self.step_window)
@@ -515,12 +520,17 @@ class CampaignMetricsCallback(BaseCallback):
         self.castle_heal_episodes = 0
         self.total_chests_collected = 0
         self.chest_collection_episodes = 0
+        self.total_sold_items = 0
+        self.total_merchant_sale_gold = 0.0
+        self.sale_episodes = 0
         self.best_recent_victory_rate = 0.0
         self._last_logged_step = 0
         self._episode_castle_heal_uses: list[int] = []
         self._episode_castle_heal_flags: list[bool] = []
         self._episode_castle_healed_hp: list[float] = []
         self._episode_chests_collected: list[int] = []
+        self._episode_sold_items: list[int] = []
+        self._episode_sale_gold: list[float] = []
 
     def _append_recent_stat(self, info: dict[str, Any], key: str, target: deque) -> None:
         value = info.get(key)
@@ -539,6 +549,8 @@ class CampaignMetricsCallback(BaseCallback):
         self._episode_castle_heal_flags.extend([False] * missing)
         self._episode_castle_healed_hp.extend([0.0] * missing)
         self._episode_chests_collected.extend([0] * missing)
+        self._episode_sold_items.extend([0] * missing)
+        self._episode_sale_gold.extend([0.0] * missing)
 
     def _consume_castle_heal(self, info: dict[str, Any], env_index: int) -> None:
         if not info.get("castle_heal_action"):
@@ -602,6 +614,56 @@ class CampaignMetricsCallback(BaseCallback):
 
         self._episode_chests_collected[env_index] = 0
 
+    def _consume_merchant_sales(self, info: dict[str, Any], env_index: int) -> None:
+        try:
+            sold_items = int(info.get("merchant_sold_items_count", 0) or 0)
+        except (TypeError, ValueError):
+            sold_items = 0
+        try:
+            sale_gold = float(info.get("merchant_sale_gold", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            sale_gold = 0.0
+
+        if sold_items <= 0 and sale_gold <= 0.0:
+            return
+
+        self.total_sold_items += max(0, sold_items)
+        self.total_merchant_sale_gold += max(0.0, sale_gold)
+        self._episode_sold_items[env_index] += max(0, sold_items)
+        self._episode_sale_gold[env_index] += max(0.0, sale_gold)
+
+    def _finalize_episode_sales(self, env_index: int) -> None:
+        sold_items = float(self._episode_sold_items[env_index])
+        sale_gold = float(self._episode_sale_gold[env_index])
+        sold_flag = sold_items > 0.0 or sale_gold > 0.0
+
+        self.episode_sold_items.append(sold_items)
+        self.recent_sold_items.append(sold_items)
+        self.recent_sale_episode_flags.append(1.0 if sold_flag else 0.0)
+        self.recent_sale_gold.append(sale_gold)
+        if sold_flag:
+            self.sale_episodes += 1
+
+        if self.experiment is not None:
+            self.experiment.log_metric(
+                "campaign/episode_sold_items",
+                sold_items,
+                step=self.num_timesteps,
+            )
+            self.experiment.log_metric(
+                "campaign/episode_merchant_sale_gold",
+                sale_gold,
+                step=self.num_timesteps,
+            )
+        model = getattr(self, "model", None)
+        logger = getattr(model, "logger", None)
+        if logger is not None:
+            logger.record("campaign/episode_sold_items", sold_items)
+            logger.record("campaign/episode_merchant_sale_gold", sale_gold)
+
+        self._episode_sold_items[env_index] = 0
+        self._episode_sale_gold[env_index] = 0.0
+
     def _record_window_metrics(self, infos: list[dict[str, Any]]) -> None:
         turns = []
         gold = []
@@ -636,6 +698,7 @@ class CampaignMetricsCallback(BaseCallback):
         if env_index is not None:
             self._consume_castle_heal(info, env_index)
             self._consume_chests(info, env_index)
+            self._consume_merchant_sales(info, env_index)
 
         episode = info.get("episode")
         if isinstance(episode, dict):
@@ -652,6 +715,7 @@ class CampaignMetricsCallback(BaseCallback):
             if env_index is not None:
                 self._finalize_episode_castle_heal(env_index)
                 self._finalize_episode_chests(env_index)
+                self._finalize_episode_sales(env_index)
 
         campaign_result = info.get("campaign_result")
         if campaign_result:
@@ -738,6 +802,20 @@ class CampaignMetricsCallback(BaseCallback):
                 self.chest_collection_episodes,
                 total_episodes,
             ),
+            "campaign/sold_items_total": float(self.total_sold_items),
+            "campaign/sold_items_per_episode_mean": _safe_rate(
+                self.total_sold_items,
+                total_episodes,
+            ),
+            "campaign/merchant_sale_gold_total": float(self.total_merchant_sale_gold),
+            "campaign/merchant_sale_gold_per_episode_mean": _safe_rate(
+                self.total_merchant_sale_gold,
+                total_episodes,
+            ),
+            "campaign/sale_episodes_rate": _safe_rate(
+                self.sale_episodes,
+                total_episodes,
+            ),
             "campaign/recent_episodes": float(len(self.recent_episode_rewards)),
             "campaign/recent_episode_reward_mean": _safe_mean(self.recent_episode_rewards),
             "campaign/recent_episode_length_mean": _safe_mean(self.recent_episode_lengths),
@@ -755,6 +833,11 @@ class CampaignMetricsCallback(BaseCallback):
             "campaign/recent_chest_collection_episodes_rate": _safe_mean(
                 self.recent_chest_episode_flags
             ),
+            "campaign/recent_sold_items_mean": _safe_mean(self.recent_sold_items),
+            "campaign/recent_sale_episodes_rate": _safe_mean(
+                self.recent_sale_episode_flags
+            ),
+            "campaign/recent_merchant_sale_gold_mean": _safe_mean(self.recent_sale_gold),
             "campaign/recent_turns_mean": _safe_mean(self.recent_turns),
             "campaign/recent_gold_mean": _safe_mean(self.recent_gold),
             "campaign/recent_moves_mean": _safe_mean(self.recent_moves),
@@ -774,6 +857,7 @@ class CampaignMetricsCallback(BaseCallback):
                 window_battles,
             ),
             "campaign/window/chests_collected_mean": _safe_mean(self.recent_chests_collected),
+            "campaign/window/sold_items_mean": _safe_mean(self.recent_sold_items),
             "campaign/best_recent_victory_rate": self.best_recent_victory_rate,
         }
 
@@ -806,6 +890,18 @@ class CampaignMetricsCallback(BaseCallback):
             logger.record(
                 "campaign/chest_collection_episodes_rate",
                 payload["campaign/chest_collection_episodes_rate"],
+            )
+            logger.record(
+                "campaign/recent_sold_items_mean",
+                payload["campaign/recent_sold_items_mean"],
+            )
+            logger.record(
+                "campaign/sold_items_per_episode_mean",
+                payload["campaign/sold_items_per_episode_mean"],
+            )
+            logger.record(
+                "campaign/merchant_sale_gold_per_episode_mean",
+                payload["campaign/merchant_sale_gold_per_episode_mean"],
             )
 
         if self.experiment is not None:
@@ -878,6 +974,45 @@ class CampaignMetricsCallback(BaseCallback):
         ax.set_title("Collected Chests Per Episode")
         ax.set_xlabel("Episode")
         ax.set_ylabel("Chests")
+        ax.grid(True, alpha=0.25, linewidth=0.6)
+        ax.legend(loc="upper right")
+        fig.tight_layout()
+        fig.savefig(target, dpi=160)
+        plt.close(fig)
+        return target
+
+    def save_sold_items_per_episode_plot(self, path: str | os.PathLike[str]) -> Path | None:
+        if not self.episode_sold_items:
+            return None
+
+        import matplotlib.pyplot as plt
+
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+        episodes = np.arange(1, len(self.episode_sold_items) + 1)
+        sold_counts = np.asarray(self.episode_sold_items, dtype=float)
+
+        fig, ax = plt.subplots(figsize=(10, 4.5))
+        ax.plot(episodes, sold_counts, color="#8C1C13", linewidth=1.6, label="Sold items per episode")
+        ax.fill_between(episodes, sold_counts, color="#D95D39", alpha=0.28)
+
+        if len(sold_counts) >= 5:
+            window = min(25, len(sold_counts))
+            kernel = np.ones(window, dtype=float) / float(window)
+            rolling = np.convolve(sold_counts, kernel, mode="valid")
+            rolling_x = episodes[window - 1 :]
+            ax.plot(
+                rolling_x,
+                rolling,
+                color="#2F4858",
+                linewidth=2.0,
+                label=f"Rolling mean ({window})",
+            )
+
+        ax.set_title("Sold Merchant Items Per Episode")
+        ax.set_xlabel("Episode")
+        ax.set_ylabel("Items sold")
         ax.grid(True, alpha=0.25, linewidth=0.6)
         ax.legend(loc="upper right")
         fig.tight_layout()
@@ -1070,6 +1205,7 @@ if __name__ == "__main__":
     model = MaskablePPO(
         policy="MlpPolicy",
         env=vec_env,
+        device="cpu",
         verbose=1,
         n_steps=2048,
         batch_size=256,
@@ -1163,6 +1299,11 @@ if __name__ == "__main__":
     saved_chests_plot = metrics_cb.save_chests_per_episode_plot(chests_plot_path)
     if saved_chests_plot is not None:
         print(f"  График сундуков: {saved_chests_plot}")
+
+    sold_items_plot_path = BASE_DIR / "outputs" / "campaign_sold_items_per_episode.png"
+    saved_sold_items_plot = metrics_cb.save_sold_items_per_episode_plot(sold_items_plot_path)
+    if saved_sold_items_plot is not None:
+        print(f"  График продаж: {saved_sold_items_plot}")
 
     if COMET_AVAILABLE and comet_experiment is not None:
         try:

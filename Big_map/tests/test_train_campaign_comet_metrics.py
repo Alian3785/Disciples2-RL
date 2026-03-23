@@ -58,6 +58,8 @@ def test_campaign_metrics_callback_logs_custom_metrics(monkeypatch):
                 "enemy_defeat_reward": 4.0,
                 "blue_exp_reward": 1.5,
                 "final_objective_reward": 2.5,
+                "merchant_sold_items_count": 3,
+                "merchant_sale_gold": 3650.0,
                 "episode": {"r": 12.0, "l": 123},
                 "turns": 12,
                 "gold": 120,
@@ -84,16 +86,27 @@ def test_campaign_metrics_callback_logs_custom_metrics(monkeypatch):
     assert payload["campaign/chests_collected_total"] == 2.0
     assert payload["campaign/chests_collected_per_episode_mean"] == 2.0
     assert payload["campaign/chest_collection_episodes_rate"] == 1.0
+    assert payload["campaign/sold_items_total"] == 3.0
+    assert payload["campaign/sold_items_per_episode_mean"] == 3.0
+    assert payload["campaign/merchant_sale_gold_total"] == 3650.0
+    assert payload["campaign/merchant_sale_gold_per_episode_mean"] == 3650.0
+    assert payload["campaign/sale_episodes_rate"] == 1.0
     assert payload["campaign/recent_castle_heal_uses_mean"] == 1.0
     assert payload["campaign/recent_castle_heal_episodes_rate"] == 1.0
     assert payload["campaign/recent_castle_healed_hp_mean"] == 37.5
     assert payload["campaign/recent_chests_collected_mean"] == 2.0
     assert payload["campaign/recent_chest_collection_episodes_rate"] == 1.0
+    assert payload["campaign/recent_sold_items_mean"] == 3.0
+    assert payload["campaign/recent_sale_episodes_rate"] == 1.0
+    assert payload["campaign/recent_merchant_sale_gold_mean"] == 3650.0
     assert payload["campaign/window/chests_collected_mean"] == 2.0
+    assert payload["campaign/window/sold_items_mean"] == 3.0
     assert "campaign/window_enemy_encounters/enemy_31" not in payload
     assert "campaign/window_enemy_victories/enemy_31" not in payload
     assert payload["campaign/window_victory_reasons/objective_cities_cleared"] == 1.0
     assert ("campaign/episode_chests_collected", 2.0, 1000) in dummy_experiment.metric_logged
+    assert ("campaign/episode_sold_items", 3.0, 1000) in dummy_experiment.metric_logged
+    assert ("campaign/episode_merchant_sale_gold", 3650.0, 1000) in dummy_experiment.metric_logged
     assert dummy_experiment.others["summary_campaign_victory_rate"] == 1.0
 
 
@@ -144,12 +157,21 @@ def test_campaign_metrics_callback_flushes_partial_window_on_training_end():
     assert payload["campaign/chests_collected_total"] == 0.0
     assert payload["campaign/chests_collected_per_episode_mean"] == 0.0
     assert payload["campaign/chest_collection_episodes_rate"] == 0.0
+    assert payload["campaign/sold_items_total"] == 0.0
+    assert payload["campaign/sold_items_per_episode_mean"] == 0.0
+    assert payload["campaign/merchant_sale_gold_total"] == 0.0
+    assert payload["campaign/merchant_sale_gold_per_episode_mean"] == 0.0
+    assert payload["campaign/sale_episodes_rate"] == 0.0
     assert payload["campaign/recent_castle_heal_uses_mean"] == 0.0
     assert payload["campaign/recent_castle_heal_episodes_rate"] == 0.0
     assert payload["campaign/recent_castle_healed_hp_mean"] == 0.0
     assert payload["campaign/recent_chests_collected_mean"] == 0.0
     assert payload["campaign/recent_chest_collection_episodes_rate"] == 0.0
+    assert payload["campaign/recent_sold_items_mean"] == 0.0
+    assert payload["campaign/recent_sale_episodes_rate"] == 0.0
+    assert payload["campaign/recent_merchant_sale_gold_mean"] == 0.0
     assert payload["campaign/window/chests_collected_mean"] == 0.0
+    assert payload["campaign/window/sold_items_mean"] == 0.0
     assert payload["campaign/window/battle_win_rate"] == 0.0
     assert "campaign/window_enemy_encounters/enemy_7" not in payload
     assert "campaign/window_enemy_defeats/enemy_7" not in payload
@@ -162,6 +184,18 @@ def test_campaign_metrics_callback_saves_chests_plot(tmp_path):
 
     output_path = tmp_path / "campaign_chests_per_episode.png"
     saved_path = callback.save_chests_per_episode_plot(output_path)
+
+    assert saved_path == output_path
+    assert output_path.exists()
+    assert output_path.stat().st_size > 0
+
+
+def test_campaign_metrics_callback_saves_sold_items_plot(tmp_path):
+    callback = CampaignMetricsCallback(log_freq=1000, episode_window=4, experiment=None)
+    callback.episode_sold_items = [0.0, 1.0, 3.0, 2.0]
+
+    output_path = tmp_path / "campaign_sold_items_per_episode.png"
+    saved_path = callback.save_sold_items_per_episode_plot(output_path)
 
     assert saved_path == output_path
     assert output_path.exists()
