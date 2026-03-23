@@ -761,6 +761,7 @@ class CampaignVisualizer:
     COLOR_VILLAGE_EDGE = (0.00, 0.50, 0.58, 0.98)
     COLOR_SETTLEMENT_CORNER_FILL = (1.0, 0.25, 0.62, 0.82)
     COLOR_SETTLEMENT_CORNER_EDGE = (0.58, 0.05, 0.30, 0.98)
+    COLOR_RUIN_EDGE = (0.82, 0.05, 0.05, 0.98)
     CASTLE_POS = DEFAULT_HERO_GRID_POSITION
 
     def __init__(
@@ -778,8 +779,10 @@ class CampaignVisualizer:
         self.background_image = None
         self.capital_overlays: list[dict] = []
         self.village_overlays: list[dict] = []
+        self.ruin_overlays: list[dict] = []
         self._load_background_image()
         self._load_settlement_overlays()
+        self._load_ruin_overlays()
 
         # Создаём фигуру
         self.fig, self.ax = plt.subplots(figsize=(10, 10))
@@ -1008,6 +1011,79 @@ class CampaignVisualizer:
                 zorder=2.5,
             )
 
+    def _load_ruin_overlays(self) -> None:
+        if not self.scenario_path or extract_render_objects is None:
+            return
+        try:
+            data = Path(self.scenario_path).read_bytes()
+            render_objects = extract_render_objects(data)
+        except Exception as exc:
+            print(f"[WARN] Failed to load ruin overlays from {self.scenario_path}: {exc}")
+            return
+
+        overlays = []
+        spec = RENDER_OBJECT_SPECS.get(".?AVCMidRuin@@", {})
+        width, height = spec.get("footprint", (3, 3))
+        for ruin in render_objects.get(".?AVCMidRuin@@", []):
+            try:
+                x = int(ruin["x"])
+                y = int(ruin["y"])
+            except Exception:
+                continue
+            overlays.append(
+                {
+                    "x": x,
+                    "y": y,
+                    "width": int(width),
+                    "height": int(height),
+                }
+            )
+        self.ruin_overlays = sorted(overlays, key=lambda overlay: (overlay["y"], overlay["x"]))
+
+    def _draw_ruin_overlays(self) -> None:
+        for overlay in self.ruin_overlays:
+            x = int(overlay["x"])
+            y = int(overlay["y"])
+            width = int(overlay["width"])
+            height = int(overlay["height"])
+            draw_x, draw_y, draw_w, draw_h = self._display_rect(x, y, width, height)
+            ruin_rect = patches.Rectangle(
+                (draw_x - 0.5, draw_y - 0.5),
+                draw_w,
+                draw_h,
+                facecolor="none",
+                edgecolor=self.COLOR_RUIN_EDGE,
+                linewidth=2.0,
+                linestyle="--",
+                zorder=2.66,
+            )
+            self.ax.add_patch(ruin_rect)
+
+            marker_x = x + max(0, width - 1)
+            marker_y = y + max(0, height - 1)
+            coord_draw_x, coord_draw_y = self._display_tile(marker_x, marker_y)
+            coord_rect = patches.Rectangle(
+                (coord_draw_x - 0.42, coord_draw_y - 0.42),
+                0.84,
+                0.84,
+                facecolor=(0.95, 0.12, 0.12, 0.18),
+                edgecolor=self.COLOR_RUIN_EDGE,
+                linewidth=2.0,
+                zorder=2.74,
+            )
+            self.ax.add_patch(coord_rect)
+            self.ax.text(
+                coord_draw_x,
+                coord_draw_y,
+                "Р",
+                ha="center",
+                va="center",
+                fontsize=10,
+                fontweight="bold",
+                color=self.COLOR_RUIN_EDGE,
+                zorder=2.82,
+            )
+
     def draw_grid(
         self,
         agent_pos: tuple,
@@ -1035,6 +1111,9 @@ class CampaignVisualizer:
         hero_name: str = "",
         hero_level: int = 0,
         hero_abilities: list | None = None,
+        ruins_cleared: int = 0,
+        ruins_total: int = 0,
+        last_ruin_reward: dict | None = None,
     ):
         """Отрисовка карты."""
         self.ax.clear()
@@ -1121,16 +1200,6 @@ class CampaignVisualizer:
                 except Exception:
                     continue
                 draw_y, draw_x, draw_h, draw_w = self._display_rect(anchor_x, anchor_y, 3, 3)
-                merchant_site_rect = patches.Rectangle(
-                    (draw_x - 0.5, draw_y - 0.5),
-                    draw_w,
-                    draw_h,
-                    facecolor=self.COLOR_MERCHANT_SITE_FILL,
-                    edgecolor=self.COLOR_MERCHANT_SITE_EDGE,
-                    linewidth=2.4,
-                    zorder=2.58,
-                )
-                self.ax.add_patch(merchant_site_rect)
                 marker_x = anchor_x + 2
                 marker_y = anchor_y + 2
                 anchor_draw_x, anchor_draw_y = self._display_tile(marker_x, marker_y)
@@ -1220,6 +1289,8 @@ class CampaignVisualizer:
                     alpha=0.7,
                 )
 
+        self._draw_ruin_overlays()
+
         # Враги
         for enemy_id, (ex, ey) in enemy_positions.items():
             draw_x, draw_y = self._display_tile(int(ex), int(ey))
@@ -1303,6 +1374,39 @@ class CampaignVisualizer:
         info_lines.append(f"Merchant tiles: {merchant_count}")
         chest_count = len(chest_positions) if chest_positions else 0
         info_lines.append(f"Сундуки: {chest_count}")
+        try:
+            ruins_cleared = max(0, int(ruins_cleared or 0))
+        except (TypeError, ValueError):
+            ruins_cleared = 0
+        try:
+            ruins_total = max(0, int(ruins_total or 0))
+        except (TypeError, ValueError):
+            ruins_total = 0
+        if ruins_total > 0:
+            info_lines.append(f"Руины: {ruins_cleared}/{ruins_total}")
+            ruin_reward_data = dict(last_ruin_reward or {})
+            if ruin_reward_data:
+                ruin_title = str(ruin_reward_data.get("title", "") or "").strip()
+                if not ruin_title:
+                    ruin_pos = ruin_reward_data.get("ruin_position")
+                    if isinstance(ruin_pos, (list, tuple)) and len(ruin_pos) >= 2:
+                        ruin_title = f"Руины ({int(ruin_pos[0])}, {int(ruin_pos[1])})"
+                ruin_item = str(ruin_reward_data.get("item", "") or "").strip()
+                try:
+                    ruin_gold = max(0.0, float(ruin_reward_data.get("gold", 0.0) or 0.0))
+                except (TypeError, ValueError):
+                    ruin_gold = 0.0
+                if ruin_title:
+                    info_lines.append(f"Последняя руина: {ruin_title}")
+                reward_parts = []
+                if ruin_gold > 0.0:
+                    reward_parts.append(f"+{ruin_gold:g} gold")
+                if ruin_item:
+                    reward_parts.append(ruin_item)
+                if reward_parts:
+                    info_lines.append(f"Добыча руин: {', '.join(reward_parts)}")
+            else:
+                info_lines.append("Последняя руина: нет")
         heroitems = list(heroitems or [])
         if heroitems:
             def _hero_item_label(entry):
@@ -1615,6 +1719,9 @@ def run_campaign_visualization(
                 hero_name=hero_name,
                 hero_level=hero_level,
                 hero_abilities=hero_abilities,
+                ruins_cleared=len(getattr(env_base, "cleared_ruin_enemy_ids", ())),
+                ruins_total=len(getattr(env_base, "RUIN_REWARD_BY_ENEMY_ID", {})),
+                last_ruin_reward=getattr(env_base, "last_ruin_reward", None),
             )
 
             # Проверяем, был ли только что бой
@@ -1677,6 +1784,9 @@ def run_campaign_visualization(
                     hero_name=hero_name,
                     hero_level=hero_level,
                     hero_abilities=hero_abilities,
+                    ruins_cleared=len(getattr(env_base, "cleared_ruin_enemy_ids", ())),
+                    ruins_total=len(getattr(env_base, "RUIN_REWARD_BY_ENEMY_ID", {})),
+                    last_ruin_reward=getattr(env_base, "last_ruin_reward", None),
                 )
                 grid_viz.show_battle_start(enemy_id)
                 time.sleep(delay * 2)
@@ -1810,6 +1920,9 @@ def run_campaign_visualization(
         hero_name=hero_name,
         hero_level=hero_level,
         hero_abilities=hero_abilities,
+        ruins_cleared=len(getattr(env_base, "cleared_ruin_enemy_ids", ())),
+        ruins_total=len(getattr(env_base, "RUIN_REWARD_BY_ENEMY_ID", {})),
+        last_ruin_reward=getattr(env_base, "last_ruin_reward", None),
     )
 
     # Закрываем визуализатор боя если открыт
