@@ -746,6 +746,8 @@ class CampaignVisualizer:
     COLOR_UNVISITED = (0.95, 0.95, 0.95, 1.0)
     COLOR_PATH = (0.3, 0.6, 0.9, 0.6)
     COLOR_CASTLE = (1.0, 0.92, 0.2, 0.55)
+    COLOR_LEGIONS_TERRITORY = (0.78, 0.16, 0.12, 0.14)
+    COLOR_EMPIRE_TERRITORY = (0.18, 0.52, 0.20, 0.14)
     COLOR_OBSTACLE = (0.55, 0.55, 0.55, 0.9)
     COLOR_CHEST_FILL = (0.62, 0.40, 0.12, 0.95)
     COLOR_CHEST_EDGE = (0.30, 0.16, 0.02, 1.0)
@@ -1154,6 +1156,8 @@ class CampaignVisualizer:
         title: str = "",
         highlight_battle: int = None,
         castle_heal_tiles: list | tuple | None = None,
+        legions_territory_tiles: list | tuple | set | None = None,
+        empire_territory_tiles: list | tuple | set | None = None,
         obstacle_tiles: list | tuple | set | None = None,
         merchant_positions: list | tuple | set | dict | None = None,
         merchant_site_anchors: list | tuple | set | dict | None = None,
@@ -1200,6 +1204,36 @@ class CampaignVisualizer:
                 edgecolor="none",
             )
             self.ax.add_patch(rect)
+
+        if legions_territory_tiles:
+            for tile in legions_territory_tiles:
+                try:
+                    lx, ly = int(tile[0]), int(tile[1])
+                except Exception:
+                    continue
+                draw_x, draw_y = self._display_tile(lx, ly)
+                territory_rect = patches.Rectangle(
+                    (draw_x - 0.45, draw_y - 0.45), 0.9, 0.9,
+                    facecolor=self.COLOR_LEGIONS_TERRITORY,
+                    edgecolor="none",
+                    zorder=1.6,
+                )
+                self.ax.add_patch(territory_rect)
+
+        if empire_territory_tiles:
+            for tile in empire_territory_tiles:
+                try:
+                    ex, ey = int(tile[0]), int(tile[1])
+                except Exception:
+                    continue
+                draw_x, draw_y = self._display_tile(ex, ey)
+                territory_rect = patches.Rectangle(
+                    (draw_x - 0.45, draw_y - 0.45), 0.9, 0.9,
+                    facecolor=self.COLOR_EMPIRE_TERRITORY,
+                    edgecolor="none",
+                    zorder=1.62,
+                )
+                self.ax.add_patch(territory_rect)
 
         if obstacle_tiles:
             for tile in obstacle_tiles:
@@ -1435,6 +1469,10 @@ class CampaignVisualizer:
         merchant_count = len(merchant_positions) if merchant_positions else 0
         info_lines.append(f"Merchant tiles: {merchant_count}")
         chest_count = len(chest_positions) if chest_positions else 0
+        legions_territory_count = len(legions_territory_tiles) if legions_territory_tiles else 0
+        empire_territory_count = len(empire_territory_tiles) if empire_territory_tiles else 0
+        info_lines.append(f"Legions territory: {legions_territory_count}")
+        info_lines.append(f"Empire territory: {empire_territory_count}")
         info_lines.append(f"Сундуки: {chest_count}")
         try:
             ruins_cleared = max(0, int(ruins_cleared or 0))
@@ -1509,6 +1547,8 @@ class CampaignVisualizer:
         total_enemies = len(enemies_alive)
         defeated_count = total_enemies - alive_count
         legend_text += f" | Enemies: {defeated_count}/{total_enemies} defeated"
+        legend_text += f" | Legions: {legions_territory_count}"
+        legend_text += f" | Empire: {empire_territory_count}"
         self.ax.set_xlabel(legend_text, fontsize=11)
 
         # Убираем оси
@@ -1763,6 +1803,8 @@ def run_campaign_visualization(
                 visited_cells=env_base.grid_env.visited_cells,
                 title=title,
                 castle_heal_tiles=getattr(env_base, "castle_heal_tiles", None),
+                legions_territory_tiles=getattr(env_base, "legions_territory_tiles", None),
+                empire_territory_tiles=getattr(env_base, "empire_territory_tiles", None),
                 obstacle_tiles=getattr(env_base.grid_env, "obstacle_positions", None),
                 merchant_positions=getattr(env_base.grid_env, "merchant_positions", None),
                 merchant_site_anchors=getattr(env_base, "merchant_site_anchors", None),
@@ -1828,6 +1870,8 @@ def run_campaign_visualization(
                     title=f"BATTLE vs Enemy {enemy_id}!",
                     highlight_battle=enemy_id,
                     castle_heal_tiles=getattr(env_base, "castle_heal_tiles", None),
+                    legions_territory_tiles=getattr(env_base, "legions_territory_tiles", None),
+                    empire_territory_tiles=getattr(env_base, "empire_territory_tiles", None),
                     obstacle_tiles=getattr(env_base.grid_env, "obstacle_positions", None),
                     merchant_positions=getattr(env_base.grid_env, "merchant_positions", None),
                     merchant_site_anchors=getattr(env_base, "merchant_site_anchors", None),
@@ -1964,6 +2008,8 @@ def run_campaign_visualization(
         visited_cells=env_base.grid_env.visited_cells,
         title=f"CAMPAIGN {'VICTORY' if battles_won == total_enemies else 'ENDED'} | Reward: {total_reward:.2f}",
         castle_heal_tiles=getattr(env_base, "castle_heal_tiles", None),
+        legions_territory_tiles=getattr(env_base, "legions_territory_tiles", None),
+        empire_territory_tiles=getattr(env_base, "empire_territory_tiles", None),
         obstacle_tiles=getattr(env_base.grid_env, "obstacle_positions", None),
         merchant_positions=getattr(env_base.grid_env, "merchant_positions", None),
         merchant_site_anchors=getattr(env_base, "merchant_site_anchors", None),

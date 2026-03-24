@@ -20,8 +20,11 @@
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
+from collections import deque
+from functools import lru_cache
 from typing import Optional, Dict, List, Tuple
 from copy import deepcopy
+from pathlib import Path
 
 from battle_env import BattleEnv, UNITS_BLUE, FEATURES_PER_UNIT
 from enemy_configs import ENEMY_CONFIGS, ENEMY_DESCRIPTIONS
@@ -57,6 +60,141 @@ BUILDINGS_D2 = {
     "elves": elves_buildings_d2,
 }
 BUILDINGS_D2_TEMPLATE = {key: deepcopy(value) for key, value in BUILDINGS_D2.items()}
+
+DEFAULT_SCENARIO_FILENAME = "A Return To Simpler Times.sg"
+LEGIONS_TERRITORY_PASSABLE_POSITIONED_CLASSES = frozenset(
+    {
+        ".?AVCMidLandmark@@",
+        ".?AVCMidLocation@@",
+        ".?AVCMidRoad@@",
+    }
+)
+
+
+@lru_cache(maxsize=1)
+def _load_legions_territory_base_forbidden_tiles() -> Tuple[Tuple[int, int], ...]:
+    scenario_path = Path(__file__).resolve().with_name(DEFAULT_SCENARIO_FILENAME)
+    if not scenario_path.exists():
+        return ()
+
+    try:
+        from tools.inspect_sg_map import (
+            RENDER_OBJECT_SPECS,
+            extract_render_objects,
+            parse_map_size,
+            parse_positioned_objects,
+            parse_resource_objects,
+            parse_water_cells,
+        )
+    except Exception:
+        return ()
+
+    try:
+        data = scenario_path.read_bytes()
+        map_size = int(parse_map_size(data))
+        water_cells = parse_water_cells(data, map_size)
+        render_objects = extract_render_objects(data)
+        positioned_objects = parse_positioned_objects(data)
+        resource_objects = parse_resource_objects(data)
+    except Exception:
+        return ()
+
+    forbidden_tiles: set[Tuple[int, int]] = {
+        (int(x), int(y))
+        for x, y in water_cells
+        if 0 <= int(x) < map_size and 0 <= int(y) < map_size
+    }
+
+    for class_name, objects in render_objects.items():
+        spec = RENDER_OBJECT_SPECS.get(class_name, {})
+        width, height = spec.get("footprint", (1, 1))
+        width = max(1, int(width))
+        height = max(1, int(height))
+        for obj in objects:
+            ox = int(obj.get("x", 0) or 0)
+            oy = int(obj.get("y", 0) or 0)
+            for tx in range(ox, min(map_size, ox + width)):
+                for ty in range(oy, min(map_size, oy + height)):
+                    forbidden_tiles.add((tx, ty))
+
+    for obj in positioned_objects:
+        if str(obj.get("class", "") or "") in LEGIONS_TERRITORY_PASSABLE_POSITIONED_CLASSES:
+            continue
+        ox = int(obj.get("x", 0) or 0)
+        oy = int(obj.get("y", 0) or 0)
+        if 0 <= ox < map_size and 0 <= oy < map_size:
+            forbidden_tiles.add((ox, oy))
+
+    resource_tiles = {
+        (int(resource.get("x", 0) or 0), int(resource.get("y", 0) or 0))
+        for resource in resource_objects
+        if str(resource.get("class", "") or "").startswith("resource:")
+    }
+    chest_tiles = {
+        (int(obj.get("x", 0) or 0), int(obj.get("y", 0) or 0))
+        for obj in render_objects.get(".?AVCMidBag@@", ())
+    }
+    forbidden_tiles.difference_update(resource_tiles | chest_tiles)
+
+    return tuple(sorted(forbidden_tiles))
+
+
+@lru_cache(maxsize=1)
+def _load_legions_territory_base_water_tiles() -> Tuple[Tuple[int, int], ...]:
+    scenario_path = Path(__file__).resolve().with_name(DEFAULT_SCENARIO_FILENAME)
+    if not scenario_path.exists():
+        return ()
+
+    try:
+        from tools.inspect_sg_map import parse_map_size, parse_water_cells
+    except Exception:
+        return ()
+
+    try:
+        data = scenario_path.read_bytes()
+        map_size = int(parse_map_size(data))
+        water_cells = parse_water_cells(data, map_size)
+    except Exception:
+        return ()
+
+    return tuple(
+        sorted(
+            (int(x), int(y))
+            for x, y in water_cells
+            if 0 <= int(x) < map_size and 0 <= int(y) < map_size
+        )
+    )
+
+
+@lru_cache(maxsize=1)
+def _load_legions_territory_base_gold_mine_tiles() -> Tuple[Tuple[int, int], ...]:
+    scenario_path = Path(__file__).resolve().with_name(DEFAULT_SCENARIO_FILENAME)
+    if not scenario_path.exists():
+        return ()
+
+    try:
+        from tools.inspect_sg_map import parse_map_size, parse_resource_objects
+    except Exception:
+        return ()
+
+    try:
+        data = scenario_path.read_bytes()
+        map_size = int(parse_map_size(data))
+        resource_objects = parse_resource_objects(data)
+    except Exception:
+        return ()
+
+    return tuple(
+        sorted(
+            {
+                (int(resource.get("x", 0) or 0), int(resource.get("y", 0) or 0))
+                for resource in resource_objects
+                if str(resource.get("class", "") or "") == "resource:0"
+                and 0 <= int(resource.get("x", 0) or 0) < map_size
+                and 0 <= int(resource.get("y", 0) or 0) < map_size
+            }
+        )
+    )
 
 
 class HeroInventoryItem(str):
@@ -141,7 +279,9 @@ class CampaignEnv(gym.Env):
     GRID_STEPS_PER_TURN = MOVES_PER_TURN
     HERO_PATHFINDING_LEVEL = 2
     HERO_PATHFINDING_MOVE_BONUS_PCT = 0.20
-    GOLD_PER_TURN = 1.5
+    GOLD_PER_TURN = 100.0
+    BUILDING_GOLD_COST_MULTIPLIER = 100.0
+    LEGIONS_GOLD_MINE_GOLD_PER_TURN = 50.0
     GRID_BOTTLE_ACTION_START = 9
     GRID_BOTTLE_POSITIONS = list(range(7, 13))  # 6 позиций BLUE
     HEAL_BOTTLE_AMOUNT = 100.0
@@ -164,6 +304,10 @@ class CampaignEnv(gym.Env):
     STRENGTH_POTION_DAMAGE_MULTIPLIER = 1.30
     CASTLE_POS = DEFAULT_HERO_GRID_POSITION
     CASTLE_HEAL_TILE_COUNT = HEAL_TILE_COUNT
+    LEGIONS_TERRITORY_EXPANSION_PER_TURN = 10
+    EMPIRE_TERRITORY_SOURCE_ENEMY_ID = 75
+    EMPIRE_TERRITORY_SOURCE_TILE = (26, 10)
+    EMPIRE_TERRITORY_EXPANSION_PER_TURN = LEGIONS_TERRITORY_EXPANSION_PER_TURN
     GRID_CASTLE_HEAL_ACTION_START = GRID_STRENGTH_ACTION_START + len(STRENGTH_POTION_POSITIONS)  # 33
     CASTLE_HEAL_POSITIONS = GRID_BOTTLE_POSITIONS
     GRID_CASTLE_REVIVE_ACTION_START = GRID_CASTLE_HEAL_ACTION_START + len(CASTLE_HEAL_POSITIONS)  # 39
@@ -403,6 +547,7 @@ class CampaignEnv(gym.Env):
         self.gold_norm_k = max(1.0, self.turn_norm_k * float(self.GOLD_PER_TURN))
         # Realcapital: 1 = empire, 2 = legions, 3 = mountain_clans, 4 = undead_hordes, 5 = elves
         self.Realcapital = self._normalize_realcapital(realcapital)
+        self._reset_buildings_state()
 
         enemy_positions = scale_enemy_positions(self.grid_size)
         self.castle_heal_tiles: Tuple[Tuple[int, int], ...] = resolve_heal_tiles(
@@ -438,6 +583,66 @@ class CampaignEnv(gym.Env):
             start_position=self.CASTLE_POS,
             max_steps=max_grid_steps,
         )
+        self.legions_territory_source_tile: Tuple[int, int] = tuple(
+            int(coord) for coord in self.grid_env.start_position
+        )
+        base_gold_mine_tiles = _load_legions_territory_base_gold_mine_tiles()
+        self.gold_mine_tiles: Tuple[Tuple[int, int], ...] = tuple(
+            sorted(
+                tuple(tile)
+                for tile in scale_static_tiles(self.grid_size, base_gold_mine_tiles)
+            )
+        ) if base_gold_mine_tiles else ()
+        empire_source_tile = self._static_enemy_positions.get(
+            int(self.EMPIRE_TERRITORY_SOURCE_ENEMY_ID),
+            scale_static_tiles(self.grid_size, (tuple(self.EMPIRE_TERRITORY_SOURCE_TILE),))[0],
+        )
+        self.empire_territory_source_tile: Tuple[int, int] = tuple(
+            int(coord) for coord in empire_source_tile
+        )
+        self.legions_territory_forbidden_tiles: Tuple[Tuple[int, int], ...] = (
+            self._build_legions_territory_forbidden_tiles()
+        )
+        self.legions_territory_forbidden_tile_set: set[Tuple[int, int]] = set(
+            self.legions_territory_forbidden_tiles
+        )
+        self.legions_territory_path_blocked_tiles: Tuple[Tuple[int, int], ...] = (
+            self._build_legions_territory_path_blocked_tiles()
+        )
+        self.legions_territory_path_blocked_tile_set: set[Tuple[int, int]] = set(
+            self.legions_territory_path_blocked_tiles
+        )
+        self.legions_territory_path_distances: Dict[Tuple[int, int], int] = (
+            self._build_legions_territory_path_distances()
+        )
+        self.legions_territory_order: Tuple[Tuple[int, int], ...] = (
+            self._build_legions_territory_order()
+        )
+        self.legions_territory_tiles: Tuple[Tuple[int, int], ...] = ()
+        self.legions_territory_tile_set: set[Tuple[int, int]] = set()
+        self.legions_captured_gold_mine_tiles: Tuple[Tuple[int, int], ...] = ()
+        self.legions_captured_gold_mine_count: int = 0
+        self.empire_territory_forbidden_tiles: Tuple[Tuple[int, int], ...] = (
+            self._build_empire_territory_forbidden_tiles()
+        )
+        self.empire_territory_forbidden_tile_set: set[Tuple[int, int]] = set(
+            self.empire_territory_forbidden_tiles
+        )
+        self.empire_territory_path_blocked_tiles: Tuple[Tuple[int, int], ...] = (
+            self._build_empire_territory_path_blocked_tiles()
+        )
+        self.empire_territory_path_blocked_tile_set: set[Tuple[int, int]] = set(
+            self.empire_territory_path_blocked_tiles
+        )
+        self.empire_territory_path_distances: Dict[Tuple[int, int], int] = (
+            self._build_empire_territory_path_distances()
+        )
+        self.empire_territory_order: Tuple[Tuple[int, int], ...] = (
+            self._build_empire_territory_order()
+        )
+        self.empire_territory_tiles: Tuple[Tuple[int, int], ...] = ()
+        self.empire_territory_tile_set: set[Tuple[int, int]] = set()
+        self._legions_territory_grid_obs_cache = np.zeros(0, dtype=np.float32)
         self._sync_grid_merchant_positions()
         self._ensure_map_layout_consistency()
         self.battle_env: Optional[BattleEnv] = None
@@ -476,9 +681,11 @@ class CampaignEnv(gym.Env):
         self.captured_objective_cities: set[str] = set()
         self.cleared_ruin_enemy_ids: set[int] = set()
         self.last_ruin_reward: Optional[Dict[str, object]] = None
+        self._refresh_faction_territories()
         self._sync_grid_chest_positions()
         self._sync_grid_merchant_positions()
         self._init_campaign_grid_obs_metadata()
+        self._refresh_legions_territory_grid_obs_cache()
         self.GRID_OBS_SIZE = (
             self.grid_obs_base_size
             + self.grid_enemy_obs_size
@@ -541,6 +748,7 @@ class CampaignEnv(gym.Env):
         self.last_ruin_reward = None
         self.chests = dict(self._static_chests)
         self.castle_heal_tiles = self._static_castle_heal_tiles
+        self._refresh_faction_territories()
         self.grid_env.enemy_positions = dict(self._static_enemy_positions)
         self.grid_env.obstacle_positions = set(self._static_obstacle_tiles)
         self._sync_grid_chest_positions()
@@ -580,6 +788,16 @@ class CampaignEnv(gym.Env):
             "active_air_ward_positions": sorted(self.active_air_ward_positions),
             "combat_potion_battle_bonus_pending": bool(self.combat_potion_battle_bonus_pending),
             "chests_remaining": len(self.chests),
+            "legions_territory_tiles": tuple(self.legions_territory_tiles),
+            "legions_territory_count": len(self.legions_territory_tiles),
+            "legions_captured_gold_mine_tiles": tuple(self.legions_captured_gold_mine_tiles),
+            "legions_captured_gold_mine_count": int(self.legions_captured_gold_mine_count),
+            "legions_gold_mine_income_per_turn": (
+                int(self.legions_captured_gold_mine_count)
+                * float(self.LEGIONS_GOLD_MINE_GOLD_PER_TURN)
+            ),
+            "empire_territory_tiles": tuple(self.empire_territory_tiles),
+            "empire_territory_count": len(self.empire_territory_tiles),
         }
         info.update(self._ruin_progress_info())
         info.update(self._merchant_context_info(self.grid_env.agent_pos))
@@ -907,6 +1125,20 @@ class CampaignEnv(gym.Env):
         )
         finalized_info.setdefault("collected_chests", [])
         finalized_info["chests_remaining"] = len(self.chests)
+        finalized_info["legions_territory_tiles"] = tuple(self.legions_territory_tiles)
+        finalized_info["legions_territory_count"] = len(self.legions_territory_tiles)
+        finalized_info["legions_captured_gold_mine_tiles"] = tuple(
+            self.legions_captured_gold_mine_tiles
+        )
+        finalized_info["legions_captured_gold_mine_count"] = int(
+            self.legions_captured_gold_mine_count
+        )
+        finalized_info["legions_gold_mine_income_per_turn"] = (
+            int(self.legions_captured_gold_mine_count)
+            * float(self.LEGIONS_GOLD_MINE_GOLD_PER_TURN)
+        )
+        finalized_info["empire_territory_tiles"] = tuple(self.empire_territory_tiles)
+        finalized_info["empire_territory_count"] = len(self.empire_territory_tiles)
         finalized_info.update(self._ruin_progress_info())
         finalized_info.update(self._merchant_context_info(position))
 
@@ -1722,6 +1954,22 @@ class CampaignEnv(gym.Env):
                 continue
             target.clear()
             target.update(deepcopy(template))
+            self._scale_building_gold_costs_in_place(target)
+
+    @classmethod
+    def _scale_building_gold_costs_in_place(cls, buildings: Dict) -> None:
+        cost_multiplier = max(0.0, float(cls.BUILDING_GOLD_COST_MULTIPLIER))
+        if cost_multiplier == 1.0:
+            return
+
+        for entry in buildings.values():
+            if not isinstance(entry, dict) or "gold" not in entry:
+                continue
+            try:
+                base_gold = float(entry.get("gold", 0.0) or 0.0)
+            except (TypeError, ValueError):
+                continue
+            entry["gold"] = base_gold * cost_multiplier
 
     def get_built_building_names(self) -> List[str]:
         """Возвращает названия построенных зданий активной фракции в порядке ключей."""
@@ -3712,17 +3960,273 @@ class CampaignEnv(gym.Env):
         )
         return float(reward), float(alive_ratio), float(hp_ratio)
 
+    def _legions_gold_income_per_turn(self) -> float:
+        return float(self.GOLD_PER_TURN) + float(self.legions_captured_gold_mine_count) * float(
+            self.LEGIONS_GOLD_MINE_GOLD_PER_TURN
+        )
+
     def _advance_turns(self, delta_turns: int) -> float:
         """Увеличивает счётчик ходов и золото на заданное количество."""
         if delta_turns <= 0:
             return 0.0
-        self.turns += int(delta_turns)
+        total_gold_income = 0.0
+        for _ in range(int(delta_turns)):
+            self.turns += 1
+            self._refresh_faction_territories()
+            total_gold_income += self._legions_gold_income_per_turn()
         self._clear_expired_combat_potion_effects()
         self.combat_potion_battle_bonus_pending = False
-        self.gold += float(delta_turns) * self.GOLD_PER_TURN
+        self.gold += float(total_gold_income)
         self.moves = self.moves_per_turn
         self.active_buildings["alredybuilt"] = 0
         return -float(delta_turns) * self.reward_turn_penalty
+
+    @staticmethod
+    def _territory_sort_key(
+        origin_tile: Tuple[int, int],
+        tile: Tuple[int, int],
+    ) -> Tuple[int, int, int, int, int, int]:
+        origin_x, origin_y = int(origin_tile[0]), int(origin_tile[1])
+        tile_x, tile_y = int(tile[0]), int(tile[1])
+        dx = tile_x - origin_x
+        dy = tile_y - origin_y
+        # В кампании есть диагональный ход, поэтому основная близость — по Chebyshev,
+        # а дальше добиваем детерминированной развязкой по Manhattan и координатам.
+        return (
+            max(abs(dx), abs(dy)),
+            abs(dx) + abs(dy),
+            abs(dy),
+            abs(dx),
+            tile_y,
+            tile_x,
+        )
+
+    def _legions_territory_sort_key(self, tile: Tuple[int, int]) -> Tuple[int, int, int, int, int, int]:
+        return self._territory_sort_key(self.legions_territory_source_tile, tile)
+
+    def _empire_territory_sort_key(self, tile: Tuple[int, int]) -> Tuple[int, int, int, int, int, int]:
+        return self._territory_sort_key(self.empire_territory_source_tile, tile)
+
+    def _build_territory_forbidden_tiles(
+        self,
+        *,
+        source_tile: Tuple[int, int],
+        additional_claimable_tiles: Tuple[Tuple[int, int], ...] = (),
+    ) -> Tuple[Tuple[int, int], ...]:
+        forbidden_tiles = set(tuple(tile) for tile in self._static_obstacle_tiles)
+
+        base_forbidden_tiles = _load_legions_territory_base_forbidden_tiles()
+        if base_forbidden_tiles:
+            forbidden_tiles.update(
+                tuple(tile)
+                for tile in scale_static_tiles(self.grid_size, base_forbidden_tiles)
+            )
+
+        enemy_tiles = {
+            tuple(int(coord) for coord in pos)
+            for pos in (self._static_enemy_positions or {}).values()
+        }
+        forbidden_tiles.difference_update(enemy_tiles)
+        claimable_tiles = {
+            tuple(int(coord) for coord in tuple(source_tile))
+        }
+        claimable_tiles.update(
+            tuple(int(coord) for coord in tile)
+            for tile in tuple(additional_claimable_tiles or ())
+        )
+        forbidden_tiles.difference_update(claimable_tiles)
+
+        return tuple(sorted(forbidden_tiles))
+
+    def _build_legions_territory_forbidden_tiles(self) -> Tuple[Tuple[int, int], ...]:
+        return self._build_territory_forbidden_tiles(
+            source_tile=self.legions_territory_source_tile,
+            additional_claimable_tiles=(
+                self.legions_territory_source_tile,
+                self.empire_territory_source_tile,
+            ),
+        )
+
+    def _build_empire_territory_forbidden_tiles(self) -> Tuple[Tuple[int, int], ...]:
+        return self._build_territory_forbidden_tiles(
+            source_tile=self.empire_territory_source_tile,
+            additional_claimable_tiles=(
+                self.legions_territory_source_tile,
+                self.empire_territory_source_tile,
+            ),
+        )
+
+    def _build_territory_path_blocked_tiles(
+        self,
+        *,
+        source_tile: Tuple[int, int],
+    ) -> Tuple[Tuple[int, int], ...]:
+        blocked_tiles = set(tuple(tile) for tile in self._static_obstacle_tiles)
+        base_water_tiles = _load_legions_territory_base_water_tiles()
+        if base_water_tiles:
+            blocked_tiles.update(
+                tuple(tile)
+                for tile in scale_static_tiles(self.grid_size, base_water_tiles)
+            )
+        blocked_tiles.discard(tuple(source_tile))
+        return tuple(sorted(blocked_tiles))
+
+    def _build_legions_territory_path_blocked_tiles(self) -> Tuple[Tuple[int, int], ...]:
+        return self._build_territory_path_blocked_tiles(
+            source_tile=self.legions_territory_source_tile,
+        )
+
+    def _build_empire_territory_path_blocked_tiles(self) -> Tuple[Tuple[int, int], ...]:
+        return self._build_territory_path_blocked_tiles(
+            source_tile=self.empire_territory_source_tile,
+        )
+
+    def _build_territory_path_distances(
+        self,
+        *,
+        source_tile: Tuple[int, int],
+        blocked_tile_set: set[Tuple[int, int]],
+    ) -> Dict[Tuple[int, int], int]:
+        source = (int(source_tile[0]), int(source_tile[1]))
+        if source in blocked_tile_set:
+            return {}
+
+        distances: Dict[Tuple[int, int], int] = {source: 0}
+        frontier = deque([source])
+        neighbor_offsets = (
+            (-1, -1),
+            (0, -1),
+            (1, -1),
+            (-1, 0),
+            (1, 0),
+            (-1, 1),
+            (0, 1),
+            (1, 1),
+        )
+
+        while frontier:
+            x, y = frontier.popleft()
+            current_distance = distances[(x, y)]
+            for dx, dy in neighbor_offsets:
+                nx, ny = x + dx, y + dy
+                if not (0 <= nx < int(self.grid_size) and 0 <= ny < int(self.grid_size)):
+                    continue
+                tile = (nx, ny)
+                if tile in blocked_tile_set or tile in distances:
+                    continue
+                distances[tile] = current_distance + 1
+                frontier.append(tile)
+
+        return distances
+
+    def _build_legions_territory_path_distances(self) -> Dict[Tuple[int, int], int]:
+        return self._build_territory_path_distances(
+            source_tile=self.legions_territory_source_tile,
+            blocked_tile_set=self.legions_territory_path_blocked_tile_set,
+        )
+
+    def _build_empire_territory_path_distances(self) -> Dict[Tuple[int, int], int]:
+        return self._build_territory_path_distances(
+            source_tile=self.empire_territory_source_tile,
+            blocked_tile_set=self.empire_territory_path_blocked_tile_set,
+        )
+
+    def _build_territory_order(
+        self,
+        *,
+        forbidden_tile_set: set[Tuple[int, int]],
+        path_distances: Dict[Tuple[int, int], int],
+        sort_key,
+    ) -> Tuple[Tuple[int, int], ...]:
+        allowed_tiles = tuple(
+            (x, y)
+            for y in range(int(self.grid_size))
+            for x in range(int(self.grid_size))
+            if (x, y) not in forbidden_tile_set and (x, y) in path_distances
+        )
+        return tuple(
+            sorted(
+                allowed_tiles,
+                key=lambda tile: (int(path_distances[tile]), *sort_key(tile)),
+            )
+        )
+
+    def _build_legions_territory_order(self) -> Tuple[Tuple[int, int], ...]:
+        return self._build_territory_order(
+            forbidden_tile_set=self.legions_territory_forbidden_tile_set,
+            path_distances=self.legions_territory_path_distances,
+            sort_key=self._legions_territory_sort_key,
+        )
+
+    def _build_empire_territory_order(self) -> Tuple[Tuple[int, int], ...]:
+        return self._build_territory_order(
+            forbidden_tile_set=self.empire_territory_forbidden_tile_set,
+            path_distances=self.empire_territory_path_distances,
+            sort_key=self._empire_territory_sort_key,
+        )
+
+    @staticmethod
+    def _territory_claim_count(total_tiles: int, expansion_per_turn: int, turns: int) -> int:
+        return min(
+            int(total_tiles),
+            1 + max(0, int(turns)) * int(expansion_per_turn),
+        )
+
+    @staticmethod
+    def _claim_territory_tiles(
+        order: Tuple[Tuple[int, int], ...],
+        claim_count: int,
+    ) -> Tuple[Tuple[int, int], ...]:
+        if claim_count <= 0:
+            return ()
+        return tuple(order[: int(claim_count)])
+
+    def _refresh_legions_territory_tiles(self) -> None:
+        self._refresh_faction_territories()
+
+    def _refresh_legions_territory_grid_obs_cache(self) -> None:
+        obs_size = int(getattr(self, "grid_legions_territory_obs_size", 0) or 0)
+        if obs_size <= 0:
+            self._legions_territory_grid_obs_cache = np.zeros(0, dtype=np.float32)
+            return
+
+        territory_obs = np.zeros(obs_size, dtype=np.float32)
+        index_by_pos = getattr(self, "grid_legions_territory_index_by_pos", {})
+        for tile_pos in self.legions_territory_tiles:
+            tile_index = index_by_pos.get(tuple(tile_pos))
+            if tile_index is not None:
+                territory_obs[int(tile_index)] = 1.0
+        self._legions_territory_grid_obs_cache = territory_obs
+
+    def _refresh_faction_territories(self) -> None:
+        legions_claim_count = self._territory_claim_count(
+            len(self.legions_territory_order),
+            self.LEGIONS_TERRITORY_EXPANSION_PER_TURN,
+            self.turns,
+        )
+        self.legions_territory_tiles = self._claim_territory_tiles(
+            self.legions_territory_order,
+            legions_claim_count,
+        )
+        self.legions_territory_tile_set = set(self.legions_territory_tiles)
+        self.legions_captured_gold_mine_tiles = tuple(
+            tile
+            for tile in self.gold_mine_tiles
+            if tuple(tile) in self.legions_territory_tile_set
+        )
+        self.legions_captured_gold_mine_count = len(self.legions_captured_gold_mine_tiles)
+        empire_claim_count = self._territory_claim_count(
+            len(self.empire_territory_order),
+            self.EMPIRE_TERRITORY_EXPANSION_PER_TURN,
+            self.turns,
+        )
+        self.empire_territory_tiles = self._claim_territory_tiles(
+            self.empire_territory_order,
+            empire_claim_count,
+        )
+        self.empire_territory_tile_set = set(self.empire_territory_tiles)
+        if hasattr(self, "grid_legions_territory_positions"):
+            self._refresh_legions_territory_grid_obs_cache()
 
     def _init_merchant_site_metadata(self) -> None:
         obstacle_tiles = set(self._static_obstacle_tiles)
@@ -3898,6 +4402,27 @@ class CampaignEnv(gym.Env):
             len(self.grid_heal_tile_positions) * self.grid_heal_tile_features_per_entry
         )
 
+        self.grid_legions_territory_positions = tuple(
+            (x, y)
+            for y in range(int(self.grid_size))
+            for x in range(int(self.grid_size))
+        )
+        self.grid_legions_territory_features_per_entry = 1
+        self.grid_legions_territory_obs_size = (
+            len(self.grid_legions_territory_positions)
+            * self.grid_legions_territory_features_per_entry
+        )
+        self.grid_legions_territory_index_by_pos = {
+            tuple(tile_pos): index
+            for index, tile_pos in enumerate(self.grid_legions_territory_positions)
+        }
+        self.grid_empire_territory_positions = self.grid_legions_territory_positions
+        self.grid_empire_territory_features_per_entry = 1
+        self.grid_empire_territory_obs_size = (
+            len(self.grid_empire_territory_positions)
+            * self.grid_empire_territory_features_per_entry
+        )
+
         self.grid_ruin_positions = tuple(
             sorted(
                 tuple(int(coord) for coord in tuple(reward_data.get("ruin_pos", (0, 0)))[:2])
@@ -3978,6 +4503,7 @@ class CampaignEnv(gym.Env):
             + self.grid_building_obs_size
             + self.grid_chest_obs_size
             + self.grid_heal_tile_obs_size
+            + self.grid_legions_territory_obs_size
             + self.grid_ruin_obs_size
             + self.grid_objective_city_obs_size
         )
@@ -4187,6 +4713,26 @@ class CampaignEnv(gym.Env):
             heal_obs.extend([tile_pos[0] / grid_scale, tile_pos[1] / grid_scale])
         return np.array(heal_obs, dtype=np.float32)
 
+    def _build_legions_territory_grid_obs(self) -> np.ndarray:
+        if self.grid_legions_territory_obs_size <= 0:
+            return np.zeros(0, dtype=np.float32)
+        return self._legions_territory_grid_obs_cache
+
+    def _build_empire_territory_grid_obs(self) -> np.ndarray:
+        if self.grid_empire_territory_obs_size <= 0:
+            return np.zeros(0, dtype=np.float32)
+
+        territory_tiles = self.empire_territory_tile_set
+        territory_obs = np.fromiter(
+            (
+                1.0 if tuple(tile_pos) in territory_tiles else 0.0
+                for tile_pos in self.grid_empire_territory_positions
+            ),
+            dtype=np.float32,
+            count=self.grid_empire_territory_obs_size,
+        )
+        return territory_obs
+
     def _build_ruin_grid_obs(self) -> np.ndarray:
         if self.grid_ruin_obs_size <= 0:
             return np.zeros(0, dtype=np.float32)
@@ -4251,6 +4797,7 @@ class CampaignEnv(gym.Env):
                 self._build_building_grid_obs(),
                 self._build_chest_grid_obs(),
                 self._build_heal_tiles_grid_obs(),
+                self._build_legions_territory_grid_obs(),
                 self._build_ruin_grid_obs(),
                 self._build_objective_city_grid_obs(),
             ]

@@ -162,6 +162,8 @@ BASE_STATIC_EMPTY_TILES: Tuple[Tuple[int, int], ...] = (
     (28, 41),
     (30, 41),
     (41, 44),
+    # Empire capital eastern inner tile mirrors the open Legions capital slot.
+    (26, 10),
 )
 BASE_VILLAGE_HEAL_TILES: Tuple[Tuple[int, int], ...] = (
     (6, 4),
@@ -695,6 +697,16 @@ VILLAGE_INTERNAL_GARRISON_OVERRIDES: tuple[dict[str, object], ...] = (
     },
 )
 
+CAPITAL_INTERNAL_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
+    {
+        "enemy_id": 75,
+        "position": (26, 10),
+        "description": "Внутренний отряд Тимории: Рыцарь, Рыцарь на пегасе, 2 Стрелка",
+        "front": ["Рыцарь", None, "Рыцарь на пегасе"],
+        "back": ["Стрелок", None, "Стрелок"],
+    },
+)
+
 
 RUIN_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
     _make_stack_override(
@@ -770,6 +782,7 @@ ADDITIONAL_MAP_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
 ALL_MAP_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
     VILLAGE_LINKED_STACK_OVERRIDES
     + VILLAGE_INTERNAL_GARRISON_OVERRIDES
+    + CAPITAL_INTERNAL_STACK_OVERRIDES
     + RUIN_STACK_OVERRIDES
     + ADDITIONAL_MAP_STACK_OVERRIDES
 )
