@@ -762,6 +762,9 @@ class CampaignVisualizer:
     COLOR_SETTLEMENT_CORNER_FILL = (1.0, 0.25, 0.62, 0.82)
     COLOR_SETTLEMENT_CORNER_EDGE = (0.58, 0.05, 0.30, 0.98)
     COLOR_RUIN_EDGE = (0.82, 0.05, 0.05, 0.98)
+    COLOR_GOLD_MINE_FILL = (0.96, 0.80, 0.16, 0.84)
+    COLOR_GOLD_MINE_EDGE = (0.56, 0.38, 0.02, 0.98)
+    COLOR_GOLD_MINE_TEXT = (0.34, 0.20, 0.00, 0.98)
     CASTLE_POS = DEFAULT_HERO_GRID_POSITION
 
     def __init__(
@@ -780,9 +783,11 @@ class CampaignVisualizer:
         self.capital_overlays: list[dict] = []
         self.village_overlays: list[dict] = []
         self.ruin_overlays: list[dict] = []
+        self.gold_mine_overlays: list[dict] = []
         self._load_background_image()
         self._load_settlement_overlays()
         self._load_ruin_overlays()
+        self._load_gold_mine_overlays()
 
         # Создаём фигуру
         self.fig, self.ax = plt.subplots(figsize=(10, 10))
@@ -1040,6 +1045,62 @@ class CampaignVisualizer:
             )
         self.ruin_overlays = sorted(overlays, key=lambda overlay: (overlay["y"], overlay["x"]))
 
+    def _load_gold_mine_overlays(self) -> None:
+        if not self.scenario_path or extract_render_objects is None:
+            return
+        try:
+            data = Path(self.scenario_path).read_bytes()
+            render_objects = extract_render_objects(data)
+        except Exception as exc:
+            print(f"[WARN] Failed to load gold mine overlays from {self.scenario_path}: {exc}")
+            return
+
+        overlays = []
+        spec = RENDER_OBJECT_SPECS.get("resource:0", {})
+        width, height = spec.get("footprint", (1, 1))
+        for gold_mine in render_objects.get("resource:0", []):
+            try:
+                x = int(gold_mine["x"])
+                y = int(gold_mine["y"])
+            except Exception:
+                continue
+            overlays.append(
+                {
+                    "x": x,
+                    "y": y,
+                    "width": int(width),
+                    "height": int(height),
+                }
+            )
+        self.gold_mine_overlays = sorted(overlays, key=lambda overlay: (overlay["y"], overlay["x"]))
+
+    def _draw_gold_mine_overlays(self) -> None:
+        for overlay in self.gold_mine_overlays:
+            x = int(overlay["x"])
+            y = int(overlay["y"])
+            draw_x, draw_y = self._display_tile(x, y)
+            gold_rect = patches.Rectangle(
+                (draw_x - 0.36, draw_y - 0.36),
+                0.72,
+                0.72,
+                facecolor=self.COLOR_GOLD_MINE_FILL,
+                edgecolor=self.COLOR_GOLD_MINE_EDGE,
+                linewidth=1.8,
+                zorder=2.72,
+            )
+            self.ax.add_patch(gold_rect)
+            self.ax.text(
+                draw_x,
+                draw_y,
+                "З",
+                ha="center",
+                va="center",
+                fontsize=9,
+                fontweight="bold",
+                color=self.COLOR_GOLD_MINE_TEXT,
+                zorder=2.8,
+            )
+
     def _draw_ruin_overlays(self) -> None:
         for overlay in self.ruin_overlays:
             x = int(overlay["x"])
@@ -1289,6 +1350,7 @@ class CampaignVisualizer:
                     alpha=0.7,
                 )
 
+        self._draw_gold_mine_overlays()
         self._draw_ruin_overlays()
 
         # Враги

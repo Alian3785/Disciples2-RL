@@ -100,6 +100,25 @@ ATTACK_TYPES = [
     "Air",
 ]  # one-hot(9)
 
+ZERO_DAMAGE_NO_HP_UNIT_TYPES = frozenset(
+    {
+        "Ghost",
+        "Witch",
+        "Shadow",
+        "Incub",
+        "Succub",
+        "Summoner",
+        "Occultmaster",
+        "Laclaan",
+        "Baroness",
+        "Travnitsa",
+        "Novice",
+        "Alchemist",
+        "Dwarfdruid",
+        "Arhidruid",
+    }
+)
+
 FEATURES_PER_UNIT = 8 + len(TYPE_LIST) + 5 * len(ATTACK_TYPES) + 14 + 3
 OBSERVATION_SIZE = FEATURES_PER_UNIT * 12
 
@@ -2126,12 +2145,20 @@ class BattleEnv(gym.Env):
             if unit.get("original_damage", 0) > 0:
                 unit["damage"] = unit["original_damage"]
 
-    def _apply_damage_with_armor(self, base_dmg: float, victim: Dict) -> int:
+    def _apply_damage_with_armor(self, attacker: Dict, base_dmg: float, victim: Dict) -> int:
+        attacker_type = str(attacker.get("unit_type", "") or "")
+        if attacker_type in ZERO_DAMAGE_NO_HP_UNIT_TYPES:
+            return 0
+
+        raw_damage = float(base_dmg or 0)
+        if raw_damage <= 0:
+            return 0
+
         armor = float(victim.get("armor", 0) or 0)
         armor = min(armor, 90)  # Максимум 90% снижения урона
         factor = (1.0 - armor / 100.0) if armor > 0 else 1.0
         bonus = self.rng.randint(0, 5)
-        boosted = base_dmg + bonus
+        boosted = raw_damage + bonus
         eff = boosted * max(0.0, factor)
         return int(round(eff))
 
@@ -2531,7 +2558,7 @@ class BattleEnv(gym.Env):
                     continue
 
                 before = victim["health"]
-                dmg = self._apply_damage_with_armor(attacker["damage"], victim)
+                dmg = self._apply_damage_with_armor(attacker, attacker["damage"], victim)
                 victim["health"] -= dmg
                 after = victim["health"]
                 self._log(
@@ -2749,7 +2776,7 @@ class BattleEnv(gym.Env):
                 return True, "resilience_block"
 
             before = victim["health"]
-            dmg = self._apply_damage_with_armor(attacker["damage"], victim)
+            dmg = self._apply_damage_with_armor(attacker, attacker["damage"], victim)
             victim["health"] -= dmg
             after = victim["health"]
             self._log(
