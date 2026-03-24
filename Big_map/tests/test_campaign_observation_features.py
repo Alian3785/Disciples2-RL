@@ -122,6 +122,101 @@ def test_legions_captured_gold_mines_add_bonus_gold_each_turn():
     assert env.gold == pytest.approx(600.0)
 
 
+def test_mana_pools_start_at_zero_and_infernal_income_starts_on_turn_one():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    _, info = env.reset(seed=123)
+
+    assert env.infernal_mana == pytest.approx(0.0)
+    assert env.life_mana == pytest.approx(0.0)
+    assert env.death_mana == pytest.approx(0.0)
+    assert env.runes_mana == pytest.approx(0.0)
+    assert env.elven_mana == pytest.approx(0.0)
+    assert info["mana_totals"]["infernal"] == pytest.approx(0.0)
+    assert info["mana_income_per_turn"]["infernal"] == pytest.approx(25.0)
+    assert info["mana_income_per_turn"]["life"] == pytest.approx(0.0)
+    assert info["mana_income_per_turn"]["death"] == pytest.approx(0.0)
+    assert info["mana_income_per_turn"]["runes"] == pytest.approx(0.0)
+    assert info["mana_income_per_turn"]["elves"] == pytest.approx(0.0)
+
+    env._advance_turns(1)
+
+    assert env.infernal_mana == pytest.approx(25.0)
+    assert env.life_mana == pytest.approx(0.0)
+    assert env.death_mana == pytest.approx(0.0)
+    assert env.runes_mana == pytest.approx(0.0)
+    assert env.elven_mana == pytest.approx(0.0)
+
+
+def test_captured_mana_sources_add_income_by_type_each_turn():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    captured_tiles = {
+        (6, 16),   # infernal
+        (10, 29),  # infernal
+        (25, 16),  # life
+        (7, 41),   # death
+        (1, 4),    # runes
+    }
+    env.legions_territory_tiles = tuple(sorted(set(env.legions_territory_tiles) | captured_tiles))
+    env.legions_territory_tile_set = set(env.legions_territory_tiles)
+    env._refresh_legions_captured_mana_source_state()
+
+    assert env.legions_captured_mana_source_counts_by_kind["infernal"] == 2
+    assert env.legions_captured_mana_source_counts_by_kind["life"] == 1
+    assert env.legions_captured_mana_source_counts_by_kind["death"] == 1
+    assert env.legions_captured_mana_source_counts_by_kind["runes"] == 1
+    assert env.legions_captured_mana_source_counts_by_kind["elves"] == 0
+    assert env.mana_income_per_turn["infernal"] == pytest.approx(125.0)
+    assert env.mana_income_per_turn["life"] == pytest.approx(50.0)
+    assert env.mana_income_per_turn["death"] == pytest.approx(50.0)
+    assert env.mana_income_per_turn["runes"] == pytest.approx(50.0)
+    assert env.mana_income_per_turn["elves"] == pytest.approx(0.0)
+
+    env._apply_mana_income_for_turn()
+
+    assert env.infernal_mana == pytest.approx(125.0)
+    assert env.life_mana == pytest.approx(50.0)
+    assert env.death_mana == pytest.approx(50.0)
+    assert env.runes_mana == pytest.approx(50.0)
+    assert env.elven_mana == pytest.approx(0.0)
+
+
+def test_campaign_obs_includes_compact_mana_source_positions_types_and_totals():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    assert env.grid_mana_source_obs_size == len(env.mana_sources) * 3
+    assert env.grid_resource_obs_size == env.grid_resource_core_obs_size + len(env.MANA_KIND_ORDER)
+
+    mana_source_obs = env._build_mana_source_grid_obs()
+    assert mana_source_obs.shape == (env.grid_mana_source_obs_size,)
+
+    grid_scale = max(1, env.grid_env.grid_size - 1)
+    for index, entry in enumerate(env.grid_mana_source_entries):
+        offset = index * env.grid_mana_source_features_per_entry
+        expected_x = int(entry["pos"][0]) / grid_scale
+        expected_y = int(entry["pos"][1]) / grid_scale
+        expected_type = env.grid_mana_kind_to_norm[str(entry["kind"])]
+        assert mana_source_obs[offset] == pytest.approx(expected_x)
+        assert mana_source_obs[offset + 1] == pytest.approx(expected_y)
+        assert mana_source_obs[offset + 2] == pytest.approx(expected_type)
+
+    resource_obs = env._build_resource_grid_obs()
+    mana_totals_slice = resource_obs[-len(env.MANA_KIND_ORDER) :]
+    assert np.allclose(mana_totals_slice, 0.0)
+
+    env._advance_turns(1)
+    updated_resource_obs = env._build_resource_grid_obs()
+    infernal_idx = env.grid_mana_total_kinds.index("infernal")
+    infernal_feature = updated_resource_obs[env.grid_resource_core_obs_size + infernal_idx]
+    assert infernal_feature > 0.0
+    assert updated_resource_obs[env.grid_resource_core_obs_size + env.grid_mana_total_kinds.index("life")] == pytest.approx(0.0)
+    assert updated_resource_obs[env.grid_resource_core_obs_size + env.grid_mana_total_kinds.index("death")] == pytest.approx(0.0)
+    assert updated_resource_obs[env.grid_resource_core_obs_size + env.grid_mana_total_kinds.index("runes")] == pytest.approx(0.0)
+    assert updated_resource_obs[env.grid_resource_core_obs_size + env.grid_mana_total_kinds.index("elves")] == pytest.approx(0.0)
+
+
 def test_merchant_sell_values_remain_unchanged():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
@@ -348,3 +443,91 @@ def test_territories_keep_road_tiles_claimable():
     env._advance_turns(999)
 
     assert road_tiles.issubset(env.empire_territory_tile_set)
+
+
+def test_campaign_exposes_mana_sources_with_expected_positions_and_labels():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    expected = {
+        (6, 16): ("Мана преисподней", "П"),
+        (44, 21): ("Мана преисподней", "П"),
+        (10, 29): ("Мана преисподней", "П"),
+        (6, 11): ("Мана жизни", "Ж"),
+        (25, 16): ("Мана жизни", "Ж"),
+        (29, 40): ("Мана жизни", "Ж"),
+        (7, 41): ("Мана смерти", "С"),
+        (1, 4): ("Мана рун", "Р"),
+    }
+
+    assert set(env.mana_sources.keys()) == set(expected.keys())
+    assert set(env.grid_env.mana_sources.keys()) == set(expected.keys())
+
+    for tile, (name, letter) in expected.items():
+        env_meta = env.mana_sources[tile]
+        grid_meta = env.grid_env.mana_sources[tile]
+        assert env_meta["name"] == name
+        assert env_meta["letter"] == letter
+        assert grid_meta["name"] == name
+        assert grid_meta["letter"] == letter
+
+
+def test_grid_render_marks_mana_sources_with_colored_letters():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    render_output = env.grid_env.render(mode="ansi")
+
+    assert "\x1b[31mП\x1b[0m" in render_output
+    assert "\x1b[34mЖ\x1b[0m" in render_output
+    assert "\x1b[90mС\x1b[0m" in render_output
+    assert "\x1b[96mР\x1b[0m" in render_output
+    assert "Mana sources:" in render_output
+    assert "Мана преисподней" in render_output
+    assert "Мана жизни" in render_output
+    assert "Мана смерти" in render_output
+    assert "Мана рун" in render_output
+
+
+def test_campaign_visualizer_draws_mana_source_letters():
+    import matplotlib.pyplot as plt
+
+    from visualize_campaign import CampaignVisualizer
+
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    viz = CampaignVisualizer(
+        grid_size=env.grid_size,
+        background_map_path=None,
+        scenario_path=None,
+    )
+    try:
+        viz.draw_grid(
+            agent_pos=env.grid_env.agent_pos,
+            enemy_positions=env.grid_env.enemy_positions,
+            enemies_alive=env.grid_env.enemies_alive,
+            visited_cells=env.grid_env.visited_cells,
+            castle_heal_tiles=env.castle_heal_tiles,
+            legions_territory_tiles=env.legions_territory_tiles,
+            empire_territory_tiles=env.empire_territory_tiles,
+            obstacle_tiles=env.grid_env.obstacle_positions,
+            merchant_positions=env.grid_env.merchant_positions,
+            merchant_site_anchors=env.merchant_site_anchors,
+            chest_positions=env.chests,
+            mana_sources=env.grid_env.mana_sources,
+            mana_totals=env._current_mana_totals(),
+            mana_income_per_turn=env.mana_income_per_turn,
+            turns=env.turns,
+            gold=env.gold,
+            steps=env.moves,
+        )
+        text_values = [text.get_text() for text in viz.ax.texts]
+        assert "П" in text_values
+        assert "Ж" in text_values
+        assert "С" in text_values
+        assert "Р" in text_values
+        assert any("Мана преисподней: 0 (+25/ход)" in text for text in text_values)
+        assert any("Мана эльфов: 0 (+0/ход)" in text for text in text_values)
+    finally:
+        plt.close(viz.fig)

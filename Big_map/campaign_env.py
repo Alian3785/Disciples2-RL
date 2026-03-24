@@ -37,6 +37,7 @@ from grid import (
     SETTLEMENT_ARMOR_BONUS_BY_LEVEL,
     SETTLEMENT_DEFENDER_LEVEL_BY_ENEMY_ID,
     resolve_chests,
+    resolve_mana_sources,
     resolve_obstacle_tiles,
     resolve_heal_tiles,
     scale_static_tiles,
@@ -282,6 +283,23 @@ class CampaignEnv(gym.Env):
     GOLD_PER_TURN = 100.0
     BUILDING_GOLD_COST_MULTIPLIER = 100.0
     LEGIONS_GOLD_MINE_GOLD_PER_TURN = 50.0
+    BASE_INFERNAL_MANA_PER_TURN = 25.0
+    LEGIONS_MANA_SOURCE_MANA_PER_TURN = 50.0
+    MANA_KIND_ORDER = ("infernal", "life", "death", "runes", "elves")
+    MANA_ATTR_BY_KIND = {
+        "infernal": "infernal_mana",
+        "life": "life_mana",
+        "death": "death_mana",
+        "runes": "runes_mana",
+        "elves": "elven_mana",
+    }
+    MANA_LABEL_BY_KIND = {
+        "infernal": "Мана преисподней",
+        "life": "Мана жизни",
+        "death": "Мана смерти",
+        "runes": "Мана рун",
+        "elves": "Мана эльфов",
+    }
     GRID_BOTTLE_ACTION_START = 9
     GRID_BOTTLE_POSITIONS = list(range(7, 13))  # 6 позиций BLUE
     HEAL_BOTTLE_AMOUNT = 100.0
@@ -569,10 +587,15 @@ class CampaignEnv(gym.Env):
             obstacle_tiles=obstacle_tiles,
             start_position=self.CASTLE_POS,
         )
+        mana_sources = resolve_mana_sources(self.grid_size)
         self._static_enemy_positions = dict(enemy_positions)
         self._static_castle_heal_tiles: Tuple[Tuple[int, int], ...] = tuple(self.castle_heal_tiles)
         self._static_obstacle_tiles: Tuple[Tuple[int, int], ...] = tuple(obstacle_tiles)
         self._static_chests: Dict[Tuple[int, int], Tuple[str, ...]] = dict(chest_contents)
+        self._static_mana_sources: Dict[Tuple[int, int], Dict[str, object]] = {
+            tuple(pos): dict(meta)
+            for pos, meta in mana_sources.items()
+        }
         self._init_merchant_site_metadata()
 
         # Подсреда grid: враги и препятствия автоматически масштабируются под размер карты.
@@ -665,6 +688,11 @@ class CampaignEnv(gym.Env):
         self.active_buildings = self._get_buildings_for_capital(self.Realcapital)
         self.building_keys = self._get_building_keys(self.active_buildings)
         self.chests: Dict[Tuple[int, int], Tuple[str, ...]] = dict(self._static_chests)
+        self.mana_sources: Dict[Tuple[int, int], Dict[str, object]] = {
+            tuple(pos): dict(meta)
+            for pos, meta in self._static_mana_sources.items()
+        }
+        self._reset_mana_state()
         self.heroitems: List[object] = []
         self.extra_heal_bottles: int = 0
         self.extra_healing_bottles: int = 0
@@ -683,6 +711,7 @@ class CampaignEnv(gym.Env):
         self.last_ruin_reward: Optional[Dict[str, object]] = None
         self._refresh_faction_territories()
         self._sync_grid_chest_positions()
+        self._sync_grid_mana_sources()
         self._sync_grid_merchant_positions()
         self._init_campaign_grid_obs_metadata()
         self._refresh_legions_territory_grid_obs_cache()
@@ -747,11 +776,17 @@ class CampaignEnv(gym.Env):
         self.cleared_ruin_enemy_ids = set()
         self.last_ruin_reward = None
         self.chests = dict(self._static_chests)
+        self.mana_sources = {
+            tuple(pos): dict(meta)
+            for pos, meta in self._static_mana_sources.items()
+        }
+        self._reset_mana_state()
         self.castle_heal_tiles = self._static_castle_heal_tiles
         self._refresh_faction_territories()
         self.grid_env.enemy_positions = dict(self._static_enemy_positions)
         self.grid_env.obstacle_positions = set(self._static_obstacle_tiles)
         self._sync_grid_chest_positions()
+        self._sync_grid_mana_sources()
         self._sync_grid_merchant_positions()
 
         grid_obs, grid_info = self.grid_env.reset(seed=seed)
@@ -799,6 +834,7 @@ class CampaignEnv(gym.Env):
             "empire_territory_tiles": tuple(self.empire_territory_tiles),
             "empire_territory_count": len(self.empire_territory_tiles),
         }
+        info.update(self._mana_state_info())
         info.update(self._ruin_progress_info())
         info.update(self._merchant_context_info(self.grid_env.agent_pos))
 
@@ -1139,6 +1175,7 @@ class CampaignEnv(gym.Env):
         )
         finalized_info["empire_territory_tiles"] = tuple(self.empire_territory_tiles)
         finalized_info["empire_territory_count"] = len(self.empire_territory_tiles)
+        finalized_info.update(self._mana_state_info())
         finalized_info.update(self._ruin_progress_info())
         finalized_info.update(self._merchant_context_info(position))
 
@@ -1244,6 +1281,12 @@ class CampaignEnv(gym.Env):
 
     def _sync_grid_chest_positions(self) -> None:
         self.grid_env.chest_positions = set(self.chests.keys())
+
+    def _sync_grid_mana_sources(self) -> None:
+        self.grid_env.mana_sources = {
+            tuple(pos): dict(meta)
+            for pos, meta in getattr(self, "mana_sources", {}).items()
+        }
 
     def _sync_grid_merchant_positions(self) -> None:
         self.grid_env.merchant_positions = set(self.merchant_interaction_tiles)
@@ -1381,6 +1424,77 @@ class CampaignEnv(gym.Env):
             "cleared_ruin_enemy_ids": sorted(int(enemy_id) for enemy_id in self.cleared_ruin_enemy_ids),
             "last_ruin_reward": last_reward,
         }
+
+    @classmethod
+    def _empty_mana_dict(cls, value: float = 0.0) -> Dict[str, float]:
+        return {
+            str(kind): float(value)
+            for kind in cls.MANA_KIND_ORDER
+        }
+
+    def _reset_mana_state(self) -> None:
+        for kind, attr_name in self.MANA_ATTR_BY_KIND.items():
+            setattr(self, str(attr_name), 0.0)
+        self.legions_captured_mana_source_tiles_by_kind: Dict[str, Tuple[Tuple[int, int], ...]] = {
+            str(kind): ()
+            for kind in self.MANA_KIND_ORDER
+        }
+        self.legions_captured_mana_source_counts_by_kind: Dict[str, int] = {
+            str(kind): 0
+            for kind in self.MANA_KIND_ORDER
+        }
+        self.mana_income_per_turn: Dict[str, float] = self._empty_mana_dict()
+
+    def _current_mana_totals(self) -> Dict[str, float]:
+        return {
+            str(kind): float(getattr(self, self.MANA_ATTR_BY_KIND[str(kind)], 0.0) or 0.0)
+            for kind in self.MANA_KIND_ORDER
+        }
+
+    def _compute_mana_income_per_turn(self) -> Dict[str, float]:
+        mana_income = self._empty_mana_dict()
+        mana_income["infernal"] = float(self.BASE_INFERNAL_MANA_PER_TURN)
+        for kind in self.MANA_KIND_ORDER:
+            captured_count = int(
+                getattr(self, "legions_captured_mana_source_counts_by_kind", {}).get(str(kind), 0)
+                or 0
+            )
+            mana_income[str(kind)] += float(captured_count) * float(
+                self.LEGIONS_MANA_SOURCE_MANA_PER_TURN
+            )
+        return mana_income
+
+    def _apply_mana_income_for_turn(self) -> Dict[str, float]:
+        mana_income = self._compute_mana_income_per_turn()
+        for kind, delta in mana_income.items():
+            attr_name = str(self.MANA_ATTR_BY_KIND.get(str(kind), "") or "")
+            if not attr_name:
+                continue
+            current_value = float(getattr(self, attr_name, 0.0) or 0.0)
+            setattr(self, attr_name, current_value + float(delta))
+        self.mana_income_per_turn = dict(mana_income)
+        return dict(mana_income)
+
+    def _mana_state_info(self) -> Dict[str, object]:
+        mana_totals = self._current_mana_totals()
+        mana_income = dict(self._compute_mana_income_per_turn())
+        info: Dict[str, object] = {
+            "mana_totals": dict(mana_totals),
+            "mana_income_per_turn": dict(mana_income),
+            "legions_captured_mana_source_tiles_by_kind": {
+                str(kind): tuple(self.legions_captured_mana_source_tiles_by_kind.get(str(kind), ()))
+                for kind in self.MANA_KIND_ORDER
+            },
+            "legions_captured_mana_source_counts_by_kind": {
+                str(kind): int(self.legions_captured_mana_source_counts_by_kind.get(str(kind), 0) or 0)
+                for kind in self.MANA_KIND_ORDER
+            },
+        }
+        for kind in self.MANA_KIND_ORDER:
+            attr_name = str(self.MANA_ATTR_BY_KIND[str(kind)])
+            info[attr_name] = float(mana_totals[str(kind)])
+            info[f"{attr_name}_income_per_turn"] = float(mana_income[str(kind)])
+        return info
 
     def _grant_ruin_reward(self, enemy_id: Optional[int]) -> Dict[str, object]:
         reward_data = self.RUIN_REWARD_BY_ENEMY_ID.get(int(enemy_id or -1))
@@ -3974,6 +4088,7 @@ class CampaignEnv(gym.Env):
             self.turns += 1
             self._refresh_faction_territories()
             total_gold_income += self._legions_gold_income_per_turn()
+            self._apply_mana_income_for_turn()
         self._clear_expired_combat_potion_effects()
         self.combat_potion_battle_bonus_pending = False
         self.gold += float(total_gold_income)
@@ -4198,6 +4313,30 @@ class CampaignEnv(gym.Env):
                 territory_obs[int(tile_index)] = 1.0
         self._legions_territory_grid_obs_cache = territory_obs
 
+    def _refresh_legions_captured_mana_source_state(self) -> None:
+        captured_tiles_by_kind: Dict[str, List[Tuple[int, int]]] = {
+            str(kind): []
+            for kind in self.MANA_KIND_ORDER
+        }
+        for raw_tile, mana_meta in getattr(self, "mana_sources", {}).items():
+            tile = tuple(int(coord) for coord in tuple(raw_tile)[:2])
+            if tile not in self.legions_territory_tile_set:
+                continue
+            mana_kind = str(mana_meta.get("kind", "") or "")
+            if mana_kind not in captured_tiles_by_kind:
+                continue
+            captured_tiles_by_kind[mana_kind].append(tile)
+
+        self.legions_captured_mana_source_tiles_by_kind = {
+            str(kind): tuple(sorted(captured_tiles_by_kind[str(kind)]))
+            for kind in self.MANA_KIND_ORDER
+        }
+        self.legions_captured_mana_source_counts_by_kind = {
+            str(kind): len(self.legions_captured_mana_source_tiles_by_kind[str(kind)])
+            for kind in self.MANA_KIND_ORDER
+        }
+        self.mana_income_per_turn = self._compute_mana_income_per_turn()
+
     def _refresh_faction_territories(self) -> None:
         legions_claim_count = self._territory_claim_count(
             len(self.legions_territory_order),
@@ -4215,6 +4354,7 @@ class CampaignEnv(gym.Env):
             if tuple(tile) in self.legions_territory_tile_set
         )
         self.legions_captured_gold_mine_count = len(self.legions_captured_gold_mine_tiles)
+        self._refresh_legions_captured_mana_source_state()
         empire_claim_count = self._territory_claim_count(
             len(self.empire_territory_order),
             self.EMPIRE_TERRITORY_EXPANSION_PER_TURN,
@@ -4381,7 +4521,50 @@ class CampaignEnv(gym.Env):
         self.grid_blue_features_per_unit = 8
         self.grid_blue_obs_size = len(self.grid_blue_positions) * self.grid_blue_features_per_unit
 
-        self.grid_resource_obs_size = 11
+        self.grid_resource_core_obs_size = 11
+        self.grid_mana_total_kinds = tuple(str(kind) for kind in self.MANA_KIND_ORDER)
+        self.grid_mana_total_obs_size = len(self.grid_mana_total_kinds)
+        self.grid_resource_obs_size = (
+            self.grid_resource_core_obs_size + self.grid_mana_total_obs_size
+        )
+
+        mana_kind_order = {str(kind): index for index, kind in enumerate(self.MANA_KIND_ORDER)}
+        self.grid_mana_source_entries = tuple(
+            {
+                "pos": tuple(int(coord) for coord in tuple(tile_pos)[:2]),
+                "kind": str(mana_meta.get("kind", "") or ""),
+            }
+            for tile_pos, mana_meta in sorted(
+                getattr(self, "mana_sources", {}).items(),
+                key=lambda item: (
+                    mana_kind_order.get(str(item[1].get("kind", "") or ""), len(mana_kind_order)),
+                    int(item[0][1]),
+                    int(item[0][0]),
+                ),
+            )
+        )
+        self.grid_mana_kind_to_norm = {
+            str(kind): float(index + 1) / float(max(1, len(self.MANA_KIND_ORDER)))
+            for index, kind in enumerate(self.MANA_KIND_ORDER)
+        }
+        self.grid_mana_source_features_per_entry = 3
+        self.grid_mana_source_obs_size = (
+            len(self.grid_mana_source_entries) * self.grid_mana_source_features_per_entry
+        )
+        self.grid_mana_total_half_point_by_kind = {}
+        for kind in self.MANA_KIND_ORDER:
+            source_count = sum(
+                1
+                for mana_meta in getattr(self, "mana_sources", {}).values()
+                if str(mana_meta.get("kind", "") or "") == str(kind)
+            )
+            max_income = float(source_count) * float(self.LEGIONS_MANA_SOURCE_MANA_PER_TURN)
+            if str(kind) == "infernal":
+                max_income += float(self.BASE_INFERNAL_MANA_PER_TURN)
+            self.grid_mana_total_half_point_by_kind[str(kind)] = max(
+                1.0,
+                float(self.turn_norm_k) * max(50.0, max_income),
+            )
 
         self.grid_building_features_per_building = 3
         self.grid_building_obs_size = (
@@ -4500,6 +4683,7 @@ class CampaignEnv(gym.Env):
         self.grid_campaign_obs_size = (
             self.grid_blue_obs_size
             + self.grid_resource_obs_size
+            + self.grid_mana_source_obs_size
             + self.grid_building_obs_size
             + self.grid_chest_obs_size
             + self.grid_heal_tile_obs_size
@@ -4651,7 +4835,39 @@ class CampaignEnv(gym.Env):
                 max(1, len(self.grid_objective_city_names)),
             ),
         ]
+        for mana_kind in self.grid_mana_total_kinds:
+            mana_attr = str(self.MANA_ATTR_BY_KIND.get(str(mana_kind), "") or "")
+            mana_value = float(getattr(self, mana_attr, 0.0) or 0.0) if mana_attr else 0.0
+            resource_obs.append(
+                self._normalize_saturating_count(
+                    mana_value,
+                    half_point=float(
+                        self.grid_mana_total_half_point_by_kind.get(str(mana_kind), 1.0)
+                    ),
+                )
+            )
         return np.array(resource_obs, dtype=np.float32)
+
+    def _build_mana_source_grid_obs(self) -> np.ndarray:
+        if self.grid_mana_source_obs_size <= 0:
+            return np.zeros(0, dtype=np.float32)
+
+        grid_scale = max(1, self.grid_env.grid_size - 1)
+        mana_obs: List[float] = []
+        for entry in self.grid_mana_source_entries:
+            tile_pos = tuple(entry.get("pos", (0, 0)))
+            mana_kind = str(entry.get("kind", "") or "")
+            x = int(tile_pos[0]) if len(tile_pos) >= 1 else 0
+            y = int(tile_pos[1]) if len(tile_pos) >= 2 else 0
+            type_norm = float(self.grid_mana_kind_to_norm.get(mana_kind, 0.0))
+            mana_obs.extend(
+                [
+                    x / grid_scale,
+                    y / grid_scale,
+                    type_norm,
+                ]
+            )
+        return np.array(mana_obs, dtype=np.float32)
 
     def _build_building_grid_obs(self) -> np.ndarray:
         building_obs: List[float] = []
@@ -4794,6 +5010,7 @@ class CampaignEnv(gym.Env):
             [
                 self._build_blue_team_grid_obs(),
                 self._build_resource_grid_obs(),
+                self._build_mana_source_grid_obs(),
                 self._build_building_grid_obs(),
                 self._build_chest_grid_obs(),
                 self._build_heal_tiles_grid_obs(),
@@ -5097,6 +5314,13 @@ class CampaignEnv(gym.Env):
             lines.append(f"В бою с врагом {self.current_enemy_id}")
             lines.append(f"Описание: {ENEMY_DESCRIPTIONS.get(self.current_enemy_id, '?')}")
             lines.append(f"Ход: {self.turns} | Золото: {self.gold:g} | Шаги: {self.moves}")
+        mana_totals = self._current_mana_totals()
+        mana_income = self._compute_mana_income_per_turn()
+        mana_text = ", ".join(
+            f"{self.MANA_LABEL_BY_KIND[str(kind)]}: {mana_totals[str(kind)]:g} (+{mana_income[str(kind)]:g}/ход)"
+            for kind in self.MANA_KIND_ORDER
+        )
+        lines.append(f"Мана: {mana_text}")
 
         if self.chests:
             chest_text = ", ".join(
@@ -5166,6 +5390,7 @@ class CampaignEnv(gym.Env):
                 site_name: self._merchant_stock_snapshot(site_name)
                 for site_name in self.merchant_stocks.keys()
             },
+            **self._mana_state_info(),
             "chests_remaining": [
                 {"pos": pos, "items": list(item_names)}
                 for pos, item_names in sorted(self.chests.items())
