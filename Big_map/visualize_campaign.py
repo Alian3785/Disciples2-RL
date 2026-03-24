@@ -1103,6 +1103,45 @@ class CampaignVisualizer:
                 zorder=2.8,
             )
 
+    def _draw_mana_source_overlays(
+        self,
+        mana_sources: dict[tuple[int, int], dict[str, object]] | None,
+    ) -> None:
+        if not mana_sources:
+            return
+        for tile, meta in sorted(mana_sources.items(), key=lambda item: (item[0][1], item[0][0])):
+            try:
+                x = int(tile[0])
+                y = int(tile[1])
+            except Exception:
+                continue
+            draw_x, draw_y = self._display_tile(x, y)
+            fill_color = tuple(meta.get("fill_color", (0.8, 0.8, 0.8, 0.84)))
+            edge_color = tuple(meta.get("edge_color", (0.3, 0.3, 0.3, 0.98)))
+            text_color = tuple(meta.get("text_color", (0.05, 0.05, 0.05, 1.0)))
+            letter = str(meta.get("letter", "?") or "?")[:1]
+            mana_rect = patches.Rectangle(
+                (draw_x - 0.36, draw_y - 0.36),
+                0.72,
+                0.72,
+                facecolor=fill_color,
+                edgecolor=edge_color,
+                linewidth=1.8,
+                zorder=2.74,
+            )
+            self.ax.add_patch(mana_rect)
+            self.ax.text(
+                draw_x,
+                draw_y,
+                letter,
+                ha="center",
+                va="center",
+                fontsize=9,
+                fontweight="bold",
+                color=text_color,
+                zorder=2.82,
+            )
+
     def _draw_ruin_overlays(self) -> None:
         for overlay in self.ruin_overlays:
             x = int(overlay["x"])
@@ -1162,6 +1201,9 @@ class CampaignVisualizer:
         merchant_positions: list | tuple | set | dict | None = None,
         merchant_site_anchors: list | tuple | set | dict | None = None,
         chest_positions: list | tuple | set | dict | None = None,
+        mana_sources: dict | None = None,
+        mana_totals: dict | None = None,
+        mana_income_per_turn: dict | None = None,
         turns: int = 0,
         gold: float = 0.0,
         steps: int = 0,
@@ -1385,6 +1427,7 @@ class CampaignVisualizer:
                 )
 
         self._draw_gold_mine_overlays()
+        self._draw_mana_source_overlays(mana_sources)
         self._draw_ruin_overlays()
 
         # Враги
@@ -1474,6 +1517,26 @@ class CampaignVisualizer:
         info_lines.append(f"Legions territory: {legions_territory_count}")
         info_lines.append(f"Empire territory: {empire_territory_count}")
         info_lines.append(f"Сундуки: {chest_count}")
+        mana_totals = dict(mana_totals or {})
+        mana_income_per_turn = dict(mana_income_per_turn or {})
+        mana_display_order = (
+            ("infernal", "Мана преисподней"),
+            ("life", "Мана жизни"),
+            ("death", "Мана смерти"),
+            ("runes", "Мана рун"),
+            ("elves", "Мана эльфов"),
+        )
+        info_lines.append("Мана:")
+        for mana_kind, mana_label in mana_display_order:
+            try:
+                mana_total = float(mana_totals.get(mana_kind, 0.0) or 0.0)
+            except (TypeError, ValueError):
+                mana_total = 0.0
+            try:
+                mana_delta = float(mana_income_per_turn.get(mana_kind, 0.0) or 0.0)
+            except (TypeError, ValueError):
+                mana_delta = 0.0
+            info_lines.append(f"- {mana_label}: {mana_total:g} (+{mana_delta:g}/ход)")
         try:
             ruins_cleared = max(0, int(ruins_cleared or 0))
         except (TypeError, ValueError):
@@ -1808,6 +1871,9 @@ def run_campaign_visualization(
                 obstacle_tiles=getattr(env_base.grid_env, "obstacle_positions", None),
                 merchant_positions=getattr(env_base.grid_env, "merchant_positions", None),
                 merchant_site_anchors=getattr(env_base, "merchant_site_anchors", None),
+                mana_sources=getattr(env_base.grid_env, "mana_sources", None),
+                mana_totals=env_base._current_mana_totals(),
+                mana_income_per_turn=getattr(env_base, "mana_income_per_turn", None),
                 turns=env_base.turns,
                 gold=env_base.gold,
                 steps=env_base.moves,
@@ -1875,6 +1941,9 @@ def run_campaign_visualization(
                     obstacle_tiles=getattr(env_base.grid_env, "obstacle_positions", None),
                     merchant_positions=getattr(env_base.grid_env, "merchant_positions", None),
                     merchant_site_anchors=getattr(env_base, "merchant_site_anchors", None),
+                    mana_sources=getattr(env_base.grid_env, "mana_sources", None),
+                    mana_totals=env_base._current_mana_totals(),
+                    mana_income_per_turn=getattr(env_base, "mana_income_per_turn", None),
                     turns=env_base.turns,
                     gold=env_base.gold,
                     steps=env_base.moves,
@@ -2013,6 +2082,9 @@ def run_campaign_visualization(
         obstacle_tiles=getattr(env_base.grid_env, "obstacle_positions", None),
         merchant_positions=getattr(env_base.grid_env, "merchant_positions", None),
         merchant_site_anchors=getattr(env_base, "merchant_site_anchors", None),
+        mana_sources=getattr(env_base.grid_env, "mana_sources", None),
+        mana_totals=env_base._current_mana_totals(),
+        mana_income_per_turn=getattr(env_base, "mana_income_per_turn", None),
         turns=env_base.turns,
         gold=env_base.gold,
         steps=env_base.moves,

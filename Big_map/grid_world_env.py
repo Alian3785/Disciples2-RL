@@ -109,7 +109,14 @@ class GridWorldEnv(gym.Env):
         self.current_enemy_encounter: Optional[int] = None
         self.chest_positions: Set[Tuple[int, int]] = set()
         self.merchant_positions: Set[Tuple[int, int]] = set()
+        self.mana_sources: Dict[Tuple[int, int], Dict[str, object]] = {}
         self.step_count = 0
+
+    @staticmethod
+    def _colorize_symbol(symbol: str, ansi_color: str) -> str:
+        if not ansi_color:
+            return symbol
+        return f"{ansi_color}{symbol}\x1b[0m"
 
     def _clamp_to_grid(self, pos: Tuple[int, int]) -> Tuple[int, int]:
         return clamp_grid_pos(pos, self.grid_size)
@@ -278,6 +285,10 @@ class GridWorldEnv(gym.Env):
             self._clamp_to_grid(pos)
             for pos in getattr(self, "merchant_positions", set()) or set()
         }
+        mana_sources = {
+            self._clamp_to_grid(pos): dict(meta or {})
+            for pos, meta in (getattr(self, "mana_sources", {}) or {}).items()
+        }
 
         lines = []
         lines.append("+" + "-" * (self.grid_size * 2 + 1) + "+")
@@ -293,6 +304,11 @@ class GridWorldEnv(gym.Env):
                     row += "M "
                 elif pos in chest_positions:
                     row += "T "
+                elif pos in mana_sources:
+                    mana_meta = mana_sources[pos]
+                    symbol = str(mana_meta.get("letter", "?") or "?")[:1]
+                    ansi_color = str(mana_meta.get("ansi_color", "") or "")
+                    row += f"{self._colorize_symbol(symbol, ansi_color)} "
                 elif pos in [self.enemy_positions.get(i) for i in enemy_ids]:
                     enemy_id = self.get_enemy_at_position(pos)
                     row += f"{enemy_id} " if enemy_id is not None else "x "
@@ -308,6 +324,12 @@ class GridWorldEnv(gym.Env):
         lines.append(f"Enemies alive: {[k for k, v in self.enemies_alive.items() if v]}")
         lines.append(f"Merchants: {sorted(merchant_positions)}")
         lines.append(f"Chests: {sorted(chest_positions)}")
+        if mana_sources:
+            mana_summary = ", ".join(
+                f"{pos}:{meta.get('name', '')}"
+                for pos, meta in sorted(mana_sources.items(), key=lambda item: item[0])
+            )
+            lines.append(f"Mana sources: {mana_summary}")
         lines.append(f"Visited: {len(self.visited_cells)}/{self.grid_size**2}")
 
         result = "\n".join(lines)

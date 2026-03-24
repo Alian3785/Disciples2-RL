@@ -233,6 +233,51 @@ BASE_STATIC_CHESTS: Tuple[Tuple[Tuple[int, int], Tuple[str, ...]], ...] = (
     ((24, 30), ("Potion of Healing", "Bronze Ring (Valuable)")),
 )
 CHEST_COUNT = len(BASE_STATIC_CHESTS)
+BASE_STATIC_MANA_SOURCES: Tuple[Tuple[str, Tuple[int, int]], ...] = (
+    ("infernal", (6, 16)),
+    ("infernal", (44, 21)),
+    ("infernal", (10, 29)),
+    ("life", (6, 11)),
+    ("life", (25, 16)),
+    ("life", (29, 40)),
+    ("death", (7, 41)),
+    ("runes", (1, 4)),
+)
+MANA_SOURCE_DISPLAY_SPECS: Dict[str, Dict[str, object]] = {
+    "infernal": {
+        "name": "Мана преисподней",
+        "letter": "П",
+        "fill_color": (0.84, 0.18, 0.16, 0.84),
+        "edge_color": (0.46, 0.08, 0.06, 0.98),
+        "text_color": (1.0, 0.96, 0.96, 1.0),
+        "ansi_color": "\x1b[31m",
+    },
+    "life": {
+        "name": "Мана жизни",
+        "letter": "Ж",
+        "fill_color": (0.18, 0.38, 0.88, 0.84),
+        "edge_color": (0.06, 0.18, 0.46, 0.98),
+        "text_color": (1.0, 0.98, 0.98, 1.0),
+        "ansi_color": "\x1b[34m",
+    },
+    "death": {
+        "name": "Мана смерти",
+        "letter": "С",
+        "fill_color": (0.72, 0.72, 0.72, 0.88),
+        "edge_color": (0.36, 0.36, 0.36, 0.98),
+        "text_color": (0.10, 0.10, 0.10, 1.0),
+        "ansi_color": "\x1b[90m",
+    },
+    "runes": {
+        "name": "Мана рун",
+        "letter": "Р",
+        "fill_color": (0.40, 0.84, 0.96, 0.84),
+        "edge_color": (0.08, 0.44, 0.60, 0.98),
+        "text_color": (0.06, 0.18, 0.24, 1.0),
+        "ansi_color": "\x1b[96m",
+    },
+}
+MANA_SOURCE_COUNT = len(BASE_STATIC_MANA_SOURCES)
 
 # Base campaign layout mirrors the 48x48 scenario coordinates directly.
 BASE_GRID_SIZE = DEFAULT_GRID_SIZE
@@ -1204,6 +1249,37 @@ def resolve_chests(
         resolved[tile] = tuple(str(item_name) for item_name in item_names if str(item_name))
         reserved_tiles.add(tile)
 
+    return resolved
+
+
+def resolve_mana_sources(
+    grid_size: int,
+    *,
+    base_static_mana_sources: Tuple[Tuple[str, Tuple[int, int]], ...] = BASE_STATIC_MANA_SOURCES,
+    base_grid_size: int = BASE_GRID_SIZE,
+) -> Dict[Tuple[int, int], Dict[str, object]]:
+    """Scale the static mana-source layout to the current grid size."""
+    if not base_static_mana_sources:
+        return {}
+
+    scaled_tiles = scale_static_tiles(
+        grid_size,
+        tuple(position for _, position in base_static_mana_sources),
+        base_grid_size=base_grid_size,
+    )
+    resolved: Dict[Tuple[int, int], Dict[str, object]] = {}
+    for (kind, _), scaled_tile in zip(base_static_mana_sources, scaled_tiles):
+        tile = clamp_grid_pos(scaled_tile, grid_size)
+        display = dict(MANA_SOURCE_DISPLAY_SPECS.get(kind, {}))
+        resolved[tile] = {
+            "kind": str(kind),
+            "name": str(display.get("name", kind) or kind),
+            "letter": str(display.get("letter", "?") or "?")[:1],
+            "fill_color": tuple(display.get("fill_color", (0.8, 0.8, 0.8, 0.8))),
+            "edge_color": tuple(display.get("edge_color", (0.3, 0.3, 0.3, 1.0))),
+            "text_color": tuple(display.get("text_color", (0.0, 0.0, 0.0, 1.0))),
+            "ansi_color": str(display.get("ansi_color", "") or ""),
+        }
     return resolved
 
 
