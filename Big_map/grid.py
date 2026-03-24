@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from collections import deque
 from typing import Dict, Optional, Tuple
+from data_dicts_compact_lines import DATA
 
 DEFAULT_GRID_SIZE = 48
 DEFAULT_HERO_GRID_POSITION: Tuple[int, int] = (5, 27)
@@ -234,6 +235,138 @@ CHEST_COUNT = len(BASE_STATIC_CHESTS)
 # Base campaign layout mirrors the 48x48 scenario coordinates directly.
 BASE_GRID_SIZE = DEFAULT_GRID_SIZE
 BASE_ENEMY_POSITIONS: Dict[int, Tuple[int, int]] = {}
+
+_UNIT_NAME_ALIASES: Dict[str, str] = {
+    "Выверна": "Виверна",
+    "Гоблин-лучник": "Гоблин лучник",
+    "Зеленый дракон": "Зелёный дракон",
+    "Зелёный дракон": "Зелёный дракон",
+    "Дракон Рока": "Дракон рока",
+    "Лорд Тьмы": "Лорд тьмы",
+}
+
+
+def _canonical_enemy_name(name: str) -> str:
+    raw = str(name or "").strip()
+    return _UNIT_NAME_ALIASES.get(raw, raw)
+
+
+def _build_big_unit_names() -> frozenset[str]:
+    names: set[str] = set()
+    for entry in DATA:
+        if not isinstance(entry, dict):
+            continue
+        entry_name = entry.get("\u043a\u0442\u043e")
+        if entry_name is None:
+            entry_name = entry.get("\u0420\u0454\u0421\u201a\u0420\u0455")
+        if not entry_name:
+            continue
+        try:
+            size = int(entry.get("\u0440\u0430\u0437\u043c\u0435\u0440", 0) or 0)
+        except (TypeError, ValueError):
+            size = 0
+        if size != 1:
+            continue
+        name = str(entry_name).strip()
+        if not name:
+            continue
+        names.add(name)
+        names.add(_canonical_enemy_name(name))
+    return frozenset(names)
+
+
+BIG_UNIT_NAMES = _build_big_unit_names()
+
+
+def _is_big_enemy_unit(name: str | None) -> bool:
+    if not name:
+        return False
+    return _canonical_enemy_name(str(name)) in BIG_UNIT_NAMES
+
+
+def _normalize_big_unit_rows(
+    front: list[str | None],
+    back: list[str | None],
+) -> Tuple[list[str | None], list[str | None]]:
+    if len(front) != 3 or len(back) != 3:
+        return list(front), list(back)
+
+    original_slots: list[tuple[str, int, str]] = []
+    for row_name, row_values in (("front", front), ("back", back)):
+        for col, name in enumerate(row_values):
+            if isinstance(name, str) and name:
+                original_slots.append((row_name, int(col), str(name)))
+
+    if not original_slots:
+        return list(front), list(back)
+
+    big_slots = [
+        (row_name, col, name)
+        for row_name, col, name in original_slots
+        if _is_big_enemy_unit(name)
+    ]
+    if not big_slots:
+        return list(front), list(back)
+
+    blocked_cols = [col for _, col, _ in big_slots]
+    if len(set(blocked_cols)) != len(blocked_cols):
+        return list(front), list(back)
+
+    result_front: list[str | None] = [None, None, None]
+    result_back: list[str | None] = [None, None, None]
+    blocked_col_set = set(blocked_cols)
+
+    for _, col, name in big_slots:
+        result_front[col] = name
+
+    displaced_units: list[tuple[str, int, str]] = []
+    for row_name, col, name in original_slots:
+        if _is_big_enemy_unit(name):
+            continue
+        target_row = result_front if row_name == "front" else result_back
+        if col not in blocked_col_set and target_row[col] is None:
+            target_row[col] = name
+            continue
+        displaced_units.append((row_name, col, name))
+
+    def _candidate_slots(preferred_row: str, original_col: int) -> list[tuple[str, int]]:
+        row_order = [preferred_row, "back" if preferred_row == "front" else "front"]
+        candidates: list[tuple[str, int]] = []
+        for row_name in row_order:
+            target_row = result_front if row_name == "front" else result_back
+            free_cols = [
+                col
+                for col in range(3)
+                if col not in blocked_col_set and target_row[col] is None
+            ]
+            free_cols.sort(key=lambda col: (abs(col - original_col), col))
+            candidates.extend((row_name, col) for col in free_cols)
+        return candidates
+
+    for preferred_row, original_col, name in displaced_units:
+        placed = False
+        for row_name, col in _candidate_slots(preferred_row, original_col):
+            target_row = result_front if row_name == "front" else result_back
+            if target_row[col] is None:
+                target_row[col] = name
+                placed = True
+                break
+        if not placed:
+            return list(front), list(back)
+
+    return result_front, result_back
+
+
+def _normalize_enemy_team_spec(spec: dict[str, object]) -> dict[str, object]:
+    front, back = _normalize_big_unit_rows(
+        list(spec["front"]),
+        list(spec["back"]),
+    )
+    return {
+        "description": str(spec["description"]),
+        "front": front,
+        "back": back,
+    }
 
 # Battle-ready template for the hero squad used in campaign battles.
 BLUE_TEAM_TEMPLATE = [
@@ -486,8 +619,8 @@ VILLAGE_LINKED_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
         "enemy_id": 35,
         "position": (40, 25),
         "description": "Отряд Соругириллы: Унфегра (Королева личей), Виверна",
-        "front": [None, "Королева лич", None],
-        "back": [None, "Виверна", None],
+        "front": [None, "Виверна", None],
+        "back": ["Королева лич", None, None],
     },
 )
 
@@ -527,6 +660,7 @@ def _make_stack_override(
     label: Optional[str] = None,
 ) -> dict[str, object]:
     front, back = _pack_stack_units(units)
+    front, back = _normalize_big_unit_rows(front, back)
     composition = ", ".join(units) if units else "(empty)"
     return {
         "enemy_id": int(enemy_id),
@@ -669,6 +803,10 @@ ENEMY_TEAM_SPECS.update(
         for row in ALL_MAP_STACK_OVERRIDES
     }
 )
+ENEMY_TEAM_SPECS = {
+    enemy_id: _normalize_enemy_team_spec(spec)
+    for enemy_id, spec in ENEMY_TEAM_SPECS.items()
+}
 
 
 def clamp_grid_pos(pos: Tuple[int, int], grid_size: int) -> Tuple[int, int]:
