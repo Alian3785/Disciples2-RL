@@ -37,6 +37,7 @@ from grid import (
     SETTLEMENT_ARMOR_BONUS_BY_LEVEL,
     SETTLEMENT_DEFENDER_LEVEL_BY_ENEMY_ID,
     resolve_chests,
+    resolve_legions_settlement_territory_sources,
     resolve_mana_sources,
     resolve_obstacle_tiles,
     resolve_heal_tiles,
@@ -596,6 +597,21 @@ class CampaignEnv(gym.Env):
             tuple(pos): dict(meta)
             for pos, meta in mana_sources.items()
         }
+        self._static_legions_settlement_territory_sources: Tuple[Dict[str, object], ...] = (
+            resolve_legions_settlement_territory_sources(
+                self.grid_size,
+                enemy_positions,
+            )
+        )
+        self.legions_settlement_territory_source_by_name: Dict[str, Dict[str, object]] = {
+            str(source_data.get("name", "") or ""): dict(source_data)
+            for source_data in self._static_legions_settlement_territory_sources
+        }
+        self.legions_settlement_territory_source_name_by_enemy_id: Dict[int, str] = {
+            int(enemy_id): str(source_data.get("name", "") or "")
+            for source_data in self._static_legions_settlement_territory_sources
+            for enemy_id in tuple(source_data.get("required_enemy_ids", ()))
+        }
         self._init_merchant_site_metadata()
 
         # Подсреда grid: враги и препятствия автоматически масштабируются под размер карты.
@@ -641,8 +657,12 @@ class CampaignEnv(gym.Env):
         self.legions_territory_order: Tuple[Tuple[int, int], ...] = (
             self._build_legions_territory_order()
         )
+        self.legions_settlement_territory_orders_by_name: Dict[str, Tuple[Tuple[int, int], ...]] = (
+            self._build_legions_settlement_territory_orders_by_name()
+        )
         self.legions_territory_tiles: Tuple[Tuple[int, int], ...] = ()
         self.legions_territory_tile_set: set[Tuple[int, int]] = set()
+        self._reset_legions_settlement_territory_state()
         self.legions_captured_gold_mine_tiles: Tuple[Tuple[int, int], ...] = ()
         self.legions_captured_gold_mine_count: int = 0
         self.empire_territory_forbidden_tiles: Tuple[Tuple[int, int], ...] = (
@@ -780,6 +800,7 @@ class CampaignEnv(gym.Env):
             tuple(pos): dict(meta)
             for pos, meta in self._static_mana_sources.items()
         }
+        self._reset_legions_settlement_territory_state()
         self._reset_mana_state()
         self.castle_heal_tiles = self._static_castle_heal_tiles
         self._refresh_faction_territories()
@@ -834,6 +855,7 @@ class CampaignEnv(gym.Env):
             "empire_territory_tiles": tuple(self.empire_territory_tiles),
             "empire_territory_count": len(self.empire_territory_tiles),
         }
+        info.update(self._legions_settlement_territory_info())
         info.update(self._mana_state_info())
         info.update(self._ruin_progress_info())
         info.update(self._merchant_context_info(self.grid_env.agent_pos))
@@ -1175,6 +1197,7 @@ class CampaignEnv(gym.Env):
         )
         finalized_info["empire_territory_tiles"] = tuple(self.empire_territory_tiles)
         finalized_info["empire_territory_count"] = len(self.empire_territory_tiles)
+        finalized_info.update(self._legions_settlement_territory_info())
         finalized_info.update(self._mana_state_info())
         finalized_info.update(self._ruin_progress_info())
         finalized_info.update(self._merchant_context_info(position))
@@ -1495,6 +1518,28 @@ class CampaignEnv(gym.Env):
             info[attr_name] = float(mana_totals[str(kind)])
             info[f"{attr_name}_income_per_turn"] = float(mana_income[str(kind)])
         return info
+
+    def _reset_legions_settlement_territory_state(self) -> None:
+        self.legions_active_settlement_territory_capture_turn_by_name: Dict[str, int] = {}
+        self.legions_settlement_territory_tiles_by_name: Dict[str, Tuple[Tuple[int, int], ...]] = {
+            str(source_name): ()
+            for source_name in self.legions_settlement_territory_source_by_name.keys()
+        }
+
+    def _legions_settlement_territory_info(self) -> Dict[str, object]:
+        return {
+            "legions_active_settlement_territories": sorted(
+                self.legions_active_settlement_territory_capture_turn_by_name.keys()
+            ),
+            "legions_settlement_territory_capture_turn_by_name": {
+                str(name): int(turn)
+                for name, turn in self.legions_active_settlement_territory_capture_turn_by_name.items()
+            },
+            "legions_settlement_territory_tiles_by_name": {
+                str(name): tuple(tiles)
+                for name, tiles in self.legions_settlement_territory_tiles_by_name.items()
+            },
+        }
 
     def _grant_ruin_reward(self, enemy_id: Optional[int]) -> Dict[str, object]:
         reward_data = self.RUIN_REWARD_BY_ENEMY_ID.get(int(enemy_id or -1))
@@ -3158,6 +3203,17 @@ class CampaignEnv(gym.Env):
                     self.current_enemy_id
                 )
                 info["objective_cities_captured_total"] = sorted(self.captured_objective_cities)
+                newly_activated_settlement_territories = (
+                    self._activate_legions_settlement_territory_if_cleared(self.current_enemy_id)
+                )
+                if newly_activated_settlement_territories:
+                    info["legions_settlement_territories_activated"] = list(
+                        newly_activated_settlement_territories
+                    )
+                    for settlement_name in newly_activated_settlement_territories:
+                        self._log(
+                            f"=== ЗЕМЛЯ ЛЕГИОНОВ НАЧИНАЕТ РАСПРОСТРАНЯТЬСЯ ИЗ ПОСЕЛЕНИЯ {settlement_name} ==="
+                        )
 
                 if newly_captured_objective_cities:
                     final_objective_reward = self._compute_final_objective_reward(
@@ -3988,6 +4044,38 @@ class CampaignEnv(gym.Env):
     def _all_objective_cities_captured(self) -> bool:
         return len(self.captured_objective_cities) == len(self.FINAL_OBJECTIVE_CITIES)
 
+    def _is_legions_settlement_territory_cleared(self, settlement_name: str) -> bool:
+        source_data = self.legions_settlement_territory_source_by_name.get(str(settlement_name), {})
+        required_enemy_ids = tuple(int(enemy_id) for enemy_id in source_data.get("required_enemy_ids", ()))
+        if not required_enemy_ids:
+            return False
+        enemies_alive = getattr(self.grid_env, "enemies_alive", {}) or {}
+        for enemy_id in required_enemy_ids:
+            if enemy_id not in enemies_alive:
+                return False
+            if bool(enemies_alive.get(enemy_id, False)):
+                return False
+        return True
+
+    def _activate_legions_settlement_territory_if_cleared(
+        self,
+        enemy_id: Optional[int],
+    ) -> List[str]:
+        try:
+            normalized_enemy_id = int(enemy_id)
+        except (TypeError, ValueError):
+            return []
+        settlement_name = self.legions_settlement_territory_source_name_by_enemy_id.get(normalized_enemy_id)
+        if not settlement_name:
+            return []
+        if settlement_name in self.legions_active_settlement_territory_capture_turn_by_name:
+            return []
+        if not self._is_legions_settlement_territory_cleared(settlement_name):
+            return []
+        self.legions_active_settlement_territory_capture_turn_by_name[str(settlement_name)] = int(self.turns)
+        self._refresh_faction_territories()
+        return [str(settlement_name)]
+
     def _compute_final_objective_reward(
         self,
         city_count: int = 1,
@@ -4273,6 +4361,23 @@ class CampaignEnv(gym.Env):
             sort_key=self._legions_territory_sort_key,
         )
 
+    def _build_legions_settlement_territory_orders_by_name(self) -> Dict[str, Tuple[Tuple[int, int], ...]]:
+        orders_by_name: Dict[str, Tuple[Tuple[int, int], ...]] = {}
+        for source_data in self._static_legions_settlement_territory_sources:
+            settlement_name = str(source_data.get("name", "") or "")
+            source_tile = tuple(source_data.get("source_tile", (0, 0)))
+            path_blocked_tiles = self._build_territory_path_blocked_tiles(source_tile=source_tile)
+            path_distances = self._build_territory_path_distances(
+                source_tile=source_tile,
+                blocked_tile_set=set(path_blocked_tiles),
+            )
+            orders_by_name[settlement_name] = self._build_territory_order(
+                forbidden_tile_set=self.legions_territory_forbidden_tile_set,
+                path_distances=path_distances,
+                sort_key=lambda tile, origin_tile=source_tile: self._territory_sort_key(origin_tile, tile),
+            )
+        return orders_by_name
+
     def _build_empire_territory_order(self) -> Tuple[Tuple[int, int], ...]:
         return self._build_territory_order(
             forbidden_tile_set=self.empire_territory_forbidden_tile_set,
@@ -4295,6 +4400,21 @@ class CampaignEnv(gym.Env):
         if claim_count <= 0:
             return ()
         return tuple(order[: int(claim_count)])
+
+    @staticmethod
+    def _settlement_territory_claim_count(
+        total_tiles: int,
+        expansion_per_turn: int,
+        turns: int,
+        activation_turn: Optional[int],
+    ) -> int:
+        if activation_turn is None:
+            return 0
+        elapsed_turns = max(0, int(turns) - int(activation_turn))
+        return min(
+            int(total_tiles),
+            1 + elapsed_turns * max(0, int(expansion_per_turn)),
+        )
 
     def _refresh_legions_territory_tiles(self) -> None:
         self._refresh_faction_territories()
@@ -4343,10 +4463,39 @@ class CampaignEnv(gym.Env):
             self.LEGIONS_TERRITORY_EXPANSION_PER_TURN,
             self.turns,
         )
-        self.legions_territory_tiles = self._claim_territory_tiles(
+        capital_legions_tiles = self._claim_territory_tiles(
             self.legions_territory_order,
             legions_claim_count,
         )
+        combined_legions_tiles: List[Tuple[int, int]] = []
+        combined_legions_seen: set[Tuple[int, int]] = set()
+        for tile in capital_legions_tiles:
+            normalized_tile = (int(tile[0]), int(tile[1]))
+            if normalized_tile in combined_legions_seen:
+                continue
+            combined_legions_seen.add(normalized_tile)
+            combined_legions_tiles.append(normalized_tile)
+
+        for source_data in self._static_legions_settlement_territory_sources:
+            settlement_name = str(source_data.get("name", "") or "")
+            source_order = self.legions_settlement_territory_orders_by_name.get(settlement_name, ())
+            capture_turn = self.legions_active_settlement_territory_capture_turn_by_name.get(settlement_name)
+            settlement_claim_count = self._settlement_territory_claim_count(
+                len(source_order),
+                int(source_data.get("expansion_per_turn", 0) or 0),
+                self.turns,
+                capture_turn,
+            )
+            settlement_tiles = self._claim_territory_tiles(source_order, settlement_claim_count)
+            self.legions_settlement_territory_tiles_by_name[settlement_name] = settlement_tiles
+            for tile in settlement_tiles:
+                normalized_tile = (int(tile[0]), int(tile[1]))
+                if normalized_tile in combined_legions_seen:
+                    continue
+                combined_legions_seen.add(normalized_tile)
+                combined_legions_tiles.append(normalized_tile)
+
+        self.legions_territory_tiles = tuple(combined_legions_tiles)
         self.legions_territory_tile_set = set(self.legions_territory_tiles)
         self.legions_captured_gold_mine_tiles = tuple(
             tile

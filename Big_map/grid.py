@@ -190,6 +190,40 @@ BASE_SETTLEMENT_LEVEL_BY_HEAL_TILE: Dict[Tuple[int, int], int] = {
     (28, 33): 2,
     (40, 25): 2,
 }
+LEGIONS_SETTLEMENT_TERRITORY_EXPANSION_BY_LEVEL: Dict[int, int] = {
+    1: 15,
+    2: 15,
+    3: 20,
+    4: 20,
+    5: 25,
+}
+BASE_LEGIONS_SETTLEMENT_TERRITORY_DATA: Tuple[Dict[str, object], ...] = (
+    {
+        "name": "Стагириас",
+        "source_tile": (6, 4),
+        "required_enemy_ids": (32, 67),
+    },
+    {
+        "name": "Порт Бирмингем",
+        "source_tile": (4, 40),
+        "required_enemy_ids": (22,),
+    },
+    {
+        "name": "Кордилия",
+        "source_tile": (40, 9),
+        "required_enemy_ids": (33,),
+    },
+    {
+        "name": "Порт Полонис",
+        "source_tile": (28, 33),
+        "required_enemy_ids": (34, 68),
+    },
+    {
+        "name": "Соругирилла",
+        "source_tile": (40, 25),
+        "required_enemy_ids": (35, 69),
+    },
+)
 SETTLEMENT_ARMOR_BONUS_BY_LEVEL: Dict[int, int] = {
     1: 10,
     2: 15,
@@ -658,9 +692,9 @@ VILLAGE_LINKED_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
     {
         "enemy_id": 34,
         "position": (28, 33),
-        "description": "Отряд Порта Полонис: Нигош (Носферату), Колдун, Воин, Привидение",
-        "front": ["Колдун", "Носферату", "Воин"],
-        "back": [None, "Привидение", None],
+        "description": "Отряд Порта Полонис: Воин спереди, Колдун, Нигош (Носферату) и Привидение сзади",
+        "front": [None, "Воин", None],
+        "back": ["Колдун", "Носферату", "Привидение"],
     },
     {
         "enemy_id": 35,
@@ -1208,6 +1242,64 @@ def resolve_heal_tiles(
         blocked_tiles.add(tile)
 
     return tuple(heal_tiles)
+
+
+def resolve_legions_settlement_territory_sources(
+    grid_size: int,
+    enemy_positions: Dict[int, Tuple[int, int]],
+    *,
+    base_settlement_territory_data: Tuple[Dict[str, object], ...] = (
+        BASE_LEGIONS_SETTLEMENT_TERRITORY_DATA
+    ),
+    base_grid_size: int = BASE_GRID_SIZE,
+) -> Tuple[Dict[str, object], ...]:
+    """Resolve static settlement territory sources to the current grid size."""
+    resolved_sources: list[Dict[str, object]] = []
+    for raw_entry in base_settlement_territory_data:
+        entry = dict(raw_entry or {})
+        required_enemy_ids = tuple(
+            int(enemy_id)
+            for enemy_id in tuple(entry.get("required_enemy_ids", ()))
+        )
+        base_source_tile = tuple(entry.get("source_tile", (0, 0)))
+        scenario_settlement_level = max(
+            1,
+            int(BASE_SETTLEMENT_LEVEL_BY_HEAL_TILE.get(base_source_tile, 1) or 1),
+        )
+        source_tile = None
+        for enemy_id in required_enemy_ids:
+            if enemy_id in enemy_positions:
+                source_tile = clamp_grid_pos(enemy_positions[enemy_id], grid_size)
+                break
+        if source_tile is None:
+            source_tile = scale_static_tiles(
+                grid_size,
+                (base_source_tile,),
+                base_grid_size=base_grid_size,
+            )[0]
+        resolved_sources.append(
+            {
+                "name": str(entry.get("name", "") or ""),
+                "source_tile": tuple(source_tile),
+                "required_enemy_ids": required_enemy_ids,
+                "territory_level": scenario_settlement_level,
+                "expansion_per_turn": max(
+                    0,
+                    int(
+                        LEGIONS_SETTLEMENT_TERRITORY_EXPANSION_BY_LEVEL.get(
+                            scenario_settlement_level,
+                            0,
+                        )
+                        or 0
+                    ),
+                ),
+                "settlement_level": int(
+                    BASE_SETTLEMENT_LEVEL_BY_HEAL_TILE.get(base_source_tile, 0)
+                    or 0
+                ),
+            }
+        )
+    return tuple(resolved_sources)
 
 
 def resolve_chests(

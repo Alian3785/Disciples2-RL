@@ -244,6 +244,65 @@ def test_legions_territory_expands_by_ten_tiles_per_turn():
     assert env.legions_territory_tile_set.isdisjoint(env.legions_territory_forbidden_tile_set)
 
 
+def test_legions_settlement_territory_requires_full_city_clear_and_then_grows_from_source():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    assert env._activate_legions_settlement_territory_if_cleared(32) == []
+
+    env.grid_env.mark_enemy_defeated(32)
+    assert env._activate_legions_settlement_territory_if_cleared(32) == []
+    assert "Стагириас" not in env.legions_active_settlement_territory_capture_turn_by_name
+
+    env.grid_env.mark_enemy_defeated(67)
+    assert env._activate_legions_settlement_territory_if_cleared(67) == ["Стагириас"]
+    assert env.legions_active_settlement_territory_capture_turn_by_name["Стагириас"] == 0
+    assert env.legions_settlement_territory_tiles_by_name["Стагириас"] == ((6, 4),)
+    assert (6, 4) in env.legions_territory_tile_set
+
+    env._advance_turns(1)
+    assert len(env.legions_settlement_territory_tiles_by_name["Стагириас"]) == 16
+
+
+def test_legions_settlement_territory_levels_map_to_expected_growth_rules():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    sources = env.legions_settlement_territory_source_by_name
+    assert sources["Стагириас"]["territory_level"] == 1
+    assert sources["Порт Бирмингем"]["territory_level"] == 1
+    assert sources["Кордилия"]["territory_level"] == 2
+    assert sources["Порт Полонис"]["territory_level"] == 2
+    assert sources["Соругирилла"]["territory_level"] == 2
+
+    assert sources["Стагириас"]["expansion_per_turn"] == 15
+    assert sources["Порт Бирмингем"]["expansion_per_turn"] == 15
+    assert sources["Кордилия"]["expansion_per_turn"] == 15
+    assert sources["Порт Полонис"]["expansion_per_turn"] == 15
+    assert sources["Соругирилла"]["expansion_per_turn"] == 15
+
+
+def test_legions_settlement_territories_use_configured_growth_rates():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    env.grid_env.mark_enemy_defeated(22)
+    assert env._activate_legions_settlement_territory_if_cleared(22) == ["Порт Бирмингем"]
+
+    env.grid_env.mark_enemy_defeated(33)
+    assert env._activate_legions_settlement_territory_if_cleared(33) == ["Кордилия"]
+
+    env.grid_env.mark_enemy_defeated(35)
+    env.grid_env.mark_enemy_defeated(69)
+    assert env._activate_legions_settlement_territory_if_cleared(69) == ["Соругирилла"]
+
+    env._advance_turns(1)
+
+    assert len(env.legions_settlement_territory_tiles_by_name["Порт Бирмингем"]) == 16
+    assert len(env.legions_settlement_territory_tiles_by_name["Кордилия"]) == 16
+    assert len(env.legions_settlement_territory_tiles_by_name["Соругирилла"]) == 16
+
+
 def test_legions_territory_grid_obs_marks_claimed_tiles_and_updates_with_turns():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
