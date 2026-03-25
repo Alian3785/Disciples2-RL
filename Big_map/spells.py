@@ -14,6 +14,8 @@ empire_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s002": {
         "id": "emp_d2_s002",
@@ -29,6 +31,8 @@ empire_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s003": {
         "id": "emp_d2_s003",
@@ -44,6 +48,8 @@ empire_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s004": {
         "id": "emp_d2_s004",
@@ -59,6 +65,8 @@ empire_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s005": {
         "id": "emp_d2_s005",
@@ -74,6 +82,8 @@ empire_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s006": {
         "id": "emp_d2_s006",
@@ -89,6 +99,8 @@ empire_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s007": {
         "id": "emp_d2_s007",
@@ -104,6 +116,8 @@ empire_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s008": {
         "id": "emp_d2_s008",
@@ -119,6 +133,8 @@ empire_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s009": {
         "id": "emp_d2_s009",
@@ -134,6 +150,8 @@ empire_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s010": {
         "id": "emp_d2_s010",
@@ -149,6 +167,8 @@ empire_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s011": {
         "id": "emp_d2_s011",
@@ -164,6 +184,8 @@ empire_spells_d2 = {
         "use_death": 0,
         "use_rune": 150,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s012": {
         "id": "emp_d2_s012",
@@ -179,6 +201,8 @@ empire_spells_d2 = {
         "use_death": 0,
         "use_rune": 150,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s013": {
         "id": "emp_d2_s013",
@@ -194,6 +218,8 @@ empire_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s014": {
         "id": "emp_d2_s014",
@@ -209,6 +235,8 @@ empire_spells_d2 = {
         "use_death": 0,
         "use_rune": 150,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s015": {
         "id": "emp_d2_s015",
@@ -224,6 +252,8 @@ empire_spells_d2 = {
         "use_death": 0,
         "use_rune": 225,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s016": {
         "id": "emp_d2_s016",
@@ -239,6 +269,8 @@ empire_spells_d2 = {
         "use_death": 0,
         "use_rune": 100,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s017": {
         "id": "emp_d2_s017",
@@ -254,6 +286,8 @@ empire_spells_d2 = {
         "use_death": 0,
         "use_rune": 75,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s018": {
         "id": "emp_d2_s018",
@@ -269,6 +303,8 @@ empire_spells_d2 = {
         "use_death": 0,
         "use_rune": 100,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s019": {
         "id": "emp_d2_s019",
@@ -284,6 +320,8 @@ empire_spells_d2 = {
         "use_death": 0,
         "use_rune": 150,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s020": {
         "id": "emp_d2_s020",
@@ -299,6 +337,8 @@ empire_spells_d2 = {
         "use_death": 0,
         "use_rune": 200,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s021": {
         "id": "emp_d2_s021",
@@ -314,6 +354,8 @@ empire_spells_d2 = {
         "use_death": 120,
         "use_rune": 70,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s022": {
         "id": "emp_d2_s022",
@@ -329,6 +371,8 @@ empire_spells_d2 = {
         "use_death": 80,
         "use_rune": 100,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s023": {
         "id": "emp_d2_s023",
@@ -344,6 +388,8 @@ empire_spells_d2 = {
         "use_death": 60,
         "use_rune": 100,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "emp_d2_s024": {
         "id": "emp_d2_s024",
@@ -359,6 +405,8 @@ empire_spells_d2 = {
         "use_death": 160,
         "use_rune": 180,
         "use_nature": 0,
+
+        "learned": 0,
     },
 }
 
@@ -379,6 +427,8 @@ mountain_clans_spells_d2 = {
         "use_death": 0,
         "use_rune": 100,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s002": {
         "id": "mcl_d2_s002",
@@ -394,6 +444,8 @@ mountain_clans_spells_d2 = {
         "use_death": 0,
         "use_rune": 25,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s003": {
         "id": "mcl_d2_s003",
@@ -409,6 +461,8 @@ mountain_clans_spells_d2 = {
         "use_death": 0,
         "use_rune": 100,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s004": {
         "id": "mcl_d2_s004",
@@ -424,6 +478,8 @@ mountain_clans_spells_d2 = {
         "use_death": 0,
         "use_rune": 100,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s005": {
         "id": "mcl_d2_s005",
@@ -439,6 +495,8 @@ mountain_clans_spells_d2 = {
         "use_death": 0,
         "use_rune": 100,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s006": {
         "id": "mcl_d2_s006",
@@ -454,6 +512,8 @@ mountain_clans_spells_d2 = {
         "use_death": 0,
         "use_rune": 200,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s007": {
         "id": "mcl_d2_s007",
@@ -469,6 +529,8 @@ mountain_clans_spells_d2 = {
         "use_death": 0,
         "use_rune": 50,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s008": {
         "id": "mcl_d2_s008",
@@ -484,6 +546,8 @@ mountain_clans_spells_d2 = {
         "use_death": 0,
         "use_rune": 200,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s009": {
         "id": "mcl_d2_s009",
@@ -499,6 +563,8 @@ mountain_clans_spells_d2 = {
         "use_death": 0,
         "use_rune": 200,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s010": {
         "id": "mcl_d2_s010",
@@ -514,6 +580,8 @@ mountain_clans_spells_d2 = {
         "use_death": 0,
         "use_rune": 200,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s011": {
         "id": "mcl_d2_s011",
@@ -529,6 +597,8 @@ mountain_clans_spells_d2 = {
         "use_death": 0,
         "use_rune": 150,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s012": {
         "id": "mcl_d2_s012",
@@ -544,6 +614,8 @@ mountain_clans_spells_d2 = {
         "use_death": 75,
         "use_rune": 75,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s013": {
         "id": "mcl_d2_s013",
@@ -559,6 +631,8 @@ mountain_clans_spells_d2 = {
         "use_death": 0,
         "use_rune": 150,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s014": {
         "id": "mcl_d2_s014",
@@ -574,6 +648,8 @@ mountain_clans_spells_d2 = {
         "use_death": 0,
         "use_rune": 150,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s015": {
         "id": "mcl_d2_s015",
@@ -589,6 +665,8 @@ mountain_clans_spells_d2 = {
         "use_death": 0,
         "use_rune": 150,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s016": {
         "id": "mcl_d2_s016",
@@ -604,6 +682,8 @@ mountain_clans_spells_d2 = {
         "use_death": 125,
         "use_rune": 200,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s017": {
         "id": "mcl_d2_s017",
@@ -619,6 +699,8 @@ mountain_clans_spells_d2 = {
         "use_death": 100,
         "use_rune": 200,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s018": {
         "id": "mcl_d2_s018",
@@ -634,6 +716,8 @@ mountain_clans_spells_d2 = {
         "use_death": 100,
         "use_rune": 200,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s019": {
         "id": "mcl_d2_s019",
@@ -649,6 +733,8 @@ mountain_clans_spells_d2 = {
         "use_death": 150,
         "use_rune": 300,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s020": {
         "id": "mcl_d2_s020",
@@ -664,6 +750,8 @@ mountain_clans_spells_d2 = {
         "use_death": 400,
         "use_rune": 800,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s021": {
         "id": "mcl_d2_s021",
@@ -679,6 +767,8 @@ mountain_clans_spells_d2 = {
         "use_death": 60,
         "use_rune": 250,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s022": {
         "id": "mcl_d2_s022",
@@ -694,6 +784,8 @@ mountain_clans_spells_d2 = {
         "use_death": 70,
         "use_rune": 250,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s023": {
         "id": "mcl_d2_s023",
@@ -709,6 +801,8 @@ mountain_clans_spells_d2 = {
         "use_death": 80,
         "use_rune": 250,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "mcl_d2_s024": {
         "id": "mcl_d2_s024",
@@ -724,6 +818,8 @@ mountain_clans_spells_d2 = {
         "use_death": 160,
         "use_rune": 500,
         "use_nature": 0,
+
+        "learned": 0,
     },
 }
 
@@ -744,6 +840,8 @@ undead_hordes_spells_d2 = {
         "use_death": 100,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s002": {
         "id": "und_d2_s002",
@@ -759,6 +857,8 @@ undead_hordes_spells_d2 = {
         "use_death": 100,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s003": {
         "id": "und_d2_s003",
@@ -774,6 +874,8 @@ undead_hordes_spells_d2 = {
         "use_death": 100,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s004": {
         "id": "und_d2_s004",
@@ -789,6 +891,8 @@ undead_hordes_spells_d2 = {
         "use_death": 100,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s005": {
         "id": "und_d2_s005",
@@ -804,6 +908,8 @@ undead_hordes_spells_d2 = {
         "use_death": 100,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s006": {
         "id": "und_d2_s006",
@@ -819,6 +925,8 @@ undead_hordes_spells_d2 = {
         "use_death": 200,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s007": {
         "id": "und_d2_s007",
@@ -834,6 +942,8 @@ undead_hordes_spells_d2 = {
         "use_death": 200,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s008": {
         "id": "und_d2_s008",
@@ -849,6 +959,8 @@ undead_hordes_spells_d2 = {
         "use_death": 200,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s009": {
         "id": "und_d2_s009",
@@ -864,6 +976,8 @@ undead_hordes_spells_d2 = {
         "use_death": 200,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s010": {
         "id": "und_d2_s010",
@@ -879,6 +993,8 @@ undead_hordes_spells_d2 = {
         "use_death": 200,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s011": {
         "id": "und_d2_s011",
@@ -894,6 +1010,8 @@ undead_hordes_spells_d2 = {
         "use_death": 150,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s012": {
         "id": "und_d2_s012",
@@ -909,6 +1027,8 @@ undead_hordes_spells_d2 = {
         "use_death": 150,
         "use_rune": 150,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s013": {
         "id": "und_d2_s013",
@@ -924,6 +1044,8 @@ undead_hordes_spells_d2 = {
         "use_death": 150,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s014": {
         "id": "und_d2_s014",
@@ -939,6 +1061,8 @@ undead_hordes_spells_d2 = {
         "use_death": 150,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s015": {
         "id": "und_d2_s015",
@@ -954,6 +1078,8 @@ undead_hordes_spells_d2 = {
         "use_death": 225,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s016": {
         "id": "und_d2_s016",
@@ -969,6 +1095,8 @@ undead_hordes_spells_d2 = {
         "use_death": 200,
         "use_rune": 100,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s017": {
         "id": "und_d2_s017",
@@ -984,6 +1112,8 @@ undead_hordes_spells_d2 = {
         "use_death": 200,
         "use_rune": 100,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s018": {
         "id": "und_d2_s018",
@@ -999,6 +1129,8 @@ undead_hordes_spells_d2 = {
         "use_death": 200,
         "use_rune": 75,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s019": {
         "id": "und_d2_s019",
@@ -1014,6 +1146,8 @@ undead_hordes_spells_d2 = {
         "use_death": 400,
         "use_rune": 200,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s020": {
         "id": "und_d2_s020",
@@ -1029,6 +1163,8 @@ undead_hordes_spells_d2 = {
         "use_death": 400,
         "use_rune": 200,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s021": {
         "id": "und_d2_s021",
@@ -1044,6 +1180,8 @@ undead_hordes_spells_d2 = {
         "use_death": 250,
         "use_rune": 90,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s022": {
         "id": "und_d2_s022",
@@ -1059,6 +1197,8 @@ undead_hordes_spells_d2 = {
         "use_death": 250,
         "use_rune": 80,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s023": {
         "id": "und_d2_s023",
@@ -1074,6 +1214,8 @@ undead_hordes_spells_d2 = {
         "use_death": 250,
         "use_rune": 70,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "und_d2_s024": {
         "id": "und_d2_s024",
@@ -1089,6 +1231,8 @@ undead_hordes_spells_d2 = {
         "use_death": 375,
         "use_rune": 120,
         "use_nature": 0,
+
+        "learned": 0,
     },
 }
 
@@ -1109,6 +1253,8 @@ legions_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s002": {
         "id": "lod_d2_s002",
@@ -1124,6 +1270,8 @@ legions_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s003": {
         "id": "lod_d2_s003",
@@ -1139,6 +1287,8 @@ legions_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s004": {
         "id": "lod_d2_s004",
@@ -1154,6 +1304,8 @@ legions_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s005": {
         "id": "lod_d2_s005",
@@ -1169,6 +1321,8 @@ legions_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s006": {
         "id": "lod_d2_s006",
@@ -1184,6 +1338,8 @@ legions_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s007": {
         "id": "lod_d2_s007",
@@ -1199,6 +1355,8 @@ legions_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s008": {
         "id": "lod_d2_s008",
@@ -1214,6 +1372,8 @@ legions_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s009": {
         "id": "lod_d2_s009",
@@ -1229,6 +1389,8 @@ legions_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s010": {
         "id": "lod_d2_s010",
@@ -1244,6 +1406,8 @@ legions_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s011": {
         "id": "lod_d2_s011",
@@ -1259,6 +1423,8 @@ legions_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s012": {
         "id": "lod_d2_s012",
@@ -1274,6 +1440,8 @@ legions_spells_d2 = {
         "use_death": 150,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s013": {
         "id": "lod_d2_s013",
@@ -1289,6 +1457,8 @@ legions_spells_d2 = {
         "use_death": 150,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s014": {
         "id": "lod_d2_s014",
@@ -1304,6 +1474,8 @@ legions_spells_d2 = {
         "use_death": 150,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s015": {
         "id": "lod_d2_s015",
@@ -1319,6 +1491,8 @@ legions_spells_d2 = {
         "use_death": 225,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s016": {
         "id": "lod_d2_s016",
@@ -1334,6 +1508,8 @@ legions_spells_d2 = {
         "use_death": 100,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s017": {
         "id": "lod_d2_s017",
@@ -1349,6 +1525,8 @@ legions_spells_d2 = {
         "use_death": 100,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s018": {
         "id": "lod_d2_s018",
@@ -1364,6 +1542,8 @@ legions_spells_d2 = {
         "use_death": 125,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s019": {
         "id": "lod_d2_s019",
@@ -1379,6 +1559,8 @@ legions_spells_d2 = {
         "use_death": 200,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s020": {
         "id": "lod_d2_s020",
@@ -1394,6 +1576,8 @@ legions_spells_d2 = {
         "use_death": 150,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s021": {
         "id": "lod_d2_s021",
@@ -1409,6 +1593,8 @@ legions_spells_d2 = {
         "use_death": 110,
         "use_rune": 60,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s022": {
         "id": "lod_d2_s022",
@@ -1424,6 +1610,8 @@ legions_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s023": {
         "id": "lod_d2_s023",
@@ -1439,6 +1627,8 @@ legions_spells_d2 = {
         "use_death": 80,
         "use_rune": 100,
         "use_nature": 0,
+
+        "learned": 0,
     },
     "lod_d2_s024": {
         "id": "lod_d2_s024",
@@ -1454,6 +1644,8 @@ legions_spells_d2 = {
         "use_death": 180,
         "use_rune": 160,
         "use_nature": 0,
+
+        "learned": 0,
     },
 }
 
@@ -1474,6 +1666,8 @@ elves_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 100,
+
+        "learned": 0,
     },
     "elf_d2_s002": {
         "id": "elf_d2_s002",
@@ -1489,6 +1683,8 @@ elves_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 100,
+
+        "learned": 0,
     },
     "elf_d2_s003": {
         "id": "elf_d2_s003",
@@ -1504,6 +1700,8 @@ elves_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 100,
+
+        "learned": 0,
     },
     "elf_d2_s004": {
         "id": "elf_d2_s004",
@@ -1519,6 +1717,8 @@ elves_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 100,
+
+        "learned": 0,
     },
     "elf_d2_s005": {
         "id": "elf_d2_s005",
@@ -1534,6 +1734,8 @@ elves_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 100,
+
+        "learned": 0,
     },
     "elf_d2_s006": {
         "id": "elf_d2_s006",
@@ -1549,6 +1751,8 @@ elves_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 200,
+
+        "learned": 0,
     },
     "elf_d2_s007": {
         "id": "elf_d2_s007",
@@ -1564,6 +1768,8 @@ elves_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 200,
+
+        "learned": 0,
     },
     "elf_d2_s008": {
         "id": "elf_d2_s008",
@@ -1579,6 +1785,8 @@ elves_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 200,
+
+        "learned": 0,
     },
     "elf_d2_s009": {
         "id": "elf_d2_s009",
@@ -1594,6 +1802,8 @@ elves_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 200,
+
+        "learned": 0,
     },
     "elf_d2_s010": {
         "id": "elf_d2_s010",
@@ -1609,6 +1819,8 @@ elves_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 200,
+
+        "learned": 0,
     },
     "elf_d2_s011": {
         "id": "elf_d2_s011",
@@ -1624,6 +1836,8 @@ elves_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 150,
+
+        "learned": 0,
     },
     "elf_d2_s012": {
         "id": "elf_d2_s012",
@@ -1639,6 +1853,8 @@ elves_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 150,
+
+        "learned": 0,
     },
     "elf_d2_s013": {
         "id": "elf_d2_s013",
@@ -1654,6 +1870,8 @@ elves_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 150,
+
+        "learned": 0,
     },
     "elf_d2_s014": {
         "id": "elf_d2_s014",
@@ -1669,6 +1887,8 @@ elves_spells_d2 = {
         "use_death": 0,
         "use_rune": 0,
         "use_nature": 225,
+
+        "learned": 0,
     },
     "elf_d2_s015": {
         "id": "elf_d2_s015",
@@ -1684,6 +1904,8 @@ elves_spells_d2 = {
         "use_death": 150,
         "use_rune": 0,
         "use_nature": 150,
+
+        "learned": 0,
     },
     "elf_d2_s016": {
         "id": "elf_d2_s016",
@@ -1699,6 +1921,8 @@ elves_spells_d2 = {
         "use_death": 0,
         "use_rune": 200,
         "use_nature": 300,
+
+        "learned": 0,
     },
     "elf_d2_s017": {
         "id": "elf_d2_s017",
@@ -1714,6 +1938,8 @@ elves_spells_d2 = {
         "use_death": 0,
         "use_rune": 100,
         "use_nature": 200,
+
+        "learned": 0,
     },
     "elf_d2_s018": {
         "id": "elf_d2_s018",
@@ -1729,6 +1955,8 @@ elves_spells_d2 = {
         "use_death": 100,
         "use_rune": 0,
         "use_nature": 200,
+
+        "learned": 0,
     },
     "elf_d2_s019": {
         "id": "elf_d2_s019",
@@ -1744,6 +1972,8 @@ elves_spells_d2 = {
         "use_death": 100,
         "use_rune": 0,
         "use_nature": 200,
+
+        "learned": 0,
     },
     "elf_d2_s020": {
         "id": "elf_d2_s020",
@@ -1759,6 +1989,8 @@ elves_spells_d2 = {
         "use_death": 0,
         "use_rune": 200,
         "use_nature": 400,
+
+        "learned": 0,
     },
     "elf_d2_s021": {
         "id": "elf_d2_s021",
@@ -1774,6 +2006,8 @@ elves_spells_d2 = {
         "use_death": 80,
         "use_rune": 50,
         "use_nature": 250,
+
+        "learned": 0,
     },
     "elf_d2_s022": {
         "id": "elf_d2_s022",
@@ -1789,6 +2023,8 @@ elves_spells_d2 = {
         "use_death": 80,
         "use_rune": 70,
         "use_nature": 250,
+
+        "learned": 0,
     },
     "elf_d2_s023": {
         "id": "elf_d2_s023",
@@ -1804,6 +2040,8 @@ elves_spells_d2 = {
         "use_death": 60,
         "use_rune": 110,
         "use_nature": 250,
+
+        "learned": 0,
     },
     "elf_d2_s024": {
         "id": "elf_d2_s024",
@@ -1819,5 +2057,7 @@ elves_spells_d2 = {
         "use_death": 60,
         "use_rune": 60,
         "use_nature": 275,
+
+        "learned": 0,
     },
 }

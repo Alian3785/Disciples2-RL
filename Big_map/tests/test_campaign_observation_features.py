@@ -217,6 +217,47 @@ def test_campaign_obs_includes_compact_mana_source_positions_types_and_totals():
     assert updated_resource_obs[env.grid_resource_core_obs_size + env.grid_mana_total_kinds.index("elves")] == pytest.approx(0.0)
 
 
+def test_campaign_obs_includes_spell_learning_features():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    assert env.grid_spell_obs_size == env.grid_spell_core_obs_size + len(env.spell_keys)
+
+    baseline = env._build_spell_grid_obs()
+    assert baseline.shape == (env.grid_spell_obs_size,)
+    assert baseline[0] == pytest.approx(0.0)  # magic tower not built
+    assert baseline[1] == pytest.approx(0.0)  # turn lock off
+    assert baseline[2] == pytest.approx(0.0)  # nothing learned
+    assert np.allclose(baseline[env.grid_spell_core_obs_size :], 0.0)
+
+    for build_key in env.building_keys:
+        building = env.active_buildings.get(build_key)
+        if not isinstance(building, dict):
+            continue
+        if str(building.get("name", "") or "").strip() == env.MAGIC_TOWER_BUILDING_NAME:
+            building["built"] = 1
+            break
+    first_spell_key = env.spell_keys[0]
+    env.active_spells[first_spell_key]["learned"] = 1
+    env.spell_learning_locked = True
+
+    updated = env._build_spell_grid_obs()
+    assert updated[0] == pytest.approx(1.0)
+    assert updated[1] == pytest.approx(1.0)
+    assert updated[2] > 0.0
+    assert updated[env.grid_spell_core_obs_size + env.spell_keys.index(first_spell_key)] == pytest.approx(1.0)
+
+    campaign_obs = env._build_campaign_grid_obs()
+    spell_start = (
+        env.grid_blue_obs_size
+        + env.grid_resource_obs_size
+        + env.grid_mana_source_obs_size
+        + env.grid_building_obs_size
+    )
+    spell_end = spell_start + env.grid_spell_obs_size
+    assert np.allclose(campaign_obs[spell_start:spell_end], updated)
+
+
 def test_merchant_sell_values_remain_unchanged():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)

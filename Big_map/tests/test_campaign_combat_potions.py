@@ -146,7 +146,7 @@ def test_combat_potion_action_mask_requires_item_alive_target_and_no_duplicate_e
     unit["health"] = max_hp
 
 
-def test_support_elixir_action_mask_requires_item_alive_target_and_blocks_duplicates():
+def test_support_elixir_action_mask_requires_item_alive_target_and_blocks_same_effect_duplicates():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
 
@@ -171,10 +171,17 @@ def test_support_elixir_action_mask_requires_item_alive_target_and_blocks_duplic
     env.active_fire_ward_positions.add(target_pos)
     mask = env.compute_action_mask()
     assert bool(mask[energy_action]) is False
+    assert bool(mask[haste_action]) is True
+    assert bool(mask[fire_action]) is False
+
+    env.active_haste_elixir_positions.add(target_pos)
+    mask = env.compute_action_mask()
+    assert bool(mask[energy_action]) is False
     assert bool(mask[haste_action]) is False
     assert bool(mask[fire_action]) is False
 
     env.active_energy_elixir_positions.clear()
+    env.active_haste_elixir_positions.clear()
     env.active_fire_ward_positions.clear()
     unit["hp"] = 0.0
     unit["health"] = 0.0
@@ -275,6 +282,46 @@ def test_strength_potion_use_consumes_item_rewards_and_buffs_next_battle():
     assert int(battle_unit.get("damage", 0) or 0) == int(
         round(base_damage * env.STRENGTH_POTION_DAMAGE_MULTIPLIER)
     )
+
+
+def test_energy_elixir_use_consumes_item_rewards_and_buffs_next_battle_damage():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    target_pos = 8
+    action = _energy_action_index(env, target_pos)
+    unit = _blue_state_unit(env, target_pos)
+    base_damage = int(unit.get("damage", 0) or 0)
+    base_damage_secondary = int(unit.get("damage_secondary", 0) or 0)
+    env.heroitems = [env.ENERGY_ELIXIR_ITEM_NAME]
+
+    _, reward, terminated, truncated, info = env.step(action)
+
+    assert terminated is False
+    assert truncated is False
+    assert reward == pytest.approx(float(env.reward_defeat_enemy))
+    assert info.get("combat_potion_applied") is True
+    assert info.get("combat_potion_consumed") is True
+    assert info.get("combat_potion_item") == env.ENERGY_ELIXIR_ITEM_NAME
+    assert info.get("combat_potion_target_pos") == target_pos
+    assert env.heroitems == []
+    assert target_pos in env.active_energy_elixir_positions
+    assert int(unit.get("damage", 0) or 0) == base_damage
+    assert int(unit.get("damage_secondary", 0) or 0) == base_damage_secondary
+
+    env._init_battle(enemy_id=1)
+    battle_unit = _battle_blue_unit(env, target_pos)
+    assert int(battle_unit.get("damage", 0) or 0) == int(
+        round(base_damage * env.ENERGY_ELIXIR_DAMAGE_MULTIPLIER)
+    )
+    assert int(battle_unit.get("damage_secondary", 0) or 0) == int(
+        round(base_damage_secondary * env.ENERGY_ELIXIR_DAMAGE_MULTIPLIER)
+    )
+
+    env._save_blue_state()
+    saved_unit = _blue_state_unit(env, target_pos)
+    assert int(saved_unit.get("damage", 0) or 0) == base_damage
+    assert int(saved_unit.get("damage_secondary", 0) or 0) == base_damage_secondary
 
 
 def test_titan_elixir_permanently_buffs_damage_through_turn_and_battle():
@@ -461,26 +508,15 @@ def test_persistent_elixir_bonuses_transfer_to_promoted_unit(monkeypatch):
     assert int(promoted_grid_unit.get("campaign_supreme_elixir_uses", 0) or 0) == 1
 
 
-@pytest.mark.parametrize(
-    ("item_name", "action_fn", "target_pos", "multiplier"),
-    [
-        ("ENERGY_ELIXIR_ITEM_NAME", _energy_action_index, 7, 1.30),
-        ("HASTE_ELIXIR_ITEM_NAME", _haste_action_index, 8, 1.60),
-    ],
-)
-def test_initiative_elixirs_buff_next_battle_and_restore_after_save(
-    item_name: str,
-    action_fn,
-    target_pos: int,
-    multiplier: float,
-):
+def test_haste_elixir_buffs_next_battle_and_restore_after_save():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
 
-    action = action_fn(env, target_pos)
+    target_pos = 8
+    action = _haste_action_index(env, target_pos)
     unit = _blue_state_unit(env, target_pos)
     base_initiative = int(unit.get("initiative_base", unit.get("initiative", 0)) or 0)
-    env.heroitems = [getattr(env, item_name)]
+    env.heroitems = [env.HASTE_ELIXIR_ITEM_NAME]
 
     _, reward, terminated, truncated, info = env.step(action)
 
@@ -490,14 +526,56 @@ def test_initiative_elixirs_buff_next_battle_and_restore_after_save(
     assert info.get("combat_potion_applied") is True
     assert info.get("combat_potion_consumed") is True
     assert info.get("combat_potion_target_pos") == target_pos
+    assert info.get("combat_potion_item") == env.HASTE_ELIXIR_ITEM_NAME
     assert env.heroitems == []
 
     env._init_battle(enemy_id=1)
     battle_unit = _battle_blue_unit(env, target_pos)
-    assert int(battle_unit.get("initiative_base", 0) or 0) == int(round(base_initiative * multiplier))
+    assert int(battle_unit.get("initiative_base", 0) or 0) == int(
+        round(base_initiative * env.HASTE_ELIXIR_INITIATIVE_MULTIPLIER)
+    )
 
     env._save_blue_state()
     saved_unit = _blue_state_unit(env, target_pos)
+    assert int(saved_unit.get("initiative_base", 0) or 0) == base_initiative
+
+
+def test_energy_elixir_and_haste_can_stack_on_same_unit_for_next_battle():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    target_pos = 7
+    unit = _blue_state_unit(env, target_pos)
+    base_damage = int(unit.get("damage", 0) or 0)
+    base_damage_secondary = int(unit.get("damage_secondary", 0) or 0)
+    base_initiative = int(unit.get("initiative_base", unit.get("initiative", 0)) or 0)
+    env.heroitems = [
+        env.ENERGY_ELIXIR_ITEM_NAME,
+        env.HASTE_ELIXIR_ITEM_NAME,
+    ]
+
+    env.step(_energy_action_index(env, target_pos))
+    env.step(_haste_action_index(env, target_pos))
+
+    assert target_pos in env.active_energy_elixir_positions
+    assert target_pos in env.active_haste_elixir_positions
+
+    env._init_battle(enemy_id=1)
+    battle_unit = _battle_blue_unit(env, target_pos)
+    assert int(battle_unit.get("damage", 0) or 0) == int(
+        round(base_damage * env.ENERGY_ELIXIR_DAMAGE_MULTIPLIER)
+    )
+    assert int(battle_unit.get("damage_secondary", 0) or 0) == int(
+        round(base_damage_secondary * env.ENERGY_ELIXIR_DAMAGE_MULTIPLIER)
+    )
+    assert int(battle_unit.get("initiative_base", 0) or 0) == int(
+        round(base_initiative * env.HASTE_ELIXIR_INITIATIVE_MULTIPLIER)
+    )
+
+    env._save_blue_state()
+    saved_unit = _blue_state_unit(env, target_pos)
+    assert int(saved_unit.get("damage", 0) or 0) == base_damage
+    assert int(saved_unit.get("damage_secondary", 0) or 0) == base_damage_secondary
     assert int(saved_unit.get("initiative_base", 0) or 0) == base_initiative
 
 
