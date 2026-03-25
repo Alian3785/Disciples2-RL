@@ -75,6 +75,7 @@ REWARD_CONFIG = {
     "battle_reward_loss": -1.0,
     "battle_reward_step": 0.01,
     "reward_sell_junk_item": 0.05,
+    "reward_spell_learn": 2.0,
 }
 
 REQUIRED_COMET_VERSION = (3, 57, 0)
@@ -503,6 +504,9 @@ class CampaignMetricsCallback(BaseCallback):
         self.recent_sold_items = deque(maxlen=self.episode_window)
         self.recent_sale_episode_flags = deque(maxlen=self.episode_window)
         self.recent_sale_gold = deque(maxlen=self.episode_window)
+        self.episode_spells_learned: list[float] = []
+        self.recent_spells_learned = deque(maxlen=self.episode_window)
+        self.recent_spell_learning_episode_flags = deque(maxlen=self.episode_window)
         self.recent_turns = deque(maxlen=self.step_window)
         self.recent_gold = deque(maxlen=self.step_window)
         self.recent_moves = deque(maxlen=self.step_window)
@@ -528,6 +532,8 @@ class CampaignMetricsCallback(BaseCallback):
         self.total_sold_items = 0
         self.total_merchant_sale_gold = 0.0
         self.sale_episodes = 0
+        self.total_spells_learned = 0
+        self.spell_learning_episodes = 0
         self.best_recent_victory_rate = 0.0
         self._last_logged_step = 0
         self._episode_castle_heal_uses: list[int] = []
@@ -537,6 +543,7 @@ class CampaignMetricsCallback(BaseCallback):
         self._episode_ruins_cleared: list[int] = []
         self._episode_sold_items: list[int] = []
         self._episode_sale_gold: list[float] = []
+        self._episode_spells_learned: list[int] = []
 
     def _append_recent_stat(self, info: dict[str, Any], key: str, target: deque) -> None:
         value = info.get(key)
@@ -558,6 +565,7 @@ class CampaignMetricsCallback(BaseCallback):
         self._episode_ruins_cleared.extend([0] * missing)
         self._episode_sold_items.extend([0] * missing)
         self._episode_sale_gold.extend([0.0] * missing)
+        self._episode_spells_learned.extend([0] * missing)
 
     def _consume_castle_heal(self, info: dict[str, Any], env_index: int) -> None:
         if not info.get("castle_heal_action"):
@@ -685,6 +693,31 @@ class CampaignMetricsCallback(BaseCallback):
         self._episode_sold_items[env_index] = 0
         self._episode_sale_gold[env_index] = 0.0
 
+    def _consume_spell_learning(self, info: dict[str, Any], env_index: int) -> None:
+        if not info.get("spell_learned"):
+            return
+        self.total_spells_learned += 1
+        self._episode_spells_learned[env_index] += 1
+
+    def _finalize_episode_spell_learning(self, env_index: int) -> None:
+        spell_count = float(self._episode_spells_learned[env_index])
+        learned_flag = spell_count > 0.0
+
+        self.episode_spells_learned.append(spell_count)
+        self.recent_spells_learned.append(spell_count)
+        self.recent_spell_learning_episode_flags.append(1.0 if learned_flag else 0.0)
+        if learned_flag:
+            self.spell_learning_episodes += 1
+
+        if self.experiment is not None:
+            self.experiment.log_metric(
+                "campaign/episode_spells_learned",
+                spell_count,
+                step=self.num_timesteps,
+            )
+
+        self._episode_spells_learned[env_index] = 0
+
     def _record_window_metrics(self, infos: list[dict[str, Any]]) -> None:
         turns = []
         gold = []
@@ -721,6 +754,7 @@ class CampaignMetricsCallback(BaseCallback):
             self._consume_chests(info, env_index)
             self._consume_ruins(info, env_index)
             self._consume_merchant_sales(info, env_index)
+            self._consume_spell_learning(info, env_index)
 
         episode = info.get("episode")
         if isinstance(episode, dict):
@@ -739,6 +773,7 @@ class CampaignMetricsCallback(BaseCallback):
                 self._finalize_episode_chests(env_index)
                 self._finalize_episode_ruins(env_index)
                 self._finalize_episode_sales(env_index)
+                self._finalize_episode_spell_learning(env_index)
 
         campaign_result = info.get("campaign_result")
         if campaign_result:
@@ -848,6 +883,15 @@ class CampaignMetricsCallback(BaseCallback):
                 self.sale_episodes,
                 total_episodes,
             ),
+            "campaign/spells_learned_total": float(self.total_spells_learned),
+            "campaign/spells_learned_per_episode_mean": _safe_rate(
+                self.total_spells_learned,
+                total_episodes,
+            ),
+            "campaign/spell_learning_episodes_rate": _safe_rate(
+                self.spell_learning_episodes,
+                total_episodes,
+            ),
             "campaign/recent_episodes": float(len(self.recent_episode_rewards)),
             "campaign/recent_episode_reward_mean": _safe_mean(self.recent_episode_rewards),
             "campaign/recent_episode_length_mean": _safe_mean(self.recent_episode_lengths),
@@ -874,6 +918,10 @@ class CampaignMetricsCallback(BaseCallback):
                 self.recent_sale_episode_flags
             ),
             "campaign/recent_merchant_sale_gold_mean": _safe_mean(self.recent_sale_gold),
+            "campaign/recent_spells_learned_mean": _safe_mean(self.recent_spells_learned),
+            "campaign/recent_spell_learning_episodes_rate": _safe_mean(
+                self.recent_spell_learning_episode_flags
+            ),
             "campaign/recent_turns_mean": _safe_mean(self.recent_turns),
             "campaign/recent_gold_mean": _safe_mean(self.recent_gold),
             "campaign/recent_moves_mean": _safe_mean(self.recent_moves),
@@ -895,6 +943,7 @@ class CampaignMetricsCallback(BaseCallback):
             "campaign/window/chests_collected_mean": _safe_mean(self.recent_chests_collected),
             "campaign/window/ruins_cleared_mean": _safe_mean(self.recent_ruins_cleared),
             "campaign/window/sold_items_mean": _safe_mean(self.recent_sold_items),
+            "campaign/window/spells_learned_mean": _safe_mean(self.recent_spells_learned),
             "campaign/best_recent_victory_rate": self.best_recent_victory_rate,
         }
 
@@ -1061,6 +1110,45 @@ class CampaignMetricsCallback(BaseCallback):
         ax.set_title("Cleared Ruins Per Episode")
         ax.set_xlabel("Episode")
         ax.set_ylabel("Ruins")
+        ax.grid(True, alpha=0.25, linewidth=0.6)
+        ax.legend(loc="upper right")
+        fig.tight_layout()
+        fig.savefig(target, dpi=160)
+        plt.close(fig)
+        return target
+
+    def save_spells_learned_per_episode_plot(self, path: str | os.PathLike[str]) -> Path | None:
+        if not self.episode_spells_learned:
+            return None
+
+        import matplotlib.pyplot as plt
+
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+        episodes = np.arange(1, len(self.episode_spells_learned) + 1)
+        spell_counts = np.asarray(self.episode_spells_learned, dtype=float)
+
+        fig, ax = plt.subplots(figsize=(10, 4.5))
+        ax.plot(episodes, spell_counts, color="#1D4ED8", linewidth=1.7, label="Spells learned per episode")
+        ax.fill_between(episodes, spell_counts, color="#60A5FA", alpha=0.24)
+
+        if len(spell_counts) >= 5:
+            window = min(25, len(spell_counts))
+            kernel = np.ones(window, dtype=float) / float(window)
+            rolling = np.convolve(spell_counts, kernel, mode="valid")
+            rolling_x = episodes[window - 1 :]
+            ax.plot(
+                rolling_x,
+                rolling,
+                color="#0F172A",
+                linewidth=2.0,
+                label=f"Rolling mean ({window})",
+            )
+
+        ax.set_title("Learned Spells Per Episode")
+        ax.set_xlabel("Episode")
+        ax.set_ylabel("Spells")
         ax.grid(True, alpha=0.25, linewidth=0.6)
         ax.legend(loc="upper right")
         fig.tight_layout()
@@ -1358,6 +1446,11 @@ if __name__ == "__main__":
     if saved_ruins_plot is not None:
         print(f"  График руин: {saved_ruins_plot}")
 
+    spells_plot_path = BASE_DIR / "outputs" / "campaign_spells_learned_per_episode.png"
+    saved_spells_plot = metrics_cb.save_spells_learned_per_episode_plot(spells_plot_path)
+    if saved_spells_plot is not None:
+        print(f"  График заклинаний: {saved_spells_plot}")
+
     if COMET_AVAILABLE and comet_experiment is not None:
         try:
             comet_experiment.log_tensorboard_folder(TB_LOG_DIR)
@@ -1368,6 +1461,11 @@ if __name__ == "__main__":
                 comet_experiment.log_image(str(saved_ruins_plot), name="campaign_ruins_per_episode")
             except Exception as exc:
                 print(f"[WARN] Failed to upload ruins plot to Comet: {exc}")
+        if saved_spells_plot is not None and hasattr(comet_experiment, "log_image"):
+            try:
+                comet_experiment.log_image(str(saved_spells_plot), name="campaign_spells_learned_per_episode")
+            except Exception as exc:
+                print(f"[WARN] Failed to upload spells plot to Comet: {exc}")
         try:
             comet_experiment.log_other(
                 "final_campaign_victories",

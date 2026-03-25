@@ -53,6 +53,13 @@ from Buildings import (
     legions_buildings_d2,
     elves_buildings_d2,
 )
+from spells import (
+    empire_spells_d2,
+    mountain_clans_spells_d2,
+    undead_hordes_spells_d2,
+    legions_spells_d2,
+    elves_spells_d2,
+)
 
 BUILDINGS_D2 = {
     "empire": empire_buildings_d2,
@@ -62,6 +69,14 @@ BUILDINGS_D2 = {
     "elves": elves_buildings_d2,
 }
 BUILDINGS_D2_TEMPLATE = {key: deepcopy(value) for key, value in BUILDINGS_D2.items()}
+SPELLS_D2 = {
+    "empire": empire_spells_d2,
+    "mountain_clans": mountain_clans_spells_d2,
+    "undead_hordes": undead_hordes_spells_d2,
+    "legions": legions_spells_d2,
+    "elves": elves_spells_d2,
+}
+SPELLS_D2_TEMPLATE = {key: deepcopy(value) for key, value in SPELLS_D2.items()}
 
 DEFAULT_SCENARIO_FILENAME = "A Return To Simpler Times.sg"
 LEGIONS_TERRITORY_PASSABLE_POSITIONED_CLASSES = frozenset(
@@ -246,6 +261,7 @@ class CampaignEnv(gym.Env):
         - В режиме grid:
           - 0-7: движение в 8 направлениях
           - 8: отдых (REST) — восстановление 5% HP раненым юнитам
+            (+ бонус лечения на клетках столицы и поселений)
           - 9-14: применить подходящую банку лечения к позициям BLUE 7-12
             (автовыбор +50 HP или +100 HP в зависимости от недостающего здоровья и запасов)
           - 15-20: применить бутыль воскрешения к позициям BLUE 7-12 (оживляет с 1 HP)
@@ -301,6 +317,14 @@ class CampaignEnv(gym.Env):
         "runes": "Мана рун",
         "elves": "Мана эльфов",
     }
+    SPELL_COST_MANA_KIND_BY_SUFFIX = {
+        "hell": "infernal",
+        "life": "life",
+        "death": "death",
+        "rune": "runes",
+        "nature": "elves",
+    }
+    MAGIC_TOWER_BUILDING_NAME = "Башня магии"
     GRID_BOTTLE_ACTION_START = 9
     GRID_BOTTLE_POSITIONS = list(range(7, 13))  # 6 позиций BLUE
     HEAL_BOTTLE_AMOUNT = 100.0
@@ -323,6 +347,20 @@ class CampaignEnv(gym.Env):
     STRENGTH_POTION_DAMAGE_MULTIPLIER = 1.30
     CASTLE_POS = DEFAULT_HERO_GRID_POSITION
     CASTLE_HEAL_TILE_COUNT = HEAL_TILE_COUNT
+    SETTLEMENT_UPGRADE_GOLD_COST_BY_LEVEL = {
+        1: 150.0,
+        2: 250.0,
+        3: 500.0,
+        4: 750.0,
+    }
+    MAX_SETTLEMENT_LEVEL = 5
+    SETTLEMENT_REST_HEAL_BONUS_BY_LEVEL = {
+        1: 10.0,
+        2: 15.0,
+        3: 20.0,
+        4: 25.0,
+        5: 30.0,
+    }
     LEGIONS_TERRITORY_EXPANSION_PER_TURN = 10
     EMPIRE_TERRITORY_SOURCE_ENEMY_ID = 75
     EMPIRE_TERRITORY_SOURCE_TILE = (26, 10)
@@ -397,7 +435,7 @@ class CampaignEnv(gym.Env):
     TITAN_ELIXIR_ITEM_NAME = "Эликсир Силы титана"
     SUPREME_ELIXIR_ITEM_NAME = "Эликсир Всевышнего"
     RING_OF_AGES_ITEM_NAME = "Кольцо веков (Артефакт)"
-    ENERGY_ELIXIR_INITIATIVE_MULTIPLIER = 1.30
+    ENERGY_ELIXIR_DAMAGE_MULTIPLIER = 1.50
     HASTE_ELIXIR_INITIATIVE_MULTIPLIER = 1.60
     TITAN_ELIXIR_DAMAGE_MULTIPLIER = 1.10
     SUPREME_ELIXIR_HEALTH_MULTIPLIER = 1.15
@@ -515,6 +553,7 @@ class CampaignEnv(gym.Env):
         battle_reward_step: float = 0.01,
         reward_combat_potion_battle_participation: float = 0.05,
         reward_sell_junk_item: float = 0.05,
+        reward_spell_learn: float = 2.0,
         reward_castle_heal_per_hp: float = 0.01,
         reward_castle_revive: float = 0.5,
         persist_blue_hp: bool = True,
@@ -552,6 +591,7 @@ class CampaignEnv(gym.Env):
             float(reward_combat_potion_battle_participation),
         )
         self.reward_sell_junk_item = max(0.0, float(reward_sell_junk_item))
+        self.reward_spell_learn = max(0.0, float(reward_spell_learn))
         self.reward_castle_heal_per_hp = max(0.0, float(reward_castle_heal_per_hp))
         self.reward_castle_revive = max(0.0, float(reward_castle_revive))
         self.persist_blue_hp = persist_blue_hp
@@ -567,6 +607,7 @@ class CampaignEnv(gym.Env):
         # Realcapital: 1 = empire, 2 = legions, 3 = mountain_clans, 4 = undead_hordes, 5 = elves
         self.Realcapital = self._normalize_realcapital(realcapital)
         self._reset_buildings_state()
+        self._reset_spells_state()
 
         enemy_positions = scale_enemy_positions(self.grid_size)
         self.castle_heal_tiles: Tuple[Tuple[int, int], ...] = resolve_heal_tiles(
@@ -606,6 +647,15 @@ class CampaignEnv(gym.Env):
         self.legions_settlement_territory_source_by_name: Dict[str, Dict[str, object]] = {
             str(source_data.get("name", "") or ""): dict(source_data)
             for source_data in self._static_legions_settlement_territory_sources
+        }
+        self.legions_settlement_source_tile_by_name: Dict[str, Tuple[int, int]] = {
+            str(source_data.get("name", "") or ""): tuple(source_data.get("source_tile", (0, 0)))
+            for source_data in self._static_legions_settlement_territory_sources
+        }
+        self.legions_settlement_source_name_by_tile: Dict[Tuple[int, int], str] = {
+            tuple(source_data.get("source_tile", ())): str(source_data.get("name", "") or "")
+            for source_data in self._static_legions_settlement_territory_sources
+            if len(tuple(source_data.get("source_tile", ()))) == 2
         }
         self.legions_settlement_territory_source_name_by_enemy_id: Dict[int, str] = {
             int(enemy_id): str(source_data.get("name", "") or "")
@@ -707,12 +757,18 @@ class CampaignEnv(gym.Env):
         self.moves: int = self.moves_per_turn
         self.active_buildings = self._get_buildings_for_capital(self.Realcapital)
         self.building_keys = self._get_building_keys(self.active_buildings)
+        self.active_spells = self._get_spells_for_capital(self.Realcapital)
+        self.spell_keys = self._get_spell_keys(self.active_spells)
+        self.settlement_upgrade_names = list(self.legions_settlement_territory_source_by_name.keys())
+        self.grid_spell_action_start = self.GRID_BUILD_ACTION_START + len(self.building_keys)
+        self.grid_settlement_upgrade_action_start = self.grid_spell_action_start + len(self.spell_keys)
         self.chests: Dict[Tuple[int, int], Tuple[str, ...]] = dict(self._static_chests)
         self.mana_sources: Dict[Tuple[int, int], Dict[str, object]] = {
             tuple(pos): dict(meta)
             for pos, meta in self._static_mana_sources.items()
         }
         self._reset_mana_state()
+        self.spell_learning_locked = False
         self.heroitems: List[object] = []
         self.extra_heal_bottles: int = 0
         self.extra_healing_bottles: int = 0
@@ -740,8 +796,8 @@ class CampaignEnv(gym.Env):
             + self.grid_enemy_obs_size
             + self.grid_campaign_obs_size
         )
-        total_actions = self.GRID_BUILD_ACTION_START + len(self.building_keys)
-        # Action space: максимум из двух режимов (battle = 15 действий, grid расширен для бутылей и построек)
+        total_actions = self.grid_settlement_upgrade_action_start + len(self.settlement_upgrade_names)
+        # Action space: максимум из двух режимов (battle = 15 действий, grid расширен для экономики и заклинаний)
         self.action_space = spaces.Discrete(total_actions)
 
         # Observation space: режим + grid + battle + ход + золото
@@ -764,6 +820,12 @@ class CampaignEnv(gym.Env):
         self._reset_buildings_state()
         self.active_buildings = self._get_buildings_for_capital(self.Realcapital)
         self.building_keys = self._get_building_keys(self.active_buildings)
+        self._reset_spells_state()
+        self.active_spells = self._get_spells_for_capital(self.Realcapital)
+        self.spell_keys = self._get_spell_keys(self.active_spells)
+        self.settlement_upgrade_names = list(self.legions_settlement_territory_source_by_name.keys())
+        self.grid_spell_action_start = self.GRID_BUILD_ACTION_START + len(self.building_keys)
+        self.grid_settlement_upgrade_action_start = self.grid_spell_action_start + len(self.spell_keys)
         self.mode = self.MODE_GRID
         self.current_enemy_id = None
         self.battle_origin_pos = None
@@ -775,6 +837,7 @@ class CampaignEnv(gym.Env):
         self.revive_bottles_used = 0
         self.turns = 0
         self.gold = 0.0
+        self.spell_learning_locked = False
         self._sync_moves_per_turn_with_hero(units=self.blue_team_state, refill=True)
         self.battle_env = None
         self._campaign_logs = []
@@ -857,6 +920,7 @@ class CampaignEnv(gym.Env):
         }
         info.update(self._legions_settlement_territory_info())
         info.update(self._mana_state_info())
+        info.update(self._spell_state_info())
         info.update(self._ruin_progress_info())
         info.update(self._merchant_context_info(self.grid_env.agent_pos))
 
@@ -891,6 +955,12 @@ class CampaignEnv(gym.Env):
         #   91-96 — Эликсир Силы титана по позициям 7-12.
         #   97-102 — Эликсир Всевышнего по позициям 7-12.
         #   103-... — постройка зданий активной фракции.
+        #   после построек — изучение заклинаний активной фракции.
+        #   после заклинаний — улучшение захваченных городов.
+        if action >= self.grid_settlement_upgrade_action_start:
+            return self._step_upgrade_settlement(action)
+        if action >= self.grid_spell_action_start:
+            return self._step_learn_spell(action)
         if action >= self.GRID_BUILD_ACTION_START:
             return self._step_building(action)
         if action >= self.GRID_SUPREME_ELIXIR_ACTION_START:
@@ -1040,11 +1110,27 @@ class CampaignEnv(gym.Env):
         }
         info.update(self._merchant_context_info(new_pos))
 
-        # Обработка действия REST — восстановление 5% HP
+        # Обработка действия REST — восстановление 5% HP и бонусного лечения на heal-tile.
         if grid_info.get("rest_action"):
-            healed = self._heal_blue_team(heal_percent=0.05)
+            (
+                _rest_armor_bonus,
+                rest_heal_flat_bonus,
+                rest_heal_bonus_source,
+                rest_heal_bonus_level,
+            ) = self._resolve_heal_tile_context(self.grid_env.agent_pos)
+            healed = self._heal_blue_team(
+                heal_percent=0.05,
+                flat_bonus=rest_heal_flat_bonus,
+            )
             if healed > 0:
-                self._log(f"Отдых: восстановлено HP у {healed} юнитов (5%)")
+                if rest_heal_flat_bonus > 0.0:
+                    self._log(
+                        f"Отдых в городе {rest_heal_bonus_source} уровня {rest_heal_bonus_level}: "
+                        f"восстановлено HP у {healed} юнитов "
+                        f"(5% + {rest_heal_flat_bonus:g})"
+                    )
+                else:
+                    self._log(f"Отдых: восстановлено HP у {healed} юнитов (5%)")
             else:
                 self._log("Отдых: все юниты на полном здоровье")
             # Отдых завершает ход
@@ -1053,6 +1139,11 @@ class CampaignEnv(gym.Env):
             info["gold"] = self.gold
             info["moves"] = self.moves
             info["healed_units"] = healed
+            info["rest_heal_percent"] = 0.05
+            info["rest_heal_flat_bonus"] = float(rest_heal_flat_bonus)
+            info["rest_heal_bonus_source"] = rest_heal_bonus_source
+            if rest_heal_bonus_level is not None:
+                info["rest_heal_bonus_level"] = int(rest_heal_bonus_level)
 
         # Проверяем столкновение с врагом
         if grid_info.get("battle_triggered"):
@@ -1199,6 +1290,7 @@ class CampaignEnv(gym.Env):
         finalized_info["empire_territory_count"] = len(self.empire_territory_tiles)
         finalized_info.update(self._legions_settlement_territory_info())
         finalized_info.update(self._mana_state_info())
+        finalized_info.update(self._spell_state_info())
         finalized_info.update(self._ruin_progress_info())
         finalized_info.update(self._merchant_context_info(position))
 
@@ -1525,6 +1617,16 @@ class CampaignEnv(gym.Env):
             str(source_name): ()
             for source_name in self.legions_settlement_territory_source_by_name.keys()
         }
+        self.legions_settlement_level_by_name: Dict[str, int] = {
+            str(source_name): max(
+                1,
+                int(
+                    source_data.get("settlement_level", source_data.get("territory_level", 1))
+                    or 1
+                ),
+            )
+            for source_name, source_data in self.legions_settlement_territory_source_by_name.items()
+        }
 
     def _legions_settlement_territory_info(self) -> Dict[str, object]:
         return {
@@ -1538,6 +1640,10 @@ class CampaignEnv(gym.Env):
             "legions_settlement_territory_tiles_by_name": {
                 str(name): tuple(tiles)
                 for name, tiles in self.legions_settlement_territory_tiles_by_name.items()
+            },
+            "legions_settlement_level_by_name": {
+                str(name): int(level)
+                for name, level in self.legions_settlement_level_by_name.items()
             },
         }
 
@@ -2105,6 +2211,13 @@ class CampaignEnv(gym.Env):
                 keys.append(key)
         return keys
 
+    def _get_spell_keys(self, spells: Dict) -> List[str]:
+        keys: List[str] = []
+        for key, entry in spells.items():
+            if isinstance(entry, dict) and entry.get("id"):
+                keys.append(key)
+        return keys
+
     def _reset_buildings_state(self) -> None:
         """Сбрасывает состояние зданий к эталону из Buildings.py."""
         for key, template in BUILDINGS_D2_TEMPLATE.items():
@@ -2114,6 +2227,17 @@ class CampaignEnv(gym.Env):
             target.clear()
             target.update(deepcopy(template))
             self._scale_building_gold_costs_in_place(target)
+
+    def _reset_spells_state(self) -> None:
+        for key, template in SPELLS_D2_TEMPLATE.items():
+            target = SPELLS_D2.get(key)
+            if not isinstance(target, dict) or not isinstance(template, dict):
+                continue
+            target.clear()
+            target.update(deepcopy(template))
+            for entry in target.values():
+                if isinstance(entry, dict):
+                    entry["learned"] = int(entry.get("learned", 0) or 0)
 
     @classmethod
     def _scale_building_gold_costs_in_place(cls, buildings: Dict) -> None:
@@ -2148,6 +2272,79 @@ class CampaignEnv(gym.Env):
             if name:
                 built_names.append(name)
         return built_names
+
+    @classmethod
+    def _spell_costs_from_entry(cls, spell: Dict, prefix: str) -> Dict[str, float]:
+        costs: Dict[str, float] = {}
+        for suffix, mana_kind in cls.SPELL_COST_MANA_KIND_BY_SUFFIX.items():
+            raw_value = spell.get(f"{prefix}_{suffix}", 0.0) if isinstance(spell, dict) else 0.0
+            try:
+                value = max(0.0, float(raw_value or 0.0))
+            except (TypeError, ValueError):
+                value = 0.0
+            costs[str(mana_kind)] = value
+        return costs
+
+    def _get_spell_learning_costs(self, spell: Dict) -> Dict[str, float]:
+        return self._spell_costs_from_entry(spell, prefix="learn")
+
+    def _has_magic_tower_built(self) -> bool:
+        for build_key in self.building_keys:
+            building = self.active_buildings.get(build_key)
+            if not isinstance(building, dict):
+                continue
+            if str(building.get("name", "") or "").strip() != self.MAGIC_TOWER_BUILDING_NAME:
+                continue
+            try:
+                return int(building.get("Build", building.get("built", 0)) or 0) == 1
+            except (TypeError, ValueError):
+                return False
+        return False
+
+    def _has_mana_for_costs(self, costs: Dict[str, float]) -> bool:
+        for mana_kind, required_amount in costs.items():
+            attr_name = str(self.MANA_ATTR_BY_KIND.get(str(mana_kind), "") or "")
+            if not attr_name:
+                continue
+            current_amount = float(getattr(self, attr_name, 0.0) or 0.0)
+            if current_amount + 1e-9 < float(required_amount):
+                return False
+        return True
+
+    def _spend_mana_costs(self, costs: Dict[str, float]) -> None:
+        for mana_kind, required_amount in costs.items():
+            attr_name = str(self.MANA_ATTR_BY_KIND.get(str(mana_kind), "") or "")
+            if not attr_name:
+                continue
+            current_amount = float(getattr(self, attr_name, 0.0) or 0.0)
+            setattr(self, attr_name, max(0.0, current_amount - float(required_amount)))
+
+    def get_learned_spell_descriptions(self) -> List[str]:
+        learned_descriptions: List[str] = []
+        for spell_key in self.spell_keys:
+            spell = self.active_spells.get(spell_key)
+            if not isinstance(spell, dict):
+                continue
+            try:
+                is_learned = int(spell.get("learned", 0) or 0) == 1
+            except (TypeError, ValueError):
+                is_learned = False
+            if not is_learned:
+                continue
+            description = str(spell.get("description", "") or "").strip()
+            if description:
+                learned_descriptions.append(description)
+        return learned_descriptions
+
+    def _spell_state_info(self) -> Dict[str, object]:
+        learned_spells = self.get_learned_spell_descriptions()
+        return {
+            "learned_spells": list(learned_spells),
+            "learned_spells_count": int(len(learned_spells)),
+            "spells_total": int(len(self.spell_keys)),
+            "spell_learning_locked": bool(self.spell_learning_locked),
+            "magic_tower_built": bool(self._has_magic_tower_built()),
+        }
 
     def _grant_merchant_item(self, item_name: str) -> List[str]:
         granted_items: List[str] = []
@@ -2321,6 +2518,155 @@ class CampaignEnv(gym.Env):
             "insufficient_gold": insufficient_gold,
             "build_blocked": build_blocked,
             "build_locked": build_locked,
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+        }
+
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
+
+    def _step_learn_spell(self, action: int):
+        idx = action - self.grid_spell_action_start
+        grid_obs = self._get_grid_obs()
+        reward = 0.0
+        terminated = False
+        truncated = False
+
+        spell_key = None
+        spell_description = None
+        spell_level = None
+        spell_learned = False
+        spell_already_learned = False
+        spell_learning_locked = bool(self.spell_learning_locked)
+        missing_magic_tower = not self._has_magic_tower_built()
+        insufficient_mana = False
+        mana_costs: Dict[str, float] = {}
+        mana_totals_before = self._current_mana_totals()
+
+        if 0 <= idx < len(self.spell_keys):
+            spell_key = self.spell_keys[idx]
+            spell = self.active_spells.get(spell_key)
+            if isinstance(spell, dict):
+                spell_description = str(spell.get("description", "") or "").strip()
+                try:
+                    spell_level = int(spell.get("level", 0) or 0)
+                except (TypeError, ValueError):
+                    spell_level = 0
+                try:
+                    spell_already_learned = int(spell.get("learned", 0) or 0) == 1
+                except (TypeError, ValueError):
+                    spell_already_learned = False
+                mana_costs = self._get_spell_learning_costs(spell)
+                insufficient_mana = not self._has_mana_for_costs(mana_costs)
+                if (
+                    not spell_learning_locked
+                    and not missing_magic_tower
+                    and not spell_already_learned
+                    and not insufficient_mana
+                ):
+                    self._spend_mana_costs(mana_costs)
+                    spell["learned"] = 1
+                    self.spell_learning_locked = True
+                    spell_learning_locked = True
+                    spell_learned = True
+                    reward += float(self.reward_spell_learn)
+                    if spell_description:
+                        self._log("ЗАКЛИНАНИЕ ИЗУЧЕНО")
+                        self._log(f'Изучено заклинание: "{spell_description}"')
+
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            "spell_action": True,
+            "spell_key": spell_key,
+            "spell_description": spell_description,
+            "spell_level": spell_level,
+            "spell_learned": spell_learned,
+            "spell_already_learned": spell_already_learned,
+            "spell_learning_locked": spell_learning_locked,
+            "missing_magic_tower": missing_magic_tower,
+            "insufficient_mana": insufficient_mana,
+            "spell_learning_costs": dict(mana_costs),
+            "mana_totals_before_spell_learning": dict(mana_totals_before),
+            "spell_learning_reward": float(reward if spell_learned else 0.0),
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+        }
+
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
+
+    def _step_upgrade_settlement(self, action: int):
+        idx = action - self.grid_settlement_upgrade_action_start
+        grid_obs = self._get_grid_obs()
+        reward = 0.0
+        terminated = False
+        truncated = False
+
+        settlement_name = None
+        source_tile = None
+        captured = False
+        current_level = None
+        next_level = None
+        upgrade_cost = 0.0
+        upgraded = False
+        insufficient_gold = False
+        at_max_level = False
+
+        if 0 <= idx < len(self.settlement_upgrade_names):
+            settlement_name = str(self.settlement_upgrade_names[idx])
+            source_tile = self.legions_settlement_source_tile_by_name.get(settlement_name)
+            captured = (
+                settlement_name in self.legions_active_settlement_territory_capture_turn_by_name
+            )
+            current_level = int(self.legions_settlement_level_by_name.get(settlement_name, 1) or 1)
+            at_max_level = current_level >= int(self.MAX_SETTLEMENT_LEVEL)
+            upgrade_cost = self._settlement_upgrade_cost_for_level(current_level)
+            insufficient_gold = (
+                captured
+                and not at_max_level
+                and upgrade_cost > 0.0
+                and float(self.gold or 0.0) < float(upgrade_cost)
+            )
+            next_level = min(int(self.MAX_SETTLEMENT_LEVEL), current_level + 1)
+            if captured and not at_max_level and upgrade_cost > 0.0 and not insufficient_gold:
+                self.gold -= float(upgrade_cost)
+                self.legions_settlement_level_by_name[settlement_name] = int(next_level)
+                upgraded = True
+                self._log(
+                    f'Город "{settlement_name}" улучшен: уровень {current_level} -> {next_level} '
+                    f"за {upgrade_cost:g} золота."
+                )
+
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            "settlement_upgrade_action": True,
+            "settlement_upgrade_name": settlement_name,
+            "settlement_upgrade_source_tile": tuple(source_tile) if source_tile is not None else None,
+            "settlement_upgrade_captured": bool(captured),
+            "settlement_upgrade_old_level": current_level,
+            "settlement_upgrade_new_level": next_level if upgraded else current_level,
+            "settlement_upgrade_cost": float(upgrade_cost),
+            "settlement_upgrade_applied": bool(upgraded),
+            "settlement_upgrade_insufficient_gold": bool(insufficient_gold),
+            "settlement_upgrade_at_max_level": bool(at_max_level),
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
@@ -2535,14 +2881,14 @@ class CampaignEnv(gym.Env):
         return self._can_apply_single_turn_effect_position(
             position,
             self.ENERGY_ELIXIR_ITEM_NAME,
-            self.active_energy_elixir_positions | self.active_haste_elixir_positions,
+            self.active_energy_elixir_positions,
         )
 
     def _can_apply_haste_elixir_position(self, position: int) -> bool:
         return self._can_apply_single_turn_effect_position(
             position,
             self.HASTE_ELIXIR_ITEM_NAME,
-            self.active_energy_elixir_positions | self.active_haste_elixir_positions,
+            self.active_haste_elixir_positions,
         )
 
     def _can_apply_fire_ward_position(self, position: int) -> bool:
@@ -2618,17 +2964,13 @@ class CampaignEnv(gym.Env):
         return False, None
 
     def _apply_energy_elixir_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
-        if int(position) in self.active_haste_elixir_positions:
-            return False, None
         return self._apply_position_flag_effect(
             position,
             self.active_energy_elixir_positions,
-            "Эликсир энергии: {name} (pos {position}) получает +30% инициативы до конца текущего хода",
+            "Эликсир энергии: {name} (pos {position}) получает +50% урона до конца текущего хода",
         )
 
     def _apply_haste_elixir_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
-        if int(position) in self.active_energy_elixir_positions:
-            return False, None
         return self._apply_position_flag_effect(
             position,
             self.active_haste_elixir_positions,
@@ -3299,6 +3641,52 @@ class CampaignEnv(gym.Env):
         except (TypeError, ValueError):
             return 0
 
+    def _resolve_heal_tile_context(
+        self,
+        position: Optional[Tuple[int, int]],
+    ) -> tuple[int, float, str, Optional[int]]:
+        if position is None:
+            return 0, 0.0, "", None
+
+        try:
+            normalized_position = (int(position[0]), int(position[1]))
+        except (TypeError, ValueError, IndexError):
+            return 0, 0.0, "", None
+
+        settlement_name = self.legions_settlement_source_name_by_tile.get(normalized_position)
+        if not settlement_name:
+            return 0, 0.0, "", None
+        if settlement_name not in self.legions_active_settlement_territory_capture_turn_by_name:
+            return 0, 0.0, "", None
+
+        settlement_level = self.legions_settlement_level_by_name.get(str(settlement_name))
+        if settlement_level is None:
+            return 0, 0.0, "", None
+        normalized_level = max(0, int(settlement_level))
+        return (
+            int(SETTLEMENT_ARMOR_BONUS_BY_LEVEL.get(normalized_level, 0)),
+            float(self.SETTLEMENT_REST_HEAL_BONUS_BY_LEVEL.get(normalized_level, 0.0)),
+            str(settlement_name),
+            normalized_level,
+        )
+
+    @classmethod
+    def _settlement_upgrade_cost_for_level(cls, current_level: int) -> float:
+        try:
+            normalized_level = int(current_level)
+        except (TypeError, ValueError):
+            normalized_level = 0
+        return float(cls.SETTLEMENT_UPGRADE_GOLD_COST_BY_LEVEL.get(normalized_level, 0.0))
+
+    def _can_upgrade_settlement(self, settlement_name: str) -> bool:
+        if str(settlement_name) not in self.legions_active_settlement_territory_capture_turn_by_name:
+            return False
+        current_level = int(self.legions_settlement_level_by_name.get(str(settlement_name), 0) or 0)
+        if current_level >= int(self.MAX_SETTLEMENT_LEVEL):
+            return False
+        upgrade_cost = self._settlement_upgrade_cost_for_level(current_level)
+        return upgrade_cost > 0.0 and float(self.gold or 0.0) >= float(upgrade_cost)
+
     def _resolve_settlement_defender_armor_bonus(
         self,
         enemy_id: Optional[int],
@@ -3367,6 +3755,37 @@ class CampaignEnv(gym.Env):
                 f"({affected_units} юнитов, {source})."
             )
 
+    def _apply_hero_heal_tile_armor_bonus(self, blue_team: List[Dict]) -> None:
+        bonus, _rest_bonus, source, settlement_level = self._resolve_heal_tile_context(
+            self.battle_origin_pos
+        )
+        if bonus <= 0:
+            return
+
+        affected_units = 0
+        for unit in blue_team:
+            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
+            if max_hp <= 0:
+                continue
+
+            base_armor = self._normalize_armor_value(unit.get("armor", 0))
+            unit["campaign_heal_tile_base_armor"] = int(base_armor)
+            unit["campaign_heal_tile_armor_bonus"] = int(bonus)
+            unit["armor"] = base_armor + bonus
+            unit["settlement_armor_bonus"] = int(bonus)
+            if settlement_level is not None:
+                unit["settlement_level"] = int(settlement_level)
+            affected_units += 1
+
+        if affected_units <= 0:
+            return
+
+        if settlement_level is not None:
+            self._log(
+                f"Бонус города {source} уровня {settlement_level}: BLUE-отряд героя получает "
+                f"+{bonus} брони на каждого юнита ({affected_units} юнитов)."
+            )
+
     def _apply_active_blue_potion_effects(self, blue_team: List[Dict]) -> None:
         if not blue_team:
             return
@@ -3396,32 +3815,39 @@ class CampaignEnv(gym.Env):
                 )
                 buffed_invulnerability.append(position)
 
+            damage_multiplier = 1.0
             if position in self.active_strength_potion_positions:
+                damage_multiplier *= float(self.STRENGTH_POTION_DAMAGE_MULTIPLIER)
+            if position in self.active_energy_elixir_positions:
+                damage_multiplier *= float(self.ENERGY_ELIXIR_DAMAGE_MULTIPLIER)
+            if damage_multiplier > 1.0:
                 base_damage = self._normalize_damage_value(unit.get("damage", 0))
                 base_damage_secondary = self._normalize_damage_value(unit.get("damage_secondary", 0))
                 unit["campaign_potion_base_damage"] = int(base_damage)
                 unit["campaign_potion_base_damage_secondary"] = int(base_damage_secondary)
                 unit["damage"] = self._normalize_damage_value(
-                    float(base_damage) * float(self.STRENGTH_POTION_DAMAGE_MULTIPLIER)
+                    float(base_damage) * float(damage_multiplier)
                 )
                 unit["damage_secondary"] = self._normalize_damage_value(
-                    float(base_damage_secondary) * float(self.STRENGTH_POTION_DAMAGE_MULTIPLIER)
+                    float(base_damage_secondary) * float(damage_multiplier)
                 )
-                unit["campaign_strength_potion_multiplier"] = float(
-                    self.STRENGTH_POTION_DAMAGE_MULTIPLIER
-                )
-                buffed_strength.append(position)
+                unit["campaign_damage_potion_multiplier"] = float(damage_multiplier)
+                if position in self.active_strength_potion_positions:
+                    unit["campaign_strength_potion_multiplier"] = float(
+                        self.STRENGTH_POTION_DAMAGE_MULTIPLIER
+                    )
+                    buffed_strength.append(position)
+                if position in self.active_energy_elixir_positions:
+                    unit["campaign_energy_elixir_multiplier"] = float(
+                        self.ENERGY_ELIXIR_DAMAGE_MULTIPLIER
+                    )
+                    buffed_energy.append(position)
 
             initiative_multiplier = 1.0
             if position in self.active_haste_elixir_positions:
                 initiative_multiplier = max(
                     initiative_multiplier,
                     float(self.HASTE_ELIXIR_INITIATIVE_MULTIPLIER),
-                )
-            elif position in self.active_energy_elixir_positions:
-                initiative_multiplier = max(
-                    initiative_multiplier,
-                    float(self.ENERGY_ELIXIR_INITIATIVE_MULTIPLIER),
                 )
             if initiative_multiplier > 1.0:
                 base_initiative = int(unit.get("initiative_base", unit.get("initiative", 0)) or 0)
@@ -3432,10 +3858,7 @@ class CampaignEnv(gym.Env):
                 unit["initiative_base"] = int(boosted_initiative)
                 unit["initiative"] = int(boosted_initiative)
                 unit["campaign_initiative_potion_multiplier"] = float(initiative_multiplier)
-                if position in self.active_haste_elixir_positions:
-                    buffed_haste.append(position)
-                else:
-                    buffed_energy.append(position)
+                buffed_haste.append(position)
 
             added_resistance: List[str] = []
             resistance = [str(res) for res in (unit.get("resistance") or [])]
@@ -3507,6 +3930,7 @@ class CampaignEnv(gym.Env):
         else:
             blue_team = deepcopy(UNITS_BLUE)
             self._log("Используется дефолтная BLUE команда")
+        self._apply_hero_heal_tile_armor_bonus(blue_team)
         self._apply_active_blue_potion_effects(blue_team)
 
         self.battle_env = BattleEnv(
@@ -3565,7 +3989,10 @@ class CampaignEnv(gym.Env):
             restored_unit["bonusturn"] = 0
             restored_unit.pop("resilience_used_types", None)
             position = int(restored_unit.get("position", -1) or -1)
-            if position in self.active_strength_potion_positions:
+            if (
+                position in self.active_strength_potion_positions
+                or position in self.active_energy_elixir_positions
+            ):
                 base_damage = self._normalize_damage_value(
                     restored_unit.get(
                         "campaign_potion_base_damage",
@@ -3583,11 +4010,10 @@ class CampaignEnv(gym.Env):
             restored_unit.pop("original_damage", None)
             restored_unit.pop("campaign_potion_base_damage", None)
             restored_unit.pop("campaign_potion_base_damage_secondary", None)
+            restored_unit.pop("campaign_damage_potion_multiplier", None)
             restored_unit.pop("campaign_strength_potion_multiplier", None)
-            if (
-                position in self.active_energy_elixir_positions
-                or position in self.active_haste_elixir_positions
-            ):
+            restored_unit.pop("campaign_energy_elixir_multiplier", None)
+            if position in self.active_haste_elixir_positions:
                 base_initiative = int(
                     restored_unit.get(
                         "campaign_potion_base_initiative",
@@ -3620,9 +4046,17 @@ class CampaignEnv(gym.Env):
             else:
                 # Armor must be restored to the unit's battle-start value.
                 base_armor = int(restored_unit.get("base_armor", restored_unit.get("armor", 0)) or 0)
+            if "campaign_heal_tile_base_armor" in restored_unit:
+                base_armor = self._normalize_armor_value(
+                    restored_unit.get("campaign_heal_tile_base_armor", base_armor)
+                )
             restored_unit["armor"] = max(0, base_armor)
             restored_unit.pop("campaign_potion_base_armor", None)
             restored_unit.pop("campaign_invulnerability_potion_bonus", None)
+            restored_unit.pop("campaign_heal_tile_base_armor", None)
+            restored_unit.pop("campaign_heal_tile_armor_bonus", None)
+            restored_unit.pop("settlement_armor_bonus", None)
+            restored_unit.pop("settlement_level", None)
             
             # Восстанавливаем initiative к базовому значению
             restored_unit["initiative"] = restored_unit.get("initiative_base", 0)
@@ -3658,6 +4092,23 @@ class CampaignEnv(gym.Env):
         if capital_value == 5:
             return elves_buildings_d2
         return empire_buildings_d2
+
+    def _get_spells_for_capital(self, capital: Optional[int]) -> Dict:
+        """Возвращает словарь заклинаний по значению 'столица'."""
+        try:
+            capital_value = int(capital)
+        except (TypeError, ValueError):
+            capital_value = None
+
+        if capital_value == 2:
+            return legions_spells_d2
+        if capital_value == 3:
+            return mountain_clans_spells_d2
+        if capital_value == 4:
+            return undead_hordes_spells_d2
+        if capital_value == 5:
+            return elves_spells_d2
+        return empire_spells_d2
 
     def _build_unit_from_data(self, entry: Dict, team: str, position: int) -> Dict:
         def _entry_get(*keys, default=0):
@@ -3799,13 +4250,14 @@ class CampaignEnv(gym.Env):
 
         return int(upgraded_count)
 
-    def _heal_blue_team(self, heal_percent: float = 0.05) -> int:
+    def _heal_blue_team(self, heal_percent: float = 0.05, flat_bonus: float = 0.0) -> int:
         """
         Восстанавливает HP раненым юнитам BLUE команды.
         
         Args:
             heal_percent: Доля от max_health для восстановления (0.05 = 5%)
-            
+            flat_bonus: Фиксированная прибавка к восстановлению на юнита.
+             
         Returns:
             Количество юнитов, которым восстановлено HP
         """
@@ -3818,7 +4270,7 @@ class CampaignEnv(gym.Env):
             
             # Юнит жив и ранен
             if hp > 0 and hp < max_hp:
-                heal_amount = max_hp * heal_percent
+                heal_amount = max_hp * heal_percent + max(0.0, float(flat_bonus or 0.0))
                 new_hp = min(max_hp, hp + heal_amount)
                 unit["hp"] = new_hp
                 unit["health"] = new_hp
@@ -4182,6 +4634,7 @@ class CampaignEnv(gym.Env):
         self.gold += float(total_gold_income)
         self.moves = self.moves_per_turn
         self.active_buildings["alredybuilt"] = 0
+        self.spell_learning_locked = False
         return -float(delta_turns) * self.reward_turn_penalty
 
     @staticmethod
@@ -4719,6 +5172,12 @@ class CampaignEnv(gym.Env):
         self.grid_building_obs_size = (
             len(self.building_keys) * self.grid_building_features_per_building
         )
+        self.grid_spell_core_obs_size = 3
+        self.grid_spell_features_per_spell = 1
+        self.grid_spell_obs_size = (
+            self.grid_spell_core_obs_size
+            + len(self.spell_keys) * self.grid_spell_features_per_spell
+        )
 
         self.grid_chest_positions = tuple(sorted(tuple(pos) for pos in self._static_chests.keys()))
         self.grid_chest_features_per_entry = 3
@@ -4834,6 +5293,7 @@ class CampaignEnv(gym.Env):
             + self.grid_resource_obs_size
             + self.grid_mana_source_obs_size
             + self.grid_building_obs_size
+            + self.grid_spell_obs_size
             + self.grid_chest_obs_size
             + self.grid_heal_tile_obs_size
             + self.grid_legions_territory_obs_size
@@ -5051,6 +5511,27 @@ class CampaignEnv(gym.Env):
 
         return np.array(building_obs, dtype=np.float32)
 
+    def _build_spell_grid_obs(self) -> np.ndarray:
+        spell_obs: List[float] = [
+            1.0 if self._has_magic_tower_built() else 0.0,
+            1.0 if self.spell_learning_locked else 0.0,
+            self._normalize_ratio(
+                len(self.get_learned_spell_descriptions()),
+                max(1, len(self.spell_keys)),
+            ),
+        ]
+        for spell_key in self.spell_keys:
+            spell = self.active_spells.get(spell_key)
+            if not isinstance(spell, dict):
+                spell_obs.append(0.0)
+                continue
+            try:
+                learned_v = 1.0 if int(spell.get("learned", 0) or 0) == 1 else 0.0
+            except (TypeError, ValueError):
+                learned_v = 0.0
+            spell_obs.append(learned_v)
+        return np.array(spell_obs, dtype=np.float32)
+
     def _build_chest_grid_obs(self) -> np.ndarray:
         if self.grid_chest_obs_size <= 0:
             return np.zeros(0, dtype=np.float32)
@@ -5161,6 +5642,7 @@ class CampaignEnv(gym.Env):
                 self._build_resource_grid_obs(),
                 self._build_mana_source_grid_obs(),
                 self._build_building_grid_obs(),
+                self._build_spell_grid_obs(),
                 self._build_chest_grid_obs(),
                 self._build_heal_tiles_grid_obs(),
                 self._build_legions_territory_grid_obs(),
@@ -5323,6 +5805,25 @@ class CampaignEnv(gym.Env):
                 mask[self.GRID_BUILD_ACTION_START + idx] = (
                     not has_build_lock and not is_built and not is_blocked and self.gold >= price
                 )
+            if self._has_magic_tower_built() and not self.spell_learning_locked:
+                for idx, spell_key in enumerate(self.spell_keys):
+                    spell = self.active_spells.get(spell_key)
+                    if not isinstance(spell, dict):
+                        continue
+                    try:
+                        is_learned = int(spell.get("learned", 0) or 0) == 1
+                    except (TypeError, ValueError):
+                        is_learned = False
+                    if is_learned:
+                        continue
+                    spell_costs = self._get_spell_learning_costs(spell)
+                    mask[self.grid_spell_action_start + idx] = self._has_mana_for_costs(
+                        spell_costs
+                    )
+            for idx, settlement_name in enumerate(self.settlement_upgrade_names):
+                mask[self.grid_settlement_upgrade_action_start + idx] = self._can_upgrade_settlement(
+                    settlement_name
+                )
         else:
             # В battle режиме используем маску из BattleEnv
             if self.battle_env is not None:
@@ -5470,6 +5971,14 @@ class CampaignEnv(gym.Env):
             for kind in self.MANA_KIND_ORDER
         )
         lines.append(f"Мана: {mana_text}")
+        lines.append(
+            "Башня магии: "
+            + ("построена" if self._has_magic_tower_built() else "не построена")
+        )
+        lines.append(
+            f"Изучение заклинаний в этом ходу: "
+            + ("заблокировано" if self.spell_learning_locked else "доступно")
+        )
 
         if self.chests:
             chest_text = ", ".join(
@@ -5506,6 +6015,14 @@ class CampaignEnv(gym.Env):
                 "Активное зелье силы на позициях: "
                 f"{sorted(self.active_strength_potion_positions)}"
             )
+        learned_spells = self.get_learned_spell_descriptions()
+        if learned_spells:
+            lines.append(
+                f"Изученные заклинания ({len(learned_spells)}/{len(self.spell_keys)}):"
+            )
+            lines.extend(f"- {description}" for description in learned_spells)
+        else:
+            lines.append(f"Изученные заклинания: 0/{len(self.spell_keys)}")
 
         result = "\n".join(lines)
         print(result)
@@ -5528,6 +6045,11 @@ class CampaignEnv(gym.Env):
             "gold": self.gold,
             "moves": self.moves,
             "heroitems": list(self.heroitems),
+            "learned_spells": list(self.get_learned_spell_descriptions()),
+            "learned_spells_count": len(self.get_learned_spell_descriptions()),
+            "spells_total": len(self.spell_keys),
+            "spell_learning_locked": bool(self.spell_learning_locked),
+            "magic_tower_built": bool(self._has_magic_tower_built()),
             "extra_heal_bottles": int(self.extra_heal_bottles or 0),
             "extra_healing_bottles": int(self.extra_healing_bottles or 0),
             "extra_revive_bottles": int(self.extra_revive_bottles or 0),

@@ -19,8 +19,30 @@ def _battle_red_unit(env: CampaignEnv, position: int) -> dict:
     )
 
 
+def _battle_blue_unit(env: CampaignEnv, position: int) -> dict:
+    assert env.battle_env is not None
+    return next(
+        unit
+        for unit in env.battle_env.combined
+        if unit.get("team") == "blue" and int(unit.get("position", -1)) == int(position)
+    )
+
+
 def _armor_obs_index(position: int) -> int:
     return (int(position) - 1) * FEATURES_PER_UNIT + ARMOR_FEATURE_OFFSET
+
+
+def _settlement_upgrade_action_index(env: CampaignEnv, settlement_name: str) -> int:
+    return env.grid_settlement_upgrade_action_start + env.settlement_upgrade_names.index(
+        settlement_name
+    )
+
+
+def _capture_settlement(env: CampaignEnv, source_data: dict) -> str:
+    settlement_name = str(source_data.get("name", "") or "")
+    env.legions_active_settlement_territory_capture_turn_by_name[settlement_name] = int(env.turns)
+    env._refresh_faction_territories()
+    return settlement_name
 
 
 def test_city_linked_stack_gets_level_1_armor_bonus():
@@ -79,6 +101,193 @@ def test_enemy_on_capital_heal_tile_gets_capital_armor_bonus():
         assert int(battle_unit.get("armor", -1)) >= base_armor + 50
         assert int(battle_unit.get("settlement_armor_bonus", -1)) == 50
         assert battle_unit.get("settlement_level") == "capital"
+
+
+def test_hero_stack_from_captured_settlement_tile_gets_matching_armor_bonus_and_restore_after_save():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    source_data = next(
+        source
+        for source in env._static_legions_settlement_territory_sources
+        if int(source.get("settlement_level", 0) or 0) == 1
+    )
+    _capture_settlement(env, source_data)
+    env.battle_origin_pos = tuple(source_data.get("source_tile", ()))
+
+    grid_unit = next(unit for unit in env.blue_team_state if int(unit.get("position", -1)) == 7)
+    base_armor = int(grid_unit.get("armor", 0) or 0)
+
+    env._init_battle(enemy_id=1)
+
+    battle_unit = _battle_blue_unit(env, 7)
+    assert int(battle_unit.get("base_armor", -1)) == base_armor + 10
+    assert int(battle_unit.get("armor", -1)) >= base_armor + 10
+    assert int(battle_unit.get("settlement_armor_bonus", -1)) == 10
+    assert int(battle_unit.get("settlement_level", -1)) == 1
+
+    env._save_blue_state()
+    saved_unit = next(unit for unit in env.blue_team_state if int(unit.get("position", -1)) == 7)
+    assert int(saved_unit.get("armor", -1)) == base_armor
+    assert "settlement_armor_bonus" not in saved_unit
+    assert "settlement_level" not in saved_unit
+
+
+def test_hero_stack_from_uncaptured_settlement_tile_gets_no_city_bonus():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    source_data = next(
+        source
+        for source in env._static_legions_settlement_territory_sources
+        if int(source.get("settlement_level", 0) or 0) == 1
+    )
+    env.battle_origin_pos = tuple(source_data.get("source_tile", ()))
+
+    grid_unit = next(unit for unit in env.blue_team_state if int(unit.get("position", -1)) == 7)
+    base_armor = int(grid_unit.get("armor", 0) or 0)
+
+    env._init_battle(enemy_id=1)
+
+    battle_unit = _battle_blue_unit(env, 7)
+    assert int(battle_unit.get("base_armor", -1)) == base_armor
+    assert int(battle_unit.get("armor", -1)) >= base_armor
+    assert "settlement_armor_bonus" not in battle_unit
+    assert "settlement_level" not in battle_unit
+
+
+def test_rest_on_settlement_tile_adds_flat_bonus_regeneration():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    source_data = next(
+        source
+        for source in env._static_legions_settlement_territory_sources
+        if int(source.get("settlement_level", 0) or 0) == 1
+    )
+    settlement_name = _capture_settlement(env, source_data)
+    env.grid_env.agent_pos = tuple(source_data.get("source_tile", ()))
+
+    unit = next(unit for unit in env.blue_team_state if int(unit.get("position", -1)) == 7)
+    max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0.0)
+    start_hp = max(1.0, max_hp - 40.0)
+    unit["hp"] = start_hp
+    unit["health"] = start_hp
+
+    _, _, terminated, truncated, info = env.step(8)
+
+    assert terminated is False
+    assert truncated is False
+    assert info.get("rest_action") is True
+    assert info.get("rest_heal_flat_bonus") == pytest.approx(10.0)
+    assert info.get("rest_heal_bonus_level") == 1
+    assert info.get("rest_heal_bonus_source") == settlement_name
+    expected_hp = min(max_hp, start_hp + max_hp * 0.05 + 10.0)
+    assert float(unit.get("hp", 0) or 0.0) == pytest.approx(expected_hp)
+
+
+def test_rest_on_capital_tile_keeps_default_regeneration_without_city_bonus():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+    env.grid_env.agent_pos = tuple(env.CASTLE_POS)
+
+    unit = next(unit for unit in env.blue_team_state if int(unit.get("position", -1)) == 8)
+    max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0.0)
+    start_hp = max(1.0, max_hp - 80.0)
+    unit["hp"] = start_hp
+    unit["health"] = start_hp
+
+    _, _, terminated, truncated, info = env.step(8)
+
+    assert terminated is False
+    assert truncated is False
+    assert info.get("rest_action") is True
+    assert info.get("rest_heal_flat_bonus") == pytest.approx(0.0)
+    assert info.get("rest_heal_bonus_source") == ""
+    expected_hp = min(max_hp, start_hp + max_hp * 0.05)
+    assert float(unit.get("hp", 0) or 0.0) == pytest.approx(expected_hp)
+
+
+def test_settlement_upgrade_action_requires_capture_and_enough_gold():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    source_data = next(
+        source
+        for source in env._static_legions_settlement_territory_sources
+        if int(source.get("settlement_level", 0) or 0) == 1
+    )
+    settlement_name = str(source_data.get("name", "") or "")
+    action = _settlement_upgrade_action_index(env, settlement_name)
+
+    env.gold = 999.0
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is False
+
+    _capture_settlement(env, source_data)
+    env.gold = 149.0
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is False
+
+    _, _, terminated, truncated, info = env.step(action)
+    assert terminated is False
+    assert truncated is False
+    assert info.get("settlement_upgrade_action") is True
+    assert info.get("settlement_upgrade_name") == settlement_name
+    assert info.get("settlement_upgrade_applied") is False
+    assert info.get("settlement_upgrade_insufficient_gold") is True
+    assert int(env.legions_settlement_level_by_name[settlement_name]) == 1
+
+
+def test_settlement_upgrade_action_advances_levels_costs_and_updates_city_bonuses():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    source_data = next(
+        source
+        for source in env._static_legions_settlement_territory_sources
+        if int(source.get("settlement_level", 0) or 0) == 1
+    )
+    settlement_name = _capture_settlement(env, source_data)
+    action = _settlement_upgrade_action_index(env, settlement_name)
+
+    env.gold = 5000.0
+    starting_gold = env.gold
+    expected_costs = [150.0, 250.0, 500.0, 750.0]
+    expected_levels = [2, 3, 4, 5]
+
+    for expected_cost, expected_level in zip(expected_costs, expected_levels):
+        _, _, terminated, truncated, info = env.step(action)
+        assert terminated is False
+        assert truncated is False
+        assert info.get("settlement_upgrade_applied") is True
+        assert info.get("settlement_upgrade_cost") == pytest.approx(expected_cost)
+        assert int(env.legions_settlement_level_by_name[settlement_name]) == expected_level
+
+    assert env.gold == pytest.approx(starting_gold - sum(expected_costs))
+    assert bool(env.compute_action_mask()[action]) is False
+
+    env.battle_origin_pos = tuple(source_data.get("source_tile", ()))
+    grid_unit = next(unit for unit in env.blue_team_state if int(unit.get("position", -1)) == 7)
+    base_armor = int(grid_unit.get("armor", 0) or 0)
+    env._init_battle(enemy_id=1)
+    battle_unit = _battle_blue_unit(env, 7)
+    assert int(battle_unit.get("base_armor", -1)) == base_armor + 30
+    assert int(battle_unit.get("settlement_armor_bonus", -1)) == 30
+    assert int(battle_unit.get("settlement_level", -1)) == 5
+
+    env._save_blue_state()
+    env.grid_env.agent_pos = tuple(source_data.get("source_tile", ()))
+    unit = next(unit for unit in env.blue_team_state if int(unit.get("position", -1)) == 7)
+    max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0.0)
+    start_hp = max(1.0, max_hp - 80.0)
+    unit["hp"] = start_hp
+    unit["health"] = start_hp
+
+    _, _, _, _, rest_info = env.step(8)
+    expected_hp = min(max_hp, start_hp + max_hp * 0.05 + 30.0)
+    assert rest_info.get("rest_heal_flat_bonus") == pytest.approx(30.0)
+    assert float(unit.get("hp", 0) or 0.0) == pytest.approx(expected_hp)
 
 
 def test_battle_observation_keeps_high_armor_below_clip_point():

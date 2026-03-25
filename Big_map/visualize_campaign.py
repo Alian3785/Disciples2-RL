@@ -1214,6 +1214,7 @@ class CampaignVisualizer:
         revive_bottles_left: int = 0,
         max_revive_bottles: int = 0,
         built_buildings: list = None,
+        learned_spells: list | None = None,
         heroitems: list | None = None,
         hero_name: str = "",
         hero_level: int = 0,
@@ -1509,6 +1510,12 @@ class CampaignVisualizer:
             info_lines.extend(f"- {name}" for name in built_buildings)
         else:
             info_lines.append("Постройки: нет")
+        learned_spells = learned_spells or []
+        if learned_spells:
+            info_lines.append("Заклинания:")
+            info_lines.extend(f"- {description}" for description in learned_spells)
+        else:
+            info_lines.append("Заклинания: нет")
         merchant_count = len(merchant_positions) if merchant_positions else 0
         info_lines.append(f"Merchant tiles: {merchant_count}")
         chest_count = len(chest_positions) if chest_positions else 0
@@ -1884,6 +1891,7 @@ def run_campaign_visualization(
                 revive_bottles_left=revive_left,
                 max_revive_bottles=max_revive,
                 built_buildings=env_base.get_built_building_names(),
+                learned_spells=env_base.get_learned_spell_descriptions(),
                 chest_positions=getattr(env_base, "chests", None),
                 heroitems=getattr(env_base, "heroitems", None),
                 hero_name=hero_name,
@@ -1954,6 +1962,7 @@ def run_campaign_visualization(
                     revive_bottles_left=revive_left,
                     max_revive_bottles=max_revive,
                     built_buildings=env_base.get_built_building_names(),
+                    learned_spells=env_base.get_learned_spell_descriptions(),
                     chest_positions=getattr(env_base, "chests", None),
                     heroitems=getattr(env_base, "heroitems", None),
                     hero_name=hero_name,
@@ -2095,6 +2104,7 @@ def run_campaign_visualization(
         revive_bottles_left=revive_left,
         max_revive_bottles=max_revive,
         built_buildings=env_base.get_built_building_names(),
+        learned_spells=env_base.get_learned_spell_descriptions(),
         chest_positions=getattr(env_base, "chests", None),
         heroitems=getattr(env_base, "heroitems", None),
         hero_name=hero_name,
