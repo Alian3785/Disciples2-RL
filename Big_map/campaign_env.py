@@ -60,6 +60,13 @@ from spells import (
     legions_spells_d2,
     elves_spells_d2,
 )
+from hire import (
+    empire_hire_d2,
+    mountain_clans_hire_d2,
+    undead_hordes_hire_d2,
+    legions_hire_d2,
+    elves_hire_d2,
+)
 
 BUILDINGS_D2 = {
     "empire": empire_buildings_d2,
@@ -77,6 +84,13 @@ SPELLS_D2 = {
     "elves": elves_spells_d2,
 }
 SPELLS_D2_TEMPLATE = {key: deepcopy(value) for key, value in SPELLS_D2.items()}
+HIRE_D2 = {
+    "empire": empire_hire_d2,
+    "mountain_clans": mountain_clans_hire_d2,
+    "undead_hordes": undead_hordes_hire_d2,
+    "legions": legions_hire_d2,
+    "elves": elves_hire_d2,
+}
 
 DEFAULT_SCENARIO_FILENAME = "A Return To Simpler Times.sg"
 LEGIONS_TERRITORY_PASSABLE_POSITIONED_CLASSES = frozenset(
@@ -237,6 +251,7 @@ class CampaignEnv(gym.Env):
     Награды:
         - Награда за участие в битве (нашёл врага): +0.1
         - Награда за победу в каждой битве: +0.3
+        - Награда за успешный найм юнита после лидерства: 3 * reward_defeat_enemy
         - Награда за первый захваченный целевой город: reward_all_enemies
         - Награда за второй захваченный целевой город: reward_all_enemies * 5
         - Победа в кампании после захвата Порта Полонис и Соругириллы
@@ -244,6 +259,7 @@ class CampaignEnv(gym.Env):
         - Награда за лечение на специальных клетках: reward_castle_heal_per_hp * restored_hp
         - Награда за успешное воскрешение на специальных клетках: reward_castle_revive
         - Минимальная награда за продажу бесполезного предмета у торговца
+        - Дополнительный штраф за каждый завершённый ход, пока герою нужен юнит
         - Штраф за поражение: -1.0
         - Штраф за таймаут (лимит шагов на карте): -6.0
 
@@ -296,6 +312,7 @@ class CampaignEnv(gym.Env):
     MOVES_PER_TURN = 20
     GRID_STEPS_PER_TURN = MOVES_PER_TURN
     HERO_PATHFINDING_LEVEL = 2
+    HERO_LEADERSHIP_LEVEL = 3
     HERO_PATHFINDING_MOVE_BONUS_PCT = 0.20
     GOLD_PER_TURN = 100.0
     BUILDING_GOLD_COST_MULTIPLIER = 100.0
@@ -369,27 +386,28 @@ class CampaignEnv(gym.Env):
     CASTLE_HEAL_POSITIONS = GRID_BOTTLE_POSITIONS
     GRID_CASTLE_REVIVE_ACTION_START = GRID_CASTLE_HEAL_ACTION_START + len(CASTLE_HEAL_POSITIONS)  # 39
     CASTLE_REVIVE_POSITIONS = REVIVE_BOTTLE_POSITIONS
-    GRID_MERCHANT_BUY_ACTION_START = (
-        GRID_CASTLE_REVIVE_ACTION_START + len(CASTLE_REVIVE_POSITIONS)
-    )  # 45
+    HIRE_FRONT_POSITIONS = (7, 9)
+    HIRE_BACK_POSITIONS = (10, 11, 12)
+    GRID_HIRE_ACTION_START = GRID_CASTLE_REVIVE_ACTION_START + len(CASTLE_REVIVE_POSITIONS)  # 45
+    GRID_MERCHANT_BUY_ACTION_START = GRID_HIRE_ACTION_START
     ENERGY_ELIXIR_POSITIONS = GRID_BOTTLE_POSITIONS
-    GRID_ENERGY_ACTION_START = GRID_MERCHANT_BUY_ACTION_START + 10  # 55
+    GRID_ENERGY_ACTION_START = GRID_MERCHANT_BUY_ACTION_START + 10
     HASTE_ELIXIR_POSITIONS = GRID_BOTTLE_POSITIONS
-    GRID_HASTE_ACTION_START = GRID_ENERGY_ACTION_START + len(ENERGY_ELIXIR_POSITIONS)  # 61
+    GRID_HASTE_ACTION_START = GRID_ENERGY_ACTION_START + len(ENERGY_ELIXIR_POSITIONS)
     FIRE_WARD_POSITIONS = GRID_BOTTLE_POSITIONS
-    GRID_FIRE_WARD_ACTION_START = GRID_HASTE_ACTION_START + len(HASTE_ELIXIR_POSITIONS)  # 67
+    GRID_FIRE_WARD_ACTION_START = GRID_HASTE_ACTION_START + len(HASTE_ELIXIR_POSITIONS)
     EARTH_WARD_POSITIONS = GRID_BOTTLE_POSITIONS
-    GRID_EARTH_WARD_ACTION_START = GRID_FIRE_WARD_ACTION_START + len(FIRE_WARD_POSITIONS)  # 73
+    GRID_EARTH_WARD_ACTION_START = GRID_FIRE_WARD_ACTION_START + len(FIRE_WARD_POSITIONS)
     WATER_WARD_POSITIONS = GRID_BOTTLE_POSITIONS
-    GRID_WATER_WARD_ACTION_START = GRID_EARTH_WARD_ACTION_START + len(EARTH_WARD_POSITIONS)  # 79
+    GRID_WATER_WARD_ACTION_START = GRID_EARTH_WARD_ACTION_START + len(EARTH_WARD_POSITIONS)
     AIR_WARD_POSITIONS = GRID_BOTTLE_POSITIONS
-    GRID_AIR_WARD_ACTION_START = GRID_WATER_WARD_ACTION_START + len(WATER_WARD_POSITIONS)  # 85
+    GRID_AIR_WARD_ACTION_START = GRID_WATER_WARD_ACTION_START + len(WATER_WARD_POSITIONS)
     TITAN_ELIXIR_POSITIONS = GRID_BOTTLE_POSITIONS
-    GRID_TITAN_ELIXIR_ACTION_START = GRID_AIR_WARD_ACTION_START + len(AIR_WARD_POSITIONS)  # 91
+    GRID_TITAN_ELIXIR_ACTION_START = GRID_AIR_WARD_ACTION_START + len(AIR_WARD_POSITIONS)
     SUPREME_ELIXIR_POSITIONS = GRID_BOTTLE_POSITIONS
     GRID_SUPREME_ELIXIR_ACTION_START = (
         GRID_TITAN_ELIXIR_ACTION_START + len(TITAN_ELIXIR_POSITIONS)
-    )  # 97
+    )
     FINAL_OBJECTIVE_CITIES = {
         "Порт Полонис": (34, 68),
         "Соругирилла": (35, 69),
@@ -453,7 +471,7 @@ class CampaignEnv(gym.Env):
     )
     GRID_BUILD_ACTION_START = (
         GRID_SUPREME_ELIXIR_ACTION_START + len(SUPREME_ELIXIR_POSITIONS)
-    )  # 103
+    )
     CHEST_ITEM_GOLD_VALUES = {
         "Potion of Healing": 150,
         "Life Potion": 400,
@@ -538,6 +556,7 @@ class CampaignEnv(gym.Env):
         reward_loss: float = -5.0,          # Штраф за поражение кампании
         reward_timeout: float = -3.0,       # Штраф за таймаут (лимит шагов)
         reward_turn_penalty: float = 0.02,  # Штраф за завершение хода (REST)
+        reward_needaunit_turn_penalty: float = 0.05,  # Штраф за ход, пока герою нужен найм.
         reward_repeat_position_penalty: float = 0.015,  # Штраф за повторное посещение клетки.
         reward_repeat_position_penalty_cap: float = 0.08,  # Кеп на повторный штраф за 1 шаг.
         reward_backtrack_penalty: float = 0.03,  # Штраф за микро-цикл A->B->A.
@@ -573,6 +592,7 @@ class CampaignEnv(gym.Env):
         self.reward_loss = reward_loss
         self.reward_timeout = reward_timeout
         self.reward_turn_penalty = reward_turn_penalty
+        self.reward_needaunit_turn_penalty = max(0.0, float(reward_needaunit_turn_penalty))
         self.reward_repeat_position_penalty = max(0.0, float(reward_repeat_position_penalty))
         self.reward_repeat_position_penalty_cap = max(0.0, float(reward_repeat_position_penalty_cap))
         self.reward_backtrack_penalty = max(0.0, float(reward_backtrack_penalty))
@@ -759,9 +779,9 @@ class CampaignEnv(gym.Env):
         self.building_keys = self._get_building_keys(self.active_buildings)
         self.active_spells = self._get_spells_for_capital(self.Realcapital)
         self.spell_keys = self._get_spell_keys(self.active_spells)
+        self.active_hire_options: List[Dict[str, object]] = []
         self.settlement_upgrade_names = list(self.legions_settlement_territory_source_by_name.keys())
-        self.grid_spell_action_start = self.GRID_BUILD_ACTION_START + len(self.building_keys)
-        self.grid_settlement_upgrade_action_start = self.grid_spell_action_start + len(self.spell_keys)
+        self._refresh_dynamic_action_layout()
         self.chests: Dict[Tuple[int, int], Tuple[str, ...]] = dict(self._static_chests)
         self.mana_sources: Dict[Tuple[int, int], Dict[str, object]] = {
             tuple(pos): dict(meta)
@@ -824,14 +844,14 @@ class CampaignEnv(gym.Env):
         self.active_spells = self._get_spells_for_capital(self.Realcapital)
         self.spell_keys = self._get_spell_keys(self.active_spells)
         self.settlement_upgrade_names = list(self.legions_settlement_territory_source_by_name.keys())
-        self.grid_spell_action_start = self.GRID_BUILD_ACTION_START + len(self.building_keys)
-        self.grid_settlement_upgrade_action_start = self.grid_spell_action_start + len(self.spell_keys)
+        self._refresh_dynamic_action_layout()
         self.mode = self.MODE_GRID
         self.current_enemy_id = None
         self.battle_origin_pos = None
         # Стартовое состояние BLUE — копия базовых юнитов, чтобы
         # вне боя можно было применять лечение до первого боя.
         self.blue_team_state = deepcopy(UNITS_BLUE)
+        self._sync_hero_progression_flags(self.blue_team_state)
         self.heal_bottles_used = 0
         self.healing_bottles_used = 0
         self.revive_bottles_used = 0
@@ -872,6 +892,8 @@ class CampaignEnv(gym.Env):
         self._sync_grid_chest_positions()
         self._sync_grid_mana_sources()
         self._sync_grid_merchant_positions()
+        total_actions = self.grid_settlement_upgrade_action_start + len(self.settlement_upgrade_names)
+        self.action_space = spaces.Discrete(total_actions)
 
         grid_obs, grid_info = self.grid_env.reset(seed=seed)
         grid_obs = self._augment_grid_obs(grid_obs)
@@ -945,16 +967,9 @@ class CampaignEnv(gym.Env):
         #   27-32 — применить зелье силы к позициям 7-12 соответственно.
         #   33-38 — лечение на специальных клетках карты по позициям 7-12.
         #   39-44 — воскрешение на специальных клетках карты по позициям 7-12.
-        #   45-54 — купить товар у торговца.
-        #   55-60 — Эликсир энергии по позициям 7-12.
-        #   61-66 — Эликсир быстроты по позициям 7-12.
-        #   67-72 — защита от магии Огня по позициям 7-12.
-        #   73-78 — защита от магии Земли по позициям 7-12.
-        #   79-84 — защита от магии Воды по позициям 7-12.
-        #   85-90 — защита от магии Воздуха по позициям 7-12.
-        #   91-96 — Эликсир Силы титана по позициям 7-12.
-        #   97-102 — Эликсир Всевышнего по позициям 7-12.
-        #   103-... — постройка зданий активной фракции.
+        #   после 44 — найм фракционных юнитов в городе/столице;
+        #   число action в этом блоке зависит от массива найма выбранной расы в hire.py.
+        #   после блока найма — покупки у торговца, затем боевые эликсиры и постройки.
         #   после построек — изучение заклинаний активной фракции.
         #   после заклинаний — улучшение захваченных городов.
         if action >= self.grid_settlement_upgrade_action_start:
@@ -981,6 +996,8 @@ class CampaignEnv(gym.Env):
             return self._step_apply_energy_elixir(action)
         if action >= self.GRID_MERCHANT_BUY_ACTION_START:
             return self._step_buy_merchant_item(action)
+        if action >= self.GRID_HIRE_ACTION_START:
+            return self._step_hire_faction_unit(action)
         if action >= self.GRID_CASTLE_REVIVE_ACTION_START:
             return self._step_revive_in_castle(action)
         if action >= self.GRID_CASTLE_HEAL_ACTION_START:
@@ -1112,6 +1129,10 @@ class CampaignEnv(gym.Env):
 
         # Обработка действия REST — восстановление 5% HP и бонусного лечения на heal-tile.
         if grid_info.get("rest_action"):
+            pending_hire_turn_penalty = self._pending_hire_turn_penalty(
+                1,
+                units=self.blue_team_state,
+            )
             (
                 _rest_armor_bonus,
                 rest_heal_flat_bonus,
@@ -1139,6 +1160,7 @@ class CampaignEnv(gym.Env):
             info["gold"] = self.gold
             info["moves"] = self.moves
             info["healed_units"] = healed
+            info["pending_hire_turn_penalty"] = float(pending_hire_turn_penalty)
             info["rest_heal_percent"] = 0.05
             info["rest_heal_flat_bonus"] = float(rest_heal_flat_bonus)
             info["rest_heal_bonus_source"] = rest_heal_bonus_source
@@ -1343,6 +1365,19 @@ class CampaignEnv(gym.Env):
         except (TypeError, ValueError):
             return False
 
+    def _resolve_hero_needaunit(self, unit: Dict) -> int:
+        try:
+            return 1 if int(round(float(unit.get("needaunit", 0) or 0))) > 0 else 0
+        except (TypeError, ValueError):
+            return 0
+
+    def _sync_hero_progression_flags(self, units: Optional[List[Dict]] = None) -> None:
+        roster = units if units is not None else self.blue_team_state
+        if not roster:
+            return
+        for unit in roster:
+            unit["needaunit"] = self._resolve_hero_needaunit(unit)
+
     def _resolve_travel_hero(self, units: Optional[List[Dict]] = None) -> Optional[Dict]:
         roster = units if units is not None else self._get_blue_state()
         heroes = [unit for unit in roster if self._is_hero_unit(unit)]
@@ -1365,8 +1400,141 @@ class CampaignEnv(gym.Env):
         except (TypeError, ValueError):
             return 0
 
+    def _hero_needs_faction_hire(self, units: Optional[List[Dict]] = None) -> bool:
+        hero = self._resolve_travel_hero(units=units)
+        if hero is None:
+            return False
+        return self._resolve_hero_needaunit(hero) > 0
+
+    def _hire_reward_value(self) -> float:
+        return max(0.0, 3.0 * float(self.reward_defeat_enemy))
+
+    def _pending_hire_turn_penalty(
+        self,
+        delta_turns: int,
+        units: Optional[List[Dict]] = None,
+    ) -> float:
+        if delta_turns <= 0:
+            return 0.0
+        if not self._hero_needs_faction_hire(units=units):
+            return 0.0
+        return float(delta_turns) * float(self.reward_needaunit_turn_penalty)
+
     def _hero_has_pathfinding(self, units: Optional[List[Dict]] = None) -> bool:
         return self._hero_level(units=units) >= int(self.HERO_PATHFINDING_LEVEL)
+
+    def _hero_has_leadership(self, units: Optional[List[Dict]] = None) -> bool:
+        return self._hero_level(units=units) >= int(self.HERO_LEADERSHIP_LEVEL)
+
+    @staticmethod
+    def _is_empty_blue_unit(unit: Optional[Dict]) -> bool:
+        if not isinstance(unit, dict):
+            return True
+        name = str(unit.get("name", "") or "").strip().lower()
+        if name == "пусто":
+            return True
+        hp = float(unit.get("hp", 0) or unit.get("health", 0) or 0)
+        max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
+        return hp <= 0 and max_hp <= 0
+
+    def _hire_option(self, action_idx: int) -> Optional[Dict[str, object]]:
+        if 0 <= int(action_idx) < len(self.active_hire_options):
+            return dict(self.active_hire_options[int(action_idx)])
+        return None
+
+    def _hire_positions_for_role(self, role: object) -> Tuple[int, ...]:
+        role_name = str(role or "").strip().lower()
+        if role_name == "warrior":
+            return tuple(int(pos) for pos in self.HIRE_FRONT_POSITIONS)
+        if role_name in {"mage", "archer", "support"}:
+            return tuple(int(pos) for pos in self.HIRE_BACK_POSITIONS)
+        return tuple()
+
+    def _find_first_empty_blue_position(self, positions: Tuple[int, ...]) -> Optional[int]:
+        state = self._get_blue_state()
+        units_by_position = {
+            int(unit.get("position", -1) or -1): unit
+            for unit in state
+            if isinstance(unit, dict)
+        }
+        for position in positions:
+            unit = units_by_position.get(int(position))
+            if self._is_empty_blue_unit(unit):
+                return int(position)
+        return None
+
+    def _can_hire_faction_unit_option(self, option: Optional[Dict[str, object]]) -> bool:
+        if not isinstance(option, dict):
+            return False
+        if not self._is_at_castle():
+            return False
+
+        hero = self._resolve_travel_hero()
+        if hero is None:
+            return False
+        if not self._hero_has_leadership(units=[hero]):
+            return False
+        if self._resolve_hero_needaunit(hero) <= 0:
+            return False
+
+        try:
+            cost = max(0.0, float(option.get("gold", 0.0) or 0.0))
+        except (TypeError, ValueError):
+            return False
+        if float(self.gold or 0.0) < cost:
+            return False
+
+        unit_name = str(option.get("name", "") or "").strip()
+        positions = self._hire_positions_for_role(option.get("role"))
+        if not unit_name or not positions:
+            return False
+        if self._find_unit_data_by_name(unit_name) is None:
+            return False
+        return self._find_first_empty_blue_position(positions) is not None
+
+    def _hire_faction_unit_option(
+        self,
+        option: Optional[Dict[str, object]],
+    ) -> Tuple[bool, Optional[str], Optional[int], float]:
+        if not self._can_hire_faction_unit_option(option):
+            return False, None, None, 0.0
+
+        assert isinstance(option, dict)
+        unit_name = str(option.get("name", "") or "").strip()
+        positions = self._hire_positions_for_role(option.get("role"))
+        target_pos = self._find_first_empty_blue_position(positions)
+        if target_pos is None:
+            return False, None, None, 0.0
+
+        unit_data = self._find_unit_data_by_name(unit_name)
+        if unit_data is None:
+            return False, None, None, 0.0
+
+        recruited_unit = self._build_unit_from_data(unit_data, "blue", target_pos)
+        state = self._get_blue_state()
+        replaced = False
+        for idx, unit in enumerate(state):
+            if int(unit.get("position", -1) or -1) != int(target_pos):
+                continue
+            state[idx] = deepcopy(recruited_unit)
+            replaced = True
+            break
+        if not replaced:
+            state.append(deepcopy(recruited_unit))
+            state.sort(key=lambda unit: int(unit.get("position", 999) or 999))
+
+        hero = self._resolve_travel_hero(units=state)
+        if hero is not None:
+            hero["needaunit"] = 0
+
+        cost = max(0.0, float(option.get("gold", 0.0) or 0.0))
+        self.gold = max(0.0, float(self.gold or 0.0) - cost)
+        self._sync_hero_progression_flags(state)
+        self._log(
+            f'Найм в городе: "{unit_name}" нанят на позицию {int(target_pos)} '
+            f"(стоимость={cost:.1f} gold, gold_left={float(self.gold):.1f})"
+        )
+        return True, unit_name, int(target_pos), cost
 
     def _hero_pathfinding_move_bonus(self, units: Optional[List[Dict]] = None) -> int:
         if not self._hero_has_pathfinding(units=units):
@@ -1384,9 +1552,12 @@ class CampaignEnv(gym.Env):
         if hero is None:
             return None
 
+        hero["needaunit"] = self._resolve_hero_needaunit(hero)
         abilities: List[str] = []
         if self._hero_has_pathfinding(units=[hero]):
             abilities.append("Нахождение пути (+20% шагов)")
+        if self._hero_has_leadership(units=[hero]):
+            abilities.append("Лидерство")
 
         return {
             "name": str(hero.get("name", "") or "").strip(),
@@ -2178,6 +2349,66 @@ class CampaignEnv(gym.Env):
             "revive_cost": revive_cost,
             "gold_spent": gold_spent,
             "castle_revive_reward": reward,
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+        }
+
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
+
+    def _step_hire_faction_unit(self, action: int):
+        idx = action - self.GRID_HIRE_ACTION_START
+        option = self._hire_option(idx)
+
+        grid_obs = self._get_grid_obs()
+        terminated = False
+        truncated = False
+
+        unit_name = None if option is None else str(option.get("name", "") or "").strip()
+        hire_cost = 0.0
+        hire_role = None if option is None else str(option.get("role", "") or "").strip().lower()
+        hire_target_pos = None
+        if option is not None:
+            try:
+                hire_cost = max(0.0, float(option.get("gold", 0.0) or 0.0))
+            except (TypeError, ValueError):
+                hire_cost = 0.0
+            positions = self._hire_positions_for_role(hire_role)
+            if positions:
+                hire_target_pos = self._find_first_empty_blue_position(positions)
+
+        hire_available_before = self._can_hire_faction_unit_option(option)
+        hired, hired_unit_name, hired_position, gold_spent = self._hire_faction_unit_option(option)
+
+        hero = self._resolve_travel_hero()
+        hero_needaunit = self._resolve_hero_needaunit(hero) if hero is not None else 0
+        reward = self._hire_reward_value() if hired else 0.0
+
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            "hire_action": True,
+            "hire_action_idx": int(idx),
+            "hire_unit_name": unit_name,
+            "hire_role": hire_role,
+            "hire_cost": float(hire_cost),
+            "hire_target_pos": hire_target_pos,
+            "hire_available": bool(hire_available_before),
+            "hired": bool(hired),
+            "hired_units_count": int(1 if hired else 0),
+            "hired_unit_name": hired_unit_name,
+            "hired_position": hired_position,
+            "gold_spent": float(gold_spent),
+            "hire_reward": float(reward),
+            "hero_needaunit": int(hero_needaunit),
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
@@ -4060,6 +4291,7 @@ class CampaignEnv(gym.Env):
             
             # Восстанавливаем initiative к базовому значению
             restored_unit["initiative"] = restored_unit.get("initiative_base", 0)
+            restored_unit["needaunit"] = self._resolve_hero_needaunit(restored_unit)
             
             self.blue_team_state.append(restored_unit)
 
@@ -4109,6 +4341,62 @@ class CampaignEnv(gym.Env):
         if capital_value == 5:
             return elves_spells_d2
         return empire_spells_d2
+
+    def _get_hire_options_for_capital(self, capital: Optional[int]) -> List[Dict[str, object]]:
+        try:
+            capital_value = int(capital)
+        except (TypeError, ValueError):
+            capital_value = None
+
+        if capital_value == 2:
+            hire_data = HIRE_D2["legions"]
+        elif capital_value == 3:
+            hire_data = HIRE_D2["mountain_clans"]
+        elif capital_value == 4:
+            hire_data = HIRE_D2["undead_hordes"]
+        elif capital_value == 5:
+            hire_data = HIRE_D2["elves"]
+        else:
+            hire_data = HIRE_D2["empire"]
+
+        if not isinstance(hire_data, dict):
+            return []
+        return [dict(entry) for entry in hire_data.values() if isinstance(entry, dict)]
+
+    def _refresh_dynamic_action_layout(self) -> None:
+        self.active_hire_options = self._get_hire_options_for_capital(self.Realcapital)
+        self.GRID_MERCHANT_BUY_ACTION_START = self.GRID_HIRE_ACTION_START + len(self.active_hire_options)
+        self.GRID_ENERGY_ACTION_START = self.GRID_MERCHANT_BUY_ACTION_START + len(
+            self.MERCHANT_BUY_ITEMS
+        )
+        self.GRID_HASTE_ACTION_START = self.GRID_ENERGY_ACTION_START + len(
+            self.ENERGY_ELIXIR_POSITIONS
+        )
+        self.GRID_FIRE_WARD_ACTION_START = self.GRID_HASTE_ACTION_START + len(
+            self.HASTE_ELIXIR_POSITIONS
+        )
+        self.GRID_EARTH_WARD_ACTION_START = self.GRID_FIRE_WARD_ACTION_START + len(
+            self.FIRE_WARD_POSITIONS
+        )
+        self.GRID_WATER_WARD_ACTION_START = self.GRID_EARTH_WARD_ACTION_START + len(
+            self.EARTH_WARD_POSITIONS
+        )
+        self.GRID_AIR_WARD_ACTION_START = self.GRID_WATER_WARD_ACTION_START + len(
+            self.WATER_WARD_POSITIONS
+        )
+        self.GRID_TITAN_ELIXIR_ACTION_START = self.GRID_AIR_WARD_ACTION_START + len(
+            self.AIR_WARD_POSITIONS
+        )
+        self.GRID_SUPREME_ELIXIR_ACTION_START = self.GRID_TITAN_ELIXIR_ACTION_START + len(
+            self.TITAN_ELIXIR_POSITIONS
+        )
+        self.GRID_BUILD_ACTION_START = self.GRID_SUPREME_ELIXIR_ACTION_START + len(
+            self.SUPREME_ELIXIR_POSITIONS
+        )
+        self.grid_spell_action_start = self.GRID_BUILD_ACTION_START + len(self.building_keys)
+        self.grid_settlement_upgrade_action_start = self.grid_spell_action_start + len(
+            self.spell_keys
+        )
 
     def _build_unit_from_data(self, entry: Dict, team: str, position: int) -> Dict:
         def _entry_get(*keys, default=0):
@@ -4370,7 +4658,10 @@ class CampaignEnv(gym.Env):
         """Возвращает (и при необходимости инициализирует) сохранённое состояние BLUE."""
         if self.blue_team_state is None:
             self.blue_team_state = deepcopy(UNITS_BLUE)
+            self._sync_hero_progression_flags(self.blue_team_state)
             self._sync_moves_per_turn_with_hero(units=self.blue_team_state, refill=True)
+        else:
+            self._sync_hero_progression_flags(self.blue_team_state)
         return self.blue_team_state
 
     def _spend_moves(self, spent_moves: int) -> None:
@@ -4623,6 +4914,10 @@ class CampaignEnv(gym.Env):
         """Увеличивает счётчик ходов и золото на заданное количество."""
         if delta_turns <= 0:
             return 0.0
+        pending_hire_penalty = self._pending_hire_turn_penalty(
+            delta_turns,
+            units=self.blue_team_state,
+        )
         total_gold_income = 0.0
         for _ in range(int(delta_turns)):
             self.turns += 1
@@ -4635,7 +4930,7 @@ class CampaignEnv(gym.Env):
         self.moves = self.moves_per_turn
         self.active_buildings["alredybuilt"] = 0
         self.spell_learning_locked = False
-        return -float(delta_turns) * self.reward_turn_penalty
+        return -float(delta_turns) * self.reward_turn_penalty - float(pending_hire_penalty)
 
     @staticmethod
     def _territory_sort_key(
@@ -5782,6 +6077,10 @@ class CampaignEnv(gym.Env):
                     mask[self.GRID_CASTLE_HEAL_ACTION_START + idx] = self._can_heal_position(pos)
                 for idx, pos in enumerate(self.CASTLE_REVIVE_POSITIONS):
                     mask[self.GRID_CASTLE_REVIVE_ACTION_START + idx] = self._can_castle_revive_position(pos)
+            for idx in range(len(self.active_hire_options)):
+                mask[self.GRID_HIRE_ACTION_START + idx] = self._can_hire_faction_unit_option(
+                    self._hire_option(idx)
+                )
 
             # Постройки: доступны при достаточном золоте и если не blocked/built
             alredybuilt_flag = self.active_buildings.get("alredybuilt", 0)

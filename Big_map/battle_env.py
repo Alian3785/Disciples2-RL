@@ -231,6 +231,7 @@ def _build_next_level_exp_by_name(unit_data: List[Dict]) -> Dict[str, int]:
 
 
 NEXT_LEVEL_EXP_BY_NAME = _build_next_level_exp_by_name(UNIT_DATA)
+HERO_LEADERSHIP_LEVEL = 3
 
 
 def _resolve_unit_next_level_exp(unit: Dict) -> int:
@@ -242,6 +243,16 @@ def _resolve_unit_next_level_exp(unit: Dict) -> int:
     if not unit_name:
         return 0
     return _to_int_or_default(NEXT_LEVEL_EXP_BY_NAME.get(unit_name, 0), default=0)
+
+
+def _is_travel_hero_unit(unit: Dict) -> bool:
+    if _resolve_unit_next_level_exp(unit) <= 0:
+        return False
+    return _to_int_or_default(unit.get("position", -1), default=-1) == 8
+
+
+def _resolve_unit_needaunit(unit: Dict) -> int:
+    return 1 if _to_int_or_default(unit.get("needaunit", 0), default=0) > 0 else 0
 
 
 def _apply_hero_levelup_bonuses(unit: Dict) -> None:
@@ -264,6 +275,9 @@ def _apply_hero_levelup_bonuses(unit: Dict) -> None:
 
     current_exp_kill = float(unit.get("exp_kill", 0) or 0)
     unit["exp_kill"] = max(0, _to_int_or_default(current_exp_kill * 1.1, default=0))
+    unit["needaunit"] = _resolve_unit_needaunit(unit)
+    if _is_travel_hero_unit(unit) and _resolve_unit_level(unit) == HERO_LEADERSHIP_LEVEL:
+        unit["needaunit"] = 1
 
 UNITS_RED = [{'name': 'Скелет рыцарь',
   'initiative': 50,
@@ -470,6 +484,7 @@ _apply_team_traits(UNITS_BLUE, UNITS_RED)
 for unit in UNITS_RED + UNITS_BLUE:
     unit["Level"] = _resolve_unit_level(unit)
     unit["next_level_exp"] = _resolve_unit_next_level_exp(unit)
+    unit["needaunit"] = _resolve_unit_needaunit(unit)
     unit.setdefault("defense", 0)
     unit.setdefault("waited", 0)
 
@@ -2046,6 +2061,7 @@ class BattleEnv(gym.Env):
             u.setdefault("big", False)
             u.setdefault("Level", _resolve_unit_level(u))
             u.setdefault("next_level_exp", _resolve_unit_next_level_exp(u))
+            u["needaunit"] = _resolve_unit_needaunit(u)
             u.setdefault("bonusturn", 0)
             u["defense"] = 0
             u["waited"] = 0
@@ -4463,6 +4479,7 @@ class BattleEnv(gym.Env):
             u.setdefault("big", False)
             u.setdefault("Level", _resolve_unit_level(u))
             u.setdefault("next_level_exp", _resolve_unit_next_level_exp(u))
+            u["needaunit"] = _resolve_unit_needaunit(u)
             u.setdefault("bonusturn", 0)
             u.setdefault("original_damage", u.get("damage", 0))
 
