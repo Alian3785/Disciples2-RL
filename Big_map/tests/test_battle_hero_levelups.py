@@ -33,6 +33,7 @@ def test_hero_levelup_raises_level_resets_exp_and_buffs_hero_stats():
     duke["max_health"] = 150
     duke["exp_kill"] = 60
     duke["accuracy"] = 80
+    duke["needaunit"] = 0
 
     env.combined = [duke, _make_enemy(exp_kill=1)]
     env._apply_battle_exp("red")
@@ -46,7 +47,24 @@ def test_hero_levelup_raises_level_resets_exp_and_buffs_hero_stats():
     assert duke["max_health"] == 165
     assert duke["exp_kill"] == 66
     assert duke["accuracy"] == 81
+    assert duke["needaunit"] == 0
     assert env.last_levelups == [duke["name"]]
+
+
+def test_hero_levelup_to_third_level_sets_needaunit_flag():
+    env = BattleEnv(log_enabled=False)
+    duke = deepcopy(next(u for u in UNITS_BLUE if int(u.get("position", -1)) == 8))
+    duke["exp_current"] = 649
+    duke["exp_required"] = 650
+    duke["Level"] = 2
+    duke["next_level_exp"] = 500
+    duke["needaunit"] = 0
+
+    env.combined = [duke, _make_enemy(exp_kill=1)]
+    env._apply_battle_exp("red")
+
+    assert duke["Level"] == 3
+    assert duke["needaunit"] == 1
 
 
 def test_regular_unit_without_next_level_exp_keeps_transform_upgrade_flow():
@@ -95,6 +113,7 @@ def test_campaign_moves_per_turn_scales_with_travel_hero_level():
 
     duke = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
     assert duke["Level"] == 1
+    assert duke["needaunit"] == 0
     assert env.moves_per_turn == 21
     env.moves = 5
     duke["Level"] = 2
@@ -111,3 +130,23 @@ def test_campaign_moves_per_turn_scales_with_travel_hero_level():
 
     env._advance_turns(1)
     assert env.moves == 26
+
+
+def test_campaign_travel_hero_visual_info_shows_leadership_on_level_three():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    duke = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
+    duke["Level"] = 3
+    duke["needaunit"] = 0
+
+    env._sync_moves_per_turn_with_hero(units=env.blue_team_state, grant_delta=True)
+
+    assert env.get_travel_hero_visual_info() == {
+        "name": duke["name"],
+        "level": 3,
+        "abilities": [
+            "Нахождение пути (+20% шагов)",
+            "Лидерство",
+        ],
+    }

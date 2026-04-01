@@ -356,6 +356,11 @@ def map_unit_to_battle(u: dict, team: str, position: int) -> dict:
     except Exception:
         level_v = 0
 
+    try:
+        needaunit_v = 1 if int(round(float(_get(u, "needaunit", default=0)))) > 0 else 0
+    except Exception:
+        needaunit_v = 0
+
     if isinstance(turns_raw, list):
         turns_into_v = list(turns_raw)
     elif turns_raw:
@@ -397,6 +402,7 @@ def map_unit_to_battle(u: dict, team: str, position: int) -> dict:
         "exp_required": exp_required_v,
         "exp_current": exp_current_v,
         "next_level_exp": next_level_exp_v,
+        "needaunit": needaunit_v,
         "turns_into": turns_into_v,
     }
 
@@ -436,6 +442,7 @@ def placeholder_unit(team: str, position: int) -> dict:
         "transformed": 0,
         "basestats": [],
         "Level": 0,
+        "needaunit": 0,
     }
 
 # ========================= ВСПОМОГАТЕЛЬНОЕ =========================

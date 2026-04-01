@@ -507,6 +507,9 @@ class CampaignMetricsCallback(BaseCallback):
         self.episode_spells_learned: list[float] = []
         self.recent_spells_learned = deque(maxlen=self.episode_window)
         self.recent_spell_learning_episode_flags = deque(maxlen=self.episode_window)
+        self.episode_hired_units: list[float] = []
+        self.recent_hired_units = deque(maxlen=self.episode_window)
+        self.recent_hire_episode_flags = deque(maxlen=self.episode_window)
         self.recent_turns = deque(maxlen=self.step_window)
         self.recent_gold = deque(maxlen=self.step_window)
         self.recent_moves = deque(maxlen=self.step_window)
@@ -534,6 +537,8 @@ class CampaignMetricsCallback(BaseCallback):
         self.sale_episodes = 0
         self.total_spells_learned = 0
         self.spell_learning_episodes = 0
+        self.total_hired_units = 0
+        self.hire_episodes = 0
         self.best_recent_victory_rate = 0.0
         self._last_logged_step = 0
         self._episode_castle_heal_uses: list[int] = []
@@ -544,6 +549,7 @@ class CampaignMetricsCallback(BaseCallback):
         self._episode_sold_items: list[int] = []
         self._episode_sale_gold: list[float] = []
         self._episode_spells_learned: list[int] = []
+        self._episode_hired_units: list[int] = []
 
     def _append_recent_stat(self, info: dict[str, Any], key: str, target: deque) -> None:
         value = info.get(key)
@@ -566,6 +572,7 @@ class CampaignMetricsCallback(BaseCallback):
         self._episode_sold_items.extend([0] * missing)
         self._episode_sale_gold.extend([0.0] * missing)
         self._episode_spells_learned.extend([0] * missing)
+        self._episode_hired_units.extend([0] * missing)
 
     def _consume_castle_heal(self, info: dict[str, Any], env_index: int) -> None:
         if not info.get("castle_heal_action"):
@@ -718,6 +725,38 @@ class CampaignMetricsCallback(BaseCallback):
 
         self._episode_spells_learned[env_index] = 0
 
+    def _consume_hires(self, info: dict[str, Any], env_index: int) -> None:
+        try:
+            hired_units = int(info.get("hired_units_count", 0) or 0)
+        except (TypeError, ValueError):
+            hired_units = 0
+        if hired_units <= 0 and info.get("hired"):
+            hired_units = 1
+        if hired_units <= 0:
+            return
+
+        self.total_hired_units += hired_units
+        self._episode_hired_units[env_index] += hired_units
+
+    def _finalize_episode_hires(self, env_index: int) -> None:
+        hired_units = float(self._episode_hired_units[env_index])
+        hired_flag = hired_units > 0.0
+
+        self.episode_hired_units.append(hired_units)
+        self.recent_hired_units.append(hired_units)
+        self.recent_hire_episode_flags.append(1.0 if hired_flag else 0.0)
+        if hired_flag:
+            self.hire_episodes += 1
+
+        if self.experiment is not None:
+            self.experiment.log_metric(
+                "campaign/episode_hired_units",
+                hired_units,
+                step=self.num_timesteps,
+            )
+
+        self._episode_hired_units[env_index] = 0
+
     def _record_window_metrics(self, infos: list[dict[str, Any]]) -> None:
         turns = []
         gold = []
@@ -755,6 +794,7 @@ class CampaignMetricsCallback(BaseCallback):
             self._consume_ruins(info, env_index)
             self._consume_merchant_sales(info, env_index)
             self._consume_spell_learning(info, env_index)
+            self._consume_hires(info, env_index)
 
         episode = info.get("episode")
         if isinstance(episode, dict):
@@ -774,6 +814,7 @@ class CampaignMetricsCallback(BaseCallback):
                 self._finalize_episode_ruins(env_index)
                 self._finalize_episode_sales(env_index)
                 self._finalize_episode_spell_learning(env_index)
+                self._finalize_episode_hires(env_index)
 
         campaign_result = info.get("campaign_result")
         if campaign_result:
@@ -892,6 +933,15 @@ class CampaignMetricsCallback(BaseCallback):
                 self.spell_learning_episodes,
                 total_episodes,
             ),
+            "campaign/hired_units_total": float(self.total_hired_units),
+            "campaign/hired_units_per_episode_mean": _safe_rate(
+                self.total_hired_units,
+                total_episodes,
+            ),
+            "campaign/hire_episodes_rate": _safe_rate(
+                self.hire_episodes,
+                total_episodes,
+            ),
             "campaign/recent_episodes": float(len(self.recent_episode_rewards)),
             "campaign/recent_episode_reward_mean": _safe_mean(self.recent_episode_rewards),
             "campaign/recent_episode_length_mean": _safe_mean(self.recent_episode_lengths),
@@ -922,6 +972,10 @@ class CampaignMetricsCallback(BaseCallback):
             "campaign/recent_spell_learning_episodes_rate": _safe_mean(
                 self.recent_spell_learning_episode_flags
             ),
+            "campaign/recent_hired_units_mean": _safe_mean(self.recent_hired_units),
+            "campaign/recent_hire_episodes_rate": _safe_mean(
+                self.recent_hire_episode_flags
+            ),
             "campaign/recent_turns_mean": _safe_mean(self.recent_turns),
             "campaign/recent_gold_mean": _safe_mean(self.recent_gold),
             "campaign/recent_moves_mean": _safe_mean(self.recent_moves),
@@ -944,6 +998,7 @@ class CampaignMetricsCallback(BaseCallback):
             "campaign/window/ruins_cleared_mean": _safe_mean(self.recent_ruins_cleared),
             "campaign/window/sold_items_mean": _safe_mean(self.recent_sold_items),
             "campaign/window/spells_learned_mean": _safe_mean(self.recent_spells_learned),
+            "campaign/window/hired_units_mean": _safe_mean(self.recent_hired_units),
             "campaign/best_recent_victory_rate": self.best_recent_victory_rate,
         }
 
@@ -1151,6 +1206,76 @@ class CampaignMetricsCallback(BaseCallback):
         ax.set_ylabel("Spells")
         ax.grid(True, alpha=0.25, linewidth=0.6)
         ax.legend(loc="upper right")
+        fig.tight_layout()
+        fig.savefig(target, dpi=160)
+        plt.close(fig)
+        return target
+
+    def save_hired_units_per_episode_plot(self, path: str | os.PathLike[str]) -> Path | None:
+        if not self.episode_hired_units:
+            return None
+
+        import matplotlib.pyplot as plt
+
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+        episodes = np.arange(1, len(self.episode_hired_units) + 1)
+        hired_counts = np.asarray(self.episode_hired_units, dtype=float)
+
+        fig, ax = plt.subplots(figsize=(10, 4.5))
+        ax.plot(episodes, hired_counts, color="#9A3412", linewidth=1.8, label="Hired units per episode")
+        ax.fill_between(episodes, hired_counts, color="#FDBA74", alpha=0.3)
+
+        if len(hired_counts) >= 5:
+            window = min(25, len(hired_counts))
+            kernel = np.ones(window, dtype=float) / float(window)
+            rolling = np.convolve(hired_counts, kernel, mode="valid")
+            rolling_x = episodes[window - 1 :]
+            ax.plot(
+                rolling_x,
+                rolling,
+                color="#1F2937",
+                linewidth=2.0,
+                label=f"Rolling mean ({window})",
+            )
+
+        ax.set_title("Hired Units Per Episode")
+        ax.set_xlabel("Episode")
+        ax.set_ylabel("Units hired")
+        ax.grid(True, alpha=0.25, linewidth=0.6)
+        ax.legend(loc="upper right")
+        fig.tight_layout()
+        fig.savefig(target, dpi=160)
+        plt.close(fig)
+        return target
+
+    def save_cumulative_hired_units_plot(self, path: str | os.PathLike[str]) -> Path | None:
+        if not self.episode_hired_units:
+            return None
+
+        import matplotlib.pyplot as plt
+
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+        episodes = np.arange(1, len(self.episode_hired_units) + 1)
+        cumulative_hired = np.cumsum(np.asarray(self.episode_hired_units, dtype=float))
+
+        fig, ax = plt.subplots(figsize=(10, 4.5))
+        ax.plot(
+            episodes,
+            cumulative_hired,
+            color="#0F766E",
+            linewidth=2.1,
+            label="Cumulative hired units",
+        )
+        ax.fill_between(episodes, cumulative_hired, color="#5EEAD4", alpha=0.24)
+        ax.set_title("Cumulative Hired Units Over Training")
+        ax.set_xlabel("Episode")
+        ax.set_ylabel("Total units hired")
+        ax.grid(True, alpha=0.25, linewidth=0.6)
+        ax.legend(loc="upper left")
         fig.tight_layout()
         fig.savefig(target, dpi=160)
         plt.close(fig)
@@ -1431,41 +1556,37 @@ if __name__ == "__main__":
         print(f"  Winrate: {100 * metrics_cb.victories / total:.1f}%")
     print(f"{'='*60}")
 
-    chests_plot_path = BASE_DIR / "outputs" / "campaign_chests_per_episode.png"
-    saved_chests_plot = metrics_cb.save_chests_per_episode_plot(chests_plot_path)
-    if saved_chests_plot is not None:
-        print(f"  График сундуков: {saved_chests_plot}")
+    hired_episode_plot_path = BASE_DIR / "outputs" / "campaign_hired_units_per_episode.png"
+    saved_hired_episode_plot = metrics_cb.save_hired_units_per_episode_plot(hired_episode_plot_path)
+    if saved_hired_episode_plot is not None:
+        print(f"  График найма за эпизод: {saved_hired_episode_plot}")
 
-    sold_items_plot_path = BASE_DIR / "outputs" / "campaign_sold_items_per_episode.png"
-    saved_sold_items_plot = metrics_cb.save_sold_items_per_episode_plot(sold_items_plot_path)
-    if saved_sold_items_plot is not None:
-        print(f"  График продаж: {saved_sold_items_plot}")
-
-    ruins_plot_path = BASE_DIR / "outputs" / "campaign_ruins_per_episode.png"
-    saved_ruins_plot = metrics_cb.save_ruins_cleared_per_episode_plot(ruins_plot_path)
-    if saved_ruins_plot is not None:
-        print(f"  График руин: {saved_ruins_plot}")
-
-    spells_plot_path = BASE_DIR / "outputs" / "campaign_spells_learned_per_episode.png"
-    saved_spells_plot = metrics_cb.save_spells_learned_per_episode_plot(spells_plot_path)
-    if saved_spells_plot is not None:
-        print(f"  График заклинаний: {saved_spells_plot}")
+    hired_total_plot_path = BASE_DIR / "outputs" / "campaign_hired_units_cumulative.png"
+    saved_hired_total_plot = metrics_cb.save_cumulative_hired_units_plot(hired_total_plot_path)
+    if saved_hired_total_plot is not None:
+        print(f"  График найма за всё обучение: {saved_hired_total_plot}")
 
     if COMET_AVAILABLE and comet_experiment is not None:
         try:
             comet_experiment.log_tensorboard_folder(TB_LOG_DIR)
         except Exception as exc:
             print(f"[WARN] Failed to upload TensorBoard logs to Comet: {exc}")
-        if saved_ruins_plot is not None and hasattr(comet_experiment, "log_image"):
+        if saved_hired_episode_plot is not None and hasattr(comet_experiment, "log_image"):
             try:
-                comet_experiment.log_image(str(saved_ruins_plot), name="campaign_ruins_per_episode")
+                comet_experiment.log_image(
+                    str(saved_hired_episode_plot),
+                    name="campaign_hired_units_per_episode",
+                )
             except Exception as exc:
-                print(f"[WARN] Failed to upload ruins plot to Comet: {exc}")
-        if saved_spells_plot is not None and hasattr(comet_experiment, "log_image"):
+                print(f"[WARN] Failed to upload hire-per-episode plot to Comet: {exc}")
+        if saved_hired_total_plot is not None and hasattr(comet_experiment, "log_image"):
             try:
-                comet_experiment.log_image(str(saved_spells_plot), name="campaign_spells_learned_per_episode")
+                comet_experiment.log_image(
+                    str(saved_hired_total_plot),
+                    name="campaign_hired_units_cumulative",
+                )
             except Exception as exc:
-                print(f"[WARN] Failed to upload spells plot to Comet: {exc}")
+                print(f"[WARN] Failed to upload cumulative-hire plot to Comet: {exc}")
         try:
             comet_experiment.log_other(
                 "final_campaign_victories",
