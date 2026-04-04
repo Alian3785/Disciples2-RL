@@ -442,6 +442,22 @@ class CampaignEnv(gym.Env):
     HEALING_OINTMENT_ITEM_NAME = "Целебная мазь"
     BONUS_REVIVE_SOURCE_ITEM = "Life Potion"
     BONUS_REVIVE_ITEM_NAME = "Зелье воскрешения (+1)"
+    BATTLE_EQUIP_SLOTS = 2
+    BATTLE_EQUIPPABLE_ITEM_NAMES = (
+        BONUS_SMALL_HEAL_ITEM_NAME,
+        BONUS_LARGE_HEAL_ITEM_NAME,
+        HEALING_OINTMENT_ITEM_NAME,
+        BONUS_REVIVE_ITEM_NAME,
+    )
+    LEGION_DAMAGE_SPELL_ACTION_SPECS = (
+        ("lod_d2_s003", 15.0),
+        ("lod_d2_s004", 15.0),
+        ("lod_d2_s008", 30.0),
+        ("lod_d2_s014", 50.0),
+        ("lod_d2_s017", 75.0),
+        ("lod_d2_s018", 75.0),
+        ("lod_d2_s019", 60.0),
+    )
     ENERGY_ELIXIR_ITEM_NAME = "Эликсир энергии"
     FIRE_WARD_ITEM_NAME = "Эликсир защиты от магии Огня"
     EARTH_WARD_ITEM_NAME = "Эликсир защиты от магии Земли"
@@ -570,9 +586,12 @@ class CampaignEnv(gym.Env):
         battle_reward_win: float = 2.0,
         battle_reward_loss: float = -1.0,
         battle_reward_step: float = 0.01,
+        reward_battle_item_equip: float = 0.02,
+        reward_battle_item_use: float = 0.05,
         reward_combat_potion_battle_participation: float = 0.05,
         reward_sell_junk_item: float = 0.05,
         reward_spell_learn: float = 2.0,
+        reward_spell_cast: float = 0.005,
         reward_castle_heal_per_hp: float = 0.01,
         reward_castle_revive: float = 0.5,
         persist_blue_hp: bool = True,
@@ -606,12 +625,15 @@ class CampaignEnv(gym.Env):
         self.battle_reward_win = float(battle_reward_win)
         self.battle_reward_loss = float(battle_reward_loss)
         self.battle_reward_step = float(battle_reward_step)
+        self.reward_battle_item_equip = max(0.0, float(reward_battle_item_equip))
+        self.reward_battle_item_use = max(0.0, float(reward_battle_item_use))
         self.reward_combat_potion_battle_participation = max(
             0.0,
             float(reward_combat_potion_battle_participation),
         )
         self.reward_sell_junk_item = max(0.0, float(reward_sell_junk_item))
         self.reward_spell_learn = max(0.0, float(reward_spell_learn))
+        self.reward_spell_cast = max(0.0, float(reward_spell_cast))
         self.reward_castle_heal_per_hp = max(0.0, float(reward_castle_heal_per_hp))
         self.reward_castle_revive = max(0.0, float(reward_castle_revive))
         self.persist_blue_hp = persist_blue_hp
@@ -790,6 +812,10 @@ class CampaignEnv(gym.Env):
         self._reset_mana_state()
         self.spell_learning_locked = False
         self.heroitems: List[object] = []
+        self.equipped_hero_items: List[Optional[str]] = [None] * int(self.BATTLE_EQUIP_SLOTS)
+        self.battle_item_equip_used_this_turn: bool = False
+        self.enemy_team_states: Dict[int, List[Dict]] = self._create_initial_enemy_team_states()
+        self.damage_spell_ids_used_this_turn: set[str] = set()
         self.extra_heal_bottles: int = 0
         self.extra_healing_bottles: int = 0
         self.extra_revive_bottles: int = 0
@@ -802,6 +828,8 @@ class CampaignEnv(gym.Env):
         self.active_earth_ward_positions: set[int] = set()
         self.active_water_ward_positions: set[int] = set()
         self.active_air_ward_positions: set[int] = set()
+        self.battle_items_equipped_total: int = 0
+        self.battle_items_used_total: int = 0
         self.captured_objective_cities: set[str] = set()
         self.cleared_ruin_enemy_ids: set[int] = set()
         self.last_ruin_reward: Optional[Dict[str, object]] = None
@@ -816,8 +844,10 @@ class CampaignEnv(gym.Env):
             + self.grid_enemy_obs_size
             + self.grid_campaign_obs_size
         )
-        total_actions = self.grid_settlement_upgrade_action_start + len(self.settlement_upgrade_names)
-        # Action space: максимум из двух режимов (battle = 15 действий, grid расширен для экономики и заклинаний)
+        total_actions = self.grid_legion_damage_spell_action_start + len(
+            self.LEGION_DAMAGE_SPELL_ACTION_SPECS
+        )
+        # Action space: максимум из двух режимов (battle = 27 действий, grid расширен для экономики и заклинаний)
         self.action_space = spaces.Discrete(total_actions)
 
         # Observation space: режим + grid + battle + ход + золото
@@ -862,6 +892,10 @@ class CampaignEnv(gym.Env):
         self.battle_env = None
         self._campaign_logs = []
         self.heroitems = []
+        self.equipped_hero_items = [None] * int(self.BATTLE_EQUIP_SLOTS)
+        self.battle_item_equip_used_this_turn = False
+        self.enemy_team_states = self._create_initial_enemy_team_states()
+        self.damage_spell_ids_used_this_turn = set()
         self.extra_heal_bottles = 0
         self.extra_healing_bottles = 0
         self.extra_revive_bottles = 0
@@ -874,6 +908,8 @@ class CampaignEnv(gym.Env):
         self.active_earth_ward_positions = set()
         self.active_water_ward_positions = set()
         self.active_air_ward_positions = set()
+        self.battle_items_equipped_total = 0
+        self.battle_items_used_total = 0
         self.combat_potion_battle_bonus_pending = False
         self.captured_objective_cities = set()
         self.cleared_ruin_enemy_ids = set()
@@ -892,7 +928,9 @@ class CampaignEnv(gym.Env):
         self._sync_grid_chest_positions()
         self._sync_grid_mana_sources()
         self._sync_grid_merchant_positions()
-        total_actions = self.grid_settlement_upgrade_action_start + len(self.settlement_upgrade_names)
+        total_actions = self.grid_legion_damage_spell_action_start + len(
+            self.LEGION_DAMAGE_SPELL_ACTION_SPECS
+        )
         self.action_space = spaces.Discrete(total_actions)
 
         grid_obs, grid_info = self.grid_env.reset(seed=seed)
@@ -914,6 +952,9 @@ class CampaignEnv(gym.Env):
             "gold": self.gold,
             "moves": self.moves,
             "heroitems": list(self.heroitems),
+            "equipped_hero_items": list(self.equipped_hero_items),
+            "battle_items_equipped_total": int(self.battle_items_equipped_total),
+            "battle_items_used_total": int(self.battle_items_used_total),
             "extra_heal_bottles": int(self.extra_heal_bottles or 0),
             "extra_healing_bottles": int(self.extra_healing_bottles or 0),
             "extra_revive_bottles": int(self.extra_revive_bottles or 0),
@@ -972,6 +1013,12 @@ class CampaignEnv(gym.Env):
         #   после блока найма — покупки у торговца, затем боевые эликсиры и постройки.
         #   после построек — изучение заклинаний активной фракции.
         #   после заклинаний — улучшение захваченных городов.
+        if action >= self.grid_legion_damage_spell_action_start:
+            return self._step_cast_legion_damage_spell(action)
+        if action >= self.GRID_EQUIP_BATTLE_ITEM2_ACTION_START:
+            return self._step_equip_battle_item(action)
+        if action >= self.GRID_EQUIP_BATTLE_ITEM1_ACTION_START:
+            return self._step_equip_battle_item(action)
         if action >= self.grid_settlement_upgrade_action_start:
             return self._step_upgrade_settlement(action)
         if action >= self.grid_spell_action_start:
@@ -1023,6 +1070,7 @@ class CampaignEnv(gym.Env):
                 "gold": self.gold,
                 "moves": self.moves,
                 "heroitems": list(self.heroitems),
+                "equipped_hero_items": list(self.equipped_hero_items),
                 "extra_healing_bottles": int(self.extra_healing_bottles or 0),
                 "extra_revive_bottles": int(self.extra_revive_bottles or 0),
                 "active_invulnerability_positions": sorted(self.active_invulnerability_potion_positions),
@@ -1239,6 +1287,7 @@ class CampaignEnv(gym.Env):
         sale_info = self._sell_sell_only_heroitems_at_merchant(position=position)
         finalized_reward = float(reward) + float(sale_info["merchant_sale_reward"])
         finalized_info.update(sale_info)
+        self._sync_equipped_hero_items()
 
         if "grid_reward_scaled" in finalized_info:
             try:
@@ -1254,6 +1303,9 @@ class CampaignEnv(gym.Env):
         finalized_info["gold"] = self.gold
         finalized_info["moves"] = self.moves
         finalized_info["heroitems"] = list(self.heroitems)
+        finalized_info["equipped_hero_items"] = list(self.equipped_hero_items)
+        finalized_info["battle_items_equipped_total"] = int(self.battle_items_equipped_total)
+        finalized_info["battle_items_used_total"] = int(self.battle_items_used_total)
         finalized_info["extra_heal_bottles"] = int(self.extra_heal_bottles or 0)
         finalized_info["extra_healing_bottles"] = int(self.extra_healing_bottles or 0)
         finalized_info["extra_revive_bottles"] = int(self.extra_revive_bottles or 0)
@@ -1360,6 +1412,15 @@ class CampaignEnv(gym.Env):
 
     @staticmethod
     def _is_hero_unit(unit: Dict) -> bool:
+        if not isinstance(unit, dict):
+            return False
+        if "hero" in unit:
+            value = unit.get("hero")
+            if isinstance(value, bool):
+                return value
+            if isinstance(value, (int, float)):
+                return int(value) != 0
+            return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
         try:
             return int(round(float(unit.get("next_level_exp", 0) or 0))) > 0
         except (TypeError, ValueError):
@@ -1376,6 +1437,7 @@ class CampaignEnv(gym.Env):
         if not roster:
             return
         for unit in roster:
+            unit["hero"] = self._is_hero_unit(unit)
             unit["needaunit"] = self._resolve_hero_needaunit(unit)
 
     def _resolve_travel_hero(self, units: Optional[List[Dict]] = None) -> Optional[Dict]:
@@ -1383,13 +1445,7 @@ class CampaignEnv(gym.Env):
         heroes = [unit for unit in roster if self._is_hero_unit(unit)]
         if not heroes:
             return None
-        for unit in heroes:
-            try:
-                if int(unit.get("position", -1)) == 8:
-                    return unit
-            except (TypeError, ValueError):
-                continue
-        return min(heroes, key=lambda unit: int(unit.get("position", 999) or 999))
+        return heroes[0]
 
     def _hero_level(self, units: Optional[List[Dict]] = None) -> int:
         hero = self._resolve_travel_hero(units=units)
@@ -1594,6 +1650,140 @@ class CampaignEnv(gym.Env):
 
     def _revive_bottles_left(self) -> int:
         return max(0, self._max_revive_bottles_available() - int(self.revive_bottles_used or 0))
+
+    @classmethod
+    def _battle_item_effect_definitions(cls) -> Dict[str, Dict[str, object]]:
+        return {
+            cls.BONUS_SMALL_HEAL_ITEM_NAME: {
+                "kind": "heal",
+                "amount": float(cls.HEALING_BOTTLE_AMOUNT),
+            },
+            cls.BONUS_LARGE_HEAL_ITEM_NAME: {
+                "kind": "heal",
+                "amount": float(cls.HEAL_BOTTLE_AMOUNT),
+            },
+            cls.HEALING_OINTMENT_ITEM_NAME: {
+                "kind": "heal",
+                "amount": float(cls.HEALING_OINTMENT_AMOUNT),
+            },
+            cls.BONUS_REVIVE_ITEM_NAME: {
+                "kind": "revive",
+                "amount": 1.0,
+            },
+        }
+
+    def _battle_equip_item_available_count(self, item_name: str) -> int:
+        normalized_name = str(item_name or "")
+        if normalized_name == self.BONUS_SMALL_HEAL_ITEM_NAME:
+            return int(self._healing_bottles_left())
+        if normalized_name == self.BONUS_LARGE_HEAL_ITEM_NAME:
+            return int(self._heal_bottles_left())
+        if normalized_name == self.BONUS_REVIVE_ITEM_NAME:
+            return int(self._revive_bottles_left())
+        if normalized_name == self.HEALING_OINTMENT_ITEM_NAME:
+            return int(self._count_hero_item(self.HEALING_OINTMENT_ITEM_NAME))
+        return 0
+
+    def _count_equipped_battle_items(
+        self,
+        item_name: str,
+        *,
+        exclude_slot: Optional[int] = None,
+    ) -> int:
+        normalized_name = str(item_name or "")
+        count = 0
+        for slot_index, equipped_name in enumerate(self.equipped_hero_items):
+            if exclude_slot is not None and int(slot_index) == int(exclude_slot):
+                continue
+            if str(equipped_name or "") == normalized_name:
+                count += 1
+        return count
+
+    def _sync_equipped_hero_items(self) -> None:
+        normalized_slots: List[Optional[str]] = [None] * int(self.BATTLE_EQUIP_SLOTS)
+        reserved: Dict[str, int] = {}
+        current_slots = list(self.equipped_hero_items or [])
+        for slot_index in range(int(self.BATTLE_EQUIP_SLOTS)):
+            item_name = (
+                str(current_slots[slot_index] or "")
+                if slot_index < len(current_slots) and current_slots[slot_index] is not None
+                else ""
+            )
+            if item_name not in self.BATTLE_EQUIPPABLE_ITEM_NAMES:
+                continue
+            available_count = int(self._battle_equip_item_available_count(item_name))
+            already_reserved = int(reserved.get(item_name, 0))
+            if already_reserved >= available_count:
+                continue
+            normalized_slots[slot_index] = item_name
+            reserved[item_name] = already_reserved + 1
+        self.equipped_hero_items = normalized_slots
+
+    def _can_equip_battle_item(self, slot_index: int, item_name: str) -> bool:
+        normalized_name = str(item_name or "")
+        if normalized_name not in self.BATTLE_EQUIPPABLE_ITEM_NAMES:
+            return False
+        if not (0 <= int(slot_index) < int(self.BATTLE_EQUIP_SLOTS)):
+            return False
+        if self.battle_item_equip_used_this_turn:
+            return False
+        self._sync_equipped_hero_items()
+        if str(self.equipped_hero_items[int(slot_index)] or "") == normalized_name:
+            return False
+        available_count = int(self._battle_equip_item_available_count(normalized_name))
+        reserved_elsewhere = self._count_equipped_battle_items(
+            normalized_name,
+            exclude_slot=int(slot_index),
+        )
+        return available_count > reserved_elsewhere
+
+    def _equip_battle_item(self, slot_index: int, item_name: str) -> bool:
+        if not self._can_equip_battle_item(slot_index, item_name):
+            return False
+        self.equipped_hero_items[int(slot_index)] = str(item_name)
+        self._sync_equipped_hero_items()
+        return True
+
+    def _consume_counter_backed_item(self, item_name: str) -> bool:
+        normalized_name = str(item_name or "")
+        if normalized_name == self.BONUS_SMALL_HEAL_ITEM_NAME:
+            if self._healing_bottles_left() <= 0:
+                return False
+            self.healing_bottles_used = min(
+                self.healing_bottles_used + 1,
+                self._max_healing_bottles_available(),
+            )
+            self._consume_hero_item(self.BONUS_SMALL_HEAL_ITEM_NAME)
+            return True
+        if normalized_name == self.BONUS_LARGE_HEAL_ITEM_NAME:
+            if self._heal_bottles_left() <= 0:
+                return False
+            self.heal_bottles_used = min(
+                self.heal_bottles_used + 1,
+                self._max_heal_bottles_available(),
+            )
+            self._consume_hero_item(self.BONUS_LARGE_HEAL_ITEM_NAME)
+            return True
+        if normalized_name == self.BONUS_REVIVE_ITEM_NAME:
+            if self._revive_bottles_left() <= 0:
+                return False
+            self.revive_bottles_used = min(
+                self.revive_bottles_used + 1,
+                self._max_revive_bottles_available(),
+            )
+            self._consume_hero_item(self.BONUS_REVIVE_ITEM_NAME)
+            return True
+        return False
+
+    def _consume_battle_equipable_item(self, item_name: str) -> bool:
+        normalized_name = str(item_name or "")
+        consumed = False
+        if normalized_name == self.HEALING_OINTMENT_ITEM_NAME:
+            consumed = self._consume_hero_item(self.HEALING_OINTMENT_ITEM_NAME)
+        else:
+            consumed = self._consume_counter_backed_item(normalized_name)
+        self._sync_equipped_hero_items()
+        return bool(consumed)
 
     @staticmethod
     def _normalize_damage_value(value: object) -> int:
@@ -2519,6 +2709,52 @@ class CampaignEnv(gym.Env):
     def _get_spell_learning_costs(self, spell: Dict) -> Dict[str, float]:
         return self._spell_costs_from_entry(spell, prefix="learn")
 
+    def _get_spell_use_costs(self, spell: Dict) -> Dict[str, float]:
+        return self._spell_costs_from_entry(spell, prefix="use")
+
+    @classmethod
+    def _legion_damage_spell_ids(cls) -> Tuple[str, ...]:
+        return tuple(str(spell_id) for spell_id, _ in cls.LEGION_DAMAGE_SPELL_ACTION_SPECS)
+
+    @classmethod
+    def _legion_damage_spell_damage_by_id(cls) -> Dict[str, float]:
+        return {
+            str(spell_id): float(damage)
+            for spell_id, damage in cls.LEGION_DAMAGE_SPELL_ACTION_SPECS
+        }
+
+    @staticmethod
+    def _legion_damage_spell_element_by_id() -> Dict[str, str]:
+        return {
+            "lod_d2_s003": "Fire",
+            "lod_d2_s004": "Mind",
+            "lod_d2_s008": "Fire",
+            "lod_d2_s014": "Mind",
+            "lod_d2_s017": "Fire",
+            "lod_d2_s018": "Earth",
+            "lod_d2_s019": "Fire",
+        }
+
+    def _is_legions_capital(self) -> bool:
+        return int(self.Realcapital) == 2
+
+    def _create_initial_enemy_team_states(self) -> Dict[int, List[Dict]]:
+        return {
+            int(enemy_id): deepcopy(team)
+            for enemy_id, team in ENEMY_CONFIGS.items()
+        }
+
+    def _get_enemy_team_state(self, enemy_id: Optional[int]) -> List[Dict]:
+        try:
+            normalized_enemy_id = int(enemy_id)
+        except (TypeError, ValueError):
+            return []
+        team = self.enemy_team_states.get(normalized_enemy_id)
+        if team is None:
+            team = deepcopy(ENEMY_CONFIGS.get(normalized_enemy_id, []))
+            self.enemy_team_states[normalized_enemy_id] = team
+        return team
+
     def _has_magic_tower_built(self) -> bool:
         for build_key in self.building_keys:
             building = self.active_buildings.get(build_key)
@@ -2576,6 +2812,155 @@ class CampaignEnv(gym.Env):
             "spell_learning_locked": bool(self.spell_learning_locked),
             "magic_tower_built": bool(self._has_magic_tower_built()),
         }
+
+    def _is_spell_learned(self, spell_key: str) -> bool:
+        spell = self.active_spells.get(str(spell_key))
+        if not isinstance(spell, dict):
+            return False
+        try:
+            return int(spell.get("learned", 0) or 0) == 1
+        except (TypeError, ValueError):
+            return False
+
+    def _can_cast_legion_damage_spell(
+        self,
+        spell_key: str,
+        *,
+        nearest_enemy: Optional[Dict[str, object]] = None,
+    ) -> bool:
+        normalized_spell_key = str(spell_key or "")
+        if not self._is_legions_capital():
+            return False
+        if normalized_spell_key not in self._legion_damage_spell_ids():
+            return False
+        if normalized_spell_key in self.damage_spell_ids_used_this_turn:
+            return False
+        spell = self.active_spells.get(normalized_spell_key)
+        if not isinstance(spell, dict):
+            return False
+        if not self._is_spell_learned(normalized_spell_key):
+            return False
+        if nearest_enemy is None:
+            nearest_enemy = self.get_nearest_enemy_stack()
+        if nearest_enemy is None:
+            return False
+        target_enemy_id = nearest_enemy.get("enemy_id")
+        if not self._enemy_team_has_living_units(target_enemy_id):
+            return False
+        return self._has_mana_for_costs(self._get_spell_use_costs(spell))
+
+    def _enemy_team_has_living_units(self, enemy_id: Optional[int]) -> bool:
+        for unit in self._get_enemy_team_state(enemy_id):
+            if self._is_empty_enemy_unit(unit):
+                continue
+            hp = float(unit.get("health", 0) or unit.get("hp", 0) or 0.0)
+            max_hp = float(unit.get("max_health", 0) or unit.get("maxhp", 0) or 0.0)
+            if max_hp > 0.0 and hp > 0.0:
+                return True
+        return False
+
+    @classmethod
+    def _unit_blocks_spell_damage(cls, unit: Dict, damage_type: Optional[str]) -> bool:
+        normalized_type = str(damage_type or "").strip()
+        if not normalized_type:
+            return False
+
+        normalized_type_lower = normalized_type.lower()
+        immunities_lower = {
+            str(value or "").strip().lower() for value in (unit.get("immunity") or [])
+        }
+        if normalized_type_lower in immunities_lower:
+            return True
+
+        resistances_lower = {
+            str(value or "").strip().lower() for value in (unit.get("resistance") or [])
+        }
+        if normalized_type_lower in resistances_lower:
+            return True
+
+        defence_flag_names = (
+            f"{normalized_type}defence",
+            f"{normalized_type}Defense",
+            f"{normalized_type.lower()}defence",
+            f"{normalized_type.lower()}_defence",
+        )
+        for flag_name in defence_flag_names:
+            try:
+                if int(unit.get(flag_name, 0) or 0) == 1:
+                    return True
+            except (TypeError, ValueError):
+                continue
+        return False
+
+    def _apply_damage_to_enemy_stack(
+        self,
+        enemy_id: Optional[int],
+        damage_amount: float,
+        damage_type: Optional[str] = None,
+    ) -> Tuple[float, int, int, int]:
+        actual_damage = 0.0
+        units_hit = 0
+        defeated_units = 0
+        blocked_units = 0
+
+        for unit in self._get_enemy_team_state(enemy_id):
+            if self._is_empty_enemy_unit(unit):
+                continue
+            current_hp = float(unit.get("health", 0) or unit.get("hp", 0) or 0.0)
+            max_hp = float(unit.get("max_health", 0) or unit.get("maxhp", 0) or 0.0)
+            if max_hp <= 0.0 or current_hp <= 0.0:
+                continue
+            if self._unit_blocks_spell_damage(unit, damage_type):
+                blocked_units += 1
+                continue
+            new_hp = max(0.0, current_hp - float(damage_amount))
+            actual_damage += max(0.0, current_hp - new_hp)
+            units_hit += 1
+            if new_hp <= 0.0:
+                defeated_units += 1
+                unit["initiative"] = 0
+            unit["health"] = float(new_hp)
+            if "hp" in unit:
+                unit["hp"] = float(new_hp)
+
+        return (
+            float(actual_damage),
+            int(units_hit),
+            int(defeated_units),
+            int(blocked_units),
+        )
+
+    def _heal_wounded_enemy_teams_for_turn(self) -> Tuple[int, float]:
+        healed_units = 0
+        healed_total = 0.0
+
+        for enemy_id, is_alive in self.grid_env.enemies_alive.items():
+            if not bool(is_alive):
+                continue
+            for unit in self._get_enemy_team_state(enemy_id):
+                if self._is_empty_enemy_unit(unit):
+                    continue
+                current_hp = float(unit.get("health", 0) or unit.get("hp", 0) or 0.0)
+                max_hp = float(unit.get("max_health", 0) or unit.get("maxhp", 0) or 0.0)
+                if max_hp <= 0.0 or current_hp <= 0.0 or current_hp >= max_hp:
+                    continue
+                heal_amount = max(1.0, max_hp * 0.1)
+                new_hp = min(max_hp, current_hp + heal_amount)
+                actual_heal = max(0.0, new_hp - current_hp)
+                if actual_heal <= 0.0:
+                    continue
+                unit["health"] = float(new_hp)
+                if "hp" in unit:
+                    unit["hp"] = float(new_hp)
+                healed_units += 1
+                healed_total += actual_heal
+
+        if healed_units > 0:
+            self._log(
+                f"Вражеские отряды восстановили {healed_total:g} HP на {healed_units} юнитах за ход."
+            )
+
+        return int(healed_units), float(healed_total)
 
     def _grant_merchant_item(self, item_name: str) -> List[str]:
         granted_items: List[str] = []
@@ -2841,6 +3226,202 @@ class CampaignEnv(gym.Env):
             info=info,
         )
 
+    def _step_cast_legion_damage_spell(self, action: int):
+        idx = int(action) - int(self.grid_legion_damage_spell_action_start)
+        grid_obs = self._get_grid_obs()
+        reward = 0.0
+        terminated = False
+        truncated = False
+
+        spell_key = None
+        spell_description = None
+        spell_level = None
+        spell_damage = 0.0
+        spell_damage_type = None
+        spell = None
+        if 0 <= idx < len(self.LEGION_DAMAGE_SPELL_ACTION_SPECS):
+            spell_key, spell_damage = self.LEGION_DAMAGE_SPELL_ACTION_SPECS[idx]
+            spell = self.active_spells.get(str(spell_key))
+            spell_damage_type = self._legion_damage_spell_element_by_id().get(str(spell_key))
+
+        if isinstance(spell, dict):
+            spell_description = str(spell.get("description", "") or "").strip()
+            try:
+                spell_level = int(spell.get("level", 0) or 0)
+            except (TypeError, ValueError):
+                spell_level = 0
+
+        mana_costs = self._get_spell_use_costs(spell) if isinstance(spell, dict) else {}
+        is_legions_capital = self._is_legions_capital()
+        spell_known = bool(spell_key) and self._is_spell_learned(str(spell_key))
+        spell_used_this_turn = bool(spell_key) and str(spell_key) in self.damage_spell_ids_used_this_turn
+        insufficient_mana = not self._has_mana_for_costs(mana_costs) if mana_costs else True
+        nearest_enemy = self.get_nearest_enemy_stack()
+        target_enemy_id = None if nearest_enemy is None else int(nearest_enemy.get("enemy_id", -1))
+        target_position = None if nearest_enemy is None else tuple(nearest_enemy.get("position", ()))
+        target_reachable = bool(nearest_enemy.get("reachable", False)) if nearest_enemy else False
+        target_description = None if nearest_enemy is None else str(nearest_enemy.get("description", "") or "")
+
+        spell_cast_applied = False
+        spell_cast_executed = False
+        actual_damage = 0.0
+        units_hit = 0
+        defeated_units = 0
+        blocked_units = 0
+        spell_enemy_defeated = False
+        enemy_reward = 0.0
+        ruin_clear_bonus_reward = 0.0
+        newly_captured_objective_cities: List[str] = []
+        newly_activated_settlement_territories: List[str] = []
+        final_objective_reward = 0.0
+        spell_cast_reward = 0.0
+
+        can_cast = (
+            bool(spell_key)
+            and isinstance(spell, dict)
+            and is_legions_capital
+            and spell_known
+            and not spell_used_this_turn
+            and nearest_enemy is not None
+            and self._has_mana_for_costs(mana_costs)
+        )
+
+        if can_cast:
+            self._spend_mana_costs(mana_costs)
+            self.damage_spell_ids_used_this_turn.add(str(spell_key))
+            spell_cast_executed = True
+            spell_cast_reward = float(self.reward_spell_cast)
+            reward += spell_cast_reward
+            actual_damage, units_hit, defeated_units, blocked_units = self._apply_damage_to_enemy_stack(
+                target_enemy_id,
+                spell_damage,
+                spell_damage_type,
+            )
+            spell_cast_applied = units_hit > 0
+
+            if spell_description:
+                self._log(
+                    f'Применено заклинание "{spell_description}" по ближайшему вражескому отряду '
+                    f"{target_enemy_id}: {actual_damage:g} урона суммарно, "
+                    f"задето {units_hit} юнитов, заблокировано {blocked_units}, "
+                    f"добито {defeated_units}."
+                )
+
+            if target_enemy_id is not None and not self._enemy_team_has_living_units(target_enemy_id):
+                spell_enemy_defeated = True
+                enemy_reward = self._compute_enemy_defeat_reward(target_enemy_id)
+                ruin_clear_bonus_reward = (
+                    float(self.reward_ruin_clear_bonus)
+                    if int(target_enemy_id or -1) in self.RUIN_REWARD_BY_ENEMY_ID
+                    else 0.0
+                )
+                reward += enemy_reward
+                self.grid_env.mark_enemy_defeated(target_enemy_id)
+                self._log(f"=== ВРАГ {target_enemy_id} УНИЧТОЖЕН ЗАКЛИНАНИЕМ НА КАРТЕ ===")
+
+                objective_cities_captured_before = len(self.captured_objective_cities)
+                newly_captured_objective_cities = self._capture_objective_city_if_cleared(
+                    target_enemy_id
+                )
+                newly_activated_settlement_territories = (
+                    self._activate_legions_settlement_territory_if_cleared(target_enemy_id)
+                )
+                if newly_captured_objective_cities:
+                    final_objective_reward = self._compute_final_objective_reward(
+                        len(newly_captured_objective_cities),
+                        captured_before=objective_cities_captured_before,
+                    )
+                    reward += final_objective_reward
+                if newly_activated_settlement_territories:
+                    for settlement_name in newly_activated_settlement_territories:
+                        self._log(
+                            f"=== ЗЕМЛЯ ЛЕГИОНОВ НАЧИНАЕТ РАСПРОСТРАНЯТЬСЯ ИЗ ПОСЕЛЕНИЯ {settlement_name} ==="
+                        )
+
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            "spell_cast_action": True,
+            "spell_key": spell_key,
+            "spell_description": spell_description,
+            "spell_level": spell_level,
+            "spell_damage": float(spell_damage),
+            "spell_damage_type": spell_damage_type,
+            "spell_cast_applied": bool(spell_cast_applied),
+            "spell_cast_executed": bool(spell_cast_executed),
+            "spell_cast_reward": float(spell_cast_reward),
+            "spell_cast_used_this_turn": bool(spell_used_this_turn),
+            "spell_is_learned": bool(spell_known),
+            "spell_is_legions_capital": bool(is_legions_capital),
+            "spell_use_costs": dict(mana_costs),
+            "insufficient_mana": bool(not can_cast and mana_costs and not self._has_mana_for_costs(mana_costs)),
+            "target_enemy_id": target_enemy_id,
+            "target_enemy_position": target_position,
+            "target_enemy_reachable": bool(target_reachable),
+            "target_enemy_description": target_description,
+            "spell_damage_total": float(actual_damage),
+            "spell_damage_units_hit": int(units_hit),
+            "spell_damage_units_defeated": int(defeated_units),
+            "spell_damage_units_blocked": int(blocked_units),
+            "spell_enemy_defeated": bool(spell_enemy_defeated),
+            "enemy_defeat_reward": float(enemy_reward),
+            "enemy_defeat_reward_base": float(self.reward_defeat_enemy) if spell_enemy_defeated else 0.0,
+            "blue_exp_reward": 0.0,
+            "blue_exp_raw": 0.0,
+            "ruin_clear_bonus_reward": float(ruin_clear_bonus_reward),
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+        }
+
+        if spell_enemy_defeated:
+            info.update(self._grant_ruin_reward(target_enemy_id))
+            info["objective_cities_captured_total"] = sorted(self.captured_objective_cities)
+            if newly_activated_settlement_territories:
+                info["legions_settlement_territories_activated"] = list(
+                    newly_activated_settlement_territories
+                )
+            if newly_captured_objective_cities:
+                info["captured_objective_cities"] = list(newly_captured_objective_cities)
+                info["final_objective_reward"] = float(final_objective_reward)
+
+            if self._all_objective_cities_captured():
+                self._log("=== ЗАХВАЧЕНЫ ВСЕ ЦЕЛЕВЫЕ ГОРОДА: ПОБЕДА В КАМПАНИИ ===")
+                grid_obs = self._get_grid_obs()
+                info["campaign_result"] = "victory"
+                info["campaign_victory_reason"] = "objective_cities_cleared"
+                return self._finalize_grid_step_result(
+                    grid_obs=grid_obs,
+                    reward=reward,
+                    terminated=True,
+                    truncated=False,
+                    info=info,
+                )
+
+            if self.grid_env.all_enemies_defeated():
+                self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")
+                grid_obs = self._get_grid_obs()
+                info["campaign_result"] = "victory"
+                info["campaign_victory_reason"] = "all_enemies_defeated"
+                return self._finalize_grid_step_result(
+                    grid_obs=grid_obs,
+                    reward=reward,
+                    terminated=True,
+                    truncated=False,
+                    info=info,
+                )
+
+        grid_obs = self._get_grid_obs()
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
+
     def _step_upgrade_settlement(self, action: int):
         idx = action - self.grid_settlement_upgrade_action_start
         grid_obs = self._get_grid_obs()
@@ -2911,6 +3492,71 @@ class CampaignEnv(gym.Env):
             info=info,
         )
 
+    def _step_equip_battle_item(self, action: int):
+        slot_index = 0
+        action_start = self.GRID_EQUIP_BATTLE_ITEM1_ACTION_START
+        if int(action) >= self.GRID_EQUIP_BATTLE_ITEM2_ACTION_START:
+            slot_index = 1
+            action_start = self.GRID_EQUIP_BATTLE_ITEM2_ACTION_START
+        idx = int(action) - int(action_start)
+        item_name = (
+            self.BATTLE_EQUIPPABLE_ITEM_NAMES[idx]
+            if 0 <= idx < len(self.BATTLE_EQUIPPABLE_ITEM_NAMES)
+            else None
+        )
+
+        grid_obs = self._get_grid_obs()
+        reward = 0.0
+        terminated = False
+        truncated = False
+
+        previous_item = None
+        equipped = False
+        equip_turn_locked = bool(self.battle_item_equip_used_this_turn)
+        if (
+            not equip_turn_locked
+            and item_name is not None
+            and 0 <= int(slot_index) < len(self.equipped_hero_items)
+        ):
+            previous_item = self.equipped_hero_items[int(slot_index)]
+            equipped = self._equip_battle_item(int(slot_index), str(item_name))
+            if equipped:
+                self.battle_item_equip_used_this_turn = True
+                self.battle_items_equipped_total += 1
+                if not previous_item:
+                    reward = float(self.reward_battle_item_equip)
+                self._log(
+                    f"Боевой слот {int(slot_index) + 1}: экипирован предмет '{str(item_name)}'"
+                )
+
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            "equip_battle_item_action": True,
+            "equip_battle_item_slot": int(slot_index) + 1,
+            "equip_battle_item_name": str(item_name or ""),
+            "equip_battle_item_previous": previous_item,
+            "equip_battle_item_applied": bool(equipped),
+            "equip_battle_item_turn_locked": bool(equip_turn_locked),
+            "equip_battle_item_reward": float(reward),
+            "battle_items_equipped_total": int(self.battle_items_equipped_total),
+            "battle_items_used_total": int(self.battle_items_used_total),
+            "equipped_hero_items": list(self.equipped_hero_items),
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+        }
+        info.update(self._merchant_context_info(self.grid_env.agent_pos))
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
+
     def _step_heal_with_bottle(self, action: int):
         """Применяет подходящую банку лечения к указанной позиции BLUE в режиме grid."""
         idx = action - self.GRID_BOTTLE_ACTION_START
@@ -2931,7 +3577,7 @@ class CampaignEnv(gym.Env):
             )
         if target_pos is not None and selected_bottle_kind is not None:
             if selected_bottle_kind == "ointment":
-                if self._consume_hero_item(self.HEALING_OINTMENT_ITEM_NAME):
+                if self._consume_battle_equipable_item(self.HEALING_OINTMENT_ITEM_NAME):
                     healed_amount, unit_name = self._heal_unit_at_position(
                         position=target_pos,
                         heal_amount=selected_heal_amount,
@@ -2955,16 +3601,11 @@ class CampaignEnv(gym.Env):
                     ),
                 )
                 if healed_amount > 0.0:
-                    if selected_bottle_kind == "large":
-                        self.heal_bottles_used = min(
-                            self.heal_bottles_used + 1,
-                            self._max_heal_bottles_available(),
-                        )
-                    else:
-                        self.healing_bottles_used = min(
-                            self.healing_bottles_used + 1,
-                            self._max_healing_bottles_available(),
-                        )
+                    self._consume_battle_equipable_item(
+                        self.BONUS_LARGE_HEAL_ITEM_NAME
+                        if selected_bottle_kind == "large"
+                        else self.BONUS_SMALL_HEAL_ITEM_NAME
+                    )
 
         info = {
             "mode": "grid",
@@ -3016,13 +3657,10 @@ class CampaignEnv(gym.Env):
         terminated = False
         truncated = False
 
-        self.revive_bottles_used = min(
-            self.revive_bottles_used + 1,
-            self._max_revive_bottles_available(),
-        )
-
         revived, unit_name = (False, None)
-        if target_pos is not None:
+        if target_pos is not None and self._consume_battle_equipable_item(
+            self.BONUS_REVIVE_ITEM_NAME
+        ):
             revived, unit_name = self._revive_unit_at_position(position=target_pos)
 
         info = {
@@ -3690,12 +4328,15 @@ class CampaignEnv(gym.Env):
                 info={"error": "no_battle_env", "agent_pos": self.grid_env.agent_pos},
             )
 
+        battle_info = {}
+
         # Проверка: бой уже завершён (например, RED победил в свой ход)
         if self.battle_env.winner is not None:
             winner = self.battle_env.winner
             obs = self.battle_env._obs()
             reward = 0.0
             battle_reward_raw = 0.0
+            battle_item_use_reward = 0.0
             terminated = True
             truncated = False
         else:
@@ -3706,18 +4347,50 @@ class CampaignEnv(gym.Env):
             if action >= self.battle_env.action_space.n:
                 action = self.battle_env.action_space.n - 1
             obs, battle_reward_raw, terminated, truncated, battle_info = self.battle_env.step(action)
-            reward = self.battle_reward_scale * float(battle_reward_raw)
+            if isinstance(battle_info, dict):
+                consumed_item_name = str(
+                    battle_info.get("battle_hero_item_name", "") or ""
+                )
+                if (
+                    battle_info.get("battle_hero_item_action")
+                    and battle_info.get("battle_hero_item_consumed")
+                    and consumed_item_name
+                ):
+                    self._consume_battle_equipable_item(consumed_item_name)
+                    if battle_info.get("battle_hero_item_applied"):
+                        self.battle_items_used_total += 1
+                        battle_item_use_reward = float(self.reward_battle_item_use)
+                    else:
+                        battle_item_use_reward = 0.0
+                else:
+                    battle_item_use_reward = 0.0
+                equipped_items = battle_info.get("equipped_hero_items")
+                if isinstance(equipped_items, list):
+                    self.equipped_hero_items = list(equipped_items)
+                    self._sync_equipped_hero_items()
+            else:
+                battle_item_use_reward = 0.0
+            reward = self.battle_reward_scale * float(battle_reward_raw) + float(
+                battle_item_use_reward
+            )
 
         info = {
             "mode": "battle",
             "enemy_id": self.current_enemy_id,
             "battle_step": True,
             "battle_reward_raw": float(battle_reward_raw),
-            "battle_reward_scaled": float(reward),
+            "battle_reward_scaled": float(self.battle_reward_scale * float(battle_reward_raw)),
+            "battle_item_use_reward": float(battle_item_use_reward),
+            "battle_items_equipped_total": int(self.battle_items_equipped_total),
+            "battle_items_used_total": int(self.battle_items_used_total),
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
+            "heroitems": list(self.heroitems),
+            "equipped_hero_items": list(self.equipped_hero_items),
         }
+        if isinstance(battle_info, dict):
+            info.update(battle_info)
 
         if terminated or truncated:
             winner = self.battle_env.winner
@@ -4151,7 +4824,11 @@ class CampaignEnv(gym.Env):
 
     def _init_battle(self, enemy_id: int):
         """Инициализирует бой с конкретной RED командой."""
-        red_team = deepcopy(ENEMY_CONFIGS.get(enemy_id, ENEMY_CONFIGS[1]))
+        red_team_state = self._get_enemy_team_state(enemy_id)
+        if red_team_state:
+            red_team = deepcopy(red_team_state)
+        else:
+            red_team = deepcopy(ENEMY_CONFIGS.get(enemy_id, ENEMY_CONFIGS[1]))
         self._apply_settlement_defender_armor_bonus(enemy_id, red_team)
 
         # Восстанавливаем состояние BLUE или берём дефолтное
@@ -4163,6 +4840,7 @@ class CampaignEnv(gym.Env):
             self._log("Используется дефолтная BLUE команда")
         self._apply_hero_heal_tile_armor_bonus(blue_team)
         self._apply_active_blue_potion_effects(blue_team)
+        self._sync_equipped_hero_items()
 
         self.battle_env = BattleEnv(
             reward_win=self.battle_reward_win,
@@ -4170,6 +4848,8 @@ class CampaignEnv(gym.Env):
             reward_step=self.battle_reward_step,
             log_enabled=self.log_enabled,
         )
+        self.battle_env.equipped_hero_items = list(self.equipped_hero_items)
+        self.battle_env.hero_item_effects = dict(self._battle_item_effect_definitions())
 
         # Инициализируем бой с кастомными командами
         self.battle_env._init_with_custom_teams(red_team, blue_team)
@@ -4295,6 +4975,7 @@ class CampaignEnv(gym.Env):
             
             self.blue_team_state.append(restored_unit)
 
+        self._sync_hero_progression_flags(self.blue_team_state)
         self._sync_moves_per_turn_with_hero(units=self.blue_team_state, grant_delta=True)
         self._log("Состояние BLUE команды сохранено (HP не восстановлено)")
 
@@ -4396,6 +5077,15 @@ class CampaignEnv(gym.Env):
         self.grid_spell_action_start = self.GRID_BUILD_ACTION_START + len(self.building_keys)
         self.grid_settlement_upgrade_action_start = self.grid_spell_action_start + len(
             self.spell_keys
+        )
+        self.GRID_EQUIP_BATTLE_ITEM1_ACTION_START = (
+            self.grid_settlement_upgrade_action_start + len(self.settlement_upgrade_names)
+        )
+        self.GRID_EQUIP_BATTLE_ITEM2_ACTION_START = (
+            self.GRID_EQUIP_BATTLE_ITEM1_ACTION_START + len(self.BATTLE_EQUIPPABLE_ITEM_NAMES)
+        )
+        self.grid_legion_damage_spell_action_start = (
+            self.GRID_EQUIP_BATTLE_ITEM2_ACTION_START + len(self.BATTLE_EQUIPPABLE_ITEM_NAMES)
         )
 
     def _build_unit_from_data(self, entry: Dict, team: str, position: int) -> Dict:
@@ -4924,12 +5614,15 @@ class CampaignEnv(gym.Env):
             self._refresh_faction_territories()
             total_gold_income += self._legions_gold_income_per_turn()
             self._apply_mana_income_for_turn()
+            self._heal_wounded_enemy_teams_for_turn()
         self._clear_expired_combat_potion_effects()
         self.combat_potion_battle_bonus_pending = False
         self.gold += float(total_gold_income)
         self.moves = self.moves_per_turn
         self.active_buildings["alredybuilt"] = 0
         self.spell_learning_locked = False
+        self.battle_item_equip_used_this_turn = False
+        self.damage_spell_ids_used_this_turn = set()
         return -float(delta_turns) * self.reward_turn_penalty - float(pending_hire_penalty)
 
     @staticmethod
@@ -5418,7 +6111,16 @@ class CampaignEnv(gym.Env):
         self.grid_blue_features_per_unit = 8
         self.grid_blue_obs_size = len(self.grid_blue_positions) * self.grid_blue_features_per_unit
 
-        self.grid_resource_core_obs_size = 11
+        self.grid_battle_equipment_item_names = tuple(
+            str(item_name) for item_name in self.BATTLE_EQUIPPABLE_ITEM_NAMES
+        )
+        self.grid_battle_equipment_features_per_slot = (
+            len(self.grid_battle_equipment_item_names) + 1
+        )
+        self.grid_battle_equipment_obs_size = (
+            int(self.BATTLE_EQUIP_SLOTS) * self.grid_battle_equipment_features_per_slot
+        )
+        self.grid_resource_core_obs_size = 11 + self.grid_battle_equipment_obs_size
         self.grid_mana_total_kinds = tuple(str(kind) for kind in self.MANA_KIND_ORDER)
         self.grid_mana_total_obs_size = len(self.grid_mana_total_kinds)
         self.grid_resource_obs_size = (
@@ -5647,7 +6349,7 @@ class CampaignEnv(gym.Env):
             enemy_obs.extend([ex / grid_scale, ey / grid_scale])
 
             is_alive = self.grid_env.enemies_alive.get(enemy_id, False)
-            team = ENEMY_CONFIGS.get(enemy_id, [])
+            team = self._get_enemy_team_state(enemy_id)
             team_sorted = sorted(team, key=lambda u: int(u.get("position", 0)))
 
             for idx in range(self.grid_enemy_unit_slots):
@@ -5739,6 +6441,13 @@ class CampaignEnv(gym.Env):
                 max(1, len(self.grid_objective_city_names)),
             ),
         ]
+        for slot_index in range(int(self.BATTLE_EQUIP_SLOTS)):
+            equipped_name = ""
+            if slot_index < len(self.equipped_hero_items):
+                equipped_name = str(self.equipped_hero_items[slot_index] or "")
+            resource_obs.append(1.0 if not equipped_name else 0.0)
+            for item_name in self.grid_battle_equipment_item_names:
+                resource_obs.append(1.0 if equipped_name == item_name else 0.0)
         for mana_kind in self.grid_mana_total_kinds:
             mana_attr = str(self.MANA_ATTR_BY_KIND.get(str(mana_kind), "") or "")
             mana_value = float(getattr(self, mana_attr, 0.0) or 0.0) if mana_attr else 0.0
@@ -6123,6 +6832,23 @@ class CampaignEnv(gym.Env):
                 mask[self.grid_settlement_upgrade_action_start + idx] = self._can_upgrade_settlement(
                     settlement_name
                 )
+            for idx, item_name in enumerate(self.BATTLE_EQUIPPABLE_ITEM_NAMES):
+                mask[self.GRID_EQUIP_BATTLE_ITEM1_ACTION_START + idx] = self._can_equip_battle_item(
+                    0,
+                    item_name,
+                )
+                mask[self.GRID_EQUIP_BATTLE_ITEM2_ACTION_START + idx] = self._can_equip_battle_item(
+                    1,
+                    item_name,
+                )
+            nearest_enemy = self._get_nearest_enemy_stack_for_mask()
+            for idx, (spell_key, _spell_damage) in enumerate(self.LEGION_DAMAGE_SPELL_ACTION_SPECS):
+                mask[self.grid_legion_damage_spell_action_start + idx] = (
+                    self._can_cast_legion_damage_spell(
+                        spell_key,
+                        nearest_enemy=nearest_enemy,
+                    )
+                )
         else:
             # В battle режиме используем маску из BattleEnv
             if self.battle_env is not None:
@@ -6245,6 +6971,130 @@ class CampaignEnv(gym.Env):
             return max_hp > 0 and hp > 0 and hp < max_hp
         return False
 
+    def get_nearest_enemy_stack(
+        self,
+        from_pos: Optional[Tuple[int, int]] = None,
+        *,
+        only_alive: bool = True,
+    ) -> Optional[Dict[str, object]]:
+        """
+        Возвращает один ближайший вражеский отряд на карте.
+
+        Правило выбора детерминированное:
+        1. минимальная длина пути по текущей карте с учётом препятствий;
+        2. при равенстве меньший enemy_id;
+        3. затем верхняя-левая координата (y, x).
+
+        Если путь ни к одному врагу недоступен, используется fallback по
+        свободной от препятствий дистанции хода (Chebyshev) с тем же tie-break.
+        """
+        enemy_positions = getattr(self.grid_env, "enemy_positions", {}) or {}
+        enemies_alive = getattr(self.grid_env, "enemies_alive", {}) or {}
+        if not enemy_positions:
+            return None
+
+        start_pos = tuple(from_pos) if from_pos is not None else tuple(self.grid_env.agent_pos)
+        start_tile = (
+            int(start_pos[0]),
+            int(start_pos[1]),
+        )
+        blocked_tiles = {
+            (int(pos[0]), int(pos[1]))
+            for pos in (getattr(self.grid_env, "obstacle_positions", set()) or set())
+        }
+        path_distances = self._build_territory_path_distances(
+            source_tile=start_tile,
+            blocked_tile_set=blocked_tiles,
+        )
+
+        reachable_candidates: List[Tuple[int, int, int, int]] = []
+        fallback_candidates: List[Tuple[int, int, int, int]] = []
+
+        for raw_enemy_id, raw_pos in enemy_positions.items():
+            enemy_id = int(raw_enemy_id)
+            if only_alive and not bool(enemies_alive.get(enemy_id, False)):
+                continue
+
+            ex = int(raw_pos[0])
+            ey = int(raw_pos[1])
+            enemy_tile = (ex, ey)
+
+            if enemy_tile in path_distances:
+                reachable_candidates.append((int(path_distances[enemy_tile]), enemy_id, ey, ex))
+
+            chebyshev_distance = max(abs(start_tile[0] - ex), abs(start_tile[1] - ey))
+            fallback_candidates.append((int(chebyshev_distance), enemy_id, ey, ex))
+
+        if not fallback_candidates:
+            return None
+
+        best_distance, best_enemy_id, best_y, best_x = min(
+            reachable_candidates or fallback_candidates
+        )
+        best_pos = (int(best_x), int(best_y))
+        is_reachable = bool(reachable_candidates)
+
+        return {
+            "enemy_id": int(best_enemy_id),
+            "position": best_pos,
+            "path_distance": int(best_distance) if is_reachable else None,
+            "fallback_distance": None if is_reachable else int(best_distance),
+            "reachable": is_reachable,
+            "is_alive": bool(enemies_alive.get(int(best_enemy_id), False)),
+            "description": ENEMY_DESCRIPTIONS.get(int(best_enemy_id), "Неизвестный враг"),
+        }
+
+    def _get_nearest_enemy_stack_for_mask(
+        self,
+        from_pos: Optional[Tuple[int, int]] = None,
+        *,
+        only_alive: bool = True,
+    ) -> Optional[Dict[str, object]]:
+        """
+        Дешёвый кандидат ближайшего врага для action mask.
+
+        В отличие от get_nearest_enemy_stack() не строит BFS по карте, а использует
+        только геометрическую близость (Chebyshev) и состояние живых отрядов.
+        Этого достаточно для маски spell-action: сама цель при реальном касте всё
+        равно выбирается точным методом в _step_cast_legion_damage_spell().
+        """
+        enemy_positions = getattr(self.grid_env, "enemy_positions", {}) or {}
+        enemies_alive = getattr(self.grid_env, "enemies_alive", {}) or {}
+        if not enemy_positions:
+            return None
+
+        start_pos = tuple(from_pos) if from_pos is not None else tuple(self.grid_env.agent_pos)
+        start_x = int(start_pos[0])
+        start_y = int(start_pos[1])
+        candidates: List[Tuple[int, int, int, int]] = []
+
+        for raw_enemy_id, raw_pos in enemy_positions.items():
+            enemy_id = int(raw_enemy_id)
+            if only_alive and not bool(enemies_alive.get(enemy_id, False)):
+                continue
+            if not self._enemy_team_has_living_units(enemy_id):
+                continue
+
+            ex = int(raw_pos[0])
+            ey = int(raw_pos[1])
+            chebyshev_distance = max(abs(start_x - ex), abs(start_y - ey))
+            candidates.append((int(chebyshev_distance), enemy_id, ey, ex))
+
+        if not candidates:
+            return None
+
+        best_distance, best_enemy_id, best_y, best_x = min(candidates)
+        best_pos = (int(best_x), int(best_y))
+        return {
+            "enemy_id": int(best_enemy_id),
+            "position": best_pos,
+            "path_distance": None,
+            "fallback_distance": int(best_distance),
+            "reachable": False,
+            "is_alive": bool(enemies_alive.get(int(best_enemy_id), False)),
+            "description": ENEMY_DESCRIPTIONS.get(int(best_enemy_id), "Неизвестный враг"),
+        }
+
     def render(self, mode: str = "ansi") -> Optional[str]:
         """Отрисовка текущего состояния."""
         if mode != "ansi":
@@ -6293,6 +7143,14 @@ class CampaignEnv(gym.Env):
             )
         else:
             lines.append("Предметы героя: нет")
+        equipped_labels = [
+            str(item_name or "пусто") for item_name in list(self.equipped_hero_items or [])
+        ]
+        lines.append(f"Экипированные предметы: [{', '.join(equipped_labels)}]")
+        lines.append(
+            f"Боевые предметы: экипировано {int(self.battle_items_equipped_total)}, "
+            f"использовано {int(self.battle_items_used_total)}"
+        )
         lines.append(f"Доп. бутылей лечения: {max(0, int(self.extra_heal_bottles or 0))}")
         lines.append(f"Доп. банок исцеления: {max(0, int(self.extra_healing_bottles or 0))}")
         lines.append(f"Доп. зелий воскрешения: {max(0, int(self.extra_revive_bottles or 0))}")
@@ -6344,6 +7202,9 @@ class CampaignEnv(gym.Env):
             "gold": self.gold,
             "moves": self.moves,
             "heroitems": list(self.heroitems),
+            "equipped_hero_items": list(self.equipped_hero_items),
+            "battle_items_equipped_total": int(self.battle_items_equipped_total),
+            "battle_items_used_total": int(self.battle_items_used_total),
             "learned_spells": list(self.get_learned_spell_descriptions()),
             "learned_spells_count": len(self.get_learned_spell_descriptions()),
             "spells_total": len(self.spell_keys),

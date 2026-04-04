@@ -35,6 +35,9 @@ from battle_env import (
     DEFEND_ACTION_INDEX,
     WAIT_ACTION_INDEX,
     RUN_AWAY_ACTION_INDEX,
+    FIRST_HERO_ITEM_ACTION_START,
+    SECOND_HERO_ITEM_ACTION_START,
+    HERO_ITEM_TARGET_SLOTS,
     DEFEND_ARMOR_BONUS,
 )
 from console_encoding import setup_utf8_console
@@ -1216,6 +1219,9 @@ class CampaignVisualizer:
         built_buildings: list = None,
         learned_spells: list | None = None,
         heroitems: list | None = None,
+        equipped_hero_items: list | None = None,
+        battle_items_equipped_total: int = 0,
+        battle_items_used_total: int = 0,
         hero_name: str = "",
         hero_level: int = 0,
         hero_abilities: list | None = None,
@@ -1577,17 +1583,29 @@ class CampaignVisualizer:
                     info_lines.append(f"Добыча руин: {', '.join(reward_parts)}")
             else:
                 info_lines.append("Последняя руина: нет")
+        def _hero_item_label(entry):
+            if isinstance(entry, dict):
+                return str(entry.get("name", "") or "")
+            return str(entry or "")
+
         heroitems = list(heroitems or [])
         if heroitems:
-            def _hero_item_label(entry):
-                if isinstance(entry, dict):
-                    return str(entry.get("name", "") or "")
-                return str(entry or "")
-
             info_lines.append("Hero items:")
             info_lines.extend(f"- {_hero_item_label(item_name)}" for item_name in heroitems)
         else:
             info_lines.append("Hero items: none")
+        equipped_hero_items = list(equipped_hero_items or [])
+        if equipped_hero_items:
+            info_lines.append("Equipped battle items:")
+            for slot_index, item_name in enumerate(equipped_hero_items, start=1):
+                label = _hero_item_label(item_name) if item_name else "none"
+                info_lines.append(f"- slot {slot_index}: {label}")
+        else:
+            info_lines.append("Equipped battle items: none")
+        info_lines.append(
+            f"Battle items stats: equipped={int(battle_items_equipped_total)} "
+            f"used={int(battle_items_used_total)}"
+        )
         hero_name = str(hero_name or "").strip()
         hero_abilities = list(hero_abilities or [])
         if hero_name:
@@ -1834,6 +1852,36 @@ def run_campaign_visualization(
             elif action_idx < len(TARGET_POSITIONS):
                 target_pos = TARGET_POSITIONS[action_idx]
                 chosen_line = f"[STEP {step_count}] Агент выбирает action={action_idx} > атака RED pos{target_pos}"
+            elif FIRST_HERO_ITEM_ACTION_START <= action_idx < (
+                FIRST_HERO_ITEM_ACTION_START + len(HERO_ITEM_TARGET_SLOTS)
+            ):
+                slot_no = HERO_ITEM_TARGET_SLOTS[action_idx - FIRST_HERO_ITEM_ACTION_START]
+                item_name = ""
+                if getattr(env_base.battle_env, "equipped_hero_items", None):
+                    item_name = str(env_base.battle_env.equipped_hero_items[0] or "")
+                chosen_line = (
+                    f"[STEP {step_count}] Агент выбирает action={action_idx} > "
+                    f"предмет 1 на свой слот {slot_no}"
+                )
+                chosen_line = (
+                    f"[STEP {step_count}] Agent chooses action={action_idx} > "
+                    f"item 1 ({item_name or 'empty'}) on own slot {slot_no}"
+                )
+            elif SECOND_HERO_ITEM_ACTION_START <= action_idx < (
+                SECOND_HERO_ITEM_ACTION_START + len(HERO_ITEM_TARGET_SLOTS)
+            ):
+                slot_no = HERO_ITEM_TARGET_SLOTS[action_idx - SECOND_HERO_ITEM_ACTION_START]
+                item_name = ""
+                if getattr(env_base.battle_env, "equipped_hero_items", None):
+                    item_name = str(env_base.battle_env.equipped_hero_items[1] or "")
+                chosen_line = (
+                    f"[STEP {step_count}] Агент выбирает action={action_idx} > "
+                    f"предмет 2 на свой слот {slot_no}"
+                )
+                chosen_line = (
+                    f"[STEP {step_count}] Agent chooses action={action_idx} > "
+                    f"item 2 ({item_name or 'empty'}) on own slot {slot_no}"
+                )
             else:
                 chosen_line = f"[STEP {step_count}] Агент выбирает action={action_idx}"
             print("\n" + chosen_line)
@@ -1894,6 +1942,9 @@ def run_campaign_visualization(
                 learned_spells=env_base.get_learned_spell_descriptions(),
                 chest_positions=getattr(env_base, "chests", None),
                 heroitems=getattr(env_base, "heroitems", None),
+                equipped_hero_items=getattr(env_base, "equipped_hero_items", None),
+                battle_items_equipped_total=getattr(env_base, "battle_items_equipped_total", 0),
+                battle_items_used_total=getattr(env_base, "battle_items_used_total", 0),
                 hero_name=hero_name,
                 hero_level=hero_level,
                 hero_abilities=hero_abilities,
@@ -1965,6 +2016,9 @@ def run_campaign_visualization(
                     learned_spells=env_base.get_learned_spell_descriptions(),
                     chest_positions=getattr(env_base, "chests", None),
                     heroitems=getattr(env_base, "heroitems", None),
+                    equipped_hero_items=getattr(env_base, "equipped_hero_items", None),
+                    battle_items_equipped_total=getattr(env_base, "battle_items_equipped_total", 0),
+                    battle_items_used_total=getattr(env_base, "battle_items_used_total", 0),
                     hero_name=hero_name,
                     hero_level=hero_level,
                     hero_abilities=hero_abilities,
@@ -2107,6 +2161,9 @@ def run_campaign_visualization(
         learned_spells=env_base.get_learned_spell_descriptions(),
         chest_positions=getattr(env_base, "chests", None),
         heroitems=getattr(env_base, "heroitems", None),
+        equipped_hero_items=getattr(env_base, "equipped_hero_items", None),
+        battle_items_equipped_total=getattr(env_base, "battle_items_equipped_total", 0),
+        battle_items_used_total=getattr(env_base, "battle_items_used_total", 0),
         hero_name=hero_name,
         hero_level=hero_level,
         hero_abilities=hero_abilities,
