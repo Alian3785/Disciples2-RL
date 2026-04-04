@@ -1,0 +1,4 @@
+# Explicitly tracked project packages updated for the Big_map environment.
+gymnasium==1.2.3
+stable-baselines3==2.8.0
+opik==1.10.58

@@ -315,6 +315,66 @@ def _get(u: dict, *keys, default=0):
             return u[k]
     return default
 
+
+HERO_UNIT_NAMES = frozenset(
+    {
+        "Рыцарь на пегасе",
+        "Рейнджер людей",
+        "Архимаг",
+        "Архангел",
+        "Герцог",
+        "Советник",
+        "Архидьявол",
+        "Баронесса",
+        "Королевский страж",
+        "Инженер",
+        "Хранитель знаний",
+        "Жезловик гномов",
+        "Рыцарь смерти",
+        "Носферату",
+        "Королева лич",
+        "Баньши",
+        "Лесной лорд",
+        "Хранитель леса",
+        "Дриада",
+        "Мудрец",
+    }
+)
+
+
+def _to_bool_flag(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return int(value) != 0
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def is_hero_name(name: str) -> bool:
+    return str(name or "").strip() in HERO_UNIT_NAMES
+
+
+def _resolve_hero_flag(u: dict) -> bool:
+    if not isinstance(u, dict):
+        return False
+    if "hero" in u:
+        return _to_bool_flag(u.get("hero"))
+    if "герой" in u:
+        return _to_bool_flag(u.get("герой"))
+    unit_name = str(_get(u, "кто", "name", default="") or "").strip()
+    if unit_name and is_hero_name(unit_name):
+        return True
+    next_level_raw = _get(u, "следуровень", "next_level_exp", default=0)
+    try:
+        return int(round(float(next_level_raw))) > 0
+    except Exception:
+        return False
+
+
+for _entry in DATA:
+    if isinstance(_entry, dict):
+        _entry["hero"] = _resolve_hero_flag(_entry)
+
 def map_unit_to_battle(u: dict, team: str, position: int) -> dict:
     """Маппинг одного словаря из DATA -> объект боевого юнита с ключами целевого формата."""
     initv = int(_get(u, "инит", "инициатива", default=0))
@@ -397,6 +457,7 @@ def map_unit_to_battle(u: dict, team: str, position: int) -> dict:
         "long_paralyzed": 0,
         "running_away": 0,
         "transformed": 0,
+        "hero": _resolve_hero_flag(u),
         "basestats": [],
         "exp_kill": exp_kill_v,
         "exp_required": exp_required_v,
@@ -440,6 +501,7 @@ def placeholder_unit(team: str, position: int) -> dict:
         "long_paralyzed": 0,
         "running_away": 0,
         "transformed": 0,
+        "hero": False,
         "basestats": [],
         "Level": 0,
         "needaunit": 0,

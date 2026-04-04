@@ -14,6 +14,7 @@ import time
 from collections import Counter, deque
 from pathlib import Path
 from typing import Any
+import gymnasium as gym
 import numpy as np
 from console_encoding import setup_utf8_console
 
@@ -74,11 +75,15 @@ REWARD_CONFIG = {
     "battle_reward_win": 2.0,
     "battle_reward_loss": -1.0,
     "battle_reward_step": 0.01,
+    "reward_battle_item_equip": 0.02,
+    "reward_battle_item_use": 0.05,
     "reward_sell_junk_item": 0.05,
     "reward_spell_learn": 2.0,
+    "reward_spell_cast": 0.005,
 }
 
 REQUIRED_COMET_VERSION = (3, 57, 0)
+MAX_EVAL_EPISODE_STEPS = 4000
 
 
 def _comet_version_tuple(raw_version: str) -> tuple[int, int, int] | None:
@@ -182,7 +187,33 @@ def mask_fn(env: CampaignEnv) -> np.ndarray:
     return env.compute_action_mask()
 
 
-def make_env(log_enabled: bool = False):
+class EvalStepCapWrapper(gym.Wrapper):
+    """Hard-stop eval episodes after a fixed number of env steps."""
+
+    def __init__(self, env: gym.Env, max_steps: int):
+        super().__init__(env)
+        self.max_steps = max(1, int(max_steps))
+        self.eval_steps = 0
+
+    def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
+        self.eval_steps = 0
+        return self.env.reset(seed=seed, options=options)
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        self.eval_steps += 1
+
+        if not terminated and not truncated and self.eval_steps >= self.max_steps:
+            info = dict(info)
+            truncated = True
+            info["campaign_result"] = "eval_timeout"
+            info["eval_step_cap_hit"] = True
+            info["eval_step_cap"] = self.max_steps
+
+        return obs, reward, terminated, truncated, info
+
+
+def make_env(log_enabled: bool = False, eval_max_episode_steps: int | None = None):
     """Фабрика создания среды."""
     base = CampaignEnv(
         grid_size=DEFAULT_GRID_SIZE,
@@ -193,8 +224,10 @@ def make_env(log_enabled: bool = False):
         max_grid_steps=1800,
         realcapital=2,
     )
-    masked = ActionMasker(base, mask_fn)
-    return Monitor(masked)
+    env = ActionMasker(base, mask_fn)
+    if eval_max_episode_steps is not None:
+        env = EvalStepCapWrapper(env, max_steps=eval_max_episode_steps)
+    return Monitor(env)
 
 
 class CampaignCheckpointCallback(BaseCallback):
@@ -507,9 +540,18 @@ class CampaignMetricsCallback(BaseCallback):
         self.episode_spells_learned: list[float] = []
         self.recent_spells_learned = deque(maxlen=self.episode_window)
         self.recent_spell_learning_episode_flags = deque(maxlen=self.episode_window)
+        self.episode_spell_casts: list[float] = []
+        self.recent_spell_casts = deque(maxlen=self.episode_window)
+        self.recent_spell_cast_episode_flags = deque(maxlen=self.episode_window)
         self.episode_hired_units: list[float] = []
         self.recent_hired_units = deque(maxlen=self.episode_window)
         self.recent_hire_episode_flags = deque(maxlen=self.episode_window)
+        self.episode_battle_items_equipped: list[float] = []
+        self.recent_battle_items_equipped = deque(maxlen=self.episode_window)
+        self.recent_battle_item_equip_episode_flags = deque(maxlen=self.episode_window)
+        self.episode_battle_items_used: list[float] = []
+        self.recent_battle_items_used = deque(maxlen=self.episode_window)
+        self.recent_battle_item_use_episode_flags = deque(maxlen=self.episode_window)
         self.recent_turns = deque(maxlen=self.step_window)
         self.recent_gold = deque(maxlen=self.step_window)
         self.recent_moves = deque(maxlen=self.step_window)
@@ -537,8 +579,14 @@ class CampaignMetricsCallback(BaseCallback):
         self.sale_episodes = 0
         self.total_spells_learned = 0
         self.spell_learning_episodes = 0
+        self.total_spell_casts = 0
+        self.spell_cast_episodes = 0
         self.total_hired_units = 0
         self.hire_episodes = 0
+        self.total_battle_items_equipped = 0
+        self.battle_item_equip_episodes = 0
+        self.total_battle_items_used = 0
+        self.battle_item_use_episodes = 0
         self.best_recent_victory_rate = 0.0
         self._last_logged_step = 0
         self._episode_castle_heal_uses: list[int] = []
@@ -549,7 +597,10 @@ class CampaignMetricsCallback(BaseCallback):
         self._episode_sold_items: list[int] = []
         self._episode_sale_gold: list[float] = []
         self._episode_spells_learned: list[int] = []
+        self._episode_spell_casts: list[int] = []
         self._episode_hired_units: list[int] = []
+        self._episode_battle_items_equipped: list[int] = []
+        self._episode_battle_items_used: list[int] = []
 
     def _append_recent_stat(self, info: dict[str, Any], key: str, target: deque) -> None:
         value = info.get(key)
@@ -572,7 +623,10 @@ class CampaignMetricsCallback(BaseCallback):
         self._episode_sold_items.extend([0] * missing)
         self._episode_sale_gold.extend([0.0] * missing)
         self._episode_spells_learned.extend([0] * missing)
+        self._episode_spell_casts.extend([0] * missing)
         self._episode_hired_units.extend([0] * missing)
+        self._episode_battle_items_equipped.extend([0] * missing)
+        self._episode_battle_items_used.extend([0] * missing)
 
     def _consume_castle_heal(self, info: dict[str, Any], env_index: int) -> None:
         if not info.get("castle_heal_action"):
@@ -725,6 +779,33 @@ class CampaignMetricsCallback(BaseCallback):
 
         self._episode_spells_learned[env_index] = 0
 
+    def _consume_spell_casts(self, info: dict[str, Any], env_index: int) -> None:
+        if not info.get("spell_cast_action"):
+            return
+        if not info.get("spell_cast_executed"):
+            return
+        self.total_spell_casts += 1
+        self._episode_spell_casts[env_index] += 1
+
+    def _finalize_episode_spell_casts(self, env_index: int) -> None:
+        cast_count = float(self._episode_spell_casts[env_index])
+        cast_flag = cast_count > 0.0
+
+        self.episode_spell_casts.append(cast_count)
+        self.recent_spell_casts.append(cast_count)
+        self.recent_spell_cast_episode_flags.append(1.0 if cast_flag else 0.0)
+        if cast_flag:
+            self.spell_cast_episodes += 1
+
+        if self.experiment is not None:
+            self.experiment.log_metric(
+                "campaign/episode_spell_casts",
+                cast_count,
+                step=self.num_timesteps,
+            )
+
+        self._episode_spell_casts[env_index] = 0
+
     def _consume_hires(self, info: dict[str, Any], env_index: int) -> None:
         try:
             hired_units = int(info.get("hired_units_count", 0) or 0)
@@ -756,6 +837,57 @@ class CampaignMetricsCallback(BaseCallback):
             )
 
         self._episode_hired_units[env_index] = 0
+
+    def _consume_battle_item_activity(self, info: dict[str, Any], env_index: int) -> None:
+        equipped = bool(info.get("equip_battle_item_action")) and bool(
+            info.get("equip_battle_item_applied")
+        )
+        used = (
+            bool(info.get("battle_hero_item_action"))
+            and bool(info.get("battle_hero_item_applied"))
+            and bool(info.get("battle_hero_item_consumed"))
+        )
+
+        if equipped:
+            self.total_battle_items_equipped += 1
+            self._episode_battle_items_equipped[env_index] += 1
+
+        if used:
+            self.total_battle_items_used += 1
+            self._episode_battle_items_used[env_index] += 1
+
+    def _finalize_episode_battle_item_activity(self, env_index: int) -> None:
+        equipped_count = float(self._episode_battle_items_equipped[env_index])
+        used_count = float(self._episode_battle_items_used[env_index])
+        equipped_flag = equipped_count > 0.0
+        used_flag = used_count > 0.0
+
+        self.episode_battle_items_equipped.append(equipped_count)
+        self.recent_battle_items_equipped.append(equipped_count)
+        self.recent_battle_item_equip_episode_flags.append(1.0 if equipped_flag else 0.0)
+        if equipped_flag:
+            self.battle_item_equip_episodes += 1
+
+        self.episode_battle_items_used.append(used_count)
+        self.recent_battle_items_used.append(used_count)
+        self.recent_battle_item_use_episode_flags.append(1.0 if used_flag else 0.0)
+        if used_flag:
+            self.battle_item_use_episodes += 1
+
+        if self.experiment is not None:
+            self.experiment.log_metric(
+                "campaign/episode_battle_items_equipped",
+                equipped_count,
+                step=self.num_timesteps,
+            )
+            self.experiment.log_metric(
+                "campaign/episode_battle_items_used",
+                used_count,
+                step=self.num_timesteps,
+            )
+
+        self._episode_battle_items_equipped[env_index] = 0
+        self._episode_battle_items_used[env_index] = 0
 
     def _record_window_metrics(self, infos: list[dict[str, Any]]) -> None:
         turns = []
@@ -794,7 +926,9 @@ class CampaignMetricsCallback(BaseCallback):
             self._consume_ruins(info, env_index)
             self._consume_merchant_sales(info, env_index)
             self._consume_spell_learning(info, env_index)
+            self._consume_spell_casts(info, env_index)
             self._consume_hires(info, env_index)
+            self._consume_battle_item_activity(info, env_index)
 
         episode = info.get("episode")
         if isinstance(episode, dict):
@@ -814,7 +948,9 @@ class CampaignMetricsCallback(BaseCallback):
                 self._finalize_episode_ruins(env_index)
                 self._finalize_episode_sales(env_index)
                 self._finalize_episode_spell_learning(env_index)
+                self._finalize_episode_spell_casts(env_index)
                 self._finalize_episode_hires(env_index)
+                self._finalize_episode_battle_item_activity(env_index)
 
         campaign_result = info.get("campaign_result")
         if campaign_result:
@@ -933,6 +1069,15 @@ class CampaignMetricsCallback(BaseCallback):
                 self.spell_learning_episodes,
                 total_episodes,
             ),
+            "campaign/spell_casts_total": float(self.total_spell_casts),
+            "campaign/spell_casts_per_episode_mean": _safe_rate(
+                self.total_spell_casts,
+                total_episodes,
+            ),
+            "campaign/spell_cast_episodes_rate": _safe_rate(
+                self.spell_cast_episodes,
+                total_episodes,
+            ),
             "campaign/hired_units_total": float(self.total_hired_units),
             "campaign/hired_units_per_episode_mean": _safe_rate(
                 self.total_hired_units,
@@ -940,6 +1085,24 @@ class CampaignMetricsCallback(BaseCallback):
             ),
             "campaign/hire_episodes_rate": _safe_rate(
                 self.hire_episodes,
+                total_episodes,
+            ),
+            "campaign/battle_items_equipped_total": float(self.total_battle_items_equipped),
+            "campaign/battle_items_equipped_per_episode_mean": _safe_rate(
+                self.total_battle_items_equipped,
+                total_episodes,
+            ),
+            "campaign/battle_item_equip_episodes_rate": _safe_rate(
+                self.battle_item_equip_episodes,
+                total_episodes,
+            ),
+            "campaign/battle_items_used_total": float(self.total_battle_items_used),
+            "campaign/battle_items_used_per_episode_mean": _safe_rate(
+                self.total_battle_items_used,
+                total_episodes,
+            ),
+            "campaign/battle_item_use_episodes_rate": _safe_rate(
+                self.battle_item_use_episodes,
                 total_episodes,
             ),
             "campaign/recent_episodes": float(len(self.recent_episode_rewards)),
@@ -972,9 +1135,25 @@ class CampaignMetricsCallback(BaseCallback):
             "campaign/recent_spell_learning_episodes_rate": _safe_mean(
                 self.recent_spell_learning_episode_flags
             ),
+            "campaign/recent_spell_casts_mean": _safe_mean(self.recent_spell_casts),
+            "campaign/recent_spell_cast_episodes_rate": _safe_mean(
+                self.recent_spell_cast_episode_flags
+            ),
             "campaign/recent_hired_units_mean": _safe_mean(self.recent_hired_units),
             "campaign/recent_hire_episodes_rate": _safe_mean(
                 self.recent_hire_episode_flags
+            ),
+            "campaign/recent_battle_items_equipped_mean": _safe_mean(
+                self.recent_battle_items_equipped
+            ),
+            "campaign/recent_battle_item_equip_episodes_rate": _safe_mean(
+                self.recent_battle_item_equip_episode_flags
+            ),
+            "campaign/recent_battle_items_used_mean": _safe_mean(
+                self.recent_battle_items_used
+            ),
+            "campaign/recent_battle_item_use_episodes_rate": _safe_mean(
+                self.recent_battle_item_use_episode_flags
             ),
             "campaign/recent_turns_mean": _safe_mean(self.recent_turns),
             "campaign/recent_gold_mean": _safe_mean(self.recent_gold),
@@ -998,7 +1177,14 @@ class CampaignMetricsCallback(BaseCallback):
             "campaign/window/ruins_cleared_mean": _safe_mean(self.recent_ruins_cleared),
             "campaign/window/sold_items_mean": _safe_mean(self.recent_sold_items),
             "campaign/window/spells_learned_mean": _safe_mean(self.recent_spells_learned),
+            "campaign/window/spell_casts_mean": _safe_mean(self.recent_spell_casts),
             "campaign/window/hired_units_mean": _safe_mean(self.recent_hired_units),
+            "campaign/window/battle_items_equipped_mean": _safe_mean(
+                self.recent_battle_items_equipped
+            ),
+            "campaign/window/battle_items_used_mean": _safe_mean(
+                self.recent_battle_items_used
+            ),
             "campaign/best_recent_victory_rate": self.best_recent_victory_rate,
         }
 
@@ -1211,6 +1397,65 @@ class CampaignMetricsCallback(BaseCallback):
         plt.close(fig)
         return target
 
+    def save_spell_cast_activity_plot(self, path: str | os.PathLike[str]) -> Path | None:
+        if not self.episode_spell_casts:
+            return None
+
+        import matplotlib.pyplot as plt
+
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+        episodes = np.arange(1, len(self.episode_spell_casts) + 1)
+        cast_counts = np.asarray(self.episode_spell_casts, dtype=float)
+        cumulative_casts = np.cumsum(cast_counts)
+
+        fig, (ax_top, ax_bottom) = plt.subplots(2, 1, figsize=(10, 8.0), sharex=True)
+
+        ax_top.plot(
+            episodes,
+            cast_counts,
+            color="#B45309",
+            linewidth=1.8,
+            label="Spell casts per episode",
+        )
+        ax_top.fill_between(episodes, cast_counts, color="#FCD34D", alpha=0.28)
+        if len(cast_counts) >= 5:
+            window = min(25, len(cast_counts))
+            kernel = np.ones(window, dtype=float) / float(window)
+            rolling = np.convolve(cast_counts, kernel, mode="valid")
+            rolling_x = episodes[window - 1 :]
+            ax_top.plot(
+                rolling_x,
+                rolling,
+                color="#78350F",
+                linewidth=2.0,
+                linestyle="--",
+                label=f"Rolling mean ({window})",
+            )
+        ax_top.set_title("Spell Cast Usage")
+        ax_top.set_ylabel("Casts per episode")
+        ax_top.grid(True, alpha=0.25, linewidth=0.6)
+        ax_top.legend(loc="upper right")
+
+        ax_bottom.plot(
+            episodes,
+            cumulative_casts,
+            color="#1D4ED8",
+            linewidth=2.1,
+            label="Cumulative spell casts",
+        )
+        ax_bottom.fill_between(episodes, cumulative_casts, color="#93C5FD", alpha=0.22)
+        ax_bottom.set_xlabel("Episode")
+        ax_bottom.set_ylabel("Cumulative casts")
+        ax_bottom.grid(True, alpha=0.25, linewidth=0.6)
+        ax_bottom.legend(loc="upper left")
+
+        fig.tight_layout()
+        fig.savefig(target, dpi=160)
+        plt.close(fig)
+        return target
+
     def save_hired_units_per_episode_plot(self, path: str | os.PathLike[str]) -> Path | None:
         if not self.episode_hired_units:
             return None
@@ -1243,6 +1488,82 @@ class CampaignMetricsCallback(BaseCallback):
         ax.set_title("Hired Units Per Episode")
         ax.set_xlabel("Episode")
         ax.set_ylabel("Units hired")
+        ax.grid(True, alpha=0.25, linewidth=0.6)
+        ax.legend(loc="upper right")
+        fig.tight_layout()
+        fig.savefig(target, dpi=160)
+        plt.close(fig)
+        return target
+
+    def save_battle_item_activity_plot(self, path: str | os.PathLike[str]) -> Path | None:
+        if not self.episode_battle_items_equipped and not self.episode_battle_items_used:
+            return None
+
+        import matplotlib.pyplot as plt
+
+        equip_count = len(self.episode_battle_items_equipped)
+        use_count = len(self.episode_battle_items_used)
+        episode_count = max(equip_count, use_count)
+        if episode_count <= 0:
+            return None
+
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+        episodes = np.arange(1, episode_count + 1)
+        equipped_counts = np.asarray(
+            list(self.episode_battle_items_equipped) + [0.0] * (episode_count - equip_count),
+            dtype=float,
+        )
+        used_counts = np.asarray(
+            list(self.episode_battle_items_used) + [0.0] * (episode_count - use_count),
+            dtype=float,
+        )
+
+        fig, ax = plt.subplots(figsize=(10, 4.8))
+        ax.plot(
+            episodes,
+            equipped_counts,
+            color="#0F766E",
+            linewidth=1.8,
+            label="Equipped per episode",
+        )
+        ax.fill_between(episodes, equipped_counts, color="#5EEAD4", alpha=0.22)
+        ax.plot(
+            episodes,
+            used_counts,
+            color="#7C3AED",
+            linewidth=1.8,
+            label="Used in battle per episode",
+        )
+        ax.fill_between(episodes, used_counts, color="#C4B5FD", alpha=0.18)
+
+        if episode_count >= 5:
+            window = min(25, episode_count)
+            kernel = np.ones(window, dtype=float) / float(window)
+            equipped_rolling = np.convolve(equipped_counts, kernel, mode="valid")
+            used_rolling = np.convolve(used_counts, kernel, mode="valid")
+            rolling_x = episodes[window - 1 :]
+            ax.plot(
+                rolling_x,
+                equipped_rolling,
+                color="#115E59",
+                linewidth=2.0,
+                linestyle="--",
+                label=f"Equip rolling mean ({window})",
+            )
+            ax.plot(
+                rolling_x,
+                used_rolling,
+                color="#5B21B6",
+                linewidth=2.0,
+                linestyle="--",
+                label=f"Use rolling mean ({window})",
+            )
+
+        ax.set_title("Battle Item Equips and Uses Per Episode")
+        ax.set_xlabel("Episode")
+        ax.set_ylabel("Count")
         ax.grid(True, alpha=0.25, linewidth=0.6)
         ax.legend(loc="upper right")
         fig.tight_layout()
@@ -1376,6 +1697,7 @@ if __name__ == "__main__":
             "eval_freq": EVAL_FREQ,
             "comet_log_freq": args.comet_log_freq,
             "eval_episodes": EVAL_EPISODES,
+            "max_eval_episode_steps": MAX_EVAL_EPISODE_STEPS,
             "comet_window_episodes": args.comet_window_episodes,
             "comet_offline": bool(args.comet_offline),
             "grid_size": DEFAULT_GRID_SIZE,
@@ -1450,7 +1772,14 @@ if __name__ == "__main__":
     )
 
     # Оценочная среда
-    eval_env = DummyVecEnv([lambda: make_env(log_enabled=False)])
+    eval_env = DummyVecEnv(
+        [
+            lambda: make_env(
+                log_enabled=False,
+                eval_max_episode_steps=MAX_EVAL_EPISODE_STEPS,
+            )
+        ]
+    )
     # Eval env receives running statistics from train env via EvalCallback sync.
     eval_env = VecNormalize(
         eval_env,
@@ -1527,6 +1856,7 @@ if __name__ == "__main__":
     print(f"Checkpoint каждые: {CHECKPOINT_FREQ:,} шагов")
     print(f"Evaluation каждые: {EVAL_FREQ:,} шагов")
     print(f"Eval эпизодов на режим: {EVAL_EPISODES}")
+    print(f"Eval лимит шагов на эпизод: {MAX_EVAL_EPISODE_STEPS}")
     print(f"Run ID: {run_id}")
     print(f"{'='*60}\n")
 
@@ -1566,6 +1896,16 @@ if __name__ == "__main__":
     if saved_hired_total_plot is not None:
         print(f"  График найма за всё обучение: {saved_hired_total_plot}")
 
+    battle_item_plot_path = BASE_DIR / "outputs" / "campaign_battle_item_activity.png"
+    saved_battle_item_plot = metrics_cb.save_battle_item_activity_plot(battle_item_plot_path)
+    if saved_battle_item_plot is not None:
+        print(f"  График боевых предметов: {saved_battle_item_plot}")
+
+    spell_cast_plot_path = BASE_DIR / "outputs" / "campaign_spell_cast_activity.png"
+    saved_spell_cast_plot = metrics_cb.save_spell_cast_activity_plot(spell_cast_plot_path)
+    if saved_spell_cast_plot is not None:
+        print(f"  График применения заклинаний: {saved_spell_cast_plot}")
+
     if COMET_AVAILABLE and comet_experiment is not None:
         try:
             comet_experiment.log_tensorboard_folder(TB_LOG_DIR)
@@ -1587,6 +1927,22 @@ if __name__ == "__main__":
                 )
             except Exception as exc:
                 print(f"[WARN] Failed to upload cumulative-hire plot to Comet: {exc}")
+        if saved_battle_item_plot is not None and hasattr(comet_experiment, "log_image"):
+            try:
+                comet_experiment.log_image(
+                    str(saved_battle_item_plot),
+                    name="campaign_battle_item_activity",
+                )
+            except Exception as exc:
+                print(f"[WARN] Failed to upload battle-item plot to Comet: {exc}")
+        if saved_spell_cast_plot is not None and hasattr(comet_experiment, "log_image"):
+            try:
+                comet_experiment.log_image(
+                    str(saved_spell_cast_plot),
+                    name="campaign_spell_cast_activity",
+                )
+            except Exception as exc:
+                print(f"[WARN] Failed to upload spell-cast plot to Comet: {exc}")
         try:
             comet_experiment.log_other(
                 "final_campaign_victories",

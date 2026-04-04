@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from collections import deque
 from typing import Dict, Optional, Tuple
-from data_dicts_compact_lines import DATA
+from data_dicts_compact_lines import DATA, is_hero_name
 
 DEFAULT_GRID_SIZE = 48
 DEFAULT_HERO_GRID_POSITION: Tuple[int, int] = (5, 27)
@@ -632,6 +632,9 @@ BLUE_TEAM_TEMPLATE = [
         "turns_into": [],
     },
 ]
+
+for _unit in BLUE_TEAM_TEMPLATE:
+    _unit["hero"] = is_hero_name(_unit.get("name"))
 
 # Real stacks from the 48x48 scenario that match campaign enemy compositions.
 MATCHED_MAP_STACKS: tuple[dict[str, object], ...] = (

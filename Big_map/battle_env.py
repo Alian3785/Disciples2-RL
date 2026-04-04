@@ -1,6 +1,6 @@
 # ============================================================
 # КАСТОМНАЯ СРЕДА Gymnasium «RED vs BLUE»
-# Версия: action space = 8 (6 атак по врагам pos1..pos6 + защита + ожидание)
+# Версия: action space = 27 (12 pos-действий + защита + ожидание + побег + 12 hero item actions)
 # + big-юниты: Dead dragon (3-6), Asterot (7-10), Gargoyle (9-12)
 # + Чекпоинты каждые 1,000,000 шагов
 # + Тест с логами и улучшенной визуализацией (большие карточки)
@@ -245,10 +245,32 @@ def _resolve_unit_next_level_exp(unit: Dict) -> int:
     return _to_int_or_default(NEXT_LEVEL_EXP_BY_NAME.get(unit_name, 0), default=0)
 
 
-def _is_travel_hero_unit(unit: Dict) -> bool:
-    if _resolve_unit_next_level_exp(unit) <= 0:
+def _to_bool_flag(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return int(value) != 0
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _resolve_unit_hero_flag(unit: Dict) -> bool:
+    if not isinstance(unit, dict):
         return False
-    return _to_int_or_default(unit.get("position", -1), default=-1) == 8
+    if "hero" in unit:
+        return _to_bool_flag(unit.get("hero"))
+    return _resolve_unit_next_level_exp(unit) > 0
+
+
+def _is_travel_hero_unit(unit: Dict) -> bool:
+    return _resolve_unit_hero_flag(unit)
+
+
+def _is_combat_hero_unit(unit: Optional[Dict]) -> bool:
+    if not isinstance(unit, dict):
+        return False
+    if str(unit.get("team", "") or "").lower() != "blue":
+        return False
+    return _is_travel_hero_unit(unit)
 
 
 def _resolve_unit_needaunit(unit: Dict) -> int:
@@ -484,6 +506,7 @@ _apply_team_traits(UNITS_BLUE, UNITS_RED)
 for unit in UNITS_RED + UNITS_BLUE:
     unit["Level"] = _resolve_unit_level(unit)
     unit["next_level_exp"] = _resolve_unit_next_level_exp(unit)
+    unit["hero"] = _resolve_unit_hero_flag(unit)
     unit["needaunit"] = _resolve_unit_needaunit(unit)
     unit.setdefault("defense", 0)
     unit.setdefault("waited", 0)
@@ -499,12 +522,17 @@ BLUE_POSITIONS: List[int] = list(range(7, 13))
 TARGET_POSITIONS: List[int] = (
     RED_POSITIONS + BLUE_POSITIONS
 )  # 12 действий на выбор позиции
+HERO_ITEM_TARGET_SLOTS: List[int] = list(range(1, 7))
 DEFEND_ACTION_INDEX: int = len(TARGET_POSITIONS)
 WAIT_ACTION_INDEX: int = len(TARGET_POSITIONS) + 1
 RUN_AWAY_ACTION_INDEX: int = len(TARGET_POSITIONS) + 2
+FIRST_HERO_ITEM_ACTION_START: int = len(TARGET_POSITIONS) + 3
+SECOND_HERO_ITEM_ACTION_START: int = FIRST_HERO_ITEM_ACTION_START + len(
+    HERO_ITEM_TARGET_SLOTS
+)
 DEFEND_ARMOR_BONUS: int = 50
 WAIT_INIT_DIVISOR: int = 10
-TOTAL_AGENT_ACTIONS: int = len(TARGET_POSITIONS) + 3  # 15
+TOTAL_AGENT_ACTIONS: int = SECOND_HERO_ITEM_ACTION_START + len(HERO_ITEM_TARGET_SLOTS)  # 27
 
 RED_FRONT_POSITIONS: List[int] = [1, 2, 3]
 RED_BACK_POSITIONS: List[int] = [4, 5, 6]
@@ -575,7 +603,8 @@ def _to01_bool(v) -> float:
 class BattleEnv(gym.Env):
     """
     Observation (720): 12 слотов ? 60 признаков (добавлены типы Betrezen, Uter и Uter Demon).
-    Action space: Discrete(8) — 6 атак по врагам (pos1..pos6) + защита + ожидание.
+    Action space: Discrete(27) — 12 выборов pos1..pos12 + защита + ожидание + побег
+    + hero-only действия "первый/второй предмет" по своим слотам 1..6.
     """
 
     metadata = {"render_modes": []}
@@ -602,8 +631,8 @@ class BattleEnv(gym.Env):
         self.last_battle_exp: float = 0.0
         self.last_levelups: List[str] = []
 
-        # Action space = 6 целей + защита + ожидание
-        self.action_space = spaces.Discrete(TOTAL_AGENT_ACTIONS)  # 15
+        # Action space = 12 целей + защита + ожидание + побег + 12 hero item actions
+        self.action_space = spaces.Discrete(TOTAL_AGENT_ACTIONS)  # 27
 
         # Observation space contract: each component is expected in [0, 1].
         low_unit = np.zeros(FEATURES_PER_UNIT, dtype=np.float32)
@@ -625,8 +654,83 @@ class BattleEnv(gym.Env):
         self._ismir_applied_uran: Dict[int, bool] = {}
         self.survived_inits: List[Dict] = []
         self.step_count: int = 0
+        self.equipped_hero_items: List[Optional[str]] = [None, None]
+        self.hero_item_effects: Dict[str, Dict[str, object]] = {}
 
     # ------------------ [MASKING] Маска допустимых действий ------------------
+    def _hero_item_name_for_slot(self, item_no: int) -> str:
+        slot_index = max(0, int(item_no) - 1)
+        if 0 <= slot_index < len(self.equipped_hero_items):
+            return str(self.equipped_hero_items[slot_index] or "")
+        return ""
+
+    def _hero_item_effect(self, item_name: str) -> Dict[str, object]:
+        if not item_name:
+            return {}
+        effect = self.hero_item_effects.get(str(item_name), {})
+        return dict(effect) if isinstance(effect, dict) else {}
+
+    def _hero_item_target_allowed(self, *, item_name: str, target_pos: Optional[int]) -> bool:
+        effect = self._hero_item_effect(item_name)
+        if not effect or target_pos is None:
+            return False
+        effect_kind = str(effect.get("kind", "") or "").strip().lower()
+        target_unit = self._unit_by_position(int(target_pos))
+        if not isinstance(target_unit, dict):
+            return False
+        if target_unit.get("team") != "blue":
+            return False
+        if str(target_unit.get("name", "") or "").strip().lower() == "пусто":
+            return False
+        health = float(target_unit.get("health", 0) or 0)
+        max_health = float(target_unit.get("max_health", 0) or target_unit.get("health", 0) or 0)
+        if effect_kind == "heal":
+            return max_health > 0 and health > 0 and health < max_health
+        if effect_kind == "revive":
+            return max_health > 0 and health <= 0
+        return False
+
+    def _apply_hero_item_effect(
+        self,
+        *,
+        item_name: str,
+        target_pos: Optional[int],
+    ) -> Tuple[bool, Optional[str], float]:
+        effect = self._hero_item_effect(item_name)
+        if not effect or target_pos is None:
+            return False, None, 0.0
+        target_unit = self._unit_by_position(int(target_pos))
+        if not isinstance(target_unit, dict):
+            return False, None, 0.0
+        effect_kind = str(effect.get("kind", "") or "").strip().lower()
+        effect_amount = float(effect.get("amount", 0.0) or 0.0)
+        if effect_kind == "heal":
+            current_health = float(target_unit.get("health", 0) or 0)
+            max_health = float(
+                target_unit.get("max_health", 0) or target_unit.get("health", 0) or 0
+            )
+            if max_health <= 0 or current_health <= 0 or current_health >= max_health:
+                return False, None, 0.0
+            new_health = min(max_health, current_health + effect_amount)
+            healed = max(0.0, new_health - current_health)
+            target_unit["health"] = int(round(new_health))
+            if "hp" in target_unit:
+                target_unit["hp"] = int(round(new_health))
+            return healed > 0.0, "heal", healed
+        if effect_kind == "revive":
+            current_health = float(target_unit.get("health", 0) or 0)
+            max_health = float(
+                target_unit.get("max_health", 0) or target_unit.get("health", 0) or 0
+            )
+            if max_health <= 0 or current_health > 0:
+                return False, None, 0.0
+            revive_hp = max(1.0, effect_amount)
+            target_unit["health"] = int(round(revive_hp))
+            if "hp" in target_unit:
+                target_unit["hp"] = int(round(revive_hp))
+            return True, "revive", revive_hp
+        return False, None, 0.0
+
     def compute_action_mask(self) -> np.ndarray:
         """
         Возвращает маску допустимых действий для ТЕКУЩЕГО ходящего BLUE атакера.
@@ -635,13 +739,25 @@ class BattleEnv(gym.Env):
         Для ближников пересекаем с досягаемыми целями (_warrior_allowed_targets).
         Для AoE (Mage, Dead dragon, Gumtic, Uter Demon, Tiamat, Teurg) — разрешаем любые живые цели.
         Для остальных (включая стрелков) — разрешаем любые живые цели.
+        Hero-only действия предметов доступны только на ходу героя и только по занятым
+        своим слотам 1..6.
         """
         n_targets = len(TARGET_POSITIONS)
         mask = np.ones(TOTAL_AGENT_ACTIONS, dtype=bool)  # по умолчанию всё разрешено
         mask_targets = mask[:n_targets]
+        first_item_mask = mask[
+            FIRST_HERO_ITEM_ACTION_START : FIRST_HERO_ITEM_ACTION_START
+            + len(HERO_ITEM_TARGET_SLOTS)
+        ]
+        second_item_mask = mask[
+            SECOND_HERO_ITEM_ACTION_START : SECOND_HERO_ITEM_ACTION_START
+            + len(HERO_ITEM_TARGET_SLOTS)
+        ]
         mask[DEFEND_ACTION_INDEX] = True
         mask[WAIT_ACTION_INDEX] = True
         mask[RUN_AWAY_ACTION_INDEX] = True
+        first_item_mask[:] = False
+        second_item_mask[:] = False
 
         # Если не ход BLUE или нет текущего атакера — не ограничиваем
         if self.current_blue_attacker_pos is None:
@@ -661,6 +777,20 @@ class BattleEnv(gym.Env):
             mask[DEFEND_ACTION_INDEX] = False
             mask[WAIT_ACTION_INDEX] = False
             mask[RUN_AWAY_ACTION_INDEX] = False
+
+        if _is_combat_hero_unit(attacker):
+            first_item_name = self._hero_item_name_for_slot(1)
+            second_item_name = self._hero_item_name_for_slot(2)
+            for idx, slot_no in enumerate(HERO_ITEM_TARGET_SLOTS):
+                battle_pos = BLUE_POSITIONS[slot_no - 1]
+                first_item_mask[idx] = self._hero_item_target_allowed(
+                    item_name=first_item_name,
+                    target_pos=battle_pos,
+                )
+                second_item_mask[idx] = self._hero_item_target_allowed(
+                    item_name=second_item_name,
+                    target_pos=battle_pos,
+                )
 
         def is_alive_red(pos: int) -> bool:
             u = self._unit_by_position(pos)
@@ -885,6 +1015,30 @@ class BattleEnv(gym.Env):
 
     def _unit_by_position(self, pos: int):
         return next((u for u in self.combined if u["position"] == pos), None)
+
+    def _occupied_unit_at_position(self, pos: int, team: Optional[str] = None):
+        unit = self._unit_by_position(pos)
+        if (
+            unit is not None
+            and self._alive(unit)
+            and (team is None or unit.get("team") == team)
+            and unit.get("name") != "пусто"
+        ):
+            return unit
+
+        if pos in RED_BACK_POSITIONS or pos in BLUE_BACK_POSITIONS:
+            front_pos = pos - 3
+            partner = self._unit_by_position(front_pos)
+            if (
+                partner is not None
+                and self._alive(partner)
+                and partner.get("big", False)
+                and (team is None or partner.get("team") == team)
+                and partner.get("name") != "пусто"
+            ):
+                return partner
+
+        return None
 
     def _live_positions_of(self, team: str):
         return [
@@ -2061,6 +2215,7 @@ class BattleEnv(gym.Env):
             u.setdefault("big", False)
             u.setdefault("Level", _resolve_unit_level(u))
             u.setdefault("next_level_exp", _resolve_unit_next_level_exp(u))
+            u["hero"] = _resolve_unit_hero_flag(u)
             u["needaunit"] = _resolve_unit_needaunit(u)
             u.setdefault("bonusturn", 0)
             u["defense"] = 0
@@ -3608,7 +3763,7 @@ class BattleEnv(gym.Env):
             if new_value >= req_value:
                 unit_name = u.get("name", "unknown")
                 next_level_exp = _resolve_unit_next_level_exp(u)
-                if next_level_exp > 0:
+                if _resolve_unit_hero_flag(u) and next_level_exp > 0:
                     u["Level"] = _to_int_or_default(u.get("Level", 0), default=0) + 1
                     u["exp_required"] = _to_int_or_default(req_value, default=0) + next_level_exp
                     u["exp_current"] = 0
@@ -4172,9 +4327,38 @@ class BattleEnv(gym.Env):
         is_defend_action = action_idx == DEFEND_ACTION_INDEX
         is_wait_action = action_idx == WAIT_ACTION_INDEX
         is_run_away_action = action_idx == RUN_AWAY_ACTION_INDEX
+        is_first_hero_item_action = FIRST_HERO_ITEM_ACTION_START <= action_idx < (
+            FIRST_HERO_ITEM_ACTION_START + len(HERO_ITEM_TARGET_SLOTS)
+        )
+        is_second_hero_item_action = SECOND_HERO_ITEM_ACTION_START <= action_idx < (
+            SECOND_HERO_ITEM_ACTION_START + len(HERO_ITEM_TARGET_SLOTS)
+        )
+        is_hero_item_action = is_first_hero_item_action or is_second_hero_item_action
         target_pos = None
+        hero_item_slot = None
+        hero_item_target_pos = None
+        hero_item_no = None
+        hero_item_name = ""
+        hero_item_applied = False
+        hero_item_effect_kind = None
+        hero_item_effect_value = 0.0
+        hero_item_consumed = False
         if action_idx < len(TARGET_POSITIONS):
             target_pos = TARGET_POSITIONS[action_idx]
+        elif is_first_hero_item_action:
+            hero_item_no = 1
+            hero_item_slot = HERO_ITEM_TARGET_SLOTS[
+                action_idx - FIRST_HERO_ITEM_ACTION_START
+            ]
+            hero_item_target_pos = BLUE_POSITIONS[hero_item_slot - 1]
+        elif is_second_hero_item_action:
+            hero_item_no = 2
+            hero_item_slot = HERO_ITEM_TARGET_SLOTS[
+                action_idx - SECOND_HERO_ITEM_ACTION_START
+            ]
+            hero_item_target_pos = BLUE_POSITIONS[hero_item_slot - 1]
+        if hero_item_no is not None:
+            hero_item_name = self._hero_item_name_for_slot(hero_item_no)
 
         attacker = self._unit_by_position(self.current_blue_attacker_pos)
         can_strike = (
@@ -4230,6 +4414,68 @@ class BattleEnv(gym.Env):
                     self._log(
                         f"BLUE действие: {attacker['name']}#{attacker['position']} выбирает побег (running_away=1)."
                     )
+                elif is_hero_item_action:
+                    target_unit = (
+                        self._unit_by_position(hero_item_target_pos)
+                        if hero_item_target_pos is not None
+                        else None
+                    )
+                    if _is_combat_hero_unit(attacker):
+                        (
+                            hero_item_applied,
+                            hero_item_effect_kind,
+                            hero_item_effect_value,
+                        ) = self._apply_hero_item_effect(
+                            item_name=hero_item_name,
+                            target_pos=hero_item_target_pos,
+                        )
+                        if hero_item_applied and hero_item_no is not None:
+                            slot_index = int(hero_item_no) - 1
+                            if 0 <= slot_index < len(self.equipped_hero_items):
+                                self.equipped_hero_items[slot_index] = None
+                            hero_item_consumed = True
+
+                        target_label = (
+                            f"{target_unit['name']}#{target_unit['position']}"
+                            if isinstance(target_unit, dict)
+                            else f"pos{hero_item_target_pos}"
+                        )
+                        if hero_item_applied and hero_item_effect_kind == "heal":
+                            self._log(
+                                f"BLUE действие: {attacker['name']}#{attacker['position']} "
+                                f"использует предмет {hero_item_no} '{hero_item_name}' на слот {hero_item_slot} "
+                                f"({target_label}) и лечит на {int(round(hero_item_effect_value))} HP."
+                            )
+                        elif hero_item_applied and hero_item_effect_kind == "revive":
+                            self._log(
+                                f"BLUE действие: {attacker['name']}#{attacker['position']} "
+                                f"использует предмет {hero_item_no} '{hero_item_name}' на слот {hero_item_slot} "
+                                f"({target_label}) и воскрешает цель с {int(round(hero_item_effect_value))} HP."
+                            )
+                        else:
+                            self._log(
+                                f"BLUE действие: {attacker['name']}#{attacker['position']} "
+                                f"пытается использовать предмет {hero_item_no} '{hero_item_name}' на слот {hero_item_slot} "
+                                f"(pos{hero_item_target_pos}) без эффекта."
+                            )
+                    elif False:
+                        self._log(
+                            f"BLUE действие: {attacker['name']}#{attacker['position']} "
+                            f"использует предмет {item_no} на свой слот {hero_item_slot} "
+                            f"(pos{hero_item_target_pos}, {slot_unit['name']}#{slot_unit['position']})."
+                        )
+                    elif _is_combat_hero_unit(attacker):
+                        self._log(
+                            f"BLUE действие: {attacker['name']}#{attacker['position']} "
+                            f"пытается использовать предмет {item_no} на слот {hero_item_slot} "
+                            f"(pos{hero_item_target_pos}) без эффекта."
+                        )
+                    else:
+                        self._log(
+                            f"BLUE действие: {attacker['name']}#{attacker['position']} "
+                            f"выбирает hero-only предмет {item_no} на слот {hero_item_slot} "
+                            f"без эффекта."
+                        )
                 else:
                     wolf_self_select = attacker.get(
                         "unit_type"
@@ -4417,12 +4663,28 @@ class BattleEnv(gym.Env):
                             step_shaping += self.penalty_invalid_target
                         self._check_victory_after_hit()
 
+        step_info = {
+            "battle_hero_item_action": bool(is_hero_item_action),
+            "battle_hero_item_slot": int(hero_item_no) if hero_item_no is not None else None,
+            "battle_hero_item_target_pos": (
+                int(hero_item_target_pos) if hero_item_target_pos is not None else None
+            ),
+            "battle_hero_item_name": str(hero_item_name or ""),
+            "battle_hero_item_effect_kind": (
+                str(hero_item_effect_kind) if hero_item_effect_kind else ""
+            ),
+            "battle_hero_item_effect_value": float(hero_item_effect_value or 0.0),
+            "battle_hero_item_applied": bool(hero_item_applied),
+            "battle_hero_item_consumed": bool(hero_item_consumed),
+            "equipped_hero_items": list(self.equipped_hero_items),
+        }
+
         if self.winner is None:
             if self.blue_attacks_left > 0:
                 self.blue_attacks_left -= 1
             if self.blue_attacks_left > 0:
                 reward, terminated = self.reward_step + step_shaping, False
-                return self._obs(), reward, terminated, False, {}
+                return self._obs(), reward, terminated, False, step_info
             self.current_blue_attacker_pos = None
             self._reset_powerup(attacker)
             self._advance_until_blue_turn()
@@ -4441,7 +4703,7 @@ class BattleEnv(gym.Env):
             if self.step_count >= 1000:
                 truncated = True
                 self._log("? Лимит по шагам: бой остановлен на 1000 такте.")
-        return self._obs(), reward, terminated, truncated, {}
+        return self._obs(), reward, terminated, truncated, step_info
 
     # ==================== CAMPAIGN MODE ====================
 
@@ -4479,6 +4741,7 @@ class BattleEnv(gym.Env):
             u.setdefault("big", False)
             u.setdefault("Level", _resolve_unit_level(u))
             u.setdefault("next_level_exp", _resolve_unit_next_level_exp(u))
+            u["hero"] = _resolve_unit_hero_flag(u)
             u["needaunit"] = _resolve_unit_needaunit(u)
             u.setdefault("bonusturn", 0)
             u.setdefault("original_damage", u.get("damage", 0))
