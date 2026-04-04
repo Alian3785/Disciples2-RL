@@ -221,14 +221,30 @@ def test_campaign_obs_includes_spell_learning_features():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
 
-    assert env.grid_spell_obs_size == env.grid_spell_core_obs_size + len(env.spell_keys)
+    assert env.grid_spell_obs_size == (
+        env.grid_spell_core_obs_size
+        + len(env.spell_keys)
+        + env.grid_legion_spell_used_obs_size
+        + env.grid_nearest_enemy_debuff_obs_size
+    )
 
     baseline = env._build_spell_grid_obs()
     assert baseline.shape == (env.grid_spell_obs_size,)
     assert baseline[0] == pytest.approx(0.0)  # magic tower not built
     assert baseline[1] == pytest.approx(0.0)  # turn lock off
     assert baseline[2] == pytest.approx(0.0)  # nothing learned
-    assert np.allclose(baseline[env.grid_spell_core_obs_size :], 0.0)
+    assert np.allclose(
+        baseline[
+            env.grid_spell_core_obs_size : env.grid_spell_core_obs_size + len(env.spell_keys)
+        ],
+        0.0,
+    )
+    assert np.allclose(
+        baseline[
+            env.grid_spell_core_obs_size + len(env.spell_keys) :
+        ],
+        0.0,
+    )
 
     for build_key in env.building_keys:
         building = env.active_buildings.get(build_key)
@@ -256,6 +272,119 @@ def test_campaign_obs_includes_spell_learning_features():
     )
     spell_end = spell_start + env.grid_spell_obs_size
     assert np.allclose(campaign_obs[spell_start:spell_end], updated)
+
+
+def test_campaign_obs_includes_legion_spell_used_this_turn_and_nearest_enemy_debuff_flags():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    env.grid_env.agent_pos = (3, 3)
+    env.grid_env.enemy_positions = {
+        10: (4, 3),
+        20: (8, 8),
+    }
+    env.grid_env.enemies_alive = {10: True, 20: True}
+    env.grid_env.obstacle_positions = set()
+
+    for spell_key in ("lod_d2_s005", "lod_d2_s015"):
+        env.active_spells[spell_key]["learned"] = 1
+        spell = env.active_spells[spell_key]
+        for mana_kind, amount in env._get_spell_use_costs(spell).items():
+            attr_name = env.MANA_ATTR_BY_KIND[mana_kind]
+            setattr(env, attr_name, float(getattr(env, attr_name, 0.0) or 0.0) + float(amount))
+
+    env.enemy_team_states[10] = [
+        {
+            "name": "Nearest",
+            "team": "red",
+            "position": 1,
+            "stand": "ahead",
+            "health": 100.0,
+            "hp": 100.0,
+            "max_health": 100.0,
+            "maxhp": 100.0,
+            "unit_type": "Warrior",
+            "armor": 40,
+            "damage": 60,
+            "damage_secondary": 0,
+            "initiative": 50,
+            "initiative_base": 50,
+            "accuracy": 80,
+            "accuracy_secondary": 0,
+            "immunity": [],
+            "resistance": [],
+        }
+    ]
+
+    used_start = env.grid_spell_core_obs_size + len(env.spell_keys)
+    debuff_start = used_start + env.grid_legion_spell_used_obs_size
+    legion_spell_index = {
+        str(spec.get("id", "") or ""): idx
+        for idx, spec in enumerate(env.LEGION_DAMAGE_SPELL_ACTION_SPECS)
+    }
+
+    env.step(env.grid_legion_damage_spell_action_start + legion_spell_index["lod_d2_s005"])
+    env.step(env.grid_legion_damage_spell_action_start + legion_spell_index["lod_d2_s015"])
+
+    spell_obs = env._build_spell_grid_obs()
+
+    assert spell_obs[used_start + legion_spell_index["lod_d2_s005"]] == pytest.approx(1.0)
+    assert spell_obs[used_start + legion_spell_index["lod_d2_s015"]] == pytest.approx(1.0)
+    assert spell_obs[used_start + legion_spell_index["lod_d2_s003"]] == pytest.approx(0.0)
+
+    nearest_debuff_flags = spell_obs[debuff_start : debuff_start + env.grid_nearest_enemy_debuff_obs_size]
+    assert np.allclose(nearest_debuff_flags, np.array([1.0, 1.0, 0.0, 0.0, 1.0], dtype=np.float32))
+
+
+def test_spell_obs_uses_mask_nearest_enemy_candidate_without_bfs():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    env.enemy_team_states[20] = [
+        {
+            "name": "Observed target",
+            "team": "red",
+            "position": 1,
+            "stand": "ahead",
+            "health": 100.0,
+            "hp": 100.0,
+            "max_health": 100.0,
+            "maxhp": 100.0,
+            "unit_type": "Warrior",
+            "armor": 40,
+            "damage": 60,
+            "damage_secondary": 0,
+            "initiative": 50,
+            "initiative_base": 50,
+            "accuracy": 80,
+            "accuracy_secondary": 0,
+            "immunity": [],
+            "resistance": [],
+        }
+    ]
+    env.enemy_map_spell_effects[20] = {"lod_d2_s005"}
+
+    def _unexpected_exact_nearest(*args, **kwargs):
+        raise AssertionError("spell observation must not call exact nearest-enemy BFS")
+
+    env.get_nearest_enemy_stack = _unexpected_exact_nearest
+    env._get_nearest_enemy_stack_for_mask = lambda *args, **kwargs: {
+        "enemy_id": 20,
+        "position": (8, 8),
+        "path_distance": None,
+        "fallback_distance": 5,
+        "reachable": False,
+        "is_alive": True,
+        "description": "Observed target",
+    }
+
+    used_start = env.grid_spell_core_obs_size + len(env.spell_keys)
+    debuff_start = used_start + env.grid_legion_spell_used_obs_size
+
+    spell_obs = env._build_spell_grid_obs()
+
+    nearest_debuff_flags = spell_obs[debuff_start : debuff_start + env.grid_nearest_enemy_debuff_obs_size]
+    assert np.allclose(nearest_debuff_flags, np.array([1.0, 1.0, 0.0, 0.0, 0.0], dtype=np.float32))
 
 
 def test_merchant_sell_values_remain_unchanged():

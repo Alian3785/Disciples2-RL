@@ -25,8 +25,8 @@ def _make_legions_env() -> CampaignEnv:
 
 
 def _spell_action_index(env: CampaignEnv, spell_key: str) -> int:
-    for idx, (candidate_key, _damage) in enumerate(env.LEGION_DAMAGE_SPELL_ACTION_SPECS):
-        if str(candidate_key) == str(spell_key):
+    for idx, candidate_spec in enumerate(env.LEGION_DAMAGE_SPELL_ACTION_SPECS):
+        if str(candidate_spec.get("id", "") or "") == str(spell_key):
             return env.grid_legion_damage_spell_action_start + idx
     raise AssertionError(f"spell action not found: {spell_key}")
 
@@ -49,6 +49,28 @@ def _set_spell_use_mana(
     return costs
 
 
+def _grant_spell_use_mana(
+    env: CampaignEnv,
+    spell_keys: list[str],
+    *,
+    multiplier: float = 1.0,
+) -> dict[str, float]:
+    totals = {mana_kind: 0.0 for mana_kind in env.MANA_KIND_ORDER}
+    for mana_kind in env.MANA_KIND_ORDER:
+        attr_name = env.MANA_ATTR_BY_KIND[mana_kind]
+        setattr(env, attr_name, 0.0)
+
+    for spell_key in spell_keys:
+        spell = env.active_spells[spell_key]
+        for mana_kind, amount in env._get_spell_use_costs(spell).items():
+            totals[mana_kind] = float(totals.get(mana_kind, 0.0)) + float(amount)
+
+    for mana_kind, amount in totals.items():
+        attr_name = env.MANA_ATTR_BY_KIND[mana_kind]
+        setattr(env, attr_name, float(amount) * float(multiplier))
+    return totals
+
+
 def _enemy_unit(
     *,
     position: int,
@@ -62,7 +84,9 @@ def _enemy_unit(
 ) -> dict[str, object]:
     unit = {
         "name": name,
+        "team": "red",
         "position": int(position),
+        "stand": "ahead",
         "health": float(hp),
         "hp": float(hp),
         "max_health": float(max_hp),
@@ -251,3 +275,153 @@ def test_wounded_enemy_units_regenerate_ten_percent_per_turn_but_dead_units_do_n
     assert env.enemy_team_states[10][1]["health"] == pytest.approx(100.0)
     assert env.enemy_team_states[10][2]["health"] == pytest.approx(0.0)
     assert env.enemy_team_states[20][0]["health"] == pytest.approx(40.0)
+
+
+def test_legion_debuff_spell_actions_require_legions_learned_spell_and_mana():
+    env = _make_legions_env()
+    spell_key = "lod_d2_s015"
+    action = _spell_action_index(env, spell_key)
+
+    assert bool(env.compute_action_mask()[action]) is False
+
+    env.active_spells[spell_key]["learned"] = 1
+    assert bool(env.compute_action_mask()[action]) is False
+
+    _set_spell_use_mana(env, spell_key)
+    assert bool(env.compute_action_mask()[action]) is True
+
+
+def test_legion_debuff_spells_stack_until_next_turn_and_then_expire():
+    env = _make_legions_env()
+    spell_keys = [
+        "lod_d2_s005",
+        "lod_d2_s009",
+        "lod_d2_s010",
+        "lod_d2_s015",
+        "lod_d2_s016",
+        "lod_d2_s020",
+    ]
+    for spell_key in spell_keys:
+        env.active_spells[spell_key]["learned"] = 1
+    _grant_spell_use_mana(env, spell_keys)
+    env.enemy_team_states[10] = [
+        _enemy_unit(
+            position=1,
+            hp=120.0,
+            max_hp=120.0,
+            name="Debuffed target",
+            extra_fields={
+                "armor": 65,
+                "damage": 100,
+                "damage_secondary": 20,
+                "initiative": 60,
+                "initiative_base": 60,
+                "accuracy": 80,
+                "accuracy_secondary": 40,
+            },
+        ),
+    ]
+
+    for spell_key in spell_keys:
+        _, reward, terminated, truncated, info = env.step(_spell_action_index(env, spell_key))
+        assert terminated is False
+        assert truncated is False
+        assert reward == pytest.approx(env.reward_spell_cast)
+        assert info["spell_cast_executed"] is True
+        assert info["spell_cast_action"] is True
+
+    target = env.enemy_team_states[10][0]
+    assert target["armor"] == 15
+    assert target["damage"] == 85
+    assert target["damage_secondary"] == 17
+    assert target["initiative_base"] == 34
+    assert target["initiative"] == 34
+    assert target["accuracy"] == 40
+    assert target["accuracy_secondary"] == 20
+
+    env._advance_turns(1)
+
+    target = env.enemy_team_states[10][0]
+    assert target["armor"] == 65
+    assert target["damage"] == 100
+    assert target["damage_secondary"] == 20
+    assert target["initiative_base"] == 60
+    assert target["initiative"] == 60
+    assert target["accuracy"] == 80
+    assert target["accuracy_secondary"] == 40
+
+
+def test_legion_debuff_spell_carries_into_battle_for_nearest_enemy_stack():
+    env = _make_legions_env()
+    spell_key = "lod_d2_s015"
+    env.active_spells[spell_key]["learned"] = 1
+    _set_spell_use_mana(env, spell_key)
+    env.enemy_team_states[10] = [
+        _enemy_unit(
+            position=1,
+            hp=100.0,
+            max_hp=100.0,
+            name="Acc target",
+            extra_fields={
+                "armor": 10,
+                "damage": 50,
+                "damage_secondary": 0,
+                "initiative": 40,
+                "initiative_base": 40,
+                "accuracy": 80,
+                "accuracy_secondary": 60,
+            },
+        ),
+    ]
+
+    _, _, _, _, info = env.step(_spell_action_index(env, spell_key))
+
+    assert info["spell_cast_executed"] is True
+    assert info["spell_debuff_type"] == "accuracy"
+    assert info["spell_units_affected"] == 1
+    assert info["spell_effect_accuracy_multiplier"] == pytest.approx(0.75)
+
+    env._init_battle(10)
+    red_units = [u for u in env.battle_env.combined if u.get("team") == "red"]
+
+    assert len(red_units) == 1
+    assert red_units[0]["accuracy"] == 60
+    assert red_units[0]["accuracy_secondary"] == 45
+
+
+def test_legion_map_spell_skips_ruins_and_city_garrisons_when_choosing_target():
+    env = _make_legions_env()
+    env.grid_env.enemy_positions = {
+        70: (4, 3),  # ruins
+        22: (5, 3),  # city stack
+        10: (6, 3),  # valid field target
+    }
+    env.grid_env.enemies_alive = {70: True, 22: True, 10: True}
+    env.grid_env.obstacle_positions = set()
+
+    spell_key = "lod_d2_s003"
+    env.active_spells[spell_key]["learned"] = 1
+    _set_spell_use_mana(env, spell_key)
+    env.enemy_team_states[10] = [
+        _enemy_unit(position=1, hp=100.0, max_hp=100.0, name="Field target"),
+    ]
+    env.enemy_team_states[22] = [
+        _enemy_unit(position=1, hp=100.0, max_hp=100.0, name="City target"),
+    ]
+    env.enemy_team_states[70] = [
+        _enemy_unit(position=1, hp=100.0, max_hp=100.0, name="Ruin target"),
+    ]
+
+    action = _spell_action_index(env, spell_key)
+    assert bool(env.compute_action_mask()[action]) is True
+
+    _, reward, terminated, truncated, info = env.step(action)
+
+    assert terminated is False
+    assert truncated is False
+    assert reward == pytest.approx(env.reward_spell_cast)
+    assert info["spell_cast_executed"] is True
+    assert info["target_enemy_id"] == 10
+    assert env.enemy_team_states[10][0]["health"] == pytest.approx(85.0)
+    assert env.enemy_team_states[22][0]["health"] == pytest.approx(100.0)
+    assert env.enemy_team_states[70][0]["health"] == pytest.approx(100.0)
