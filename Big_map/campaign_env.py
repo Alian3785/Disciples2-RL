@@ -30,6 +30,8 @@ from battle_env import BattleEnv, UNITS_BLUE, FEATURES_PER_UNIT
 from enemy_configs import ENEMY_CONFIGS, ENEMY_DESCRIPTIONS
 from grid import (
     CAPITAL_HEAL_TILE_ARMOR_BONUS,
+    CAPITAL_INTERNAL_STACK_OVERRIDES,
+    RUIN_STACK_OVERRIDES,
     are_targets_reachable,
     DEFAULT_GRID_SIZE,
     DEFAULT_HERO_GRID_POSITION,
@@ -43,6 +45,8 @@ from grid import (
     resolve_heal_tiles,
     scale_static_tiles,
     scale_enemy_positions,
+    VILLAGE_INTERNAL_GARRISON_OVERRIDES,
+    VILLAGE_LINKED_STACK_OVERRIDES,
 )
 from grid_world_env import GridWorldEnv
 from data_dicts_compact_lines import DATA as UNIT_DATA, map_unit_to_battle
@@ -449,14 +453,22 @@ class CampaignEnv(gym.Env):
         HEALING_OINTMENT_ITEM_NAME,
         BONUS_REVIVE_ITEM_NAME,
     )
+    # Map-targeted Legion spells cast on the nearest enemy stack.
+    # Keep existing damage-spell order stable for trained policies, then append debuffs.
     LEGION_DAMAGE_SPELL_ACTION_SPECS = (
-        ("lod_d2_s003", 15.0),
-        ("lod_d2_s004", 15.0),
-        ("lod_d2_s008", 30.0),
-        ("lod_d2_s014", 50.0),
-        ("lod_d2_s017", 75.0),
-        ("lod_d2_s018", 75.0),
-        ("lod_d2_s019", 60.0),
+        {"id": "lod_d2_s003", "kind": "damage", "damage": 15.0, "damage_type": "Fire"},
+        {"id": "lod_d2_s004", "kind": "damage", "damage": 15.0, "damage_type": "Mind"},
+        {"id": "lod_d2_s008", "kind": "damage", "damage": 30.0, "damage_type": "Fire"},
+        {"id": "lod_d2_s014", "kind": "damage", "damage": 50.0, "damage_type": "Mind"},
+        {"id": "lod_d2_s017", "kind": "damage", "damage": 75.0, "damage_type": "Fire"},
+        {"id": "lod_d2_s018", "kind": "damage", "damage": 75.0, "damage_type": "Earth"},
+        {"id": "lod_d2_s019", "kind": "damage", "damage": 60.0, "damage_type": "Fire"},
+        {"id": "lod_d2_s005", "kind": "debuff", "debuff_type": "armor", "armor_delta": -50},
+        {"id": "lod_d2_s009", "kind": "debuff", "debuff_type": "damage", "damage_multiplier": 0.85},
+        {"id": "lod_d2_s010", "kind": "debuff", "debuff_type": "initiative", "initiative_multiplier": 0.85},
+        {"id": "lod_d2_s015", "kind": "debuff", "debuff_type": "accuracy", "accuracy_multiplier": 0.75},
+        {"id": "lod_d2_s016", "kind": "debuff", "debuff_type": "accuracy", "accuracy_multiplier": 0.67},
+        {"id": "lod_d2_s020", "kind": "debuff", "debuff_type": "initiative", "initiative_multiplier": 0.67},
     )
     ENERGY_ELIXIR_ITEM_NAME = "Эликсир энергии"
     FIRE_WARD_ITEM_NAME = "Эликсир защиты от магии Огня"
@@ -815,6 +827,7 @@ class CampaignEnv(gym.Env):
         self.equipped_hero_items: List[Optional[str]] = [None] * int(self.BATTLE_EQUIP_SLOTS)
         self.battle_item_equip_used_this_turn: bool = False
         self.enemy_team_states: Dict[int, List[Dict]] = self._create_initial_enemy_team_states()
+        self.enemy_map_spell_effects: Dict[int, set[str]] = {}
         self.damage_spell_ids_used_this_turn: set[str] = set()
         self.extra_heal_bottles: int = 0
         self.extra_healing_bottles: int = 0
@@ -895,6 +908,7 @@ class CampaignEnv(gym.Env):
         self.equipped_hero_items = [None] * int(self.BATTLE_EQUIP_SLOTS)
         self.battle_item_equip_used_this_turn = False
         self.enemy_team_states = self._create_initial_enemy_team_states()
+        self.enemy_map_spell_effects = {}
         self.damage_spell_ids_used_this_turn = set()
         self.extra_heal_bottles = 0
         self.extra_healing_bottles = 0
@@ -2714,25 +2728,34 @@ class CampaignEnv(gym.Env):
 
     @classmethod
     def _legion_damage_spell_ids(cls) -> Tuple[str, ...]:
-        return tuple(str(spell_id) for spell_id, _ in cls.LEGION_DAMAGE_SPELL_ACTION_SPECS)
+        return tuple(
+            str(spec.get("id", "") or "")
+            for spec in cls.LEGION_DAMAGE_SPELL_ACTION_SPECS
+            if str(spec.get("id", "") or "")
+        )
+
+    @classmethod
+    def _legion_damage_spell_specs_by_id(cls) -> Dict[str, Dict[str, object]]:
+        return {
+            str(spec.get("id", "") or ""): dict(spec)
+            for spec in cls.LEGION_DAMAGE_SPELL_ACTION_SPECS
+            if str(spec.get("id", "") or "")
+        }
 
     @classmethod
     def _legion_damage_spell_damage_by_id(cls) -> Dict[str, float]:
         return {
-            str(spell_id): float(damage)
-            for spell_id, damage in cls.LEGION_DAMAGE_SPELL_ACTION_SPECS
+            str(spec.get("id", "") or ""): float(spec.get("damage", 0.0) or 0.0)
+            for spec in cls.LEGION_DAMAGE_SPELL_ACTION_SPECS
+            if str(spec.get("kind", "") or "") == "damage"
         }
 
-    @staticmethod
-    def _legion_damage_spell_element_by_id() -> Dict[str, str]:
+    @classmethod
+    def _legion_damage_spell_element_by_id(cls) -> Dict[str, str]:
         return {
-            "lod_d2_s003": "Fire",
-            "lod_d2_s004": "Mind",
-            "lod_d2_s008": "Fire",
-            "lod_d2_s014": "Mind",
-            "lod_d2_s017": "Fire",
-            "lod_d2_s018": "Earth",
-            "lod_d2_s019": "Fire",
+            str(spec.get("id", "") or ""): str(spec.get("damage_type", "") or "")
+            for spec in cls.LEGION_DAMAGE_SPELL_ACTION_SPECS
+            if str(spec.get("kind", "") or "") == "damage"
         }
 
     def _is_legions_capital(self) -> bool:
@@ -2841,13 +2864,37 @@ class CampaignEnv(gym.Env):
         if not self._is_spell_learned(normalized_spell_key):
             return False
         if nearest_enemy is None:
-            nearest_enemy = self.get_nearest_enemy_stack()
+            nearest_enemy = self.get_nearest_enemy_stack(spell_targetable_only=True)
         if nearest_enemy is None:
             return False
         target_enemy_id = nearest_enemy.get("enemy_id")
         if not self._enemy_team_has_living_units(target_enemy_id):
             return False
         return self._has_mana_for_costs(self._get_spell_use_costs(spell))
+
+    @classmethod
+    def _spell_untargetable_enemy_ids(cls) -> frozenset[int]:
+        blocked_ids: set[int] = set()
+        for override_group in (
+            VILLAGE_LINKED_STACK_OVERRIDES,
+            VILLAGE_INTERNAL_GARRISON_OVERRIDES,
+            CAPITAL_INTERNAL_STACK_OVERRIDES,
+            RUIN_STACK_OVERRIDES,
+        ):
+            for entry in override_group:
+                try:
+                    blocked_ids.add(int(entry.get("enemy_id", -1)))
+                except (TypeError, ValueError, AttributeError):
+                    continue
+        return frozenset(enemy_id for enemy_id in blocked_ids if enemy_id >= 0)
+
+    @classmethod
+    def _is_enemy_stack_spell_targetable(cls, enemy_id: Optional[int]) -> bool:
+        try:
+            normalized_enemy_id = int(enemy_id)
+        except (TypeError, ValueError):
+            return False
+        return normalized_enemy_id not in cls._spell_untargetable_enemy_ids()
 
     def _enemy_team_has_living_units(self, enemy_id: Optional[int]) -> bool:
         for unit in self._get_enemy_team_state(enemy_id):
@@ -2858,6 +2905,242 @@ class CampaignEnv(gym.Env):
             if max_hp > 0.0 and hp > 0.0:
                 return True
         return False
+
+    @staticmethod
+    def _normalize_accuracy_value(value: object) -> int:
+        try:
+            return max(0, min(100, int(round(float(value or 0)))))
+        except (TypeError, ValueError):
+            return 0
+
+    @staticmethod
+    def _enemy_map_spell_base_field(stat_name: str) -> str:
+        return f"campaign_map_spell_base_{str(stat_name or '').strip()}"
+
+    def _capture_enemy_stack_spell_bases(self, enemy_id: Optional[int]) -> None:
+        for unit in self._get_enemy_team_state(enemy_id):
+            if self._is_empty_enemy_unit(unit):
+                continue
+            base_values = {
+                "armor": self._normalize_armor_value(unit.get("armor", 0)),
+                "damage": self._normalize_damage_value(unit.get("damage", 0)),
+                "damage_secondary": self._normalize_damage_value(unit.get("damage_secondary", 0)),
+                "initiative_base": self._normalize_damage_value(
+                    unit.get("initiative_base", unit.get("initiative", 0))
+                ),
+                "accuracy": self._normalize_accuracy_value(unit.get("accuracy", 0)),
+                "accuracy_secondary": self._normalize_accuracy_value(
+                    unit.get("accuracy_secondary", 0)
+                ),
+            }
+            for stat_name, base_value in base_values.items():
+                base_field = self._enemy_map_spell_base_field(stat_name)
+                if base_field not in unit:
+                    unit[base_field] = base_value
+
+    def _restore_enemy_stack_spell_bases(self, enemy_id: Optional[int]) -> None:
+        for unit in self._get_enemy_team_state(enemy_id):
+            if self._is_empty_enemy_unit(unit):
+                continue
+
+            base_armor = self._normalize_armor_value(
+                unit.pop(self._enemy_map_spell_base_field("armor"), unit.get("armor", 0))
+            )
+            base_damage = self._normalize_damage_value(
+                unit.pop(self._enemy_map_spell_base_field("damage"), unit.get("damage", 0))
+            )
+            base_damage_secondary = self._normalize_damage_value(
+                unit.pop(
+                    self._enemy_map_spell_base_field("damage_secondary"),
+                    unit.get("damage_secondary", 0),
+                )
+            )
+            base_initiative = self._normalize_damage_value(
+                unit.pop(
+                    self._enemy_map_spell_base_field("initiative_base"),
+                    unit.get("initiative_base", unit.get("initiative", 0)),
+                )
+            )
+            base_accuracy = self._normalize_accuracy_value(
+                unit.pop(self._enemy_map_spell_base_field("accuracy"), unit.get("accuracy", 0))
+            )
+            base_accuracy_secondary = self._normalize_accuracy_value(
+                unit.pop(
+                    self._enemy_map_spell_base_field("accuracy_secondary"),
+                    unit.get("accuracy_secondary", 0),
+                )
+            )
+
+            unit["armor"] = base_armor
+            unit["damage"] = base_damage
+            unit["damage_secondary"] = base_damage_secondary
+            unit["initiative_base"] = base_initiative
+            unit["accuracy"] = base_accuracy
+            unit["accuracy_secondary"] = base_accuracy_secondary
+
+            current_hp = float(unit.get("health", 0) or unit.get("hp", 0) or 0.0)
+            max_hp = float(unit.get("max_health", 0) or unit.get("maxhp", 0) or 0.0)
+            unit["initiative"] = base_initiative if max_hp > 0.0 and current_hp > 0.0 else 0
+
+    def _enemy_stack_spell_effect_summary(self, enemy_id: Optional[int]) -> Dict[str, object]:
+        try:
+            normalized_enemy_id = int(enemy_id)
+        except (TypeError, ValueError):
+            normalized_enemy_id = -1
+
+        active_spell_ids = sorted(
+            str(spell_id)
+            for spell_id in self.enemy_map_spell_effects.get(normalized_enemy_id, set())
+            if str(spell_id)
+        )
+        specs_by_id = self._legion_damage_spell_specs_by_id()
+
+        armor_delta = 0
+        damage_multiplier = 1.0
+        initiative_multiplier = 1.0
+        accuracy_multiplier = 1.0
+        debuff_types: List[str] = []
+
+        for spell_id in active_spell_ids:
+            spec = specs_by_id.get(str(spell_id), {})
+            if str(spec.get("kind", "") or "") != "debuff":
+                continue
+            debuff_type = str(spec.get("debuff_type", "") or "").strip()
+            if debuff_type:
+                debuff_types.append(debuff_type)
+            armor_delta += int(spec.get("armor_delta", 0) or 0)
+            damage_multiplier *= float(spec.get("damage_multiplier", 1.0) or 1.0)
+            initiative_multiplier *= float(spec.get("initiative_multiplier", 1.0) or 1.0)
+            accuracy_multiplier *= float(spec.get("accuracy_multiplier", 1.0) or 1.0)
+
+        return {
+            "active_spell_ids": active_spell_ids,
+            "debuff_types": sorted(set(debuff_types)),
+            "armor_delta": int(armor_delta),
+            "damage_multiplier": float(damage_multiplier),
+            "initiative_multiplier": float(initiative_multiplier),
+            "accuracy_multiplier": float(accuracy_multiplier),
+        }
+
+    def _recompute_enemy_stack_spell_effects(self, enemy_id: Optional[int]) -> int:
+        try:
+            normalized_enemy_id = int(enemy_id)
+        except (TypeError, ValueError):
+            return 0
+
+        active_spell_ids = {
+            str(spell_id)
+            for spell_id in self.enemy_map_spell_effects.get(normalized_enemy_id, set())
+            if str(spell_id)
+        }
+        if not active_spell_ids:
+            self._restore_enemy_stack_spell_bases(normalized_enemy_id)
+            return 0
+
+        self._capture_enemy_stack_spell_bases(normalized_enemy_id)
+        summary = self._enemy_stack_spell_effect_summary(normalized_enemy_id)
+
+        affected_units = 0
+        for unit in self._get_enemy_team_state(normalized_enemy_id):
+            if self._is_empty_enemy_unit(unit):
+                continue
+
+            base_armor = self._normalize_armor_value(
+                unit.get(self._enemy_map_spell_base_field("armor"), unit.get("armor", 0))
+            )
+            base_damage = self._normalize_damage_value(
+                unit.get(self._enemy_map_spell_base_field("damage"), unit.get("damage", 0))
+            )
+            base_damage_secondary = self._normalize_damage_value(
+                unit.get(
+                    self._enemy_map_spell_base_field("damage_secondary"),
+                    unit.get("damage_secondary", 0),
+                )
+            )
+            base_initiative = self._normalize_damage_value(
+                unit.get(
+                    self._enemy_map_spell_base_field("initiative_base"),
+                    unit.get("initiative_base", unit.get("initiative", 0)),
+                )
+            )
+            base_accuracy = self._normalize_accuracy_value(
+                unit.get(self._enemy_map_spell_base_field("accuracy"), unit.get("accuracy", 0))
+            )
+            base_accuracy_secondary = self._normalize_accuracy_value(
+                unit.get(
+                    self._enemy_map_spell_base_field("accuracy_secondary"),
+                    unit.get("accuracy_secondary", 0),
+                )
+            )
+
+            unit["armor"] = self._normalize_armor_value(
+                float(base_armor) + float(summary["armor_delta"])
+            )
+            unit["damage"] = self._normalize_damage_value(
+                float(base_damage) * float(summary["damage_multiplier"])
+            )
+            unit["damage_secondary"] = self._normalize_damage_value(
+                float(base_damage_secondary) * float(summary["damage_multiplier"])
+            )
+
+            new_initiative_base = self._normalize_damage_value(
+                float(base_initiative) * float(summary["initiative_multiplier"])
+            )
+            unit["initiative_base"] = int(new_initiative_base)
+            unit["accuracy"] = self._normalize_accuracy_value(
+                float(base_accuracy) * float(summary["accuracy_multiplier"])
+            )
+            unit["accuracy_secondary"] = self._normalize_accuracy_value(
+                float(base_accuracy_secondary) * float(summary["accuracy_multiplier"])
+            )
+
+            current_hp = float(unit.get("health", 0) or unit.get("hp", 0) or 0.0)
+            max_hp = float(unit.get("max_health", 0) or unit.get("maxhp", 0) or 0.0)
+            is_alive = max_hp > 0.0 and current_hp > 0.0
+            unit["initiative"] = int(new_initiative_base) if is_alive else 0
+            if is_alive:
+                affected_units += 1
+
+        return int(affected_units)
+
+    def _apply_debuff_to_enemy_stack(
+        self,
+        enemy_id: Optional[int],
+        spell_key: str,
+    ) -> Tuple[int, Dict[str, object]]:
+        try:
+            normalized_enemy_id = int(enemy_id)
+        except (TypeError, ValueError):
+            return 0, self._enemy_stack_spell_effect_summary(enemy_id)
+
+        active_spell_ids = self.enemy_map_spell_effects.setdefault(normalized_enemy_id, set())
+        active_spell_ids.add(str(spell_key))
+        affected_units = self._recompute_enemy_stack_spell_effects(normalized_enemy_id)
+        return int(affected_units), self._enemy_stack_spell_effect_summary(normalized_enemy_id)
+
+    def _clear_all_enemy_map_spell_effects(self) -> int:
+        expired_stacks = 0
+        for enemy_id, active_spell_ids in list(self.enemy_map_spell_effects.items()):
+            if not active_spell_ids:
+                continue
+            self._restore_enemy_stack_spell_bases(enemy_id)
+            expired_stacks += 1
+        self.enemy_map_spell_effects = {}
+        if expired_stacks > 0:
+            self._log(
+                f"Истекли временные дебаффы заклинаний Легионов на {expired_stacks} вражеских отрядах."
+            )
+        return int(expired_stacks)
+
+    def _clear_enemy_map_spell_effects_for_enemy(self, enemy_id: Optional[int]) -> None:
+        try:
+            normalized_enemy_id = int(enemy_id)
+        except (TypeError, ValueError):
+            return
+        if normalized_enemy_id not in self.enemy_map_spell_effects:
+            return
+        self.enemy_map_spell_effects.pop(normalized_enemy_id, None)
+        self._restore_enemy_stack_spell_bases(normalized_enemy_id)
 
     @classmethod
     def _unit_blocks_spell_damage(cls, unit: Dict, damage_type: Optional[str]) -> bool:
@@ -3239,10 +3522,26 @@ class CampaignEnv(gym.Env):
         spell_damage = 0.0
         spell_damage_type = None
         spell = None
+        spell_spec: Dict[str, object] = {}
+        spell_kind = ""
+        spell_debuff_type = None
+        spell_effect_summary: Dict[str, object] = {
+            "active_spell_ids": [],
+            "debuff_types": [],
+            "armor_delta": 0,
+            "damage_multiplier": 1.0,
+            "initiative_multiplier": 1.0,
+            "accuracy_multiplier": 1.0,
+        }
+        spell_units_affected = 0
         if 0 <= idx < len(self.LEGION_DAMAGE_SPELL_ACTION_SPECS):
-            spell_key, spell_damage = self.LEGION_DAMAGE_SPELL_ACTION_SPECS[idx]
+            spell_spec = dict(self.LEGION_DAMAGE_SPELL_ACTION_SPECS[idx])
+            spell_key = str(spell_spec.get("id", "") or "")
             spell = self.active_spells.get(str(spell_key))
-            spell_damage_type = self._legion_damage_spell_element_by_id().get(str(spell_key))
+            spell_kind = str(spell_spec.get("kind", "") or "")
+            spell_damage = float(spell_spec.get("damage", 0.0) or 0.0)
+            spell_damage_type = str(spell_spec.get("damage_type", "") or "") or None
+            spell_debuff_type = str(spell_spec.get("debuff_type", "") or "") or None
 
         if isinstance(spell, dict):
             spell_description = str(spell.get("description", "") or "").strip()
@@ -3256,7 +3555,7 @@ class CampaignEnv(gym.Env):
         spell_known = bool(spell_key) and self._is_spell_learned(str(spell_key))
         spell_used_this_turn = bool(spell_key) and str(spell_key) in self.damage_spell_ids_used_this_turn
         insufficient_mana = not self._has_mana_for_costs(mana_costs) if mana_costs else True
-        nearest_enemy = self.get_nearest_enemy_stack()
+        nearest_enemy = self.get_nearest_enemy_stack(spell_targetable_only=True)
         target_enemy_id = None if nearest_enemy is None else int(nearest_enemy.get("enemy_id", -1))
         target_position = None if nearest_enemy is None else tuple(nearest_enemy.get("position", ()))
         target_reachable = bool(nearest_enemy.get("reachable", False)) if nearest_enemy else False
@@ -3292,20 +3591,37 @@ class CampaignEnv(gym.Env):
             spell_cast_executed = True
             spell_cast_reward = float(self.reward_spell_cast)
             reward += spell_cast_reward
-            actual_damage, units_hit, defeated_units, blocked_units = self._apply_damage_to_enemy_stack(
-                target_enemy_id,
-                spell_damage,
-                spell_damage_type,
-            )
-            spell_cast_applied = units_hit > 0
+            if spell_kind == "damage":
+                actual_damage, units_hit, defeated_units, blocked_units = self._apply_damage_to_enemy_stack(
+                    target_enemy_id,
+                    spell_damage,
+                    spell_damage_type,
+                )
+                spell_cast_applied = units_hit > 0
+                spell_units_affected = int(units_hit)
+            elif spell_kind == "debuff":
+                spell_units_affected, spell_effect_summary = self._apply_debuff_to_enemy_stack(
+                    target_enemy_id,
+                    str(spell_key),
+                )
+                spell_cast_applied = spell_units_affected > 0
+            else:
+                spell_cast_applied = False
 
             if spell_description:
-                self._log(
-                    f'Применено заклинание "{spell_description}" по ближайшему вражескому отряду '
-                    f"{target_enemy_id}: {actual_damage:g} урона суммарно, "
-                    f"задето {units_hit} юнитов, заблокировано {blocked_units}, "
-                    f"добито {defeated_units}."
-                )
+                if spell_kind == "damage":
+                    self._log(
+                        f'Применено заклинание "{spell_description}" по ближайшему вражескому отряду '
+                        f"{target_enemy_id}: {actual_damage:g} урона суммарно, "
+                        f"задето {units_hit} юнитов, заблокировано {blocked_units}, "
+                        f"добито {defeated_units}."
+                    )
+                elif spell_kind == "debuff":
+                    self._log(
+                        f'Применено заклинание "{spell_description}" по ближайшему вражескому отряду '
+                        f"{target_enemy_id}: дебафф '{spell_debuff_type or 'unknown'}' на "
+                        f"{spell_units_affected} живых юнитах до следующего игрового хода."
+                    )
 
             if target_enemy_id is not None and not self._enemy_team_has_living_units(target_enemy_id):
                 spell_enemy_defeated = True
@@ -3317,6 +3633,7 @@ class CampaignEnv(gym.Env):
                 )
                 reward += enemy_reward
                 self.grid_env.mark_enemy_defeated(target_enemy_id)
+                self._clear_enemy_map_spell_effects_for_enemy(target_enemy_id)
                 self._log(f"=== ВРАГ {target_enemy_id} УНИЧТОЖЕН ЗАКЛИНАНИЕМ НА КАРТЕ ===")
 
                 objective_cities_captured_before = len(self.captured_objective_cities)
@@ -3347,8 +3664,10 @@ class CampaignEnv(gym.Env):
             "spell_key": spell_key,
             "spell_description": spell_description,
             "spell_level": spell_level,
+            "spell_kind": spell_kind,
             "spell_damage": float(spell_damage),
             "spell_damage_type": spell_damage_type,
+            "spell_debuff_type": spell_debuff_type,
             "spell_cast_applied": bool(spell_cast_applied),
             "spell_cast_executed": bool(spell_cast_executed),
             "spell_cast_reward": float(spell_cast_reward),
@@ -3365,6 +3684,19 @@ class CampaignEnv(gym.Env):
             "spell_damage_units_hit": int(units_hit),
             "spell_damage_units_defeated": int(defeated_units),
             "spell_damage_units_blocked": int(blocked_units),
+            "spell_units_affected": int(spell_units_affected),
+            "spell_effect_active_ids": list(spell_effect_summary.get("active_spell_ids", [])),
+            "spell_effect_types": list(spell_effect_summary.get("debuff_types", [])),
+            "spell_effect_armor_delta": int(spell_effect_summary.get("armor_delta", 0) or 0),
+            "spell_effect_damage_multiplier": float(
+                spell_effect_summary.get("damage_multiplier", 1.0) or 1.0
+            ),
+            "spell_effect_initiative_multiplier": float(
+                spell_effect_summary.get("initiative_multiplier", 1.0) or 1.0
+            ),
+            "spell_effect_accuracy_multiplier": float(
+                spell_effect_summary.get("accuracy_multiplier", 1.0) or 1.0
+            ),
             "spell_enemy_defeated": bool(spell_enemy_defeated),
             "enemy_defeat_reward": float(enemy_reward),
             "enemy_defeat_reward_base": float(self.reward_defeat_enemy) if spell_enemy_defeated else 0.0,
@@ -4418,6 +4750,7 @@ class CampaignEnv(gym.Env):
                 # Победа: помечаем врага побеждённым
                 self._log(f"=== ПОБЕДА В БОЮ ПРОТИВ ВРАГА {self.current_enemy_id}! ===")
                 self.grid_env.mark_enemy_defeated(self.current_enemy_id)
+                self._clear_enemy_map_spell_effects_for_enemy(self.current_enemy_id)
 
                 # Восстанавливаем и воскрешаем всех юнитов BLUE после победы
                 if self.persist_blue_hp:
@@ -5612,6 +5945,7 @@ class CampaignEnv(gym.Env):
         for _ in range(int(delta_turns)):
             self.turns += 1
             self._refresh_faction_territories()
+            self._clear_all_enemy_map_spell_effects()
             total_gold_income += self._legions_gold_income_per_turn()
             self._apply_mana_income_for_turn()
             self._heal_wounded_enemy_teams_for_turn()
@@ -6171,9 +6505,24 @@ class CampaignEnv(gym.Env):
         )
         self.grid_spell_core_obs_size = 3
         self.grid_spell_features_per_spell = 1
+        self.grid_legion_spell_used_features_per_spell = 1
+        self.grid_legion_spell_used_obs_size = (
+            len(self.LEGION_DAMAGE_SPELL_ACTION_SPECS)
+            * self.grid_legion_spell_used_features_per_spell
+        )
+        self.grid_nearest_enemy_debuff_flag_names = (
+            "any",
+            "armor",
+            "damage",
+            "initiative",
+            "accuracy",
+        )
+        self.grid_nearest_enemy_debuff_obs_size = len(self.grid_nearest_enemy_debuff_flag_names)
         self.grid_spell_obs_size = (
             self.grid_spell_core_obs_size
             + len(self.spell_keys) * self.grid_spell_features_per_spell
+            + self.grid_legion_spell_used_obs_size
+            + self.grid_nearest_enemy_debuff_obs_size
         )
 
         self.grid_chest_positions = tuple(sorted(tuple(pos) for pos in self._static_chests.keys()))
@@ -6534,6 +6883,29 @@ class CampaignEnv(gym.Env):
             except (TypeError, ValueError):
                 learned_v = 0.0
             spell_obs.append(learned_v)
+
+        for spell_spec in self.LEGION_DAMAGE_SPELL_ACTION_SPECS:
+            spell_key = str(spell_spec.get("id", "") or "")
+            spell_obs.append(1.0 if spell_key in self.damage_spell_ids_used_this_turn else 0.0)
+
+        nearest_enemy = self._get_nearest_enemy_stack_for_mask(spell_targetable_only=True)
+        nearest_enemy_summary = self._enemy_stack_spell_effect_summary(
+            None if nearest_enemy is None else nearest_enemy.get("enemy_id")
+        )
+        nearest_enemy_effect_types = set(
+            str(effect_type)
+            for effect_type in nearest_enemy_summary.get("debuff_types", [])
+            if str(effect_type)
+        )
+        spell_obs.extend(
+            [
+                1.0 if nearest_enemy_effect_types else 0.0,
+                1.0 if "armor" in nearest_enemy_effect_types else 0.0,
+                1.0 if "damage" in nearest_enemy_effect_types else 0.0,
+                1.0 if "initiative" in nearest_enemy_effect_types else 0.0,
+                1.0 if "accuracy" in nearest_enemy_effect_types else 0.0,
+            ]
+        )
         return np.array(spell_obs, dtype=np.float32)
 
     def _build_chest_grid_obs(self) -> np.ndarray:
@@ -6841,8 +7213,11 @@ class CampaignEnv(gym.Env):
                     1,
                     item_name,
                 )
-            nearest_enemy = self._get_nearest_enemy_stack_for_mask()
-            for idx, (spell_key, _spell_damage) in enumerate(self.LEGION_DAMAGE_SPELL_ACTION_SPECS):
+            nearest_enemy = self._get_nearest_enemy_stack_for_mask(
+                spell_targetable_only=True
+            )
+            for idx, spell_spec in enumerate(self.LEGION_DAMAGE_SPELL_ACTION_SPECS):
+                spell_key = str(spell_spec.get("id", "") or "")
                 mask[self.grid_legion_damage_spell_action_start + idx] = (
                     self._can_cast_legion_damage_spell(
                         spell_key,
@@ -6976,6 +7351,7 @@ class CampaignEnv(gym.Env):
         from_pos: Optional[Tuple[int, int]] = None,
         *,
         only_alive: bool = True,
+        spell_targetable_only: bool = False,
     ) -> Optional[Dict[str, object]]:
         """
         Возвращает один ближайший вражеский отряд на карте.
@@ -7014,6 +7390,8 @@ class CampaignEnv(gym.Env):
             enemy_id = int(raw_enemy_id)
             if only_alive and not bool(enemies_alive.get(enemy_id, False)):
                 continue
+            if spell_targetable_only and not self._is_enemy_stack_spell_targetable(enemy_id):
+                continue
 
             ex = int(raw_pos[0])
             ey = int(raw_pos[1])
@@ -7049,14 +7427,15 @@ class CampaignEnv(gym.Env):
         from_pos: Optional[Tuple[int, int]] = None,
         *,
         only_alive: bool = True,
+        spell_targetable_only: bool = False,
     ) -> Optional[Dict[str, object]]:
         """
-        Дешёвый кандидат ближайшего врага для action mask.
+        Дешёвый кандидат ближайшего врага для лёгких grid-проверок.
 
         В отличие от get_nearest_enemy_stack() не строит BFS по карте, а использует
         только геометрическую близость (Chebyshev) и состояние живых отрядов.
-        Этого достаточно для маски spell-action: сама цель при реальном касте всё
-        равно выбирается точным методом в _step_cast_legion_damage_spell().
+        Этого достаточно для action mask и spell-observation: сама цель при реальном
+        касте всё равно выбирается точным методом в _step_cast_legion_damage_spell().
         """
         enemy_positions = getattr(self.grid_env, "enemy_positions", {}) or {}
         enemies_alive = getattr(self.grid_env, "enemies_alive", {}) or {}
@@ -7071,6 +7450,8 @@ class CampaignEnv(gym.Env):
         for raw_enemy_id, raw_pos in enemy_positions.items():
             enemy_id = int(raw_enemy_id)
             if only_alive and not bool(enemies_alive.get(enemy_id, False)):
+                continue
+            if spell_targetable_only and not self._is_enemy_stack_spell_targetable(enemy_id):
                 continue
             if not self._enemy_team_has_living_units(enemy_id):
                 continue

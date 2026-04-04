@@ -88,3 +88,25 @@ def test_get_nearest_enemy_stack_uses_fallback_when_no_enemy_is_reachable():
     assert nearest["path_distance"] is None
     assert nearest["fallback_distance"] == 2
     assert nearest["reachable"] is False
+
+
+def test_get_nearest_enemy_stack_for_spells_skips_ruins_and_city_stacks():
+    env = _make_env()
+    env.grid_env.agent_pos = (3, 3)
+    env.grid_env.enemy_positions = {
+        70: (4, 3),  # ruins, not spell-targetable
+        22: (5, 3),  # city stack, not spell-targetable
+        10: (6, 3),  # normal field stack
+    }
+    env.grid_env.enemies_alive = {70: True, 22: True, 10: True}
+    env.grid_env.obstacle_positions = set()
+
+    nearest_any = env.get_nearest_enemy_stack()
+    nearest_spell = env.get_nearest_enemy_stack(spell_targetable_only=True)
+
+    assert nearest_any is not None
+    assert nearest_any["enemy_id"] == 70
+
+    assert nearest_spell is not None
+    assert nearest_spell["enemy_id"] == 10
+    assert nearest_spell["position"] == (6, 3)
