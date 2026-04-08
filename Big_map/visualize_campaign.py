@@ -13,6 +13,7 @@ import time
 import re
 import math
 import argparse
+import textwrap
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
@@ -78,6 +79,29 @@ def mask_fn(env: CampaignEnv) -> np.ndarray:
     return env.compute_action_mask()
 
 
+GRID_MOVE_ACTION_NAMES = ["↑", "↓", "←", "→", "↖", "↗", "↙", "↘", "⊙"]
+
+
+def _format_grid_action_label(action: int, info: dict | None = None) -> str:
+    info = dict(info or {})
+    if info.get("spell_cast_action"):
+        spell_description = str(info.get("spell_description") or info.get("spell_key") or "spell")
+        target_enemy_id = info.get("target_enemy_id")
+        target_suffix = ""
+        if target_enemy_id is not None:
+            target_suffix = f" -> E{int(target_enemy_id)}"
+        return f"Spell: {spell_description}{target_suffix}"
+
+    try:
+        action_idx = int(action)
+    except Exception:
+        return str(action)
+
+    if 0 <= action_idx < len(GRID_MOVE_ACTION_NAMES):
+        return GRID_MOVE_ACTION_NAMES[action_idx]
+    return f"#{action_idx}"
+
+
 # ======================= BATTLE VISUALIZER =======================
 
 class BattleVisualizer:
@@ -94,7 +118,7 @@ class BattleVisualizer:
     COL_X = {0: 0.18, 1: 0.50, 2: 0.82}
     Y_BLUE_BACK, Y_BLUE_FRONT = 0.88, 0.70
     Y_RED_FRONT, Y_RED_BACK = 0.30, 0.12
-    SLOT_W, SLOT_H = 0.28, 0.13
+    SLOT_W, SLOT_H = 0.31, 0.16
     HP_H = 0.028
 
     FRAME_DELAY = 0.14  # Базовая задержка между кадрами
@@ -161,7 +185,7 @@ class BattleVisualizer:
         self.speed_mult = max(0.01, float(speed_mult))
 
         if fig is None or ax is None:
-            self.fig, self.ax = plt.subplots(figsize=(12, 8))
+            self.fig, self.ax = plt.subplots(figsize=(13.5, 8.5))
         else:
             self.fig, self.ax = fig, ax
 
@@ -175,10 +199,11 @@ class BattleVisualizer:
 
         if self.handle is None:
             plt.ion()
-            try:
-                self.fig.show()
-            except Exception:
-                pass
+            if plt.get_backend().lower() != "agg":
+                try:
+                    self.fig.show()
+                except Exception:
+                    pass
 
     def _suffix_by_type(self, t: str) -> str:
         return {
@@ -287,6 +312,20 @@ class BattleVisualizer:
     def _strip_suffix(self, name: str) -> str:
         return re.sub(r"\s*\([^)]*\)\s*$", "", name or "").strip()
 
+    def _wrap_text(self, text: str, width: int, max_lines: int | None = None) -> str:
+        raw = str(text or "").strip()
+        if not raw:
+            return ""
+        lines = textwrap.wrap(
+            raw,
+            width=max(1, int(width)),
+            break_long_words=False,
+            break_on_hyphens=False,
+        ) or [raw]
+        if max_lines is not None and len(lines) > max_lines:
+            lines = lines[:max_lines]
+        return "\n".join(lines)
+
     def _doppel_morph(self, attacker_pos: int, target_pos: int):
         if attacker_pos not in self.state or target_pos not in self.state:
             return
@@ -330,11 +369,22 @@ class BattleVisualizer:
         ax.add_patch(patches.FancyBboxPatch((x, y), self.SLOT_W, self.SLOT_H, boxstyle="round,pad=0.010,rounding_size=0.016", linewidth=1.3, edgecolor="black", facecolor=card_color))
         if is_active:
             ax.add_patch(patches.FancyBboxPatch((x - 0.01, y - 0.01), self.SLOT_W + 0.02, self.SLOT_H + 0.02, boxstyle="round,pad=0.012,rounding_size=0.018", linewidth=3.0, edgecolor=(1.0, 0.82, 0.10), facecolor="none", alpha=0.95))
-        ax.text(x + 0.012, y + self.SLOT_H * 0.78, (u["name"] or "")[:22], fontsize=10, fontweight="bold", ha="left", va="center", color="black")
+        label_text = self._wrap_text(u["name"], width=24, max_lines=2)
+        ax.text(
+            x + 0.014,
+            y + self.SLOT_H * 0.86,
+            label_text,
+            fontsize=9.2,
+            fontweight="bold",
+            ha="left",
+            va="top",
+            color="black",
+            linespacing=1.0,
+        )
         if u.get("acc2", 0) > 0:
-            ax.text(x + self.SLOT_W - 0.012, y + self.SLOT_H * 0.78, f"{int(u['acc2'])}%", fontsize=9, ha="right", va="center", color="black")
-        hp_x, hp_y = x + 0.012, y + self.SLOT_H * 0.10
-        hp_w = self.SLOT_W - 0.024
+            ax.text(x + self.SLOT_W - 0.014, y + self.SLOT_H * 0.86, f"{int(u['acc2'])}%", fontsize=9, ha="right", va="top", color="black")
+        hp_x, hp_y = x + 0.014, y + self.SLOT_H * 0.08
+        hp_w = self.SLOT_W - 0.028
         ax.add_patch(patches.Rectangle((hp_x, hp_y), hp_w, self.HP_H, facecolor=(0.88, 0.88, 0.88), edgecolor="none"))
         frac = max(0.0, min(1.0, u["hp"] / max(1e-9, u["maxhp"])))
         ax.add_patch(patches.Rectangle((hp_x, hp_y), hp_w * frac, self.HP_H, facecolor=(0.15, 0.70, 0.25), edgecolor="none"))
@@ -365,11 +415,22 @@ class BattleVisualizer:
         ax.add_patch(patches.FancyBboxPatch((x, y), width, height, boxstyle="round,pad=0.012,rounding_size=0.020", linewidth=1.6, edgecolor="black", facecolor=card_color))
         if is_active:
             ax.add_patch(patches.FancyBboxPatch((x - 0.012, y - 0.012), width + 0.024, height + 0.024, boxstyle="round,pad=0.012,rounding_size=0.022", linewidth=3.2, edgecolor=(1.0, 0.82, 0.10), facecolor="none", alpha=0.95))
-        ax.text(x + 0.012, y + height * 0.82, (uf["name"] or "")[:22], fontsize=11, fontweight="bold", ha="left", va="center", color="black")
+        label_text = self._wrap_text(uf["name"], width=24, max_lines=3)
+        ax.text(
+            x + 0.014,
+            y + height * 0.90,
+            label_text,
+            fontsize=9.8,
+            fontweight="bold",
+            ha="left",
+            va="top",
+            color="black",
+            linespacing=1.0,
+        )
         if uf.get("acc2", 0) > 0:
-            ax.text(x + width - 0.012, y + height * 0.82, f"{int(uf['acc2'])}%", fontsize=10, ha="right", va="center", color="black")
-        hp_w = width - 0.024
-        hp_x, hp_y = x + 0.012, y + height * 0.10
+            ax.text(x + width - 0.014, y + height * 0.90, f"{int(uf['acc2'])}%", fontsize=10, ha="right", va="top", color="black")
+        hp_w = width - 0.028
+        hp_x, hp_y = x + 0.014, y + height * 0.08
         ax.add_patch(patches.Rectangle((hp_x, hp_y), hp_w, self.HP_H, facecolor=(0.88, 0.88, 0.88), edgecolor="none"))
         frac = max(0.0, min(1.0, uf["hp"] / max(1e-9, uf["maxhp"])))
         ax.add_patch(patches.Rectangle((hp_x, hp_y), hp_w * frac, self.HP_H, facecolor=(0.15, 0.70, 0.25), edgecolor="none"))
@@ -422,7 +483,19 @@ class BattleVisualizer:
             except Exception:
                 pass
         if headline:
-            self.ax.text(0.5, 0.985, headline[:120], fontsize=12, fontweight="bold", ha="center", va="top", color="black")
+            headline_text = self._wrap_text(headline, width=72, max_lines=3)
+            self.ax.text(
+                0.5,
+                0.99,
+                headline_text,
+                fontsize=11,
+                fontweight="bold",
+                ha="center",
+                va="top",
+                color="black",
+                linespacing=1.05,
+                bbox=dict(boxstyle="round,pad=0.30", facecolor=(1.0, 1.0, 1.0, 0.82), edgecolor="none"),
+            )
         if self.handle is not None:
             self.handle.update(self.fig)
         else:
@@ -771,6 +844,7 @@ class CampaignVisualizer:
     COLOR_GOLD_MINE_EDGE = (0.56, 0.38, 0.02, 0.98)
     COLOR_GOLD_MINE_TEXT = (0.34, 0.20, 0.00, 0.98)
     CASTLE_POS = DEFAULT_HERO_GRID_POSITION
+    INFO_PANEL_WIDTH_RATIO = 0.34
 
     def __init__(
         self,
@@ -795,10 +869,94 @@ class CampaignVisualizer:
         self._load_gold_mine_overlays()
 
         # Создаём фигуру
-        self.fig, self.ax = plt.subplots(figsize=(10, 10))
+        self.fig = plt.figure(figsize=(15.5, 10))
+        gs = self.fig.add_gridspec(
+            1,
+            2,
+            width_ratios=[1.0, self.INFO_PANEL_WIDTH_RATIO],
+            wspace=0.04,
+        )
+        self.ax = self.fig.add_subplot(gs[0, 0])
+        self.info_ax = self.fig.add_subplot(gs[0, 1])
+        self.info_ax.axis("off")
         plt.ion()
         if plt.get_backend().lower() != "agg":
             self.fig.show()
+
+    def _format_info_text(self, lines: list[str], width: int = 34) -> str:
+        wrapped_lines: list[str] = []
+        for raw_line in lines:
+            line = str(raw_line or "")
+            if not line:
+                wrapped_lines.append("")
+                continue
+            initial_indent = ""
+            subsequent_indent = ""
+            content = line
+            if line.startswith("- "):
+                initial_indent = "- "
+                subsequent_indent = "  "
+                content = line[2:]
+            wrapped = textwrap.wrap(
+                content,
+                width=max(8, int(width)),
+                initial_indent=initial_indent,
+                subsequent_indent=subsequent_indent,
+                break_long_words=False,
+                break_on_hyphens=False,
+            )
+            wrapped_lines.extend(wrapped or [line])
+        return "\n".join(wrapped_lines)
+
+    def _draw_info_panel(self, title: str, info_text: str) -> None:
+        self.info_ax.clear()
+        self.info_ax.set_facecolor((0.96, 0.97, 0.99))
+        self.info_ax.axis("off")
+        line_count = max(1, info_text.count("\n") + 1)
+        if line_count <= 34:
+            body_fontsize = 10.5
+        elif line_count <= 40:
+            body_fontsize = 9.8
+        elif line_count <= 48:
+            body_fontsize = 9.1
+        else:
+            body_fontsize = 8.4
+        panel = patches.FancyBboxPatch(
+            (0.02, 0.02),
+            0.96,
+            0.96,
+            boxstyle="round,pad=0.018,rounding_size=0.02",
+            linewidth=1.3,
+            edgecolor=(0.74, 0.79, 0.88),
+            facecolor=(0.985, 0.99, 1.0),
+            transform=self.info_ax.transAxes,
+        )
+        self.info_ax.add_patch(panel)
+        if title:
+            self.info_ax.text(
+                0.06,
+                0.965,
+                self._format_info_text([title], width=30),
+                transform=self.info_ax.transAxes,
+                ha="left",
+                va="top",
+                fontsize=12.5,
+                fontweight="bold",
+                color="black",
+                linespacing=1.1,
+            )
+        self.info_ax.text(
+            0.06,
+            0.92,
+            info_text,
+            transform=self.info_ax.transAxes,
+            ha="left",
+            va="top",
+            fontsize=body_fontsize,
+            fontweight="bold",
+            color="black",
+            linespacing=1.15,
+        )
 
     def _load_background_image(self) -> None:
         if not self.background_map_path:
@@ -1231,10 +1389,12 @@ class CampaignVisualizer:
     ):
         """Отрисовка карты."""
         self.ax.clear()
+        self.info_ax.clear()
         self.ax.set_xlim(-0.5, self.grid_size - 0.5)
         self.ax.set_ylim(-0.5, self.grid_size - 0.5)
         self.ax.set_aspect("equal")
         self.ax.set_facecolor((0.95, 0.95, 0.95))
+        self.info_ax.axis("off")
         self.ax.invert_yaxis()  # Y растёт вниз
 
         # Сетка
@@ -1615,19 +1775,8 @@ class CampaignVisualizer:
                 info_lines.extend(f"- {ability}" for ability in hero_abilities)
             else:
                 info_lines.append("- нет")
-        info_text = "\n".join(info_lines)
-        self.ax.text(
-            1.02,
-            0.98,
-            info_text,
-            transform=self.ax.transAxes,
-            ha="left",
-            va="top",
-            fontsize=12,
-            fontweight="bold",
-            color="black",
-            clip_on=False,
-        )
+        info_text = self._format_info_text(info_lines)
+        self._draw_info_panel(title=title, info_text=info_text)
 
         # Легенда
         legend_text = f"Visited: {len(visited_cells)}/{self.grid_size**2}"
@@ -1902,7 +2051,7 @@ def run_campaign_visualization(
 
             # Заголовок
             action_names = ["↑", "↓", "←", "→", "↖", "↗", "↙", "↘", "⊙"]
-            action_name = action_names[min(int(action), 8)]
+            action_name = _format_grid_action_label(action, info)
             title = f"Step {step_count} | Action: {action_name} | Reward: {total_reward:.2f}"
             (
                 heal_left,

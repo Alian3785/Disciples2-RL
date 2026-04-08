@@ -95,3 +95,49 @@ def test_render_includes_learned_spell_descriptions():
     assert rendered is not None
     assert "Изученные заклинания" in rendered
     assert str(first_spell["description"]) in rendered
+
+
+def test_campaign_env_exposes_default_typeoflord():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+
+    _, info = env.reset(seed=123)
+
+    assert env.typeoflord == 1
+    assert env.Typeoflord == 1
+    assert info["typeoflord"] == 1
+    assert env.get_state_summary()["typeoflord"] == 1
+
+    _, _, _, _, step_info = env.step(8)
+    assert step_info["typeoflord"] == 1
+
+
+def test_level_five_spells_are_masked_unless_typeoflord_is_two_for_all_races():
+    for realcapital in (1, 2, 3, 4, 5):
+        env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=realcapital)
+        env.reset(seed=123)
+        _mark_magic_tower_built(env)
+
+        for mana_attr in set(env.MANA_ATTR_BY_KIND.values()):
+            setattr(env, mana_attr, 10000.0)
+
+        spell_key = env.spell_keys[-1]
+        spell = env.active_spells[spell_key]
+        assert int(spell["level"]) == 5
+
+        spell_mask = _spell_mask(env)
+        assert bool(spell_mask[env.spell_keys.index(spell_key)]) is False
+
+        _, reward, terminated, truncated, info = env.step(_spell_action_index(env, spell_key))
+        assert terminated is False
+        assert truncated is False
+        assert reward == 0.0
+        assert info["spell_key"] == spell_key
+        assert info["spell_level"] == 5
+        assert info["blocked_by_typeoflord"] is True
+        assert info["spell_learned"] is False
+        assert env.active_spells[spell_key]["learned"] == 0
+
+        env.typeoflord = 2
+        env.Typeoflord = 2
+        spell_mask = _spell_mask(env)
+        assert bool(spell_mask[env.spell_keys.index(spell_key)]) is True

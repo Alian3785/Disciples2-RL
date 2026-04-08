@@ -543,6 +543,9 @@ class CampaignMetricsCallback(BaseCallback):
         self.episode_spell_casts: list[float] = []
         self.recent_spell_casts = deque(maxlen=self.episode_window)
         self.recent_spell_cast_episode_flags = deque(maxlen=self.episode_window)
+        self.episode_summoned_units: list[float] = []
+        self.recent_summoned_units = deque(maxlen=self.episode_window)
+        self.recent_summon_episode_flags = deque(maxlen=self.episode_window)
         self.episode_hired_units: list[float] = []
         self.recent_hired_units = deque(maxlen=self.episode_window)
         self.recent_hire_episode_flags = deque(maxlen=self.episode_window)
@@ -581,6 +584,8 @@ class CampaignMetricsCallback(BaseCallback):
         self.spell_learning_episodes = 0
         self.total_spell_casts = 0
         self.spell_cast_episodes = 0
+        self.total_summoned_units = 0
+        self.summon_episodes = 0
         self.total_hired_units = 0
         self.hire_episodes = 0
         self.total_battle_items_equipped = 0
@@ -598,6 +603,7 @@ class CampaignMetricsCallback(BaseCallback):
         self._episode_sale_gold: list[float] = []
         self._episode_spells_learned: list[int] = []
         self._episode_spell_casts: list[int] = []
+        self._episode_summoned_units: list[int] = []
         self._episode_hired_units: list[int] = []
         self._episode_battle_items_equipped: list[int] = []
         self._episode_battle_items_used: list[int] = []
@@ -624,6 +630,7 @@ class CampaignMetricsCallback(BaseCallback):
         self._episode_sale_gold.extend([0.0] * missing)
         self._episode_spells_learned.extend([0] * missing)
         self._episode_spell_casts.extend([0] * missing)
+        self._episode_summoned_units.extend([0] * missing)
         self._episode_hired_units.extend([0] * missing)
         self._episode_battle_items_equipped.extend([0] * missing)
         self._episode_battle_items_used.extend([0] * missing)
@@ -806,6 +813,38 @@ class CampaignMetricsCallback(BaseCallback):
 
         self._episode_spell_casts[env_index] = 0
 
+    def _consume_summons(self, info: dict[str, Any], env_index: int) -> None:
+        if str(info.get("spell_kind", "") or "") != "summon_battle":
+            return
+        if not info.get("spell_cast_executed"):
+            return
+        try:
+            summoned_units = int(info.get("spell_units_affected", 1) or 1)
+        except (TypeError, ValueError):
+            summoned_units = 1
+        summoned_units = max(1, summoned_units)
+        self.total_summoned_units += summoned_units
+        self._episode_summoned_units[env_index] += summoned_units
+
+    def _finalize_episode_summons(self, env_index: int) -> None:
+        summoned_units = float(self._episode_summoned_units[env_index])
+        summon_flag = summoned_units > 0.0
+
+        self.episode_summoned_units.append(summoned_units)
+        self.recent_summoned_units.append(summoned_units)
+        self.recent_summon_episode_flags.append(1.0 if summon_flag else 0.0)
+        if summon_flag:
+            self.summon_episodes += 1
+
+        if self.experiment is not None:
+            self.experiment.log_metric(
+                "campaign/episode_summoned_units",
+                summoned_units,
+                step=self.num_timesteps,
+            )
+
+        self._episode_summoned_units[env_index] = 0
+
     def _consume_hires(self, info: dict[str, Any], env_index: int) -> None:
         try:
             hired_units = int(info.get("hired_units_count", 0) or 0)
@@ -927,6 +966,7 @@ class CampaignMetricsCallback(BaseCallback):
             self._consume_merchant_sales(info, env_index)
             self._consume_spell_learning(info, env_index)
             self._consume_spell_casts(info, env_index)
+            self._consume_summons(info, env_index)
             self._consume_hires(info, env_index)
             self._consume_battle_item_activity(info, env_index)
 
@@ -949,6 +989,7 @@ class CampaignMetricsCallback(BaseCallback):
                 self._finalize_episode_sales(env_index)
                 self._finalize_episode_spell_learning(env_index)
                 self._finalize_episode_spell_casts(env_index)
+                self._finalize_episode_summons(env_index)
                 self._finalize_episode_hires(env_index)
                 self._finalize_episode_battle_item_activity(env_index)
 
@@ -1078,6 +1119,15 @@ class CampaignMetricsCallback(BaseCallback):
                 self.spell_cast_episodes,
                 total_episodes,
             ),
+            "campaign/summoned_units_total": float(self.total_summoned_units),
+            "campaign/summoned_units_per_episode_mean": _safe_rate(
+                self.total_summoned_units,
+                total_episodes,
+            ),
+            "campaign/summon_episodes_rate": _safe_rate(
+                self.summon_episodes,
+                total_episodes,
+            ),
             "campaign/hired_units_total": float(self.total_hired_units),
             "campaign/hired_units_per_episode_mean": _safe_rate(
                 self.total_hired_units,
@@ -1139,6 +1189,10 @@ class CampaignMetricsCallback(BaseCallback):
             "campaign/recent_spell_cast_episodes_rate": _safe_mean(
                 self.recent_spell_cast_episode_flags
             ),
+            "campaign/recent_summoned_units_mean": _safe_mean(self.recent_summoned_units),
+            "campaign/recent_summon_episodes_rate": _safe_mean(
+                self.recent_summon_episode_flags
+            ),
             "campaign/recent_hired_units_mean": _safe_mean(self.recent_hired_units),
             "campaign/recent_hire_episodes_rate": _safe_mean(
                 self.recent_hire_episode_flags
@@ -1178,6 +1232,7 @@ class CampaignMetricsCallback(BaseCallback):
             "campaign/window/sold_items_mean": _safe_mean(self.recent_sold_items),
             "campaign/window/spells_learned_mean": _safe_mean(self.recent_spells_learned),
             "campaign/window/spell_casts_mean": _safe_mean(self.recent_spell_casts),
+            "campaign/window/summoned_units_mean": _safe_mean(self.recent_summoned_units),
             "campaign/window/hired_units_mean": _safe_mean(self.recent_hired_units),
             "campaign/window/battle_items_equipped_mean": _safe_mean(
                 self.recent_battle_items_equipped
@@ -1451,6 +1506,82 @@ class CampaignMetricsCallback(BaseCallback):
         ax_bottom.grid(True, alpha=0.25, linewidth=0.6)
         ax_bottom.legend(loc="upper left")
 
+        fig.tight_layout()
+        fig.savefig(target, dpi=160)
+        plt.close(fig)
+        return target
+
+    def save_summoned_units_per_episode_plot(self, path: str | os.PathLike[str]) -> Path | None:
+        if not self.episode_summoned_units:
+            return None
+
+        import matplotlib.pyplot as plt
+
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+        episodes = np.arange(1, len(self.episode_summoned_units) + 1)
+        summoned_counts = np.asarray(self.episode_summoned_units, dtype=float)
+
+        fig, ax = plt.subplots(figsize=(10, 4.5))
+        ax.plot(
+            episodes,
+            summoned_counts,
+            color="#7C2D12",
+            linewidth=1.8,
+            label="Summoned units per episode",
+        )
+        ax.fill_between(episodes, summoned_counts, color="#FDBA74", alpha=0.28)
+
+        if len(summoned_counts) >= 5:
+            window = min(25, len(summoned_counts))
+            kernel = np.ones(window, dtype=float) / float(window)
+            rolling = np.convolve(summoned_counts, kernel, mode="valid")
+            rolling_x = episodes[window - 1 :]
+            ax.plot(
+                rolling_x,
+                rolling,
+                color="#1F2937",
+                linewidth=2.0,
+                label=f"Rolling mean ({window})",
+            )
+
+        ax.set_title("Summoned Units Per Episode")
+        ax.set_xlabel("Episode")
+        ax.set_ylabel("Units summoned")
+        ax.grid(True, alpha=0.25, linewidth=0.6)
+        ax.legend(loc="upper right")
+        fig.tight_layout()
+        fig.savefig(target, dpi=160)
+        plt.close(fig)
+        return target
+
+    def save_cumulative_summoned_units_plot(self, path: str | os.PathLike[str]) -> Path | None:
+        if not self.episode_summoned_units:
+            return None
+
+        import matplotlib.pyplot as plt
+
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+        episodes = np.arange(1, len(self.episode_summoned_units) + 1)
+        cumulative_summoned = np.cumsum(np.asarray(self.episode_summoned_units, dtype=float))
+
+        fig, ax = plt.subplots(figsize=(10, 4.5))
+        ax.plot(
+            episodes,
+            cumulative_summoned,
+            color="#0F766E",
+            linewidth=2.1,
+            label="Cumulative summoned units",
+        )
+        ax.fill_between(episodes, cumulative_summoned, color="#99F6E4", alpha=0.24)
+        ax.set_title("Cumulative Summoned Units Over Training")
+        ax.set_xlabel("Episode")
+        ax.set_ylabel("Total units summoned")
+        ax.grid(True, alpha=0.25, linewidth=0.6)
+        ax.legend(loc="upper left")
         fig.tight_layout()
         fig.savefig(target, dpi=160)
         plt.close(fig)
@@ -1886,6 +2017,20 @@ if __name__ == "__main__":
         print(f"  Winrate: {100 * metrics_cb.victories / total:.1f}%")
     print(f"{'='*60}")
 
+    summoned_episode_plot_path = BASE_DIR / "outputs" / "campaign_summoned_units_per_episode.png"
+    saved_summoned_episode_plot = metrics_cb.save_summoned_units_per_episode_plot(
+        summoned_episode_plot_path
+    )
+    if saved_summoned_episode_plot is not None:
+        print(f"  График призывов за эпизод: {saved_summoned_episode_plot}")
+
+    summoned_total_plot_path = BASE_DIR / "outputs" / "campaign_summoned_units_cumulative.png"
+    saved_summoned_total_plot = metrics_cb.save_cumulative_summoned_units_plot(
+        summoned_total_plot_path
+    )
+    if saved_summoned_total_plot is not None:
+        print(f"  График призывов за всё обучение: {saved_summoned_total_plot}")
+
     hired_episode_plot_path = BASE_DIR / "outputs" / "campaign_hired_units_per_episode.png"
     saved_hired_episode_plot = metrics_cb.save_hired_units_per_episode_plot(hired_episode_plot_path)
     if saved_hired_episode_plot is not None:
@@ -1911,6 +2056,22 @@ if __name__ == "__main__":
             comet_experiment.log_tensorboard_folder(TB_LOG_DIR)
         except Exception as exc:
             print(f"[WARN] Failed to upload TensorBoard logs to Comet: {exc}")
+        if saved_summoned_episode_plot is not None and hasattr(comet_experiment, "log_image"):
+            try:
+                comet_experiment.log_image(
+                    str(saved_summoned_episode_plot),
+                    name="campaign_summoned_units_per_episode",
+                )
+            except Exception as exc:
+                print(f"[WARN] Failed to upload summoned-per-episode plot to Comet: {exc}")
+        if saved_summoned_total_plot is not None and hasattr(comet_experiment, "log_image"):
+            try:
+                comet_experiment.log_image(
+                    str(saved_summoned_total_plot),
+                    name="campaign_summoned_units_cumulative",
+                )
+            except Exception as exc:
+                print(f"[WARN] Failed to upload cumulative-summoned plot to Comet: {exc}")
         if saved_hired_episode_plot is not None and hasattr(comet_experiment, "log_image"):
             try:
                 comet_experiment.log_image(

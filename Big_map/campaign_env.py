@@ -49,7 +49,7 @@ from grid import (
     VILLAGE_LINKED_STACK_OVERRIDES,
 )
 from grid_world_env import GridWorldEnv
-from data_dicts_compact_lines import DATA as UNIT_DATA, map_unit_to_battle
+from data_dicts_compact_lines import DATA as UNIT_DATA, map_unit_to_battle, placeholder_unit
 from Buildings import (
     empire_buildings_d2,
     mountain_clans_buildings_d2,
@@ -260,8 +260,9 @@ class CampaignEnv(gym.Env):
         - Награда за второй захваченный целевой город: reward_all_enemies * 5
         - Победа в кампании после захвата Порта Полонис и Соругириллы
         - Масштабированная награда из BattleEnv: battle_reward_scale * battle_reward
-        - Награда за лечение на специальных клетках: reward_castle_heal_per_hp * restored_hp
-        - Награда за успешное воскрешение на специальных клетках: reward_castle_revive
+- Награда за лечение на специальных клетках: reward_castle_heal_per_hp * restored_hp
+- Награда за успешное воскрешение на специальных клетках: reward_castle_revive
+- Небольшая награда за бой основного отряда героя в тот же ход после призыва юнита
         - Минимальная награда за продажу бесполезного предмета у торговца
         - Дополнительный штраф за каждый завершённый ход, пока герою нужен юнит
         - Штраф за поражение: -1.0
@@ -453,8 +454,8 @@ class CampaignEnv(gym.Env):
         HEALING_OINTMENT_ITEM_NAME,
         BONUS_REVIVE_ITEM_NAME,
     )
-    # Map-targeted Legion spells cast on the nearest enemy stack.
-    # Keep existing damage-spell order stable for trained policies, then append debuffs.
+    # Map-targeted offensive spells cast on the nearest enemy stack.
+    # Keep existing Legion damage-spell order stable for trained policies, then append debuffs.
     LEGION_DAMAGE_SPELL_ACTION_SPECS = (
         {"id": "lod_d2_s003", "kind": "damage", "damage": 15.0, "damage_type": "Fire"},
         {"id": "lod_d2_s004", "kind": "damage", "damage": 15.0, "damage_type": "Mind"},
@@ -463,13 +464,210 @@ class CampaignEnv(gym.Env):
         {"id": "lod_d2_s017", "kind": "damage", "damage": 75.0, "damage_type": "Fire"},
         {"id": "lod_d2_s018", "kind": "damage", "damage": 75.0, "damage_type": "Earth"},
         {"id": "lod_d2_s019", "kind": "damage", "damage": 60.0, "damage_type": "Fire"},
+        {"id": "lod_d2_s023", "kind": "damage", "damage": 125.0, "damage_type": "Fire"},
         {"id": "lod_d2_s005", "kind": "debuff", "debuff_type": "armor", "armor_delta": -50},
         {"id": "lod_d2_s009", "kind": "debuff", "debuff_type": "damage", "damage_multiplier": 0.85},
         {"id": "lod_d2_s010", "kind": "debuff", "debuff_type": "initiative", "initiative_multiplier": 0.85},
         {"id": "lod_d2_s015", "kind": "debuff", "debuff_type": "accuracy", "accuracy_multiplier": 0.75},
         {"id": "lod_d2_s016", "kind": "debuff", "debuff_type": "accuracy", "accuracy_multiplier": 0.67},
         {"id": "lod_d2_s020", "kind": "debuff", "debuff_type": "initiative", "initiative_multiplier": 0.67},
+        {
+            "id": "lod_d2_s001",
+            "kind": "summon_battle",
+            "summon_unit_name": "Адская гончая",
+            "targets_untargetable_stacks": True,
+        },
+        {
+            "id": "lod_d2_s006",
+            "kind": "summon_battle",
+            "summon_unit_name": "Белиарх",
+            "targets_untargetable_stacks": True,
+        },
+        {
+            "id": "lod_d2_s021",
+            "kind": "summon_battle",
+            "summon_unit_name": "Мститель",
+            "targets_untargetable_stacks": True,
+        },
     )
+    # Map-targeted Undead Horde spells cast on the nearest enemy stack.
+    # AoE damage spells are temporarily mapped to the nearest enemy stack only.
+    UNDEAD_DAMAGE_SPELL_ACTION_SPECS = (
+        {
+            "id": "und_d2_s001",
+            "kind": "summon_battle",
+            "summon_unit_name": "Скелет",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "und_d2_s002", "kind": "damage", "damage": 15.0, "damage_type": "Death"},
+        {"id": "und_d2_s003", "kind": "damage", "damage": 15.0, "damage_type": "Water"},
+        {"id": "und_d2_s004", "kind": "debuff", "debuff_type": "accuracy", "accuracy_multiplier": 0.90},
+        {"id": "und_d2_s005", "kind": "debuff", "debuff_type": "armor", "armor_delta": -50},
+        {
+            "id": "und_d2_s006",
+            "kind": "summon_battle",
+            "summon_unit_name": "Темный энт",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "und_d2_s007", "kind": "damage", "damage": 30.0, "damage_type": "Death"},
+        {"id": "und_d2_s009", "kind": "debuff", "debuff_type": "damage", "damage_multiplier": 0.85},
+        {"id": "und_d2_s010", "kind": "damage", "damage": 30.0, "damage_type": "Earth"},
+        {
+            "id": "und_d2_s011",
+            "kind": "summon_battle",
+            "summon_unit_name": "Кошмар",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "und_d2_s012", "kind": "damage", "damage": 50.0, "damage_type": "Death"},
+        {"id": "und_d2_s013", "kind": "debuff", "debuff_type": "accuracy", "accuracy_multiplier": 0.80},
+        {"id": "und_d2_s015", "kind": "damage", "damage": 40.0, "damage_type": "Earth"},
+        {"id": "und_d2_s016", "kind": "debuff", "debuff_type": "initiative", "initiative_multiplier": 0.67},
+        {"id": "und_d2_s017", "kind": "debuff", "debuff_type": "damage", "damage_multiplier": 0.67},
+        {"id": "und_d2_s018", "kind": "damage", "damage": 75.0, "damage_type": "Fire"},
+        {
+            "id": "und_d2_s021",
+            "kind": "summon_battle",
+            "summon_unit_name": "Танатос",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "und_d2_s023", "kind": "damage", "damage": 125.0, "damage_type": "Death"},
+        {"id": "und_d2_s024", "kind": "damage", "damage": 80.0, "damage_type": "Death"},
+    )
+    EMPIRE_DAMAGE_SPELL_ACTION_SPECS = (
+        {"id": "emp_d2_s004", "kind": "damage", "damage": 15.0, "damage_type": "Air"},
+        {
+            "id": "emp_d2_s008",
+            "kind": "summon_battle",
+            "summon_unit_name": "Оживший доспех",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "emp_d2_s014", "kind": "damage", "damage": 50.0, "damage_type": "Air"},
+        {
+            "id": "emp_d2_s016",
+            "kind": "summon_battle",
+            "summon_unit_name": "Голем",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "emp_d2_s015", "kind": "damage", "damage": 40.0, "damage_type": "Air"},
+        {"id": "emp_d2_s022", "kind": "damage", "damage": 125.0, "damage_type": "Air"},
+    )
+    EMPIRE_SUPPORT_SPELL_ACTION_SPECS = (
+        {"id": "emp_d2_s001", "kind": "ward", "buff_type": "resistance", "resistance_type": "Air"},
+        {"id": "emp_d2_s002", "kind": "buff", "buff_type": "initiative", "initiative_multiplier": 1.10},
+        {"id": "emp_d2_s003", "kind": "buff", "buff_type": "damage", "damage_multiplier": 1.10},
+        {"id": "emp_d2_s005", "kind": "ward", "buff_type": "resistance", "resistance_type": "Water"},
+        {"id": "emp_d2_s006", "kind": "moves", "moves_restore_fraction": 0.50},
+        {"id": "emp_d2_s007", "kind": "heal", "heal_amount": 30.0},
+        {"id": "emp_d2_s010", "kind": "ward", "buff_type": "resistance", "resistance_type": "Earth"},
+        {"id": "emp_d2_s011", "kind": "ward", "buff_type": "resistance", "resistance_type": "Mind"},
+        {"id": "emp_d2_s012", "kind": "buff", "buff_type": "armor", "armor_delta": 20},
+        {"id": "emp_d2_s013", "kind": "buff", "buff_type": "accuracy", "accuracy_multiplier": 1.20},
+        {"id": "emp_d2_s017", "kind": "ward", "buff_type": "resistance", "resistance_type": "Fire"},
+        {"id": "emp_d2_s018", "kind": "buff", "buff_type": "damage", "damage_multiplier": 1.33},
+        {"id": "emp_d2_s019", "kind": "heal", "heal_amount": 60.0},
+        {"id": "emp_d2_s021", "kind": "ward", "buff_type": "resistance", "resistance_type": "Death"},
+        {"id": "emp_d2_s023", "kind": "heal", "heal_amount": 150.0},
+        {"id": "emp_d2_s024", "kind": "heal", "heal_amount": 80.0},
+    )
+    MOUNTAIN_SUPPORT_SPELL_ACTION_SPECS = (
+        {"id": "mcl_d2_s001", "kind": "buff", "buff_type": "armor", "armor_delta": 10},
+        {"id": "mcl_d2_s003", "kind": "buff", "buff_type": "damage", "damage_multiplier": 1.10},
+        {"id": "mcl_d2_s006", "kind": "buff", "buff_type": "initiative", "initiative_multiplier": 1.15},
+        {"id": "mcl_d2_s009", "kind": "heal", "heal_amount": 30.0},
+        {"id": "mcl_d2_s012", "kind": "moves", "moves_restore_fraction": 1.00},
+        {"id": "mcl_d2_s014", "kind": "buff", "buff_type": "accuracy", "accuracy_multiplier": 1.25},
+        {"id": "mcl_d2_s015", "kind": "buff", "buff_type": "damage", "damage_multiplier": 1.20},
+        {"id": "mcl_d2_s016", "kind": "buff", "buff_type": "armor", "armor_delta": 33},
+        {"id": "mcl_d2_s017", "kind": "buff", "buff_type": "accuracy", "accuracy_multiplier": 1.33},
+        {"id": "mcl_d2_s020", "kind": "moves", "moves_restore_fraction": 1.00},
+        {"id": "mcl_d2_s023", "kind": "buff", "buff_type": "damage", "damage_multiplier": 1.50},
+        {"id": "mcl_d2_s024", "kind": "buff", "buff_type": "armor", "armor_delta": 33},
+    )
+    MOUNTAIN_DAMAGE_SPELL_ACTION_SPECS = (
+        {
+            "id": "mcl_d2_s005",
+            "kind": "summon_battle",
+            "summon_unit_name": "Рух",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "mcl_d2_s004", "kind": "damage", "damage": 15.0, "damage_type": "Water"},
+        {"id": "mcl_d2_s008", "kind": "damage", "damage": 30.0, "damage_type": "Water"},
+        {
+            "id": "mcl_d2_s011",
+            "kind": "summon_battle",
+            "summon_unit_name": "Валькирия",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "mcl_d2_s013", "kind": "damage", "damage": 60.0, "damage_type": "Earth"},
+        {"id": "mcl_d2_s018", "kind": "damage", "damage": 75.0, "damage_type": "Water"},
+        {"id": "mcl_d2_s019", "kind": "damage", "damage": 60.0, "damage_type": "Water"},
+        {
+            "id": "mcl_d2_s021",
+            "kind": "summon_battle",
+            "summon_unit_name": "Каменный предок",
+            "targets_untargetable_stacks": True,
+        },
+    )
+    ELVES_DAMAGE_SPELL_ACTION_SPECS = (
+        {"id": "elf_d2_s001", "kind": "damage", "damage": 15.0, "damage_type": "Earth"},
+        {
+            "id": "elf_d2_s002",
+            "kind": "summon_battle",
+            "summon_unit_name": "Малый энт",
+            "targets_untargetable_stacks": True,
+        },
+        {
+            "id": "elf_d2_s007",
+            "kind": "summon_battle",
+            "summon_unit_name": "Энт",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "elf_d2_s008", "kind": "damage", "damage": 30.0, "damage_type": "Fire"},
+        {"id": "elf_d2_s009", "kind": "damage", "damage": 30.0, "damage_type": "Water"},
+        {"id": "elf_d2_s010", "kind": "debuff", "debuff_type": "initiative", "initiative_multiplier": 0.85},
+        {
+            "id": "elf_d2_s012",
+            "kind": "summon_battle",
+            "summon_unit_name": "Великий энт",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "elf_d2_s013", "kind": "damage", "damage": 50.0, "damage_type": "Mind"},
+        {"id": "elf_d2_s015", "kind": "debuff", "debuff_type": "accuracy", "accuracy_multiplier": 0.80},
+        {"id": "elf_d2_s016", "kind": "damage", "damage": 60.0, "damage_type": "Earth"},
+        {"id": "elf_d2_s017", "kind": "damage", "damage": 75.0, "damage_type": "Air"},
+        {"id": "elf_d2_s018", "kind": "debuff", "debuff_type": "armor", "armor_delta": -80},
+        {"id": "elf_d2_s019", "kind": "debuff", "debuff_type": "damage", "damage_multiplier": 0.67},
+        {
+            "id": "elf_d2_s021",
+            "kind": "summon_battle",
+            "summon_unit_name": "Буйный энт",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "elf_d2_s022", "kind": "damage", "damage": 125.0, "damage_type": "Earth"},
+    )
+    ELVES_SUPPORT_SPELL_ACTION_SPECS = (
+        {"id": "elf_d2_s004", "kind": "moves", "moves_restore_fraction": 0.30},
+        {"id": "elf_d2_s005", "kind": "buff", "buff_type": "armor", "armor_delta": 10},
+        {"id": "elf_d2_s006", "kind": "heal", "heal_amount": 30.0},
+        {"id": "elf_d2_s014", "kind": "heal", "heal_amount": 50.0},
+        {"id": "elf_d2_s020", "kind": "health_bonus", "buff_type": "health", "health_delta": 50},
+    )
+    UNDEAD_SUPPORT_SPELL_ACTION_SPECS = (
+        {"id": "und_d2_s022", "kind": "ward", "buff_type": "resistance", "resistance_type": "Weapon"},
+    )
+    MAP_OFFENSIVE_SPELL_ACTION_SPECS_BY_CAPITAL = {
+        1: EMPIRE_DAMAGE_SPELL_ACTION_SPECS,
+        2: LEGION_DAMAGE_SPELL_ACTION_SPECS,
+        3: MOUNTAIN_DAMAGE_SPELL_ACTION_SPECS,
+        4: UNDEAD_DAMAGE_SPELL_ACTION_SPECS,
+        5: ELVES_DAMAGE_SPELL_ACTION_SPECS,
+    }
+    MAP_SUPPORT_SPELL_ACTION_SPECS_BY_CAPITAL = {
+        1: EMPIRE_SUPPORT_SPELL_ACTION_SPECS,
+        3: MOUNTAIN_SUPPORT_SPELL_ACTION_SPECS,
+        4: UNDEAD_SUPPORT_SPELL_ACTION_SPECS,
+        5: ELVES_SUPPORT_SPELL_ACTION_SPECS,
+    }
     ENERGY_ELIXIR_ITEM_NAME = "Эликсир энергии"
     FIRE_WARD_ITEM_NAME = "Эликсир защиты от магии Огня"
     EARTH_WARD_ITEM_NAME = "Эликсир защиты от магии Земли"
@@ -481,10 +679,14 @@ class CampaignEnv(gym.Env):
     TITAN_ELIXIR_ITEM_NAME = "Эликсир Силы титана"
     SUPREME_ELIXIR_ITEM_NAME = "Эликсир Всевышнего"
     RING_OF_AGES_ITEM_NAME = "Кольцо веков (Артефакт)"
+    RING_OF_AGES_ENGLISH_ITEM_NAME = "Ring of the Ages (Artifact)"
+    ARTIFACT_EQUIP_SLOTS = 2
     ENERGY_ELIXIR_DAMAGE_MULTIPLIER = 1.50
     HASTE_ELIXIR_INITIATIVE_MULTIPLIER = 1.60
     TITAN_ELIXIR_DAMAGE_MULTIPLIER = 1.10
     SUPREME_ELIXIR_HEALTH_MULTIPLIER = 1.15
+    RING_OF_AGES_DAMAGE_MULTIPLIER = 1.40
+    RING_OF_AGES_INITIATIVE_MULTIPLIER = 1.25
     MERCHANT_BUY_ITEMS = (
         {"name": RUIN_LIFE_ELIXIR_ITEM_NAME, "price": 400.0, "stock": 10, "grant": "revive_bonus"},
         {"name": "Эликсир исцеления", "price": 150.0, "stock": 10, "grant": "small_heal_bonus"},
@@ -523,6 +725,7 @@ class CampaignEnv(gym.Env):
         TITAN_ELIXIR_ITEM_NAME: 800,
         SUPREME_ELIXIR_ITEM_NAME: 800,
         RING_OF_AGES_ITEM_NAME: 3750,
+        RING_OF_AGES_ENGLISH_ITEM_NAME: 3750,
     }
     AUTO_CONSUMED_CHEST_ITEMS = (
         BONUS_SMALL_HEAL_SOURCE_ITEM,
@@ -604,6 +807,7 @@ class CampaignEnv(gym.Env):
         reward_sell_junk_item: float = 0.05,
         reward_spell_learn: float = 2.0,
         reward_spell_cast: float = 0.005,
+        reward_summon_hero_battle_engage: float = 0.05,
         reward_castle_heal_per_hp: float = 0.01,
         reward_castle_revive: float = 0.5,
         persist_blue_hp: bool = True,
@@ -646,6 +850,10 @@ class CampaignEnv(gym.Env):
         self.reward_sell_junk_item = max(0.0, float(reward_sell_junk_item))
         self.reward_spell_learn = max(0.0, float(reward_spell_learn))
         self.reward_spell_cast = max(0.0, float(reward_spell_cast))
+        self.reward_summon_hero_battle_engage = max(
+            0.0,
+            float(reward_summon_hero_battle_engage),
+        )
         self.reward_castle_heal_per_hp = max(0.0, float(reward_castle_heal_per_hp))
         self.reward_castle_revive = max(0.0, float(reward_castle_revive))
         self.persist_blue_hp = persist_blue_hp
@@ -660,6 +868,9 @@ class CampaignEnv(gym.Env):
         self.gold_norm_k = max(1.0, self.turn_norm_k * float(self.GOLD_PER_TURN))
         # Realcapital: 1 = empire, 2 = legions, 3 = mountain_clans, 4 = undead_hordes, 5 = elves
         self.Realcapital = self._normalize_realcapital(realcapital)
+        # Typeoflord is currently fixed for the campaign layout/state.
+        self.typeoflord = 1
+        self.Typeoflord = int(self.typeoflord)
         self._reset_buildings_state()
         self._reset_spells_state()
 
@@ -800,6 +1011,7 @@ class CampaignEnv(gym.Env):
         self.mode = self.MODE_GRID
         self.current_enemy_id: Optional[int] = None
         self.battle_origin_pos: Optional[Tuple[int, int]] = None
+        self.current_battle_context: Dict[str, object] = {}
 
         # Сохраняем состояние BLUE команды между боями
         self.blue_team_state: Optional[List[Dict]] = None
@@ -825,10 +1037,17 @@ class CampaignEnv(gym.Env):
         self.spell_learning_locked = False
         self.heroitems: List[object] = []
         self.equipped_hero_items: List[Optional[str]] = [None] * int(self.BATTLE_EQUIP_SLOTS)
+        self.equipped_artifact_items: List[Optional[str]] = [None] * int(
+            self.ARTIFACT_EQUIP_SLOTS
+        )
+        self.artifact_auto_equip_next_slot: int = 0
         self.battle_item_equip_used_this_turn: bool = False
         self.enemy_team_states: Dict[int, List[Dict]] = self._create_initial_enemy_team_states()
         self.enemy_map_spell_effects: Dict[int, set[str]] = {}
+        self.blue_map_spell_effects: set[str] = set()
         self.damage_spell_ids_used_this_turn: set[str] = set()
+        self.summon_hero_battle_bonus_pending: bool = False
+        self.summon_hero_battle_bonus_enemy_ids_this_turn: set[int] = set()
         self.extra_heal_bottles: int = 0
         self.extra_healing_bottles: int = 0
         self.extra_revive_bottles: int = 0
@@ -857,8 +1076,9 @@ class CampaignEnv(gym.Env):
             + self.grid_enemy_obs_size
             + self.grid_campaign_obs_size
         )
-        total_actions = self.grid_legion_damage_spell_action_start + len(
-            self.LEGION_DAMAGE_SPELL_ACTION_SPECS
+        total_actions = (
+            self.grid_map_support_spell_action_start
+            + self._map_support_spell_action_max_count()
         )
         # Action space: максимум из двух режимов (battle = 27 действий, grid расширен для экономики и заклинаний)
         self.action_space = spaces.Discrete(total_actions)
@@ -891,6 +1111,7 @@ class CampaignEnv(gym.Env):
         self.mode = self.MODE_GRID
         self.current_enemy_id = None
         self.battle_origin_pos = None
+        self.current_battle_context = {}
         # Стартовое состояние BLUE — копия базовых юнитов, чтобы
         # вне боя можно было применять лечение до первого боя.
         self.blue_team_state = deepcopy(UNITS_BLUE)
@@ -906,10 +1127,15 @@ class CampaignEnv(gym.Env):
         self._campaign_logs = []
         self.heroitems = []
         self.equipped_hero_items = [None] * int(self.BATTLE_EQUIP_SLOTS)
+        self.equipped_artifact_items = [None] * int(self.ARTIFACT_EQUIP_SLOTS)
+        self.artifact_auto_equip_next_slot = 0
         self.battle_item_equip_used_this_turn = False
         self.enemy_team_states = self._create_initial_enemy_team_states()
         self.enemy_map_spell_effects = {}
+        self.blue_map_spell_effects = set()
         self.damage_spell_ids_used_this_turn = set()
+        self.summon_hero_battle_bonus_pending = False
+        self.summon_hero_battle_bonus_enemy_ids_this_turn = set()
         self.extra_heal_bottles = 0
         self.extra_healing_bottles = 0
         self.extra_revive_bottles = 0
@@ -942,8 +1168,9 @@ class CampaignEnv(gym.Env):
         self._sync_grid_chest_positions()
         self._sync_grid_mana_sources()
         self._sync_grid_merchant_positions()
-        total_actions = self.grid_legion_damage_spell_action_start + len(
-            self.LEGION_DAMAGE_SPELL_ACTION_SPECS
+        total_actions = (
+            self.grid_map_support_spell_action_start
+            + self._map_support_spell_action_max_count()
         )
         self.action_space = spaces.Discrete(total_actions)
 
@@ -965,6 +1192,7 @@ class CampaignEnv(gym.Env):
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
+            "typeoflord": int(self.typeoflord),
             "heroitems": list(self.heroitems),
             "equipped_hero_items": list(self.equipped_hero_items),
             "battle_items_equipped_total": int(self.battle_items_equipped_total),
@@ -999,6 +1227,7 @@ class CampaignEnv(gym.Env):
         info.update(self._mana_state_info())
         info.update(self._spell_state_info())
         info.update(self._ruin_progress_info())
+        info.update(self._artifact_state_info())
         info.update(self._merchant_context_info(self.grid_env.agent_pos))
 
         return self._build_obs(grid_obs=grid_obs), info
@@ -1027,6 +1256,8 @@ class CampaignEnv(gym.Env):
         #   после блока найма — покупки у торговца, затем боевые эликсиры и постройки.
         #   после построек — изучение заклинаний активной фракции.
         #   после заклинаний — улучшение захваченных городов.
+        if action >= self.grid_map_support_spell_action_start:
+            return self._step_cast_support_spell(action)
         if action >= self.grid_legion_damage_spell_action_start:
             return self._step_cast_legion_damage_spell(action)
         if action >= self.GRID_EQUIP_BATTLE_ITEM2_ACTION_START:
@@ -1114,6 +1345,7 @@ class CampaignEnv(gym.Env):
         new_pos = self.grid_env.agent_pos
         stagnation_penalty = 0.0
         battle_engage_bonus = 0.0
+        summon_hero_battle_bonus = 0.0
         combat_potion_battle_bonus = 0.0
 
         if old_pos != new_pos:
@@ -1138,6 +1370,13 @@ class CampaignEnv(gym.Env):
             if enemy_id is not None and self.grid_env.enemies_alive.get(enemy_id, False):
                 battle_engage_bonus = float(self.reward_engage_battle)
                 reward += battle_engage_bonus
+                if int(enemy_id) in self.summon_hero_battle_bonus_enemy_ids_this_turn:
+                    summon_hero_battle_bonus = float(self.reward_summon_hero_battle_engage)
+                    reward += summon_hero_battle_bonus
+                    self.summon_hero_battle_bonus_enemy_ids_this_turn.discard(int(enemy_id))
+                self.summon_hero_battle_bonus_pending = bool(
+                    self.summon_hero_battle_bonus_enemy_ids_this_turn
+                )
             if self.combat_potion_battle_bonus_pending:
                 combat_potion_battle_bonus = float(
                     self.reward_combat_potion_battle_participation
@@ -1165,6 +1404,12 @@ class CampaignEnv(gym.Env):
             "grid_reward_scaled": float(reward),
             "stagnation_penalty": float(stagnation_penalty),
             "battle_engage_bonus": float(battle_engage_bonus),
+            "summon_hero_battle_bonus": float(summon_hero_battle_bonus),
+            "summon_hero_battle_bonus_applied": bool(summon_hero_battle_bonus > 0.0),
+            "summon_hero_battle_bonus_pending": bool(self.summon_hero_battle_bonus_pending),
+            "summon_hero_battle_bonus_enemy_ids": sorted(
+                int(enemy_id) for enemy_id in self.summon_hero_battle_bonus_enemy_ids_this_turn
+            ),
             "combat_potion_battle_bonus": float(combat_potion_battle_bonus),
             "turns": self.turns,
             "gold": self.gold,
@@ -1196,22 +1441,27 @@ class CampaignEnv(gym.Env):
                 units=self.blue_team_state,
             )
             (
-                _rest_armor_bonus,
-                rest_heal_flat_bonus,
+                rest_heal_bonus_percent,
                 rest_heal_bonus_source,
                 rest_heal_bonus_level,
-            ) = self._resolve_heal_tile_context(self.grid_env.agent_pos)
+            ) = self._resolve_rest_regeneration_context(self.grid_env.agent_pos)
             healed = self._heal_blue_team(
                 heal_percent=0.05,
-                flat_bonus=rest_heal_flat_bonus,
+                bonus_percent=rest_heal_bonus_percent,
             )
             if healed > 0:
-                if rest_heal_flat_bonus > 0.0:
-                    self._log(
-                        f"Отдых в городе {rest_heal_bonus_source} уровня {rest_heal_bonus_level}: "
-                        f"восстановлено HP у {healed} юнитов "
-                        f"(5% + {rest_heal_flat_bonus:g})"
-                    )
+                if rest_heal_bonus_percent > 0.0:
+                    if rest_heal_bonus_source == "capital":
+                        self._log(
+                            f"Отдых в столице: восстановлено HP у {healed} юнитов "
+                            f"(5% + {rest_heal_bonus_percent * 100.0:g}%)"
+                        )
+                    else:
+                        self._log(
+                            f"Отдых в городе {rest_heal_bonus_source} уровня {rest_heal_bonus_level}: "
+                            f"восстановлено HP у {healed} юнитов "
+                            f"(5% + {rest_heal_bonus_percent * 100.0:g}%)"
+                        )
                 else:
                     self._log(f"Отдых: восстановлено HP у {healed} юнитов (5%)")
             else:
@@ -1224,16 +1474,18 @@ class CampaignEnv(gym.Env):
             info["healed_units"] = healed
             info["pending_hire_turn_penalty"] = float(pending_hire_turn_penalty)
             info["rest_heal_percent"] = 0.05
-            info["rest_heal_flat_bonus"] = float(rest_heal_flat_bonus)
+            info["rest_heal_bonus_percent"] = float(rest_heal_bonus_percent)
+            info["rest_heal_total_percent"] = float(0.05 + rest_heal_bonus_percent)
             info["rest_heal_bonus_source"] = rest_heal_bonus_source
             if rest_heal_bonus_level is not None:
-                info["rest_heal_bonus_level"] = int(rest_heal_bonus_level)
+                info["rest_heal_bonus_level"] = rest_heal_bonus_level
 
         # Проверяем столкновение с врагом
         if grid_info.get("battle_triggered"):
             enemy_id = grid_info["enemy_id"]
             self.current_enemy_id = enemy_id
             self.battle_origin_pos = (int(old_pos[0]), int(old_pos[1]))
+            self.current_battle_context = {"kind": "hero"}
             self.mode = self.MODE_BATTLE
 
             self._log(f"!!! СТОЛКНОВЕНИЕ С ВРАГОМ {enemy_id} !!!")
@@ -1302,6 +1554,7 @@ class CampaignEnv(gym.Env):
         finalized_reward = float(reward) + float(sale_info["merchant_sale_reward"])
         finalized_info.update(sale_info)
         self._sync_equipped_hero_items()
+        self._sync_equipped_artifact_items()
 
         if "grid_reward_scaled" in finalized_info:
             try:
@@ -1316,8 +1569,10 @@ class CampaignEnv(gym.Env):
         finalized_info["turns"] = self.turns
         finalized_info["gold"] = self.gold
         finalized_info["moves"] = self.moves
+        finalized_info["typeoflord"] = int(self.typeoflord)
         finalized_info["heroitems"] = list(self.heroitems)
         finalized_info["equipped_hero_items"] = list(self.equipped_hero_items)
+        finalized_info.update(self._artifact_state_info())
         finalized_info["battle_items_equipped_total"] = int(self.battle_items_equipped_total)
         finalized_info["battle_items_used_total"] = int(self.battle_items_used_total)
         finalized_info["extra_heal_bottles"] = int(self.extra_heal_bottles or 0)
@@ -1854,6 +2109,101 @@ class CampaignEnv(gym.Env):
         return self._hero_item_name(entry)
 
     @classmethod
+    def _is_artifact_item_name(cls, item_name: str) -> bool:
+        normalized_name = str(item_name or "").strip().lower()
+        if not normalized_name:
+            return False
+        return "(artifact)" in normalized_name or "(артефакт)" in normalized_name
+
+    def _sync_equipped_artifact_items(self) -> None:
+        normalized_slots: List[Optional[str]] = [None] * int(self.ARTIFACT_EQUIP_SLOTS)
+        reserved: Dict[str, int] = {}
+        current_slots = list(getattr(self, "equipped_artifact_items", []) or [])
+        available_counts: Dict[str, int] = {}
+
+        for entry in self.heroitems:
+            item_name = self._hero_item_name(entry)
+            if not self._is_artifact_item_name(item_name):
+                continue
+            available_counts[item_name] = available_counts.get(item_name, 0) + 1
+
+        for slot_index in range(int(self.ARTIFACT_EQUIP_SLOTS)):
+            item_name = (
+                str(current_slots[slot_index] or "")
+                if slot_index < len(current_slots) and current_slots[slot_index] is not None
+                else ""
+            )
+            if not self._is_artifact_item_name(item_name):
+                continue
+            available_count = int(available_counts.get(item_name, 0) or 0)
+            already_reserved = int(reserved.get(item_name, 0) or 0)
+            if already_reserved >= available_count:
+                continue
+            normalized_slots[slot_index] = item_name
+            reserved[item_name] = already_reserved + 1
+
+        self.equipped_artifact_items = normalized_slots
+        self.artifact_auto_equip_next_slot = (
+            int(getattr(self, "artifact_auto_equip_next_slot", 0) or 0)
+            % max(1, int(self.ARTIFACT_EQUIP_SLOTS))
+        )
+
+    def _auto_equip_artifact_item(self, item_name: str) -> Dict[str, object]:
+        normalized_name = str(item_name or "")
+        if not self._is_artifact_item_name(normalized_name):
+            return {
+                "artifact_auto_equipped": False,
+                "artifact_auto_equip_slot": None,
+                "artifact_auto_equip_previous": None,
+            }
+
+        self._sync_equipped_artifact_items()
+        slot_index = int(self.artifact_auto_equip_next_slot or 0) % max(
+            1,
+            int(self.ARTIFACT_EQUIP_SLOTS),
+        )
+        previous_item = self.equipped_artifact_items[slot_index]
+        self.equipped_artifact_items[slot_index] = normalized_name
+        self.artifact_auto_equip_next_slot = (slot_index + 1) % max(
+            1,
+            int(self.ARTIFACT_EQUIP_SLOTS),
+        )
+        self._log(
+            f"Артефакт '{normalized_name}' автоматически экипирован в слот "
+            f"{slot_index + 1} (предыдущий: {previous_item or 'пусто'})."
+        )
+        return {
+            "artifact_auto_equipped": True,
+            "artifact_auto_equip_slot": int(slot_index + 1),
+            "artifact_auto_equip_previous": previous_item,
+        }
+
+    def _add_hero_item(self, item_name: str) -> Dict[str, object]:
+        normalized_name = str(item_name or "")
+        self.heroitems.append(self._make_hero_item_entry(normalized_name))
+        return self._auto_equip_artifact_item(normalized_name)
+
+    def _artifact_state_info(self) -> Dict[str, object]:
+        self._sync_equipped_artifact_items()
+        return {
+            "equipped_artifact_items": list(self.equipped_artifact_items),
+            "artifact_auto_equip_next_slot": int(self.artifact_auto_equip_next_slot),
+        }
+
+    @classmethod
+    def _artifact_effect_definition(cls, item_name: str) -> Dict[str, object]:
+        normalized_name = str(item_name or "")
+        if normalized_name in {
+            cls.RING_OF_AGES_ITEM_NAME,
+            cls.RING_OF_AGES_ENGLISH_ITEM_NAME,
+        }:
+            return {
+                "damage_multiplier": float(cls.RING_OF_AGES_DAMAGE_MULTIPLIER),
+                "initiative_multiplier": float(cls.RING_OF_AGES_INITIATIVE_MULTIPLIER),
+            }
+        return {}
+
+    @classmethod
     def _hero_item_aliases(cls, item_name: str) -> Tuple[str, ...]:
         normalized_name = str(item_name or "")
         aliases = {normalized_name}
@@ -1861,6 +2211,10 @@ class CampaignEnv(gym.Env):
             aliases.add(cls.RUIN_INVULNERABILITY_ELIXIR_ITEM_NAME)
         elif normalized_name == cls.RUIN_INVULNERABILITY_ELIXIR_ITEM_NAME:
             aliases.add(cls.INVULNERABILITY_POTION_ITEM_NAME)
+        elif normalized_name == cls.RING_OF_AGES_ITEM_NAME:
+            aliases.add(cls.RING_OF_AGES_ENGLISH_ITEM_NAME)
+        elif normalized_name == cls.RING_OF_AGES_ENGLISH_ITEM_NAME:
+            aliases.add(cls.RING_OF_AGES_ITEM_NAME)
         return tuple(aliases)
 
     def _count_hero_item(self, item_name: str) -> int:
@@ -1879,6 +2233,7 @@ class CampaignEnv(gym.Env):
         for idx, entry in enumerate(self.heroitems):
             if self._hero_item_name(entry) in normalized_names:
                 del self.heroitems[idx]
+                self._sync_equipped_artifact_items()
                 return True
         return False
 
@@ -1890,6 +2245,8 @@ class CampaignEnv(gym.Env):
 
     def _is_useful_hero_item_name(self, item_name: str) -> bool:
         normalized_name = str(item_name or "")
+        if self._is_artifact_item_name(normalized_name):
+            return True
         return normalized_name in {
             self.BONUS_SMALL_HEAL_ITEM_NAME,
             self.BONUS_LARGE_HEAL_ITEM_NAME,
@@ -2049,8 +2406,9 @@ class CampaignEnv(gym.Env):
 
         self.cleared_ruin_enemy_ids.add(ruin_enemy_id)
         self.gold = max(0.0, float(self.gold or 0.0)) + gold_reward
+        artifact_grant_info: Dict[str, object] = {}
         if item_name:
-            self.heroitems.append(self._make_hero_item_entry(item_name))
+            artifact_grant_info = self._add_hero_item(item_name)
 
         self.last_ruin_reward = {
             "enemy_id": ruin_enemy_id,
@@ -2076,6 +2434,7 @@ class CampaignEnv(gym.Env):
             "ruin_reward_gold": gold_reward,
             "ruin_reward_ruin_pos": ruin_pos,
             "ruin_reward_marker_pos": marker_pos,
+            **artifact_grant_info,
             **self._ruin_progress_info(),
         }
 
@@ -2121,6 +2480,7 @@ class CampaignEnv(gym.Env):
             return sale_info
 
         self.heroitems = kept_items
+        self._sync_equipped_artifact_items()
         self.gold = max(0.0, float(self.gold or 0.0)) + float(total_gold)
         sale_reward = float(len(sold_items)) * float(self.reward_sell_junk_item)
         sale_info.update(
@@ -2289,11 +2649,11 @@ class CampaignEnv(gym.Env):
             granted_items: List[str] = []
             for item_name in chest_data["items"]:
                 if not self._is_auto_consumed_chest_item(item_name):
-                    self.heroitems.append(self._make_hero_item_entry(item_name))
+                    self._add_hero_item(item_name)
                 granted_items.extend(self._apply_chest_item_rewards(item_name))
                 self._log(f"Сундук на {chest_pos}: получен предмет '{item_name}'")
             for granted_item in granted_items:
-                self.heroitems.append(self._make_hero_item_entry(granted_item))
+                self._add_hero_item(granted_item)
                 self._log(
                     f"Сундук на {chest_pos}: бонусом получен предмет '{granted_item}'"
                 )
@@ -2735,6 +3095,112 @@ class CampaignEnv(gym.Env):
         )
 
     @classmethod
+    def _map_offensive_spell_action_specs_for_capital(
+        cls,
+        capital: Optional[int],
+    ) -> Tuple[Dict[str, object], ...]:
+        try:
+            capital_value = int(capital)
+        except (TypeError, ValueError):
+            return ()
+        specs = cls.MAP_OFFENSIVE_SPELL_ACTION_SPECS_BY_CAPITAL.get(capital_value, ())
+        return tuple(specs)
+
+    @classmethod
+    def _map_offensive_spell_action_max_count(cls) -> int:
+        return max(
+            [0]
+            + [
+                len(tuple(specs))
+                for specs in cls.MAP_OFFENSIVE_SPELL_ACTION_SPECS_BY_CAPITAL.values()
+            ]
+        )
+
+    def _current_map_offensive_spell_action_specs(self) -> Tuple[Dict[str, object], ...]:
+        return self._map_offensive_spell_action_specs_for_capital(self.Realcapital)
+
+    @classmethod
+    def _map_offensive_spell_ids_for_capital(cls, capital: Optional[int]) -> Tuple[str, ...]:
+        return tuple(
+            str(spec.get("id", "") or "")
+            for spec in cls._map_offensive_spell_action_specs_for_capital(capital)
+            if str(spec.get("id", "") or "")
+        )
+
+    @classmethod
+    def _map_offensive_spell_specs_by_id(cls) -> Dict[str, Dict[str, object]]:
+        return {
+            str(spec.get("id", "") or ""): dict(spec)
+            for specs in cls.MAP_OFFENSIVE_SPELL_ACTION_SPECS_BY_CAPITAL.values()
+            for spec in tuple(specs)
+            if str(spec.get("id", "") or "")
+        }
+
+    def _map_offensive_spell_spec(self, spell_key: str) -> Dict[str, object]:
+        return dict(self._map_offensive_spell_specs_by_id().get(str(spell_key or ""), {}))
+
+    def _map_offensive_spell_targets_untargetable_stacks(self, spell_key: str) -> bool:
+        spell_spec = self._map_offensive_spell_spec(spell_key)
+        return bool(spell_spec.get("targets_untargetable_stacks", False))
+
+    def _get_map_offensive_spell_target(
+        self,
+        spell_key: str,
+        *,
+        for_mask: bool = False,
+    ) -> Optional[Dict[str, object]]:
+        spell_targetable_only = not self._map_offensive_spell_targets_untargetable_stacks(
+            spell_key
+        )
+        if for_mask:
+            return self._get_nearest_enemy_stack_for_mask(
+                spell_targetable_only=spell_targetable_only
+            )
+        return self.get_nearest_enemy_stack(spell_targetable_only=spell_targetable_only)
+
+    @classmethod
+    def _map_support_spell_action_specs_for_capital(
+        cls,
+        capital: Optional[int],
+    ) -> Tuple[Dict[str, object], ...]:
+        try:
+            capital_value = int(capital)
+        except (TypeError, ValueError):
+            return ()
+        specs = cls.MAP_SUPPORT_SPELL_ACTION_SPECS_BY_CAPITAL.get(capital_value, ())
+        return tuple(specs)
+
+    @classmethod
+    def _map_support_spell_action_max_count(cls) -> int:
+        return max(
+            [0]
+            + [
+                len(tuple(specs))
+                for specs in cls.MAP_SUPPORT_SPELL_ACTION_SPECS_BY_CAPITAL.values()
+            ]
+        )
+
+    def _current_map_support_spell_action_specs(self) -> Tuple[Dict[str, object], ...]:
+        return self._map_support_spell_action_specs_for_capital(self.Realcapital)
+
+    @classmethod
+    def _map_support_spell_ids_for_capital(cls, capital: Optional[int]) -> Tuple[str, ...]:
+        return tuple(
+            str(spec.get("id", "") or "")
+            for spec in cls._map_support_spell_action_specs_for_capital(capital)
+            if str(spec.get("id", "") or "")
+        )
+
+    @classmethod
+    def _map_support_spell_specs_by_id(cls) -> Dict[str, Dict[str, object]]:
+        return {
+            str(spec.get("id", "") or ""): dict(spec)
+            for specs in cls.MAP_SUPPORT_SPELL_ACTION_SPECS_BY_CAPITAL.values()
+            for spec in tuple(specs)
+            if str(spec.get("id", "") or "")
+        }
+
+    @classmethod
     def _legion_damage_spell_specs_by_id(cls) -> Dict[str, Dict[str, object]]:
         return {
             str(spec.get("id", "") or ""): dict(spec)
@@ -2760,6 +3226,12 @@ class CampaignEnv(gym.Env):
 
     def _is_legions_capital(self) -> bool:
         return int(self.Realcapital) == 2
+
+    def _is_empire_capital(self) -> bool:
+        return int(self.Realcapital) == 1
+
+    def _is_undead_hordes_capital(self) -> bool:
+        return int(self.Realcapital) == 4
 
     def _create_initial_enemy_team_states(self) -> Dict[int, List[Dict]]:
         return {
@@ -2845,6 +3317,25 @@ class CampaignEnv(gym.Env):
         except (TypeError, ValueError):
             return False
 
+    @staticmethod
+    def _spell_level_from_entry(spell: Optional[Dict[str, object]]) -> int:
+        if not isinstance(spell, dict):
+            return 0
+        try:
+            return int(spell.get("level", 0) or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    def _is_spell_level_masked_by_typeoflord(self, spell_level: Optional[int]) -> bool:
+        try:
+            normalized_level = int(spell_level or 0)
+        except (TypeError, ValueError):
+            normalized_level = 0
+        return normalized_level >= 5 and int(self.typeoflord) != 2
+
+    def _is_spell_blocked_by_typeoflord(self, spell: Optional[Dict[str, object]]) -> bool:
+        return self._is_spell_level_masked_by_typeoflord(self._spell_level_from_entry(spell))
+
     def _can_cast_legion_damage_spell(
         self,
         spell_key: str,
@@ -2852,23 +3343,54 @@ class CampaignEnv(gym.Env):
         nearest_enemy: Optional[Dict[str, object]] = None,
     ) -> bool:
         normalized_spell_key = str(spell_key or "")
-        if not self._is_legions_capital():
+        current_spell_ids = self._map_offensive_spell_ids_for_capital(self.Realcapital)
+        if not current_spell_ids:
             return False
-        if normalized_spell_key not in self._legion_damage_spell_ids():
+        if normalized_spell_key not in current_spell_ids:
             return False
         if normalized_spell_key in self.damage_spell_ids_used_this_turn:
             return False
         spell = self.active_spells.get(normalized_spell_key)
         if not isinstance(spell, dict):
             return False
+        spell_spec = self._map_offensive_spell_spec(normalized_spell_key)
+        if self._is_spell_blocked_by_typeoflord(spell):
+            return False
         if not self._is_spell_learned(normalized_spell_key):
             return False
+        if str(spell_spec.get("kind", "") or "") == "summon_battle":
+            summon_unit_name = str(spell_spec.get("summon_unit_name", "") or "").strip()
+            if not summon_unit_name or not isinstance(
+                self._find_unit_data_by_name(summon_unit_name),
+                dict,
+            ):
+                return False
         if nearest_enemy is None:
-            nearest_enemy = self.get_nearest_enemy_stack(spell_targetable_only=True)
+            nearest_enemy = self._get_map_offensive_spell_target(normalized_spell_key)
         if nearest_enemy is None:
             return False
         target_enemy_id = nearest_enemy.get("enemy_id")
         if not self._enemy_team_has_living_units(target_enemy_id):
+            return False
+        return self._has_mana_for_costs(self._get_spell_use_costs(spell))
+
+    def _can_cast_support_spell(self, spell_key: str) -> bool:
+        normalized_spell_key = str(spell_key or "")
+        current_spell_ids = self._map_support_spell_ids_for_capital(self.Realcapital)
+        if not current_spell_ids:
+            return False
+        if normalized_spell_key not in current_spell_ids:
+            return False
+        if normalized_spell_key in self.damage_spell_ids_used_this_turn:
+            return False
+        spell = self.active_spells.get(normalized_spell_key)
+        if not isinstance(spell, dict):
+            return False
+        if self._is_spell_blocked_by_typeoflord(spell):
+            return False
+        if not self._is_spell_learned(normalized_spell_key):
+            return False
+        if not self._hero_stack_has_living_units():
             return False
         return self._has_mana_for_costs(self._get_spell_use_costs(spell))
 
@@ -2993,7 +3515,7 @@ class CampaignEnv(gym.Env):
             for spell_id in self.enemy_map_spell_effects.get(normalized_enemy_id, set())
             if str(spell_id)
         )
-        specs_by_id = self._legion_damage_spell_specs_by_id()
+        specs_by_id = self._map_offensive_spell_specs_by_id()
 
         armor_delta = 0
         damage_multiplier = 1.0
@@ -3128,7 +3650,7 @@ class CampaignEnv(gym.Env):
         self.enemy_map_spell_effects = {}
         if expired_stacks > 0:
             self._log(
-                f"Истекли временные дебаффы заклинаний Легионов на {expired_stacks} вражеских отрядах."
+                f"Истекли временные дебаффы боевых заклинаний на {expired_stacks} вражеских отрядах."
             )
         return int(expired_stacks)
 
@@ -3141,6 +3663,115 @@ class CampaignEnv(gym.Env):
             return
         self.enemy_map_spell_effects.pop(normalized_enemy_id, None)
         self._restore_enemy_stack_spell_bases(normalized_enemy_id)
+
+    def _hero_stack_has_living_units(self) -> bool:
+        for unit in self._get_blue_state():
+            max_hp = float(unit.get("max_health", 0) or unit.get("maxhp", 0) or 0.0)
+            current_hp = float(unit.get("health", 0) or unit.get("hp", 0) or 0.0)
+            if max_hp > 0.0 and current_hp > 0.0:
+                return True
+        return False
+
+    def _blue_stack_spell_effect_summary(self) -> Dict[str, object]:
+        active_spell_ids = sorted(str(spell_id) for spell_id in self.blue_map_spell_effects if str(spell_id))
+        specs_by_id = self._map_support_spell_specs_by_id()
+
+        armor_delta = 0
+        damage_multiplier = 1.0
+        initiative_multiplier = 1.0
+        accuracy_multiplier = 1.0
+        health_delta = 0
+        buff_types: List[str] = []
+        resistance_types: List[str] = []
+
+        for spell_id in active_spell_ids:
+            spec = specs_by_id.get(str(spell_id), {})
+            spell_kind = str(spec.get("kind", "") or "")
+            buff_type = str(spec.get("buff_type", "") or "").strip()
+            if spell_kind == "buff":
+                if buff_type:
+                    buff_types.append(buff_type)
+                armor_delta += int(spec.get("armor_delta", 0) or 0)
+                damage_multiplier *= float(spec.get("damage_multiplier", 1.0) or 1.0)
+                initiative_multiplier *= float(spec.get("initiative_multiplier", 1.0) or 1.0)
+                accuracy_multiplier *= float(spec.get("accuracy_multiplier", 1.0) or 1.0)
+            elif spell_kind == "health_bonus":
+                if buff_type:
+                    buff_types.append(buff_type)
+                health_delta += int(spec.get("health_delta", 0) or 0)
+            elif spell_kind == "ward":
+                if buff_type:
+                    buff_types.append(buff_type)
+                resistance_type = str(spec.get("resistance_type", "") or "").strip()
+                if resistance_type:
+                    resistance_types.append(resistance_type)
+
+        return {
+            "active_spell_ids": active_spell_ids,
+            "buff_types": sorted(set(buff_types)),
+            "resistance_types": sorted(set(resistance_types)),
+            "armor_delta": int(armor_delta),
+            "damage_multiplier": float(damage_multiplier),
+            "initiative_multiplier": float(initiative_multiplier),
+            "accuracy_multiplier": float(accuracy_multiplier),
+            "health_delta": int(health_delta),
+        }
+
+    def _apply_heal_to_blue_stack(self, heal_amount: float) -> Tuple[int, float]:
+        if heal_amount <= 0.0:
+            return 0, 0.0
+
+        affected_units = 0
+        total_healed = 0.0
+        for unit in self._get_blue_state():
+            max_hp = float(unit.get("max_health", 0) or unit.get("maxhp", 0) or 0.0)
+            current_hp = float(unit.get("health", 0) or unit.get("hp", 0) or 0.0)
+            if max_hp <= 0.0 or current_hp <= 0.0:
+                continue
+            healed_hp = min(max_hp, current_hp + float(heal_amount))
+            healed_amount = max(0.0, healed_hp - current_hp)
+            unit["health"] = float(healed_hp)
+            unit["hp"] = float(healed_hp)
+            if healed_amount > 0.0:
+                affected_units += 1
+                total_healed += float(healed_amount)
+        return int(affected_units), float(total_healed)
+
+    def _restore_grid_moves(self, restore_fraction: float) -> float:
+        current_moves = max(0.0, float(self.moves or 0.0))
+        move_cap = max(0.0, float(self.moves_per_turn or 0.0))
+        if move_cap <= 0.0 or restore_fraction <= 0.0:
+            return 0.0
+        restore_amount = max(0.0, round(move_cap * float(restore_fraction)))
+        next_moves = min(move_cap, current_moves + restore_amount)
+        restored = max(0.0, next_moves - current_moves)
+        self.moves = int(round(next_moves))
+        return float(restored)
+
+    def _apply_support_spell_to_blue_stack(
+        self,
+        spell_key: str,
+    ) -> Tuple[int, Dict[str, object]]:
+        normalized_spell_key = str(spell_key or "")
+        if not normalized_spell_key:
+            return 0, self._blue_stack_spell_effect_summary()
+        self.blue_map_spell_effects.add(normalized_spell_key)
+        living_units = sum(
+            1
+            for unit in self._get_blue_state()
+            if float(unit.get("max_health", 0) or unit.get("maxhp", 0) or 0.0) > 0.0
+            and float(unit.get("health", 0) or unit.get("hp", 0) or 0.0) > 0.0
+        )
+        return int(living_units), self._blue_stack_spell_effect_summary()
+
+    def _clear_all_blue_map_spell_effects(self) -> int:
+        expired_count = len(self.blue_map_spell_effects)
+        self.blue_map_spell_effects = set()
+        if expired_count > 0:
+            self._log(
+                f"Истекли временные эффекты боевых заклинаний на отряде героя ({expired_count} шт.)."
+            )
+        return int(expired_count)
 
     @classmethod
     def _unit_blocks_spell_damage(cls, unit: Dict, damage_type: Optional[str]) -> bool:
@@ -3220,6 +3851,10 @@ class CampaignEnv(gym.Env):
         for enemy_id, is_alive in self.grid_env.enemies_alive.items():
             if not bool(is_alive):
                 continue
+            enemy_position = self.grid_env.enemy_positions.get(int(enemy_id))
+            on_player_territory = self._is_player_controlled_territory_tile(enemy_position)
+            heal_fraction = 0.05 if on_player_territory else 0.15
+            heal_fraction += self._resolve_enemy_regeneration_bonus_percent(enemy_position)
             for unit in self._get_enemy_team_state(enemy_id):
                 if self._is_empty_enemy_unit(unit):
                     continue
@@ -3227,7 +3862,7 @@ class CampaignEnv(gym.Env):
                 max_hp = float(unit.get("max_health", 0) or unit.get("maxhp", 0) or 0.0)
                 if max_hp <= 0.0 or current_hp <= 0.0 or current_hp >= max_hp:
                     continue
-                heal_amount = max(1.0, max_hp * 0.1)
+                heal_amount = max(1.0, max_hp * float(heal_fraction))
                 new_hp = min(max_hp, current_hp + heal_amount)
                 actual_heal = max(0.0, new_hp - current_hp)
                 if actual_heal <= 0.0:
@@ -3244,6 +3879,21 @@ class CampaignEnv(gym.Env):
             )
 
         return int(healed_units), float(healed_total)
+
+    def _is_player_controlled_territory_tile(self, position: Optional[Tuple[int, int]]) -> bool:
+        """Возвращает True для клетки, относящейся к территории игрока.
+
+        В текущей кампании земля игрока хранится в legions_territory_tile_set:
+        сюда входят клетки от стартовой столицы и захваченных городов/поселений.
+        Название legacy-поля историческое и не связано с текущим цветом отрисовки.
+        """
+        if position is None:
+            return False
+        try:
+            normalized_position = (int(position[0]), int(position[1]))
+        except (TypeError, ValueError, IndexError):
+            return False
+        return normalized_position in self.legions_territory_tile_set
 
     def _grant_merchant_item(self, item_name: str) -> List[str]:
         granted_items: List[str] = []
@@ -3263,7 +3913,7 @@ class CampaignEnv(gym.Env):
             granted_items.append(str(item_name or ""))
 
         for granted_item in granted_items:
-            self.heroitems.append(self._make_hero_item_entry(granted_item))
+            self._add_hero_item(granted_item)
         return granted_items
 
     def _step_buy_merchant_item(self, action: int):
@@ -3444,6 +4094,7 @@ class CampaignEnv(gym.Env):
         spell_already_learned = False
         spell_learning_locked = bool(self.spell_learning_locked)
         missing_magic_tower = not self._has_magic_tower_built()
+        blocked_by_typeoflord = False
         insufficient_mana = False
         mana_costs: Dict[str, float] = {}
         mana_totals_before = self._current_mana_totals()
@@ -3457,6 +4108,7 @@ class CampaignEnv(gym.Env):
                     spell_level = int(spell.get("level", 0) or 0)
                 except (TypeError, ValueError):
                     spell_level = 0
+                blocked_by_typeoflord = self._is_spell_level_masked_by_typeoflord(spell_level)
                 try:
                     spell_already_learned = int(spell.get("learned", 0) or 0) == 1
                 except (TypeError, ValueError):
@@ -3466,6 +4118,7 @@ class CampaignEnv(gym.Env):
                 if (
                     not spell_learning_locked
                     and not missing_magic_tower
+                    and not blocked_by_typeoflord
                     and not spell_already_learned
                     and not insufficient_mana
                 ):
@@ -3492,6 +4145,7 @@ class CampaignEnv(gym.Env):
             "spell_already_learned": spell_already_learned,
             "spell_learning_locked": spell_learning_locked,
             "missing_magic_tower": missing_magic_tower,
+            "blocked_by_typeoflord": blocked_by_typeoflord,
             "insufficient_mana": insufficient_mana,
             "spell_learning_costs": dict(mana_costs),
             "mana_totals_before_spell_learning": dict(mana_totals_before),
@@ -3515,6 +4169,7 @@ class CampaignEnv(gym.Env):
         reward = 0.0
         terminated = False
         truncated = False
+        current_specs = self._current_map_offensive_spell_action_specs()
 
         spell_key = None
         spell_description = None
@@ -3525,6 +4180,7 @@ class CampaignEnv(gym.Env):
         spell_spec: Dict[str, object] = {}
         spell_kind = ""
         spell_debuff_type = None
+        summon_unit_name = None
         spell_effect_summary: Dict[str, object] = {
             "active_spell_ids": [],
             "debuff_types": [],
@@ -3534,14 +4190,15 @@ class CampaignEnv(gym.Env):
             "accuracy_multiplier": 1.0,
         }
         spell_units_affected = 0
-        if 0 <= idx < len(self.LEGION_DAMAGE_SPELL_ACTION_SPECS):
-            spell_spec = dict(self.LEGION_DAMAGE_SPELL_ACTION_SPECS[idx])
+        if 0 <= idx < len(current_specs):
+            spell_spec = dict(current_specs[idx])
             spell_key = str(spell_spec.get("id", "") or "")
             spell = self.active_spells.get(str(spell_key))
             spell_kind = str(spell_spec.get("kind", "") or "")
             spell_damage = float(spell_spec.get("damage", 0.0) or 0.0)
             spell_damage_type = str(spell_spec.get("damage_type", "") or "") or None
             spell_debuff_type = str(spell_spec.get("debuff_type", "") or "") or None
+            summon_unit_name = str(spell_spec.get("summon_unit_name", "") or "") or None
 
         if isinstance(spell, dict):
             spell_description = str(spell.get("description", "") or "").strip()
@@ -3551,11 +4208,16 @@ class CampaignEnv(gym.Env):
                 spell_level = 0
 
         mana_costs = self._get_spell_use_costs(spell) if isinstance(spell, dict) else {}
-        is_legions_capital = self._is_legions_capital()
+        has_map_offensive_spell_actions = bool(current_specs)
         spell_known = bool(spell_key) and self._is_spell_learned(str(spell_key))
         spell_used_this_turn = bool(spell_key) and str(spell_key) in self.damage_spell_ids_used_this_turn
+        blocked_by_typeoflord = self._is_spell_blocked_by_typeoflord(spell)
         insufficient_mana = not self._has_mana_for_costs(mana_costs) if mana_costs else True
-        nearest_enemy = self.get_nearest_enemy_stack(spell_targetable_only=True)
+        nearest_enemy = (
+            self._get_map_offensive_spell_target(str(spell_key))
+            if spell_key
+            else None
+        )
         target_enemy_id = None if nearest_enemy is None else int(nearest_enemy.get("enemy_id", -1))
         target_position = None if nearest_enemy is None else tuple(nearest_enemy.get("position", ()))
         target_reachable = bool(nearest_enemy.get("reachable", False)) if nearest_enemy else False
@@ -3578,8 +4240,9 @@ class CampaignEnv(gym.Env):
         can_cast = (
             bool(spell_key)
             and isinstance(spell, dict)
-            and is_legions_capital
+            and has_map_offensive_spell_actions
             and spell_known
+            and not blocked_by_typeoflord
             and not spell_used_this_turn
             and nearest_enemy is not None
             and self._has_mana_for_costs(mana_costs)
@@ -3605,10 +4268,34 @@ class CampaignEnv(gym.Env):
                     str(spell_key),
                 )
                 spell_cast_applied = spell_units_affected > 0
+            elif spell_kind == "summon_battle":
+                summon_battle_team = self._build_summoned_blue_team(str(summon_unit_name or ""))
+                if summon_battle_team is not None and target_enemy_id is not None:
+                    summon_blue_team, summoned_unit = summon_battle_team
+                    spell_cast_applied = True
+                    spell_units_affected = 1
+                    self.summon_hero_battle_bonus_enemy_ids_this_turn.add(int(target_enemy_id))
+                    self.summon_hero_battle_bonus_pending = True
+                    self.current_enemy_id = int(target_enemy_id)
+                    self.battle_origin_pos = tuple(self.grid_env.agent_pos)
+                    self.current_battle_context = {
+                        "kind": "summon_spell",
+                        "spell_key": str(spell_key),
+                        "summoned_unit_name": str(summon_unit_name or ""),
+                        "target_enemy_id": int(target_enemy_id),
+                    }
+                    self.mode = self.MODE_BATTLE
+                    self._log(
+                        f'Применено заклинание "{spell_description}" по ближайшему вражескому отряду '
+                        f"{target_enemy_id}: призван {summoned_unit['name']} для отдельного боя."
+                    )
+                    self._init_battle(int(target_enemy_id), blue_team=summon_blue_team)
+                else:
+                    spell_cast_applied = False
             else:
                 spell_cast_applied = False
 
-            if spell_description:
+            if spell_description and spell_kind != "summon_battle":
                 if spell_kind == "damage":
                     self._log(
                         f'Применено заклинание "{spell_description}" по ближайшему вражескому отряду '
@@ -3623,7 +4310,11 @@ class CampaignEnv(gym.Env):
                         f"{spell_units_affected} живых юнитах до следующего игрового хода."
                     )
 
-            if target_enemy_id is not None and not self._enemy_team_has_living_units(target_enemy_id):
+            if (
+                spell_kind != "summon_battle"
+                and target_enemy_id is not None
+                and not self._enemy_team_has_living_units(target_enemy_id)
+            ):
                 spell_enemy_defeated = True
                 enemy_reward = self._compute_enemy_defeat_reward(target_enemy_id)
                 ruin_clear_bonus_reward = (
@@ -3668,12 +4359,20 @@ class CampaignEnv(gym.Env):
             "spell_damage": float(spell_damage),
             "spell_damage_type": spell_damage_type,
             "spell_debuff_type": spell_debuff_type,
+            "spell_summon_unit_name": summon_unit_name,
             "spell_cast_applied": bool(spell_cast_applied),
             "spell_cast_executed": bool(spell_cast_executed),
             "spell_cast_reward": float(spell_cast_reward),
             "spell_cast_used_this_turn": bool(spell_used_this_turn),
+            "summon_hero_battle_bonus_pending": bool(self.summon_hero_battle_bonus_pending),
+            "summon_hero_battle_bonus_enemy_ids": sorted(
+                int(enemy_id) for enemy_id in self.summon_hero_battle_bonus_enemy_ids_this_turn
+            ),
             "spell_is_learned": bool(spell_known),
-            "spell_is_legions_capital": bool(is_legions_capital),
+            "blocked_by_typeoflord": bool(blocked_by_typeoflord),
+            "spell_is_legions_capital": bool(self._is_legions_capital()),
+            "spell_is_undead_hordes_capital": bool(self._is_undead_hordes_capital()),
+            "spell_has_map_offensive_actions": bool(has_map_offensive_spell_actions),
             "spell_use_costs": dict(mana_costs),
             "insufficient_mana": bool(not can_cast and mana_costs and not self._has_mana_for_costs(mana_costs)),
             "target_enemy_id": target_enemy_id,
@@ -3707,6 +4406,14 @@ class CampaignEnv(gym.Env):
             "gold": self.gold,
             "moves": self.moves,
         }
+
+        if spell_cast_executed and spell_kind == "summon_battle" and self.mode == self.MODE_BATTLE:
+            battle_obs = self.battle_env._obs() if self.battle_env is not None else np.zeros(0, dtype=np.float32)
+            info["battle_triggered"] = True
+            info["mode"] = "battle"
+            info["enemy_id"] = self.current_enemy_id
+            info["battle_context_kind"] = "summon_spell"
+            return self._build_obs(battle_obs=battle_obs), reward, False, False, info
 
         if spell_enemy_defeated:
             info.update(self._grant_ruin_reward(target_enemy_id))
@@ -3744,6 +4451,203 @@ class CampaignEnv(gym.Env):
                     truncated=False,
                     info=info,
                 )
+
+        grid_obs = self._get_grid_obs()
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
+
+    def _step_cast_support_spell(self, action: int):
+        idx = int(action) - int(self.grid_map_support_spell_action_start)
+        grid_obs = self._get_grid_obs()
+        reward = 0.0
+        terminated = False
+        truncated = False
+        current_specs = self._current_map_support_spell_action_specs()
+
+        spell_key = None
+        spell_description = None
+        spell_level = None
+        spell = None
+        spell_spec: Dict[str, object] = {}
+        spell_kind = ""
+        spell_buff_type = None
+        spell_resistance_type = None
+        spell_heal_amount = 0.0
+        spell_health_delta = 0
+        spell_moves_restore_fraction = 0.0
+        spell_effect_summary: Dict[str, object] = self._blue_stack_spell_effect_summary()
+        spell_units_affected = 0
+        spell_heal_total = 0.0
+        spell_moves_restored = 0.0
+
+        if 0 <= idx < len(current_specs):
+            spell_spec = dict(current_specs[idx])
+            spell_key = str(spell_spec.get("id", "") or "")
+            spell = self.active_spells.get(str(spell_key))
+            spell_kind = str(spell_spec.get("kind", "") or "")
+            spell_buff_type = str(spell_spec.get("buff_type", "") or "") or None
+            spell_resistance_type = str(spell_spec.get("resistance_type", "") or "") or None
+            spell_heal_amount = float(spell_spec.get("heal_amount", 0.0) or 0.0)
+            spell_health_delta = int(spell_spec.get("health_delta", 0) or 0)
+            spell_moves_restore_fraction = float(
+                spell_spec.get("moves_restore_fraction", 0.0) or 0.0
+            )
+
+        if isinstance(spell, dict):
+            spell_description = str(spell.get("description", "") or "").strip()
+            try:
+                spell_level = int(spell.get("level", 0) or 0)
+            except (TypeError, ValueError):
+                spell_level = 0
+
+        mana_costs = self._get_spell_use_costs(spell) if isinstance(spell, dict) else {}
+        has_map_support_spell_actions = bool(current_specs)
+        spell_known = bool(spell_key) and self._is_spell_learned(str(spell_key))
+        spell_used_this_turn = bool(spell_key) and str(spell_key) in self.damage_spell_ids_used_this_turn
+        blocked_by_typeoflord = self._is_spell_blocked_by_typeoflord(spell)
+        can_cast = (
+            bool(spell_key)
+            and isinstance(spell, dict)
+            and has_map_support_spell_actions
+            and spell_known
+            and not blocked_by_typeoflord
+            and not spell_used_this_turn
+            and self._hero_stack_has_living_units()
+            and self._has_mana_for_costs(mana_costs)
+        )
+
+        spell_cast_applied = False
+        spell_cast_executed = False
+        spell_cast_reward = 0.0
+        moves_before_cast = float(self.moves or 0.0)
+
+        if can_cast:
+            self._spend_mana_costs(mana_costs)
+            self.damage_spell_ids_used_this_turn.add(str(spell_key))
+            spell_cast_executed = True
+            spell_cast_reward = float(self.reward_spell_cast)
+            reward += spell_cast_reward
+
+            if spell_kind == "moves":
+                spell_moves_restored = self._restore_grid_moves(spell_moves_restore_fraction)
+                spell_units_affected = 1 if spell_moves_restored > 0.0 else 0
+                spell_cast_applied = spell_moves_restored > 0.0
+                spell_effect_summary = self._blue_stack_spell_effect_summary()
+            elif spell_kind == "heal":
+                spell_units_affected, spell_heal_total = self._apply_heal_to_blue_stack(spell_heal_amount)
+                spell_cast_applied = spell_heal_total > 0.0
+                spell_effect_summary = self._blue_stack_spell_effect_summary()
+            elif spell_kind in {"buff", "ward", "health_bonus"}:
+                spell_units_affected, spell_effect_summary = self._apply_support_spell_to_blue_stack(
+                    str(spell_key)
+                )
+                spell_cast_applied = spell_units_affected > 0
+
+            if spell_description:
+                if spell_kind == "moves":
+                    self._log(
+                        f'Применено заклинание "{spell_description}" на отряд героя: '
+                        f"восстановлено {spell_moves_restored:g} ед. движения "
+                        f"({moves_before_cast:g} -> {float(self.moves or 0.0):g} из {float(self.moves_per_turn or 0.0):g})."
+                    )
+                elif spell_kind == "heal":
+                    self._log(
+                        f'Применено заклинание "{spell_description}" на отряд героя: '
+                        f"исцелено {spell_heal_total:g} HP суммарно на {spell_units_affected} юнитах."
+                    )
+                elif spell_kind == "ward":
+                    ward_description = (
+                        "защита от первой оружейной атаки"
+                        if str(spell_resistance_type or "") == "Weapon"
+                        else f"защита от магии {spell_resistance_type or 'unknown'}"
+                    )
+                    self._log(
+                        f'Применено заклинание "{spell_description}" на отряд героя: '
+                        f"{ward_description} до следующего игрового хода."
+                    )
+                elif spell_kind == "health_bonus":
+                    self._log(
+                        f'Применено заклинание "{spell_description}" на отряд героя: '
+                        f"+{spell_health_delta} HP на {spell_units_affected} живых юнитах до следующего игрового хода."
+                    )
+                elif spell_kind == "buff":
+                    self._log(
+                        f'Применено заклинание "{spell_description}" на отряд героя: '
+                        f"бафф '{spell_buff_type or 'unknown'}' на {spell_units_affected} живых юнитах "
+                        f"до следующего игрового хода."
+                    )
+
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            "spell_cast_action": True,
+            "spell_key": spell_key,
+            "spell_description": spell_description,
+            "spell_level": spell_level,
+            "spell_kind": spell_kind,
+            "spell_buff_type": spell_buff_type,
+            "spell_resistance_type": spell_resistance_type,
+            "spell_heal_amount": float(spell_heal_amount),
+            "spell_health_delta": int(spell_health_delta),
+            "spell_moves_restore_fraction": float(spell_moves_restore_fraction),
+            "spell_heal_total": float(spell_heal_total),
+            "spell_moves_restored": float(spell_moves_restored),
+            "spell_cast_applied": bool(spell_cast_applied),
+            "spell_cast_executed": bool(spell_cast_executed),
+            "spell_cast_reward": float(spell_cast_reward),
+            "spell_cast_used_this_turn": bool(spell_used_this_turn),
+            "spell_is_learned": bool(spell_known),
+            "blocked_by_typeoflord": bool(blocked_by_typeoflord),
+            "spell_is_empire_capital": bool(self._is_empire_capital()),
+            "spell_has_map_support_actions": bool(has_map_support_spell_actions),
+            "spell_use_costs": dict(mana_costs),
+            "insufficient_mana": bool(
+                not can_cast and mana_costs and not self._has_mana_for_costs(mana_costs)
+            ),
+            "target_enemy_id": None,
+            "target_enemy_position": None,
+            "target_enemy_reachable": False,
+            "target_enemy_description": None,
+            "spell_damage_total": 0.0,
+            "spell_damage_units_hit": 0,
+            "spell_damage_units_defeated": 0,
+            "spell_damage_units_blocked": 0,
+            "spell_units_affected": int(spell_units_affected),
+            "spell_effect_active_ids": list(spell_effect_summary.get("active_spell_ids", [])),
+            "spell_effect_types": list(spell_effect_summary.get("buff_types", [])),
+            "spell_effect_resistance_types": list(
+                spell_effect_summary.get("resistance_types", [])
+            ),
+            "spell_effect_armor_delta": int(spell_effect_summary.get("armor_delta", 0) or 0),
+            "spell_effect_damage_multiplier": float(
+                spell_effect_summary.get("damage_multiplier", 1.0) or 1.0
+            ),
+            "spell_effect_initiative_multiplier": float(
+                spell_effect_summary.get("initiative_multiplier", 1.0) or 1.0
+            ),
+            "spell_effect_accuracy_multiplier": float(
+                spell_effect_summary.get("accuracy_multiplier", 1.0) or 1.0
+            ),
+            "spell_effect_health_delta": int(spell_effect_summary.get("health_delta", 0) or 0),
+            "spell_enemy_defeated": False,
+            "enemy_defeat_reward": 0.0,
+            "enemy_defeat_reward_base": 0.0,
+            "blue_exp_reward": 0.0,
+            "blue_exp_raw": 0.0,
+            "ruin_clear_bonus_reward": 0.0,
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+            "moves_before_cast": float(moves_before_cast),
+            "moves_after_cast": float(self.moves or 0.0),
+        }
 
         grid_obs = self._get_grid_obs()
         return self._finalize_grid_step_result(
@@ -4651,6 +5555,7 @@ class CampaignEnv(gym.Env):
         if self.battle_env is None:
             # Защита от некорректного состояния
             self.mode = self.MODE_GRID
+            self._clear_current_battle_context()
             grid_obs = self._get_grid_obs()
             return self._finalize_grid_step_result(
                 grid_obs=grid_obs,
@@ -4697,7 +5602,9 @@ class CampaignEnv(gym.Env):
                 else:
                     battle_item_use_reward = 0.0
                 equipped_items = battle_info.get("equipped_hero_items")
-                if isinstance(equipped_items, list):
+                if isinstance(equipped_items, list) and str(
+                    self.current_battle_context.get("kind", "hero") or "hero"
+                ) != "summon_spell":
                     self.equipped_hero_items = list(equipped_items)
                     self._sync_equipped_hero_items()
             else:
@@ -4706,10 +5613,18 @@ class CampaignEnv(gym.Env):
                 battle_item_use_reward
             )
 
+        battle_context_kind = str(self.current_battle_context.get("kind", "hero") or "hero")
         info = {
             "mode": "battle",
             "enemy_id": self.current_enemy_id,
             "battle_step": True,
+            "battle_context_kind": battle_context_kind,
+            "battle_context_spell_key": str(
+                self.current_battle_context.get("spell_key", "") or ""
+            ),
+            "battle_summoned_unit_name": str(
+                self.current_battle_context.get("summoned_unit_name", "") or ""
+            ),
             "battle_reward_raw": float(battle_reward_raw),
             "battle_reward_scaled": float(self.battle_reward_scale * float(battle_reward_raw)),
             "battle_item_use_reward": float(battle_item_use_reward),
@@ -4723,10 +5638,19 @@ class CampaignEnv(gym.Env):
         }
         if isinstance(battle_info, dict):
             info.update(battle_info)
+        info.update(self._artifact_state_info())
 
         if terminated or truncated:
             winner = self.battle_env.winner
             info["battle_winner"] = winner
+
+            if battle_context_kind == "summon_spell":
+                return self._finalize_summon_spell_battle(
+                    obs=obs,
+                    reward=reward,
+                    info=info,
+                    winner=winner,
+                )
 
             if winner == "blue":
                 exp_reward, exp_raw = self._compute_blue_exp_reward()
@@ -4772,6 +5696,7 @@ class CampaignEnv(gym.Env):
                 # Возвращаемся в grid режим
                 self.mode = self.MODE_GRID
                 self.battle_env = None
+                self._clear_current_battle_context()
                 info["battle_result"] = "victory"
                 info["mode"] = "grid"
                 info["agent_pos"] = self._restore_agent_to_battle_origin()
@@ -4845,6 +5770,7 @@ class CampaignEnv(gym.Env):
                 # Поражение: конец эпизода
                 reward += self.reward_loss
                 self._clear_battle_origin()
+                self._clear_current_battle_context()
                 self._log(f"=== ПОРАЖЕНИЕ В БОЮ ПРОТИВ ВРАГА {self.current_enemy_id}! ===")
                 self._log("=== КАМПАНИЯ ПРОВАЛЕНА ===")
                 info["battle_result"] = "defeat"
@@ -4858,6 +5784,144 @@ class CampaignEnv(gym.Env):
 
         info["battle_ongoing"] = True
         return self._build_obs(battle_obs=obs), reward, terminated, truncated, info
+
+    def _finalize_summon_spell_battle(
+        self,
+        *,
+        obs: np.ndarray,
+        reward: float,
+        info: Dict[str, object],
+        winner: Optional[str],
+    ):
+        enemy_id = self.current_enemy_id
+        info["blue_exp_reward"] = 0.0
+        info["blue_exp_raw"] = 0.0
+        info["blue_survival_reward"] = 0.0
+        info["blue_alive_ratio"] = 0.0
+        info["blue_hp_ratio"] = 0.0
+        info["enemy_defeat_reward"] = 0.0
+        info["enemy_defeat_reward_base"] = 0.0
+        info["ruin_clear_bonus_reward"] = 0.0
+
+        if winner == "blue":
+            try:
+                normalized_enemy_id = int(enemy_id)
+            except (TypeError, ValueError):
+                normalized_enemy_id = None
+            if normalized_enemy_id is not None:
+                self.summon_hero_battle_bonus_enemy_ids_this_turn.discard(normalized_enemy_id)
+                self.summon_hero_battle_bonus_pending = bool(
+                    self.summon_hero_battle_bonus_enemy_ids_this_turn
+                )
+            enemy_reward = self._compute_enemy_defeat_reward(enemy_id)
+            reward += enemy_reward
+            info["enemy_defeat_reward"] = float(enemy_reward)
+            info["enemy_defeat_reward_base"] = float(self.reward_defeat_enemy)
+            if int(enemy_id or -1) in self.RUIN_REWARD_BY_ENEMY_ID:
+                info["ruin_clear_bonus_reward"] = float(self.reward_ruin_clear_bonus)
+
+            self._log(
+                f"=== ПРИЗВАННЫЙ ЮНИТ ПОБЕДИЛ В БОЮ ПРОТИВ ВРАГА {enemy_id}! ==="
+            )
+            self.grid_env.mark_enemy_defeated(enemy_id)
+            self._clear_enemy_map_spell_effects_for_enemy(enemy_id)
+
+            objective_cities_captured_before = len(self.captured_objective_cities)
+            newly_captured_objective_cities = self._capture_objective_city_if_cleared(enemy_id)
+            newly_activated_settlement_territories = (
+                self._activate_legions_settlement_territory_if_cleared(enemy_id)
+            )
+            info.update(self._grant_ruin_reward(enemy_id))
+            info["objective_cities_captured_total"] = sorted(self.captured_objective_cities)
+            if newly_activated_settlement_territories:
+                info["legions_settlement_territories_activated"] = list(
+                    newly_activated_settlement_territories
+                )
+                for settlement_name in newly_activated_settlement_territories:
+                    self._log(
+                        f"=== ЗЕМЛЯ ЛЕГИОНОВ НАЧИНАЕТ РАСПРОСТРАНЯТЬСЯ ИЗ ПОСЕЛЕНИЯ {settlement_name} ==="
+                    )
+
+            if newly_captured_objective_cities:
+                final_objective_reward = self._compute_final_objective_reward(
+                    len(newly_captured_objective_cities),
+                    captured_before=objective_cities_captured_before,
+                )
+                reward += final_objective_reward
+                info["captured_objective_cities"] = list(newly_captured_objective_cities)
+                info["final_objective_reward"] = float(final_objective_reward)
+
+            self.mode = self.MODE_GRID
+            self.battle_env = None
+            self._clear_current_battle_context()
+            info["battle_result"] = "victory"
+            info["mode"] = "grid"
+            info["agent_pos"] = self._restore_agent_to_battle_origin()
+            info["enemies_alive"] = dict(self.grid_env.enemies_alive)
+
+            if self._all_objective_cities_captured():
+                self._log("=== ЗАХВАЧЕНЫ ВСЕ ЦЕЛЕВЫЕ ГОРОДА: ПОБЕДА В КАМПАНИИ ===")
+                grid_obs = self._get_grid_obs()
+                info["campaign_result"] = "victory"
+                info["campaign_victory_reason"] = "objective_cities_cleared"
+                return self._finalize_grid_step_result(
+                    grid_obs=grid_obs,
+                    reward=reward,
+                    terminated=True,
+                    truncated=False,
+                    info=info,
+                )
+
+            if self.grid_env.all_enemies_defeated():
+                self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")
+                grid_obs = self._get_grid_obs()
+                info["campaign_result"] = "victory"
+                info["campaign_victory_reason"] = "all_enemies_defeated"
+                return self._finalize_grid_step_result(
+                    grid_obs=grid_obs,
+                    reward=reward,
+                    terminated=True,
+                    truncated=False,
+                    info=info,
+                )
+
+            grid_obs = self._get_grid_obs()
+            return self._finalize_grid_step_result(
+                grid_obs=grid_obs,
+                reward=reward,
+                terminated=False,
+                truncated=False,
+                info=info,
+            )
+
+        self._save_enemy_state_from_battle(enemy_id)
+        if winner == "red":
+            self._log(
+                f"=== ПРИЗВАННЫЙ ЮНИТ ПОТЕРПЕЛ ПОРАЖЕНИЕ В БОЮ ПРОТИВ ВРАГА {enemy_id}! ==="
+            )
+            info["battle_result"] = "defeat"
+        else:
+            self._log(
+                f"=== БОЙ ПРИЗЫВНОГО ЮНИТА ПРОТИВ ВРАГА {enemy_id} ЗАВЕРШЁН БЕЗ ПОБЕДИТЕЛЯ ==="
+            )
+            info["battle_result"] = "timeout"
+
+        self.mode = self.MODE_GRID
+        self.battle_env = None
+        self._clear_current_battle_context()
+        info["mode"] = "grid"
+        info["agent_pos"] = self._restore_agent_to_battle_origin()
+        info["enemies_alive"] = dict(self.grid_env.enemies_alive)
+        info["summon_enemy_state_saved"] = True
+
+        grid_obs = self._get_grid_obs()
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=False,
+            truncated=False,
+            info=info,
+        )
 
     def _restore_agent_to_battle_origin(self) -> Tuple[int, int]:
         """Возвращает агента на клетку, с которой был инициирован текущий бой."""
@@ -4906,6 +5970,62 @@ class CampaignEnv(gym.Env):
             str(settlement_name),
             normalized_level,
         )
+
+    def _resolve_rest_regeneration_context(
+        self,
+        position: Optional[Tuple[int, int]],
+    ) -> tuple[float, str, Optional[object]]:
+        """Возвращает процентный бонус лечения от отдыха на клетке города/столицы."""
+        if position is None:
+            return 0.0, "", None
+
+        try:
+            normalized_position = (int(position[0]), int(position[1]))
+        except (TypeError, ValueError, IndexError):
+            return 0.0, "", None
+
+        if normalized_position == tuple(self.CASTLE_POS):
+            return float(CAPITAL_HEAL_TILE_ARMOR_BONUS) / 100.0, "capital", "capital"
+
+        settlement_name = self.legions_settlement_source_name_by_tile.get(normalized_position)
+        if not settlement_name:
+            return 0.0, "", None
+        if settlement_name not in self.legions_active_settlement_territory_capture_turn_by_name:
+            return 0.0, "", None
+
+        settlement_level = self.legions_settlement_level_by_name.get(str(settlement_name))
+        if settlement_level is None:
+            return 0.0, "", None
+        normalized_level = max(0, int(settlement_level))
+        bonus_percent = float(self.SETTLEMENT_REST_HEAL_BONUS_BY_LEVEL.get(normalized_level, 0.0))
+        return bonus_percent / 100.0, str(settlement_name), normalized_level
+
+    def _resolve_enemy_regeneration_bonus_percent(
+        self,
+        position: Optional[Tuple[int, int]],
+    ) -> float:
+        """Возвращает бонус регенерации врага на клетке города/столицы."""
+        if position is None:
+            return 0.0
+
+        try:
+            normalized_position = (int(position[0]), int(position[1]))
+        except (TypeError, ValueError, IndexError):
+            return 0.0
+
+        if normalized_position == tuple(self.empire_territory_source_tile):
+            return float(CAPITAL_HEAL_TILE_ARMOR_BONUS) / 100.0
+
+        settlement_name = self.legions_settlement_source_name_by_tile.get(normalized_position)
+        if not settlement_name:
+            return 0.0
+
+        settlement_level = self.legions_settlement_level_by_name.get(str(settlement_name))
+        if settlement_level is None:
+            return 0.0
+
+        normalized_level = max(0, int(settlement_level))
+        return float(self.SETTLEMENT_REST_HEAL_BONUS_BY_LEVEL.get(normalized_level, 0.0)) / 100.0
 
     @classmethod
     def _settlement_upgrade_cost_for_level(cls, current_level: int) -> float:
@@ -5155,25 +6275,249 @@ class CampaignEnv(gym.Env):
                 f"{sorted(buffed_air)} перед началом боя"
             )
 
-    def _init_battle(self, enemy_id: int):
+    def _apply_active_blue_support_spell_effects(self, blue_team: List[Dict]) -> None:
+        if not blue_team:
+            return
+
+        summary = self._blue_stack_spell_effect_summary()
+        active_spell_ids = list(summary.get("active_spell_ids", []))
+        if not active_spell_ids:
+            return
+
+        buffed_armor: List[int] = []
+        buffed_damage: List[int] = []
+        buffed_initiative: List[int] = []
+        buffed_accuracy: List[int] = []
+        buffed_health: List[int] = []
+        buffed_resistance: List[int] = []
+        resistance_types = [
+            str(value)
+            for value in (summary.get("resistance_types", []) or [])
+            if str(value)
+        ]
+
+        for unit in blue_team:
+            position = int(unit.get("position", -1) or -1)
+            hp = float(unit.get("hp", 0) or unit.get("health", 0) or 0.0)
+            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0.0)
+            if position <= 0 or max_hp <= 0.0 or hp <= 0.0:
+                continue
+
+            armor_delta = int(summary.get("armor_delta", 0) or 0)
+            if armor_delta != 0:
+                base_armor = self._normalize_armor_value(unit.get("armor", 0))
+                unit["campaign_map_spell_base_armor"] = int(base_armor)
+                unit["armor"] = self._normalize_armor_value(float(base_armor) + float(armor_delta))
+                buffed_armor.append(position)
+
+            damage_multiplier = float(summary.get("damage_multiplier", 1.0) or 1.0)
+            if abs(damage_multiplier - 1.0) > 1e-9:
+                base_damage = self._normalize_damage_value(unit.get("damage", 0))
+                base_damage_secondary = self._normalize_damage_value(unit.get("damage_secondary", 0))
+                unit["campaign_map_spell_base_damage"] = int(base_damage)
+                unit["campaign_map_spell_base_damage_secondary"] = int(base_damage_secondary)
+                unit["damage"] = self._normalize_damage_value(
+                    float(base_damage) * float(damage_multiplier)
+                )
+                unit["damage_secondary"] = self._normalize_damage_value(
+                    float(base_damage_secondary) * float(damage_multiplier)
+                )
+                buffed_damage.append(position)
+
+            initiative_multiplier = float(summary.get("initiative_multiplier", 1.0) or 1.0)
+            if abs(initiative_multiplier - 1.0) > 1e-9:
+                base_initiative = int(unit.get("initiative_base", unit.get("initiative", 0)) or 0)
+                unit["campaign_map_spell_base_initiative"] = int(base_initiative)
+                boosted_initiative = self._normalize_damage_value(
+                    float(base_initiative) * float(initiative_multiplier)
+                )
+                unit["initiative_base"] = int(boosted_initiative)
+                unit["initiative"] = int(boosted_initiative)
+                buffed_initiative.append(position)
+
+            accuracy_multiplier = float(summary.get("accuracy_multiplier", 1.0) or 1.0)
+            if abs(accuracy_multiplier - 1.0) > 1e-9:
+                base_accuracy = self._normalize_accuracy_value(unit.get("accuracy", 0))
+                base_accuracy_secondary = self._normalize_accuracy_value(
+                    unit.get("accuracy_secondary", 0)
+                )
+                unit["campaign_map_spell_base_accuracy"] = int(base_accuracy)
+                unit["campaign_map_spell_base_accuracy_secondary"] = int(base_accuracy_secondary)
+                unit["accuracy"] = self._normalize_accuracy_value(
+                    float(base_accuracy) * float(accuracy_multiplier)
+                )
+                unit["accuracy_secondary"] = self._normalize_accuracy_value(
+                    float(base_accuracy_secondary) * float(accuracy_multiplier)
+                )
+                buffed_accuracy.append(position)
+
+            health_delta = int(summary.get("health_delta", 0) or 0)
+            if health_delta != 0:
+                base_max_health = float(
+                    unit.get("max_health", 0)
+                    or unit.get("maxhp", 0)
+                    or unit.get("health", 0)
+                    or unit.get("hp", 0)
+                    or 0.0
+                )
+                base_health = float(unit.get("health", 0) or unit.get("hp", 0) or 0.0)
+                unit["campaign_map_spell_base_max_health"] = float(base_max_health)
+                unit["campaign_map_spell_health_bonus"] = int(health_delta)
+                boosted_max_health = max(0.0, base_max_health + float(health_delta))
+                boosted_health = max(0.0, base_health + float(health_delta))
+                boosted_health = min(boosted_max_health, boosted_health)
+                unit["max_health"] = float(boosted_max_health)
+                unit["maxhp"] = float(boosted_max_health)
+                unit["health"] = float(boosted_health)
+                unit["hp"] = float(boosted_health)
+                buffed_health.append(position)
+
+            if resistance_types:
+                resistance = [str(res) for res in (unit.get("resistance") or [])]
+                added_resistance = [res for res in resistance_types if res not in resistance]
+                if added_resistance:
+                    unit["resistance"] = resistance + added_resistance
+                    unit["campaign_map_spell_added_resistance"] = list(added_resistance)
+                    buffed_resistance.append(position)
+
+        if buffed_armor:
+            self._log(
+                f"Активен бафф брони от заклинаний героя для позиций {sorted(buffed_armor)} "
+                f"перед началом боя (+{int(summary.get('armor_delta', 0) or 0)})."
+            )
+        if buffed_damage:
+            self._log(
+                "Активен бафф урона от заклинаний героя для позиций "
+                f"{sorted(buffed_damage)} перед началом боя "
+                f"(x{float(summary.get('damage_multiplier', 1.0) or 1.0):.3g})."
+            )
+        if buffed_initiative:
+            self._log(
+                "Активен бафф инициативы от заклинаний героя для позиций "
+                f"{sorted(buffed_initiative)} перед началом боя "
+                f"(x{float(summary.get('initiative_multiplier', 1.0) or 1.0):.3g})."
+            )
+        if buffed_accuracy:
+            self._log(
+                "Активен бафф точности от заклинаний героя для позиций "
+                f"{sorted(buffed_accuracy)} перед началом боя "
+                f"(x{float(summary.get('accuracy_multiplier', 1.0) or 1.0):.3g})."
+            )
+        if buffed_health:
+            self._log(
+                "Активен бафф здоровья от заклинаний героя для позиций "
+                f"{sorted(buffed_health)} перед началом боя "
+                f"(+{int(summary.get('health_delta', 0) or 0)} HP)."
+            )
+        if buffed_resistance:
+            self._log(
+                "Активна защита от магии заклинаниями героя для позиций "
+                f"{sorted(buffed_resistance)} перед началом боя: {', '.join(resistance_types)}."
+            )
+
+    def _apply_equipped_artifact_effects(self, blue_team: List[Dict]) -> None:
+        if not blue_team:
+            return
+
+        self._sync_equipped_artifact_items()
+        active_artifacts = [
+            str(item_name)
+            for item_name in list(self.equipped_artifact_items or [])
+            if self._is_artifact_item_name(str(item_name or ""))
+        ]
+        if not active_artifacts:
+            return
+
+        hero = self._resolve_travel_hero(units=blue_team)
+        if hero is None:
+            return
+
+        damage_multiplier = 1.0
+        initiative_multiplier = 1.0
+        for item_name in active_artifacts:
+            effect = self._artifact_effect_definition(item_name)
+            damage_multiplier *= float(effect.get("damage_multiplier", 1.0) or 1.0)
+            initiative_multiplier *= float(effect.get("initiative_multiplier", 1.0) or 1.0)
+
+        hero["campaign_active_artifacts"] = list(active_artifacts)
+        if abs(damage_multiplier - 1.0) > 1e-9:
+            base_damage = self._normalize_damage_value(hero.get("damage", 0))
+            base_damage_secondary = self._normalize_damage_value(hero.get("damage_secondary", 0))
+            hero["campaign_artifact_base_damage"] = int(base_damage)
+            hero["campaign_artifact_base_damage_secondary"] = int(base_damage_secondary)
+            hero["campaign_artifact_damage_multiplier"] = float(damage_multiplier)
+            hero["damage"] = self._normalize_damage_value(
+                float(base_damage) * float(damage_multiplier)
+            )
+            hero["damage_secondary"] = self._normalize_damage_value(
+                float(base_damage_secondary) * float(damage_multiplier)
+            )
+            hero["original_damage"] = int(hero.get("damage", 0) or 0)
+
+        if abs(initiative_multiplier - 1.0) > 1e-9:
+            base_initiative = int(
+                hero.get("initiative_base", hero.get("initiative", 0)) or 0
+            )
+            hero["campaign_artifact_base_initiative"] = int(base_initiative)
+            hero["campaign_artifact_initiative_multiplier"] = float(initiative_multiplier)
+            boosted_initiative = self._normalize_damage_value(
+                float(base_initiative) * float(initiative_multiplier)
+            )
+            hero["initiative_base"] = int(boosted_initiative)
+            hero["initiative"] = int(boosted_initiative)
+
+        hero_name = str(hero.get("name", "Герой") or "Герой")
+        self._log(
+            f"Активны экипированные артефакты героя {hero_name}: {', '.join(active_artifacts)} "
+            f"(урон x{damage_multiplier:.3g}, инициатива x{initiative_multiplier:.3g})."
+        )
+
+    def _init_battle(
+        self,
+        enemy_id: int,
+        *,
+        blue_team: Optional[List[Dict]] = None,
+    ):
         """Инициализирует бой с конкретной RED командой."""
         red_team_state = self._get_enemy_team_state(enemy_id)
         if red_team_state:
-            red_team = deepcopy(red_team_state)
+            red_team = self._build_battle_team_with_placeholders("red", red_team_state)
         else:
-            red_team = deepcopy(ENEMY_CONFIGS.get(enemy_id, ENEMY_CONFIGS[1]))
+            red_team = self._build_battle_team_with_placeholders(
+                "red",
+                ENEMY_CONFIGS.get(enemy_id, ENEMY_CONFIGS[1]),
+            )
         self._apply_settlement_defender_armor_bonus(enemy_id, red_team)
 
-        # Восстанавливаем состояние BLUE или берём дефолтное
-        if self.persist_blue_hp and self.blue_team_state is not None:
-            blue_team = deepcopy(self.blue_team_state)
+        # Восстанавливаем состояние BLUE или берём дефолтное.
+        if blue_team is not None:
+            prepared_blue_team = self._build_battle_team_with_placeholders("blue", blue_team)
+            equipped_hero_items: List[Optional[str]] = [None] * int(self.BATTLE_EQUIP_SLOTS)
+            hero_item_effects: Dict[str, Dict[str, object]] = {}
+            self._log("Используется кастомная BLUE команда")
+        elif self.persist_blue_hp and self.blue_team_state is not None:
+            prepared_blue_team = self._build_battle_team_with_placeholders(
+                "blue",
+                self.blue_team_state,
+            )
+            self._apply_hero_heal_tile_armor_bonus(prepared_blue_team)
+            self._apply_active_blue_potion_effects(prepared_blue_team)
+            self._apply_active_blue_support_spell_effects(prepared_blue_team)
+            self._apply_equipped_artifact_effects(prepared_blue_team)
+            self._sync_equipped_hero_items()
+            equipped_hero_items = list(self.equipped_hero_items)
+            hero_item_effects = dict(self._battle_item_effect_definitions())
             self._log("Загружено сохранённое состояние BLUE команды")
         else:
-            blue_team = deepcopy(UNITS_BLUE)
+            prepared_blue_team = self._build_battle_team_with_placeholders("blue", UNITS_BLUE)
+            self._apply_hero_heal_tile_armor_bonus(prepared_blue_team)
+            self._apply_active_blue_potion_effects(prepared_blue_team)
+            self._apply_active_blue_support_spell_effects(prepared_blue_team)
+            self._apply_equipped_artifact_effects(prepared_blue_team)
+            self._sync_equipped_hero_items()
+            equipped_hero_items = list(self.equipped_hero_items)
+            hero_item_effects = dict(self._battle_item_effect_definitions())
             self._log("Используется дефолтная BLUE команда")
-        self._apply_hero_heal_tile_armor_bonus(blue_team)
-        self._apply_active_blue_potion_effects(blue_team)
-        self._sync_equipped_hero_items()
 
         self.battle_env = BattleEnv(
             reward_win=self.battle_reward_win,
@@ -5181,11 +6525,11 @@ class CampaignEnv(gym.Env):
             reward_step=self.battle_reward_step,
             log_enabled=self.log_enabled,
         )
-        self.battle_env.equipped_hero_items = list(self.equipped_hero_items)
-        self.battle_env.hero_item_effects = dict(self._battle_item_effect_definitions())
+        self.battle_env.equipped_hero_items = list(equipped_hero_items)
+        self.battle_env.hero_item_effects = dict(hero_item_effects)
 
         # Инициализируем бой с кастомными командами
-        self.battle_env._init_with_custom_teams(red_team, blue_team)
+        self.battle_env._init_with_custom_teams(red_team, prepared_blue_team)
 
     def _save_blue_state(self):
         """
@@ -5233,6 +6577,122 @@ class CampaignEnv(gym.Env):
             restored_unit["bonusturn"] = 0
             restored_unit.pop("resilience_used_types", None)
             position = int(restored_unit.get("position", -1) or -1)
+            if "campaign_artifact_base_damage" in restored_unit:
+                restored_unit["damage"] = self._normalize_damage_value(
+                    restored_unit.get(
+                        "campaign_artifact_base_damage",
+                        restored_unit.get("damage", 0),
+                    )
+                )
+            if "campaign_artifact_base_damage_secondary" in restored_unit:
+                restored_unit["damage_secondary"] = self._normalize_damage_value(
+                    restored_unit.get(
+                        "campaign_artifact_base_damage_secondary",
+                        restored_unit.get("damage_secondary", 0),
+                    )
+                )
+            if "campaign_artifact_base_initiative" in restored_unit:
+                restored_unit["initiative_base"] = int(
+                    self._normalize_damage_value(
+                        restored_unit.get(
+                            "campaign_artifact_base_initiative",
+                            restored_unit.get(
+                                "initiative_base",
+                                restored_unit.get("initiative", 0),
+                            ),
+                        )
+                    )
+                )
+                restored_unit["initiative"] = int(restored_unit.get("initiative_base", 0) or 0)
+            if "campaign_map_spell_base_damage" in restored_unit:
+                restored_unit["damage"] = self._normalize_damage_value(
+                    restored_unit.get(
+                        "campaign_map_spell_base_damage",
+                        restored_unit.get("damage", 0),
+                    )
+                )
+            if "campaign_map_spell_base_damage_secondary" in restored_unit:
+                restored_unit["damage_secondary"] = self._normalize_damage_value(
+                    restored_unit.get(
+                        "campaign_map_spell_base_damage_secondary",
+                        restored_unit.get("damage_secondary", 0),
+                    )
+                )
+            if "campaign_map_spell_base_initiative" in restored_unit:
+                restored_unit["initiative_base"] = int(
+                    self._normalize_damage_value(
+                        restored_unit.get(
+                            "campaign_map_spell_base_initiative",
+                            restored_unit.get("initiative_base", restored_unit.get("initiative", 0)),
+                        )
+                    )
+                )
+                restored_unit["initiative"] = int(restored_unit.get("initiative_base", 0) or 0)
+            if "campaign_map_spell_base_accuracy" in restored_unit:
+                restored_unit["accuracy"] = self._normalize_accuracy_value(
+                    restored_unit.get(
+                        "campaign_map_spell_base_accuracy",
+                        restored_unit.get("accuracy", 0),
+                    )
+                )
+            if "campaign_map_spell_base_accuracy_secondary" in restored_unit:
+                restored_unit["accuracy_secondary"] = self._normalize_accuracy_value(
+                    restored_unit.get(
+                        "campaign_map_spell_base_accuracy_secondary",
+                        restored_unit.get("accuracy_secondary", 0),
+                    )
+                )
+            if "campaign_map_spell_base_max_health" in restored_unit:
+                base_max_health = float(
+                    restored_unit.get(
+                        "campaign_map_spell_base_max_health",
+                        restored_unit.get("max_health", restored_unit.get("maxhp", 0)),
+                    )
+                    or 0.0
+                )
+                health_bonus = float(
+                    restored_unit.get("campaign_map_spell_health_bonus", 0) or 0.0
+                )
+                current_hp = max(0.0, float(restored_unit.get("health", 0) or restored_unit.get("hp", 0) or 0.0))
+                restored_health = max(0.0, min(base_max_health, current_hp - health_bonus))
+                restored_unit["max_health"] = float(base_max_health)
+                restored_unit["maxhp"] = float(base_max_health)
+                restored_unit["health"] = float(restored_health)
+                restored_unit["hp"] = float(restored_health)
+            added_spell_resistance = [
+                str(res)
+                for res in (restored_unit.get("campaign_map_spell_added_resistance") or [])
+                if str(res)
+            ]
+            if added_spell_resistance:
+                restored_unit["resistance"] = [
+                    res
+                    for res in (restored_unit.get("resistance") or [])
+                    if str(res) not in set(added_spell_resistance)
+                ]
+            if "campaign_map_spell_base_armor" in restored_unit:
+                restored_unit["armor"] = self._normalize_armor_value(
+                    restored_unit.get(
+                        "campaign_map_spell_base_armor",
+                        restored_unit.get("armor", 0),
+                    )
+                )
+                restored_unit["base_armor"] = int(restored_unit["armor"])
+            restored_unit.pop("campaign_map_spell_base_damage", None)
+            restored_unit.pop("campaign_map_spell_base_damage_secondary", None)
+            restored_unit.pop("campaign_map_spell_base_initiative", None)
+            restored_unit.pop("campaign_map_spell_base_accuracy", None)
+            restored_unit.pop("campaign_map_spell_base_accuracy_secondary", None)
+            restored_unit.pop("campaign_map_spell_base_max_health", None)
+            restored_unit.pop("campaign_map_spell_health_bonus", None)
+            restored_unit.pop("campaign_map_spell_added_resistance", None)
+            restored_unit.pop("campaign_map_spell_base_armor", None)
+            restored_unit.pop("campaign_artifact_base_damage", None)
+            restored_unit.pop("campaign_artifact_base_damage_secondary", None)
+            restored_unit.pop("campaign_artifact_base_initiative", None)
+            restored_unit.pop("campaign_artifact_damage_multiplier", None)
+            restored_unit.pop("campaign_artifact_initiative_multiplier", None)
+            restored_unit.pop("campaign_active_artifacts", None)
             if (
                 position in self.active_strength_potion_positions
                 or position in self.active_energy_elixir_positions
@@ -5321,6 +6781,156 @@ class CampaignEnv(gym.Env):
             if entry_name == name:
                 return entry
         return None
+
+    def _clear_current_battle_context(self) -> None:
+        self.current_battle_context = {}
+
+    def _build_battle_team_with_placeholders(
+        self,
+        team: str,
+        units: Optional[List[Dict]],
+    ) -> List[Dict]:
+        normalized_team = "red" if str(team).lower() == "red" else "blue"
+        positions = range(1, 7) if normalized_team == "red" else range(7, 13)
+        units_by_position: Dict[int, Dict] = {}
+
+        for raw_unit in units or []:
+            if not isinstance(raw_unit, dict):
+                continue
+            try:
+                position = int(raw_unit.get("position", -1) or -1)
+            except (TypeError, ValueError):
+                continue
+            if position not in positions or position in units_by_position:
+                continue
+            normalized_unit = deepcopy(raw_unit)
+            normalized_unit["team"] = normalized_team
+            normalized_unit["position"] = int(position)
+            units_by_position[position] = normalized_unit
+
+        return [
+            units_by_position.get(int(position), placeholder_unit(normalized_team, int(position)))
+            for position in positions
+        ]
+
+    def _build_summoned_blue_team(
+        self,
+        summon_unit_name: str,
+    ) -> Optional[Tuple[List[Dict], Dict]]:
+        unit_data = self._find_unit_data_by_name(str(summon_unit_name or "").strip())
+        if not isinstance(unit_data, dict):
+            return None
+
+        template_unit = self._build_unit_from_data(unit_data, team="blue", position=7)
+        summon_position = 7 if template_unit.get("stand") == "ahead" else 10
+        template_unit["team"] = "blue"
+        template_unit["position"] = int(summon_position)
+        template_unit["stand"] = "ahead" if summon_position in (7, 8, 9) else "behind"
+        template_unit["hero"] = False
+        template_unit["needaunit"] = 0
+        template_unit["exp_current"] = 0
+        template_unit["exp_required"] = 0
+        template_unit["next_level_exp"] = 0
+
+        blue_team = self._build_battle_team_with_placeholders("blue", [template_unit])
+        summoned_unit = next(
+            unit for unit in blue_team if int(unit.get("position", -1) or -1) == int(summon_position)
+        )
+        return blue_team, summoned_unit
+
+    def _save_enemy_state_from_battle(self, enemy_id: Optional[int]) -> None:
+        if self.battle_env is None:
+            return
+
+        try:
+            normalized_enemy_id = int(enemy_id)
+        except (TypeError, ValueError):
+            return
+
+        original_team = self._build_battle_team_with_placeholders(
+            "red",
+            self._get_enemy_team_state(normalized_enemy_id),
+        )
+        original_by_position = {
+            int(unit.get("position", -1) or -1): deepcopy(unit)
+            for unit in original_team
+        }
+        battle_by_position = {
+            int(unit.get("position", -1) or -1): deepcopy(unit)
+            for unit in self.battle_env.combined
+            if unit.get("team") == "red"
+            and not bool(unit.get("Summoned"))
+            and 1 <= int(unit.get("position", -1) or -1) <= 6
+        }
+
+        saved_team: List[Dict] = []
+        for position in range(1, 7):
+            original_unit = deepcopy(original_by_position.get(position, placeholder_unit("red", position)))
+            battle_unit = battle_by_position.get(position)
+            if battle_unit is not None and not self._is_empty_enemy_unit(original_unit):
+                current_hp = max(
+                    0.0,
+                    float(battle_unit.get("health", 0) or battle_unit.get("hp", 0) or 0.0),
+                )
+                original_unit["health"] = float(current_hp)
+                original_unit["hp"] = float(current_hp)
+                original_unit["Level"] = int(
+                    battle_unit.get("Level", original_unit.get("Level", 0)) or 0
+                )
+                original_unit["exp_current"] = float(
+                    battle_unit.get("exp_current", original_unit.get("exp_current", 0)) or 0.0
+                )
+                original_unit["exp_required"] = battle_unit.get(
+                    "exp_required",
+                    original_unit.get("exp_required", 0),
+                )
+                original_unit["next_level_exp"] = int(
+                    battle_unit.get(
+                        "next_level_exp",
+                        original_unit.get("next_level_exp", 0),
+                    )
+                    or 0
+                )
+                original_unit["hero"] = bool(
+                    battle_unit.get("hero", original_unit.get("hero", False))
+                )
+                original_unit["needaunit"] = int(
+                    battle_unit.get("needaunit", original_unit.get("needaunit", 0)) or 0
+                )
+                original_unit["initiative"] = (
+                    int(original_unit.get("initiative_base", original_unit.get("initiative", 0)) or 0)
+                    if current_hp > 0.0
+                    else 0
+                )
+
+            original_unit["defense"] = 0
+            original_unit["waited"] = 0
+            original_unit["paralyzed"] = 0
+            original_unit["long_paralyzed"] = 0
+            original_unit["running_away"] = 0
+            original_unit["transformed"] = 0
+            original_unit["poison_turns_left"] = 0
+            original_unit["poison_damage_per_tick"] = 0
+            original_unit["burn_turns_left"] = 0
+            original_unit["burn_damage_per_tick"] = 0
+            original_unit["burn_source_lord_pos"] = None
+            original_unit["uran_turns_left"] = 0
+            original_unit["uran_damage_per_tick"] = 0
+            original_unit["resilience_used_types"] = []
+            original_unit["powerup"] = 0
+            original_unit["bonusturn"] = 0
+            original_unit.pop("teamated", None)
+            original_unit.pop("hermited", None)
+            original_unit.pop("settlement_armor_bonus", None)
+            original_unit.pop("settlement_level", None)
+            saved_team.append(original_unit)
+
+        self.enemy_team_states[normalized_enemy_id] = self._build_battle_team_with_placeholders(
+            "red",
+            saved_team,
+        )
+        if normalized_enemy_id in self.enemy_map_spell_effects:
+            self._recompute_enemy_stack_spell_effects(normalized_enemy_id)
 
     def _get_buildings_for_capital(self, capital: Optional[int]) -> Dict:
         """Возвращает словарь построек по значению 'столица'."""
@@ -5419,6 +7029,9 @@ class CampaignEnv(gym.Env):
         )
         self.grid_legion_damage_spell_action_start = (
             self.GRID_EQUIP_BATTLE_ITEM2_ACTION_START + len(self.BATTLE_EQUIPPABLE_ITEM_NAMES)
+        )
+        self.grid_map_support_spell_action_start = (
+            self.grid_legion_damage_spell_action_start + self._map_offensive_spell_action_max_count()
         )
 
     def _build_unit_from_data(self, entry: Dict, team: str, position: int) -> Dict:
@@ -5561,13 +7174,13 @@ class CampaignEnv(gym.Env):
 
         return int(upgraded_count)
 
-    def _heal_blue_team(self, heal_percent: float = 0.05, flat_bonus: float = 0.0) -> int:
+    def _heal_blue_team(self, heal_percent: float = 0.05, bonus_percent: float = 0.0) -> int:
         """
         Восстанавливает HP раненым юнитам BLUE команды.
         
         Args:
             heal_percent: Доля от max_health для восстановления (0.05 = 5%)
-            flat_bonus: Фиксированная прибавка к восстановлению на юнита.
+            bonus_percent: Дополнительная доля от max_health для восстановления.
              
         Returns:
             Количество юнитов, которым восстановлено HP
@@ -5581,7 +7194,9 @@ class CampaignEnv(gym.Env):
             
             # Юнит жив и ранен
             if hp > 0 and hp < max_hp:
-                heal_amount = max_hp * heal_percent + max(0.0, float(flat_bonus or 0.0))
+                heal_amount = max_hp * (
+                    float(heal_percent or 0.0) + max(0.0, float(bonus_percent or 0.0))
+                )
                 new_hp = min(max_hp, hp + heal_amount)
                 unit["hp"] = new_hp
                 unit["health"] = new_hp
@@ -5946,6 +7561,7 @@ class CampaignEnv(gym.Env):
             self.turns += 1
             self._refresh_faction_territories()
             self._clear_all_enemy_map_spell_effects()
+            self._clear_all_blue_map_spell_effects()
             total_gold_income += self._legions_gold_income_per_turn()
             self._apply_mana_income_for_turn()
             self._heal_wounded_enemy_teams_for_turn()
@@ -5957,6 +7573,8 @@ class CampaignEnv(gym.Env):
         self.spell_learning_locked = False
         self.battle_item_equip_used_this_turn = False
         self.damage_spell_ids_used_this_turn = set()
+        self.summon_hero_battle_bonus_pending = False
+        self.summon_hero_battle_bonus_enemy_ids_this_turn = set()
         return -float(delta_turns) * self.reward_turn_penalty - float(pending_hire_penalty)
 
     @staticmethod
@@ -6506,8 +8124,9 @@ class CampaignEnv(gym.Env):
         self.grid_spell_core_obs_size = 3
         self.grid_spell_features_per_spell = 1
         self.grid_legion_spell_used_features_per_spell = 1
+        self.grid_map_offensive_spell_action_count = self._map_offensive_spell_action_max_count()
         self.grid_legion_spell_used_obs_size = (
-            len(self.LEGION_DAMAGE_SPELL_ACTION_SPECS)
+            self.grid_map_offensive_spell_action_count
             * self.grid_legion_spell_used_features_per_spell
         )
         self.grid_nearest_enemy_debuff_flag_names = (
@@ -6884,9 +8503,12 @@ class CampaignEnv(gym.Env):
                 learned_v = 0.0
             spell_obs.append(learned_v)
 
-        for spell_spec in self.LEGION_DAMAGE_SPELL_ACTION_SPECS:
-            spell_key = str(spell_spec.get("id", "") or "")
-            spell_obs.append(1.0 if spell_key in self.damage_spell_ids_used_this_turn else 0.0)
+        current_specs = self._current_map_offensive_spell_action_specs()
+        for idx in range(self.grid_map_offensive_spell_action_count):
+            spell_key = ""
+            if idx < len(current_specs):
+                spell_key = str(current_specs[idx].get("id", "") or "")
+            spell_obs.append(1.0 if spell_key and spell_key in self.damage_spell_ids_used_this_turn else 0.0)
 
         nearest_enemy = self._get_nearest_enemy_stack_for_mask(spell_targetable_only=True)
         nearest_enemy_summary = self._enemy_stack_spell_effect_summary(
@@ -7191,6 +8813,12 @@ class CampaignEnv(gym.Env):
                     if not isinstance(spell, dict):
                         continue
                     try:
+                        spell_level = int(spell.get("level", 0) or 0)
+                    except (TypeError, ValueError):
+                        spell_level = 0
+                    if self._is_spell_level_masked_by_typeoflord(spell_level):
+                        continue
+                    try:
                         is_learned = int(spell.get("learned", 0) or 0) == 1
                     except (TypeError, ValueError):
                         is_learned = False
@@ -7213,16 +8841,37 @@ class CampaignEnv(gym.Env):
                     1,
                     item_name,
                 )
-            nearest_enemy = self._get_nearest_enemy_stack_for_mask(
+            nearest_targetable_enemy = self._get_nearest_enemy_stack_for_mask(
                 spell_targetable_only=True
             )
-            for idx, spell_spec in enumerate(self.LEGION_DAMAGE_SPELL_ACTION_SPECS):
-                spell_key = str(spell_spec.get("id", "") or "")
+            nearest_any_enemy = self._get_nearest_enemy_stack_for_mask(
+                spell_targetable_only=False
+            )
+            current_specs = self._current_map_offensive_spell_action_specs()
+            for idx in range(self._map_offensive_spell_action_max_count()):
+                spell_key = ""
+                nearest_enemy = None
+                if idx < len(current_specs):
+                    spell_key = str(current_specs[idx].get("id", "") or "")
+                    nearest_enemy = (
+                        nearest_any_enemy
+                        if self._map_offensive_spell_targets_untargetable_stacks(spell_key)
+                        else nearest_targetable_enemy
+                    )
                 mask[self.grid_legion_damage_spell_action_start + idx] = (
-                    self._can_cast_legion_damage_spell(
+                    bool(spell_key)
+                    and self._can_cast_legion_damage_spell(
                         spell_key,
                         nearest_enemy=nearest_enemy,
                     )
+                )
+            current_support_specs = self._current_map_support_spell_action_specs()
+            for idx in range(self._map_support_spell_action_max_count()):
+                spell_key = ""
+                if idx < len(current_support_specs):
+                    spell_key = str(current_support_specs[idx].get("id", "") or "")
+                mask[self.grid_map_support_spell_action_start + idx] = (
+                    bool(spell_key) and self._can_cast_support_spell(spell_key)
                 )
         else:
             # В battle режиме используем маску из BattleEnv
@@ -7481,6 +9130,7 @@ class CampaignEnv(gym.Env):
         if mode != "ansi":
             return None
 
+        self._sync_equipped_artifact_items()
         lines = []
         lines.append(f"=== CAMPAIGN MODE: {'GRID' if self.mode == self.MODE_GRID else 'BATTLE'} ===")
 
@@ -7528,6 +9178,10 @@ class CampaignEnv(gym.Env):
             str(item_name or "пусто") for item_name in list(self.equipped_hero_items or [])
         ]
         lines.append(f"Экипированные предметы: [{', '.join(equipped_labels)}]")
+        artifact_labels = [
+            str(item_name or "пусто") for item_name in list(self.equipped_artifact_items or [])
+        ]
+        lines.append(f"Экипированные артефакты: [{', '.join(artifact_labels)}]")
         lines.append(
             f"Боевые предметы: экипировано {int(self.battle_items_equipped_total)}, "
             f"использовано {int(self.battle_items_used_total)}"
@@ -7568,6 +9222,7 @@ class CampaignEnv(gym.Env):
 
     def get_state_summary(self) -> Dict:
         """Возвращает сводку текущего состояния."""
+        self._sync_equipped_artifact_items()
         return {
             "mode": "grid" if self.mode == self.MODE_GRID else "battle",
             "agent_pos": self.grid_env.agent_pos,
@@ -7582,8 +9237,11 @@ class CampaignEnv(gym.Env):
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
+            "typeoflord": int(self.typeoflord),
             "heroitems": list(self.heroitems),
             "equipped_hero_items": list(self.equipped_hero_items),
+            "equipped_artifact_items": list(self.equipped_artifact_items),
+            "artifact_auto_equip_next_slot": int(self.artifact_auto_equip_next_slot),
             "battle_items_equipped_total": int(self.battle_items_equipped_total),
             "battle_items_used_total": int(self.battle_items_used_total),
             "learned_spells": list(self.get_learned_spell_descriptions()),
