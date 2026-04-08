@@ -347,6 +347,7 @@ class CampaignEnv(gym.Env):
         "nature": "elves",
     }
     MAGIC_TOWER_BUILDING_NAME = "Башня магии"
+    TEMPLE_BUILDING_NAME = "Храм"
     GRID_BOTTLE_ACTION_START = 9
     GRID_BOTTLE_POSITIONS = list(range(7, 13))  # 6 позиций BLUE
     HEAL_BOTTLE_AMOUNT = 100.0
@@ -2740,7 +2741,9 @@ class CampaignEnv(gym.Env):
         healed_amount, unit_name = (0.0, None)
         gold_spent = 0.0
         gold_before = float(self.gold)
-        if self._is_at_castle() and target_pos is not None:
+        temple_built = self._has_temple_built()
+        missing_temple = not temple_built
+        if self._is_at_castle() and temple_built and target_pos is not None:
             healed_amount, unit_name = self._heal_unit_to_full_at_position(position=target_pos)
             gold_spent = max(0.0, gold_before - float(self.gold))
         reward = max(0.0, float(healed_amount)) * self.reward_castle_heal_per_hp
@@ -2753,8 +2756,10 @@ class CampaignEnv(gym.Env):
             "castle_heal_action": True,
             "castle_pos_required": self.CASTLE_POS,
             "castle_heal_tiles": self.castle_heal_tiles,
-            "castle_heal_available": self._is_at_castle(),
+            "castle_heal_available": self._is_at_castle() and temple_built,
             "castle_heal_target_pos": target_pos,
+            "temple_built": temple_built,
+            "missing_temple": missing_temple,
             "healed_amount": healed_amount,
             "healed_unit_name": unit_name,
             "gold_spent": gold_spent,
@@ -2887,8 +2892,10 @@ class CampaignEnv(gym.Env):
                     target_unit_name = unit.get("name", f"pos_{target_pos}")
                     break
 
+        temple_built = self._has_temple_built()
+        missing_temple = not temple_built
         revived, revived_unit_name, gold_spent = (False, None, 0.0)
-        if self._is_at_castle() and target_pos is not None:
+        if self._is_at_castle() and temple_built and target_pos is not None:
             revived, revived_unit_name, gold_spent = self._revive_unit_with_gold_at_position(
                 position=target_pos
             )
@@ -2901,8 +2908,11 @@ class CampaignEnv(gym.Env):
             "battle_triggered": False,
             "castle_revive_action": True,
             "castle_heal_tiles": self.castle_heal_tiles,
+            "temple_built": temple_built,
+            "missing_temple": missing_temple,
             "castle_revive_available": (
                 self._is_at_castle()
+                and temple_built
                 and target_pos is not None
                 and self._can_castle_revive_position(target_pos)
             ),
@@ -3250,18 +3260,27 @@ class CampaignEnv(gym.Env):
             self.enemy_team_states[normalized_enemy_id] = team
         return team
 
-    def _has_magic_tower_built(self) -> bool:
+    def _has_named_building_built(self, building_name: str) -> bool:
+        normalized_name = str(building_name or "").strip()
+        if not normalized_name:
+            return False
         for build_key in self.building_keys:
             building = self.active_buildings.get(build_key)
             if not isinstance(building, dict):
                 continue
-            if str(building.get("name", "") or "").strip() != self.MAGIC_TOWER_BUILDING_NAME:
+            if str(building.get("name", "") or "").strip() != normalized_name:
                 continue
             try:
                 return int(building.get("Build", building.get("built", 0)) or 0) == 1
             except (TypeError, ValueError):
                 return False
         return False
+
+    def _has_magic_tower_built(self) -> bool:
+        return self._has_named_building_built(self.MAGIC_TOWER_BUILDING_NAME)
+
+    def _has_temple_built(self) -> bool:
+        return self._has_named_building_built(self.TEMPLE_BUILDING_NAME)
 
     def _has_mana_for_costs(self, costs: Dict[str, float]) -> bool:
         for mana_kind, required_amount in costs.items():
@@ -8776,10 +8795,11 @@ class CampaignEnv(gym.Env):
 
             # Лечение и воскрешение за золото доступны только на специальных клетках лечения.
             if self._is_at_castle() and float(self.gold) > 0.0:
-                for idx, pos in enumerate(self.CASTLE_HEAL_POSITIONS):
-                    mask[self.GRID_CASTLE_HEAL_ACTION_START + idx] = self._can_heal_position(pos)
-                for idx, pos in enumerate(self.CASTLE_REVIVE_POSITIONS):
-                    mask[self.GRID_CASTLE_REVIVE_ACTION_START + idx] = self._can_castle_revive_position(pos)
+                if self._has_temple_built():
+                    for idx, pos in enumerate(self.CASTLE_HEAL_POSITIONS):
+                        mask[self.GRID_CASTLE_HEAL_ACTION_START + idx] = self._can_heal_position(pos)
+                    for idx, pos in enumerate(self.CASTLE_REVIVE_POSITIONS):
+                        mask[self.GRID_CASTLE_REVIVE_ACTION_START + idx] = self._can_castle_revive_position(pos)
             for idx in range(len(self.active_hire_options)):
                 mask[self.GRID_HIRE_ACTION_START + idx] = self._can_hire_faction_unit_option(
                     self._hire_option(idx)
