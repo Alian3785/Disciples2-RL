@@ -156,7 +156,7 @@ def test_hero_stack_from_uncaptured_settlement_tile_gets_no_city_bonus():
     assert "settlement_level" not in battle_unit
 
 
-def test_rest_on_settlement_tile_adds_flat_bonus_regeneration():
+def test_rest_on_settlement_tile_adds_percentage_bonus_regeneration():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
 
@@ -179,14 +179,15 @@ def test_rest_on_settlement_tile_adds_flat_bonus_regeneration():
     assert terminated is False
     assert truncated is False
     assert info.get("rest_action") is True
-    assert info.get("rest_heal_flat_bonus") == pytest.approx(10.0)
+    assert info.get("rest_heal_bonus_percent") == pytest.approx(0.10)
+    assert info.get("rest_heal_total_percent") == pytest.approx(0.15)
     assert info.get("rest_heal_bonus_level") == 1
     assert info.get("rest_heal_bonus_source") == settlement_name
-    expected_hp = min(max_hp, start_hp + max_hp * 0.05 + 10.0)
+    expected_hp = min(max_hp, start_hp + max_hp * 0.15)
     assert float(unit.get("hp", 0) or 0.0) == pytest.approx(expected_hp)
 
 
-def test_rest_on_capital_tile_keeps_default_regeneration_without_city_bonus():
+def test_rest_on_capital_tile_adds_capital_percentage_bonus_regeneration():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
     env.grid_env.agent_pos = tuple(env.CASTLE_POS)
@@ -202,9 +203,11 @@ def test_rest_on_capital_tile_keeps_default_regeneration_without_city_bonus():
     assert terminated is False
     assert truncated is False
     assert info.get("rest_action") is True
-    assert info.get("rest_heal_flat_bonus") == pytest.approx(0.0)
-    assert info.get("rest_heal_bonus_source") == ""
-    expected_hp = min(max_hp, start_hp + max_hp * 0.05)
+    assert info.get("rest_heal_bonus_percent") == pytest.approx(0.50)
+    assert info.get("rest_heal_total_percent") == pytest.approx(0.55)
+    assert info.get("rest_heal_bonus_source") == "capital"
+    assert info.get("rest_heal_bonus_level") == "capital"
+    expected_hp = min(max_hp, start_hp + max_hp * 0.55)
     assert float(unit.get("hp", 0) or 0.0) == pytest.approx(expected_hp)
 
 
@@ -285,9 +288,52 @@ def test_settlement_upgrade_action_advances_levels_costs_and_updates_city_bonuse
     unit["health"] = start_hp
 
     _, _, _, _, rest_info = env.step(8)
-    expected_hp = min(max_hp, start_hp + max_hp * 0.05 + 30.0)
-    assert rest_info.get("rest_heal_flat_bonus") == pytest.approx(30.0)
+    expected_hp = min(max_hp, start_hp + max_hp * 0.35)
+    assert rest_info.get("rest_heal_bonus_percent") == pytest.approx(0.30)
+    assert rest_info.get("rest_heal_total_percent") == pytest.approx(0.35)
     assert float(unit.get("hp", 0) or 0.0) == pytest.approx(expected_hp)
+
+
+def test_enemy_regeneration_on_city_and_enemy_capital_tiles_uses_percentage_bonus():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    env.enemy_team_states[10] = [
+        {
+            "position": 1,
+            "health": 100.0,
+            "hp": 100.0,
+            "max_health": 200.0,
+            "maxhp": 200.0,
+            "name": "City enemy",
+            "team": "red",
+            "stand": "ahead",
+            "unit_type": "Warrior",
+        },
+    ]
+    env.enemy_team_states[20] = [
+        {
+            "position": 1,
+            "health": 40.0,
+            "hp": 40.0,
+            "max_health": 200.0,
+            "maxhp": 200.0,
+            "name": "Capital enemy",
+            "team": "red",
+            "stand": "ahead",
+            "unit_type": "Warrior",
+        },
+    ]
+    env.grid_env.enemy_positions = {
+        10: (28, 33),
+        20: tuple(env.empire_territory_source_tile),
+    }
+    env.grid_env.enemies_alive = {10: True, 20: True}
+
+    env._advance_turns(1)
+
+    assert env.enemy_team_states[10][0]["health"] == pytest.approx(160.0)
+    assert env.enemy_team_states[20][0]["health"] == pytest.approx(170.0)
 
 
 def test_battle_observation_keeps_high_armor_below_clip_point():

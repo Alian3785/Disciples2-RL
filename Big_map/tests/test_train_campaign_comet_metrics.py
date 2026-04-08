@@ -57,6 +57,9 @@ def test_campaign_metrics_callback_logs_custom_metrics(monkeypatch):
                 "merchant_sale_gold": 3650.0,
                 "spell_cast_action": True,
                 "spell_cast_executed": True,
+                "spell_kind": "summon_battle",
+                "spell_summon_unit_name": "Белиарх",
+                "spell_units_affected": 1,
                 "hired": True,
                 "hired_units_count": 1,
                 "battle_hero_item_action": True,
@@ -96,6 +99,9 @@ def test_campaign_metrics_callback_logs_custom_metrics(monkeypatch):
     assert payload["campaign/spell_casts_total"] == 1.0
     assert payload["campaign/spell_casts_per_episode_mean"] == 1.0
     assert payload["campaign/spell_cast_episodes_rate"] == 1.0
+    assert payload["campaign/summoned_units_total"] == 1.0
+    assert payload["campaign/summoned_units_per_episode_mean"] == 1.0
+    assert payload["campaign/summon_episodes_rate"] == 1.0
     assert payload["campaign/hired_units_total"] == 1.0
     assert payload["campaign/hired_units_per_episode_mean"] == 1.0
     assert payload["campaign/hire_episodes_rate"] == 1.0
@@ -115,6 +121,8 @@ def test_campaign_metrics_callback_logs_custom_metrics(monkeypatch):
     assert payload["campaign/recent_merchant_sale_gold_mean"] == 3650.0
     assert payload["campaign/recent_spell_casts_mean"] == 1.0
     assert payload["campaign/recent_spell_cast_episodes_rate"] == 1.0
+    assert payload["campaign/recent_summoned_units_mean"] == 1.0
+    assert payload["campaign/recent_summon_episodes_rate"] == 1.0
     assert payload["campaign/recent_hired_units_mean"] == 1.0
     assert payload["campaign/recent_hire_episodes_rate"] == 1.0
     assert payload["campaign/recent_battle_items_equipped_mean"] == 1.0
@@ -124,6 +132,7 @@ def test_campaign_metrics_callback_logs_custom_metrics(monkeypatch):
     assert payload["campaign/window/chests_collected_mean"] == 2.0
     assert payload["campaign/window/sold_items_mean"] == 3.0
     assert payload["campaign/window/spell_casts_mean"] == 1.0
+    assert payload["campaign/window/summoned_units_mean"] == 1.0
     assert payload["campaign/window/hired_units_mean"] == 1.0
     assert payload["campaign/window/battle_items_equipped_mean"] == 1.0
     assert payload["campaign/window/battle_items_used_mean"] == 1.0
@@ -134,6 +143,7 @@ def test_campaign_metrics_callback_logs_custom_metrics(monkeypatch):
     assert ("campaign/episode_sold_items", 3.0, 1000) in dummy_experiment.metric_logged
     assert ("campaign/episode_merchant_sale_gold", 3650.0, 1000) in dummy_experiment.metric_logged
     assert ("campaign/episode_spell_casts", 1.0, 1000) in dummy_experiment.metric_logged
+    assert ("campaign/episode_summoned_units", 1.0, 1000) in dummy_experiment.metric_logged
     assert ("campaign/episode_hired_units", 1.0, 1000) in dummy_experiment.metric_logged
     assert ("campaign/episode_battle_items_equipped", 1.0, 1000) in dummy_experiment.metric_logged
     assert ("campaign/episode_battle_items_used", 1.0, 1000) in dummy_experiment.metric_logged
@@ -195,6 +205,9 @@ def test_campaign_metrics_callback_flushes_partial_window_on_training_end():
     assert payload["campaign/spell_casts_total"] == 0.0
     assert payload["campaign/spell_casts_per_episode_mean"] == 0.0
     assert payload["campaign/spell_cast_episodes_rate"] == 0.0
+    assert payload["campaign/summoned_units_total"] == 0.0
+    assert payload["campaign/summoned_units_per_episode_mean"] == 0.0
+    assert payload["campaign/summon_episodes_rate"] == 0.0
     assert payload["campaign/hired_units_total"] == 0.0
     assert payload["campaign/hired_units_per_episode_mean"] == 0.0
     assert payload["campaign/hire_episodes_rate"] == 0.0
@@ -214,6 +227,8 @@ def test_campaign_metrics_callback_flushes_partial_window_on_training_end():
     assert payload["campaign/recent_merchant_sale_gold_mean"] == 0.0
     assert payload["campaign/recent_spell_casts_mean"] == 0.0
     assert payload["campaign/recent_spell_cast_episodes_rate"] == 0.0
+    assert payload["campaign/recent_summoned_units_mean"] == 0.0
+    assert payload["campaign/recent_summon_episodes_rate"] == 0.0
     assert payload["campaign/recent_hired_units_mean"] == 0.0
     assert payload["campaign/recent_hire_episodes_rate"] == 0.0
     assert payload["campaign/recent_battle_items_equipped_mean"] == 0.0
@@ -223,6 +238,7 @@ def test_campaign_metrics_callback_flushes_partial_window_on_training_end():
     assert payload["campaign/window/chests_collected_mean"] == 0.0
     assert payload["campaign/window/sold_items_mean"] == 0.0
     assert payload["campaign/window/spell_casts_mean"] == 0.0
+    assert payload["campaign/window/summoned_units_mean"] == 0.0
     assert payload["campaign/window/hired_units_mean"] == 0.0
     assert payload["campaign/window/battle_items_equipped_mean"] == 0.0
     assert payload["campaign/window/battle_items_used_mean"] == 0.0
@@ -299,6 +315,30 @@ def test_campaign_metrics_callback_saves_spell_cast_activity_plot(tmp_path):
 
     output_path = tmp_path / "campaign_spell_cast_activity.png"
     saved_path = callback.save_spell_cast_activity_plot(output_path)
+
+    assert saved_path == output_path
+    assert output_path.exists()
+    assert output_path.stat().st_size > 0
+
+
+def test_campaign_metrics_callback_saves_summoned_units_per_episode_plot(tmp_path):
+    callback = CampaignMetricsCallback(log_freq=1000, episode_window=4, experiment=None)
+    callback.episode_summoned_units = [0.0, 1.0, 2.0, 1.0]
+
+    output_path = tmp_path / "campaign_summoned_units_per_episode.png"
+    saved_path = callback.save_summoned_units_per_episode_plot(output_path)
+
+    assert saved_path == output_path
+    assert output_path.exists()
+    assert output_path.stat().st_size > 0
+
+
+def test_campaign_metrics_callback_saves_cumulative_summoned_units_plot(tmp_path):
+    callback = CampaignMetricsCallback(log_freq=1000, episode_window=4, experiment=None)
+    callback.episode_summoned_units = [0.0, 1.0, 2.0, 1.0]
+
+    output_path = tmp_path / "campaign_summoned_units_cumulative.png"
+    saved_path = callback.save_cumulative_summoned_units_plot(output_path)
 
     assert saved_path == output_path
     assert output_path.exists()

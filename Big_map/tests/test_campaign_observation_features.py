@@ -387,6 +387,68 @@ def test_spell_obs_uses_mask_nearest_enemy_candidate_without_bfs():
     assert np.allclose(nearest_debuff_flags, np.array([1.0, 1.0, 0.0, 0.0, 0.0], dtype=np.float32))
 
 
+def test_undead_spell_obs_includes_used_this_turn_and_nearest_enemy_debuff_flags():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=4)
+    env.reset(seed=123)
+
+    env.grid_env.agent_pos = (3, 3)
+    env.grid_env.enemy_positions = {
+        10: (4, 3),
+        20: (8, 8),
+    }
+    env.grid_env.enemies_alive = {10: True, 20: True}
+    env.grid_env.obstacle_positions = set()
+
+    for spell_key in ("und_d2_s005", "und_d2_s013"):
+        env.active_spells[spell_key]["learned"] = 1
+        spell = env.active_spells[spell_key]
+        for mana_kind, amount in env._get_spell_use_costs(spell).items():
+            attr_name = env.MANA_ATTR_BY_KIND[mana_kind]
+            setattr(env, attr_name, float(getattr(env, attr_name, 0.0) or 0.0) + float(amount))
+
+    env.enemy_team_states[10] = [
+        {
+            "name": "Nearest",
+            "team": "red",
+            "position": 1,
+            "stand": "ahead",
+            "health": 100.0,
+            "hp": 100.0,
+            "max_health": 100.0,
+            "maxhp": 100.0,
+            "unit_type": "Warrior",
+            "armor": 40,
+            "damage": 60,
+            "damage_secondary": 0,
+            "initiative": 50,
+            "initiative_base": 50,
+            "accuracy": 80,
+            "accuracy_secondary": 0,
+            "immunity": [],
+            "resistance": [],
+        }
+    ]
+
+    used_start = env.grid_spell_core_obs_size + len(env.spell_keys)
+    debuff_start = used_start + env.grid_legion_spell_used_obs_size
+    spell_index = {
+        str(spec.get("id", "") or ""): idx
+        for idx, spec in enumerate(env._current_map_offensive_spell_action_specs())
+    }
+
+    env.step(env.grid_legion_damage_spell_action_start + spell_index["und_d2_s005"])
+    env.step(env.grid_legion_damage_spell_action_start + spell_index["und_d2_s013"])
+
+    spell_obs = env._build_spell_grid_obs()
+
+    assert spell_obs[used_start + spell_index["und_d2_s005"]] == pytest.approx(1.0)
+    assert spell_obs[used_start + spell_index["und_d2_s013"]] == pytest.approx(1.0)
+    assert spell_obs[used_start + spell_index["und_d2_s002"]] == pytest.approx(0.0)
+
+    nearest_debuff_flags = spell_obs[debuff_start : debuff_start + env.grid_nearest_enemy_debuff_obs_size]
+    assert np.allclose(nearest_debuff_flags, np.array([1.0, 1.0, 0.0, 0.0, 1.0], dtype=np.float32))
+
+
 def test_merchant_sell_values_remain_unchanged():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
@@ -760,3 +822,18 @@ def test_campaign_visualizer_draws_mana_source_letters():
         assert any("Мана эльфов: 0 (+0/ход)" in text for text in text_values)
     finally:
         plt.close(viz.fig)
+
+
+def test_visualize_campaign_formats_spell_action_label():
+    from visualize_campaign import _format_grid_action_label
+
+    label = _format_grid_action_label(
+        42,
+        {
+            "spell_cast_action": True,
+            "spell_description": "Fireball",
+            "target_enemy_id": 17,
+        },
+    )
+
+    assert label == "Spell: Fireball -> E17"
