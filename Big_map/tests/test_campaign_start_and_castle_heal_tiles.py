@@ -32,6 +32,17 @@ def _heal_bottle_action_index(env: CampaignEnv, target_pos: int) -> int:
     return env.GRID_BOTTLE_ACTION_START + env.GRID_BOTTLE_POSITIONS.index(target_pos)
 
 
+def _mark_temple_built(env: CampaignEnv) -> None:
+    for build_key in env.building_keys:
+        building = env.active_buildings.get(build_key)
+        if not isinstance(building, dict):
+            continue
+        if str(building.get("name", "") or "").strip() == env.TEMPLE_BUILDING_NAME:
+            building["built"] = 1
+            return
+    raise AssertionError("temple building not found")
+
+
 def _pairwise_manhattan_distances(tiles):
     distances = []
     for index, (x1, y1) in enumerate(tiles):
@@ -249,6 +260,7 @@ def test_campaign_grid_mask_respects_edges_and_obstacles():
 def test_castle_heal_actions_available_on_all_heal_tiles():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
+    _mark_temple_built(env)
     env.gold = 10.0
 
     # Wound one unit so castle-heal actions become valid in the mask.
@@ -265,9 +277,41 @@ def test_castle_heal_actions_available_on_all_heal_tiles():
         assert mask[castle_slice].any()
 
 
+def test_castle_heal_actions_require_temple_building():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+    env.gold = 10.0
+    env.grid_env.agent_pos = env.castle_heal_tiles[0]
+
+    target_pos = 7
+    action = env.GRID_CASTLE_HEAL_ACTION_START + env.CASTLE_HEAL_POSITIONS.index(target_pos)
+    unit = next(u for u in env.blue_team_state if int(u.get("position", -1)) == target_pos)
+    max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0.0)
+    unit["hp"] = max_hp - 12.0
+    unit["health"] = unit["hp"]
+    hp_before = float(unit.get("hp", 0) or 0.0)
+
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is False
+
+    _, reward, terminated, truncated, info = env.step(action)
+
+    assert terminated is False
+    assert truncated is False
+    assert reward == pytest.approx(0.0)
+    assert float(unit.get("hp", 0) or 0.0) == pytest.approx(hp_before)
+    assert env.gold == pytest.approx(10.0)
+    assert info.get("castle_heal_action") is True
+    assert info.get("temple_built") is False
+    assert info.get("missing_temple") is True
+    assert info.get("castle_heal_available") is False
+    assert float(info.get("healed_amount", -1.0)) == pytest.approx(0.0)
+
+
 def test_castle_revive_actions_available_on_all_heal_tiles_when_gold_is_enough():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
+    _mark_temple_built(env)
     env.gold = 50.0
 
     unit = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 7)
@@ -281,6 +325,36 @@ def test_castle_revive_actions_available_on_all_heal_tiles_when_gold_is_enough()
         env.grid_env.agent_pos = tile
         mask = env.compute_action_mask()
         assert mask[castle_revive_slice].any()
+
+
+def test_castle_revive_actions_require_temple_building():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+    env.gold = 50.0
+    env.grid_env.agent_pos = env.castle_heal_tiles[0]
+
+    target_pos = 7
+    action = env.GRID_CASTLE_REVIVE_ACTION_START + env.CASTLE_REVIVE_POSITIONS.index(target_pos)
+    unit = next(u for u in env.blue_team_state if int(u.get("position", -1)) == target_pos)
+    unit["hp"] = 0.0
+    unit["health"] = 0.0
+    unit["Level"] = 1
+
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is False
+
+    _, reward, terminated, truncated, info = env.step(action)
+
+    assert terminated is False
+    assert truncated is False
+    assert reward == pytest.approx(0.0)
+    assert float(unit.get("hp", 0) or 0.0) == pytest.approx(0.0)
+    assert env.gold == pytest.approx(50.0)
+    assert info.get("castle_revive_action") is True
+    assert info.get("temple_built") is False
+    assert info.get("missing_temple") is True
+    assert info.get("castle_revive_available") is False
+    assert info.get("revived") is False
 
 
 def _legacy_test_campaign_collects_chest_from_adjacent_tile_and_updates_heroitems():
@@ -400,6 +474,7 @@ def test_campaign_collects_chest_from_adjacent_tile_and_hides_auto_consumed_loot
 def test_castle_heal_spends_only_required_gold_when_enough():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
+    _mark_temple_built(env)
 
     target_pos = 7
     action = env.GRID_CASTLE_HEAL_ACTION_START + env.CASTLE_HEAL_POSITIONS.index(target_pos)
@@ -426,6 +501,7 @@ def test_castle_heal_spends_only_required_gold_when_enough():
 def test_castle_heal_level_2_or_3_costs_two_gold_per_hp():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
+    _mark_temple_built(env)
 
     target_pos = 7
     action = env.GRID_CASTLE_HEAL_ACTION_START + env.CASTLE_HEAL_POSITIONS.index(target_pos)
@@ -452,6 +528,7 @@ def test_castle_heal_level_2_or_3_costs_two_gold_per_hp():
 def test_castle_heal_level_4_or_5_costs_three_gold_per_hp_and_can_be_partial():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
+    _mark_temple_built(env)
 
     target_pos = 7
     action = env.GRID_CASTLE_HEAL_ACTION_START + env.CASTLE_HEAL_POSITIONS.index(target_pos)
@@ -489,6 +566,7 @@ def test_castle_heal_level_4_or_5_costs_three_gold_per_hp_and_can_be_partial():
 def test_castle_revive_spends_gold_by_unit_level(level, revive_cost):
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
+    _mark_temple_built(env)
 
     target_pos = 7
     action = env.GRID_CASTLE_REVIVE_ACTION_START + env.CASTLE_REVIVE_POSITIONS.index(target_pos)
@@ -515,6 +593,7 @@ def test_castle_revive_spends_gold_by_unit_level(level, revive_cost):
 def test_castle_revive_action_is_blocked_when_gold_is_below_required_cost():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
+    _mark_temple_built(env)
 
     target_pos = 7
     action = env.GRID_CASTLE_REVIVE_ACTION_START + env.CASTLE_REVIVE_POSITIONS.index(target_pos)
