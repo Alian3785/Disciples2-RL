@@ -278,6 +278,45 @@ def test_legion_damage_spell_is_locked_per_turn_and_unlocks_next_turn():
     assert bool(env.compute_action_mask()[action]) is True
 
 
+def test_typeoflord_two_allows_same_legion_damage_spell_twice_per_turn():
+    env = _enable_typeoflord_two(_make_legions_env())
+    spell_key = "lod_d2_s003"
+    env.active_spells[spell_key]["learned"] = 1
+    costs = _set_spell_use_mana(env, spell_key, multiplier=3.0)
+    env.enemy_team_states[10] = [
+        _enemy_unit(position=1, hp=100.0, max_hp=100.0, name="Durable target"),
+    ]
+
+    action = _spell_action_index(env, spell_key)
+
+    _, _, _, _, first_info = env.step(action)
+    hp_after_first_cast = env.enemy_team_states[10][0]["health"]
+    mana_after_first_cast = env.infernal_mana
+
+    assert first_info["spell_cast_executed"] is True
+    assert first_info["spell_cast_used_this_turn"] is False
+    assert hp_after_first_cast == pytest.approx(85.0)
+    assert mana_after_first_cast == pytest.approx(float(costs["infernal"]) * 2.0)
+    assert bool(env.compute_action_mask()[action]) is True
+
+    _, _, _, _, second_info = env.step(action)
+    hp_after_second_cast = env.enemy_team_states[10][0]["health"]
+    mana_after_second_cast = env.infernal_mana
+
+    assert second_info["spell_cast_executed"] is True
+    assert second_info["spell_cast_used_this_turn"] is False
+    assert hp_after_second_cast == pytest.approx(70.0)
+    assert mana_after_second_cast == pytest.approx(float(costs["infernal"]))
+    assert bool(env.compute_action_mask()[action]) is False
+
+    _, _, _, _, third_info = env.step(action)
+
+    assert third_info["spell_cast_executed"] is False
+    assert third_info["spell_cast_used_this_turn"] is True
+    assert env.enemy_team_states[10][0]["health"] == pytest.approx(hp_after_second_cast)
+    assert env.infernal_mana == pytest.approx(mana_after_second_cast)
+
+
 def test_legion_damage_spell_can_defeat_enemy_stack_without_battle():
     env = _make_legions_env()
     spell_key = "lod_d2_s003"
@@ -1299,6 +1338,49 @@ def test_empire_movement_spell_restores_half_of_grid_moves_and_is_locked_per_tur
 
     env._advance_turns(1)
     assert bool(env.compute_action_mask()[action]) is True
+
+
+def test_typeoflord_two_allows_same_support_spell_twice_per_turn():
+    env = _enable_typeoflord_two(_make_empire_env())
+    spell_key = "emp_d2_s006"
+    env.active_spells[spell_key]["learned"] = 1
+    _set_spell_use_mana(env, spell_key, multiplier=3.0)
+    env.moves = 0
+
+    action = _support_spell_action_index(env, spell_key)
+
+    _, reward, terminated, truncated, first_info = env.step(action)
+
+    assert terminated is False
+    assert truncated is False
+    assert reward == pytest.approx(env.reward_spell_cast)
+    assert first_info["spell_cast_executed"] is True
+    assert first_info["spell_cast_used_this_turn"] is False
+    assert first_info["spell_moves_restored"] == pytest.approx(10.0)
+    assert first_info["moves_after_cast"] == pytest.approx(10.0)
+    assert env.moves == 10
+    assert bool(env.compute_action_mask()[action]) is True
+
+    _, reward, terminated, truncated, second_info = env.step(action)
+
+    assert terminated is False
+    assert truncated is False
+    assert reward == pytest.approx(env.reward_spell_cast)
+    assert second_info["spell_cast_executed"] is True
+    assert second_info["spell_cast_used_this_turn"] is False
+    assert second_info["spell_moves_restored"] == pytest.approx(10.0)
+    assert second_info["moves_after_cast"] == pytest.approx(20.0)
+    assert env.moves == 20
+    assert bool(env.compute_action_mask()[action]) is False
+
+    _, reward, terminated, truncated, third_info = env.step(action)
+
+    assert terminated is False
+    assert truncated is False
+    assert reward == pytest.approx(0.0)
+    assert third_info["spell_cast_executed"] is False
+    assert third_info["spell_cast_used_this_turn"] is True
+    assert env.moves == 20
 
 
 def test_mountain_support_spells_apply_to_hero_stack_and_expire_next_turn():

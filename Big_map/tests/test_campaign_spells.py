@@ -1,6 +1,8 @@
 from pathlib import Path
 import sys
 
+import pytest
+
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from campaign_env import CampaignEnv
@@ -79,6 +81,42 @@ def test_spell_learning_spends_mana_marks_spell_and_locks_until_next_turn():
     assert env.spell_learning_locked is False
     assert bool(spell_mask[env.spell_keys.index(first_spell_key)]) is False
     assert bool(spell_mask[env.spell_keys.index(second_spell_key)]) is True
+
+
+def test_typeoflord_two_halves_learning_costs_but_not_use_costs():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+    _mark_magic_tower_built(env)
+    env.typeoflord = 2
+    env.Typeoflord = 2
+
+    spell_key = env.spell_keys[0]
+    spell = env.active_spells[spell_key]
+    base_learning_costs = env._spell_costs_from_entry(spell, prefix="learn")
+    adjusted_learning_costs = env._get_spell_learning_costs(spell)
+    base_use_costs = env._spell_costs_from_entry(spell, prefix="use")
+    adjusted_use_costs = env._get_spell_use_costs(spell)
+
+    for mana_kind, base_cost in base_learning_costs.items():
+        assert adjusted_learning_costs[mana_kind] == pytest.approx(float(base_cost) * 0.5)
+    assert adjusted_use_costs == base_use_costs
+
+    for mana_kind in env.MANA_KIND_ORDER:
+        setattr(env, env.MANA_ATTR_BY_KIND[mana_kind], 0.0)
+    for mana_kind, adjusted_cost in adjusted_learning_costs.items():
+        setattr(env, env.MANA_ATTR_BY_KIND[mana_kind], float(adjusted_cost))
+
+    action = _spell_action_index(env, spell_key)
+    _, reward, terminated, truncated, info = env.step(action)
+
+    assert terminated is False
+    assert truncated is False
+    assert reward == env.reward_spell_learn
+    assert info["spell_learned"] is True
+    assert env.active_spells[spell_key]["learned"] == 1
+    for mana_kind, adjusted_cost in adjusted_learning_costs.items():
+        if adjusted_cost > 0.0:
+            assert getattr(env, env.MANA_ATTR_BY_KIND[mana_kind]) == pytest.approx(0.0)
 
 
 def test_render_includes_learned_spell_descriptions():

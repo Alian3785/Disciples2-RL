@@ -11,11 +11,13 @@
 import os
 import re
 import time
+import traceback
 from collections import Counter, deque
 from pathlib import Path
 from typing import Any
 import gymnasium as gym
 import numpy as np
+import torch as th
 from console_encoding import setup_utf8_console
 
 # Отключаем torch._dynamo, чтобы избежать зависимости от sympy/gmpy при обучении.
@@ -36,7 +38,12 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CallbackList, EvalCallback, BaseCallback
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.evaluation import evaluate_policy as sb3_evaluate_policy
-from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize, sync_envs_normalization
+from stable_baselines3.common.vec_env import (
+    DummyVecEnv,
+    VecCheckNan,
+    VecNormalize,
+    sync_envs_normalization,
+)
 
 from sb3_contrib.ppo_mask import MaskablePPO
 from sb3_contrib.common.wrappers import ActionMasker
@@ -228,6 +235,279 @@ def make_env(log_enabled: bool = False, eval_max_episode_steps: int | None = Non
     if eval_max_episode_steps is not None:
         env = EvalStepCapWrapper(env, max_steps=eval_max_episode_steps)
     return Monitor(env)
+
+
+def _to_numpy_array(value: Any) -> np.ndarray | None:
+    if value is None:
+        return None
+    if isinstance(value, np.ndarray):
+        return value
+    if th.is_tensor(value):
+        return value.detach().cpu().numpy()
+    try:
+        return np.asarray(value)
+    except Exception:
+        return None
+
+
+def _slice_rollout_array(value: Any, used_size: int) -> np.ndarray | None:
+    array = _to_numpy_array(value)
+    if array is None:
+        return None
+    if array.ndim > 0 and array.shape[0] >= used_size:
+        return array[:used_size]
+    return array
+
+
+def _format_array_summary(name: str, value: Any, *, used_size: int | None = None) -> list[str]:
+    array = _to_numpy_array(value)
+    if array is None:
+        return [f"{name}: unavailable"]
+    if used_size is not None and array.ndim > 0 and array.shape[0] >= used_size:
+        array = array[:used_size]
+
+    lines = [f"{name}: shape={tuple(array.shape)}, dtype={array.dtype}, size={int(array.size)}"]
+    if array.size <= 0:
+        return lines
+
+    if np.issubdtype(array.dtype, np.bool_):
+        true_count = int(array.sum())
+        lines.append(f"{name}: true={true_count}, false={int(array.size) - true_count}")
+        if array.ndim >= 1 and array.shape[-1] > 0:
+            row_view = array.reshape(-1, array.shape[-1])
+            zero_rows = int(np.sum(row_view.sum(axis=1) == 0))
+            lines.append(f"{name}: zero_valid_action_rows={zero_rows}")
+        return lines
+
+    if np.issubdtype(array.dtype, np.number):
+        finite_mask = np.isfinite(array)
+        nan_count = int(np.isnan(array).sum()) if np.issubdtype(array.dtype, np.inexact) else 0
+        inf_count = int(np.isinf(array).sum()) if np.issubdtype(array.dtype, np.inexact) else 0
+        finite_count = int(finite_mask.sum())
+        lines.append(
+            f"{name}: finite={finite_count}/{int(array.size)}, nan={nan_count}, inf={inf_count}"
+        )
+        if finite_count > 0:
+            finite_values = array[finite_mask]
+            lines.append(
+                f"{name}: min={float(finite_values.min()):.6g}, "
+                f"max={float(finite_values.max()):.6g}, "
+                f"mean={float(finite_values.mean()):.6g}"
+            )
+        return lines
+
+    return lines
+
+
+def _rollout_buffer_used_size(model: Any) -> int:
+    rollout_buffer = getattr(model, "rollout_buffer", None)
+    if rollout_buffer is None:
+        return 0
+    if bool(getattr(rollout_buffer, "full", False)):
+        return int(getattr(rollout_buffer, "buffer_size", 0) or 0)
+    return int(getattr(rollout_buffer, "pos", 0) or 0)
+
+
+def _collect_policy_parameter_issues(model: Any) -> list[str]:
+    issues: list[str] = []
+    policy = getattr(model, "policy", None)
+    if policy is None:
+        issues.append("model.policy is unavailable")
+        return issues
+
+    for name, param in policy.named_parameters():
+        tensor = param.detach()
+        if bool(th.isfinite(tensor).all()):
+            continue
+        nan_count = int(th.isnan(tensor).sum().item())
+        inf_count = int(th.isinf(tensor).sum().item())
+        issues.append(
+            f"policy parameter {name} has non-finite values (nan={nan_count}, inf={inf_count})"
+        )
+    return issues
+
+
+def _collect_rollout_buffer_issues(model: Any) -> list[str]:
+    issues: list[str] = []
+    rollout_buffer = getattr(model, "rollout_buffer", None)
+    if rollout_buffer is None:
+        return issues
+
+    used_size = _rollout_buffer_used_size(model)
+    if used_size <= 0:
+        return issues
+
+    for field_name in ("actions", "rewards", "returns", "advantages", "values", "log_probs"):
+        if not hasattr(rollout_buffer, field_name):
+            continue
+        array = _slice_rollout_array(getattr(rollout_buffer, field_name), used_size)
+        if array is None or array.size <= 0 or not np.issubdtype(array.dtype, np.number):
+            continue
+        if not bool(np.isfinite(array).all()):
+            issues.append(f"rollout_buffer.{field_name} contains non-finite values")
+
+    action_masks = _slice_rollout_array(getattr(rollout_buffer, "action_masks", None), used_size)
+    if action_masks is not None and action_masks.size > 0:
+        mask_view = np.asarray(action_masks, dtype=bool).reshape(-1, action_masks.shape[-1])
+        zero_rows = int(np.sum(mask_view.sum(axis=1) == 0))
+        if zero_rows > 0:
+            issues.append(
+                f"rollout_buffer.action_masks contains {zero_rows} rows with zero valid actions"
+            )
+
+    return issues
+
+
+def _vec_env_wrapper_chain(env: Any) -> list[str]:
+    chain: list[str] = []
+    current = env
+    max_depth = 16
+    for _ in range(max_depth):
+        if current is None:
+            break
+        chain.append(type(current).__name__)
+        current = getattr(current, "venv", None)
+    return chain
+
+
+def _write_training_diagnostics_report(
+    report_path: str | os.PathLike[str],
+    *,
+    model: Any,
+    exception: BaseException | None = None,
+    issues: list[str] | None = None,
+) -> Path:
+    target = Path(report_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    lines = [
+        f"timestamp={time.strftime('%Y-%m-%d %H:%M:%S')}",
+        f"num_timesteps={int(getattr(model, 'num_timesteps', 0) or 0)}",
+        f"n_updates={int(getattr(model, '_n_updates', 0) or 0)}",
+        f"policy_class={type(getattr(model, 'policy', None)).__name__}",
+    ]
+
+    training_env = model.get_env()
+    lines.append(f"training_env_chain={' -> '.join(_vec_env_wrapper_chain(training_env))}")
+
+    rollout_buffer = getattr(model, "rollout_buffer", None)
+    used_size = _rollout_buffer_used_size(model)
+    if rollout_buffer is not None:
+        lines.append(
+            "rollout_buffer="
+            f"{type(rollout_buffer).__name__}(used={used_size}, "
+            f"buffer_size={int(getattr(rollout_buffer, 'buffer_size', 0) or 0)}, "
+            f"full={bool(getattr(rollout_buffer, 'full', False))}, "
+            f"pos={int(getattr(rollout_buffer, 'pos', 0) or 0)})"
+        )
+
+    if issues:
+        lines.append("issues:")
+        lines.extend(f"- {issue}" for issue in issues)
+
+    if exception is not None:
+        lines.append(f"exception_type={type(exception).__name__}")
+        lines.append(f"exception_message={exception}")
+        lines.append("traceback:")
+        lines.extend(traceback.format_exception(type(exception), exception, exception.__traceback__))
+
+    policy = getattr(model, "policy", None)
+    if policy is not None:
+        lines.append("policy_parameter_diagnostics:")
+        param_issues = _collect_policy_parameter_issues(model)
+        if param_issues:
+            lines.extend(f"- {issue}" for issue in param_issues)
+        else:
+            lines.append("- all policy parameters are finite")
+
+    if rollout_buffer is not None:
+        lines.append("rollout_buffer_diagnostics:")
+        for field_name in (
+            "observations",
+            "actions",
+            "rewards",
+            "returns",
+            "advantages",
+            "values",
+            "log_probs",
+            "action_masks",
+        ):
+            if not hasattr(rollout_buffer, field_name):
+                continue
+            lines.extend(
+                _format_array_summary(
+                    f"rollout_buffer.{field_name}",
+                    getattr(rollout_buffer, field_name),
+                    used_size=used_size,
+                )
+            )
+
+    vec_check_nan_env = training_env if isinstance(training_env, VecCheckNan) else None
+    if vec_check_nan_env is not None:
+        lines.append("vec_check_nan_last_values:")
+        lines.extend(
+            _format_array_summary("vec_check_nan.last_actions", getattr(vec_check_nan_env, "_actions", None))
+        )
+        lines.extend(
+            _format_array_summary(
+                "vec_check_nan.last_observations",
+                getattr(vec_check_nan_env, "_observations", None),
+            )
+        )
+
+    target.write_text("\n".join(lines), encoding="utf-8")
+    return target
+
+
+class CampaignNumericsDiagnosticsCallback(BaseCallback):
+    """Lightweight numerics checks around rollout/train boundaries."""
+
+    def __init__(self, report_dir: str, experiment: Any | None = None, verbose: int = 1):
+        super().__init__(verbose)
+        self.report_dir = Path(report_dir)
+        self.experiment = experiment
+        self._zero_mask_warning_reported = False
+
+    def _on_step(self) -> bool:
+        return True
+
+    def _on_rollout_end(self) -> None:
+        issues = []
+        policy_issues = _collect_policy_parameter_issues(self.model)
+        rollout_issues = _collect_rollout_buffer_issues(self.model)
+        issues.extend(policy_issues)
+        issues.extend(rollout_issues)
+        if not issues:
+            return
+
+        severe_issues = [issue for issue in issues if "non-finite" in issue]
+        zero_mask_issues = [issue for issue in issues if "zero valid actions" in issue]
+
+        should_write_warning = bool(zero_mask_issues) and not self._zero_mask_warning_reported
+        if not severe_issues and not should_write_warning:
+            return
+
+        report_kind = "rollout_error" if severe_issues else "rollout_warning"
+        report_path = self.report_dir / f"{report_kind}_step_{self.num_timesteps}.txt"
+        written_path = _write_training_diagnostics_report(
+            report_path,
+            model=self.model,
+            issues=issues,
+        )
+        if self.verbose:
+            print(f"[DIAG] Wrote diagnostics to {written_path}")
+            for issue in issues:
+                print(f"[DIAG] {issue}")
+        if self.experiment is not None:
+            self.experiment.log_other("diagnostics_last_report", str(written_path))
+
+        if zero_mask_issues:
+            self._zero_mask_warning_reported = True
+
+        if severe_issues:
+            raise RuntimeError(
+                f"Numerics diagnostics found a non-finite training state. See {written_path}"
+            )
 
 
 class CampaignCheckpointCallback(BaseCallback):
@@ -1868,12 +2148,14 @@ if __name__ == "__main__":
     MODEL_DIR = f"./campaign_models/{run_id}"
     EVAL_DIR = f"./campaign_eval/{run_id}"
     TB_LOG_DIR = f"./campaign_tb_logs/{run_id}"
+    DIAGNOSTICS_DIR = f"./campaign_diagnostics/{run_id}"
     COMET_OFFLINE_DIR = args.comet_offline_dir
 
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     os.makedirs(MODEL_DIR, exist_ok=True)
     os.makedirs(EVAL_DIR, exist_ok=True)
     os.makedirs(TB_LOG_DIR, exist_ok=True)
+    os.makedirs(DIAGNOSTICS_DIR, exist_ok=True)
     os.makedirs(COMET_OFFLINE_DIR, exist_ok=True)
 
     if COMET_AVAILABLE and comet_experiment is not None:
@@ -1884,6 +2166,7 @@ if __name__ == "__main__":
                 "model_dir": MODEL_DIR,
                 "eval_dir": EVAL_DIR,
                 "tb_log_dir": TB_LOG_DIR,
+                "diagnostics_dir": DIAGNOSTICS_DIR,
                 "comet_offline_dir": COMET_OFFLINE_DIR,
             },
             prefix="paths",
@@ -1900,6 +2183,12 @@ if __name__ == "__main__":
         norm_reward=VECNORM_NORM_REWARD,
         clip_reward=VECNORM_CLIP_REWARD,
         gamma=0.995,
+    )
+    vec_env = VecCheckNan(
+        vec_env,
+        raise_exception=True,
+        warn_once=False,
+        check_inf=True,
     )
 
     # Оценочная среда
@@ -1919,6 +2208,12 @@ if __name__ == "__main__":
         norm_reward=False,
         clip_reward=VECNORM_CLIP_REWARD,
         gamma=0.995,
+    )
+    eval_env = VecCheckNan(
+        eval_env,
+        raise_exception=True,
+        warn_once=False,
+        check_inf=True,
     )
 
     # -------------------- Модель --------------------
@@ -1960,6 +2255,12 @@ if __name__ == "__main__":
         verbose=0,
     )
     callbacks.append(metrics_cb)
+    diagnostics_cb = CampaignNumericsDiagnosticsCallback(
+        report_dir=DIAGNOSTICS_DIR,
+        experiment=comet_experiment,
+        verbose=1,
+    )
+    callbacks.append(diagnostics_cb)
 
     # Evaluation callback
     best_vecnorm_cb = SaveVecNormalizeOnBestCallback(
@@ -1988,13 +2289,27 @@ if __name__ == "__main__":
     print(f"Evaluation каждые: {EVAL_FREQ:,} шагов")
     print(f"Eval эпизодов на режим: {EVAL_EPISODES}")
     print(f"Eval лимит шагов на эпизод: {MAX_EVAL_EPISODE_STEPS}")
+    print(f"Diagnostics dir: {DIAGNOSTICS_DIR}")
     print(f"Run ID: {run_id}")
     print(f"{'='*60}\n")
 
-    model.learn(
-        total_timesteps=TOTAL_STEPS,
-        callback=CallbackList(callbacks),
-    )
+    try:
+        model.learn(
+            total_timesteps=TOTAL_STEPS,
+            callback=CallbackList(callbacks),
+        )
+    except Exception as exc:
+        crash_report_path = Path(DIAGNOSTICS_DIR) / f"learn_crash_step_{model.num_timesteps}.txt"
+        written_path = _write_training_diagnostics_report(
+            crash_report_path,
+            model=model,
+            exception=exc,
+            issues=_collect_policy_parameter_issues(model) + _collect_rollout_buffer_issues(model),
+        )
+        print(f"[DIAG] Training crash diagnostics written to {written_path}")
+        if COMET_AVAILABLE and comet_experiment is not None:
+            comet_experiment.log_other("diagnostics_last_crash_report", str(written_path))
+        raise
 
     # -------------------- Сохранение финальной модели --------------------
     final_model_path = f"{MODEL_DIR}/final_model"

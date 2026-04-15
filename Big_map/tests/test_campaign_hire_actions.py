@@ -44,7 +44,18 @@ def test_legions_hire_action_count_matches_hire_py():
     _enable_hero_hire(env, gold=999.0)
 
     assert len(env.active_hire_options) == len(legions_hire_d2)
-    assert env.GRID_MERCHANT_BUY_ACTION_START - env.GRID_HIRE_ACTION_START == len(legions_hire_d2)
+    assert (
+        env.GRID_MERCENARY_HIRE_ACTION_START - env.GRID_HIRE_ACTION_START
+        == len(legions_hire_d2)
+    )
+    assert (
+        env.GRID_TRAINER_ACTION_START - env.GRID_MERCENARY_HIRE_ACTION_START
+        == len(env.active_mercenary_hire_options)
+    )
+    assert (
+        env.GRID_MERCHANT_BUY_ACTION_START - env.GRID_TRAINER_ACTION_START
+        == len(env.TRAINER_POSITIONS)
+    )
 
 
 def test_legions_mage_hire_uses_name_from_hire_py_and_places_unit_on_backline():
@@ -170,8 +181,18 @@ def test_hire_actions_require_castle_tile_and_follow_race_specific_hire_array_le
 
     assert len(other_race_env.active_hire_options) == len(empire_hire_d2)
     assert (
-        other_race_env.GRID_MERCHANT_BUY_ACTION_START - other_race_env.GRID_HIRE_ACTION_START
+        other_race_env.GRID_MERCENARY_HIRE_ACTION_START - other_race_env.GRID_HIRE_ACTION_START
         == len(empire_hire_d2)
+    )
+    assert (
+        other_race_env.GRID_TRAINER_ACTION_START
+        - other_race_env.GRID_MERCENARY_HIRE_ACTION_START
+        == len(other_race_env.active_mercenary_hire_options)
+    )
+    assert (
+        other_race_env.GRID_MERCHANT_BUY_ACTION_START
+        - other_race_env.GRID_TRAINER_ACTION_START
+        == len(other_race_env.TRAINER_POSITIONS)
     )
 
 

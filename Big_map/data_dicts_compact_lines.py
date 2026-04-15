@@ -371,15 +371,45 @@ def _resolve_hero_flag(u: dict) -> bool:
         return False
 
 
+def _resolve_capital_value(u: dict) -> int:
+    if not isinstance(u, dict):
+        return 0
+    capital_raw = _get(u, "столица", "capital", default=0)
+    try:
+        return int(round(float(capital_raw)))
+    except Exception:
+        return 0
+
+
+def _normalize_level_value(raw_level: object, default: int = 0) -> int:
+    try:
+        return int(round(float(raw_level)))
+    except Exception:
+        return int(default)
+
+
 for _entry in DATA:
     if isinstance(_entry, dict):
         _entry["hero"] = _resolve_hero_flag(_entry)
+        capital_v = _resolve_capital_value(_entry)
+        level_v = _normalize_level_value(
+            _get(_entry, "уровень", "Level", "level", default=0),
+            default=0,
+        )
+        if capital_v == 0 and level_v < 1:
+            level_v = 1
+            _entry["уровень"] = level_v
+        _entry["Level"] = level_v
+        _entry["capital"] = capital_v
+        _entry["is_neutral_unit"] = capital_v == 0
 
 def map_unit_to_battle(u: dict, team: str, position: int) -> dict:
     """Маппинг одного словаря из DATA -> объект боевого юнита с ключами целевого формата."""
     initv = int(_get(u, "инит", "инициатива", default=0))
     hp = int(_get(u, "здоровье", "hp", default=0))
     level_raw = _get(u, "\u0443\u0440\u043e\u0432\u0435\u043d\u044c", "Level", "level", default=0)
+    capital_v = _resolve_capital_value(u)
+    is_neutral_unit = capital_v == 0
     # Experience fields are used by BattleEnv to distribute post-battle XP.
     # Keep numeric values where possible and preserve special string marker "max".
     exp_kill_raw = _get(u, "\u043e\u043f\u044b\u0442 \u0443\u0431\u0438\u0439\u0441\u0442\u0432\u0430", "exp_kill", default=0)
@@ -415,6 +445,8 @@ def map_unit_to_battle(u: dict, team: str, position: int) -> dict:
         level_v = int(round(float(level_raw)))
     except Exception:
         level_v = 0
+    if is_neutral_unit and level_v < 1:
+        level_v = 1
 
     try:
         needaunit_v = 1 if int(round(float(_get(u, "needaunit", default=0)))) > 0 else 0
@@ -436,6 +468,8 @@ def map_unit_to_battle(u: dict, team: str, position: int) -> dict:
         "stand": _stand(u),
         "unit_type": _unit_type(u),
         "Level": level_v,
+        "capital": capital_v,
+        "is_neutral_unit": is_neutral_unit,
 
         "damage": int(_get(u, "урон", "damage", default=0)),
         "damage_secondary": int(_get(u, "урон2", "damage2", default=0)),

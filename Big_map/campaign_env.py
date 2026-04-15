@@ -71,6 +71,7 @@ from hire import (
     legions_hire_d2,
     elves_hire_d2,
 )
+from scroll_spell_data import SCROLL_ITEM_ALIASES, SCROLL_ITEM_DEFINITIONS
 
 BUILDINGS_D2 = {
     "empire": empire_buildings_d2,
@@ -318,7 +319,14 @@ class CampaignEnv(gym.Env):
     GRID_STEPS_PER_TURN = MOVES_PER_TURN
     HERO_PATHFINDING_LEVEL = 2
     HERO_LEADERSHIP_LEVEL = 3
+    HERO_ENDURANCE_LEVEL = 4
     HERO_PATHFINDING_MOVE_BONUS_PCT = 0.20
+    TYPEOFLORD_TWO_SPELL_LEARNING_COST_MULTIPLIER = 0.5
+    TYPEOFLORD_TWO_SAME_SPELL_CASTS_PER_TURN = 2
+    TYPEOFLORD_THREE_BUILDING_COST_MULTIPLIER = 0.5
+    TYPEOFLORD_ONE_REST_HEAL_BONUS_PERCENT = 0.15
+    DEFAULT_REST_HEAL_PERCENT = 0.05
+    PLAYER_TERRITORY_REST_HEAL_PERCENT = 0.15
     GOLD_PER_TURN = 100.0
     BUILDING_GOLD_COST_MULTIPLIER = 100.0
     LEGIONS_GOLD_MINE_GOLD_PER_TURN = 50.0
@@ -395,9 +403,13 @@ class CampaignEnv(gym.Env):
     HIRE_FRONT_POSITIONS = (7, 9)
     HIRE_BACK_POSITIONS = (10, 11, 12)
     GRID_HIRE_ACTION_START = GRID_CASTLE_REVIVE_ACTION_START + len(CASTLE_REVIVE_POSITIONS)  # 45
-    GRID_MERCHANT_BUY_ACTION_START = GRID_HIRE_ACTION_START
+    GRID_MERCENARY_HIRE_ACTION_START = GRID_HIRE_ACTION_START
+    GRID_TRAINER_ACTION_START = GRID_MERCENARY_HIRE_ACTION_START
+    TRAINER_POSITIONS = GRID_BOTTLE_POSITIONS
+    GRID_MERCHANT_BUY_ACTION_START = GRID_TRAINER_ACTION_START
+    GRID_SPELL_SHOP_BUY_ACTION_START = GRID_MERCHANT_BUY_ACTION_START + 10
     ENERGY_ELIXIR_POSITIONS = GRID_BOTTLE_POSITIONS
-    GRID_ENERGY_ACTION_START = GRID_MERCHANT_BUY_ACTION_START + 10
+    GRID_ENERGY_ACTION_START = GRID_SPELL_SHOP_BUY_ACTION_START + 2
     HASTE_ELIXIR_POSITIONS = GRID_BOTTLE_POSITIONS
     GRID_HASTE_ACTION_START = GRID_ENERGY_ACTION_START + len(ENERGY_ELIXIR_POSITIONS)
     FIRE_WARD_POSITIONS = GRID_BOTTLE_POSITIONS
@@ -440,6 +452,125 @@ class CampaignEnv(gym.Env):
             ),
         },
     }
+    BASE_SPELL_SHOP_SITE_DATA = {
+        "Лавка заклинаний Маллавиена": {
+            "site_id": "S001SI0009",
+            "anchor": (42, 2),
+            "interaction_tiles": (
+                (45, 3),
+                (45, 4),
+                (43, 5),
+                (44, 5),
+                (45, 5),
+            ),
+        },
+    }
+    BASE_MERCENARY_SITE_DATA = {
+        "Лагерь северных варваров": {
+            "site_id": "S001SI0002",
+            "anchor": (9, 42),
+            "interaction_tiles": (
+                (12, 43),
+                (12, 44),
+                (10, 45),
+                (11, 45),
+                (12, 45),
+            ),
+            "roster": (
+                {
+                    "slot": 0,
+                    "unit_id": "g000uu5040",
+                    "unit_name": "Варвар",
+                    "gold": 850.0,
+                    "stock": 1,
+                },
+            ),
+        },
+        "Пустой лагерь наёмников": {
+            "site_id": "S001SI0007",
+            "anchor": (15, 1),
+            "interaction_tiles": (
+                (18, 2),
+                (18, 3),
+                (16, 4),
+                (17, 4),
+                (18, 4),
+            ),
+            "roster": (
+                {
+                    "slot": 0,
+                    "unit_id": "g000uu5017",
+                    "unit_name": "Гоблин",
+                    "gold": 50.0,
+                    "stock": 1,
+                },
+                {
+                    "slot": 1,
+                    "unit_id": "g000uu5018",
+                    "unit_name": "Гоблин лучник",
+                    "gold": 50.0,
+                    "stock": 1,
+                },
+            ),
+        },
+    }
+    BASE_TRAINER_SITE_DATA = {
+        "Тренировочный лагерь": {
+            "site_id": "S001SI0006",
+            "anchor": (38, 30),
+            "interaction_tiles": (
+                (41, 31),
+                (41, 32),
+                (39, 33),
+                (40, 33),
+                (41, 33),
+            ),
+        },
+    }
+    MERCENARY_FRONTLINE_UNIT_TYPES = frozenset(
+        {
+            "Warrior",
+            "Demon",
+            "Lord",
+            "Bone Lord",
+            "Dregazul",
+            "Spider",
+            "Centaur Savage",
+            "Aleman",
+            "Uter",
+            "Abyss Devil",
+            "Ismir son",
+            "Gumtic",
+            "Uter Demon",
+        }
+    )
+    MERCENARY_BACKLINE_UNIT_TYPES = frozenset(
+        {
+            "Archer",
+            "Mage",
+            "Summoner",
+            "Cliric",
+            "Profit",
+            "Patriach",
+            "Death",
+            "Ghost",
+            "Shadow",
+            "Vampire",
+            "Highvampire",
+            "Wight",
+            "Incub",
+            "Succub",
+            "Doppelganger",
+            "Witch",
+            "Baroness",
+            "Sentry",
+            "Watcher",
+            "Hermit",
+            "Teurg",
+            "Shamanka",
+            "Drulliaan",
+        }
+    )
     FINAL_OBJECTIVE_CITY_REWARD_MULTIPLIER = 5.0
     CHEST_PICKUP_RADIUS = 1
     BONUS_SMALL_HEAL_SOURCE_ITEM = "Potion of Healing"
@@ -700,6 +831,13 @@ class CampaignEnv(gym.Env):
         {"name": "Эликсир защиты от магии Воздуха", "price": 400.0, "stock": 1, "grant": "inventory"},
         {"name": "Эликсир быстроты", "price": 600.0, "stock": 1, "grant": "inventory"},
     )
+    SPELL_SHOP_BUY_SPELLS = (
+        {"name": "Армагеддон", "spell_id": "emp_d2_s022", "price": 1000.0, "stock": 1},
+        {"name": "Вызов Мстителя", "spell_id": "lod_d2_s021", "price": 1000.0, "stock": 1},
+    )
+    MAX_SPELL_SHOP_CAST_ACTIONS = 5
+    SCROLL_MAGE_UNLOCK_GOLD_COST = 500.0
+    MAX_SCROLL_CAST_ACTIONS = 5
     GRID_BUILD_ACTION_START = (
         GRID_SUPREME_ELIXIR_ACTION_START + len(SUPREME_ELIXIR_POSITIONS)
     )
@@ -870,6 +1008,10 @@ class CampaignEnv(gym.Env):
         # Realcapital: 1 = empire, 2 = legions, 3 = mountain_clans, 4 = undead_hordes, 5 = elves
         self.Realcapital = self._normalize_realcapital(realcapital)
         # Typeoflord is currently fixed for the campaign layout/state.
+        # Значения typeoflord для всех фракций трактуются так:
+        #   1 = повелитель воинов
+        #   2 = повелитель магов
+        #   3 = повелитель воров
         self.typeoflord = 1
         self.Typeoflord = int(self.typeoflord)
         self._reset_buildings_state()
@@ -929,6 +1071,9 @@ class CampaignEnv(gym.Env):
             for enemy_id in tuple(source_data.get("required_enemy_ids", ()))
         }
         self._init_merchant_site_metadata()
+        self._init_spell_shop_site_metadata()
+        self._init_mercenary_site_metadata()
+        self._init_trainer_site_metadata()
 
         # Подсреда grid: враги и препятствия автоматически масштабируются под размер карты.
         self.grid_env = GridWorldEnv(
@@ -1003,6 +1148,9 @@ class CampaignEnv(gym.Env):
         self.empire_territory_tile_set: set[Tuple[int, int]] = set()
         self._legions_territory_grid_obs_cache = np.zeros(0, dtype=np.float32)
         self._sync_grid_merchant_positions()
+        self._sync_grid_spell_shop_positions()
+        self._sync_grid_mercenary_positions()
+        self._sync_grid_trainer_positions()
         self._ensure_map_layout_consistency()
         self.battle_env: Optional[BattleEnv] = None
         self.grid_obs_base_size = int(self.grid_env.observation_space.shape[0])
@@ -1027,6 +1175,7 @@ class CampaignEnv(gym.Env):
         self.active_spells = self._get_spells_for_capital(self.Realcapital)
         self.spell_keys = self._get_spell_keys(self.active_spells)
         self.active_hire_options: List[Dict[str, object]] = []
+        self.active_mercenary_hire_options: List[Dict[str, object]] = []
         self.settlement_upgrade_names = list(self.legions_settlement_territory_source_by_name.keys())
         self._refresh_dynamic_action_layout()
         self.chests: Dict[Tuple[int, int], Tuple[str, ...]] = dict(self._static_chests)
@@ -1037,6 +1186,13 @@ class CampaignEnv(gym.Env):
         self._reset_mana_state()
         self.spell_learning_locked = False
         self.heroitems: List[object] = []
+        self._inventory_cache_valid: bool = False
+        self._hero_item_counts_cache: Dict[str, int] = {}
+        self._scroll_item_counts_cache: Dict[str, int] = {}
+        self._scroll_inventory_entries_cache: Tuple[Dict[str, object], ...] = ()
+        self._available_scroll_spell_entries_cache: Tuple[Dict[str, object], ...] = ()
+        self._scroll_cast_slot_entries_cache: Tuple[Dict[str, object], ...] = ()
+        self._total_scroll_count_cache: int = 0
         self.equipped_hero_items: List[Optional[str]] = [None] * int(self.BATTLE_EQUIP_SLOTS)
         self.equipped_artifact_items: List[Optional[str]] = [None] * int(
             self.ARTIFACT_EQUIP_SLOTS
@@ -1046,13 +1202,19 @@ class CampaignEnv(gym.Env):
         self.enemy_team_states: Dict[int, List[Dict]] = self._create_initial_enemy_team_states()
         self.enemy_map_spell_effects: Dict[int, set[str]] = {}
         self.blue_map_spell_effects: set[str] = set()
-        self.damage_spell_ids_used_this_turn: set[str] = set()
+        self.spell_cast_counts_by_id_this_turn: Dict[str, int] = {}
         self.summon_hero_battle_bonus_pending: bool = False
         self.summon_hero_battle_bonus_enemy_ids_this_turn: set[int] = set()
         self.extra_heal_bottles: int = 0
         self.extra_healing_bottles: int = 0
         self.extra_revive_bottles: int = 0
         self.merchant_stocks: Dict[str, Dict[str, int]] = self._create_initial_merchant_stocks()
+        self.spell_shop_stocks: Dict[str, Dict[str, int]] = self._create_initial_spell_shop_stocks()
+        self.spell_shop_purchased_spell_ids: set[str] = set()
+        self.scroll_magic_unlocked: bool = False
+        self.mercenary_site_rosters: Dict[str, List[Dict[str, object]]] = (
+            self._create_initial_mercenary_site_rosters()
+        )
         self.active_invulnerability_potion_positions: set[int] = set()
         self.active_strength_potion_positions: set[int] = set()
         self.active_energy_elixir_positions: set[int] = set()
@@ -1070,6 +1232,9 @@ class CampaignEnv(gym.Env):
         self._sync_grid_chest_positions()
         self._sync_grid_mana_sources()
         self._sync_grid_merchant_positions()
+        self._sync_grid_spell_shop_positions()
+        self._sync_grid_mercenary_positions()
+        self._sync_grid_trainer_positions()
         self._init_campaign_grid_obs_metadata()
         self._refresh_legions_territory_grid_obs_cache()
         self.GRID_OBS_SIZE = (
@@ -1078,8 +1243,8 @@ class CampaignEnv(gym.Env):
             + self.grid_campaign_obs_size
         )
         total_actions = (
-            self.grid_map_support_spell_action_start
-            + self._map_support_spell_action_max_count()
+            self.grid_scroll_cast_action_start
+            + int(self.MAX_SCROLL_CAST_ACTIONS)
         )
         # Action space: максимум из двух режимов (battle = 27 действий, grid расширен для экономики и заклинаний)
         self.action_space = spaces.Discrete(total_actions)
@@ -1127,6 +1292,7 @@ class CampaignEnv(gym.Env):
         self.battle_env = None
         self._campaign_logs = []
         self.heroitems = []
+        self._invalidate_inventory_cache()
         self.equipped_hero_items = [None] * int(self.BATTLE_EQUIP_SLOTS)
         self.equipped_artifact_items = [None] * int(self.ARTIFACT_EQUIP_SLOTS)
         self.artifact_auto_equip_next_slot = 0
@@ -1134,13 +1300,17 @@ class CampaignEnv(gym.Env):
         self.enemy_team_states = self._create_initial_enemy_team_states()
         self.enemy_map_spell_effects = {}
         self.blue_map_spell_effects = set()
-        self.damage_spell_ids_used_this_turn = set()
+        self.spell_cast_counts_by_id_this_turn = {}
         self.summon_hero_battle_bonus_pending = False
         self.summon_hero_battle_bonus_enemy_ids_this_turn = set()
         self.extra_heal_bottles = 0
         self.extra_healing_bottles = 0
         self.extra_revive_bottles = 0
         self.merchant_stocks = self._create_initial_merchant_stocks()
+        self.spell_shop_stocks = self._create_initial_spell_shop_stocks()
+        self.spell_shop_purchased_spell_ids = set()
+        self.scroll_magic_unlocked = False
+        self.mercenary_site_rosters = self._create_initial_mercenary_site_rosters()
         self.active_invulnerability_potion_positions = set()
         self.active_strength_potion_positions = set()
         self.active_energy_elixir_positions = set()
@@ -1169,9 +1339,12 @@ class CampaignEnv(gym.Env):
         self._sync_grid_chest_positions()
         self._sync_grid_mana_sources()
         self._sync_grid_merchant_positions()
+        self._sync_grid_spell_shop_positions()
+        self._sync_grid_mercenary_positions()
+        self._sync_grid_trainer_positions()
         total_actions = (
-            self.grid_map_support_spell_action_start
-            + self._map_support_spell_action_max_count()
+            self.grid_scroll_cast_action_start
+            + int(self.MAX_SCROLL_CAST_ACTIONS)
         )
         self.action_space = spaces.Discrete(total_actions)
 
@@ -1230,6 +1403,9 @@ class CampaignEnv(gym.Env):
         info.update(self._ruin_progress_info())
         info.update(self._artifact_state_info())
         info.update(self._merchant_context_info(self.grid_env.agent_pos))
+        info.update(self._spell_shop_context_info(self.grid_env.agent_pos))
+        info.update(self._mercenary_context_info(self.grid_env.agent_pos))
+        info.update(self._trainer_context_info(self.grid_env.agent_pos))
 
         return self._build_obs(grid_obs=grid_obs), info
 
@@ -1254,9 +1430,16 @@ class CampaignEnv(gym.Env):
         #   39-44 — воскрешение на специальных клетках карты по позициям 7-12.
         #   после 44 — найм фракционных юнитов в городе/столице;
         #   число action в этом блоке зависит от массива найма выбранной расы в hire.py.
-        #   после блока найма — покупки у торговца, затем боевые эликсиры и постройки.
+        #   после него — отдельный блок найма в лагерях наёмников на карте.
+        #   после блока наёмников — покупки у торговца, затем боевые эликсиры и постройки.
         #   после построек — изучение заклинаний активной фракции.
         #   после заклинаний — улучшение захваченных городов.
+        if action >= self.grid_scroll_cast_action_start:
+            return self._step_cast_scroll_spell(action)
+        if action >= self.GRID_UNLOCK_SCROLL_MAGIC_ACTION:
+            return self._step_unlock_scroll_magic(action)
+        if action >= self.grid_spell_shop_cast_action_start:
+            return self._step_cast_spell_shop_spell(action)
         if action >= self.grid_map_support_spell_action_start:
             return self._step_cast_support_spell(action)
         if action >= self.grid_legion_damage_spell_action_start:
@@ -1287,8 +1470,14 @@ class CampaignEnv(gym.Env):
             return self._step_apply_haste_elixir(action)
         if action >= self.GRID_ENERGY_ACTION_START:
             return self._step_apply_energy_elixir(action)
+        if action >= self.GRID_SPELL_SHOP_BUY_ACTION_START:
+            return self._step_buy_spell_shop_spell(action)
         if action >= self.GRID_MERCHANT_BUY_ACTION_START:
             return self._step_buy_merchant_item(action)
+        if action >= self.GRID_TRAINER_ACTION_START:
+            return self._step_train_unit_at_trainer(action)
+        if action >= self.GRID_MERCENARY_HIRE_ACTION_START:
+            return self._step_hire_mercenary_unit(action)
         if action >= self.GRID_HIRE_ACTION_START:
             return self._step_hire_faction_unit(action)
         if action >= self.GRID_CASTLE_REVIVE_ACTION_START:
@@ -1435,36 +1624,54 @@ class CampaignEnv(gym.Env):
         }
         info.update(self._merchant_context_info(new_pos))
 
-        # Обработка действия REST — восстановление 5% HP и бонусного лечения на heal-tile.
+        # Обработка действия REST — восстановление базового процента HP и бонусного лечения на своей столице/городе.
         if grid_info.get("rest_action"):
             pending_hire_turn_penalty = self._pending_hire_turn_penalty(
                 1,
                 units=self.blue_team_state,
             )
+            rest_heal_percent = self._resolve_rest_heal_percent(self.grid_env.agent_pos)
+            rest_heal_typeoflord_bonus_percent = self._resolve_typeoflord_rest_heal_bonus_percent()
             (
                 rest_heal_bonus_percent,
                 rest_heal_bonus_source,
                 rest_heal_bonus_level,
             ) = self._resolve_rest_regeneration_context(self.grid_env.agent_pos)
+            rest_total_percent = float(
+                rest_heal_percent
+                + rest_heal_typeoflord_bonus_percent
+                + rest_heal_bonus_percent
+            )
             healed = self._heal_blue_team(
-                heal_percent=0.05,
-                bonus_percent=rest_heal_bonus_percent,
+                heal_percent=rest_heal_percent,
+                bonus_percent=rest_heal_typeoflord_bonus_percent + rest_heal_bonus_percent,
             )
             if healed > 0:
+                rest_heal_formula_parts = [f"{rest_heal_percent * 100.0:g}%"]
+                if rest_heal_typeoflord_bonus_percent > 0.0:
+                    rest_heal_formula_parts.append(
+                        f"{rest_heal_typeoflord_bonus_percent * 100.0:g}%"
+                    )
+                if rest_heal_bonus_percent > 0.0:
+                    rest_heal_formula_parts.append(f"{rest_heal_bonus_percent * 100.0:g}%")
+                rest_heal_formula_text = " + ".join(rest_heal_formula_parts)
                 if rest_heal_bonus_percent > 0.0:
                     if rest_heal_bonus_source == "capital":
                         self._log(
                             f"Отдых в столице: восстановлено HP у {healed} юнитов "
-                            f"(5% + {rest_heal_bonus_percent * 100.0:g}%)"
+                            f"({rest_heal_formula_text})"
                         )
                     else:
                         self._log(
                             f"Отдых в городе {rest_heal_bonus_source} уровня {rest_heal_bonus_level}: "
                             f"восстановлено HP у {healed} юнитов "
-                            f"(5% + {rest_heal_bonus_percent * 100.0:g}%)"
+                            f"({rest_heal_formula_text})"
                         )
                 else:
-                    self._log(f"Отдых: восстановлено HP у {healed} юнитов (5%)")
+                    self._log(
+                        f"Отдых: восстановлено HP у {healed} юнитов "
+                        f"({rest_heal_formula_text})"
+                    )
             else:
                 self._log("Отдых: все юниты на полном здоровье")
             # Отдых завершает ход
@@ -1474,9 +1681,12 @@ class CampaignEnv(gym.Env):
             info["moves"] = self.moves
             info["healed_units"] = healed
             info["pending_hire_turn_penalty"] = float(pending_hire_turn_penalty)
-            info["rest_heal_percent"] = 0.05
+            info["rest_heal_percent"] = float(rest_heal_percent)
+            info["rest_heal_typeoflord_bonus_percent"] = float(
+                rest_heal_typeoflord_bonus_percent
+            )
             info["rest_heal_bonus_percent"] = float(rest_heal_bonus_percent)
-            info["rest_heal_total_percent"] = float(0.05 + rest_heal_bonus_percent)
+            info["rest_heal_total_percent"] = float(rest_total_percent)
             info["rest_heal_bonus_source"] = rest_heal_bonus_source
             if rest_heal_bonus_level is not None:
                 info["rest_heal_bonus_level"] = rest_heal_bonus_level
@@ -1637,6 +1847,9 @@ class CampaignEnv(gym.Env):
         finalized_info.update(self._spell_state_info())
         finalized_info.update(self._ruin_progress_info())
         finalized_info.update(self._merchant_context_info(position))
+        finalized_info.update(self._spell_shop_context_info(position))
+        finalized_info.update(self._mercenary_context_info(position))
+        finalized_info.update(self._trainer_context_info(position))
 
         return (
             self._build_obs(grid_obs=grid_obs),
@@ -1648,7 +1861,33 @@ class CampaignEnv(gym.Env):
 
     @staticmethod
     def _castle_heal_gold_per_hp(unit: Dict) -> float:
-        """Стоимость лечения на клетке лечения: 1/2/3 gold за 1 HP в зависимости от Level."""
+        """Стоимость лечения на клетке лечения.
+
+        Фракционные юниты лечатся по Level, а нейтралы — по bucket'ам max HP.
+        """
+        is_neutral_unit = bool(unit.get("is_neutral_unit", False))
+        if not is_neutral_unit:
+            capital_raw = unit.get("capital", None)
+            try:
+                is_neutral_unit = capital_raw is not None and int(round(float(capital_raw))) == 0
+            except (TypeError, ValueError):
+                is_neutral_unit = False
+
+        if is_neutral_unit:
+            max_hp_raw = unit.get("maxhp", unit.get("max_health", 0))
+            try:
+                max_hp = float(max_hp_raw or 0.0)
+            except (TypeError, ValueError):
+                max_hp = 0.0
+
+            if max_hp <= 100.0:
+                return 1.0
+            if max_hp <= 250.0:
+                return 2.0
+            if max_hp <= 500.0:
+                return 3.0
+            return 4.0
+
         level_raw = unit.get("Level", 1)
         try:
             level = int(round(float(level_raw)))
@@ -1663,7 +1902,39 @@ class CampaignEnv(gym.Env):
 
     @staticmethod
     def _castle_revive_gold_cost(unit: Dict) -> float:
-        """Стоимость воскрешения на клетке лечения в зависимости от Level."""
+        """Стоимость воскрешения на клетке лечения.
+
+        Фракционные юниты воскрешаются по Level, а нейтралы — по bucket'ам max HP.
+        """
+        is_neutral_unit = bool(unit.get("is_neutral_unit", False))
+        if not is_neutral_unit:
+            capital_raw = unit.get("capital", None)
+            try:
+                is_neutral_unit = capital_raw is not None and int(round(float(capital_raw))) == 0
+            except (TypeError, ValueError):
+                is_neutral_unit = False
+
+        if is_neutral_unit:
+            max_hp_raw = unit.get("maxhp", unit.get("max_health", 0))
+            try:
+                max_hp = float(max_hp_raw or 0.0)
+            except (TypeError, ValueError):
+                max_hp = 0.0
+
+            if max_hp <= 100.0:
+                return 50.0
+            if max_hp <= 150.0:
+                return 200.0
+            if max_hp <= 250.0:
+                return 400.0
+            if max_hp <= 350.0:
+                return 600.0
+            if max_hp <= 500.0:
+                return 800.0
+            if max_hp <= 2000.0:
+                return 1000.0
+            return 1500.0
+
         level_raw = unit.get("Level", 1)
         try:
             level = int(round(float(level_raw)))
@@ -1679,6 +1950,52 @@ class CampaignEnv(gym.Env):
         if level == 4:
             return 600.0
         return 800.0
+
+    @classmethod
+    def _trainer_gold_per_xp(cls, unit: Dict) -> float:
+        if not isinstance(unit, dict):
+            return 0.0
+
+        is_neutral_unit = bool(unit.get("is_neutral_unit", False))
+        if not is_neutral_unit:
+            capital_raw = unit.get("capital", None)
+            try:
+                is_neutral_unit = capital_raw is not None and int(round(float(capital_raw))) == 0
+            except (TypeError, ValueError):
+                is_neutral_unit = False
+        if is_neutral_unit or cls._is_hero_unit(unit):
+            return 5.0
+
+        level_raw = unit.get("Level", 0)
+        try:
+            level = int(round(float(level_raw or 0)))
+        except (TypeError, ValueError):
+            level = 0
+
+        if level <= 0:
+            return 5.0
+        if level == 1:
+            return 4.0
+        if level == 2:
+            return 5.0
+        if level == 3:
+            return 6.0
+        return 7.0
+
+    @staticmethod
+    def _trainer_exp_cap(unit: Dict) -> Optional[int]:
+        if not isinstance(unit, dict):
+            return None
+        exp_required_raw = unit.get("exp_required", 0)
+        if isinstance(exp_required_raw, str) and exp_required_raw.strip().lower() == "max":
+            return None
+        try:
+            exp_required = int(round(float(exp_required_raw or 0)))
+        except (TypeError, ValueError):
+            return None
+        if exp_required <= 0:
+            return None
+        return max(0, exp_required - 1)
 
     @staticmethod
     def _is_hero_unit(unit: Dict) -> bool:
@@ -1752,6 +2069,9 @@ class CampaignEnv(gym.Env):
     def _hero_has_leadership(self, units: Optional[List[Dict]] = None) -> bool:
         return self._hero_level(units=units) >= int(self.HERO_LEADERSHIP_LEVEL)
 
+    def _hero_has_endurance(self, units: Optional[List[Dict]] = None) -> bool:
+        return self._hero_level(units=units) >= int(self.HERO_ENDURANCE_LEVEL)
+
     @staticmethod
     def _is_empty_blue_unit(unit: Optional[Dict]) -> bool:
         if not isinstance(unit, dict):
@@ -1773,6 +2093,14 @@ class CampaignEnv(gym.Env):
         if role_name == "warrior":
             return tuple(int(pos) for pos in self.HIRE_FRONT_POSITIONS)
         if role_name in {"mage", "archer", "support"}:
+            return tuple(int(pos) for pos in self.HIRE_BACK_POSITIONS)
+        return tuple()
+
+    def _hire_positions_for_stand(self, stand: object) -> Tuple[int, ...]:
+        stand_name = str(stand or "").strip().lower()
+        if stand_name == "ahead":
+            return tuple(int(pos) for pos in self.HIRE_FRONT_POSITIONS)
+        if stand_name == "behind":
             return tuple(int(pos) for pos in self.HIRE_BACK_POSITIONS)
         return tuple()
 
@@ -1862,6 +2190,147 @@ class CampaignEnv(gym.Env):
         )
         return True, unit_name, int(target_pos), cost
 
+    @staticmethod
+    def _unit_data_is_big(unit_data: Optional[Dict]) -> bool:
+        if not isinstance(unit_data, dict):
+            return False
+        raw_value = unit_data.get("размер", unit_data.get("big", 0))
+        try:
+            return bool(int(raw_value or 0))
+        except (TypeError, ValueError):
+            return bool(raw_value)
+
+    @classmethod
+    def _mercenary_stand_for_unit_data(cls, unit_data: Optional[Dict]) -> Optional[str]:
+        if not isinstance(unit_data, dict):
+            return None
+        if cls._unit_data_is_big(unit_data):
+            return None
+
+        unit_type = str(unit_data.get("тип", unit_data.get("unit_type", "")) or "").strip()
+        if unit_type in cls.MERCENARY_FRONTLINE_UNIT_TYPES:
+            return "ahead"
+        if unit_type in cls.MERCENARY_BACKLINE_UNIT_TYPES:
+            return "behind"
+
+        attack_type = str(
+            unit_data.get("тип атаки1", unit_data.get("attack_type_primary", "")) or ""
+        ).strip().lower()
+        return "ahead" if attack_type == "weapon" else "behind"
+
+    def _mercenary_option(self, action_idx: int) -> Optional[Dict[str, object]]:
+        if not (0 <= int(action_idx) < len(self.active_mercenary_hire_options)):
+            return None
+
+        option = dict(self.active_mercenary_hire_options[int(action_idx)])
+        roster_entry = self._mercenary_roster_entry(
+            str(option.get("site_name", "") or ""),
+            int(option.get("slot", 0) or 0),
+        )
+        option["stock"] = int(roster_entry.get("stock", 0) or 0) if roster_entry else 0
+        if roster_entry is not None:
+            option["stand"] = str(roster_entry.get("stand", option.get("stand", "")) or "")
+            option["unit_type"] = str(
+                roster_entry.get("unit_type", option.get("unit_type", "")) or ""
+            )
+        return option
+
+    def _can_hire_mercenary_unit_option(self, option: Optional[Dict[str, object]]) -> bool:
+        if not isinstance(option, dict):
+            return False
+
+        site_name = str(option.get("site_name", "") or "")
+        if not site_name or site_name not in self._mercenary_sites_at_position(self.grid_env.agent_pos):
+            return False
+        if max(0, int(option.get("stock", 0) or 0)) <= 0:
+            return False
+
+        hero = self._resolve_travel_hero()
+        if hero is None:
+            return False
+        if not self._hero_has_leadership(units=[hero]):
+            return False
+
+        unit_name = str(option.get("unit_name", option.get("name", "")) or "").strip()
+        unit_data = self._find_unit_data_by_name(unit_name)
+        if unit_data is None or self._unit_data_is_big(unit_data):
+            return False
+
+        stand = str(option.get("stand", "") or "").strip().lower()
+        if not stand:
+            resolved_stand = self._mercenary_stand_for_unit_data(unit_data)
+            stand = "" if resolved_stand is None else resolved_stand
+        positions = self._hire_positions_for_stand(stand)
+        if not unit_name or not positions:
+            return False
+
+        try:
+            cost = max(0.0, float(option.get("gold", 0.0) or 0.0))
+        except (TypeError, ValueError):
+            return False
+        if float(self.gold or 0.0) < cost:
+            return False
+
+        return self._find_first_empty_blue_position(positions) is not None
+
+    def _hire_mercenary_unit_option(
+        self,
+        option: Optional[Dict[str, object]],
+    ) -> Tuple[bool, Optional[str], Optional[int], float, Optional[str], int, int]:
+        if not self._can_hire_mercenary_unit_option(option):
+            return False, None, None, 0.0, None, 0, 0
+
+        assert isinstance(option, dict)
+        site_name = str(option.get("site_name", "") or "")
+        slot = int(option.get("slot", 0) or 0)
+        unit_name = str(option.get("unit_name", option.get("name", "")) or "").strip()
+        unit_data = self._find_unit_data_by_name(unit_name)
+        if unit_data is None or self._unit_data_is_big(unit_data):
+            return False, None, None, 0.0, site_name or None, 0, 0
+
+        stand = str(option.get("stand", "") or "").strip().lower()
+        if not stand:
+            resolved_stand = self._mercenary_stand_for_unit_data(unit_data)
+            stand = "" if resolved_stand is None else resolved_stand
+        positions = self._hire_positions_for_stand(stand)
+        target_pos = self._find_first_empty_blue_position(positions)
+        if target_pos is None:
+            return False, None, None, 0.0, site_name or None, 0, 0
+
+        roster_entry = self._mercenary_roster_entry(site_name, slot)
+        stock_before = max(0, int(roster_entry.get("stock", 0) or 0)) if roster_entry else 0
+        if stock_before <= 0:
+            return False, None, None, 0.0, site_name or None, stock_before, stock_before
+
+        recruited_unit = self._build_unit_from_data(unit_data, "blue", target_pos)
+        state = self._get_blue_state()
+        replaced = False
+        for idx, unit in enumerate(state):
+            if int(unit.get("position", -1) or -1) != int(target_pos):
+                continue
+            state[idx] = deepcopy(recruited_unit)
+            replaced = True
+            break
+        if not replaced:
+            state.append(deepcopy(recruited_unit))
+            state.sort(key=lambda unit: int(unit.get("position", 999) or 999))
+
+        hero = self._resolve_travel_hero(units=state)
+        if hero is not None:
+            hero["needaunit"] = 0
+
+        cost = max(0.0, float(option.get("gold", 0.0) or 0.0))
+        self.gold = max(0.0, float(self.gold or 0.0) - cost)
+        if roster_entry is not None:
+            roster_entry["stock"] = max(0, stock_before - 1)
+        stock_after = max(0, int(roster_entry.get("stock", 0) or 0)) if roster_entry else 0
+        self._sync_hero_progression_flags(state)
+        self._log(
+            f'Лагерь наёмников {site_name}: "{unit_name}" нанят на позицию {int(target_pos)} '
+            f"(стоимость={cost:.1f} gold, gold_left={float(self.gold):.1f}, stock_left={stock_after})"
+        )
+        return True, unit_name, int(target_pos), cost, site_name or None, stock_before, stock_after
+
     def _hero_pathfinding_move_bonus(self, units: Optional[List[Dict]] = None) -> int:
         if not self._hero_has_pathfinding(units=units):
             return 0
@@ -1884,6 +2353,8 @@ class CampaignEnv(gym.Env):
             abilities.append("Нахождение пути (+20% шагов)")
         if self._hero_has_leadership(units=[hero]):
             abilities.append("Лидерство")
+        if self._hero_has_endurance(units=[hero]):
+            abilities.append("Выносливость")
 
         return {
             "name": str(hero.get("name", "") or "").strip(),
@@ -1902,6 +2373,15 @@ class CampaignEnv(gym.Env):
 
     def _sync_grid_merchant_positions(self) -> None:
         self.grid_env.merchant_positions = set(self.merchant_interaction_tiles)
+
+    def _sync_grid_spell_shop_positions(self) -> None:
+        self.grid_env.spell_shop_positions = set(self.spell_shop_interaction_tiles)
+
+    def _sync_grid_mercenary_positions(self) -> None:
+        self.grid_env.mercenary_positions = set(self.mercenary_interaction_tiles)
+
+    def _sync_grid_trainer_positions(self) -> None:
+        self.grid_env.trainer_positions = set(self.trainer_interaction_tiles)
 
     def _max_heal_bottles_available(self) -> int:
         return int(self.MAX_HEAL_BOTTLES) + max(0, int(self.extra_heal_bottles or 0))
@@ -2092,7 +2572,141 @@ class CampaignEnv(gym.Env):
         return 0
 
     @classmethod
+    @lru_cache(maxsize=1)
+    def _scroll_item_definitions_by_name(cls) -> Dict[str, Dict[str, object]]:
+        return {
+            str(entry.get("item_name", "") or ""): dict(entry)
+            for entry in SCROLL_ITEM_DEFINITIONS
+            if str(entry.get("item_name", "") or "")
+        }
+
+    @classmethod
+    @lru_cache(maxsize=1)
+    def _scroll_item_alias_to_canonical(cls) -> Dict[str, str]:
+        alias_map: Dict[str, str] = {
+            str(item_name): str(item_name)
+            for item_name in cls._scroll_item_definitions_by_name().keys()
+        }
+        for alias_name, canonical_name in SCROLL_ITEM_ALIASES.items():
+            alias_map[str(alias_name or "")] = str(canonical_name or "")
+        return alias_map
+
+    @classmethod
+    def _canonical_scroll_item_name(cls, item_name: str) -> str:
+        return str(
+            cls._scroll_item_alias_to_canonical().get(str(item_name or ""), "") or ""
+        )
+
+    def _invalidate_inventory_cache(self) -> None:
+        self._inventory_cache_valid = False
+        self._hero_item_counts_cache = {}
+        self._scroll_item_counts_cache = {}
+        self._scroll_inventory_entries_cache = ()
+        self._available_scroll_spell_entries_cache = ()
+        self._scroll_cast_slot_entries_cache = ()
+        self._total_scroll_count_cache = 0
+
+    def _ensure_inventory_cache(self) -> None:
+        if self._inventory_cache_valid:
+            return
+
+        hero_item_counts: Dict[str, int] = {}
+        scroll_item_counts: Dict[str, int] = {}
+        for entry in self.heroitems:
+            item_name = self._hero_item_name(entry)
+            hero_item_counts[item_name] = hero_item_counts.get(item_name, 0) + 1
+
+            canonical_scroll_name = self._canonical_scroll_item_name(item_name)
+            if canonical_scroll_name:
+                scroll_item_counts[canonical_scroll_name] = (
+                    scroll_item_counts.get(canonical_scroll_name, 0) + 1
+                )
+
+        definition_by_name = self._scroll_item_definitions_by_name()
+        inventory_entries: List[Dict[str, object]] = []
+        available_entries: List[Dict[str, object]] = []
+        for definition in SCROLL_ITEM_DEFINITIONS:
+            item_name = str(definition.get("item_name", "") or "")
+            canonical_name = self._canonical_scroll_item_name(item_name)
+            if not canonical_name:
+                continue
+
+            copies = int(scroll_item_counts.get(canonical_name, 0) or 0)
+            if copies <= 0:
+                continue
+
+            base_definition = definition_by_name.get(canonical_name, {})
+            if not isinstance(base_definition, dict):
+                continue
+
+            scroll_entry = dict(base_definition)
+            scroll_entry["copies"] = copies
+            inventory_entries.append(scroll_entry)
+            if bool(scroll_entry.get("supported", False)):
+                available_entries.append(scroll_entry)
+
+        self._hero_item_counts_cache = hero_item_counts
+        self._scroll_item_counts_cache = scroll_item_counts
+        self._scroll_inventory_entries_cache = tuple(inventory_entries)
+        self._available_scroll_spell_entries_cache = tuple(available_entries)
+        self._scroll_cast_slot_entries_cache = tuple(
+            available_entries[: int(self.MAX_SCROLL_CAST_ACTIONS)]
+        )
+        self._total_scroll_count_cache = int(sum(scroll_item_counts.values()))
+        self._inventory_cache_valid = True
+
+    def is_scroll_item(self, item_name: str) -> bool:
+        return bool(self.scroll_item_definition(item_name))
+
+    def scroll_item_definition(self, item_name: str) -> Dict[str, object]:
+        canonical_name = self._canonical_scroll_item_name(item_name)
+        if not canonical_name:
+            return {}
+        definition = self._scroll_item_definitions_by_name().get(canonical_name, {})
+        if not isinstance(definition, dict):
+            return {}
+        return dict(definition)
+
+    def count_scroll_item(self, item_name: str) -> int:
+        canonical_name = self._canonical_scroll_item_name(item_name)
+        if not canonical_name:
+            return 0
+        self._ensure_inventory_cache()
+        return int(self._scroll_item_counts_cache.get(canonical_name, 0) or 0)
+
+    def count_scroll_spell(self, spell_id: str) -> int:
+        normalized_spell_id = str(spell_id or "")
+        if not normalized_spell_id:
+            return 0
+        for definition in SCROLL_ITEM_DEFINITIONS:
+            if str(definition.get("spell_id", "") or "") == normalized_spell_id:
+                return self.count_scroll_item(str(definition.get("item_name", "") or ""))
+        return 0
+
+    def available_scroll_spell_entries(self) -> Tuple[Dict[str, object], ...]:
+        self._ensure_inventory_cache()
+        return self._available_scroll_spell_entries_cache
+
+    def scroll_cast_slot_entries(self) -> Tuple[Dict[str, object], ...]:
+        self._ensure_inventory_cache()
+        return self._scroll_cast_slot_entries_cache
+
+    @classmethod
     def _hero_item_gold_value_by_name(cls, item_name: str) -> int:
+        canonical_scroll_name = cls._canonical_scroll_item_name(item_name)
+        if canonical_scroll_name:
+            try:
+                return max(
+                    0,
+                    int(
+                        cls._scroll_item_definitions_by_name()
+                        .get(canonical_scroll_name, {})
+                        .get("gold_value", 0)
+                        or 0
+                    ),
+                )
+            except (TypeError, ValueError):
+                return 0
         try:
             return max(0, int(cls.CHEST_ITEM_GOLD_VALUES.get(str(item_name or ""), 0) or 0))
         except (TypeError, ValueError):
@@ -2179,9 +2793,14 @@ class CampaignEnv(gym.Env):
             "artifact_auto_equip_previous": previous_item,
         }
 
-    def _add_hero_item(self, item_name: str) -> Dict[str, object]:
+    def _append_hero_item(self, item_name: str) -> None:
         normalized_name = str(item_name or "")
         self.heroitems.append(self._make_hero_item_entry(normalized_name))
+        self._invalidate_inventory_cache()
+
+    def _add_hero_item(self, item_name: str) -> Dict[str, object]:
+        normalized_name = str(item_name or "")
+        self._append_hero_item(normalized_name)
         return self._auto_equip_artifact_item(normalized_name)
 
     def _artifact_state_info(self) -> Dict[str, object]:
@@ -2208,6 +2827,12 @@ class CampaignEnv(gym.Env):
     def _hero_item_aliases(cls, item_name: str) -> Tuple[str, ...]:
         normalized_name = str(item_name or "")
         aliases = {normalized_name}
+        canonical_scroll_name = cls._canonical_scroll_item_name(normalized_name)
+        if canonical_scroll_name:
+            aliases.add(canonical_scroll_name)
+            for alias_name, alias_canonical_name in cls._scroll_item_alias_to_canonical().items():
+                if str(alias_canonical_name or "") == canonical_scroll_name:
+                    aliases.add(str(alias_name or ""))
         if normalized_name == cls.INVULNERABILITY_POTION_ITEM_NAME:
             aliases.add(cls.RUIN_INVULNERABILITY_ELIXIR_ITEM_NAME)
         elif normalized_name == cls.RUIN_INVULNERABILITY_ELIXIR_ITEM_NAME:
@@ -2221,8 +2846,11 @@ class CampaignEnv(gym.Env):
     def _count_hero_item(self, item_name: str) -> int:
         if not item_name:
             return 0
+        self._ensure_inventory_cache()
         normalized_names = set(self._hero_item_aliases(item_name))
-        return sum(1 for entry in self.heroitems if self._hero_item_name(entry) in normalized_names)
+        return int(
+            sum(int(self._hero_item_counts_cache.get(name, 0) or 0) for name in normalized_names)
+        )
 
     def _hero_item_available(self, item_name: str) -> bool:
         return self._count_hero_item(item_name) > 0
@@ -2234,6 +2862,7 @@ class CampaignEnv(gym.Env):
         for idx, entry in enumerate(self.heroitems):
             if self._hero_item_name(entry) in normalized_names:
                 del self.heroitems[idx]
+                self._invalidate_inventory_cache()
                 self._sync_equipped_artifact_items()
                 return True
         return False
@@ -2481,6 +3110,7 @@ class CampaignEnv(gym.Env):
             return sale_info
 
         self.heroitems = kept_items
+        self._invalidate_inventory_cache()
         self._sync_equipped_artifact_items()
         self.gold = max(0.0, float(self.gold or 0.0)) + float(total_gold)
         sale_reward = float(len(sold_items)) * float(self.reward_sell_junk_item)
@@ -3059,6 +3689,31 @@ class CampaignEnv(gym.Env):
                 continue
             entry["gold"] = base_gold * cost_multiplier
 
+    def _building_cost_multiplier(self) -> float:
+        return (
+            float(self.TYPEOFLORD_THREE_BUILDING_COST_MULTIPLIER)
+            if int(self.typeoflord) == 3
+            else 1.0
+        )
+
+    def _get_building_gold_cost(self, building: Optional[Dict[str, object]]) -> float:
+        if not isinstance(building, dict):
+            return 0.0
+        try:
+            base_cost = max(0.0, float(building.get("gold", 0.0) or 0.0))
+        except (TypeError, ValueError):
+            base_cost = 0.0
+        return base_cost * float(self._building_cost_multiplier())
+
+    def _current_max_building_gold_cost(self) -> float:
+        max_price = 1.0
+        for build_key in self.building_keys:
+            max_price = max(
+                max_price,
+                self._get_building_gold_cost(self.active_buildings.get(build_key)),
+            )
+        return float(max_price)
+
     def get_built_building_names(self) -> List[str]:
         """Возвращает названия построенных зданий активной фракции в порядке ключей."""
         built_names: List[str] = []
@@ -3090,11 +3745,55 @@ class CampaignEnv(gym.Env):
             costs[str(mana_kind)] = value
         return costs
 
+    def _spell_learning_cost_multiplier(self) -> float:
+        return (
+            float(self.TYPEOFLORD_TWO_SPELL_LEARNING_COST_MULTIPLIER)
+            if int(self.typeoflord) == 2
+            else 1.0
+        )
+
     def _get_spell_learning_costs(self, spell: Dict) -> Dict[str, float]:
-        return self._spell_costs_from_entry(spell, prefix="learn")
+        base_costs = self._spell_costs_from_entry(spell, prefix="learn")
+        multiplier = float(self._spell_learning_cost_multiplier())
+        if abs(multiplier - 1.0) <= 1e-9:
+            return base_costs
+        return {
+            str(mana_kind): max(0.0, float(required_amount) * multiplier)
+            for mana_kind, required_amount in base_costs.items()
+        }
 
     def _get_spell_use_costs(self, spell: Dict) -> Dict[str, float]:
         return self._spell_costs_from_entry(spell, prefix="use")
+
+    def _same_spell_cast_limit_per_turn(self) -> int:
+        if int(self.typeoflord) == 2:
+            return int(self.TYPEOFLORD_TWO_SAME_SPELL_CASTS_PER_TURN)
+        return 1
+
+    def _spell_cast_count_this_turn(self, spell_key: str) -> int:
+        normalized_spell_key = str(spell_key or "")
+        if not normalized_spell_key:
+            return 0
+        return max(
+            0,
+            int(self.spell_cast_counts_by_id_this_turn.get(normalized_spell_key, 0) or 0),
+        )
+
+    def _spell_cast_limit_reached_this_turn(self, spell_key: str) -> bool:
+        return self._spell_cast_count_this_turn(spell_key) >= int(
+            self._same_spell_cast_limit_per_turn()
+        )
+
+    def _spell_shop_cast_limit_reached_this_turn(self, spell_key: str) -> bool:
+        return self._spell_cast_count_this_turn(spell_key) >= 1
+
+    def _register_spell_cast_this_turn(self, spell_key: str) -> None:
+        normalized_spell_key = str(spell_key or "")
+        if not normalized_spell_key:
+            return
+        self.spell_cast_counts_by_id_this_turn[normalized_spell_key] = (
+            self._spell_cast_count_this_turn(normalized_spell_key) + 1
+        )
 
     @classmethod
     def _legion_damage_spell_ids(cls) -> Tuple[str, ...]:
@@ -3210,6 +3909,125 @@ class CampaignEnv(gym.Env):
             if str(spec.get("id", "") or "")
         }
 
+    def _map_support_spell_spec(self, spell_key: str) -> Dict[str, object]:
+        return dict(self._map_support_spell_specs_by_id().get(str(spell_key or ""), {}))
+
+    @classmethod
+    def _map_castable_spell_ids_for_capital(cls, capital: Optional[int]) -> Tuple[str, ...]:
+        return tuple(
+            dict.fromkeys(
+                [
+                    *cls._map_offensive_spell_ids_for_capital(capital),
+                    *cls._map_support_spell_ids_for_capital(capital),
+                ]
+            )
+        )
+
+    @classmethod
+    @lru_cache(maxsize=1)
+    def _all_spell_entries_by_id(cls) -> Dict[str, Dict[str, object]]:
+        all_spells: Dict[str, Dict[str, object]] = {}
+        for faction_spells in SPELLS_D2_TEMPLATE.values():
+            if not isinstance(faction_spells, dict):
+                continue
+            for spell_key, spell_data in faction_spells.items():
+                if not isinstance(spell_data, dict):
+                    continue
+                all_spells[str(spell_key)] = dict(spell_data)
+        return all_spells
+
+    def _spell_entry_by_id(self, spell_key: str) -> Optional[Dict[str, object]]:
+        normalized_spell_key = str(spell_key or "")
+        spell = self.active_spells.get(normalized_spell_key)
+        if isinstance(spell, dict):
+            return spell
+        fallback_spell = self._all_spell_entries_by_id().get(normalized_spell_key)
+        if isinstance(fallback_spell, dict):
+            return dict(fallback_spell)
+        return None
+
+    @classmethod
+    @lru_cache(maxsize=1)
+    def _scroll_supported_spell_definitions_by_id(cls) -> Dict[str, Dict[str, object]]:
+        return {
+            str(entry.get("spell_id", "") or ""): dict(entry)
+            for entry in SCROLL_ITEM_DEFINITIONS
+            if bool(entry.get("supported", False))
+            and str(entry.get("spell_id", "") or "")
+        }
+
+    def _scroll_spell_definition_by_id(self, spell_key: str) -> Dict[str, object]:
+        return dict(
+            self._scroll_supported_spell_definitions_by_id().get(str(spell_key or ""), {})
+        )
+
+    @classmethod
+    @lru_cache(maxsize=1)
+    def _scroll_offensive_spell_specs_by_id(cls) -> Dict[str, Dict[str, object]]:
+        offensive_kinds = {"damage", "debuff", "summon_battle"}
+        return {
+            str(entry.get("spell_id", "") or ""): dict(entry)
+            for entry in SCROLL_ITEM_DEFINITIONS
+            if bool(entry.get("supported", False))
+            and str(entry.get("spell_kind", "") or "") in offensive_kinds
+        }
+
+    @classmethod
+    @lru_cache(maxsize=1)
+    def _scroll_support_spell_specs_by_id(cls) -> Dict[str, Dict[str, object]]:
+        return {
+            str(entry.get("spell_id", "") or ""): dict(entry)
+            for entry in SCROLL_ITEM_DEFINITIONS
+            if bool(entry.get("supported", False))
+            and str(entry.get("spell_kind", "") or "")
+            in {"moves", "heal", "buff", "ward", "health_bonus"}
+        }
+
+    @classmethod
+    @lru_cache(maxsize=1)
+    def _combined_map_offensive_spell_specs_by_id(cls) -> Dict[str, Dict[str, object]]:
+        combined = dict(cls._map_offensive_spell_specs_by_id())
+        combined.update(cls._scroll_offensive_spell_specs_by_id())
+        return combined
+
+    @classmethod
+    @lru_cache(maxsize=1)
+    def _combined_map_support_spell_specs_by_id(cls) -> Dict[str, Dict[str, object]]:
+        combined = dict(cls._map_support_spell_specs_by_id())
+        combined.update(cls._scroll_support_spell_specs_by_id())
+        return combined
+
+    def _spell_shop_spell_has_regular_action(self, spell_key: str) -> bool:
+        return str(spell_key or "") in set(self._map_castable_spell_ids_for_capital(self.Realcapital))
+
+    def _spell_shop_cast_spell_entries(self) -> Tuple[Dict[str, object], ...]:
+        entries: List[Dict[str, object]] = []
+        seen_spell_ids: set[str] = set()
+        for spell_data in self.SPELL_SHOP_BUY_SPELLS:
+            spell_id = str(spell_data.get("spell_id", "") or "")
+            if (
+                not spell_id
+                or spell_id in seen_spell_ids
+                or self._spell_shop_spell_has_regular_action(spell_id)
+            ):
+                continue
+            spell_spec = self._map_offensive_spell_spec(spell_id)
+            if not spell_spec:
+                spell_spec = self._map_support_spell_spec(spell_id)
+            if not spell_spec or not isinstance(self._spell_entry_by_id(spell_id), dict):
+                continue
+            entries.append(dict(spell_data))
+            seen_spell_ids.add(spell_id)
+            if len(entries) >= int(self.MAX_SPELL_SHOP_CAST_ACTIONS):
+                break
+        return tuple(entries)
+
+    def _spell_shop_cast_spell_entry(self, idx: int) -> Dict[str, object]:
+        entries = self._spell_shop_cast_spell_entries()
+        if 0 <= int(idx) < len(entries):
+            return dict(entries[int(idx)])
+        return {}
+
     @classmethod
     def _legion_damage_spell_specs_by_id(cls) -> Dict[str, Dict[str, object]]:
         return {
@@ -3319,12 +4137,57 @@ class CampaignEnv(gym.Env):
 
     def _spell_state_info(self) -> Dict[str, object]:
         learned_spells = self.get_learned_spell_descriptions()
-        return {
+        spell_shop_purchased_spells = [
+            str(spell_data.get("name", "") or "")
+            for spell_data in self.SPELL_SHOP_BUY_SPELLS
+            if str(spell_data.get("spell_id", "") or "") in self.spell_shop_purchased_spell_ids
+        ]
+        info = {
             "learned_spells": list(learned_spells),
             "learned_spells_count": int(len(learned_spells)),
             "spells_total": int(len(self.spell_keys)),
             "spell_learning_locked": bool(self.spell_learning_locked),
             "magic_tower_built": bool(self._has_magic_tower_built()),
+            "spell_shop_purchased_spells": spell_shop_purchased_spells,
+            "spell_shop_purchased_spells_count": int(len(spell_shop_purchased_spells)),
+        }
+        info.update(self._scroll_state_info())
+        return info
+
+    def _total_scroll_count(self) -> int:
+        self._ensure_inventory_cache()
+        return int(self._total_scroll_count_cache)
+
+    def _scroll_state_info(self) -> Dict[str, object]:
+        self._ensure_inventory_cache()
+        inventory_entries = self._scroll_inventory_entries_cache
+        slot_entries = self._scroll_cast_slot_entries_cache
+        return {
+            "scroll_magic_unlocked": bool(self.scroll_magic_unlocked),
+            "supported_scroll_types_count": int(len(self._available_scroll_spell_entries_cache)),
+            "total_scroll_count": int(self._total_scroll_count_cache),
+            "scroll_inventory": [
+                {
+                    "item_name": str(entry.get("item_name", "") or ""),
+                    "spell_id": str(entry.get("spell_id", "") or ""),
+                    "spell_name": str(entry.get("spell_name", "") or ""),
+                    "copies": int(entry.get("copies", 0) or 0),
+                    "supported": bool(entry.get("supported", False)),
+                }
+                for entry in inventory_entries
+            ],
+            "scroll_cast_slots": [
+                {
+                    "slot": int(idx),
+                    "item_name": str(entry.get("item_name", "") or ""),
+                    "spell_id": str(entry.get("spell_id", "") or ""),
+                    "spell_name": str(entry.get("spell_name", "") or ""),
+                    "copies": int(entry.get("copies", 0) or 0),
+                    "spell_kind": str(entry.get("spell_kind", "") or ""),
+                    "spell_level": int(entry.get("spell_level", 0) or 0),
+                }
+                for idx, entry in enumerate(slot_entries)
+            ],
         }
 
     def _is_spell_learned(self, spell_key: str) -> bool:
@@ -3367,7 +4230,7 @@ class CampaignEnv(gym.Env):
             return False
         if normalized_spell_key not in current_spell_ids:
             return False
-        if normalized_spell_key in self.damage_spell_ids_used_this_turn:
+        if self._spell_cast_limit_reached_this_turn(normalized_spell_key):
             return False
         spell = self.active_spells.get(normalized_spell_key)
         if not isinstance(spell, dict):
@@ -3400,7 +4263,7 @@ class CampaignEnv(gym.Env):
             return False
         if normalized_spell_key not in current_spell_ids:
             return False
-        if normalized_spell_key in self.damage_spell_ids_used_this_turn:
+        if self._spell_cast_limit_reached_this_turn(normalized_spell_key):
             return False
         spell = self.active_spells.get(normalized_spell_key)
         if not isinstance(spell, dict):
@@ -3412,6 +4275,484 @@ class CampaignEnv(gym.Env):
         if not self._hero_stack_has_living_units():
             return False
         return self._has_mana_for_costs(self._get_spell_use_costs(spell))
+
+    def _can_cast_spell_shop_spell(
+        self,
+        spell_key: str,
+        *,
+        nearest_targetable_enemy: Optional[Dict[str, object]] = None,
+        nearest_any_enemy: Optional[Dict[str, object]] = None,
+    ) -> bool:
+        normalized_spell_key = str(spell_key or "")
+        if not normalized_spell_key:
+            return False
+        if not self._spell_shop_spell_owned(normalized_spell_key):
+            return False
+        if self._spell_shop_spell_has_regular_action(normalized_spell_key):
+            return False
+        if self._spell_shop_cast_limit_reached_this_turn(normalized_spell_key):
+            return False
+
+        spell = self._spell_entry_by_id(normalized_spell_key)
+        if not isinstance(spell, dict):
+            return False
+
+        offensive_spec = self._map_offensive_spell_spec(normalized_spell_key)
+        if offensive_spec:
+            if str(offensive_spec.get("kind", "") or "") == "summon_battle":
+                summon_unit_name = str(offensive_spec.get("summon_unit_name", "") or "").strip()
+                if not summon_unit_name or not isinstance(
+                    self._find_unit_data_by_name(summon_unit_name),
+                    dict,
+                ):
+                    return False
+            nearest_enemy = (
+                nearest_any_enemy
+                if self._map_offensive_spell_targets_untargetable_stacks(normalized_spell_key)
+                else nearest_targetable_enemy
+            )
+            if nearest_enemy is None:
+                nearest_enemy = self._get_map_offensive_spell_target(normalized_spell_key)
+            if nearest_enemy is None:
+                return False
+            target_enemy_id = nearest_enemy.get("enemy_id")
+            if not self._enemy_team_has_living_units(target_enemy_id):
+                return False
+            return self._has_mana_for_costs(self._get_spell_use_costs(spell))
+
+        support_spec = self._map_support_spell_spec(normalized_spell_key)
+        if support_spec:
+            if not self._hero_stack_has_living_units():
+                return False
+            return self._has_mana_for_costs(self._get_spell_use_costs(spell))
+
+        return False
+
+    @staticmethod
+    def _spell_kind_is_offensive(spell_kind: str) -> bool:
+        return str(spell_kind or "") in {"damage", "debuff", "summon_battle"}
+
+    @staticmethod
+    def _spell_kind_is_support(spell_kind: str) -> bool:
+        return str(spell_kind or "") in {"moves", "heal", "buff", "ward", "health_bonus"}
+
+    def _resolve_spell_target_enemy(
+        self,
+        spell_key: str,
+        spell_spec: Dict[str, object],
+        *,
+        nearest_targetable_enemy: Optional[Dict[str, object]] = None,
+        nearest_any_enemy: Optional[Dict[str, object]] = None,
+    ) -> Optional[Dict[str, object]]:
+        normalized_spell_key = str(spell_key or "")
+        spell_kind = str(spell_spec.get("spell_kind", spell_spec.get("kind", "")) or "")
+        if not self._spell_kind_is_offensive(spell_kind):
+            return None
+        targets_untargetable = bool(
+            spell_spec.get(
+                "targets_untargetable_stacks",
+                spell_kind == "summon_battle"
+                or self._map_offensive_spell_targets_untargetable_stacks(normalized_spell_key),
+            )
+        )
+        if targets_untargetable:
+            return nearest_any_enemy or self.get_nearest_enemy_stack(
+                spell_targetable_only=False
+            )
+        return nearest_targetable_enemy or self.get_nearest_enemy_stack(
+            spell_targetable_only=True
+        )
+
+    def _can_cast_scroll_spell(
+        self,
+        slot_entry: Dict[str, object],
+        *,
+        nearest_targetable_enemy: Optional[Dict[str, object]] = None,
+        nearest_any_enemy: Optional[Dict[str, object]] = None,
+    ) -> bool:
+        if not bool(self.scroll_magic_unlocked):
+            return False
+        if not isinstance(slot_entry, dict):
+            return False
+        item_name = str(slot_entry.get("item_name", "") or "")
+        spell_key = str(slot_entry.get("spell_id", "") or "")
+        spell_kind = str(slot_entry.get("spell_kind", "") or "")
+        if (
+            not item_name
+            or not spell_key
+            or not bool(slot_entry.get("supported", False))
+            or self.count_scroll_item(item_name) <= 0
+        ):
+            return False
+        if self._spell_kind_is_offensive(spell_kind):
+            if spell_kind == "summon_battle":
+                summon_unit_name = str(slot_entry.get("summon_unit_name", "") or "").strip()
+                if not summon_unit_name or not isinstance(
+                    self._find_unit_data_by_name(summon_unit_name),
+                    dict,
+                ):
+                    return False
+            nearest_enemy = self._resolve_spell_target_enemy(
+                spell_key,
+                slot_entry,
+                nearest_targetable_enemy=nearest_targetable_enemy,
+                nearest_any_enemy=nearest_any_enemy,
+            )
+            if nearest_enemy is None:
+                return False
+            return self._enemy_team_has_living_units(nearest_enemy.get("enemy_id"))
+        if self._spell_kind_is_support(spell_kind):
+            return self._hero_stack_has_living_units()
+        return False
+
+    def _cast_from_spell_spec(
+        self,
+        *,
+        source: str,
+        spell_key: str,
+        spell_description: Optional[str],
+        spell_spec: Dict[str, object],
+        mana_costs: Optional[Dict[str, float]] = None,
+        spend_mana: bool = False,
+        enforce_turn_limit: bool = False,
+        consume_item_name: Optional[str] = None,
+        nearest_targetable_enemy: Optional[Dict[str, object]] = None,
+        nearest_any_enemy: Optional[Dict[str, object]] = None,
+    ) -> Dict[str, object]:
+        normalized_spell_key = str(spell_key or "")
+        spell_kind = str(spell_spec.get("spell_kind", spell_spec.get("kind", "")) or "")
+        mana_costs = dict(mana_costs or {})
+        result: Dict[str, object] = {
+            "source": str(source or ""),
+            "spell_cast_applied": False,
+            "spell_cast_executed": False,
+            "spell_cast_reward": 0.0,
+            "spell_units_affected": 0,
+            "spell_heal_total": 0.0,
+            "spell_moves_restored": 0.0,
+            "moves_before_cast": float(self.moves or 0.0),
+            "moves_after_cast": float(self.moves or 0.0),
+            "target_enemy_id": None,
+            "target_enemy_position": None,
+            "target_enemy_reachable": False,
+            "target_enemy_description": None,
+            "spell_damage_total": 0.0,
+            "spell_damage_units_hit": 0,
+            "spell_damage_units_defeated": 0,
+            "spell_damage_units_blocked": 0,
+            "spell_enemy_defeated": False,
+            "enemy_defeat_reward": 0.0,
+            "enemy_defeat_reward_base": 0.0,
+            "ruin_clear_bonus_reward": 0.0,
+            "final_objective_reward": 0.0,
+            "newly_captured_objective_cities": [],
+            "newly_activated_settlement_territories": [],
+            "battle_triggered": False,
+            "battle_context_kind": None,
+            "spell_effect_summary": (
+                self._blue_stack_spell_effect_summary()
+                if self._spell_kind_is_support(spell_kind)
+                else {
+                    "active_spell_ids": [],
+                    "debuff_types": [],
+                    "armor_delta": 0,
+                    "damage_multiplier": 1.0,
+                    "initiative_multiplier": 1.0,
+                    "accuracy_multiplier": 1.0,
+                }
+            ),
+            "scroll_item_name": str(consume_item_name or ""),
+            "scroll_item_consumed": False,
+            "scroll_copies_before": (
+                int(self.count_scroll_item(str(consume_item_name or "")))
+                if consume_item_name
+                else 0
+            ),
+            "scroll_copies_after": (
+                int(self.count_scroll_item(str(consume_item_name or "")))
+                if consume_item_name
+                else 0
+            ),
+            "reward": 0.0,
+        }
+        if spend_mana and mana_costs:
+            self._spend_mana_costs(mana_costs)
+        if enforce_turn_limit and normalized_spell_key:
+            self._register_spell_cast_this_turn(normalized_spell_key)
+
+        result["spell_cast_executed"] = True
+        result["spell_cast_reward"] = float(self.reward_spell_cast)
+        result["reward"] = float(result["reward"]) + float(self.reward_spell_cast)
+
+        spell_damage = float(spell_spec.get("damage", 0.0) or 0.0)
+        spell_damage_type = str(spell_spec.get("damage_type", "") or "") or None
+        spell_debuff_type = str(spell_spec.get("debuff_type", "") or "") or None
+        spell_buff_type = str(spell_spec.get("buff_type", "") or "") or None
+        spell_resistance_type = str(spell_spec.get("resistance_type", "") or "") or None
+        spell_heal_amount = float(spell_spec.get("heal_amount", 0.0) or 0.0)
+        spell_health_delta = int(spell_spec.get("health_delta", 0) or 0)
+        spell_moves_restore_fraction = float(
+            spell_spec.get("moves_restore_fraction", 0.0) or 0.0
+        )
+        summon_unit_name = str(spell_spec.get("summon_unit_name", "") or "") or None
+
+        nearest_enemy = self._resolve_spell_target_enemy(
+            normalized_spell_key,
+            spell_spec,
+            nearest_targetable_enemy=nearest_targetable_enemy,
+            nearest_any_enemy=nearest_any_enemy,
+        )
+        if nearest_enemy is not None:
+            result["target_enemy_id"] = int(nearest_enemy.get("enemy_id", -1))
+            result["target_enemy_position"] = tuple(nearest_enemy.get("position", ()))
+            result["target_enemy_reachable"] = bool(nearest_enemy.get("reachable", False))
+            result["target_enemy_description"] = str(
+                nearest_enemy.get("description", "") or ""
+            )
+
+        target_enemy_id = result["target_enemy_id"]
+        if spell_kind == "damage":
+            (
+                result["spell_damage_total"],
+                result["spell_damage_units_hit"],
+                result["spell_damage_units_defeated"],
+                result["spell_damage_units_blocked"],
+            ) = self._apply_damage_to_enemy_stack(
+                target_enemy_id,
+                spell_damage,
+                spell_damage_type,
+            )
+            result["spell_cast_applied"] = int(result["spell_damage_units_hit"]) > 0
+            result["spell_units_affected"] = int(result["spell_damage_units_hit"])
+        elif spell_kind == "debuff":
+            (
+                result["spell_units_affected"],
+                result["spell_effect_summary"],
+            ) = self._apply_debuff_to_enemy_stack(target_enemy_id, normalized_spell_key)
+            result["spell_cast_applied"] = int(result["spell_units_affected"]) > 0
+        elif spell_kind == "summon_battle":
+            summon_battle_team = self._build_summoned_blue_team(str(summon_unit_name or ""))
+            if summon_battle_team is not None and target_enemy_id is not None:
+                summon_blue_team, summoned_unit = summon_battle_team
+                result["spell_cast_applied"] = True
+                result["spell_units_affected"] = 1
+                self.summon_hero_battle_bonus_enemy_ids_this_turn.add(int(target_enemy_id))
+                self.summon_hero_battle_bonus_pending = True
+                self.current_enemy_id = int(target_enemy_id)
+                self.battle_origin_pos = tuple(self.grid_env.agent_pos)
+                self.current_battle_context = {
+                    "kind": "summon_spell",
+                    "spell_key": normalized_spell_key,
+                    "summoned_unit_name": str(summon_unit_name or ""),
+                    "target_enemy_id": int(target_enemy_id),
+                }
+                self.mode = self.MODE_BATTLE
+                self._log(
+                    f'Применено заклинание "{spell_description}" по ближайшему вражескому отряду '
+                    f"{target_enemy_id}: призван {summoned_unit['name']} для отдельного боя."
+                )
+                self._init_battle(int(target_enemy_id), blue_team=summon_blue_team)
+                result["battle_triggered"] = True
+                result["battle_context_kind"] = "summon_spell"
+            else:
+                result["spell_cast_applied"] = False
+        elif spell_kind == "moves":
+            result["spell_moves_restored"] = self._restore_grid_moves(
+                spell_moves_restore_fraction
+            )
+            result["spell_units_affected"] = (
+                1 if float(result["spell_moves_restored"]) > 0.0 else 0
+            )
+            result["spell_cast_applied"] = float(result["spell_moves_restored"]) > 0.0
+            result["spell_effect_summary"] = self._blue_stack_spell_effect_summary()
+        elif spell_kind == "heal":
+            (
+                result["spell_units_affected"],
+                result["spell_heal_total"],
+            ) = self._apply_heal_to_blue_stack(spell_heal_amount)
+            result["spell_cast_applied"] = float(result["spell_heal_total"]) > 0.0
+            result["spell_effect_summary"] = self._blue_stack_spell_effect_summary()
+        elif spell_kind in {"buff", "ward", "health_bonus"}:
+            (
+                result["spell_units_affected"],
+                result["spell_effect_summary"],
+            ) = self._apply_support_spell_to_blue_stack(normalized_spell_key)
+            result["spell_cast_applied"] = int(result["spell_units_affected"]) > 0
+
+        if consume_item_name:
+            if bool(result["spell_cast_applied"]) and self._consume_hero_item(consume_item_name):
+                result["scroll_item_consumed"] = True
+            result["scroll_copies_after"] = int(self.count_scroll_item(consume_item_name))
+
+        if spell_description and spell_kind != "summon_battle":
+            if spell_kind == "damage":
+                self._log(
+                    f'Применено заклинание "{spell_description}" по ближайшему вражескому отряду '
+                    f"{target_enemy_id}: {float(result['spell_damage_total']):g} урона суммарно, "
+                    f"задето {int(result['spell_damage_units_hit'])} юнитов, "
+                    f"заблокировано {int(result['spell_damage_units_blocked'])}, "
+                    f"добито {int(result['spell_damage_units_defeated'])}."
+                )
+            elif spell_kind == "debuff":
+                self._log(
+                    f'Применено заклинание "{spell_description}" по ближайшему вражескому отряду '
+                    f"{target_enemy_id}: дебафф '{spell_debuff_type or 'unknown'}' на "
+                    f"{int(result['spell_units_affected'])} живых юнитах до следующего игрового хода."
+                )
+            elif spell_kind == "moves":
+                self._log(
+                    f'Применено заклинание "{spell_description}" на отряд героя: '
+                    f"восстановлено {float(result['spell_moves_restored']):g} ед. движения "
+                    f"({float(result['moves_before_cast']):g} -> {float(self.moves or 0.0):g} "
+                    f"из {float(self.moves_per_turn or 0.0):g})."
+                )
+            elif spell_kind == "heal":
+                self._log(
+                    f'Применено заклинание "{spell_description}" на отряд героя: '
+                    f"исцелено {float(result['spell_heal_total']):g} HP суммарно на "
+                    f"{int(result['spell_units_affected'])} юнитах."
+                )
+            elif spell_kind == "ward":
+                ward_description = (
+                    "защита от первой оружейной атаки"
+                    if str(spell_resistance_type or "") == "Weapon"
+                    else f"защита от магии {spell_resistance_type or 'unknown'}"
+                )
+                self._log(
+                    f'Применено заклинание "{spell_description}" на отряд героя: '
+                    f"{ward_description} до следующего игрового хода."
+                )
+            elif spell_kind == "health_bonus":
+                self._log(
+                    f'Применено заклинание "{spell_description}" на отряд героя: '
+                    f"+{spell_health_delta} HP на {int(result['spell_units_affected'])} живых юнитах "
+                    f"до следующего игрового хода."
+                )
+            elif spell_kind == "buff":
+                self._log(
+                    f'Применено заклинание "{spell_description}" на отряд героя: '
+                    f"бафф '{spell_buff_type or 'unknown'}' на {int(result['spell_units_affected'])} "
+                    f"живых юнитах до следующего игрового хода."
+                )
+
+        if (
+            self._spell_kind_is_offensive(spell_kind)
+            and spell_kind != "summon_battle"
+            and target_enemy_id is not None
+            and not self._enemy_team_has_living_units(target_enemy_id)
+        ):
+            result["spell_enemy_defeated"] = True
+            result["enemy_defeat_reward"] = self._compute_enemy_defeat_reward(target_enemy_id)
+            result["enemy_defeat_reward_base"] = float(self.reward_defeat_enemy)
+            result["ruin_clear_bonus_reward"] = (
+                float(self.reward_ruin_clear_bonus)
+                if int(target_enemy_id or -1) in self.RUIN_REWARD_BY_ENEMY_ID
+                else 0.0
+            )
+            result["reward"] = (
+                float(result["reward"])
+                + float(result["enemy_defeat_reward"])
+                + float(result["ruin_clear_bonus_reward"])
+            )
+            self.grid_env.mark_enemy_defeated(target_enemy_id)
+            self._clear_enemy_map_spell_effects_for_enemy(target_enemy_id)
+            self._log(f"=== ВРАГ {target_enemy_id} УНИЧТОЖЕН ЗАКЛИНАНИЕМ НА КАРТЕ ===")
+
+            objective_cities_captured_before = len(self.captured_objective_cities)
+            result["newly_captured_objective_cities"] = self._capture_objective_city_if_cleared(
+                target_enemy_id
+            )
+            result["newly_activated_settlement_territories"] = (
+                self._activate_legions_settlement_territory_if_cleared(target_enemy_id)
+            )
+            if result["newly_captured_objective_cities"]:
+                result["final_objective_reward"] = self._compute_final_objective_reward(
+                    len(result["newly_captured_objective_cities"]),
+                    captured_before=objective_cities_captured_before,
+                )
+                result["reward"] = float(result["reward"]) + float(
+                    result["final_objective_reward"]
+                )
+            if result["newly_activated_settlement_territories"]:
+                for settlement_name in result["newly_activated_settlement_territories"]:
+                    self._log(
+                        f"=== ЗЕМЛЯ ЛЕГИОНОВ НАЧИНАЕТ РАСПРОСТРАНЯТЬСЯ ИЗ ПОСЕЛЕНИЯ {settlement_name} ==="
+                    )
+
+        result["moves_after_cast"] = float(self.moves or 0.0)
+        return result
+
+    def _finalize_map_spell_step(
+        self,
+        *,
+        reward: float,
+        info: Dict[str, object],
+        cast_result: Dict[str, object],
+    ):
+        if bool(cast_result.get("battle_triggered", False)) and self.mode == self.MODE_BATTLE:
+            battle_obs = (
+                self.battle_env._obs()
+                if self.battle_env is not None
+                else np.zeros(0, dtype=np.float32)
+            )
+            info["battle_triggered"] = True
+            info["mode"] = "battle"
+            info["enemy_id"] = self.current_enemy_id
+            info["battle_context_kind"] = cast_result.get("battle_context_kind")
+            return self._build_obs(battle_obs=battle_obs), reward, False, False, info
+
+        if bool(cast_result.get("spell_enemy_defeated", False)):
+            target_enemy_id = cast_result.get("target_enemy_id")
+            info.update(self._grant_ruin_reward(target_enemy_id))
+            info["objective_cities_captured_total"] = sorted(self.captured_objective_cities)
+            newly_activated = list(
+                cast_result.get("newly_activated_settlement_territories", []) or []
+            )
+            if newly_activated:
+                info["legions_settlement_territories_activated"] = newly_activated
+            newly_captured = list(
+                cast_result.get("newly_captured_objective_cities", []) or []
+            )
+            if newly_captured:
+                info["captured_objective_cities"] = newly_captured
+                info["final_objective_reward"] = float(
+                    cast_result.get("final_objective_reward", 0.0) or 0.0
+                )
+
+            if self._all_objective_cities_captured():
+                self._log("=== ЗАХВАЧЕНЫ ВСЕ ЦЕЛЕВЫЕ ГОРОДА: ПОБЕДА В КАМПАНИИ ===")
+                grid_obs = self._get_grid_obs()
+                info["campaign_result"] = "victory"
+                info["campaign_victory_reason"] = "objective_cities_cleared"
+                return self._finalize_grid_step_result(
+                    grid_obs=grid_obs,
+                    reward=reward,
+                    terminated=True,
+                    truncated=False,
+                    info=info,
+                )
+
+            if self.grid_env.all_enemies_defeated():
+                self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")
+                grid_obs = self._get_grid_obs()
+                info["campaign_result"] = "victory"
+                info["campaign_victory_reason"] = "all_enemies_defeated"
+                return self._finalize_grid_step_result(
+                    grid_obs=grid_obs,
+                    reward=reward,
+                    terminated=True,
+                    truncated=False,
+                    info=info,
+                )
+
+        grid_obs = self._get_grid_obs()
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=False,
+            truncated=False,
+            info=info,
+        )
 
     @classmethod
     def _spell_untargetable_enemy_ids(cls) -> frozenset[int]:
@@ -3534,7 +4875,7 @@ class CampaignEnv(gym.Env):
             for spell_id in self.enemy_map_spell_effects.get(normalized_enemy_id, set())
             if str(spell_id)
         )
-        specs_by_id = self._map_offensive_spell_specs_by_id()
+        specs_by_id = self._combined_map_offensive_spell_specs_by_id()
 
         armor_delta = 0
         damage_multiplier = 1.0
@@ -3693,7 +5034,7 @@ class CampaignEnv(gym.Env):
 
     def _blue_stack_spell_effect_summary(self) -> Dict[str, object]:
         active_spell_ids = sorted(str(spell_id) for spell_id in self.blue_map_spell_effects if str(spell_id))
-        specs_by_id = self._map_support_spell_specs_by_id()
+        specs_by_id = self._combined_map_support_spell_specs_by_id()
 
         armor_delta = 0
         damage_multiplier = 1.0
@@ -3997,6 +5338,276 @@ class CampaignEnv(gym.Env):
             info=info,
         )
 
+    def _step_buy_spell_shop_spell(self, action: int):
+        idx = action - self.GRID_SPELL_SHOP_BUY_ACTION_START
+        grid_obs = self._get_grid_obs()
+        reward = 0.0
+        terminated = False
+        truncated = False
+
+        spell_data = (
+            self.SPELL_SHOP_BUY_SPELLS[idx] if 0 <= idx < len(self.SPELL_SHOP_BUY_SPELLS) else {}
+        )
+        spell_name = str(spell_data.get("name", "") or "")
+        spell_id = str(spell_data.get("spell_id", "") or "")
+        spell_price = float(spell_data.get("price", 0.0) or 0.0)
+        site_names = self._spell_shop_sites_at_position(self.grid_env.agent_pos)
+        site_name = self._spell_shop_site_for_spell(spell_name, position=self.grid_env.agent_pos)
+        stock_before = self._spell_shop_spell_stock(site_name, spell_name) if site_name else 0
+
+        purchased = False
+        insufficient_gold = False
+        already_owned = self._spell_shop_spell_owned(spell_id)
+        not_at_spell_shop = not bool(site_names)
+        out_of_stock = bool(site_names) and not bool(site_name)
+        added_to_spellbook = False
+
+        if site_name is not None and spell_name:
+            if already_owned:
+                pass
+            elif float(self.gold or 0.0) < spell_price:
+                insufficient_gold = True
+            elif stock_before > 0:
+                self.gold = max(0.0, float(self.gold or 0.0) - spell_price)
+                self.spell_shop_stocks[site_name][spell_name] = max(0, stock_before - 1)
+                self.spell_shop_purchased_spell_ids.add(spell_id)
+                spell_entry = self.active_spells.get(spell_id)
+                if isinstance(spell_entry, dict):
+                    spell_entry["learned"] = 1
+                    added_to_spellbook = True
+                purchased = True
+                self._log(
+                    f"Лавка заклинаний {site_name}: куплено заклинание '{spell_name}' за {spell_price:.1f} gold"
+                )
+
+        stock_after = self._spell_shop_spell_stock(site_name, spell_name) if site_name else 0
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            "spell_shop_buy_action": True,
+            "spell_shop_buy_spell": spell_name,
+            "spell_shop_buy_spell_id": spell_id,
+            "spell_shop_buy_price": spell_price,
+            "spell_shop_buy_site": site_name,
+            "spell_shop_buy_purchased": purchased,
+            "spell_shop_buy_added_to_spellbook": added_to_spellbook,
+            "spell_shop_buy_already_owned": already_owned,
+            "spell_shop_buy_stock_before": int(stock_before),
+            "spell_shop_buy_stock_after": int(stock_after),
+            "spell_shop_buy_not_at_spell_shop": not_at_spell_shop,
+            "spell_shop_buy_out_of_stock": out_of_stock,
+            "spell_shop_buy_insufficient_gold": insufficient_gold,
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+        }
+
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
+
+    def _step_hire_mercenary_unit(self, action: int):
+        idx = action - self.GRID_MERCENARY_HIRE_ACTION_START
+        option = self._mercenary_option(idx)
+
+        grid_obs = self._get_grid_obs()
+        terminated = False
+        truncated = False
+
+        site_names = self._mercenary_sites_at_position(self.grid_env.agent_pos)
+        site_name = None if option is None else str(option.get("site_name", "") or "").strip()
+        site_id = None if option is None else str(option.get("site_id", "") or "").strip()
+        unit_name = None if option is None else str(
+            option.get("unit_name", option.get("name", "")) or ""
+        ).strip()
+        unit_type = None if option is None else str(option.get("unit_type", "") or "").strip()
+        hire_cost = 0.0
+        hire_stand = None if option is None else str(option.get("stand", "") or "").strip().lower()
+        hire_target_pos = None
+        stock_before = 0
+        if option is not None:
+            try:
+                hire_cost = max(0.0, float(option.get("gold", 0.0) or 0.0))
+            except (TypeError, ValueError):
+                hire_cost = 0.0
+            stock_before = max(0, int(option.get("stock", 0) or 0))
+            positions = self._hire_positions_for_stand(hire_stand)
+            if positions:
+                hire_target_pos = self._find_first_empty_blue_position(positions)
+
+        hire_available_before = self._can_hire_mercenary_unit_option(option)
+        hired, hired_unit_name, hired_position, gold_spent, hired_site_name, stock_before_used, stock_after = (
+            self._hire_mercenary_unit_option(option)
+        )
+
+        hero = self._resolve_travel_hero()
+        hero_needaunit = self._resolve_hero_needaunit(hero) if hero is not None else 0
+        reward = self._hire_reward_value() if hired else 0.0
+        matching_site_in_range = bool(site_name) and site_name in site_names
+        insufficient_gold = matching_site_in_range and bool(unit_name) and float(self.gold or 0.0) < hire_cost
+        out_of_stock = matching_site_in_range and stock_before <= 0
+
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            "hire_action": True,
+            "hire_action_kind": "mercenary",
+            "hire_action_idx": int(idx),
+            "hire_unit_name": unit_name,
+            "hire_role": hire_stand,
+            "hire_cost": float(hire_cost),
+            "hire_target_pos": hire_target_pos,
+            "hire_available": bool(hire_available_before),
+            "hired": bool(hired),
+            "hired_units_count": int(1 if hired else 0),
+            "hired_unit_name": hired_unit_name,
+            "hired_position": hired_position,
+            "gold_spent": float(gold_spent),
+            "hire_reward": float(reward),
+            "hero_needaunit": int(hero_needaunit),
+            "mercenary_hire_action": True,
+            "mercenary_hire_action_idx": int(idx),
+            "mercenary_hire_site": hired_site_name or site_name,
+            "mercenary_hire_site_id": site_id,
+            "mercenary_hire_unit_name": unit_name,
+            "mercenary_hire_unit_type": unit_type,
+            "mercenary_hire_stand": hire_stand,
+            "mercenary_hire_cost": float(hire_cost),
+            "mercenary_hire_stock_before": int(stock_before_used if hired else stock_before),
+            "mercenary_hire_stock_after": int(stock_after),
+            "mercenary_hire_available": bool(hire_available_before),
+            "mercenary_hire_not_at_camp": not matching_site_in_range,
+            "mercenary_hire_out_of_stock": bool(out_of_stock),
+            "mercenary_hire_insufficient_gold": bool(
+                matching_site_in_range and not hired and bool(unit_name) and float(self.gold or 0.0) < hire_cost
+            ),
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+        }
+
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
+
+    def _step_train_unit_at_trainer(self, action: int):
+        idx = action - self.GRID_TRAINER_ACTION_START
+        target_pos = (
+            self.TRAINER_POSITIONS[idx] if 0 <= idx < len(self.TRAINER_POSITIONS) else None
+        )
+        terminated = False
+        truncated = False
+        reward = 0.0
+
+        site_names = self._trainer_sites_at_position(self.grid_env.agent_pos)
+        site_name = site_names[0] if site_names else None
+        preview_before = (
+            self._trainer_preview_for_position(int(target_pos))
+            if target_pos is not None
+            else {
+                "site_names": list(site_names),
+                "unit": None,
+                "unit_name": None,
+                "trainable": False,
+                "missing_unit": True,
+                "dead_or_empty": False,
+                "already_capped": False,
+                "insufficient_gold": False,
+                "exp_cap": None,
+                "exp_before": 0,
+                "xp_missing": 0,
+                "gold_per_xp": 0.0,
+                "gold_needed_full": 0.0,
+                "affordable_xp": 0,
+                "gold_spent": 0.0,
+                "exp_after": 0,
+            }
+        )
+
+        trained = False
+        xp_gained = 0
+        gold_spent = 0.0
+        exp_after = int(preview_before.get("exp_before", 0) or 0)
+        unit_name = str(preview_before.get("unit_name") or "").strip() or None
+        unit = preview_before.get("unit")
+
+        if target_pos is not None and bool(preview_before.get("trainable", False)) and isinstance(unit, dict):
+            xp_gained = max(0, int(preview_before.get("affordable_xp", 0) or 0))
+            gold_spent = max(0.0, float(preview_before.get("gold_spent", 0.0) or 0.0))
+            exp_cap = preview_before.get("exp_cap")
+            exp_before = max(0, int(preview_before.get("exp_before", 0) or 0))
+            if exp_cap is not None and xp_gained > 0:
+                exp_after = min(int(exp_cap), exp_before + xp_gained)
+                unit["exp_current"] = int(exp_after)
+                self.gold = max(0.0, float(self.gold or 0.0) - gold_spent)
+                trained = True
+                self._sync_hero_progression_flags(self.blue_team_state)
+                self._log(
+                    f"Тренировочный лагерь: {unit.get('name', 'unit')}#{int(target_pos)} "
+                    f"+{xp_gained} XP за {gold_spent:.1f} золота"
+                )
+
+        preview_after = (
+            self._trainer_preview_for_position(int(target_pos))
+            if target_pos is not None
+            else preview_before
+        )
+
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            "trainer_action": True,
+            "trainer_action_idx": int(idx),
+            "trainer_site": site_name,
+            "trainer_position": target_pos,
+            "trainer_unit_name": unit_name,
+            "trainer_trainable": bool(preview_before.get("trainable", False)),
+            "trainer_not_at_camp": not bool(site_names),
+            "trainer_missing_unit": bool(preview_before.get("missing_unit", False)),
+            "trainer_dead_or_empty": bool(preview_before.get("dead_or_empty", False)),
+            "trainer_already_capped": bool(preview_before.get("already_capped", False)),
+            "trainer_insufficient_gold": bool(preview_before.get("insufficient_gold", False)),
+            "trainer_gold_per_xp": float(preview_before.get("gold_per_xp", 0.0) or 0.0),
+            "trainer_gold_needed_full": float(preview_before.get("gold_needed_full", 0.0) or 0.0),
+            "trainer_gold_spent": float(gold_spent),
+            "trainer_exp_before": int(preview_before.get("exp_before", 0) or 0),
+            "trainer_exp_after": int(exp_after),
+            "trainer_exp_cap": preview_before.get("exp_cap"),
+            "trainer_xp_missing_before": int(preview_before.get("xp_missing", 0) or 0),
+            "trainer_xp_gained": int(xp_gained),
+            "trainer_xp_affordable_before": int(preview_before.get("affordable_xp", 0) or 0),
+            "trainer_xp_missing_after": int(preview_after.get("xp_missing", 0) or 0),
+            "trainer_trained": bool(trained),
+            "gold_spent": float(gold_spent),
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+        }
+
+        grid_obs = self._get_grid_obs()
+
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
+
     def _step_building(self, action: int):
         """Выбирает здание активной фракции и отмечает его как построенное."""
         idx = action - self.GRID_BUILD_ACTION_START
@@ -4020,11 +5631,7 @@ class CampaignEnv(gym.Env):
             building = self.active_buildings.get(build_key)
             if isinstance(building, dict):
                 build_name = building.get("name")
-                price_raw = building.get("gold", 0)
-                try:
-                    build_cost = float(price_raw)
-                except (TypeError, ValueError):
-                    build_cost = 0.0
+                build_cost = self._get_building_gold_cost(building)
                 alredybuilt_flag = self.active_buildings.get("alredybuilt", 0)
                 try:
                     build_locked = int(alredybuilt_flag or 0) == 1
@@ -4184,10 +5791,7 @@ class CampaignEnv(gym.Env):
 
     def _step_cast_legion_damage_spell(self, action: int):
         idx = int(action) - int(self.grid_legion_damage_spell_action_start)
-        grid_obs = self._get_grid_obs()
         reward = 0.0
-        terminated = False
-        truncated = False
         current_specs = self._current_map_offensive_spell_action_specs()
 
         spell_key = None
@@ -4229,7 +5833,9 @@ class CampaignEnv(gym.Env):
         mana_costs = self._get_spell_use_costs(spell) if isinstance(spell, dict) else {}
         has_map_offensive_spell_actions = bool(current_specs)
         spell_known = bool(spell_key) and self._is_spell_learned(str(spell_key))
-        spell_used_this_turn = bool(spell_key) and str(spell_key) in self.damage_spell_ids_used_this_turn
+        spell_used_this_turn = bool(spell_key) and self._spell_cast_limit_reached_this_turn(
+            str(spell_key)
+        )
         blocked_by_typeoflord = self._is_spell_blocked_by_typeoflord(spell)
         insufficient_mana = not self._has_mana_for_costs(mana_costs) if mana_costs else True
         nearest_enemy = (
@@ -4268,102 +5874,53 @@ class CampaignEnv(gym.Env):
         )
 
         if can_cast:
-            self._spend_mana_costs(mana_costs)
-            self.damage_spell_ids_used_this_turn.add(str(spell_key))
-            spell_cast_executed = True
-            spell_cast_reward = float(self.reward_spell_cast)
-            reward += spell_cast_reward
-            if spell_kind == "damage":
-                actual_damage, units_hit, defeated_units, blocked_units = self._apply_damage_to_enemy_stack(
-                    target_enemy_id,
-                    spell_damage,
-                    spell_damage_type,
-                )
-                spell_cast_applied = units_hit > 0
-                spell_units_affected = int(units_hit)
-            elif spell_kind == "debuff":
-                spell_units_affected, spell_effect_summary = self._apply_debuff_to_enemy_stack(
-                    target_enemy_id,
-                    str(spell_key),
-                )
-                spell_cast_applied = spell_units_affected > 0
-            elif spell_kind == "summon_battle":
-                summon_battle_team = self._build_summoned_blue_team(str(summon_unit_name or ""))
-                if summon_battle_team is not None and target_enemy_id is not None:
-                    summon_blue_team, summoned_unit = summon_battle_team
-                    spell_cast_applied = True
-                    spell_units_affected = 1
-                    self.summon_hero_battle_bonus_enemy_ids_this_turn.add(int(target_enemy_id))
-                    self.summon_hero_battle_bonus_pending = True
-                    self.current_enemy_id = int(target_enemy_id)
-                    self.battle_origin_pos = tuple(self.grid_env.agent_pos)
-                    self.current_battle_context = {
-                        "kind": "summon_spell",
-                        "spell_key": str(spell_key),
-                        "summoned_unit_name": str(summon_unit_name or ""),
-                        "target_enemy_id": int(target_enemy_id),
-                    }
-                    self.mode = self.MODE_BATTLE
-                    self._log(
-                        f'Применено заклинание "{spell_description}" по ближайшему вражескому отряду '
-                        f"{target_enemy_id}: призван {summoned_unit['name']} для отдельного боя."
-                    )
-                    self._init_battle(int(target_enemy_id), blue_team=summon_blue_team)
-                else:
-                    spell_cast_applied = False
-            else:
-                spell_cast_applied = False
-
-            if spell_description and spell_kind != "summon_battle":
-                if spell_kind == "damage":
-                    self._log(
-                        f'Применено заклинание "{spell_description}" по ближайшему вражескому отряду '
-                        f"{target_enemy_id}: {actual_damage:g} урона суммарно, "
-                        f"задето {units_hit} юнитов, заблокировано {blocked_units}, "
-                        f"добито {defeated_units}."
-                    )
-                elif spell_kind == "debuff":
-                    self._log(
-                        f'Применено заклинание "{spell_description}" по ближайшему вражескому отряду '
-                        f"{target_enemy_id}: дебафф '{spell_debuff_type or 'unknown'}' на "
-                        f"{spell_units_affected} живых юнитах до следующего игрового хода."
-                    )
-
-            if (
-                spell_kind != "summon_battle"
-                and target_enemy_id is not None
-                and not self._enemy_team_has_living_units(target_enemy_id)
-            ):
-                spell_enemy_defeated = True
-                enemy_reward = self._compute_enemy_defeat_reward(target_enemy_id)
-                ruin_clear_bonus_reward = (
-                    float(self.reward_ruin_clear_bonus)
-                    if int(target_enemy_id or -1) in self.RUIN_REWARD_BY_ENEMY_ID
-                    else 0.0
-                )
-                reward += enemy_reward
-                self.grid_env.mark_enemy_defeated(target_enemy_id)
-                self._clear_enemy_map_spell_effects_for_enemy(target_enemy_id)
-                self._log(f"=== ВРАГ {target_enemy_id} УНИЧТОЖЕН ЗАКЛИНАНИЕМ НА КАРТЕ ===")
-
-                objective_cities_captured_before = len(self.captured_objective_cities)
-                newly_captured_objective_cities = self._capture_objective_city_if_cleared(
-                    target_enemy_id
-                )
-                newly_activated_settlement_territories = (
-                    self._activate_legions_settlement_territory_if_cleared(target_enemy_id)
-                )
-                if newly_captured_objective_cities:
-                    final_objective_reward = self._compute_final_objective_reward(
-                        len(newly_captured_objective_cities),
-                        captured_before=objective_cities_captured_before,
-                    )
-                    reward += final_objective_reward
-                if newly_activated_settlement_territories:
-                    for settlement_name in newly_activated_settlement_territories:
-                        self._log(
-                            f"=== ЗЕМЛЯ ЛЕГИОНОВ НАЧИНАЕТ РАСПРОСТРАНЯТЬСЯ ИЗ ПОСЕЛЕНИЯ {settlement_name} ==="
-                        )
+            cast_result = self._cast_from_spell_spec(
+                source="learned_offensive_spell",
+                spell_key=str(spell_key),
+                spell_description=spell_description,
+                spell_spec=spell_spec,
+                mana_costs=mana_costs,
+                spend_mana=True,
+                enforce_turn_limit=True,
+                nearest_targetable_enemy=nearest_enemy
+                if not self._map_offensive_spell_targets_untargetable_stacks(str(spell_key))
+                else None,
+                nearest_any_enemy=nearest_enemy
+                if self._map_offensive_spell_targets_untargetable_stacks(str(spell_key))
+                else None,
+            )
+            spell_cast_applied = bool(cast_result.get("spell_cast_applied", False))
+            spell_cast_executed = bool(cast_result.get("spell_cast_executed", False))
+            spell_cast_reward = float(cast_result.get("spell_cast_reward", 0.0) or 0.0)
+            reward += float(cast_result.get("reward", 0.0) or 0.0)
+            actual_damage = float(cast_result.get("spell_damage_total", 0.0) or 0.0)
+            units_hit = int(cast_result.get("spell_damage_units_hit", 0) or 0)
+            defeated_units = int(
+                cast_result.get("spell_damage_units_defeated", 0) or 0
+            )
+            blocked_units = int(cast_result.get("spell_damage_units_blocked", 0) or 0)
+            spell_units_affected = int(cast_result.get("spell_units_affected", 0) or 0)
+            spell_effect_summary = dict(cast_result.get("spell_effect_summary", {}))
+            target_enemy_id = cast_result.get("target_enemy_id")
+            target_position = cast_result.get("target_enemy_position")
+            target_reachable = bool(cast_result.get("target_enemy_reachable", False))
+            target_description = cast_result.get("target_enemy_description")
+            spell_enemy_defeated = bool(cast_result.get("spell_enemy_defeated", False))
+            enemy_reward = float(cast_result.get("enemy_defeat_reward", 0.0) or 0.0)
+            ruin_clear_bonus_reward = float(
+                cast_result.get("ruin_clear_bonus_reward", 0.0) or 0.0
+            )
+            newly_captured_objective_cities = list(
+                cast_result.get("newly_captured_objective_cities", []) or []
+            )
+            newly_activated_settlement_territories = list(
+                cast_result.get("newly_activated_settlement_territories", []) or []
+            )
+            final_objective_reward = float(
+                cast_result.get("final_objective_reward", 0.0) or 0.0
+            )
+        else:
+            cast_result = {}
 
         info = {
             "mode": "grid",
@@ -4426,66 +5983,15 @@ class CampaignEnv(gym.Env):
             "moves": self.moves,
         }
 
-        if spell_cast_executed and spell_kind == "summon_battle" and self.mode == self.MODE_BATTLE:
-            battle_obs = self.battle_env._obs() if self.battle_env is not None else np.zeros(0, dtype=np.float32)
-            info["battle_triggered"] = True
-            info["mode"] = "battle"
-            info["enemy_id"] = self.current_enemy_id
-            info["battle_context_kind"] = "summon_spell"
-            return self._build_obs(battle_obs=battle_obs), reward, False, False, info
-
-        if spell_enemy_defeated:
-            info.update(self._grant_ruin_reward(target_enemy_id))
-            info["objective_cities_captured_total"] = sorted(self.captured_objective_cities)
-            if newly_activated_settlement_territories:
-                info["legions_settlement_territories_activated"] = list(
-                    newly_activated_settlement_territories
-                )
-            if newly_captured_objective_cities:
-                info["captured_objective_cities"] = list(newly_captured_objective_cities)
-                info["final_objective_reward"] = float(final_objective_reward)
-
-            if self._all_objective_cities_captured():
-                self._log("=== ЗАХВАЧЕНЫ ВСЕ ЦЕЛЕВЫЕ ГОРОДА: ПОБЕДА В КАМПАНИИ ===")
-                grid_obs = self._get_grid_obs()
-                info["campaign_result"] = "victory"
-                info["campaign_victory_reason"] = "objective_cities_cleared"
-                return self._finalize_grid_step_result(
-                    grid_obs=grid_obs,
-                    reward=reward,
-                    terminated=True,
-                    truncated=False,
-                    info=info,
-                )
-
-            if self.grid_env.all_enemies_defeated():
-                self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")
-                grid_obs = self._get_grid_obs()
-                info["campaign_result"] = "victory"
-                info["campaign_victory_reason"] = "all_enemies_defeated"
-                return self._finalize_grid_step_result(
-                    grid_obs=grid_obs,
-                    reward=reward,
-                    terminated=True,
-                    truncated=False,
-                    info=info,
-                )
-
-        grid_obs = self._get_grid_obs()
-        return self._finalize_grid_step_result(
-            grid_obs=grid_obs,
+        return self._finalize_map_spell_step(
             reward=reward,
-            terminated=terminated,
-            truncated=truncated,
             info=info,
+            cast_result=cast_result,
         )
 
     def _step_cast_support_spell(self, action: int):
         idx = int(action) - int(self.grid_map_support_spell_action_start)
-        grid_obs = self._get_grid_obs()
         reward = 0.0
-        terminated = False
-        truncated = False
         current_specs = self._current_map_support_spell_action_specs()
 
         spell_key = None
@@ -4527,7 +6033,9 @@ class CampaignEnv(gym.Env):
         mana_costs = self._get_spell_use_costs(spell) if isinstance(spell, dict) else {}
         has_map_support_spell_actions = bool(current_specs)
         spell_known = bool(spell_key) and self._is_spell_learned(str(spell_key))
-        spell_used_this_turn = bool(spell_key) and str(spell_key) in self.damage_spell_ids_used_this_turn
+        spell_used_this_turn = bool(spell_key) and self._spell_cast_limit_reached_this_turn(
+            str(spell_key)
+        )
         blocked_by_typeoflord = self._is_spell_blocked_by_typeoflord(spell)
         can_cast = (
             bool(spell_key)
@@ -4546,60 +6054,27 @@ class CampaignEnv(gym.Env):
         moves_before_cast = float(self.moves or 0.0)
 
         if can_cast:
-            self._spend_mana_costs(mana_costs)
-            self.damage_spell_ids_used_this_turn.add(str(spell_key))
-            spell_cast_executed = True
-            spell_cast_reward = float(self.reward_spell_cast)
-            reward += spell_cast_reward
-
-            if spell_kind == "moves":
-                spell_moves_restored = self._restore_grid_moves(spell_moves_restore_fraction)
-                spell_units_affected = 1 if spell_moves_restored > 0.0 else 0
-                spell_cast_applied = spell_moves_restored > 0.0
-                spell_effect_summary = self._blue_stack_spell_effect_summary()
-            elif spell_kind == "heal":
-                spell_units_affected, spell_heal_total = self._apply_heal_to_blue_stack(spell_heal_amount)
-                spell_cast_applied = spell_heal_total > 0.0
-                spell_effect_summary = self._blue_stack_spell_effect_summary()
-            elif spell_kind in {"buff", "ward", "health_bonus"}:
-                spell_units_affected, spell_effect_summary = self._apply_support_spell_to_blue_stack(
-                    str(spell_key)
-                )
-                spell_cast_applied = spell_units_affected > 0
-
-            if spell_description:
-                if spell_kind == "moves":
-                    self._log(
-                        f'Применено заклинание "{spell_description}" на отряд героя: '
-                        f"восстановлено {spell_moves_restored:g} ед. движения "
-                        f"({moves_before_cast:g} -> {float(self.moves or 0.0):g} из {float(self.moves_per_turn or 0.0):g})."
-                    )
-                elif spell_kind == "heal":
-                    self._log(
-                        f'Применено заклинание "{spell_description}" на отряд героя: '
-                        f"исцелено {spell_heal_total:g} HP суммарно на {spell_units_affected} юнитах."
-                    )
-                elif spell_kind == "ward":
-                    ward_description = (
-                        "защита от первой оружейной атаки"
-                        if str(spell_resistance_type or "") == "Weapon"
-                        else f"защита от магии {spell_resistance_type or 'unknown'}"
-                    )
-                    self._log(
-                        f'Применено заклинание "{spell_description}" на отряд героя: '
-                        f"{ward_description} до следующего игрового хода."
-                    )
-                elif spell_kind == "health_bonus":
-                    self._log(
-                        f'Применено заклинание "{spell_description}" на отряд героя: '
-                        f"+{spell_health_delta} HP на {spell_units_affected} живых юнитах до следующего игрового хода."
-                    )
-                elif spell_kind == "buff":
-                    self._log(
-                        f'Применено заклинание "{spell_description}" на отряд героя: '
-                        f"бафф '{spell_buff_type or 'unknown'}' на {spell_units_affected} живых юнитах "
-                        f"до следующего игрового хода."
-                    )
+            cast_result = self._cast_from_spell_spec(
+                source="learned_support_spell",
+                spell_key=str(spell_key),
+                spell_description=spell_description,
+                spell_spec=spell_spec,
+                mana_costs=mana_costs,
+                spend_mana=True,
+                enforce_turn_limit=True,
+            )
+            spell_cast_applied = bool(cast_result.get("spell_cast_applied", False))
+            spell_cast_executed = bool(cast_result.get("spell_cast_executed", False))
+            spell_cast_reward = float(cast_result.get("spell_cast_reward", 0.0) or 0.0)
+            reward += float(cast_result.get("reward", 0.0) or 0.0)
+            spell_units_affected = int(cast_result.get("spell_units_affected", 0) or 0)
+            spell_heal_total = float(cast_result.get("spell_heal_total", 0.0) or 0.0)
+            spell_moves_restored = float(
+                cast_result.get("spell_moves_restored", 0.0) or 0.0
+            )
+            spell_effect_summary = dict(cast_result.get("spell_effect_summary", {}))
+        else:
+            cast_result = {}
 
         info = {
             "mode": "grid",
@@ -4668,13 +6143,494 @@ class CampaignEnv(gym.Env):
             "moves_after_cast": float(self.moves or 0.0),
         }
 
+        return self._finalize_map_spell_step(
+            reward=reward,
+            info=info,
+            cast_result=cast_result,
+        )
+
+    def _step_cast_spell_shop_spell(self, action: int):
+        idx = int(action) - int(self.grid_spell_shop_cast_action_start)
+        reward = 0.0
+
+        spell_data = self._spell_shop_cast_spell_entry(idx)
+        spell_key = str(spell_data.get("spell_id", "") or "")
+        spell_name = str(spell_data.get("name", "") or "").strip()
+        spell = self._spell_entry_by_id(spell_key)
+        offensive_spec = self._map_offensive_spell_spec(spell_key) if spell_key else {}
+        support_spec = {} if offensive_spec else self._map_support_spell_spec(spell_key)
+        spell_spec: Dict[str, object] = dict(offensive_spec or support_spec)
+        spell_kind = str(spell_spec.get("kind", "") or "")
+
+        spell_description = spell_name or spell_key or None
+        spell_level = None
+        if isinstance(spell, dict):
+            spell_description = str(spell.get("description", "") or spell_description or "").strip()
+            try:
+                spell_level = int(spell.get("level", 0) or 0)
+            except (TypeError, ValueError):
+                spell_level = 0
+
+        spell_damage = float(spell_spec.get("damage", 0.0) or 0.0)
+        spell_damage_type = str(spell_spec.get("damage_type", "") or "") or None
+        spell_debuff_type = str(spell_spec.get("debuff_type", "") or "") or None
+        summon_unit_name = str(spell_spec.get("summon_unit_name", "") or "") or None
+        spell_buff_type = str(spell_spec.get("buff_type", "") or "") or None
+        spell_resistance_type = str(spell_spec.get("resistance_type", "") or "") or None
+        spell_heal_amount = float(spell_spec.get("heal_amount", 0.0) or 0.0)
+        spell_health_delta = int(spell_spec.get("health_delta", 0) or 0)
+        spell_moves_restore_fraction = float(spell_spec.get("moves_restore_fraction", 0.0) or 0.0)
+
+        mana_costs = self._get_spell_use_costs(spell) if isinstance(spell, dict) else {}
+        spell_purchased = bool(spell_key) and self._spell_shop_spell_owned(spell_key)
+        spell_regular_action = bool(spell_key) and self._spell_shop_spell_has_regular_action(spell_key)
+        spell_used_this_turn = bool(spell_key) and self._spell_shop_cast_limit_reached_this_turn(
+            spell_key
+        )
+
+        nearest_enemy = (
+            self._get_map_offensive_spell_target(str(spell_key))
+            if spell_key and offensive_spec
+            else None
+        )
+        target_enemy_id = None if nearest_enemy is None else int(nearest_enemy.get("enemy_id", -1))
+        target_position = None if nearest_enemy is None else tuple(nearest_enemy.get("position", ()))
+        target_reachable = bool(nearest_enemy.get("reachable", False)) if nearest_enemy else False
+        target_description = None if nearest_enemy is None else str(nearest_enemy.get("description", "") or "")
+        can_cast = (
+            bool(spell_key)
+            and isinstance(spell, dict)
+            and spell_purchased
+            and not spell_regular_action
+            and not spell_used_this_turn
+            and self._can_cast_spell_shop_spell(str(spell_key))
+        )
+
+        spell_cast_applied = False
+        spell_cast_executed = False
+        spell_cast_reward = 0.0
+        spell_units_affected = 0
+        spell_heal_total = 0.0
+        spell_moves_restored = 0.0
+        moves_before_cast = float(self.moves or 0.0)
+        actual_damage = 0.0
+        units_hit = 0
+        defeated_units = 0
+        blocked_units = 0
+        spell_enemy_defeated = False
+        enemy_reward = 0.0
+        ruin_clear_bonus_reward = 0.0
+        newly_captured_objective_cities: List[str] = []
+        newly_activated_settlement_territories: List[str] = []
+        final_objective_reward = 0.0
+        spell_effect_summary: Dict[str, object]
+        if support_spec:
+            spell_effect_summary = self._blue_stack_spell_effect_summary()
+        else:
+            spell_effect_summary = {
+                "active_spell_ids": [],
+                "debuff_types": [],
+                "armor_delta": 0,
+                "damage_multiplier": 1.0,
+                "initiative_multiplier": 1.0,
+                "accuracy_multiplier": 1.0,
+            }
+
+        if can_cast:
+            cast_result = self._cast_from_spell_spec(
+                source="spell_shop",
+                spell_key=str(spell_key),
+                spell_description=spell_description,
+                spell_spec=spell_spec,
+                mana_costs=mana_costs,
+                spend_mana=True,
+                enforce_turn_limit=True,
+            )
+            spell_cast_applied = bool(cast_result.get("spell_cast_applied", False))
+            spell_cast_executed = bool(cast_result.get("spell_cast_executed", False))
+            spell_cast_reward = float(cast_result.get("spell_cast_reward", 0.0) or 0.0)
+            reward += float(cast_result.get("reward", 0.0) or 0.0)
+            spell_units_affected = int(cast_result.get("spell_units_affected", 0) or 0)
+            spell_heal_total = float(cast_result.get("spell_heal_total", 0.0) or 0.0)
+            spell_moves_restored = float(
+                cast_result.get("spell_moves_restored", 0.0) or 0.0
+            )
+            actual_damage = float(cast_result.get("spell_damage_total", 0.0) or 0.0)
+            units_hit = int(cast_result.get("spell_damage_units_hit", 0) or 0)
+            defeated_units = int(
+                cast_result.get("spell_damage_units_defeated", 0) or 0
+            )
+            blocked_units = int(cast_result.get("spell_damage_units_blocked", 0) or 0)
+            spell_effect_summary = dict(cast_result.get("spell_effect_summary", {}))
+            target_enemy_id = cast_result.get("target_enemy_id")
+            target_position = cast_result.get("target_enemy_position")
+            target_reachable = bool(cast_result.get("target_enemy_reachable", False))
+            target_description = cast_result.get("target_enemy_description")
+            spell_enemy_defeated = bool(cast_result.get("spell_enemy_defeated", False))
+            enemy_reward = float(cast_result.get("enemy_defeat_reward", 0.0) or 0.0)
+            ruin_clear_bonus_reward = float(
+                cast_result.get("ruin_clear_bonus_reward", 0.0) or 0.0
+            )
+            newly_captured_objective_cities = list(
+                cast_result.get("newly_captured_objective_cities", []) or []
+            )
+            newly_activated_settlement_territories = list(
+                cast_result.get("newly_activated_settlement_territories", []) or []
+            )
+            final_objective_reward = float(
+                cast_result.get("final_objective_reward", 0.0) or 0.0
+            )
+        else:
+            cast_result = {}
+
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            "spell_cast_action": True,
+            "spell_shop_cast_action": True,
+            "spell_shop_cast_slot": int(idx),
+            "spell_key": spell_key,
+            "spell_description": spell_description,
+            "spell_level": spell_level,
+            "spell_kind": spell_kind,
+            "spell_damage": float(spell_damage),
+            "spell_damage_type": spell_damage_type,
+            "spell_debuff_type": spell_debuff_type,
+            "spell_summon_unit_name": summon_unit_name,
+            "spell_buff_type": spell_buff_type,
+            "spell_resistance_type": spell_resistance_type,
+            "spell_heal_amount": float(spell_heal_amount),
+            "spell_health_delta": int(spell_health_delta),
+            "spell_moves_restore_fraction": float(spell_moves_restore_fraction),
+            "spell_heal_total": float(spell_heal_total),
+            "spell_moves_restored": float(spell_moves_restored),
+            "spell_cast_applied": bool(spell_cast_applied),
+            "spell_cast_executed": bool(spell_cast_executed),
+            "spell_cast_reward": float(spell_cast_reward),
+            "spell_cast_used_this_turn": bool(spell_used_this_turn),
+            "spell_is_learned": bool(spell_purchased),
+            "spell_shop_spell_purchased": bool(spell_purchased),
+            "spell_shop_spell_has_regular_action": bool(spell_regular_action),
+            "spell_has_map_offensive_actions": bool(offensive_spec),
+            "spell_has_map_support_actions": bool(support_spec),
+            "spell_use_costs": dict(mana_costs),
+            "insufficient_mana": bool(
+                not can_cast and mana_costs and not self._has_mana_for_costs(mana_costs)
+            ),
+            "target_enemy_id": target_enemy_id,
+            "target_enemy_position": target_position,
+            "target_enemy_reachable": bool(target_reachable),
+            "target_enemy_description": target_description,
+            "spell_damage_total": float(actual_damage),
+            "spell_damage_units_hit": int(units_hit),
+            "spell_damage_units_defeated": int(defeated_units),
+            "spell_damage_units_blocked": int(blocked_units),
+            "spell_units_affected": int(spell_units_affected),
+            "spell_effect_active_ids": list(spell_effect_summary.get("active_spell_ids", [])),
+            "spell_effect_types": list(
+                spell_effect_summary.get(
+                    "debuff_types" if offensive_spec else "buff_types",
+                    [],
+                )
+            ),
+            "spell_effect_resistance_types": list(
+                spell_effect_summary.get("resistance_types", [])
+            ),
+            "spell_effect_armor_delta": int(spell_effect_summary.get("armor_delta", 0) or 0),
+            "spell_effect_damage_multiplier": float(
+                spell_effect_summary.get("damage_multiplier", 1.0) or 1.0
+            ),
+            "spell_effect_initiative_multiplier": float(
+                spell_effect_summary.get("initiative_multiplier", 1.0) or 1.0
+            ),
+            "spell_effect_accuracy_multiplier": float(
+                spell_effect_summary.get("accuracy_multiplier", 1.0) or 1.0
+            ),
+            "spell_effect_health_delta": int(spell_effect_summary.get("health_delta", 0) or 0),
+            "spell_enemy_defeated": bool(spell_enemy_defeated),
+            "enemy_defeat_reward": float(enemy_reward),
+            "enemy_defeat_reward_base": float(self.reward_defeat_enemy) if spell_enemy_defeated else 0.0,
+            "blue_exp_reward": 0.0,
+            "blue_exp_raw": 0.0,
+            "ruin_clear_bonus_reward": float(ruin_clear_bonus_reward),
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+            "moves_before_cast": float(moves_before_cast),
+            "moves_after_cast": float(self.moves or 0.0),
+        }
+
+        return self._finalize_map_spell_step(
+            reward=reward,
+            info=info,
+            cast_result=cast_result,
+        )
+
+    def _step_unlock_scroll_magic(self, action: int):
+        reward = 0.0
+        scroll_magic_unlocked_before = bool(self.scroll_magic_unlocked)
+        supported_entries = self.available_scroll_spell_entries()
+        can_unlock = (
+            int(action) == int(self.GRID_UNLOCK_SCROLL_MAGIC_ACTION)
+            and self.mode == self.MODE_GRID
+            and not scroll_magic_unlocked_before
+            and float(self.gold or 0.0) >= float(self.SCROLL_MAGE_UNLOCK_GOLD_COST)
+            and bool(supported_entries)
+        )
+        gold_spent = 0.0
+        if can_unlock:
+            gold_spent = float(self.SCROLL_MAGE_UNLOCK_GOLD_COST)
+            self.gold = max(0.0, float(self.gold or 0.0) - gold_spent)
+            self.scroll_magic_unlocked = True
+            self._log(
+                f"Маг для чтения свитков нанят за {gold_spent:g} gold. "
+                "Свитки доступны до конца эпизода."
+            )
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            "scroll_magic_unlock_action": True,
+            "scroll_magic_unlocked_before": bool(scroll_magic_unlocked_before),
+            "scroll_magic_unlocked_after": bool(self.scroll_magic_unlocked),
+            "scroll_magic_unlock_gold_spent": float(gold_spent),
+            "scroll_magic_unlock_available": bool(
+                not scroll_magic_unlocked_before and bool(supported_entries)
+            ),
+            "scroll_magic_unlock_can_afford": bool(
+                float(self.gold or 0.0) + gold_spent
+                >= float(self.SCROLL_MAGE_UNLOCK_GOLD_COST)
+            ),
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+        }
         grid_obs = self._get_grid_obs()
         return self._finalize_grid_step_result(
             grid_obs=grid_obs,
             reward=reward,
-            terminated=terminated,
-            truncated=truncated,
+            terminated=False,
+            truncated=False,
             info=info,
+        )
+
+    def _step_cast_scroll_spell(self, action: int):
+        idx = int(action) - int(self.grid_scroll_cast_action_start)
+        reward = 0.0
+        slot_entries = self.scroll_cast_slot_entries()
+        spell_data = dict(slot_entries[idx]) if 0 <= idx < len(slot_entries) else {}
+        spell_key = str(spell_data.get("spell_id", "") or "")
+        spell_description = str(
+            spell_data.get("spell_name", "")
+            or spell_data.get("spell_description", "")
+            or spell_key
+        ).strip()
+        spell_level = int(spell_data.get("spell_level", 0) or 0) if spell_data else None
+        spell_kind = str(spell_data.get("spell_kind", "") or "")
+        spell_damage = float(spell_data.get("damage", 0.0) or 0.0)
+        spell_damage_type = str(spell_data.get("damage_type", "") or "") or None
+        spell_debuff_type = str(spell_data.get("debuff_type", "") or "") or None
+        summon_unit_name = str(spell_data.get("summon_unit_name", "") or "") or None
+        spell_buff_type = str(spell_data.get("buff_type", "") or "") or None
+        spell_resistance_type = str(spell_data.get("resistance_type", "") or "") or None
+        spell_heal_amount = float(spell_data.get("heal_amount", 0.0) or 0.0)
+        spell_health_delta = int(spell_data.get("health_delta", 0) or 0)
+        spell_moves_restore_fraction = float(
+            spell_data.get("moves_restore_fraction", 0.0) or 0.0
+        )
+        item_name = str(spell_data.get("item_name", "") or "")
+        scroll_copies_before = int(self.count_scroll_item(item_name))
+        nearest_targetable_enemy = self._get_nearest_enemy_stack_for_mask(
+            spell_targetable_only=True
+        )
+        nearest_any_enemy = self._get_nearest_enemy_stack_for_mask(
+            spell_targetable_only=False
+        )
+        can_cast = bool(spell_key) and self._can_cast_scroll_spell(
+            spell_data,
+            nearest_targetable_enemy=nearest_targetable_enemy,
+            nearest_any_enemy=nearest_any_enemy,
+        )
+
+        spell_cast_applied = False
+        spell_cast_executed = False
+        spell_cast_reward = 0.0
+        spell_units_affected = 0
+        spell_heal_total = 0.0
+        spell_moves_restored = 0.0
+        actual_damage = 0.0
+        units_hit = 0
+        defeated_units = 0
+        blocked_units = 0
+        spell_enemy_defeated = False
+        enemy_reward = 0.0
+        ruin_clear_bonus_reward = 0.0
+        newly_captured_objective_cities: List[str] = []
+        newly_activated_settlement_territories: List[str] = []
+        final_objective_reward = 0.0
+        spell_effect_summary: Dict[str, object] = (
+            self._blue_stack_spell_effect_summary()
+            if self._spell_kind_is_support(spell_kind)
+            else {
+                "active_spell_ids": [],
+                "debuff_types": [],
+                "armor_delta": 0,
+                "damage_multiplier": 1.0,
+                "initiative_multiplier": 1.0,
+                "accuracy_multiplier": 1.0,
+            }
+        )
+        target_enemy_id = None
+        target_position = None
+        target_reachable = False
+        target_description = None
+
+        if can_cast:
+            cast_result = self._cast_from_spell_spec(
+                source="scroll",
+                spell_key=spell_key,
+                spell_description=spell_description,
+                spell_spec=spell_data,
+                spend_mana=False,
+                enforce_turn_limit=False,
+                consume_item_name=item_name,
+                nearest_targetable_enemy=nearest_targetable_enemy,
+                nearest_any_enemy=nearest_any_enemy,
+            )
+            spell_cast_applied = bool(cast_result.get("spell_cast_applied", False))
+            spell_cast_executed = bool(cast_result.get("spell_cast_executed", False))
+            spell_cast_reward = float(cast_result.get("spell_cast_reward", 0.0) or 0.0)
+            reward += float(cast_result.get("reward", 0.0) or 0.0)
+            spell_units_affected = int(cast_result.get("spell_units_affected", 0) or 0)
+            spell_heal_total = float(cast_result.get("spell_heal_total", 0.0) or 0.0)
+            spell_moves_restored = float(
+                cast_result.get("spell_moves_restored", 0.0) or 0.0
+            )
+            actual_damage = float(cast_result.get("spell_damage_total", 0.0) or 0.0)
+            units_hit = int(cast_result.get("spell_damage_units_hit", 0) or 0)
+            defeated_units = int(
+                cast_result.get("spell_damage_units_defeated", 0) or 0
+            )
+            blocked_units = int(cast_result.get("spell_damage_units_blocked", 0) or 0)
+            spell_effect_summary = dict(cast_result.get("spell_effect_summary", {}))
+            target_enemy_id = cast_result.get("target_enemy_id")
+            target_position = cast_result.get("target_enemy_position")
+            target_reachable = bool(cast_result.get("target_enemy_reachable", False))
+            target_description = cast_result.get("target_enemy_description")
+            spell_enemy_defeated = bool(cast_result.get("spell_enemy_defeated", False))
+            enemy_reward = float(cast_result.get("enemy_defeat_reward", 0.0) or 0.0)
+            ruin_clear_bonus_reward = float(
+                cast_result.get("ruin_clear_bonus_reward", 0.0) or 0.0
+            )
+            newly_captured_objective_cities = list(
+                cast_result.get("newly_captured_objective_cities", []) or []
+            )
+            newly_activated_settlement_territories = list(
+                cast_result.get("newly_activated_settlement_territories", []) or []
+            )
+            final_objective_reward = float(
+                cast_result.get("final_objective_reward", 0.0) or 0.0
+            )
+            scroll_item_consumed = bool(cast_result.get("scroll_item_consumed", False))
+            scroll_copies_after = int(cast_result.get("scroll_copies_after", 0) or 0)
+        else:
+            cast_result = {}
+            scroll_item_consumed = False
+            scroll_copies_after = scroll_copies_before
+
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            "spell_cast_action": True,
+            "scroll_cast_action": True,
+            "scroll_cast_slot": int(idx),
+            "scroll_item_name": item_name,
+            "scroll_spell_key": spell_key,
+            "scroll_spell_kind": spell_kind,
+            "scroll_item_consumed": bool(scroll_item_consumed),
+            "scroll_copies_before": int(scroll_copies_before),
+            "scroll_copies_after": int(scroll_copies_after),
+            "spell_key": spell_key,
+            "spell_description": spell_description,
+            "spell_level": spell_level,
+            "spell_kind": spell_kind,
+            "spell_damage": float(spell_damage),
+            "spell_damage_type": spell_damage_type,
+            "spell_debuff_type": spell_debuff_type,
+            "spell_summon_unit_name": summon_unit_name,
+            "spell_buff_type": spell_buff_type,
+            "spell_resistance_type": spell_resistance_type,
+            "spell_heal_amount": float(spell_heal_amount),
+            "spell_health_delta": int(spell_health_delta),
+            "spell_moves_restore_fraction": float(spell_moves_restore_fraction),
+            "spell_heal_total": float(spell_heal_total),
+            "spell_moves_restored": float(spell_moves_restored),
+            "spell_cast_applied": bool(spell_cast_applied),
+            "spell_cast_executed": bool(spell_cast_executed),
+            "spell_cast_reward": float(spell_cast_reward),
+            "spell_cast_used_this_turn": False,
+            "spell_is_learned": False,
+            "spell_use_costs": {},
+            "insufficient_mana": False,
+            "target_enemy_id": target_enemy_id,
+            "target_enemy_position": target_position,
+            "target_enemy_reachable": bool(target_reachable),
+            "target_enemy_description": target_description,
+            "spell_damage_total": float(actual_damage),
+            "spell_damage_units_hit": int(units_hit),
+            "spell_damage_units_defeated": int(defeated_units),
+            "spell_damage_units_blocked": int(blocked_units),
+            "spell_units_affected": int(spell_units_affected),
+            "spell_effect_active_ids": list(
+                spell_effect_summary.get("active_spell_ids", [])
+            ),
+            "spell_effect_types": list(
+                spell_effect_summary.get(
+                    "debuff_types"
+                    if self._spell_kind_is_offensive(spell_kind)
+                    else "buff_types",
+                    [],
+                )
+            ),
+            "spell_effect_resistance_types": list(
+                spell_effect_summary.get("resistance_types", [])
+            ),
+            "spell_effect_armor_delta": int(
+                spell_effect_summary.get("armor_delta", 0) or 0
+            ),
+            "spell_effect_damage_multiplier": float(
+                spell_effect_summary.get("damage_multiplier", 1.0) or 1.0
+            ),
+            "spell_effect_initiative_multiplier": float(
+                spell_effect_summary.get("initiative_multiplier", 1.0) or 1.0
+            ),
+            "spell_effect_accuracy_multiplier": float(
+                spell_effect_summary.get("accuracy_multiplier", 1.0) or 1.0
+            ),
+            "spell_effect_health_delta": int(
+                spell_effect_summary.get("health_delta", 0) or 0
+            ),
+            "spell_enemy_defeated": bool(spell_enemy_defeated),
+            "enemy_defeat_reward": float(enemy_reward),
+            "enemy_defeat_reward_base": float(self.reward_defeat_enemy)
+            if spell_enemy_defeated
+            else 0.0,
+            "blue_exp_reward": 0.0,
+            "blue_exp_raw": 0.0,
+            "ruin_clear_bonus_reward": float(ruin_clear_bonus_reward),
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+        }
+        return self._finalize_map_spell_step(
+            reward=reward,
+            info=info,
+            cast_result=cast_result,
         )
 
     def _step_upgrade_settlement(self, action: int):
@@ -4839,9 +6795,7 @@ class CampaignEnv(gym.Env):
                         source_label=self.HEALING_OINTMENT_ITEM_NAME,
                     )
                     if healed_amount <= 0.0:
-                        self.heroitems.append(
-                            self._make_hero_item_entry(self.HEALING_OINTMENT_ITEM_NAME)
-                        )
+                        self._append_hero_item(self.HEALING_OINTMENT_ITEM_NAME)
                 else:
                     selected_bottle_kind = None
                     selected_heal_amount = 0.0
@@ -5260,7 +7214,7 @@ class CampaignEnv(gym.Env):
             consumed = True
             applied, unit_name = apply_fn(target_pos)
             if not applied:
-                self.heroitems.append(self._make_hero_item_entry(item_name))
+                self._append_hero_item(item_name)
                 consumed = False
             else:
                 reward = self._combat_potion_reward_value()
@@ -5317,9 +7271,7 @@ class CampaignEnv(gym.Env):
             consumed = True
             applied, unit_name = self._apply_invulnerability_potion_to_position(target_pos)
             if not applied:
-                self.heroitems.append(
-                    self._make_hero_item_entry(self.INVULNERABILITY_POTION_ITEM_NAME)
-                )
+                self._append_hero_item(self.INVULNERABILITY_POTION_ITEM_NAME)
                 consumed = False
             else:
                 reward = self._combat_potion_reward_value()
@@ -5381,9 +7333,7 @@ class CampaignEnv(gym.Env):
             consumed = True
             applied, unit_name = self._apply_strength_potion_to_position(target_pos)
             if not applied:
-                self.heroitems.append(
-                    self._make_hero_item_entry(self.STRENGTH_POTION_ITEM_NAME)
-                )
+                self._append_hero_item(self.STRENGTH_POTION_ITEM_NAME)
                 consumed = False
             else:
                 reward = self._combat_potion_reward_value()
@@ -5517,7 +7467,7 @@ class CampaignEnv(gym.Env):
             consumed = True
             applied, unit_name = apply_fn(target_pos)
             if not applied:
-                self.heroitems.append(self._make_hero_item_entry(item_name))
+                self._append_hero_item(item_name)
                 consumed = False
 
         info = {
@@ -6018,6 +7968,21 @@ class CampaignEnv(gym.Env):
         normalized_level = max(0, int(settlement_level))
         bonus_percent = float(self.SETTLEMENT_REST_HEAL_BONUS_BY_LEVEL.get(normalized_level, 0.0))
         return bonus_percent / 100.0, str(settlement_name), normalized_level
+
+    def _resolve_rest_heal_percent(
+        self,
+        position: Optional[Tuple[int, int]],
+    ) -> float:
+        """Возвращает базовый процент лечения от отдыха на текущей клетке."""
+        if self._is_player_controlled_territory_tile(position):
+            return float(self.PLAYER_TERRITORY_REST_HEAL_PERCENT)
+        return float(self.DEFAULT_REST_HEAL_PERCENT)
+
+    def _resolve_typeoflord_rest_heal_bonus_percent(self) -> float:
+        """Возвращает дополнительный бонус лечения от отдыха по типу лорда."""
+        if int(self.typeoflord) == 1:
+            return float(self.TYPEOFLORD_ONE_REST_HEAL_BONUS_PERCENT)
+        return 0.0
 
     def _resolve_enemy_regeneration_bonus_percent(
         self,
@@ -7006,11 +8971,59 @@ class CampaignEnv(gym.Env):
             return []
         return [dict(entry) for entry in hire_data.values() if isinstance(entry, dict)]
 
+    def _get_mercenary_hire_options(self) -> List[Dict[str, object]]:
+        options: List[Dict[str, object]] = []
+        for site_name, site_data in self.BASE_MERCENARY_SITE_DATA.items():
+            site_id = str(site_data.get("site_id", "") or "")
+            for idx, entry in enumerate(tuple(site_data.get("roster", ()))):
+                if not isinstance(entry, dict):
+                    continue
+                unit_name = str(entry.get("unit_name", entry.get("name", "")) or "").strip()
+                if not unit_name:
+                    continue
+                slot = int(entry.get("slot", idx) or idx)
+                try:
+                    gold_cost = max(0.0, float(entry.get("gold", 0.0) or 0.0))
+                except (TypeError, ValueError):
+                    gold_cost = 0.0
+                unit_data = self._find_unit_data_by_name(unit_name)
+                stand = self._mercenary_stand_for_unit_data(unit_data)
+                options.append(
+                    {
+                        "site_name": str(site_name),
+                        "site_id": site_id,
+                        "slot": int(slot),
+                        "unit_id": str(entry.get("unit_id", "") or ""),
+                        "unit_name": unit_name,
+                        "name": unit_name,
+                        "gold": float(gold_cost),
+                        "stand": "" if stand is None else stand,
+                        "unit_type": (
+                            str(unit_data.get("тип", unit_data.get("unit_type", "")) or "").strip()
+                            if isinstance(unit_data, dict)
+                            else ""
+                        ),
+                    }
+                )
+        return options
+
     def _refresh_dynamic_action_layout(self) -> None:
         self.active_hire_options = self._get_hire_options_for_capital(self.Realcapital)
-        self.GRID_MERCHANT_BUY_ACTION_START = self.GRID_HIRE_ACTION_START + len(self.active_hire_options)
-        self.GRID_ENERGY_ACTION_START = self.GRID_MERCHANT_BUY_ACTION_START + len(
+        self.active_mercenary_hire_options = self._get_mercenary_hire_options()
+        self.GRID_MERCENARY_HIRE_ACTION_START = (
+            self.GRID_HIRE_ACTION_START + len(self.active_hire_options)
+        )
+        self.GRID_TRAINER_ACTION_START = (
+            self.GRID_MERCENARY_HIRE_ACTION_START + len(self.active_mercenary_hire_options)
+        )
+        self.GRID_MERCHANT_BUY_ACTION_START = (
+            self.GRID_TRAINER_ACTION_START + len(self.TRAINER_POSITIONS)
+        )
+        self.GRID_SPELL_SHOP_BUY_ACTION_START = self.GRID_MERCHANT_BUY_ACTION_START + len(
             self.MERCHANT_BUY_ITEMS
+        )
+        self.GRID_ENERGY_ACTION_START = self.GRID_SPELL_SHOP_BUY_ACTION_START + len(
+            self.SPELL_SHOP_BUY_SPELLS
         )
         self.GRID_HASTE_ACTION_START = self.GRID_ENERGY_ACTION_START + len(
             self.ENERGY_ELIXIR_POSITIONS
@@ -7052,6 +9065,13 @@ class CampaignEnv(gym.Env):
         self.grid_map_support_spell_action_start = (
             self.grid_legion_damage_spell_action_start + self._map_offensive_spell_action_max_count()
         )
+        self.grid_spell_shop_cast_action_start = (
+            self.grid_map_support_spell_action_start + self._map_support_spell_action_max_count()
+        )
+        self.GRID_UNLOCK_SCROLL_MAGIC_ACTION = (
+            self.grid_spell_shop_cast_action_start + int(self.MAX_SPELL_SHOP_CAST_ACTIONS)
+        )
+        self.grid_scroll_cast_action_start = self.GRID_UNLOCK_SCROLL_MAGIC_ACTION + 1
 
     def _build_unit_from_data(self, entry: Dict, team: str, position: int) -> Dict:
         def _entry_get(*keys, default=0):
@@ -7591,7 +9611,7 @@ class CampaignEnv(gym.Env):
         self.active_buildings["alredybuilt"] = 0
         self.spell_learning_locked = False
         self.battle_item_equip_used_this_turn = False
-        self.damage_spell_ids_used_this_turn = set()
+        self.spell_cast_counts_by_id_this_turn = {}
         self.summon_hero_battle_bonus_pending = False
         self.summon_hero_battle_bonus_enemy_ids_this_turn = set()
         return -float(delta_turns) * self.reward_turn_penalty - float(pending_hire_penalty)
@@ -7963,6 +9983,158 @@ class CampaignEnv(gym.Env):
 
         self.merchant_interaction_tiles = tuple(all_tiles)
 
+    def _init_spell_shop_site_metadata(self) -> None:
+        obstacle_tiles = set(self._static_obstacle_tiles)
+        self.spell_shop_site_anchors: Dict[str, Tuple[int, int]] = {}
+        self.spell_shop_site_interaction_tiles: Dict[str, Tuple[Tuple[int, int], ...]] = {}
+        all_tiles: List[Tuple[int, int]] = []
+        seen_tiles: set[Tuple[int, int]] = set()
+
+        for site_name, site_data in self.BASE_SPELL_SHOP_SITE_DATA.items():
+            anchor = scale_static_tiles(
+                self.grid_size,
+                (tuple(site_data["anchor"]),),
+            )[0]
+            scaled_tiles = scale_static_tiles(
+                self.grid_size,
+                tuple(site_data["interaction_tiles"]),
+            )
+
+            site_tiles: List[Tuple[int, int]] = []
+            site_seen: set[Tuple[int, int]] = set()
+            for tile in scaled_tiles:
+                normalized_tile = (int(tile[0]), int(tile[1]))
+                if normalized_tile in obstacle_tiles or normalized_tile in site_seen:
+                    continue
+                site_seen.add(normalized_tile)
+                site_tiles.append(normalized_tile)
+                if normalized_tile not in seen_tiles:
+                    seen_tiles.add(normalized_tile)
+                    all_tiles.append(normalized_tile)
+
+            self.spell_shop_site_anchors[str(site_name)] = (int(anchor[0]), int(anchor[1]))
+            self.spell_shop_site_interaction_tiles[str(site_name)] = tuple(site_tiles)
+
+        self.spell_shop_interaction_tiles = tuple(all_tiles)
+
+    def _init_mercenary_site_metadata(self) -> None:
+        obstacle_tiles = set(self._static_obstacle_tiles)
+        self.mercenary_site_anchors: Dict[str, Tuple[int, int]] = {}
+        self.mercenary_site_interaction_tiles: Dict[str, Tuple[Tuple[int, int], ...]] = {}
+        all_tiles: List[Tuple[int, int]] = []
+        seen_tiles: set[Tuple[int, int]] = set()
+
+        for site_name, site_data in self.BASE_MERCENARY_SITE_DATA.items():
+            anchor = scale_static_tiles(
+                self.grid_size,
+                (tuple(site_data["anchor"]),),
+            )[0]
+            scaled_tiles = scale_static_tiles(
+                self.grid_size,
+                tuple(site_data["interaction_tiles"]),
+            )
+
+            site_tiles: List[Tuple[int, int]] = []
+            site_seen: set[Tuple[int, int]] = set()
+            for tile in scaled_tiles:
+                normalized_tile = (int(tile[0]), int(tile[1]))
+                if normalized_tile in obstacle_tiles or normalized_tile in site_seen:
+                    continue
+                site_seen.add(normalized_tile)
+                site_tiles.append(normalized_tile)
+                if normalized_tile not in seen_tiles:
+                    seen_tiles.add(normalized_tile)
+                    all_tiles.append(normalized_tile)
+
+            self.mercenary_site_anchors[str(site_name)] = (int(anchor[0]), int(anchor[1]))
+            self.mercenary_site_interaction_tiles[str(site_name)] = tuple(site_tiles)
+
+        self.mercenary_interaction_tiles = tuple(all_tiles)
+
+    def _init_trainer_site_metadata(self) -> None:
+        obstacle_tiles = set(self._static_obstacle_tiles)
+        self.trainer_site_anchors: Dict[str, Tuple[int, int]] = {}
+        self.trainer_site_interaction_tiles: Dict[str, Tuple[Tuple[int, int], ...]] = {}
+        all_tiles: List[Tuple[int, int]] = []
+        seen_tiles: set[Tuple[int, int]] = set()
+
+        for site_name, site_data in self.BASE_TRAINER_SITE_DATA.items():
+            anchor = scale_static_tiles(
+                self.grid_size,
+                (tuple(site_data["anchor"]),),
+            )[0]
+            scaled_tiles = scale_static_tiles(
+                self.grid_size,
+                tuple(site_data["interaction_tiles"]),
+            )
+
+            site_tiles: List[Tuple[int, int]] = []
+            site_seen: set[Tuple[int, int]] = set()
+            for tile in scaled_tiles:
+                normalized_tile = (int(tile[0]), int(tile[1]))
+                if normalized_tile in obstacle_tiles or normalized_tile in site_seen:
+                    continue
+                site_seen.add(normalized_tile)
+                site_tiles.append(normalized_tile)
+                if normalized_tile not in seen_tiles:
+                    seen_tiles.add(normalized_tile)
+                    all_tiles.append(normalized_tile)
+
+            self.trainer_site_anchors[str(site_name)] = (int(anchor[0]), int(anchor[1]))
+            self.trainer_site_interaction_tiles[str(site_name)] = tuple(site_tiles)
+
+        self.trainer_interaction_tiles = tuple(all_tiles)
+
+    def _create_initial_mercenary_site_rosters(self) -> Dict[str, List[Dict[str, object]]]:
+        rosters: Dict[str, List[Dict[str, object]]] = {}
+        for site_name, site_data in self.BASE_MERCENARY_SITE_DATA.items():
+            site_roster: List[Dict[str, object]] = []
+            for idx, entry in enumerate(tuple(site_data.get("roster", ()))):
+                if not isinstance(entry, dict):
+                    continue
+                unit_name = str(entry.get("unit_name", entry.get("name", "")) or "").strip()
+                if not unit_name:
+                    continue
+                unit_data = self._find_unit_data_by_name(unit_name)
+                stand = self._mercenary_stand_for_unit_data(unit_data)
+                try:
+                    gold_cost = max(0.0, float(entry.get("gold", 0.0) or 0.0))
+                except (TypeError, ValueError):
+                    gold_cost = 0.0
+                try:
+                    stock = max(0, int(entry.get("stock", 0) or 0))
+                except (TypeError, ValueError):
+                    stock = 0
+                site_roster.append(
+                    {
+                        "slot": int(entry.get("slot", idx) or idx),
+                        "unit_id": str(entry.get("unit_id", "") or ""),
+                        "unit_name": unit_name,
+                        "gold": float(gold_cost),
+                        "stock": int(stock),
+                        "initial_stock": int(stock),
+                        "stand": "" if stand is None else stand,
+                        "unit_type": (
+                            str(unit_data.get("тип", unit_data.get("unit_type", "")) or "").strip()
+                            if isinstance(unit_data, dict)
+                            else ""
+                        ),
+                        "unit_max_health": (
+                            float(unit_data.get("здоровье", unit_data.get("max_health", 0)) or 0.0)
+                            if isinstance(unit_data, dict)
+                            else 0.0
+                        ),
+                        "unit_damage": (
+                            float(unit_data.get("урон", unit_data.get("damage", 0)) or 0.0)
+                            if isinstance(unit_data, dict)
+                            else 0.0
+                        ),
+                        "big": bool(self._unit_data_is_big(unit_data)),
+                    }
+                )
+            rosters[str(site_name)] = site_roster
+        return rosters
+
     def _create_initial_merchant_stocks(self) -> Dict[str, Dict[str, int]]:
         stocks: Dict[str, Dict[str, int]] = {
             str(site_name): {} for site_name in self.BASE_MERCHANT_SITE_DATA.keys()
@@ -8040,6 +10212,260 @@ class CampaignEnv(gym.Env):
             "merchant_sites_in_range": list(site_names),
             "merchant_stock": merchant_stock,
         }
+
+    def _create_initial_spell_shop_stocks(self) -> Dict[str, Dict[str, int]]:
+        stocks: Dict[str, Dict[str, int]] = {
+            str(site_name): {} for site_name in self.BASE_SPELL_SHOP_SITE_DATA.keys()
+        }
+        for site_name in stocks.keys():
+            site_stock: Dict[str, int] = {}
+            for spell_data in self.SPELL_SHOP_BUY_SPELLS:
+                spell_name = str(spell_data.get("name", "") or "")
+                if not spell_name:
+                    continue
+                site_stock[spell_name] = max(0, int(spell_data.get("stock", 0) or 0))
+            stocks[site_name] = site_stock
+        return stocks
+
+    @classmethod
+    def _spell_shop_spell_definition(cls, spell_name: str) -> Optional[Dict[str, object]]:
+        normalized_name = str(spell_name or "")
+        for spell_data in cls.SPELL_SHOP_BUY_SPELLS:
+            if str(spell_data.get("name", "") or "") == normalized_name:
+                return dict(spell_data)
+        return None
+
+    def _spell_shop_spell_stock(self, site_name: str, spell_name: str) -> int:
+        site_stock = self.spell_shop_stocks.get(str(site_name), {})
+        try:
+            return max(0, int(site_stock.get(str(spell_name), 0) or 0))
+        except (TypeError, ValueError):
+            return 0
+
+    def _spell_shop_spell_owned(self, spell_id: str) -> bool:
+        normalized_spell_id = str(spell_id or "")
+        if not normalized_spell_id:
+            return False
+        if normalized_spell_id in self.spell_shop_purchased_spell_ids:
+            return True
+        return self._is_spell_learned(normalized_spell_id)
+
+    def _spell_shop_site_for_spell(
+        self,
+        spell_name: str,
+        position: Optional[Tuple[int, int]] = None,
+    ) -> Optional[str]:
+        for site_name in self._spell_shop_sites_at_position(position):
+            if self._spell_shop_spell_stock(site_name, spell_name) > 0:
+                return site_name
+        return None
+
+    def _spell_shop_stock_snapshot(self, site_name: str) -> Dict[str, int]:
+        snapshot: Dict[str, int] = {}
+        for spell_data in self.SPELL_SHOP_BUY_SPELLS:
+            spell_name = str(spell_data.get("name", "") or "")
+            if not spell_name:
+                continue
+            stock_left = self._spell_shop_spell_stock(site_name, spell_name)
+            if stock_left > 0:
+                snapshot[spell_name] = stock_left
+        return snapshot
+
+    def _spell_shop_sites_at_position(
+        self,
+        position: Optional[Tuple[int, int]] = None,
+    ) -> List[str]:
+        if position is None:
+            position = tuple(self.grid_env.agent_pos)
+        normalized_pos = (int(position[0]), int(position[1]))
+        return [
+            site_name
+            for site_name, tiles in self.spell_shop_site_interaction_tiles.items()
+            if normalized_pos in tiles
+        ]
+
+    def _spell_shop_context_info(
+        self,
+        position: Optional[Tuple[int, int]] = None,
+    ) -> Dict[str, object]:
+        site_names = self._spell_shop_sites_at_position(position)
+        spell_shop_stock = {
+            site_name: self._spell_shop_stock_snapshot(site_name)
+            for site_name in site_names
+        }
+        purchased_spell_names = [
+            str(spell_data.get("name", "") or "")
+            for spell_data in self.SPELL_SHOP_BUY_SPELLS
+            if str(spell_data.get("spell_id", "") or "") in self.spell_shop_purchased_spell_ids
+        ]
+        return {
+            "is_at_spell_shop": bool(site_names),
+            "spell_shop_sites_in_range": list(site_names),
+            "spell_shop_stock": spell_shop_stock,
+            "spell_shop_purchased_spells": purchased_spell_names,
+        }
+
+    def _mercenary_roster_entry(
+        self,
+        site_name: str,
+        slot: int,
+    ) -> Optional[Dict[str, object]]:
+        for entry in self.mercenary_site_rosters.get(str(site_name), []):
+            raw_slot = entry.get("slot", -1)
+            try:
+                entry_slot = int(-1 if raw_slot is None else raw_slot)
+            except (TypeError, ValueError):
+                entry_slot = -1
+            if entry_slot == int(slot):
+                return entry
+        return None
+
+    def _mercenary_stock_snapshot(self, site_name: str) -> List[Dict[str, object]]:
+        snapshot: List[Dict[str, object]] = []
+        for entry in self.mercenary_site_rosters.get(str(site_name), []):
+            snapshot.append(
+                {
+                    "slot": int(entry.get("slot", 0) or 0),
+                    "unit_id": str(entry.get("unit_id", "") or ""),
+                    "unit_name": str(entry.get("unit_name", "") or ""),
+                    "gold": float(entry.get("gold", 0.0) or 0.0),
+                    "stock": max(0, int(entry.get("stock", 0) or 0)),
+                    "stand": str(entry.get("stand", "") or ""),
+                    "unit_type": str(entry.get("unit_type", "") or ""),
+                    "big": bool(entry.get("big", False)),
+                }
+            )
+        return snapshot
+
+    def _mercenary_sites_at_position(
+        self,
+        position: Optional[Tuple[int, int]] = None,
+    ) -> List[str]:
+        if position is None:
+            position = tuple(self.grid_env.agent_pos)
+        normalized_pos = (int(position[0]), int(position[1]))
+        return [
+            site_name
+            for site_name, tiles in self.mercenary_site_interaction_tiles.items()
+            if normalized_pos in tiles
+        ]
+
+    def _mercenary_context_info(
+        self,
+        position: Optional[Tuple[int, int]] = None,
+    ) -> Dict[str, object]:
+        site_names = self._mercenary_sites_at_position(position)
+        mercenary_stock = {
+            site_name: self._mercenary_stock_snapshot(site_name)
+            for site_name in site_names
+        }
+        return {
+            "is_at_mercenary_camp": bool(site_names),
+            "mercenary_sites_in_range": list(site_names),
+            "mercenary_stock": mercenary_stock,
+        }
+
+    def _trainer_sites_at_position(
+        self,
+        position: Optional[Tuple[int, int]] = None,
+    ) -> List[str]:
+        if position is None:
+            position = tuple(self.grid_env.agent_pos)
+        normalized_pos = (int(position[0]), int(position[1]))
+        return [
+            site_name
+            for site_name, tiles in self.trainer_site_interaction_tiles.items()
+            if normalized_pos in tiles
+        ]
+
+    def _trainer_context_info(
+        self,
+        position: Optional[Tuple[int, int]] = None,
+    ) -> Dict[str, object]:
+        site_names = self._trainer_sites_at_position(position)
+        return {
+            "is_at_trainer": bool(site_names),
+            "trainer_sites_in_range": list(site_names),
+        }
+
+    def _trainer_preview_for_position(self, position: int) -> Dict[str, object]:
+        normalized_position = int(position)
+        preview: Dict[str, object] = {
+            "position": normalized_position,
+            "site_names": list(self._trainer_sites_at_position(self.grid_env.agent_pos)),
+            "unit": None,
+            "unit_name": None,
+            "trainable": False,
+            "missing_unit": True,
+            "dead_or_empty": False,
+            "already_capped": False,
+            "insufficient_gold": False,
+            "exp_cap": None,
+            "exp_before": 0,
+            "xp_missing": 0,
+            "gold_per_xp": 0.0,
+            "gold_needed_full": 0.0,
+            "affordable_xp": 0,
+            "gold_spent": 0.0,
+            "exp_after": 0,
+        }
+
+        for unit in self._get_blue_state():
+            if int(unit.get("position", -1) or -1) != normalized_position:
+                continue
+            preview["unit"] = unit
+            preview["unit_name"] = str(unit.get("name", "") or "").strip()
+            preview["missing_unit"] = False
+
+            hp = float(unit.get("hp", 0) or unit.get("health", 0) or 0.0)
+            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0.0)
+            if self._is_empty_blue_unit(unit) or max_hp <= 0.0 or hp <= 0.0:
+                preview["dead_or_empty"] = True
+                return preview
+
+            exp_cap = self._trainer_exp_cap(unit)
+            preview["exp_cap"] = exp_cap
+            if exp_cap is None:
+                preview["already_capped"] = True
+                return preview
+
+            try:
+                exp_before = int(round(float(unit.get("exp_current", 0) or 0)))
+            except (TypeError, ValueError):
+                exp_before = 0
+            exp_before = max(0, exp_before)
+            preview["exp_before"] = exp_before
+            xp_missing = max(0, int(exp_cap) - exp_before)
+            preview["xp_missing"] = xp_missing
+            if xp_missing <= 0:
+                preview["already_capped"] = True
+                preview["exp_after"] = exp_before
+                return preview
+
+            gold_per_xp = float(self._trainer_gold_per_xp(unit))
+            preview["gold_per_xp"] = gold_per_xp
+            preview["gold_needed_full"] = float(xp_missing) * gold_per_xp
+
+            affordable_xp = 0
+            if gold_per_xp > 0.0:
+                affordable_xp = min(
+                    xp_missing,
+                    max(0, int(float(self.gold or 0.0) // gold_per_xp)),
+                )
+            preview["affordable_xp"] = int(affordable_xp)
+            preview["gold_spent"] = float(affordable_xp) * gold_per_xp
+            preview["exp_after"] = exp_before + int(affordable_xp)
+            preview["insufficient_gold"] = affordable_xp <= 0
+            preview["trainable"] = bool(affordable_xp > 0)
+            return preview
+
+        return preview
+
+    def _can_train_unit_position(self, position: int) -> bool:
+        if not self._trainer_sites_at_position(self.grid_env.agent_pos):
+            return False
+        preview = self._trainer_preview_for_position(position)
+        return bool(preview.get("trainable", False))
 
     @staticmethod
     def _is_empty_enemy_unit(unit: Dict) -> bool:
@@ -8156,11 +10582,19 @@ class CampaignEnv(gym.Env):
             "accuracy",
         )
         self.grid_nearest_enemy_debuff_obs_size = len(self.grid_nearest_enemy_debuff_flag_names)
+        self.grid_scroll_core_obs_size = 3
+        self.grid_scroll_slot_count = int(self.MAX_SCROLL_CAST_ACTIONS)
+        self.grid_scroll_slot_features_per_entry = 4
+        self.grid_scroll_obs_size = (
+            self.grid_scroll_core_obs_size
+            + self.grid_scroll_slot_count * self.grid_scroll_slot_features_per_entry
+        )
         self.grid_spell_obs_size = (
             self.grid_spell_core_obs_size
             + len(self.spell_keys) * self.grid_spell_features_per_spell
             + self.grid_legion_spell_used_obs_size
             + self.grid_nearest_enemy_debuff_obs_size
+            + self.grid_scroll_obs_size
         )
 
         self.grid_chest_positions = tuple(sorted(tuple(pos) for pos in self._static_chests.keys()))
@@ -8214,6 +10648,134 @@ class CampaignEnv(gym.Env):
         self.grid_objective_city_obs_size = (
             len(self.grid_objective_city_names) * self.grid_objective_city_features_per_entry
         )
+        self.grid_merchant_site_names = tuple(
+            str(site_name) for site_name in self.BASE_MERCHANT_SITE_DATA.keys()
+        )
+        self.grid_merchant_site_features_per_entry = 5
+        self.grid_merchant_site_obs_size = (
+            len(self.grid_merchant_site_names) * self.grid_merchant_site_features_per_entry
+        )
+        self.grid_merchant_item_names = tuple(
+            str(item_data.get("name", "") or "") for item_data in self.MERCHANT_BUY_ITEMS
+        )
+        self.grid_merchant_item_features_per_entry = 1
+        self.grid_current_merchant_stock_obs_size = (
+            len(self.grid_merchant_item_names) * self.grid_merchant_item_features_per_entry
+        )
+        self.grid_spell_shop_site_names = tuple(
+            str(site_name) for site_name in self.BASE_SPELL_SHOP_SITE_DATA.keys()
+        )
+        self.grid_spell_shop_site_features_per_entry = 5
+        self.grid_spell_shop_site_obs_size = (
+            len(self.grid_spell_shop_site_names) * self.grid_spell_shop_site_features_per_entry
+        )
+        self.grid_spell_shop_spell_names = tuple(
+            str(spell_data.get("name", "") or "") for spell_data in self.SPELL_SHOP_BUY_SPELLS
+        )
+        self.grid_spell_shop_spell_features_per_entry = 1
+        self.grid_current_spell_shop_stock_obs_size = (
+            len(self.grid_spell_shop_spell_names) * self.grid_spell_shop_spell_features_per_entry
+        )
+        self.grid_mercenary_site_names = tuple(
+            str(site_name) for site_name in self.BASE_MERCENARY_SITE_DATA.keys()
+        )
+        self.grid_mercenary_site_features_per_entry = 5
+        self.grid_mercenary_site_obs_size = (
+            len(self.grid_mercenary_site_names) * self.grid_mercenary_site_features_per_entry
+        )
+        self.grid_mercenary_slot_count = max(
+            (len(roster) for roster in self.mercenary_site_rosters.values()),
+            default=0,
+        )
+        self.grid_mercenary_slot_features_per_entry = 8
+        self.grid_mercenary_roster_obs_size = (
+            self.grid_mercenary_slot_count * self.grid_mercenary_slot_features_per_entry
+        )
+        self.grid_trainer_features_per_entry = 5
+        self.grid_trainer_obs_size = self.grid_trainer_features_per_entry
+        self.grid_trainer_total_affordable_xp_half_point = 20.0
+        self.grid_merchant_initial_total_stock_by_site_name: Dict[str, int] = {}
+        self.grid_merchant_initial_stock_by_site_item: Dict[Tuple[str, str], int] = {}
+        self.grid_spell_shop_initial_total_stock_by_site_name: Dict[str, int] = {}
+        self.grid_spell_shop_initial_stock_by_site_spell: Dict[Tuple[str, str], int] = {}
+        self.grid_mercenary_initial_total_stock_by_site_name: Dict[str, int] = {}
+        self.grid_mercenary_initial_stock_by_site_slot: Dict[Tuple[str, int], int] = {}
+        self.grid_max_mercenary_price = 1.0
+        self.grid_max_mercenary_unit_health = 1.0
+        self.grid_max_mercenary_unit_damage = 1.0
+        for site_name in self.grid_merchant_site_names:
+            total_site_stock = 0
+            initial_site_stock = self._create_initial_merchant_stocks().get(site_name, {})
+            for item_name in self.grid_merchant_item_names:
+                try:
+                    initial_stock = max(
+                        0,
+                        int(initial_site_stock.get(item_name, 0) or 0),
+                    )
+                except (TypeError, ValueError):
+                    initial_stock = 0
+                total_site_stock += int(initial_stock)
+                self.grid_merchant_initial_stock_by_site_item[(site_name, item_name)] = int(
+                    initial_stock
+                )
+            self.grid_merchant_initial_total_stock_by_site_name[site_name] = int(total_site_stock)
+        for site_name in self.grid_spell_shop_site_names:
+            total_site_stock = 0
+            initial_site_stock = self._create_initial_spell_shop_stocks().get(site_name, {})
+            for spell_name in self.grid_spell_shop_spell_names:
+                try:
+                    initial_stock = max(
+                        0,
+                        int(initial_site_stock.get(spell_name, 0) or 0),
+                    )
+                except (TypeError, ValueError):
+                    initial_stock = 0
+                total_site_stock += int(initial_stock)
+                self.grid_spell_shop_initial_stock_by_site_spell[(site_name, spell_name)] = int(
+                    initial_stock
+                )
+            self.grid_spell_shop_initial_total_stock_by_site_name[site_name] = int(total_site_stock)
+        for site_name in self.grid_mercenary_site_names:
+            total_site_stock = 0
+            for entry in self.mercenary_site_rosters.get(site_name, []):
+                slot_raw = entry.get("slot", 0)
+                try:
+                    slot = int(slot_raw if slot_raw is not None else 0)
+                except (TypeError, ValueError):
+                    slot = 0
+                initial_stock_raw = entry.get("initial_stock", entry.get("stock", 0))
+                try:
+                    initial_stock = max(0, int(initial_stock_raw or 0))
+                except (TypeError, ValueError):
+                    initial_stock = 0
+                total_site_stock += int(initial_stock)
+                self.grid_mercenary_initial_stock_by_site_slot[(site_name, slot)] = int(
+                    initial_stock
+                )
+                try:
+                    self.grid_max_mercenary_price = max(
+                        float(self.grid_max_mercenary_price),
+                        float(entry.get("gold", 0.0) or 0.0),
+                    )
+                except (TypeError, ValueError):
+                    pass
+                try:
+                    self.grid_max_mercenary_unit_health = max(
+                        float(self.grid_max_mercenary_unit_health),
+                        float(entry.get("unit_max_health", 0.0) or 0.0),
+                    )
+                except (TypeError, ValueError):
+                    pass
+                try:
+                    self.grid_max_mercenary_unit_damage = max(
+                        float(self.grid_max_mercenary_unit_damage),
+                        float(entry.get("unit_damage", 0.0) or 0.0),
+                    )
+                except (TypeError, ValueError):
+                    pass
+            self.grid_mercenary_initial_total_stock_by_site_name[site_name] = int(
+                total_site_stock
+            )
 
         merchant_small_heal_stock = int(
             sum(
@@ -8283,6 +10845,13 @@ class CampaignEnv(gym.Env):
             + self.grid_legions_territory_obs_size
             + self.grid_ruin_obs_size
             + self.grid_objective_city_obs_size
+            + self.grid_merchant_site_obs_size
+            + self.grid_current_merchant_stock_obs_size
+            + self.grid_spell_shop_site_obs_size
+            + self.grid_current_spell_shop_stock_obs_size
+            + self.grid_mercenary_site_obs_size
+            + self.grid_mercenary_roster_obs_size
+            + self.grid_trainer_obs_size
         )
 
     def _encode_enemy_unit_type(self, unit_type: Optional[str]) -> List[float]:
@@ -8471,6 +11040,7 @@ class CampaignEnv(gym.Env):
 
     def _build_building_grid_obs(self) -> np.ndarray:
         building_obs: List[float] = []
+        max_build_price = self._current_max_building_gold_cost()
         for build_key in self.building_keys:
             building = self.active_buildings.get(build_key)
             if not isinstance(building, dict):
@@ -8487,22 +11057,20 @@ class CampaignEnv(gym.Env):
                 blocked_v = 1.0 if int(blocked_flag or 0) == 1 else 0.0
             except (TypeError, ValueError):
                 blocked_v = 0.0
-            try:
-                price_v = float(building.get("gold", 0) or 0.0)
-            except (TypeError, ValueError):
-                price_v = 0.0
+            price_v = self._get_building_gold_cost(building)
 
             building_obs.extend(
                 [
                     built_v,
                     blocked_v,
-                    self._normalize_ratio(price_v, self.grid_max_build_price),
+                    self._normalize_ratio(price_v, max_build_price),
                 ]
             )
 
         return np.array(building_obs, dtype=np.float32)
 
     def _build_spell_grid_obs(self) -> np.ndarray:
+        self._ensure_inventory_cache()
         spell_obs: List[float] = [
             1.0 if self._has_magic_tower_built() else 0.0,
             1.0 if self.spell_learning_locked else 0.0,
@@ -8527,7 +11095,9 @@ class CampaignEnv(gym.Env):
             spell_key = ""
             if idx < len(current_specs):
                 spell_key = str(current_specs[idx].get("id", "") or "")
-            spell_obs.append(1.0 if spell_key and spell_key in self.damage_spell_ids_used_this_turn else 0.0)
+            spell_obs.append(
+                1.0 if spell_key and self._spell_cast_limit_reached_this_turn(spell_key) else 0.0
+            )
 
         nearest_enemy = self._get_nearest_enemy_stack_for_mask(spell_targetable_only=True)
         nearest_enemy_summary = self._enemy_stack_spell_effect_summary(
@@ -8547,6 +11117,52 @@ class CampaignEnv(gym.Env):
                 1.0 if "accuracy" in nearest_enemy_effect_types else 0.0,
             ]
         )
+        kind_index = {
+            "damage": 1,
+            "debuff": 2,
+            "summon_battle": 3,
+            "moves": 4,
+            "heal": 5,
+            "buff": 6,
+            "ward": 7,
+            "health_bonus": 8,
+        }
+        scroll_entries = self._scroll_cast_slot_entries_cache
+        available_scroll_entry_count = len(self._available_scroll_spell_entries_cache)
+        total_scroll_count = int(self._total_scroll_count_cache)
+        spell_obs.extend(
+            [
+                1.0 if self.scroll_magic_unlocked else 0.0,
+                self._normalize_saturating_count(
+                    available_scroll_entry_count,
+                    half_point=float(max(1, self.MAX_SCROLL_CAST_ACTIONS)),
+                ),
+                self._normalize_saturating_count(
+                    total_scroll_count,
+                    half_point=float(max(1, self.MAX_SCROLL_CAST_ACTIONS)),
+                ),
+            ]
+        )
+        for idx in range(int(self.MAX_SCROLL_CAST_ACTIONS)):
+            scroll_entry: Dict[str, object] = {}
+            if idx < len(scroll_entries):
+                scroll_entry = dict(scroll_entries[idx])
+            spell_kind = str(scroll_entry.get("spell_kind", "") or "")
+            try:
+                spell_level = int(scroll_entry.get("spell_level", 0) or 0)
+            except (TypeError, ValueError):
+                spell_level = 0
+            spell_obs.extend(
+                [
+                    1.0 if scroll_entry else 0.0,
+                    self._normalize_saturating_count(
+                        int(scroll_entry.get("copies", 0) or 0),
+                        half_point=2.0,
+                    ),
+                    self._normalize_ratio(kind_index.get(spell_kind, 0), max(1, len(kind_index))),
+                    self._normalize_ratio(spell_level, 5.0),
+                ]
+            )
         return np.array(spell_obs, dtype=np.float32)
 
     def _build_chest_grid_obs(self) -> np.ndarray:
@@ -8652,6 +11268,278 @@ class CampaignEnv(gym.Env):
 
         return np.array(objective_obs, dtype=np.float32)
 
+    def _build_merchant_site_grid_obs(self) -> np.ndarray:
+        if self.grid_merchant_site_obs_size <= 0:
+            return np.zeros(0, dtype=np.float32)
+
+        grid_scale = max(1, self.grid_env.grid_size - 1)
+        current_pos = tuple(int(coord) for coord in tuple(self.grid_env.agent_pos)[:2])
+        site_obs: List[float] = []
+
+        for site_name in self.grid_merchant_site_names:
+            anchor = self.merchant_site_anchors.get(site_name, (0, 0))
+            total_stock = sum(
+                max(0, int(stock or 0))
+                for stock in self.merchant_stocks.get(site_name, {}).values()
+            )
+            max_total_stock = int(
+                self.grid_merchant_initial_total_stock_by_site_name.get(site_name, 0) or 0
+            )
+            site_obs.extend(
+                [
+                    int(anchor[0]) / grid_scale,
+                    int(anchor[1]) / grid_scale,
+                    1.0
+                    if current_pos in self.merchant_site_interaction_tiles.get(site_name, ())
+                    else 0.0,
+                    1.0 if total_stock > 0 else 0.0,
+                    (
+                        self._normalize_ratio(total_stock, max_total_stock)
+                        if max_total_stock > 0
+                        else 0.0
+                    ),
+                ]
+            )
+
+        return np.array(site_obs, dtype=np.float32)
+
+    def _build_current_merchant_stock_grid_obs(self) -> np.ndarray:
+        if self.grid_current_merchant_stock_obs_size <= 0:
+            return np.zeros(0, dtype=np.float32)
+
+        site_names = self._merchant_sites_at_position(self.grid_env.agent_pos)
+        active_site_name = str(site_names[0]) if site_names else ""
+        stock_obs: List[float] = []
+
+        for item_name in self.grid_merchant_item_names:
+            current_stock = self._merchant_item_stock(active_site_name, item_name) if active_site_name else 0
+            initial_stock = int(
+                self.grid_merchant_initial_stock_by_site_item.get(
+                    (active_site_name, item_name),
+                    0,
+                )
+                or 0
+            )
+            stock_obs.append(
+                self._normalize_ratio(current_stock, initial_stock) if initial_stock > 0 else 0.0
+            )
+
+        return np.array(stock_obs, dtype=np.float32)
+
+    def _build_spell_shop_site_grid_obs(self) -> np.ndarray:
+        if self.grid_spell_shop_site_obs_size <= 0:
+            return np.zeros(0, dtype=np.float32)
+
+        grid_scale = max(1, self.grid_env.grid_size - 1)
+        current_pos = tuple(int(coord) for coord in tuple(self.grid_env.agent_pos)[:2])
+        site_obs: List[float] = []
+
+        for site_name in self.grid_spell_shop_site_names:
+            anchor = self.spell_shop_site_anchors.get(site_name, (0, 0))
+            total_stock = sum(
+                max(0, int(stock or 0))
+                for stock in self.spell_shop_stocks.get(site_name, {}).values()
+            )
+            max_total_stock = int(
+                self.grid_spell_shop_initial_total_stock_by_site_name.get(site_name, 0) or 0
+            )
+            site_obs.extend(
+                [
+                    int(anchor[0]) / grid_scale,
+                    int(anchor[1]) / grid_scale,
+                    1.0
+                    if current_pos in self.spell_shop_site_interaction_tiles.get(site_name, ())
+                    else 0.0,
+                    1.0 if total_stock > 0 else 0.0,
+                    (
+                        self._normalize_ratio(total_stock, max_total_stock)
+                        if max_total_stock > 0
+                        else 0.0
+                    ),
+                ]
+            )
+
+        return np.array(site_obs, dtype=np.float32)
+
+    def _build_current_spell_shop_stock_grid_obs(self) -> np.ndarray:
+        if self.grid_current_spell_shop_stock_obs_size <= 0:
+            return np.zeros(0, dtype=np.float32)
+
+        site_names = self._spell_shop_sites_at_position(self.grid_env.agent_pos)
+        active_site_name = str(site_names[0]) if site_names else ""
+        stock_obs: List[float] = []
+
+        for spell_name in self.grid_spell_shop_spell_names:
+            current_stock = (
+                self._spell_shop_spell_stock(active_site_name, spell_name) if active_site_name else 0
+            )
+            initial_stock = int(
+                self.grid_spell_shop_initial_stock_by_site_spell.get(
+                    (active_site_name, spell_name),
+                    0,
+                )
+                or 0
+            )
+            stock_obs.append(
+                self._normalize_ratio(current_stock, initial_stock) if initial_stock > 0 else 0.0
+            )
+
+        return np.array(stock_obs, dtype=np.float32)
+
+    def _build_mercenary_site_grid_obs(self) -> np.ndarray:
+        if self.grid_mercenary_site_obs_size <= 0:
+            return np.zeros(0, dtype=np.float32)
+
+        grid_scale = max(1, self.grid_env.grid_size - 1)
+        current_pos = tuple(int(coord) for coord in tuple(self.grid_env.agent_pos)[:2])
+        site_obs: List[float] = []
+
+        for site_name in self.grid_mercenary_site_names:
+            anchor = self.mercenary_site_anchors.get(site_name, (0, 0))
+            total_stock = sum(
+                max(0, int(entry.get("stock", 0) or 0))
+                for entry in self.mercenary_site_rosters.get(site_name, [])
+            )
+            max_total_stock = int(
+                self.grid_mercenary_initial_total_stock_by_site_name.get(site_name, 0) or 0
+            )
+            site_obs.extend(
+                [
+                    int(anchor[0]) / grid_scale,
+                    int(anchor[1]) / grid_scale,
+                    1.0
+                    if current_pos in self.mercenary_site_interaction_tiles.get(site_name, ())
+                    else 0.0,
+                    1.0 if total_stock > 0 else 0.0,
+                    (
+                        self._normalize_ratio(total_stock, max_total_stock)
+                        if max_total_stock > 0
+                        else 0.0
+                    ),
+                ]
+            )
+
+        return np.array(site_obs, dtype=np.float32)
+
+    def _build_current_mercenary_roster_grid_obs(self) -> np.ndarray:
+        if self.grid_mercenary_roster_obs_size <= 0:
+            return np.zeros(0, dtype=np.float32)
+
+        site_names = self._mercenary_sites_at_position(self.grid_env.agent_pos)
+        active_site_name = str(site_names[0]) if site_names else ""
+        active_entries = self.mercenary_site_rosters.get(active_site_name, []) if active_site_name else []
+        entries_by_slot: Dict[int, Dict[str, object]] = {}
+        option_index_by_slot: Dict[int, int] = {}
+
+        for entry in active_entries:
+            slot_raw = entry.get("slot", 0)
+            try:
+                slot = int(slot_raw if slot_raw is not None else 0)
+            except (TypeError, ValueError):
+                continue
+            entries_by_slot[slot] = entry
+
+        if active_site_name:
+            for idx, option in enumerate(self.active_mercenary_hire_options):
+                if str(option.get("site_name", "") or "") != active_site_name:
+                    continue
+                slot_raw = option.get("slot", 0)
+                try:
+                    slot = int(slot_raw if slot_raw is not None else 0)
+                except (TypeError, ValueError):
+                    continue
+                option_index_by_slot[slot] = int(idx)
+
+        roster_obs: List[float] = []
+        for slot in range(int(self.grid_mercenary_slot_count)):
+            entry = entries_by_slot.get(int(slot))
+            if not isinstance(entry, dict):
+                roster_obs.extend([0.0] * self.grid_mercenary_slot_features_per_entry)
+                continue
+
+            stock = max(0, int(entry.get("stock", 0) or 0))
+            initial_stock = max(
+                0,
+                int(
+                    self.grid_mercenary_initial_stock_by_site_slot.get(
+                        (active_site_name, int(slot)),
+                        entry.get("initial_stock", stock),
+                    )
+                    or 0
+                ),
+            )
+            stand = str(entry.get("stand", "") or "").strip().lower()
+            option_idx = option_index_by_slot.get(int(slot))
+            hireable_now = 0.0
+            if option_idx is not None:
+                hireable_now = 1.0 if self._can_hire_mercenary_unit_option(self._mercenary_option(option_idx)) else 0.0
+
+            roster_obs.extend(
+                [
+                    1.0,
+                    self._normalize_ratio(stock, initial_stock) if initial_stock > 0 else 0.0,
+                    1.0 if stand == "ahead" else 0.0,
+                    1.0 if stand == "behind" else 0.0,
+                    self._normalize_ratio(
+                        float(entry.get("gold", 0.0) or 0.0),
+                        self.grid_max_mercenary_price,
+                    ),
+                    self._normalize_ratio(
+                        float(entry.get("unit_max_health", 0.0) or 0.0),
+                        self.grid_max_mercenary_unit_health,
+                    ),
+                    self._normalize_ratio(
+                        float(entry.get("unit_damage", 0.0) or 0.0),
+                        self.grid_max_mercenary_unit_damage,
+                    ),
+                    float(hireable_now),
+                ]
+            )
+
+        return np.array(roster_obs, dtype=np.float32)
+
+    def _build_trainer_grid_obs(self) -> np.ndarray:
+        if self.grid_trainer_obs_size <= 0:
+            return np.zeros(0, dtype=np.float32)
+
+        current_pos = tuple(int(coord) for coord in tuple(self.grid_env.agent_pos)[:2])
+        grid_scale = max(1, self.grid_env.grid_size - 1)
+        trainer_tiles = tuple(getattr(self, "trainer_interaction_tiles", ()) or ())
+
+        dx_norm = 0.0
+        dy_norm = 0.0
+        if trainer_tiles:
+            nearest_tile = min(
+                trainer_tiles,
+                key=lambda tile: (
+                    abs(int(tile[0]) - int(current_pos[0])) + abs(int(tile[1]) - int(current_pos[1])),
+                    int(tile[1]),
+                    int(tile[0]),
+                ),
+            )
+            dx = int(nearest_tile[0]) - int(current_pos[0])
+            dy = int(nearest_tile[1]) - int(current_pos[1])
+            dx_norm = float(np.clip((float(dx) / float(grid_scale) + 1.0) * 0.5, 0.0, 1.0))
+            dy_norm = float(np.clip((float(dy) / float(grid_scale) + 1.0) * 0.5, 0.0, 1.0))
+
+        previews = [self._trainer_preview_for_position(pos) for pos in self.TRAINER_POSITIONS]
+        trainable_slots = sum(1 for preview in previews if bool(preview.get("trainable", False)))
+        total_affordable_xp = sum(
+            max(0, int(preview.get("affordable_xp", 0) or 0))
+            for preview in previews
+        )
+        trainer_obs = [
+            float(dx_norm),
+            float(dy_norm),
+            1.0 if self._trainer_sites_at_position(self.grid_env.agent_pos) else 0.0,
+            self._normalize_ratio(trainable_slots, max(1, len(self.TRAINER_POSITIONS))),
+            self._normalize_saturating_count(
+                total_affordable_xp,
+                half_point=float(self.grid_trainer_total_affordable_xp_half_point),
+            ),
+        ]
+        return np.array(trainer_obs, dtype=np.float32)
+
     def _build_campaign_grid_obs(self) -> np.ndarray:
         campaign_obs = np.concatenate(
             [
@@ -8665,6 +11553,13 @@ class CampaignEnv(gym.Env):
                 self._build_legions_territory_grid_obs(),
                 self._build_ruin_grid_obs(),
                 self._build_objective_city_grid_obs(),
+                self._build_merchant_site_grid_obs(),
+                self._build_current_merchant_stock_grid_obs(),
+                self._build_spell_shop_site_grid_obs(),
+                self._build_current_spell_shop_stock_grid_obs(),
+                self._build_mercenary_site_grid_obs(),
+                self._build_current_mercenary_roster_grid_obs(),
+                self._build_trainer_grid_obs(),
             ]
         )
         return campaign_obs.astype(np.float32, copy=False)
@@ -8716,6 +11611,7 @@ class CampaignEnv(gym.Env):
         mask = np.zeros(self.action_space.n, dtype=bool)
 
         if self.mode == self.MODE_GRID:
+            self._ensure_inventory_cache()
             # В grid режиме движение доступно только при moves > 0.
             # REST (8) доступен при ранении или когда очки перемещения закончились.
             grid_mask = self.grid_env.compute_action_mask()
@@ -8748,6 +11644,21 @@ class CampaignEnv(gym.Env):
                         and float(self.gold or 0.0) >= item_price
                         and self._merchant_site_for_item(
                             item_name,
+                            position=self.grid_env.agent_pos,
+                        )
+                        is not None
+                    )
+            if self._spell_shop_sites_at_position(self.grid_env.agent_pos):
+                for idx, spell_data in enumerate(self.SPELL_SHOP_BUY_SPELLS):
+                    spell_name = str(spell_data.get("name", "") or "")
+                    spell_id = str(spell_data.get("spell_id", "") or "")
+                    spell_price = float(spell_data.get("price", 0.0) or 0.0)
+                    mask[self.GRID_SPELL_SHOP_BUY_ACTION_START + idx] = (
+                        bool(spell_name)
+                        and float(self.gold or 0.0) >= spell_price
+                        and not self._spell_shop_spell_owned(spell_id)
+                        and self._spell_shop_site_for_spell(
+                            spell_name,
                             position=self.grid_env.agent_pos,
                         )
                         is not None
@@ -8804,6 +11715,15 @@ class CampaignEnv(gym.Env):
                 mask[self.GRID_HIRE_ACTION_START + idx] = self._can_hire_faction_unit_option(
                     self._hire_option(idx)
                 )
+            for idx in range(len(self.active_mercenary_hire_options)):
+                mask[self.GRID_MERCENARY_HIRE_ACTION_START + idx] = (
+                    self._can_hire_mercenary_unit_option(self._mercenary_option(idx))
+                )
+            if self._trainer_sites_at_position(self.grid_env.agent_pos):
+                for idx, pos in enumerate(self.TRAINER_POSITIONS):
+                    mask[self.GRID_TRAINER_ACTION_START + idx] = self._can_train_unit_position(
+                        pos
+                    )
 
             # Постройки: доступны при достаточном золоте и если не blocked/built
             alredybuilt_flag = self.active_buildings.get("alredybuilt", 0)
@@ -8815,11 +11735,7 @@ class CampaignEnv(gym.Env):
                 building = self.active_buildings.get(build_key)
                 if not isinstance(building, dict):
                     continue
-                price_raw = building.get("gold", 0)
-                try:
-                    price = float(price_raw)
-                except (TypeError, ValueError):
-                    price = 0.0
+                price = self._get_building_gold_cost(building)
                 built_flag = building.get("Build", building.get("built", 0))
                 is_built = int(built_flag or 0) == 1
                 blocked_flag = building.get("blocked", 0)
@@ -8892,6 +11808,37 @@ class CampaignEnv(gym.Env):
                     spell_key = str(current_support_specs[idx].get("id", "") or "")
                 mask[self.grid_map_support_spell_action_start + idx] = (
                     bool(spell_key) and self._can_cast_support_spell(spell_key)
+                )
+            current_spell_shop_specs = self._spell_shop_cast_spell_entries()
+            for idx in range(int(self.MAX_SPELL_SHOP_CAST_ACTIONS)):
+                spell_key = ""
+                if idx < len(current_spell_shop_specs):
+                    spell_key = str(current_spell_shop_specs[idx].get("spell_id", "") or "")
+                mask[self.grid_spell_shop_cast_action_start + idx] = (
+                    bool(spell_key)
+                    and self._can_cast_spell_shop_spell(
+                        spell_key,
+                        nearest_targetable_enemy=nearest_targetable_enemy,
+                        nearest_any_enemy=nearest_any_enemy,
+                    )
+                )
+            mask[self.GRID_UNLOCK_SCROLL_MAGIC_ACTION] = (
+                not bool(self.scroll_magic_unlocked)
+                and float(self.gold or 0.0) >= float(self.SCROLL_MAGE_UNLOCK_GOLD_COST)
+                and bool(self._available_scroll_spell_entries_cache)
+            )
+            current_scroll_specs = self._scroll_cast_slot_entries_cache
+            for idx in range(int(self.MAX_SCROLL_CAST_ACTIONS)):
+                scroll_entry: Dict[str, object] = {}
+                if idx < len(current_scroll_specs):
+                    scroll_entry = dict(current_scroll_specs[idx])
+                mask[self.grid_scroll_cast_action_start + idx] = (
+                    bool(scroll_entry)
+                    and self._can_cast_scroll_spell(
+                        scroll_entry,
+                        nearest_targetable_enemy=nearest_targetable_enemy,
+                        nearest_any_enemy=nearest_any_enemy,
+                    )
                 )
         else:
             # В battle режиме используем маску из BattleEnv
@@ -9194,6 +12141,30 @@ class CampaignEnv(gym.Env):
             )
         else:
             lines.append("Предметы героя: нет")
+        lines.append(
+            "Маг для свитков: "
+            + ("нанят" if self.scroll_magic_unlocked else "не нанят")
+        )
+        scroll_state = self._scroll_state_info()
+        scroll_inventory = list(scroll_state.get("scroll_inventory", []))
+        if scroll_inventory:
+            lines.append(
+                "Свитки в инвентаре: "
+                + ", ".join(
+                    f"{entry['spell_name']} x{int(entry['copies'])}"
+                    + ("" if entry.get("supported", False) else " (unsupported)")
+                    for entry in scroll_inventory
+                )
+            )
+        else:
+            lines.append("Свитки в инвентаре: нет")
+        scroll_slot_entries = self.scroll_cast_slot_entries()
+        if scroll_slot_entries:
+            lines.append("Слоты scroll-action:")
+            lines.extend(
+                f"- slot {idx}: {entry['spell_name']} x{int(entry['copies'])}"
+                for idx, entry in enumerate(scroll_slot_entries)
+            )
         equipped_labels = [
             str(item_name or "пусто") for item_name in list(self.equipped_hero_items or [])
         ]
@@ -9243,6 +12214,7 @@ class CampaignEnv(gym.Env):
     def get_state_summary(self) -> Dict:
         """Возвращает сводку текущего состояния."""
         self._sync_equipped_artifact_items()
+        scroll_state = self._scroll_state_info()
         return {
             "mode": "grid" if self.mode == self.MODE_GRID else "battle",
             "agent_pos": self.grid_env.agent_pos,
@@ -9269,6 +12241,11 @@ class CampaignEnv(gym.Env):
             "spells_total": len(self.spell_keys),
             "spell_learning_locked": bool(self.spell_learning_locked),
             "magic_tower_built": bool(self._has_magic_tower_built()),
+            "scroll_magic_unlocked": bool(self.scroll_magic_unlocked),
+            "scroll_inventory": list(scroll_state.get("scroll_inventory", [])),
+            "scroll_cast_slots": list(scroll_state.get("scroll_cast_slots", [])),
+            "supported_scroll_types_count": int(scroll_state.get("supported_scroll_types_count", 0) or 0),
+            "total_scroll_count": int(scroll_state.get("total_scroll_count", 0) or 0),
             "extra_heal_bottles": int(self.extra_heal_bottles or 0),
             "extra_healing_bottles": int(self.extra_healing_bottles or 0),
             "extra_revive_bottles": int(self.extra_revive_bottles or 0),
@@ -9280,6 +12257,16 @@ class CampaignEnv(gym.Env):
                 site_name: self._merchant_stock_snapshot(site_name)
                 for site_name in self.merchant_stocks.keys()
             },
+            "spell_shop_stocks": {
+                site_name: self._spell_shop_stock_snapshot(site_name)
+                for site_name in self.spell_shop_stocks.keys()
+            },
+            "spell_shop_sites_in_range": list(self._spell_shop_sites_at_position()),
+            "mercenary_stocks": {
+                site_name: self._mercenary_stock_snapshot(site_name)
+                for site_name in self.mercenary_site_rosters.keys()
+            },
+            "trainer_sites_in_range": list(self._trainer_sites_at_position()),
             **self._mana_state_info(),
             "chests_remaining": [
                 {"pos": pos, "items": list(item_names)}

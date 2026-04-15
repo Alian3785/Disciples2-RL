@@ -109,6 +109,9 @@ class GridWorldEnv(gym.Env):
         self.current_enemy_encounter: Optional[int] = None
         self.chest_positions: Set[Tuple[int, int]] = set()
         self.merchant_positions: Set[Tuple[int, int]] = set()
+        self.spell_shop_positions: Set[Tuple[int, int]] = set()
+        self.mercenary_positions: Set[Tuple[int, int]] = set()
+        self.trainer_positions: Set[Tuple[int, int]] = set()
         self.mana_sources: Dict[Tuple[int, int], Dict[str, object]] = {}
         self.step_count = 0
 
@@ -285,6 +288,18 @@ class GridWorldEnv(gym.Env):
             self._clamp_to_grid(pos)
             for pos in getattr(self, "merchant_positions", set()) or set()
         }
+        spell_shop_positions = {
+            self._clamp_to_grid(pos)
+            for pos in getattr(self, "spell_shop_positions", set()) or set()
+        }
+        mercenary_positions = {
+            self._clamp_to_grid(pos)
+            for pos in getattr(self, "mercenary_positions", set()) or set()
+        }
+        trainer_positions = {
+            self._clamp_to_grid(pos)
+            for pos in getattr(self, "trainer_positions", set()) or set()
+        }
         mana_sources = {
             self._clamp_to_grid(pos): dict(meta or {})
             for pos, meta in (getattr(self, "mana_sources", {}) or {}).items()
@@ -302,6 +317,12 @@ class GridWorldEnv(gym.Env):
                     row += "# "
                 elif pos in merchant_positions:
                     row += "M "
+                elif pos in spell_shop_positions:
+                    row += "S "
+                elif pos in mercenary_positions:
+                    row += "H "
+                elif pos in trainer_positions:
+                    row += "R "
                 elif pos in chest_positions:
                     row += "T "
                 elif pos in mana_sources:
@@ -323,6 +344,9 @@ class GridWorldEnv(gym.Env):
         lines.append(f"Agent: {self.agent_pos}")
         lines.append(f"Enemies alive: {[k for k, v in self.enemies_alive.items() if v]}")
         lines.append(f"Merchants: {sorted(merchant_positions)}")
+        lines.append(f"Spell shops: {sorted(spell_shop_positions)}")
+        lines.append(f"Mercenary camps: {sorted(mercenary_positions)}")
+        lines.append(f"Trainers: {sorted(trainer_positions)}")
         lines.append(f"Chests: {sorted(chest_positions)}")
         if mana_sources:
             mana_summary = ", ".join(

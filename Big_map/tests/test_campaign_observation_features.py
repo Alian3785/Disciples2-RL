@@ -50,6 +50,206 @@ def test_campaign_grid_obs_includes_campaign_state_features():
     assert np.array_equal(updated, baseline) is False
 
 
+def test_campaign_obs_includes_mercenary_site_positions_and_stock_state():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    site_obs = env._build_mercenary_site_grid_obs()
+    grid_scale = max(1, env.grid_env.grid_size - 1)
+    feature_count = env.grid_mercenary_site_features_per_entry
+
+    assert site_obs.shape == (env.grid_mercenary_site_obs_size,)
+    assert env.grid_mercenary_site_obs_size == len(env.grid_mercenary_site_names) * feature_count
+
+    barbarian_site_index = env.grid_mercenary_site_names.index("Лагерь северных варваров")
+    offset = barbarian_site_index * feature_count
+    barbarian_anchor = env.mercenary_site_anchors["Лагерь северных варваров"]
+
+    assert site_obs[offset] == pytest.approx(barbarian_anchor[0] / grid_scale)
+    assert site_obs[offset + 1] == pytest.approx(barbarian_anchor[1] / grid_scale)
+    assert site_obs[offset + 2] == pytest.approx(0.0)
+    assert site_obs[offset + 3] == pytest.approx(1.0)
+    assert site_obs[offset + 4] == pytest.approx(1.0)
+
+    env.mercenary_site_rosters["Лагерь северных варваров"][0]["stock"] = 0
+    depleted_site_obs = env._build_mercenary_site_grid_obs()
+    assert depleted_site_obs[offset + 3] == pytest.approx(0.0)
+    assert depleted_site_obs[offset + 4] == pytest.approx(0.0)
+
+
+def test_campaign_obs_includes_current_mercenary_roster_and_hireability():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+    env.grid_env.agent_pos = (18, 2)
+
+    hero = next(unit for unit in env.blue_team_state if int(unit.get("position", -1)) == 8)
+    hero["Level"] = 3
+    env.gold = 999.0
+
+    for position in (7, 10):
+        unit = next(u for u in env.blue_team_state if int(u.get("position", -1)) == position)
+        unit["name"] = "пусто"
+        unit["hp"] = 0.0
+        unit["health"] = 0.0
+        unit["maxhp"] = 0.0
+        unit["max_health"] = 0.0
+
+    roster_obs = env._build_current_mercenary_roster_grid_obs()
+    feature_count = env.grid_mercenary_slot_features_per_entry
+
+    assert roster_obs.shape == (env.grid_mercenary_roster_obs_size,)
+    assert env.grid_mercenary_slot_count == 2
+
+    assert roster_obs[0] == pytest.approx(1.0)
+    assert roster_obs[1] == pytest.approx(1.0)
+    assert roster_obs[2] == pytest.approx(1.0)
+    assert roster_obs[3] == pytest.approx(0.0)
+    assert roster_obs[7] == pytest.approx(1.0)
+
+    second_offset = feature_count
+    assert roster_obs[second_offset] == pytest.approx(1.0)
+    assert roster_obs[second_offset + 1] == pytest.approx(1.0)
+    assert roster_obs[second_offset + 2] == pytest.approx(0.0)
+    assert roster_obs[second_offset + 3] == pytest.approx(1.0)
+    assert roster_obs[second_offset + 7] == pytest.approx(1.0)
+
+    env.grid_env.agent_pos = (0, 0)
+    assert np.allclose(env._build_current_mercenary_roster_grid_obs(), 0.0)
+
+
+def test_campaign_obs_includes_merchant_site_positions_and_stock_state():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    site_obs = env._build_merchant_site_grid_obs()
+    grid_scale = max(1, env.grid_env.grid_size - 1)
+    feature_count = env.grid_merchant_site_features_per_entry
+
+    assert site_obs.shape == (env.grid_merchant_site_obs_size,)
+    assert env.grid_merchant_site_obs_size == len(env.grid_merchant_site_names) * feature_count
+
+    stocked_site_name = env.grid_merchant_site_names[0]
+    empty_site_name = env.grid_merchant_site_names[1]
+
+    stocked_anchor = env.merchant_site_anchors[stocked_site_name]
+    empty_anchor = env.merchant_site_anchors[empty_site_name]
+
+    assert site_obs[0] == pytest.approx(stocked_anchor[0] / grid_scale)
+    assert site_obs[1] == pytest.approx(stocked_anchor[1] / grid_scale)
+    assert site_obs[2] == pytest.approx(0.0)
+    assert site_obs[3] == pytest.approx(1.0)
+    assert site_obs[4] == pytest.approx(1.0)
+
+    second_offset = feature_count
+    assert site_obs[second_offset] == pytest.approx(empty_anchor[0] / grid_scale)
+    assert site_obs[second_offset + 1] == pytest.approx(empty_anchor[1] / grid_scale)
+    assert site_obs[second_offset + 2] == pytest.approx(0.0)
+    assert site_obs[second_offset + 3] == pytest.approx(0.0)
+    assert site_obs[second_offset + 4] == pytest.approx(0.0)
+
+    for item_name in env.grid_merchant_item_names:
+        env.merchant_stocks[stocked_site_name][item_name] = 0
+    depleted_site_obs = env._build_merchant_site_grid_obs()
+    assert depleted_site_obs[3] == pytest.approx(0.0)
+    assert depleted_site_obs[4] == pytest.approx(0.0)
+
+
+def test_campaign_obs_includes_current_merchant_stock_ratios():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    stocked_site_name = env.grid_merchant_site_names[0]
+    empty_site_name = env.grid_merchant_site_names[1]
+    stocked_tile = tuple(env.merchant_site_interaction_tiles[stocked_site_name][0])
+    empty_tile = tuple(env.merchant_site_interaction_tiles[empty_site_name][0])
+
+    env.grid_env.agent_pos = stocked_tile
+    stock_obs = env._build_current_merchant_stock_grid_obs()
+    assert stock_obs.shape == (env.grid_current_merchant_stock_obs_size,)
+    assert env.grid_current_merchant_stock_obs_size == len(env.grid_merchant_item_names)
+    assert np.allclose(stock_obs, 1.0)
+
+    first_item_name = env.grid_merchant_item_names[0]
+    env.merchant_stocks[stocked_site_name][first_item_name] = 5
+    updated_stock_obs = env._build_current_merchant_stock_grid_obs()
+    assert updated_stock_obs[0] == pytest.approx(0.5)
+
+    env.grid_env.agent_pos = empty_tile
+    empty_stock_obs = env._build_current_merchant_stock_grid_obs()
+    assert np.allclose(empty_stock_obs, 0.0)
+
+
+def test_campaign_obs_includes_compact_trainer_features():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+    env.gold = 100.0
+
+    for position in env.TRAINER_POSITIONS:
+        unit = next(u for u in env.blue_team_state if int(u.get("position", -1)) == int(position))
+        if int(position) == 7:
+            unit["hero"] = 0
+            unit["capital"] = env.Realcapital
+            unit["is_neutral_unit"] = False
+            unit["Level"] = 1
+            unit["exp_current"] = 10
+            unit["exp_required"] = 20
+            unit["next_level_exp"] = 0
+            unit["hp"] = max(1.0, float(unit.get("hp", unit.get("health", 1.0)) or 1.0))
+            unit["health"] = unit["hp"]
+            unit["maxhp"] = max(
+                float(unit.get("maxhp", unit.get("max_health", unit["hp"])) or unit["hp"]),
+                unit["hp"],
+            )
+            unit["max_health"] = unit["maxhp"]
+        else:
+            unit["hp"] = 0.0
+            unit["health"] = 0.0
+
+    trainer_obs = env._build_trainer_grid_obs()
+
+    assert trainer_obs.shape == (env.grid_trainer_obs_size,)
+    assert env.grid_trainer_obs_size == 5
+
+    current_pos = tuple(int(coord) for coord in tuple(env.grid_env.agent_pos)[:2])
+    nearest_tile = min(
+        env.trainer_interaction_tiles,
+        key=lambda tile: (
+            abs(int(tile[0]) - int(current_pos[0])) + abs(int(tile[1]) - int(current_pos[1])),
+            int(tile[1]),
+            int(tile[0]),
+        ),
+    )
+    grid_scale = max(1, env.grid_env.grid_size - 1)
+    expected_dx = np.clip(
+        ((int(nearest_tile[0]) - int(current_pos[0])) / grid_scale + 1.0) * 0.5,
+        0.0,
+        1.0,
+    )
+    expected_dy = np.clip(
+        ((int(nearest_tile[1]) - int(current_pos[1])) / grid_scale + 1.0) * 0.5,
+        0.0,
+        1.0,
+    )
+
+    assert trainer_obs[0] == pytest.approx(expected_dx)
+    assert trainer_obs[1] == pytest.approx(expected_dy)
+    assert trainer_obs[2] == pytest.approx(0.0)
+    assert trainer_obs[3] == pytest.approx(1.0 / len(env.TRAINER_POSITIONS))
+    assert trainer_obs[4] == pytest.approx(
+        env._normalize_saturating_count(
+            9,
+            half_point=float(env.grid_trainer_total_affordable_xp_half_point),
+        )
+    )
+
+    env.grid_env.agent_pos = (41, 31)
+    onsite_obs = env._build_trainer_grid_obs()
+    assert onsite_obs[2] == pytest.approx(1.0)
+
+    campaign_obs = env._build_campaign_grid_obs()
+    assert np.allclose(campaign_obs[-env.grid_trainer_obs_size :], onsite_obs)
+
+
 def test_campaign_enemy_grid_obs_uses_one_hot_type_encoding():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
@@ -97,6 +297,47 @@ def test_campaign_economy_uses_higher_turn_income_and_scaled_building_costs():
     assert env.active_buildings["lod_d2_b004"]["gold"] == pytest.approx(1500.0)
     assert env.active_buildings["lod_d2_b020"]["gold"] == pytest.approx(4500.0)
     assert env.grid_max_build_price == pytest.approx(4500.0)
+
+
+@pytest.mark.parametrize("realcapital", [1, 2, 3, 4, 5])
+def test_typeoflord_three_halves_building_costs_for_all_capitals(realcapital: int):
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=realcapital)
+    env.reset(seed=123)
+    env.typeoflord = 3
+    env.Typeoflord = 3
+
+    effective_costs = {}
+    for build_key in env.building_keys:
+        building = env.active_buildings.get(build_key)
+        assert isinstance(building, dict)
+        raw_cost = float(building.get("gold", 0.0) or 0.0)
+        effective_costs[build_key] = env._get_building_gold_cost(building)
+        assert effective_costs[build_key] == pytest.approx(raw_cost * 0.5)
+
+    first_build_key = env.building_keys[0]
+    first_action = env.GRID_BUILD_ACTION_START + env.building_keys.index(first_build_key)
+    first_cost = effective_costs[first_build_key]
+
+    env.gold = max(0.0, float(first_cost) - 1.0)
+    assert bool(env.compute_action_mask()[first_action]) is False
+
+    env.gold = float(first_cost)
+    assert bool(env.compute_action_mask()[first_action]) is True
+
+    _, reward, terminated, truncated, info = env.step(first_action)
+
+    assert terminated is False
+    assert truncated is False
+    assert reward == pytest.approx(0.0)
+    assert info["build_action"] is True
+    assert info["build_key"] == first_build_key
+    assert info["built"] is True
+    assert info["build_cost"] == pytest.approx(first_cost)
+    assert env.gold == pytest.approx(0.0)
+
+    building_obs = env._build_building_grid_obs()
+    expected_max_cost = max(effective_costs.values())
+    assert building_obs[2] == pytest.approx(first_cost / expected_max_cost)
 
 
 def test_legions_captured_gold_mines_add_bonus_gold_each_turn():
@@ -837,3 +1078,18 @@ def test_visualize_campaign_formats_spell_action_label():
     )
 
     assert label == "Spell: Fireball -> E17"
+
+
+def test_visualize_campaign_formats_mercenary_hire_action_label():
+    from visualize_campaign import _format_grid_action_label
+
+    label = _format_grid_action_label(
+        47,
+        {
+            "mercenary_hire_action": True,
+            "mercenary_hire_unit_name": "Варвар",
+            "mercenary_hire_site": "Лагерь северных варваров",
+        },
+    )
+
+    assert label == "Merc: Варвар (Лагерь северных варваров)"
