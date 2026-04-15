@@ -91,6 +91,33 @@ def _format_grid_action_label(action: int, info: dict | None = None) -> str:
         if target_enemy_id is not None:
             target_suffix = f" -> E{int(target_enemy_id)}"
         return f"Spell: {spell_description}{target_suffix}"
+    if info.get("spell_shop_buy_action"):
+        spell_name = str(info.get("spell_shop_buy_spell") or "spell").strip()
+        site_name = str(info.get("spell_shop_buy_site") or "").strip()
+        if site_name:
+            return f"Spell shop: {spell_name} ({site_name})"
+        return f"Spell shop: {spell_name}"
+    if info.get("mercenary_hire_action"):
+        unit_name = str(
+            info.get("mercenary_hire_unit_name")
+            or info.get("hired_unit_name")
+            or info.get("hire_unit_name")
+            or "unit"
+        ).strip()
+        site_name = str(info.get("mercenary_hire_site") or "").strip()
+        if site_name:
+            return f"Merc: {unit_name} ({site_name})"
+        return f"Merc: {unit_name}"
+    if info.get("trainer_action"):
+        unit_name = str(info.get("trainer_unit_name") or "unit").strip()
+        xp_gained = int(info.get("trainer_xp_gained", 0) or 0)
+        site_name = str(info.get("trainer_site") or "").strip()
+        label = f"Train: {unit_name}"
+        if xp_gained > 0:
+            label += f" +{xp_gained} XP"
+        if site_name:
+            label += f" ({site_name})"
+        return label
 
     try:
         action_idx = int(action)
@@ -833,6 +860,18 @@ class CampaignVisualizer:
     COLOR_MERCHANT_SITE_EDGE = (0.88, 0.15, 0.08, 0.95)
     COLOR_MERCHANT_ANCHOR_FILL = (0.88, 0.10, 0.08, 0.34)
     COLOR_MERCHANT_ANCHOR_EDGE = (0.82, 0.05, 0.04, 0.98)
+    COLOR_SPELL_SHOP_FILL = (0.14, 0.50, 0.86, 0.12)
+    COLOR_SPELL_SHOP_EDGE = (0.06, 0.28, 0.58, 0.42)
+    COLOR_SPELL_SHOP_ANCHOR_FILL = (0.08, 0.36, 0.72, 0.36)
+    COLOR_SPELL_SHOP_ANCHOR_EDGE = (0.04, 0.20, 0.50, 0.98)
+    COLOR_MERCENARY_FILL = (0.52, 0.18, 0.78, 0.12)
+    COLOR_MERCENARY_EDGE = (0.34, 0.08, 0.56, 0.42)
+    COLOR_MERCENARY_ANCHOR_FILL = (0.42, 0.10, 0.66, 0.36)
+    COLOR_MERCENARY_ANCHOR_EDGE = (0.27, 0.04, 0.46, 0.98)
+    COLOR_TRAINER_FILL = (0.96, 0.52, 0.12, 0.12)
+    COLOR_TRAINER_EDGE = (0.70, 0.30, 0.02, 0.42)
+    COLOR_TRAINER_ANCHOR_FILL = (0.92, 0.42, 0.06, 0.34)
+    COLOR_TRAINER_ANCHOR_EDGE = (0.74, 0.23, 0.02, 0.98)
     COLOR_CAPITAL_FILL = (0.08, 0.30, 0.82, 0.18)
     COLOR_CAPITAL_EDGE = (0.05, 0.20, 0.62, 0.98)
     COLOR_VILLAGE_FILL = (0.00, 0.72, 0.78, 0.18)
@@ -1361,6 +1400,12 @@ class CampaignVisualizer:
         obstacle_tiles: list | tuple | set | None = None,
         merchant_positions: list | tuple | set | dict | None = None,
         merchant_site_anchors: list | tuple | set | dict | None = None,
+        spell_shop_positions: list | tuple | set | dict | None = None,
+        spell_shop_site_anchors: list | tuple | set | dict | None = None,
+        mercenary_positions: list | tuple | set | dict | None = None,
+        mercenary_site_anchors: list | tuple | set | dict | None = None,
+        trainer_positions: list | tuple | set | dict | None = None,
+        trainer_site_anchors: list | tuple | set | dict | None = None,
         chest_positions: list | tuple | set | dict | None = None,
         mana_sources: dict | None = None,
         mana_totals: dict | None = None,
@@ -1529,6 +1574,114 @@ class CampaignVisualizer:
                     zorder=2.82,
                 )
 
+        if spell_shop_site_anchors:
+            raw_spell_shop_anchors = (
+                spell_shop_site_anchors.values()
+                if isinstance(spell_shop_site_anchors, dict)
+                else spell_shop_site_anchors
+            )
+            for anchor in raw_spell_shop_anchors:
+                try:
+                    anchor_x, anchor_y = int(anchor[0]), int(anchor[1])
+                except Exception:
+                    continue
+                marker_x = anchor_x + 2
+                marker_y = anchor_y + 2
+                anchor_draw_x, anchor_draw_y = self._display_tile(marker_x, marker_y)
+                spell_shop_anchor_rect = patches.Rectangle(
+                    (anchor_draw_x - 0.45, anchor_draw_y - 0.45),
+                    0.9,
+                    0.9,
+                    facecolor=self.COLOR_SPELL_SHOP_ANCHOR_FILL,
+                    edgecolor=self.COLOR_SPELL_SHOP_ANCHOR_EDGE,
+                    linewidth=2.2,
+                    zorder=2.745,
+                )
+                self.ax.add_patch(spell_shop_anchor_rect)
+                self.ax.text(
+                    anchor_draw_x,
+                    anchor_draw_y,
+                    "S",
+                    ha="center",
+                    va="center",
+                    fontsize=10,
+                    fontweight="bold",
+                    color="white",
+                    zorder=2.825,
+                )
+
+        if mercenary_site_anchors:
+            raw_mercenary_anchors = (
+                mercenary_site_anchors.values()
+                if isinstance(mercenary_site_anchors, dict)
+                else mercenary_site_anchors
+            )
+            for anchor in raw_mercenary_anchors:
+                try:
+                    anchor_x, anchor_y = int(anchor[0]), int(anchor[1])
+                except Exception:
+                    continue
+                marker_x = anchor_x + 2
+                marker_y = anchor_y + 2
+                anchor_draw_x, anchor_draw_y = self._display_tile(marker_x, marker_y)
+                mercenary_anchor_rect = patches.Rectangle(
+                    (anchor_draw_x - 0.45, anchor_draw_y - 0.45),
+                    0.9,
+                    0.9,
+                    facecolor=self.COLOR_MERCENARY_ANCHOR_FILL,
+                    edgecolor=self.COLOR_MERCENARY_ANCHOR_EDGE,
+                    linewidth=2.2,
+                    zorder=2.75,
+                )
+                self.ax.add_patch(mercenary_anchor_rect)
+                self.ax.text(
+                    anchor_draw_x,
+                    anchor_draw_y,
+                    "H",
+                    ha="center",
+                    va="center",
+                    fontsize=10,
+                    fontweight="bold",
+                    color="white",
+                    zorder=2.83,
+                )
+
+        if trainer_site_anchors:
+            raw_trainer_anchors = (
+                trainer_site_anchors.values()
+                if isinstance(trainer_site_anchors, dict)
+                else trainer_site_anchors
+            )
+            for anchor in raw_trainer_anchors:
+                try:
+                    anchor_x, anchor_y = int(anchor[0]), int(anchor[1])
+                except Exception:
+                    continue
+                marker_x = anchor_x + 2
+                marker_y = anchor_y + 2
+                anchor_draw_x, anchor_draw_y = self._display_tile(marker_x, marker_y)
+                trainer_anchor_rect = patches.Rectangle(
+                    (anchor_draw_x - 0.45, anchor_draw_y - 0.45),
+                    0.9,
+                    0.9,
+                    facecolor=self.COLOR_TRAINER_ANCHOR_FILL,
+                    edgecolor=self.COLOR_TRAINER_ANCHOR_EDGE,
+                    linewidth=2.2,
+                    zorder=2.76,
+                )
+                self.ax.add_patch(trainer_anchor_rect)
+                self.ax.text(
+                    anchor_draw_x,
+                    anchor_draw_y,
+                    "R",
+                    ha="center",
+                    va="center",
+                    fontsize=10,
+                    fontweight="bold",
+                    color="white",
+                    zorder=2.84,
+                )
+
         # Путь агента
         if merchant_positions:
             raw_merchant_tiles = (
@@ -1551,6 +1704,72 @@ class CampaignVisualizer:
                     zorder=2.65,
                 )
                 self.ax.add_patch(merchant_rect)
+
+        if spell_shop_positions:
+            raw_spell_shop_tiles = (
+                spell_shop_positions.keys()
+                if isinstance(spell_shop_positions, dict)
+                else spell_shop_positions
+            )
+            for tile in raw_spell_shop_tiles:
+                try:
+                    sx, sy = int(tile[0]), int(tile[1])
+                except Exception:
+                    continue
+                draw_x, draw_y = self._display_tile(sx, sy)
+                spell_shop_rect = patches.Rectangle(
+                    (draw_x - 0.40, draw_y - 0.40), 0.80, 0.80,
+                    facecolor=self.COLOR_SPELL_SHOP_FILL,
+                    edgecolor=self.COLOR_SPELL_SHOP_EDGE,
+                    linewidth=1.2,
+                    linestyle="--",
+                    zorder=2.655,
+                )
+                self.ax.add_patch(spell_shop_rect)
+
+        if mercenary_positions:
+            raw_mercenary_tiles = (
+                mercenary_positions.keys()
+                if isinstance(mercenary_positions, dict)
+                else mercenary_positions
+            )
+            for tile in raw_mercenary_tiles:
+                try:
+                    mx, my = int(tile[0]), int(tile[1])
+                except Exception:
+                    continue
+                draw_x, draw_y = self._display_tile(mx, my)
+                mercenary_rect = patches.Rectangle(
+                    (draw_x - 0.40, draw_y - 0.40), 0.80, 0.80,
+                    facecolor=self.COLOR_MERCENARY_FILL,
+                    edgecolor=self.COLOR_MERCENARY_EDGE,
+                    linewidth=1.2,
+                    linestyle="--",
+                    zorder=2.66,
+                )
+                self.ax.add_patch(mercenary_rect)
+
+        if trainer_positions:
+            raw_trainer_tiles = (
+                trainer_positions.keys()
+                if isinstance(trainer_positions, dict)
+                else trainer_positions
+            )
+            for tile in raw_trainer_tiles:
+                try:
+                    tx, ty = int(tile[0]), int(tile[1])
+                except Exception:
+                    continue
+                draw_x, draw_y = self._display_tile(tx, ty)
+                trainer_rect = patches.Rectangle(
+                    (draw_x - 0.40, draw_y - 0.40), 0.80, 0.80,
+                    facecolor=self.COLOR_TRAINER_FILL,
+                    edgecolor=self.COLOR_TRAINER_EDGE,
+                    linewidth=1.2,
+                    linestyle="--",
+                    zorder=2.67,
+                )
+                self.ax.add_patch(trainer_rect)
 
         if chest_positions:
             raw_chest_tiles = (
@@ -1684,6 +1903,12 @@ class CampaignVisualizer:
             info_lines.append("Заклинания: нет")
         merchant_count = len(merchant_positions) if merchant_positions else 0
         info_lines.append(f"Merchant tiles: {merchant_count}")
+        spell_shop_count = len(spell_shop_positions) if spell_shop_positions else 0
+        info_lines.append(f"Spell shop tiles: {spell_shop_count}")
+        mercenary_count = len(mercenary_positions) if mercenary_positions else 0
+        info_lines.append(f"Mercenary tiles: {mercenary_count}")
+        trainer_count = len(trainer_positions) if trainer_positions else 0
+        info_lines.append(f"Trainer tiles: {trainer_count}")
         chest_count = len(chest_positions) if chest_positions else 0
         legions_territory_count = len(legions_territory_tiles) if legions_territory_tiles else 0
         empire_territory_count = len(empire_territory_tiles) if empire_territory_tiles else 0
@@ -2075,6 +2300,12 @@ def run_campaign_visualization(
                 obstacle_tiles=getattr(env_base.grid_env, "obstacle_positions", None),
                 merchant_positions=getattr(env_base.grid_env, "merchant_positions", None),
                 merchant_site_anchors=getattr(env_base, "merchant_site_anchors", None),
+                spell_shop_positions=getattr(env_base.grid_env, "spell_shop_positions", None),
+                spell_shop_site_anchors=getattr(env_base, "spell_shop_site_anchors", None),
+                mercenary_positions=getattr(env_base.grid_env, "mercenary_positions", None),
+                mercenary_site_anchors=getattr(env_base, "mercenary_site_anchors", None),
+                trainer_positions=getattr(env_base.grid_env, "trainer_positions", None),
+                trainer_site_anchors=getattr(env_base, "trainer_site_anchors", None),
                 mana_sources=getattr(env_base.grid_env, "mana_sources", None),
                 mana_totals=env_base._current_mana_totals(),
                 mana_income_per_turn=getattr(env_base, "mana_income_per_turn", None),
@@ -2149,6 +2380,12 @@ def run_campaign_visualization(
                     obstacle_tiles=getattr(env_base.grid_env, "obstacle_positions", None),
                     merchant_positions=getattr(env_base.grid_env, "merchant_positions", None),
                     merchant_site_anchors=getattr(env_base, "merchant_site_anchors", None),
+                    spell_shop_positions=getattr(env_base.grid_env, "spell_shop_positions", None),
+                    spell_shop_site_anchors=getattr(env_base, "spell_shop_site_anchors", None),
+                    mercenary_positions=getattr(env_base.grid_env, "mercenary_positions", None),
+                    mercenary_site_anchors=getattr(env_base, "mercenary_site_anchors", None),
+                    trainer_positions=getattr(env_base.grid_env, "trainer_positions", None),
+                    trainer_site_anchors=getattr(env_base, "trainer_site_anchors", None),
                     mana_sources=getattr(env_base.grid_env, "mana_sources", None),
                     mana_totals=env_base._current_mana_totals(),
                     mana_income_per_turn=getattr(env_base, "mana_income_per_turn", None),
@@ -2294,6 +2531,12 @@ def run_campaign_visualization(
         obstacle_tiles=getattr(env_base.grid_env, "obstacle_positions", None),
         merchant_positions=getattr(env_base.grid_env, "merchant_positions", None),
         merchant_site_anchors=getattr(env_base, "merchant_site_anchors", None),
+        spell_shop_positions=getattr(env_base.grid_env, "spell_shop_positions", None),
+        spell_shop_site_anchors=getattr(env_base, "spell_shop_site_anchors", None),
+        mercenary_positions=getattr(env_base.grid_env, "mercenary_positions", None),
+        mercenary_site_anchors=getattr(env_base, "mercenary_site_anchors", None),
+        trainer_positions=getattr(env_base.grid_env, "trainer_positions", None),
+        trainer_site_anchors=getattr(env_base, "trainer_site_anchors", None),
         mana_sources=getattr(env_base.grid_env, "mana_sources", None),
         mana_totals=env_base._current_mana_totals(),
         mana_income_per_turn=getattr(env_base, "mana_income_per_turn", None),

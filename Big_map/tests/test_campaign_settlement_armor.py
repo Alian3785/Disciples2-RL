@@ -179,11 +179,13 @@ def test_rest_on_settlement_tile_adds_percentage_bonus_regeneration():
     assert terminated is False
     assert truncated is False
     assert info.get("rest_action") is True
+    assert info.get("rest_heal_percent") == pytest.approx(0.15)
+    assert info.get("rest_heal_typeoflord_bonus_percent") == pytest.approx(0.15)
     assert info.get("rest_heal_bonus_percent") == pytest.approx(0.10)
-    assert info.get("rest_heal_total_percent") == pytest.approx(0.15)
+    assert info.get("rest_heal_total_percent") == pytest.approx(0.40)
     assert info.get("rest_heal_bonus_level") == 1
     assert info.get("rest_heal_bonus_source") == settlement_name
-    expected_hp = min(max_hp, start_hp + max_hp * 0.15)
+    expected_hp = min(max_hp, start_hp + max_hp * 0.40)
     assert float(unit.get("hp", 0) or 0.0) == pytest.approx(expected_hp)
 
 
@@ -203,11 +205,77 @@ def test_rest_on_capital_tile_adds_capital_percentage_bonus_regeneration():
     assert terminated is False
     assert truncated is False
     assert info.get("rest_action") is True
+    assert info.get("rest_heal_percent") == pytest.approx(0.15)
+    assert info.get("rest_heal_typeoflord_bonus_percent") == pytest.approx(0.15)
     assert info.get("rest_heal_bonus_percent") == pytest.approx(0.50)
-    assert info.get("rest_heal_total_percent") == pytest.approx(0.55)
+    assert info.get("rest_heal_total_percent") == pytest.approx(0.80)
     assert info.get("rest_heal_bonus_source") == "capital"
     assert info.get("rest_heal_bonus_level") == "capital"
-    expected_hp = min(max_hp, start_hp + max_hp * 0.55)
+    expected_hp = min(max_hp, start_hp + max_hp * 0.80)
+    assert float(unit.get("hp", 0) or 0.0) == pytest.approx(expected_hp)
+
+
+def test_rest_on_player_controlled_territory_tile_uses_15_percent_base_regeneration():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+    env._advance_turns(1)
+
+    territory_tile = next(
+        tile
+        for tile in env.legions_territory_tiles
+        if tuple(tile) != tuple(env.CASTLE_POS)
+    )
+    env.grid_env.agent_pos = tuple(territory_tile)
+
+    unit = next(unit for unit in env.blue_team_state if int(unit.get("position", -1)) == 7)
+    max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0.0)
+    start_hp = max(1.0, max_hp - 40.0)
+    unit["hp"] = start_hp
+    unit["health"] = start_hp
+
+    _, _, terminated, truncated, info = env.step(8)
+
+    assert terminated is False
+    assert truncated is False
+    assert info.get("rest_action") is True
+    assert info.get("rest_heal_percent") == pytest.approx(0.15)
+    assert info.get("rest_heal_typeoflord_bonus_percent") == pytest.approx(0.15)
+    assert info.get("rest_heal_bonus_percent") == pytest.approx(0.0)
+    assert info.get("rest_heal_total_percent") == pytest.approx(0.30)
+    expected_hp = min(max_hp, start_hp + max_hp * 0.30)
+    assert float(unit.get("hp", 0) or 0.0) == pytest.approx(expected_hp)
+
+
+def test_rest_typeoflord_bonus_is_not_applied_for_non_warrior_lords():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+    env.typeoflord = 2
+    env.Typeoflord = 2
+    env._advance_turns(1)
+
+    territory_tile = next(
+        tile
+        for tile in env.legions_territory_tiles
+        if tuple(tile) != tuple(env.CASTLE_POS)
+    )
+    env.grid_env.agent_pos = tuple(territory_tile)
+
+    unit = next(unit for unit in env.blue_team_state if int(unit.get("position", -1)) == 7)
+    max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0.0)
+    start_hp = max(1.0, max_hp - 40.0)
+    unit["hp"] = start_hp
+    unit["health"] = start_hp
+
+    _, _, terminated, truncated, info = env.step(8)
+
+    assert terminated is False
+    assert truncated is False
+    assert info.get("rest_action") is True
+    assert info.get("rest_heal_percent") == pytest.approx(0.15)
+    assert info.get("rest_heal_typeoflord_bonus_percent") == pytest.approx(0.0)
+    assert info.get("rest_heal_bonus_percent") == pytest.approx(0.0)
+    assert info.get("rest_heal_total_percent") == pytest.approx(0.15)
+    expected_hp = min(max_hp, start_hp + max_hp * 0.15)
     assert float(unit.get("hp", 0) or 0.0) == pytest.approx(expected_hp)
 
 
@@ -288,9 +356,11 @@ def test_settlement_upgrade_action_advances_levels_costs_and_updates_city_bonuse
     unit["health"] = start_hp
 
     _, _, _, _, rest_info = env.step(8)
-    expected_hp = min(max_hp, start_hp + max_hp * 0.35)
+    expected_hp = min(max_hp, start_hp + max_hp * 0.60)
+    assert rest_info.get("rest_heal_percent") == pytest.approx(0.15)
+    assert rest_info.get("rest_heal_typeoflord_bonus_percent") == pytest.approx(0.15)
     assert rest_info.get("rest_heal_bonus_percent") == pytest.approx(0.30)
-    assert rest_info.get("rest_heal_total_percent") == pytest.approx(0.35)
+    assert rest_info.get("rest_heal_total_percent") == pytest.approx(0.60)
     assert float(unit.get("hp", 0) or 0.0) == pytest.approx(expected_hp)
 
 

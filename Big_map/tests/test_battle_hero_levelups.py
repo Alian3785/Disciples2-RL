@@ -67,6 +67,32 @@ def test_hero_levelup_to_third_level_sets_needaunit_flag():
     assert duke["needaunit"] == 1
 
 
+def test_hero_levelup_to_fourth_level_grants_endurance_health_bonus():
+    env = BattleEnv(log_enabled=False)
+    duke = deepcopy(next(u for u in UNITS_BLUE if int(u.get("position", -1)) == 8))
+    duke["exp_current"] = 1149
+    duke["exp_required"] = 1150
+    duke["Level"] = 3
+    duke["next_level_exp"] = 500
+    duke["health"] = 200
+    duke["max_health"] = 200
+    duke["exp_kill"] = 73
+    duke["accuracy"] = 82
+    duke["needaunit"] = 0
+
+    env.combined = [duke, _make_enemy(exp_kill=1)]
+    env._apply_battle_exp("red")
+
+    assert duke["Level"] == 4
+    assert duke["exp_current"] == 0
+    assert duke["exp_required"] == 1650
+    assert duke["health"] == 264
+    assert duke["max_health"] == 264
+    assert duke["exp_kill"] == 80
+    assert duke["accuracy"] == 83
+    assert duke["needaunit"] == 0
+
+
 def test_regular_unit_without_next_level_exp_keeps_transform_upgrade_flow():
     env = BattleEnv(log_enabled=False)
     fighter = deepcopy(next(u for u in UNITS_BLUE if int(u.get("position", -1)) == 7))
@@ -148,5 +174,26 @@ def test_campaign_travel_hero_visual_info_shows_leadership_on_level_three():
         "abilities": [
             "Нахождение пути (+20% шагов)",
             "Лидерство",
+        ],
+    }
+
+
+def test_campaign_travel_hero_visual_info_shows_endurance_on_level_four():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    duke = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
+    duke["Level"] = 4
+    duke["needaunit"] = 0
+
+    env._sync_moves_per_turn_with_hero(units=env.blue_team_state, grant_delta=True)
+
+    assert env.get_travel_hero_visual_info() == {
+        "name": duke["name"],
+        "level": 4,
+        "abilities": [
+            "Нахождение пути (+20% шагов)",
+            "Лидерство",
+            "Выносливость",
         ],
     }
