@@ -376,7 +376,10 @@ def _build_next_level_exp_by_name(unit_data: List[Dict]) -> Dict[str, int]:
 NEXT_LEVEL_EXP_BY_NAME = _build_next_level_exp_by_name(UNIT_DATA)
 HERO_LEADERSHIP_LEVEL = 3
 HERO_ENDURANCE_LEVEL = 4
+HERO_STRENGTH_LEVEL = 5
+HERO_SECOND_LEADERSHIP_LEVEL = 6
 HERO_ENDURANCE_HEALTH_MULTIPLIER = 1.20
+HERO_STRENGTH_DAMAGE_MULTIPLIER = 1.25
 
 
 def _resolve_unit_next_level_exp(unit: Dict) -> int:
@@ -458,7 +461,10 @@ def _apply_hero_levelup_bonuses(unit: Dict) -> None:
     current_exp_kill = float(unit.get("exp_kill", 0) or 0)
     unit["exp_kill"] = max(0, _to_int_or_default(current_exp_kill * 1.1, default=0))
     unit["needaunit"] = _resolve_unit_needaunit(unit)
-    if _is_travel_hero_unit(unit) and _resolve_unit_level(unit) == HERO_LEADERSHIP_LEVEL:
+    if _is_travel_hero_unit(unit) and _resolve_unit_level(unit) in (
+        HERO_LEADERSHIP_LEVEL,
+        HERO_SECOND_LEADERSHIP_LEVEL,
+    ):
         unit["needaunit"] = 1
     if _is_travel_hero_unit(unit) and _resolve_unit_level(unit) == HERO_ENDURANCE_LEVEL:
         current_health = float(unit.get("health", unit.get("hp", 0)) or 0)
@@ -481,6 +487,14 @@ def _apply_hero_levelup_bonuses(unit: Dict) -> None:
             unit["hp"] = unit["health"]
         if "maxhp" in unit:
             unit["maxhp"] = unit["max_health"]
+    if _is_travel_hero_unit(unit) and _resolve_unit_level(unit) == HERO_STRENGTH_LEVEL:
+        base_damage = float(unit.get("original_damage", unit.get("damage", 0)) or 0)
+        strength_damage = max(
+            0,
+            _to_int_or_default(base_damage * HERO_STRENGTH_DAMAGE_MULTIPLIER, default=0),
+        )
+        unit["damage"] = strength_damage
+        unit["original_damage"] = strength_damage
 
 UNITS_RED = [{'name': 'Скелет рыцарь',
   'initiative': 50,

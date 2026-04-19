@@ -320,6 +320,8 @@ class CampaignEnv(gym.Env):
     HERO_PATHFINDING_LEVEL = 2
     HERO_LEADERSHIP_LEVEL = 3
     HERO_ENDURANCE_LEVEL = 4
+    HERO_STRENGTH_LEVEL = 5
+    HERO_SECOND_LEADERSHIP_LEVEL = 6
     HERO_PATHFINDING_MOVE_BONUS_PCT = 0.20
     TYPEOFLORD_TWO_SPELL_LEARNING_COST_MULTIPLIER = 0.5
     TYPEOFLORD_TWO_SAME_SPELL_CASTS_PER_TURN = 2
@@ -2105,8 +2107,23 @@ class CampaignEnv(gym.Env):
     def _hero_has_leadership(self, units: Optional[List[Dict]] = None) -> bool:
         return self._hero_level(units=units) >= int(self.HERO_LEADERSHIP_LEVEL)
 
+    def _hero_has_second_leadership(self, units: Optional[List[Dict]] = None) -> bool:
+        return self._hero_level(units=units) >= int(self.HERO_SECOND_LEADERSHIP_LEVEL)
+
+    def _hero_leadership_count(self, units: Optional[List[Dict]] = None) -> int:
+        level = self._hero_level(units=units)
+        count = 0
+        if level >= int(self.HERO_LEADERSHIP_LEVEL):
+            count += 1
+        if level >= int(self.HERO_SECOND_LEADERSHIP_LEVEL):
+            count += 1
+        return count
+
     def _hero_has_endurance(self, units: Optional[List[Dict]] = None) -> bool:
         return self._hero_level(units=units) >= int(self.HERO_ENDURANCE_LEVEL)
+
+    def _hero_has_strength(self, units: Optional[List[Dict]] = None) -> bool:
+        return self._hero_level(units=units) >= int(self.HERO_STRENGTH_LEVEL)
 
     @staticmethod
     def _is_empty_blue_unit(unit: Optional[Dict]) -> bool:
@@ -2387,10 +2404,15 @@ class CampaignEnv(gym.Env):
         abilities: List[str] = []
         if self._hero_has_pathfinding(units=[hero]):
             abilities.append("Нахождение пути (+20% шагов)")
-        if self._hero_has_leadership(units=[hero]):
+        leadership_count = self._hero_leadership_count(units=[hero])
+        if leadership_count == 1:
             abilities.append("Лидерство")
+        elif leadership_count >= 2:
+            abilities.append("Лидерство x2")
         if self._hero_has_endurance(units=[hero]):
             abilities.append("Выносливость")
+        if self._hero_has_strength(units=[hero]):
+            abilities.append("Сила (+25% основной урон)")
 
         return {
             "name": str(hero.get("name", "") or "").strip(),
