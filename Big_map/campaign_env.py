@@ -812,6 +812,23 @@ class CampaignEnv(gym.Env):
     SUPREME_ELIXIR_ITEM_NAME = "Эликсир Всевышнего"
     RING_OF_AGES_ITEM_NAME = "Кольцо веков (Артефакт)"
     RING_OF_AGES_ENGLISH_ITEM_NAME = "Ring of the Ages (Artifact)"
+    DWARVEN_BRACER_ITEM_NAME = "Dwarven Bracer (Artifact)"
+    UNHOLY_CHALICE_ARTIFACT_ITEM_NAME = "Unholy Chalice (Artifact)"
+    RING_OF_STRENGTH_ITEM_NAME = "Ring of Strength (Artifact)"
+    RUNIC_BLADE_ITEM_NAME = "Runic Blade (Artifact)"
+    MJOLNIRS_CROWN_ITEM_NAME = "Mjolnir's Crown (Artifact)"
+    BETHREZENS_CLAW_ITEM_NAME = "Bethrezen's Claw (Artifact)"
+    RUNESTONE_ARTIFACT_ITEM_NAME = "Runestone (Artifact)"
+    HOLY_CHALICE_ARTIFACT_ITEM_NAME = "Holy Chalice (Artifact)"
+    SKULL_BRACERS_ITEM_NAME = "Skull Bracers (Artifact)"
+    HORN_OF_AWARENESS_ITEM_NAME = "Horn of Awareness (Artifact)"
+    ETCHED_CIRCLET_ITEM_NAME = "Etched Circlet (Artifact)"
+    SOUL_CRYSTAL_ARTIFACT_ITEM_NAME = "Soul Crystal (Artifact)"
+    HORN_OF_INCUBUS_ARTIFACT_ITEM_NAME = "Horn of Incubus (Artifact)"
+    UNHOLY_DAGGER_ARTIFACT_ITEM_NAME = "Unholy Dagger (Artifact)"
+    THANATOS_BLADE_ARTIFACT_ITEM_NAME = "Thanatos Blade (Artifact)"
+    SKULL_OF_THANATOS_ARTIFACT_ITEM_NAME = "Skull of Thanatos (Artifact)"
+    HAGS_RING_ARTIFACT_ITEM_NAME = "Hag's Ring (Artifact)"
     ARTIFACT_EQUIP_SLOTS = 2
     ENERGY_ELIXIR_DAMAGE_MULTIPLIER = 1.50
     HASTE_ELIXIR_INITIATIVE_MULTIPLIER = 1.60
@@ -819,6 +836,18 @@ class CampaignEnv(gym.Env):
     SUPREME_ELIXIR_HEALTH_MULTIPLIER = 1.15
     RING_OF_AGES_DAMAGE_MULTIPLIER = 1.40
     RING_OF_AGES_INITIATIVE_MULTIPLIER = 1.25
+    DWARVEN_BRACER_DAMAGE_MULTIPLIER = 1.10
+    UNHOLY_CHALICE_ARTIFACT_DAMAGE_MULTIPLIER = 1.15
+    RING_OF_STRENGTH_DAMAGE_MULTIPLIER = 1.20
+    RUNIC_BLADE_DAMAGE_MULTIPLIER = 1.25
+    MJOLNIRS_CROWN_DAMAGE_MULTIPLIER = 1.35
+    BETHREZENS_CLAW_DAMAGE_MULTIPLIER = 1.40
+    BETHREZENS_CLAW_INITIATIVE_MULTIPLIER = 1.50
+    RUNESTONE_ARTIFACT_ARMOR_BONUS = 10
+    HOLY_CHALICE_ARTIFACT_ARMOR_BONUS = 15
+    SKULL_BRACERS_ARMOR_BONUS = 20
+    HORN_OF_AWARENESS_ARMOR_BONUS = 25
+    ETCHED_CIRCLET_ARMOR_BONUS = 35
     MERCHANT_BUY_ITEMS = (
         {"name": RUIN_LIFE_ELIXIR_ITEM_NAME, "price": 400.0, "stock": 10, "grant": "revive_bonus"},
         {"name": "Эликсир исцеления", "price": 150.0, "stock": 10, "grant": "small_heal_bonus"},
@@ -865,6 +894,12 @@ class CampaignEnv(gym.Env):
         SUPREME_ELIXIR_ITEM_NAME: 800,
         RING_OF_AGES_ITEM_NAME: 3750,
         RING_OF_AGES_ENGLISH_ITEM_NAME: 3750,
+        SOUL_CRYSTAL_ARTIFACT_ITEM_NAME: 2000,
+        HORN_OF_INCUBUS_ARTIFACT_ITEM_NAME: 2000,
+        UNHOLY_DAGGER_ARTIFACT_ITEM_NAME: 1500,
+        THANATOS_BLADE_ARTIFACT_ITEM_NAME: 1500,
+        SKULL_OF_THANATOS_ARTIFACT_ITEM_NAME: 3750,
+        HAGS_RING_ARTIFACT_ITEM_NAME: 2500,
     }
     AUTO_CONSUMED_CHEST_ITEMS = (
         BONUS_SMALL_HEAL_SOURCE_ITEM,
@@ -1187,6 +1222,7 @@ class CampaignEnv(gym.Env):
         self.spell_learning_locked = False
         self.heroitems: List[object] = []
         self._inventory_cache_valid: bool = False
+        self._inventory_cache_signature: Tuple[str, ...] = ()
         self._hero_item_counts_cache: Dict[str, int] = {}
         self._scroll_item_counts_cache: Dict[str, int] = {}
         self._scroll_inventory_entries_cache: Tuple[Dict[str, object], ...] = ()
@@ -1765,7 +1801,7 @@ class CampaignEnv(gym.Env):
         finalized_reward = float(reward) + float(sale_info["merchant_sale_reward"])
         finalized_info.update(sale_info)
         self._sync_equipped_hero_items()
-        self._sync_equipped_artifact_items()
+        self._refresh_campaign_artifact_effects(log=False)
 
         if "grid_reward_scaled" in finalized_info:
             try:
@@ -2599,6 +2635,7 @@ class CampaignEnv(gym.Env):
 
     def _invalidate_inventory_cache(self) -> None:
         self._inventory_cache_valid = False
+        self._inventory_cache_signature = ()
         self._hero_item_counts_cache = {}
         self._scroll_item_counts_cache = {}
         self._scroll_inventory_entries_cache = ()
@@ -2607,13 +2644,13 @@ class CampaignEnv(gym.Env):
         self._total_scroll_count_cache = 0
 
     def _ensure_inventory_cache(self) -> None:
-        if self._inventory_cache_valid:
+        current_signature = tuple(self._hero_item_name(entry) for entry in self.heroitems)
+        if self._inventory_cache_valid and current_signature == self._inventory_cache_signature:
             return
 
         hero_item_counts: Dict[str, int] = {}
         scroll_item_counts: Dict[str, int] = {}
-        for entry in self.heroitems:
-            item_name = self._hero_item_name(entry)
+        for item_name in current_signature:
             hero_item_counts[item_name] = hero_item_counts.get(item_name, 0) + 1
 
             canonical_scroll_name = self._canonical_scroll_item_name(item_name)
@@ -2653,6 +2690,7 @@ class CampaignEnv(gym.Env):
             available_entries[: int(self.MAX_SCROLL_CAST_ACTIONS)]
         )
         self._total_scroll_count_cache = int(sum(scroll_item_counts.values()))
+        self._inventory_cache_signature = current_signature
         self._inventory_cache_valid = True
 
     def is_scroll_item(self, item_name: str) -> bool:
@@ -2801,10 +2839,13 @@ class CampaignEnv(gym.Env):
     def _add_hero_item(self, item_name: str) -> Dict[str, object]:
         normalized_name = str(item_name or "")
         self._append_hero_item(normalized_name)
-        return self._auto_equip_artifact_item(normalized_name)
+        artifact_info = self._auto_equip_artifact_item(normalized_name)
+        if bool(artifact_info.get("artifact_auto_equipped")):
+            self._refresh_campaign_artifact_effects(log=True)
+        return artifact_info
 
     def _artifact_state_info(self) -> Dict[str, object]:
-        self._sync_equipped_artifact_items()
+        self._refresh_campaign_artifact_effects(log=False)
         return {
             "equipped_artifact_items": list(self.equipped_artifact_items),
             "artifact_auto_equip_next_slot": int(self.artifact_auto_equip_next_slot),
@@ -2813,15 +2854,39 @@ class CampaignEnv(gym.Env):
     @classmethod
     def _artifact_effect_definition(cls, item_name: str) -> Dict[str, object]:
         normalized_name = str(item_name or "")
-        if normalized_name in {
-            cls.RING_OF_AGES_ITEM_NAME,
-            cls.RING_OF_AGES_ENGLISH_ITEM_NAME,
-        }:
-            return {
-                "damage_multiplier": float(cls.RING_OF_AGES_DAMAGE_MULTIPLIER),
-                "initiative_multiplier": float(cls.RING_OF_AGES_INITIATIVE_MULTIPLIER),
-            }
-        return {}
+        damage_multipliers = {
+            cls.RING_OF_AGES_ITEM_NAME: cls.RING_OF_AGES_DAMAGE_MULTIPLIER,
+            cls.RING_OF_AGES_ENGLISH_ITEM_NAME: cls.RING_OF_AGES_DAMAGE_MULTIPLIER,
+            cls.DWARVEN_BRACER_ITEM_NAME: cls.DWARVEN_BRACER_DAMAGE_MULTIPLIER,
+            cls.UNHOLY_CHALICE_ARTIFACT_ITEM_NAME: (
+                cls.UNHOLY_CHALICE_ARTIFACT_DAMAGE_MULTIPLIER
+            ),
+            cls.RING_OF_STRENGTH_ITEM_NAME: cls.RING_OF_STRENGTH_DAMAGE_MULTIPLIER,
+            cls.RUNIC_BLADE_ITEM_NAME: cls.RUNIC_BLADE_DAMAGE_MULTIPLIER,
+            cls.MJOLNIRS_CROWN_ITEM_NAME: cls.MJOLNIRS_CROWN_DAMAGE_MULTIPLIER,
+            cls.BETHREZENS_CLAW_ITEM_NAME: cls.BETHREZENS_CLAW_DAMAGE_MULTIPLIER,
+        }
+        initiative_multipliers = {
+            cls.RING_OF_AGES_ITEM_NAME: cls.RING_OF_AGES_INITIATIVE_MULTIPLIER,
+            cls.RING_OF_AGES_ENGLISH_ITEM_NAME: cls.RING_OF_AGES_INITIATIVE_MULTIPLIER,
+            cls.BETHREZENS_CLAW_ITEM_NAME: cls.BETHREZENS_CLAW_INITIATIVE_MULTIPLIER,
+        }
+        armor_bonuses = {
+            cls.RUNESTONE_ARTIFACT_ITEM_NAME: cls.RUNESTONE_ARTIFACT_ARMOR_BONUS,
+            cls.HOLY_CHALICE_ARTIFACT_ITEM_NAME: cls.HOLY_CHALICE_ARTIFACT_ARMOR_BONUS,
+            cls.SKULL_BRACERS_ITEM_NAME: cls.SKULL_BRACERS_ARMOR_BONUS,
+            cls.HORN_OF_AWARENESS_ITEM_NAME: cls.HORN_OF_AWARENESS_ARMOR_BONUS,
+            cls.ETCHED_CIRCLET_ITEM_NAME: cls.ETCHED_CIRCLET_ARMOR_BONUS,
+        }
+
+        effect: Dict[str, object] = {}
+        if normalized_name in damage_multipliers:
+            effect["damage_multiplier"] = float(damage_multipliers[normalized_name])
+        if normalized_name in initiative_multipliers:
+            effect["initiative_multiplier"] = float(initiative_multipliers[normalized_name])
+        if normalized_name in armor_bonuses:
+            effect["armor_bonus"] = int(armor_bonuses[normalized_name])
+        return effect
 
     @classmethod
     def _hero_item_aliases(cls, item_name: str) -> Tuple[str, ...]:
@@ -2864,6 +2929,7 @@ class CampaignEnv(gym.Env):
                 del self.heroitems[idx]
                 self._invalidate_inventory_cache()
                 self._sync_equipped_artifact_items()
+                self._refresh_campaign_artifact_effects(log=False)
                 return True
         return False
 
@@ -3112,6 +3178,7 @@ class CampaignEnv(gym.Env):
         self.heroitems = kept_items
         self._invalidate_inventory_cache()
         self._sync_equipped_artifact_items()
+        self._refresh_campaign_artifact_effects(log=False)
         self.gold = max(0.0, float(self.gold or 0.0)) + float(total_gold)
         sale_reward = float(len(sold_items)) * float(self.reward_sell_junk_item)
         sale_info.update(
@@ -8399,7 +8466,59 @@ class CampaignEnv(gym.Env):
                 f"{sorted(buffed_resistance)} перед началом боя: {', '.join(resistance_types)}."
             )
 
-    def _apply_equipped_artifact_effects(self, blue_team: List[Dict]) -> None:
+    def _clear_equipped_artifact_effects(self, blue_team: Optional[List[Dict]]) -> None:
+        if not blue_team:
+            return
+
+        for unit in blue_team:
+            if "campaign_artifact_base_damage" in unit:
+                unit["damage"] = self._normalize_damage_value(
+                    unit.get(
+                        "campaign_artifact_base_damage",
+                        unit.get("damage", 0),
+                    )
+                )
+            if "campaign_artifact_base_initiative" in unit:
+                base_initiative = int(
+                    self._normalize_damage_value(
+                        unit.get(
+                            "campaign_artifact_base_initiative",
+                            unit.get("initiative_base", unit.get("initiative", 0)),
+                        )
+                    )
+                )
+                unit["initiative_base"] = int(base_initiative)
+                unit["initiative"] = int(base_initiative)
+            if "campaign_artifact_base_armor" in unit:
+                base_armor = self._normalize_armor_value(
+                    unit.get(
+                        "campaign_artifact_base_armor",
+                        unit.get("armor", 0),
+                    )
+                )
+                unit["armor"] = int(base_armor)
+                unit["base_armor"] = int(base_armor)
+            unit.pop("campaign_artifact_base_damage", None)
+            unit.pop("campaign_artifact_base_damage_secondary", None)
+            unit.pop("campaign_artifact_base_initiative", None)
+            unit.pop("campaign_artifact_base_armor", None)
+            unit.pop("campaign_artifact_damage_multiplier", None)
+            unit.pop("campaign_artifact_initiative_multiplier", None)
+            unit.pop("campaign_artifact_armor_bonus", None)
+            unit.pop("campaign_active_artifacts", None)
+
+    def _refresh_campaign_artifact_effects(self, *, log: bool = False) -> None:
+        if self.blue_team_state is None:
+            return
+        self._apply_equipped_artifact_effects(self.blue_team_state, log=log)
+
+    def _apply_equipped_artifact_effects(
+        self,
+        blue_team: List[Dict],
+        *,
+        log: bool = True,
+    ) -> None:
+        self._clear_equipped_artifact_effects(blue_team)
         if not blue_team:
             return
 
@@ -8418,25 +8537,21 @@ class CampaignEnv(gym.Env):
 
         damage_multiplier = 1.0
         initiative_multiplier = 1.0
+        armor_bonus = 0
         for item_name in active_artifacts:
             effect = self._artifact_effect_definition(item_name)
             damage_multiplier *= float(effect.get("damage_multiplier", 1.0) or 1.0)
             initiative_multiplier *= float(effect.get("initiative_multiplier", 1.0) or 1.0)
+            armor_bonus += int(effect.get("armor_bonus", 0) or 0)
 
         hero["campaign_active_artifacts"] = list(active_artifacts)
         if abs(damage_multiplier - 1.0) > 1e-9:
             base_damage = self._normalize_damage_value(hero.get("damage", 0))
-            base_damage_secondary = self._normalize_damage_value(hero.get("damage_secondary", 0))
             hero["campaign_artifact_base_damage"] = int(base_damage)
-            hero["campaign_artifact_base_damage_secondary"] = int(base_damage_secondary)
             hero["campaign_artifact_damage_multiplier"] = float(damage_multiplier)
             hero["damage"] = self._normalize_damage_value(
                 float(base_damage) * float(damage_multiplier)
             )
-            hero["damage_secondary"] = self._normalize_damage_value(
-                float(base_damage_secondary) * float(damage_multiplier)
-            )
-            hero["original_damage"] = int(hero.get("damage", 0) or 0)
 
         if abs(initiative_multiplier - 1.0) > 1e-9:
             base_initiative = int(
@@ -8450,11 +8565,20 @@ class CampaignEnv(gym.Env):
             hero["initiative_base"] = int(boosted_initiative)
             hero["initiative"] = int(boosted_initiative)
 
-        hero_name = str(hero.get("name", "Герой") or "Герой")
-        self._log(
-            f"Активны экипированные артефакты героя {hero_name}: {', '.join(active_artifacts)} "
-            f"(урон x{damage_multiplier:.3g}, инициатива x{initiative_multiplier:.3g})."
-        )
+        if armor_bonus != 0:
+            base_armor = self._normalize_armor_value(hero.get("armor", 0))
+            hero["campaign_artifact_base_armor"] = int(base_armor)
+            hero["campaign_artifact_armor_bonus"] = int(armor_bonus)
+            hero["armor"] = self._normalize_armor_value(int(base_armor) + int(armor_bonus))
+            hero["base_armor"] = int(hero.get("armor", 0) or 0)
+
+        if log:
+            hero_name = str(hero.get("name", "Герой") or "Герой")
+            self._log(
+                f"Активны экипированные артефакты героя {hero_name}: {', '.join(active_artifacts)} "
+                f"(урон x{damage_multiplier:.3g}, инициатива x{initiative_multiplier:.3g}, "
+                f"броня +{int(armor_bonus)})."
+            )
 
     def _init_battle(
         self,
@@ -8484,6 +8608,7 @@ class CampaignEnv(gym.Env):
                 "blue",
                 self.blue_team_state,
             )
+            self._clear_equipped_artifact_effects(prepared_blue_team)
             self._apply_hero_heal_tile_armor_bonus(prepared_blue_team)
             self._apply_active_blue_potion_effects(prepared_blue_team)
             self._apply_active_blue_support_spell_effects(prepared_blue_team)
@@ -8494,6 +8619,7 @@ class CampaignEnv(gym.Env):
             self._log("Загружено сохранённое состояние BLUE команды")
         else:
             prepared_blue_team = self._build_battle_team_with_placeholders("blue", UNITS_BLUE)
+            self._clear_equipped_artifact_effects(prepared_blue_team)
             self._apply_hero_heal_tile_armor_bonus(prepared_blue_team)
             self._apply_active_blue_potion_effects(prepared_blue_team)
             self._apply_active_blue_support_spell_effects(prepared_blue_team)
@@ -8540,9 +8666,17 @@ class CampaignEnv(gym.Env):
 
             # Сохраняем юнита в текущей форме (после улучшений)
             restored_unit = deepcopy(u)
+            restore_transformed = getattr(
+                self.battle_env, "_restore_transformed_unit", None
+            )
+            if callable(restore_transformed):
+                restore_transformed(restored_unit)
             
             # СОХРАНЯЕМ ТЕКУЩЕЕ HP (не восстанавливаем!)
-            current_hp = max(0.0, float(u.get("health", 0) or u.get("hp", 0)))
+            current_hp = max(
+                0.0,
+                float(restored_unit.get("health", 0) or restored_unit.get("hp", 0)),
+            )
             restored_unit["health"] = current_hp
             restored_unit["hp"] = current_hp
 
@@ -8568,13 +8702,6 @@ class CampaignEnv(gym.Env):
                         restored_unit.get("damage", 0),
                     )
                 )
-            if "campaign_artifact_base_damage_secondary" in restored_unit:
-                restored_unit["damage_secondary"] = self._normalize_damage_value(
-                    restored_unit.get(
-                        "campaign_artifact_base_damage_secondary",
-                        restored_unit.get("damage_secondary", 0),
-                    )
-                )
             if "campaign_artifact_base_initiative" in restored_unit:
                 restored_unit["initiative_base"] = int(
                     self._normalize_damage_value(
@@ -8588,6 +8715,15 @@ class CampaignEnv(gym.Env):
                     )
                 )
                 restored_unit["initiative"] = int(restored_unit.get("initiative_base", 0) or 0)
+            if "campaign_artifact_base_armor" in restored_unit:
+                base_armor = self._normalize_armor_value(
+                    restored_unit.get(
+                        "campaign_artifact_base_armor",
+                        restored_unit.get("armor", 0),
+                    )
+                )
+                restored_unit["armor"] = int(base_armor)
+                restored_unit["base_armor"] = int(base_armor)
             if "campaign_map_spell_base_damage" in restored_unit:
                 restored_unit["damage"] = self._normalize_damage_value(
                     restored_unit.get(
@@ -8674,8 +8810,10 @@ class CampaignEnv(gym.Env):
             restored_unit.pop("campaign_artifact_base_damage", None)
             restored_unit.pop("campaign_artifact_base_damage_secondary", None)
             restored_unit.pop("campaign_artifact_base_initiative", None)
+            restored_unit.pop("campaign_artifact_base_armor", None)
             restored_unit.pop("campaign_artifact_damage_multiplier", None)
             restored_unit.pop("campaign_artifact_initiative_multiplier", None)
+            restored_unit.pop("campaign_artifact_armor_bonus", None)
             restored_unit.pop("campaign_active_artifacts", None)
             if (
                 position in self.active_strength_potion_positions
@@ -8754,6 +8892,7 @@ class CampaignEnv(gym.Env):
 
         self._sync_hero_progression_flags(self.blue_team_state)
         self._sync_moves_per_turn_with_hero(units=self.blue_team_state, grant_delta=True)
+        self._refresh_campaign_artifact_effects(log=False)
         self._log("Состояние BLUE команды сохранено (HP не восстановлено)")
 
     def _find_unit_data_by_name(self, name: str) -> Optional[Dict]:
@@ -8846,6 +8985,12 @@ class CampaignEnv(gym.Env):
             and not bool(unit.get("Summoned"))
             and 1 <= int(unit.get("position", -1) or -1) <= 6
         }
+        restore_transformed = getattr(
+            self.battle_env, "_restore_transformed_unit", None
+        )
+        if callable(restore_transformed):
+            for battle_unit in battle_by_position.values():
+                restore_transformed(battle_unit)
 
         saved_team: List[Dict] = []
         for position in range(1, 7):
@@ -9140,6 +9285,7 @@ class CampaignEnv(gym.Env):
             if int(unit.get("position", -1)) == int(pos):
                 self.blue_team_state[idx] = deepcopy(upgraded)
                 self._sync_moves_per_turn_with_hero(units=self.blue_team_state)
+                self._refresh_campaign_artifact_effects(log=False)
                 return
 
     def _log_turns_into_levelups(self) -> int:
@@ -12097,7 +12243,7 @@ class CampaignEnv(gym.Env):
         if mode != "ansi":
             return None
 
-        self._sync_equipped_artifact_items()
+        self._refresh_campaign_artifact_effects(log=False)
         lines = []
         lines.append(f"=== CAMPAIGN MODE: {'GRID' if self.mode == self.MODE_GRID else 'BATTLE'} ===")
 
@@ -12213,7 +12359,7 @@ class CampaignEnv(gym.Env):
 
     def get_state_summary(self) -> Dict:
         """Возвращает сводку текущего состояния."""
-        self._sync_equipped_artifact_items()
+        self._refresh_campaign_artifact_effects(log=False)
         scroll_state = self._scroll_state_info()
         return {
             "mode": "grid" if self.mode == self.MODE_GRID else "battle",
