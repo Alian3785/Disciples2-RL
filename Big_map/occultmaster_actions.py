@@ -211,7 +211,7 @@ def handle_occultmaster_action(
         "name": "Сущий",
         "initiative": 0,
         "initiative_base": 50,
-        "unit_type": "wight",
+        "unit_type": "Wight",
         "damage": 75,
         "damage_secondary": 0,
         "health": 105,

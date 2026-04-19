@@ -100,6 +100,38 @@ ATTACK_TYPES = [
     "Air",
 ]  # one-hot(9)
 
+SOUL_CRYSTAL_ARTIFACT_ITEM_NAME = "Soul Crystal (Artifact)"
+HORN_OF_INCUBUS_ARTIFACT_ITEM_NAME = "Horn of Incubus (Artifact)"
+UNHOLY_DAGGER_ARTIFACT_ITEM_NAME = "Unholy Dagger (Artifact)"
+THANATOS_BLADE_ARTIFACT_ITEM_NAME = "Thanatos Blade (Artifact)"
+SKULL_OF_THANATOS_ARTIFACT_ITEM_NAME = "Skull of Thanatos (Artifact)"
+HAGS_RING_ARTIFACT_ITEM_NAME = "Hag's Ring (Artifact)"
+
+HERO_COMBAT_ARTIFACT_ITEMS = frozenset(
+    {
+        SOUL_CRYSTAL_ARTIFACT_ITEM_NAME,
+        HORN_OF_INCUBUS_ARTIFACT_ITEM_NAME,
+        UNHOLY_DAGGER_ARTIFACT_ITEM_NAME,
+        THANATOS_BLADE_ARTIFACT_ITEM_NAME,
+        SKULL_OF_THANATOS_ARTIFACT_ITEM_NAME,
+        HAGS_RING_ARTIFACT_ITEM_NAME,
+    }
+)
+UNHOLY_DAGGER_DRAIN_PERCENT = 25
+THANATOS_BLADE_POISON_DAMAGE = 20
+SKULL_OF_THANATOS_POISON_DAMAGE = 35
+HERO_ARTIFACT_STATUS_CHANCES = {
+    SOUL_CRYSTAL_ARTIFACT_ITEM_NAME: 80,
+    HORN_OF_INCUBUS_ARTIFACT_ITEM_NAME: 80,
+    THANATOS_BLADE_ARTIFACT_ITEM_NAME: 80,
+    SKULL_OF_THANATOS_ARTIFACT_ITEM_NAME: 80,
+    HAGS_RING_ARTIFACT_ITEM_NAME: 70,
+}
+HERO_ARTIFACT_POISON_DAMAGE = {
+    THANATOS_BLADE_ARTIFACT_ITEM_NAME: THANATOS_BLADE_POISON_DAMAGE,
+    SKULL_OF_THANATOS_ARTIFACT_ITEM_NAME: SKULL_OF_THANATOS_POISON_DAMAGE,
+}
+
 ZERO_DAMAGE_NO_HP_UNIT_TYPES = frozenset(
     {
         "Ghost",
@@ -157,6 +189,113 @@ def _build_transforms_by_name(unit_data: List[Dict]) -> Dict[str, List[str]]:
 TRANSFORMS_BY_NAME = _build_transforms_by_name(UNIT_DATA)
 
 
+_ATK_CANON = {
+    "weapon": "Weapon",
+    "earth": "Earth",
+    "fire": "Fire",
+    "water": "Water",
+    "poison": "Poison",
+    "death": "Death",
+    "mind": "Mind",
+    "life": "Life",
+    "air": "Air",
+    "": "",
+}
+
+
+def _canon_attack_type(value: object) -> str:
+    raw = str(value or "")
+    return _ATK_CANON.get(raw.lower(), raw)
+
+
+def _canon_attack_list(values: object) -> List[str]:
+    if not isinstance(values, (list, tuple)):
+        return []
+    return [_canon_attack_type(value) for value in values]
+
+
+def _unit_data_name(entry: Dict) -> str:
+    return str(entry.get("кто", "") or "").strip()
+
+
+def _legacy_name_aliases(name: str) -> List[str]:
+    aliases = [name]
+    for errors in ("strict", "replace", "ignore"):
+        try:
+            alias = name.encode("utf-8").decode("cp1251", errors=errors)
+        except UnicodeError:
+            continue
+        if alias and alias not in aliases:
+            aliases.append(alias)
+    return aliases
+
+
+def _entry_stand(entry: Dict) -> str:
+    attack_type = str(entry.get("тип атаки1", "") or "").lower()
+    if attack_type == "weapon" or bool(entry.get("размер", 0)):
+        return "ahead"
+    return "behind"
+
+
+def _entry_armor(entry: Dict) -> int:
+    try:
+        return int(round(float(entry.get("броня", 0) or 0) * 100))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _entry_accuracy(entry: Dict, key: str) -> int:
+    try:
+        return int(round(float(entry.get(key, 0) or 0) * 100))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _build_source_by_name(unit_data: List[Dict]) -> Dict[str, str]:
+    source_by_name: Dict[str, str] = {}
+    for entry in unit_data:
+        if not isinstance(entry, dict):
+            continue
+        name = _unit_data_name(entry)
+        if not name:
+            continue
+        source = str(entry.get("происходитиз", "") or "").strip()
+        for alias in _legacy_name_aliases(name):
+            source_by_name[alias] = source
+    return source_by_name
+
+
+def _build_battle_template_by_name(unit_data: List[Dict]) -> Dict[str, Dict]:
+    templates: Dict[str, Dict] = {}
+    for entry in unit_data:
+        if not isinstance(entry, dict):
+            continue
+        name = _unit_data_name(entry)
+        if not name:
+            continue
+        template = {
+            "form_name": name,
+            "initiative_base": _to_int_or_default(entry.get("инит", 0), default=0),
+            "stand": _entry_stand(entry),
+            "unit_type": str(entry.get("тип", "") or ""),
+            "Level": _to_int_or_default(entry.get("уровень", 0), default=0),
+            "damage": _to_int_or_default(entry.get("урон", 0), default=0),
+            "damage_secondary": _to_int_or_default(entry.get("урон2", 0), default=0),
+            "max_health": _to_int_or_default(entry.get("здоровье", 0), default=0),
+            "armor": _entry_armor(entry),
+            "accuracy": _entry_accuracy(entry, "точн"),
+            "accuracy_secondary": _entry_accuracy(entry, "точн2"),
+            "immunity": _canon_attack_list(entry.get("иммунитет", [])),
+            "resistance": _canon_attack_list(entry.get("защита", [])),
+            "attack_type_primary": _canon_attack_type(entry.get("тип атаки1", "")),
+            "attack_type_secondary": _canon_attack_type(entry.get("тип атаки2", "")),
+            "big": bool(entry.get("размер", 0)),
+        }
+        for alias in _legacy_name_aliases(name):
+            templates[alias] = template
+    return templates
+
+
 def _apply_transformations_to_unit(unit: Dict) -> None:
     name = str(unit.get("name", "") or "").strip()
     transforms = TRANSFORMS_BY_NAME.get(name)
@@ -176,6 +315,10 @@ def _to_int_or_default(value, default: int = 0) -> int:
         return int(round(float(value)))
     except (TypeError, ValueError):
         return int(default)
+
+
+SOURCE_BY_NAME = _build_source_by_name(UNIT_DATA)
+BATTLE_TEMPLATE_BY_NAME = _build_battle_template_by_name(UNIT_DATA)
 
 
 def _build_levels_by_name(unit_data: List[Dict]) -> Dict[str, int]:
@@ -253,6 +396,21 @@ def _to_bool_flag(value: object) -> bool:
     if isinstance(value, (int, float)):
         return int(value) != 0
     return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _is_neutral_battle_unit(unit: Dict) -> bool:
+    if not isinstance(unit, dict):
+        return False
+    if bool(unit.get("is_neutral_unit", False)):
+        return True
+
+    capital = unit.get("capital", unit.get("\u0441\u0442\u043e\u043b\u0438\u0446\u0430"))
+    if capital is None:
+        return False
+    try:
+        return int(round(float(capital))) == 0
+    except (TypeError, ValueError):
+        return str(capital).strip() == "0"
 
 
 def _resolve_unit_hero_flag(unit: Dict) -> bool:
@@ -586,7 +744,8 @@ BURN_DAMAGE = 10  # базовый фолбэк; Владыка задаёт per
 BURN_TURNS = 6
 URAN_DAMAGE = 10  # базовый фолбэк; Сын Измира задаёт per-tick из своего урон2
 URAN_TURNS = 6
-WIGHT_DECAY_PERCENT = 0.33  # share of stats removed by wight effect
+DEFAULT_TRANSFORM_RECOVERY_CHANCE = 0.3
+WIGHT_LEVEL_DOWN_RECOVERY_CHANCE = 0.01
 
 # Observation normalization profile.
 INIT_BASE_NORM_MAX = 80.0
@@ -1450,6 +1609,169 @@ class BattleEnv(gym.Env):
         )
         return "revive_success"
 
+    def _transform_snapshot_keys(self, include_health_fields: bool = False) -> Tuple[str, ...]:
+        keys = (
+            "accuracy",
+            "accuracy_secondary",
+            "damage",
+            "damage_secondary",
+            "original_damage",
+            "attack_type_primary",
+            "attack_type_secondary",
+            "initiative",
+            "initiative_base",
+            "unit_type",
+            "stand",
+            "armor",
+            "immunity",
+            "resistance",
+            "resilience_used_types",
+            "big",
+            "Level",
+            "next_level_exp",
+            "needaunit",
+            "transformed",
+            "wight_form_name",
+            "transform_effect",
+            "transform_recover_chance",
+        )
+        if include_health_fields:
+            keys += ("max_health", "maxhp")
+        return keys
+
+    def _build_transform_snapshot(
+        self, unit: Dict, include_health_fields: bool = False
+    ) -> Dict:
+        snapshot = {}
+        for key in self._transform_snapshot_keys(include_health_fields):
+            if key in unit:
+                snapshot[key] = deepcopy(unit[key])
+        snapshot.setdefault(
+            "initiative",
+            deepcopy(unit.get("initiative_base", unit.get("initiative", 0))),
+        )
+        snapshot.setdefault("transformed", int(unit.get("transformed", 0) or 0))
+        return snapshot
+
+    def _ensure_transform_snapshot(
+        self, unit: Dict, include_health_fields: bool = False
+    ) -> Dict:
+        pos_key = unit.get("position")
+        basestats = unit.get("basestats")
+        if isinstance(basestats, dict):
+            snapshots = basestats.get(pos_key)
+            if not isinstance(snapshots, list):
+                snapshots = []
+                basestats[pos_key] = snapshots
+        else:
+            snapshots = basestats if isinstance(basestats, list) else []
+            basestats = {pos_key: snapshots}
+            unit["basestats"] = basestats
+
+        if not snapshots:
+            snapshot = self._build_transform_snapshot(unit, include_health_fields)
+            snapshots.append(snapshot)
+            return snapshot
+
+        snapshot = snapshots[0]
+        if isinstance(snapshot, dict):
+            for key in self._transform_snapshot_keys(include_health_fields):
+                if key not in snapshot and key in unit:
+                    snapshot[key] = deepcopy(unit[key])
+            snapshot.setdefault(
+                "initiative",
+                deepcopy(unit.get("initiative_base", unit.get("initiative", 0))),
+            )
+            snapshot.setdefault("transformed", int(unit.get("transformed", 0) or 0))
+            return snapshot
+
+        snapshot = self._build_transform_snapshot(unit, include_health_fields)
+        snapshots[0] = snapshot
+        return snapshot
+
+    def _transform_snapshots_for_unit(self, unit: Dict) -> Tuple[object, List[Dict]]:
+        basestats = unit.get("basestats")
+        pos_key = unit.get("position")
+        if isinstance(basestats, dict):
+            snapshots = basestats.get(pos_key) or []
+            return basestats, snapshots if isinstance(snapshots, list) else []
+        if isinstance(basestats, list):
+            return basestats, basestats
+        return basestats, []
+
+    def _scale_health_to_new_max(
+        self, current_health: object, current_max: object, new_max: object
+    ) -> int:
+        try:
+            old_hp = max(0.0, float(current_health or 0))
+        except (TypeError, ValueError):
+            old_hp = 0.0
+        try:
+            old_max = max(0.0, float(current_max or 0))
+        except (TypeError, ValueError):
+            old_max = 0.0
+        try:
+            target_max = max(0, int(round(float(new_max or 0))))
+        except (TypeError, ValueError):
+            target_max = 0
+        if target_max <= 0:
+            return 0
+        if old_max <= 0:
+            return target_max if old_hp > 0 else 0
+        scaled = int(round((old_hp / old_max) * target_max))
+        if old_hp > 0 and scaled <= 0:
+            return 1
+        return max(0, min(target_max, scaled))
+
+    def _restore_transformed_unit(self, unit: Optional[Dict]) -> bool:
+        if not isinstance(unit, dict) or not unit.get("transformed", 0):
+            return False
+        basestats, snapshots = self._transform_snapshots_for_unit(unit)
+        snapshot = snapshots[0] if snapshots else None
+        if not isinstance(snapshot, dict):
+            unit["transformed"] = 0
+            unit.pop("wight_form_name", None)
+            unit.pop("transform_effect", None)
+            unit.pop("transform_recover_chance", None)
+            return False
+
+        current_health = unit.get("health", unit.get("hp", 0))
+        current_max = unit.get("max_health", unit.get("maxhp", current_health))
+        restored_max = snapshot.get("max_health", snapshot.get("maxhp"))
+
+        for key in self._transform_snapshot_keys(include_health_fields=False):
+            if key in snapshot:
+                unit[key] = deepcopy(snapshot[key])
+
+        if restored_max is not None:
+            restored_health = self._scale_health_to_new_max(
+                current_health, current_max, restored_max
+            )
+            unit["max_health"] = deepcopy(restored_max)
+            unit["health"] = restored_health
+            if "maxhp" in unit or "maxhp" in snapshot:
+                unit["maxhp"] = deepcopy(restored_max)
+            if "hp" in unit or "hp" in snapshot:
+                unit["hp"] = restored_health
+
+        if isinstance(basestats, dict):
+            basestats.pop(unit.get("position"), None)
+        elif isinstance(basestats, list):
+            try:
+                snapshots.pop(0)
+            except IndexError:
+                pass
+
+        if not unit.get("transformed", 0):
+            unit.pop("wight_form_name", None)
+            unit.pop("transform_effect", None)
+            unit.pop("transform_recover_chance", None)
+        return True
+
+    def _restore_all_transformed_units(self) -> None:
+        for unit in self.combined:
+            self._restore_transformed_unit(unit)
+
     def _cleanse_negative_effects(self, unit: Optional[Dict]) -> bool:
         """Снимает доты/контроль/статовые дебаффы, если юнит жив."""
         if unit is None or not self._alive(unit):
@@ -1494,40 +1816,10 @@ class BattleEnv(gym.Env):
             unit["hermited"] = 0
             cleared = True
 
-        # Если юнит превращён ведьмой/суккубом — откатываем сохранённые характеристики.
+        # Если юнит превращён ведьмой/суккубом/Сущим — откатываем сохранённые характеристики.
         if unit.get("transformed", 0):
-            basestats = unit.get("basestats")
-            pos_key = unit.get("position")
-            snapshots: List[Dict] = []
-            if isinstance(basestats, dict):
-                snapshots = basestats.get(pos_key) or []
-            elif isinstance(basestats, list):
-                snapshots = basestats
-            snapshot = snapshots[0] if snapshots else None
-            if isinstance(snapshot, dict):
-                for key in (
-                    "accuracy",
-                    "accuracy_secondary",
-                    "damage",
-                    "damage_secondary",
-                    "attack_type_primary",
-                    "attack_type_secondary",
-                    "initiative",
-                    "initiative_base",
-                    "unit_type",
-                    "resistance",
-                    "resilience_used_types",
-                    "transformed",
-                ):
-                    if key in snapshot:
-                        unit[key] = deepcopy(snapshot[key])
-                if isinstance(basestats, dict):
-                    basestats.pop(pos_key, None)
-                elif isinstance(basestats, list):
-                    snapshots.pop(0)
+            if self._restore_transformed_unit(unit):
                 cleared = True
-            else:
-                unit["transformed"] = 0
 
         # Если убрали поджог – сбрасываем флажок Владыки, чтобы он мог снова наложить burn.
         if burn_cleared:
@@ -2174,44 +2466,17 @@ class BattleEnv(gym.Env):
             elif isinstance(basestats, list):
                 snapshots = basestats
 
-            if snapshots and self.rng.random() < 0.3 and unit.get("initiative") > 10:
-                base_snapshot = snapshots[0]
-                if isinstance(base_snapshot, dict):
-                    unit["accuracy"] = base_snapshot.get(
-                        "accuracy", unit.get("accuracy", 0)
-                    )
-                    unit["accuracy_secondary"] = base_snapshot.get(
-                        "accuracy_secondary", unit.get("accuracy_secondary", 0)
-                    )
-                    unit["damage"] = base_snapshot.get("damage", unit.get("damage", 0))
-                    unit["damage_secondary"] = base_snapshot.get(
-                        "damage_secondary", unit.get("damage_secondary", 0)
-                    )
-                    unit["attack_type_primary"] = base_snapshot.get(
-                        "attack_type_primary", unit.get("attack_type_primary", "Weapon")
-                    )
-                    unit["attack_type_secondary"] = base_snapshot.get(
-                        "attack_type_secondary", unit.get("attack_type_secondary", "")
-                    )
-                    ini_val = base_snapshot.get("initiative", unit.get("initiative", 0))
-                    unit["initiative_base"] = ini_val
-                    unit["initiative"] = ini_val
-                    unit["unit_type"] = base_snapshot.get(
-                        "unit_type", unit.get("unit_type", "Warrior")
-                    )
-                    unit["resistance"] = list(base_snapshot.get("resistance", []))
-                    unit["resilience_used_types"] = list(
-                        base_snapshot.get("resilience_used_types", [])
-                    )
-                    unit["transformed"] = base_snapshot.get("transformed", 0)
-                if isinstance(basestats, dict):
-                    basestats.pop(pos_key, None)
-                else:
-                    try:
-                        snapshots.pop(0)
-                    except IndexError:
-                        pass
-                self._log(f"?? {unit['basestats']}")
+            if snapshots and unit.get("initiative") > 10:
+                chance = unit.get("transform_recover_chance")
+                if chance is None:
+                    chance = DEFAULT_TRANSFORM_RECOVERY_CHANCE
+                try:
+                    recover_chance = float(chance)
+                except (TypeError, ValueError):
+                    recover_chance = DEFAULT_TRANSFORM_RECOVERY_CHANCE
+                if self.rng.random() < recover_chance:
+                    self._restore_transformed_unit(unit)
+                    self._log(f"?? {unit['basestats']}")
 
         return True
 
@@ -2251,6 +2516,11 @@ class BattleEnv(gym.Env):
             u["uran_turns_left"] = 0
             u["uran_damage_per_tick"] = 0
             u["resilience_used_types"] = []
+            u["transformed"] = 0
+            u["basestats"] = {}
+            u.pop("wight_form_name", None)
+            u.pop("transform_effect", None)
+            u.pop("transform_recover_chance", None)
         self.round_no = 1
         self.winner = None
         self.current_blue_attacker_pos = None
@@ -2468,29 +2738,86 @@ class BattleEnv(gym.Env):
             f"accuracy=80, damage={victim['damage']}, initiative={victim['initiative']}"
         )
 
-    def _apply_wight_decay_effect(self, attacker: Dict, victim: Dict) -> None:
-        dmg_before = int(victim.get("damage", 0) or 0)
-        hp_before = int(victim.get("health", 0) or 0)
-        max_before = int(victim.get("max_health", 0) or 0)
+    def _apply_wight_decay_effect(self, attacker: Dict, victim: Dict) -> bool:
+        if _is_neutral_battle_unit(victim):
+            self._log(
+                f"? Wight drain: {victim['team'].upper()} {victim['name']}#{victim['position']} "
+                "is neutral and cannot be lowered."
+            )
+            return False
 
-        dmg_reduction = int(round(dmg_before * WIGHT_DECAY_PERCENT))
-        hp_reduction = int(round(hp_before * WIGHT_DECAY_PERCENT))
-        max_reduction = int(round(max_before * WIGHT_DECAY_PERCENT))
+        current_form = str(
+            victim.get("wight_form_name") or victim.get("name", "") or ""
+        ).strip()
+        lower_form = SOURCE_BY_NAME.get(current_form, "")
+        if not lower_form:
+            self._log(
+                f"? Wight drain: {victim['team'].upper()} {victim['name']}#{victim['position']} "
+                f"has no lower form from '{current_form}'."
+            )
+            return False
 
-        new_damage = max(0, dmg_before - dmg_reduction)
-        new_max = max(0, max_before - max_reduction)
-        new_hp = max(0, hp_before - hp_reduction)
+        lower_template = BATTLE_TEMPLATE_BY_NAME.get(lower_form)
+        if not isinstance(lower_template, dict):
+            self._log(
+                f"? Wight drain: lower form '{lower_form}' is missing from unit data."
+            )
+            return False
 
-        victim["damage"] = new_damage
+        self._ensure_transform_snapshot(victim, include_health_fields=True)
+
+        old_hp = victim.get("health", 0)
+        old_max = victim.get("max_health", old_hp)
+        old_damage = victim.get("damage", 0)
+        old_unit_type = victim.get("unit_type", "")
+        old_initiative = victim.get("initiative", 0)
+        new_max = int(lower_template.get("max_health", 0) or 0)
+        new_health = self._scale_health_to_new_max(old_hp, old_max, new_max)
+
+        victim["wight_form_name"] = lower_template.get("form_name", lower_form)
+        victim["accuracy"] = int(lower_template.get("accuracy", 0) or 0)
+        victim["accuracy_secondary"] = int(
+            lower_template.get("accuracy_secondary", 0) or 0
+        )
+        victim["damage"] = int(lower_template.get("damage", 0) or 0)
+        victim["damage_secondary"] = int(
+            lower_template.get("damage_secondary", 0) or 0
+        )
+        victim["original_damage"] = victim["damage"]
+        victim["attack_type_primary"] = lower_template.get(
+            "attack_type_primary", "Weapon"
+        )
+        victim["attack_type_secondary"] = lower_template.get(
+            "attack_type_secondary", ""
+        )
+        victim["initiative_base"] = int(lower_template.get("initiative_base", 0) or 0)
+        victim["initiative"] = old_initiative if old_initiative == 0 else victim["initiative_base"]
+        victim["unit_type"] = lower_template.get("unit_type", victim.get("unit_type", ""))
+        victim["stand"] = lower_template.get("stand", victim.get("stand", "ahead"))
+        victim["armor"] = int(lower_template.get("armor", 0) or 0)
+        victim["immunity"] = list(lower_template.get("immunity", []))
+        victim["resistance"] = list(lower_template.get("resistance", []))
+        victim["resilience_used_types"] = []
+        victim["big"] = bool(lower_template.get("big", False))
+        victim["Level"] = int(lower_template.get("Level", victim.get("Level", 0)) or 0)
         victim["max_health"] = new_max
-        victim["health"] = min(new_hp, victim["max_health"])
+        victim["health"] = new_health
+        if "maxhp" in victim:
+            victim["maxhp"] = new_max
+        if "hp" in victim:
+            victim["hp"] = new_health
+        victim["transformed"] = 1
+        victim["transform_effect"] = "wight_level_down"
+        victim["transform_recover_chance"] = WIGHT_LEVEL_DOWN_RECOVERY_CHANCE
 
         self._log(
             f"? Wight drain: {attacker['team'].upper()} {attacker['name']}#{attacker['position']} "
-            f"reduces stats of {victim['team'].upper()} {victim['name']}#{victim['position']}: "
-            f"damage {dmg_before}->{victim['damage']}, health {hp_before}->{victim['health']}, "
-            f"max_health {max_before}->{victim['max_health']}."
+            f"lowers {victim['team'].upper()} {victim['name']}#{victim['position']} "
+            f"from {current_form} to {victim['wight_form_name']}: "
+            f"type {old_unit_type}->{victim['unit_type']}, damage {old_damage}->{victim['damage']}, "
+            f"health {old_hp}/{old_max}->{victim['health']}/{victim['max_health']}."
         )
+        return True
 
     def _apply_long_paralysis_effect(self, attacker: Dict, victim: Dict) -> bool:
         if victim.get("long_paralyzed", 0):
@@ -2530,6 +2857,191 @@ class BattleEnv(gym.Env):
                 f"накладывает долгий паралич на {victim['team'].upper()} {victim['name']}#{victim['position']}"
             )
         return True
+
+    def _active_hero_combat_artifacts(self, attacker: Dict) -> List[str]:
+        if not bool(attacker.get("hero", False)):
+            return []
+
+        active_artifacts: List[str] = []
+        seen = set()
+        for raw_name in list(attacker.get("campaign_active_artifacts") or []):
+            item_name = str(raw_name or "")
+            if item_name not in HERO_COMBAT_ARTIFACT_ITEMS or item_name in seen:
+                continue
+            active_artifacts.append(item_name)
+            seen.add(item_name)
+        return active_artifacts
+
+    def _artifact_attacker(
+        self,
+        attacker: Dict,
+        *,
+        effect_type: str,
+        primary: bool = False,
+        unit_type: Optional[str] = None,
+    ) -> Dict:
+        artifact_attacker = dict(attacker)
+        if primary:
+            artifact_attacker["attack_type_primary"] = effect_type
+        artifact_attacker["attack_type_secondary"] = effect_type
+        if unit_type:
+            artifact_attacker["unit_type"] = unit_type
+        return artifact_attacker
+
+    def _roll_hero_artifact_status(
+        self, attacker: Dict, victim: Dict, artifact_name: str, chance: float
+    ) -> bool:
+        roll = self._roll_status(float(chance or 0))
+        self._log(
+            f"Artifact {artifact_name}: status chance {int(chance)}% - "
+            + ("success" if roll else "fail")
+            + f" vs {victim['team'].upper()} {victim['name']}#{victim['position']}."
+        )
+        return roll
+
+    def _apply_hero_artifact_life_drain(
+        self, attacker: Dict, inflicted_damage: int
+    ) -> None:
+        if UNHOLY_DAGGER_ARTIFACT_ITEM_NAME not in self._active_hero_combat_artifacts(
+            attacker
+        ):
+            return
+
+        inflicted = int(inflicted_damage or 0)
+        if inflicted <= 0:
+            return
+
+        leeched_total = int(inflicted * UNHOLY_DAGGER_DRAIN_PERCENT // 100)
+        if leeched_total <= 0:
+            return
+
+        self._log(
+            f"Artifact {UNHOLY_DAGGER_ARTIFACT_ITEM_NAME}: drains {leeched_total} HP "
+            f"from {inflicted} inflicted damage."
+        )
+        self._apply_vampiric_heal(attacker, leeched_total, share_leftover=False)
+
+    def _apply_hero_artifact_poison(
+        self, attacker: Dict, victim: Dict, artifact_name: str, damage_per_tick: int
+    ) -> bool:
+        if not self._alive(victim):
+            return False
+
+        chance = HERO_ARTIFACT_STATUS_CHANCES.get(artifact_name, 0)
+        if not self._roll_hero_artifact_status(attacker, victim, artifact_name, chance):
+            return False
+
+        artifact_attacker = self._artifact_attacker(
+            attacker, effect_type="Death", primary=False
+        )
+        if self._is_immune_status(artifact_attacker, victim):
+            self._log(
+                f"Artifact {artifact_name}: immunity to Death blocks poison on "
+                f"{victim['team'].upper()} {victim['name']}#{victim['position']}."
+            )
+            return False
+
+        if self._resilience_blocks(artifact_attacker, victim, custom_tag="Death"):
+            return False
+
+        existing_turns = int(victim.get("poison_turns_left", 0) or 0)
+        existing_damage = int(victim.get("poison_damage_per_tick", 0) or 0)
+        if existing_turns > 0 and existing_damage >= int(damage_per_tick):
+            self._log(
+                f"Artifact {artifact_name}: existing poison "
+                f"({existing_damage} damage/turn) is not weaker."
+            )
+            return False
+
+        turns = self.rng.randint(1, POISON_TURNS)
+        victim["poison_turns_left"] = turns
+        victim["poison_damage_per_tick"] = int(damage_per_tick)
+        self._log(
+            f"Artifact {artifact_name}: applies poison "
+            f"({int(damage_per_tick)} damage/turn) to "
+            f"{victim['team'].upper()} {victim['name']}#{victim['position']} "
+            f"for {turns} turns."
+        )
+        return True
+
+    def _apply_hero_artifact_transform(
+        self, attacker: Dict, victim: Dict, artifact_name: str
+    ) -> bool:
+        if not self._alive(victim):
+            return False
+
+        chance = HERO_ARTIFACT_STATUS_CHANCES.get(artifact_name, 0)
+        if not self._roll_hero_artifact_status(attacker, victim, artifact_name, chance):
+            return False
+
+        artifact_attacker = self._artifact_attacker(
+            attacker, effect_type="Mind", primary=False
+        )
+        if self._is_immune_status(artifact_attacker, victim):
+            self._log(
+                f"Artifact {artifact_name}: immunity to Mind blocks transform on "
+                f"{victim['team'].upper()} {victim['name']}#{victim['position']}."
+            )
+            return False
+
+        forbiddenwitch_names = {
+            "\u00c0\u00f8\u00e3\u00e0\u00ed",
+            "\u00c0\u00f8\u00ea\u00e0\u00fd\u00eb\u00fc",
+            "\u00c2\u00e8\u00e4\u00e0\u00f0",
+            "\u00cc\u00e8\u00e7\u00f0\u00e0\u00fd\u00eb\u00fc",
+            "\u00c8\u00eb\u00eb\u00fe\u00ec\u00e8\u00fd\u00eb\u00eb\u00fc",
+        }
+        if victim.get("name") in forbiddenwitch_names:
+            self._log("Artifact Hag's Ring: capital guard cannot be transformed.")
+            return False
+
+        if self._resilience_blocks(artifact_attacker, victim, custom_tag="Mind"):
+            return False
+
+        self._apply_witch_effect(artifact_attacker, victim)
+        return True
+
+    def _apply_hero_artifact_post_hit_statuses(
+        self, attacker: Dict, victim: Dict
+    ) -> None:
+        if not self._alive(victim):
+            return
+
+        for artifact_name in self._active_hero_combat_artifacts(attacker):
+            if not self._alive(victim):
+                return
+            if artifact_name == UNHOLY_DAGGER_ARTIFACT_ITEM_NAME:
+                continue
+
+            chance = HERO_ARTIFACT_STATUS_CHANCES.get(artifact_name, 0)
+            if artifact_name == SOUL_CRYSTAL_ARTIFACT_ITEM_NAME:
+                if self._roll_hero_artifact_status(
+                    attacker, victim, artifact_name, chance
+                ):
+                    artifact_attacker = self._artifact_attacker(
+                        attacker, effect_type="Mind", primary=True
+                    )
+                    self._apply_paralysis_effect(artifact_attacker, victim)
+            elif artifact_name == HORN_OF_INCUBUS_ARTIFACT_ITEM_NAME:
+                if self._roll_hero_artifact_status(
+                    attacker, victim, artifact_name, chance
+                ):
+                    artifact_attacker = self._artifact_attacker(
+                        attacker,
+                        effect_type="Earth",
+                        primary=False,
+                        unit_type="Abyss Devil",
+                    )
+                    self._apply_long_paralysis_effect(artifact_attacker, victim)
+            elif artifact_name in HERO_ARTIFACT_POISON_DAMAGE:
+                self._apply_hero_artifact_poison(
+                    attacker,
+                    victim,
+                    artifact_name,
+                    HERO_ARTIFACT_POISON_DAMAGE[artifact_name],
+                )
+            elif artifact_name == HAGS_RING_ARTIFACT_ITEM_NAME:
+                self._apply_hero_artifact_transform(attacker, victim, artifact_name)
 
     def _apply_tiamat_damage_debuff(self, attacker: Dict, victim: Dict) -> bool:
         effect_type = attacker.get("attack_type_secondary", "")
@@ -2979,8 +3491,10 @@ class BattleEnv(gym.Env):
                 f"({before}>{max(0, after)})"
             )
 
+            inflicted = min(dmg, max(0, before))
+            self._apply_hero_artifact_life_drain(attacker, inflicted)
+
             if unit_type == "Bone Lord":
-                inflicted = min(dmg, max(0, before))
                 if inflicted > 0:
                     leeched_total = int(inflicted) // 2
                     self._apply_vampiric_heal(
@@ -2988,7 +3502,6 @@ class BattleEnv(gym.Env):
                     )
 
             if unit_type == "Dregazul":
-                inflicted = min(dmg, max(0, before))
                 if inflicted > 0:
                     leeched_total = int(inflicted) // 2
                     self._apply_vampiric_heal(
@@ -3069,8 +3582,15 @@ class BattleEnv(gym.Env):
                     "Centaur Savage",
                     "Spider",
                 ):
-                    acc2 = float(attacker.get("accuracy_secondary", 0) or 0)
-                    roll = self._roll_status(acc2)
+                    wight_neutral_target = (
+                        unit_type == "Wight" and _is_neutral_battle_unit(victim)
+                    )
+                    acc2 = (
+                        0.0
+                        if wight_neutral_target
+                        else float(attacker.get("accuracy_secondary", 0) or 0)
+                    )
+                    roll = False if wight_neutral_target else self._roll_status(acc2)
 
                     if unit_type == "Death" and victim.get("poison_turns_left", 0) <= 0:
                         self._log(
@@ -3103,25 +3623,31 @@ class BattleEnv(gym.Env):
                                     )
 
                     elif unit_type == "Wight":
-                        self._log(
-                            f"?? Wight drain chance {int(acc2)}% - "
-                            + ("success" if roll else "fail")
-                            + f" vs {victim['team'].upper()} {victim['name']}#{victim['position']}."
-                        )
-                        if roll:
-                            if self._is_immune_status(attacker, victim):
-                                self._log(
-                                    f"?? Immunity blocks '{attacker.get('attack_type_secondary', '')}' - "
-                                    f"{victim['team'].upper()} {victim['name']}#{victim['position']}."
-                                )
-                            else:
-                                status_tag = attacker.get(
-                                    "attack_type_secondary", ""
-                                ) or attacker.get("attack_type_primary", "")
-                                if not self._resilience_blocks(
-                                    attacker, victim, custom_tag=status_tag
-                                ):
-                                    self._apply_wight_decay_effect(attacker, victim)
+                        if wight_neutral_target:
+                            self._log(
+                                f"? Wight drain skipped: {victim['team'].upper()} {victim['name']}#{victim['position']} "
+                                "is neutral."
+                            )
+                        else:
+                            self._log(
+                                f"?? Wight drain chance {int(acc2)}% - "
+                                + ("success" if roll else "fail")
+                                + f" vs {victim['team'].upper()} {victim['name']}#{victim['position']}."
+                            )
+                            if roll:
+                                if self._is_immune_status(attacker, victim):
+                                    self._log(
+                                        f"?? Immunity blocks '{attacker.get('attack_type_secondary', '')}' - "
+                                        f"{victim['team'].upper()} {victim['name']}#{victim['position']}."
+                                    )
+                                else:
+                                    status_tag = attacker.get(
+                                        "attack_type_secondary", ""
+                                    ) or attacker.get("attack_type_primary", "")
+                                    if not self._resilience_blocks(
+                                        attacker, victim, custom_tag=status_tag
+                                    ):
+                                        self._apply_wight_decay_effect(attacker, victim)
 
                     elif (
                         unit_type == "Sentry" and victim.get("uran_turns_left", 0) <= 0
@@ -3272,6 +3798,8 @@ class BattleEnv(gym.Env):
                                 f"({extra_damage:g}) to {victim['team'].upper()} {victim['name']}#{victim['position']} "
                                 f"({before:g}>{max(0.0, after):g})."
                             )
+
+                self._apply_hero_artifact_post_hit_statuses(attacker, victim)
 
             if victim["health"] <= 0:
                 victim["initiative"] = 0
@@ -3803,12 +4331,14 @@ class BattleEnv(gym.Env):
             self.winner = "red"
             self._revert_fenrir_survivors()
             self._restore_default_doppelgangers()
+            self._restore_all_transformed_units()
             self._log("?? Победа RED!")
             self._apply_battle_exp("blue")
         elif not self._team_alive("red"):
             self.winner = "blue"
             self._revert_fenrir_survivors()
             self._restore_default_doppelgangers()
+            self._restore_all_transformed_units()
             self._log("?? Победа BLUE!")
             self._apply_battle_exp("red")
 
@@ -4780,6 +5310,11 @@ class BattleEnv(gym.Env):
             u["uran_turns_left"] = 0
             u["uran_damage_per_tick"] = 0
             u["resilience_used_types"] = []
+            u["transformed"] = 0
+            u["basestats"] = {}
+            u.pop("wight_form_name", None)
+            u.pop("transform_effect", None)
+            u.pop("transform_recover_chance", None)
 
         # Сбрасываем глобальное состояние боя
         self.round_no = 1
