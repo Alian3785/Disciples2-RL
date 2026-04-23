@@ -3,6 +3,10 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
+import matplotlib
+
+matplotlib.use("Agg")
+
 import train_campaign
 from train_campaign import CampaignMetricsCallback
 
@@ -21,6 +25,43 @@ class DummyCometExperiment:
 
     def log_other(self, key, value):
         self.others[key] = value
+
+
+ACTIVE_CAMPAIGN_METRICS = {
+    "campaign/battle_item_use_episodes_rate",
+    "campaign/battle_items_used_per_episode_mean",
+    "campaign/battle_victories_per_episode_mean",
+    "campaign/battle_win_rate",
+    "campaign/best_recent_victory_rate",
+    "campaign/castle_heal_episodes_rate",
+    "campaign/chests_collected_per_episode_mean",
+    "campaign/defeat_rate",
+    "campaign/episodes_total",
+    "campaign/hire_episodes_rate",
+    "campaign/hired_units_per_episode_mean",
+    "campaign/merchant_sale_gold_per_episode_mean",
+    "campaign/ruin_clear_episodes_rate",
+    "campaign/ruins_cleared_per_episode_mean",
+    "campaign/sold_items_per_episode_mean",
+    "campaign/spell_cast_episodes_rate",
+    "campaign/spell_casts_per_episode_mean",
+    "campaign/spells_learned_per_episode_mean",
+    "campaign/summon_episodes_rate",
+    "campaign/summoned_units_per_episode_mean",
+    "campaign/timeout_rate",
+    "campaign/unit_upgrades_total",
+    "campaign/victories_total",
+    "campaign/victory_rate",
+    "campaign/window/battle_win_rate",
+    "campaign/window/chests_collected_mean",
+    "campaign/window/defeat_rate",
+    "campaign/window/episodes",
+    "campaign/window/hired_units_mean",
+    "campaign/window/ruins_cleared_mean",
+    "campaign/window/spell_casts_mean",
+    "campaign/window/timeout_rate",
+    "campaign/window/victory_rate",
+}
 
 
 def test_campaign_metrics_callback_logs_custom_metrics(monkeypatch):
@@ -79,74 +120,44 @@ def test_campaign_metrics_callback_logs_custom_metrics(monkeypatch):
 
     payload, step = dummy_experiment.logged[0]
     assert step == 1000
+    assert set(payload) == ACTIVE_CAMPAIGN_METRICS
     assert payload["campaign/episodes_total"] == 1
+    assert payload["campaign/victories_total"] == 1.0
     assert payload["campaign/victory_rate"] == 1.0
+    assert payload["campaign/defeat_rate"] == 0.0
+    assert payload["campaign/timeout_rate"] == 0.0
     assert payload["campaign/battle_victories_per_episode_mean"] == 1.0
     assert payload["campaign/battle_win_rate"] == 1.0
-    assert payload["campaign/recent_episode_reward_mean"] == 12.0
-    assert payload["campaign/recent_blue_hp_ratio_mean"] == 0.75
-    assert payload["campaign/castle_heal_uses_total"] == 1.0
-    assert payload["campaign/castle_healed_hp_total"] == 37.5
+    assert payload["campaign/unit_upgrades_total"] == 2.0
     assert payload["campaign/castle_heal_episodes_rate"] == 1.0
-    assert payload["campaign/chests_collected_total"] == 2.0
     assert payload["campaign/chests_collected_per_episode_mean"] == 2.0
-    assert payload["campaign/chest_collection_episodes_rate"] == 1.0
-    assert payload["campaign/sold_items_total"] == 3.0
+    assert payload["campaign/ruins_cleared_per_episode_mean"] == 0.0
+    assert payload["campaign/ruin_clear_episodes_rate"] == 0.0
     assert payload["campaign/sold_items_per_episode_mean"] == 3.0
-    assert payload["campaign/merchant_sale_gold_total"] == 3650.0
     assert payload["campaign/merchant_sale_gold_per_episode_mean"] == 3650.0
-    assert payload["campaign/sale_episodes_rate"] == 1.0
-    assert payload["campaign/spell_casts_total"] == 1.0
+    assert payload["campaign/spells_learned_per_episode_mean"] == 0.0
     assert payload["campaign/spell_casts_per_episode_mean"] == 1.0
     assert payload["campaign/spell_cast_episodes_rate"] == 1.0
-    assert payload["campaign/summoned_units_total"] == 1.0
     assert payload["campaign/summoned_units_per_episode_mean"] == 1.0
     assert payload["campaign/summon_episodes_rate"] == 1.0
-    assert payload["campaign/hired_units_total"] == 1.0
     assert payload["campaign/hired_units_per_episode_mean"] == 1.0
     assert payload["campaign/hire_episodes_rate"] == 1.0
-    assert payload["campaign/battle_items_equipped_total"] == 1.0
-    assert payload["campaign/battle_items_equipped_per_episode_mean"] == 1.0
-    assert payload["campaign/battle_item_equip_episodes_rate"] == 1.0
-    assert payload["campaign/battle_items_used_total"] == 1.0
     assert payload["campaign/battle_items_used_per_episode_mean"] == 1.0
     assert payload["campaign/battle_item_use_episodes_rate"] == 1.0
-    assert payload["campaign/recent_castle_heal_uses_mean"] == 1.0
-    assert payload["campaign/recent_castle_heal_episodes_rate"] == 1.0
-    assert payload["campaign/recent_castle_healed_hp_mean"] == 37.5
-    assert payload["campaign/recent_chests_collected_mean"] == 2.0
-    assert payload["campaign/recent_chest_collection_episodes_rate"] == 1.0
-    assert payload["campaign/recent_sold_items_mean"] == 3.0
-    assert payload["campaign/recent_sale_episodes_rate"] == 1.0
-    assert payload["campaign/recent_merchant_sale_gold_mean"] == 3650.0
-    assert payload["campaign/recent_spell_casts_mean"] == 1.0
-    assert payload["campaign/recent_spell_cast_episodes_rate"] == 1.0
-    assert payload["campaign/recent_summoned_units_mean"] == 1.0
-    assert payload["campaign/recent_summon_episodes_rate"] == 1.0
-    assert payload["campaign/recent_hired_units_mean"] == 1.0
-    assert payload["campaign/recent_hire_episodes_rate"] == 1.0
-    assert payload["campaign/recent_battle_items_equipped_mean"] == 1.0
-    assert payload["campaign/recent_battle_item_equip_episodes_rate"] == 1.0
-    assert payload["campaign/recent_battle_items_used_mean"] == 1.0
-    assert payload["campaign/recent_battle_item_use_episodes_rate"] == 1.0
+    assert payload["campaign/window/episodes"] == 1.0
+    assert payload["campaign/window/victory_rate"] == 1.0
+    assert payload["campaign/window/defeat_rate"] == 0.0
+    assert payload["campaign/window/timeout_rate"] == 0.0
+    assert payload["campaign/window/battle_win_rate"] == 1.0
     assert payload["campaign/window/chests_collected_mean"] == 2.0
-    assert payload["campaign/window/sold_items_mean"] == 3.0
+    assert payload["campaign/window/ruins_cleared_mean"] == 0.0
     assert payload["campaign/window/spell_casts_mean"] == 1.0
-    assert payload["campaign/window/summoned_units_mean"] == 1.0
     assert payload["campaign/window/hired_units_mean"] == 1.0
-    assert payload["campaign/window/battle_items_equipped_mean"] == 1.0
-    assert payload["campaign/window/battle_items_used_mean"] == 1.0
+    assert payload["campaign/best_recent_victory_rate"] == 1.0
     assert "campaign/window_enemy_encounters/enemy_31" not in payload
     assert "campaign/window_enemy_victories/enemy_31" not in payload
-    assert payload["campaign/window_victory_reasons/objective_cities_cleared"] == 1.0
-    assert ("campaign/episode_chests_collected", 2.0, 1000) in dummy_experiment.metric_logged
-    assert ("campaign/episode_sold_items", 3.0, 1000) in dummy_experiment.metric_logged
-    assert ("campaign/episode_merchant_sale_gold", 3650.0, 1000) in dummy_experiment.metric_logged
-    assert ("campaign/episode_spell_casts", 1.0, 1000) in dummy_experiment.metric_logged
-    assert ("campaign/episode_summoned_units", 1.0, 1000) in dummy_experiment.metric_logged
-    assert ("campaign/episode_hired_units", 1.0, 1000) in dummy_experiment.metric_logged
-    assert ("campaign/episode_battle_items_equipped", 1.0, 1000) in dummy_experiment.metric_logged
-    assert ("campaign/episode_battle_items_used", 1.0, 1000) in dummy_experiment.metric_logged
+    assert "campaign/window_victory_reasons/objective_cities_cleared" not in payload
+    assert dummy_experiment.metric_logged == []
     assert dummy_experiment.others["summary_campaign_victory_rate"] == 1.0
 
 
@@ -188,63 +199,43 @@ def test_campaign_metrics_callback_flushes_partial_window_on_training_end():
 
     payload, step = dummy_experiment.logged[0]
     assert step == 750
+    assert set(payload) == ACTIVE_CAMPAIGN_METRICS
     assert payload["campaign/episodes_total"] == 1
+    assert payload["campaign/victories_total"] == 0.0
+    assert payload["campaign/victory_rate"] == 0.0
     assert payload["campaign/defeat_rate"] == 1.0
+    assert payload["campaign/timeout_rate"] == 0.0
     assert payload["campaign/battle_victories_per_episode_mean"] == 0.0
-    assert payload["campaign/castle_heal_uses_total"] == 0.0
-    assert payload["campaign/castle_healed_hp_total"] == 0.0
+    assert payload["campaign/battle_win_rate"] == 0.0
+    assert payload["campaign/unit_upgrades_total"] == 0.0
     assert payload["campaign/castle_heal_episodes_rate"] == 0.0
-    assert payload["campaign/chests_collected_total"] == 0.0
     assert payload["campaign/chests_collected_per_episode_mean"] == 0.0
-    assert payload["campaign/chest_collection_episodes_rate"] == 0.0
-    assert payload["campaign/sold_items_total"] == 0.0
+    assert payload["campaign/ruins_cleared_per_episode_mean"] == 0.0
+    assert payload["campaign/ruin_clear_episodes_rate"] == 0.0
     assert payload["campaign/sold_items_per_episode_mean"] == 0.0
-    assert payload["campaign/merchant_sale_gold_total"] == 0.0
     assert payload["campaign/merchant_sale_gold_per_episode_mean"] == 0.0
-    assert payload["campaign/sale_episodes_rate"] == 0.0
-    assert payload["campaign/spell_casts_total"] == 0.0
+    assert payload["campaign/spells_learned_per_episode_mean"] == 0.0
     assert payload["campaign/spell_casts_per_episode_mean"] == 0.0
     assert payload["campaign/spell_cast_episodes_rate"] == 0.0
-    assert payload["campaign/summoned_units_total"] == 0.0
     assert payload["campaign/summoned_units_per_episode_mean"] == 0.0
     assert payload["campaign/summon_episodes_rate"] == 0.0
-    assert payload["campaign/hired_units_total"] == 0.0
     assert payload["campaign/hired_units_per_episode_mean"] == 0.0
     assert payload["campaign/hire_episodes_rate"] == 0.0
-    assert payload["campaign/battle_items_equipped_total"] == 0.0
-    assert payload["campaign/battle_items_equipped_per_episode_mean"] == 0.0
-    assert payload["campaign/battle_item_equip_episodes_rate"] == 0.0
-    assert payload["campaign/battle_items_used_total"] == 0.0
     assert payload["campaign/battle_items_used_per_episode_mean"] == 0.0
     assert payload["campaign/battle_item_use_episodes_rate"] == 0.0
-    assert payload["campaign/recent_castle_heal_uses_mean"] == 0.0
-    assert payload["campaign/recent_castle_heal_episodes_rate"] == 0.0
-    assert payload["campaign/recent_castle_healed_hp_mean"] == 0.0
-    assert payload["campaign/recent_chests_collected_mean"] == 0.0
-    assert payload["campaign/recent_chest_collection_episodes_rate"] == 0.0
-    assert payload["campaign/recent_sold_items_mean"] == 0.0
-    assert payload["campaign/recent_sale_episodes_rate"] == 0.0
-    assert payload["campaign/recent_merchant_sale_gold_mean"] == 0.0
-    assert payload["campaign/recent_spell_casts_mean"] == 0.0
-    assert payload["campaign/recent_spell_cast_episodes_rate"] == 0.0
-    assert payload["campaign/recent_summoned_units_mean"] == 0.0
-    assert payload["campaign/recent_summon_episodes_rate"] == 0.0
-    assert payload["campaign/recent_hired_units_mean"] == 0.0
-    assert payload["campaign/recent_hire_episodes_rate"] == 0.0
-    assert payload["campaign/recent_battle_items_equipped_mean"] == 0.0
-    assert payload["campaign/recent_battle_item_equip_episodes_rate"] == 0.0
-    assert payload["campaign/recent_battle_items_used_mean"] == 0.0
-    assert payload["campaign/recent_battle_item_use_episodes_rate"] == 0.0
+    assert payload["campaign/window/episodes"] == 1.0
+    assert payload["campaign/window/victory_rate"] == 0.0
+    assert payload["campaign/window/defeat_rate"] == 1.0
+    assert payload["campaign/window/timeout_rate"] == 0.0
     assert payload["campaign/window/chests_collected_mean"] == 0.0
-    assert payload["campaign/window/sold_items_mean"] == 0.0
+    assert payload["campaign/window/ruins_cleared_mean"] == 0.0
     assert payload["campaign/window/spell_casts_mean"] == 0.0
-    assert payload["campaign/window/summoned_units_mean"] == 0.0
     assert payload["campaign/window/hired_units_mean"] == 0.0
-    assert payload["campaign/window/battle_items_equipped_mean"] == 0.0
-    assert payload["campaign/window/battle_items_used_mean"] == 0.0
     assert payload["campaign/window/battle_win_rate"] == 0.0
+    assert payload["campaign/best_recent_victory_rate"] == 0.0
     assert "campaign/window_enemy_encounters/enemy_7" not in payload
     assert "campaign/window_enemy_defeats/enemy_7" not in payload
+    assert dummy_experiment.metric_logged == []
     assert dummy_experiment.others["summary_campaign_battle_win_rate"] == 0.0
 
 

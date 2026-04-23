@@ -121,6 +121,26 @@ def test_second_objective_city_capture_ends_episode_and_keeps_full_reward():
     assert info.get("final_objective_reward") == 40.0
 
 
+def test_campaign_truncates_after_max_grid_steps():
+    env = CampaignEnv(
+        log_enabled=False,
+        persist_blue_hp=False,
+        realcapital=2,
+        max_grid_steps=1,
+        reward_timeout=-7.0,
+    )
+    env.reset(seed=123)
+
+    _, reward, terminated, truncated, info = env.step(8)
+
+    assert terminated is False
+    assert truncated is True
+    assert info.get("campaign_result") == "timeout"
+    assert env.max_grid_steps == 1
+    assert env.grid_env.max_steps == 1
+    assert reward <= -7.0
+
+
 def test_agent_returns_to_attack_origin_after_battle_victory():
     env = _make_reward_isolated_env()
     env.reset(seed=123)

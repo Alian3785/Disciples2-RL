@@ -652,6 +652,86 @@ def test_legion_summon_spell_victory_defeats_enemy_without_blue_exp():
     )
 
 
+def test_summon_victory_over_city_captures_city_immediately():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    city_enemy_id = 68
+    already_defeated_city_enemy_id = 34
+    other_enemy_id = 1
+    city_tile = tuple(env.grid_env.enemy_positions[city_enemy_id])
+    env.grid_env.agent_pos = (city_tile[0] - 1, city_tile[1])
+    env.grid_env.enemy_positions = {
+        already_defeated_city_enemy_id: city_tile,
+        city_enemy_id: city_tile,
+        other_enemy_id: (0, 0),
+    }
+    env.grid_env.enemies_alive = {
+        already_defeated_city_enemy_id: False,
+        city_enemy_id: True,
+        other_enemy_id: True,
+    }
+    env.grid_env.obstacle_positions = set()
+    env.enemy_team_states[city_enemy_id] = [
+        _enemy_unit(
+            position=1,
+            hp=10.0,
+            max_hp=10.0,
+            name="Weak city defender",
+            extra_fields={
+                "damage": 1,
+                "accuracy": 0,
+                "initiative": 1,
+                "initiative_base": 1,
+            },
+        ),
+    ]
+
+    spell_key = "lod_d2_s006"
+    env.active_spells[spell_key]["learned"] = 1
+    _set_spell_use_mana(env, spell_key)
+
+    _, _, _, _, cast_info = env.step(_spell_action_index(env, spell_key))
+    assert cast_info["battle_triggered"] is True
+    assert cast_info["target_enemy_id"] == city_enemy_id
+
+    summoned_unit = next(
+        unit
+        for unit in env.battle_env.combined
+        if unit.get("team") == "blue" and float(unit.get("max_health", 0) or 0) > 0
+    )
+    summoned_unit["damage"] = 999
+    summoned_unit["accuracy"] = 100
+    summoned_unit["initiative"] = 999
+    summoned_unit["initiative_base"] = 999
+
+    _, _, terminated, truncated, info = env.step(_battle_target_action(1))
+
+    city_name = env._objective_city_for_enemy(city_enemy_id)
+    settlement_name = env.legions_settlement_territory_source_name_by_enemy_id[
+        city_enemy_id
+    ]
+
+    assert env.mode == env.MODE_GRID
+    assert terminated is False
+    assert truncated is False
+    assert env.grid_env.enemies_alive[city_enemy_id] is False
+    assert city_name in env.captured_objective_cities
+    assert settlement_name in env.legions_active_settlement_territory_capture_turn_by_name
+    assert info["captured_objective_cities"] == [city_name]
+    assert info["legions_settlement_territories_activated"] == [settlement_name]
+    assert info["final_objective_reward"] == pytest.approx(env.reward_all_enemies)
+    assert "summon_city_capture_deferred" not in info
+    assert "pending_summon_city_capture_count" not in info
+
+    upgrade_action = (
+        env.grid_settlement_upgrade_action_start
+        + env.settlement_upgrade_names.index(settlement_name)
+    )
+    env.gold = 999.0
+    assert bool(env.compute_action_mask()[upgrade_action]) is True
+
+
 def test_legion_summon_spell_defeat_persists_enemy_damage_and_enemy_exp():
     env = _make_legions_env()
     spell_key = "lod_d2_s001"

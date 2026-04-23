@@ -964,12 +964,13 @@ class CampaignMetricsCallback(BaseCallback):
         if chest_count > 0.0:
             self.chest_collection_episodes += 1
 
-        if self.experiment is not None:
-            self.experiment.log_metric(
-                "campaign/episode_chests_collected",
-                chest_count,
-                step=self.num_timesteps,
-            )
+        # Disabled campaign graph. Uncomment to restore per-episode chest logging.
+        # if self.experiment is not None:
+        #     self.experiment.log_metric(
+        #         "campaign/episode_chests_collected",
+        #         chest_count,
+        #         step=self.num_timesteps,
+        #     )
 
         self._episode_chests_collected[env_index] = 0
 
@@ -987,12 +988,13 @@ class CampaignMetricsCallback(BaseCallback):
         if ruin_count > 0.0:
             self.ruin_clear_episodes += 1
 
-        if self.experiment is not None:
-            self.experiment.log_metric(
-                "campaign/episode_ruins_cleared",
-                ruin_count,
-                step=self.num_timesteps,
-            )
+        # Disabled campaign graph. Uncomment to restore per-episode ruin logging.
+        # if self.experiment is not None:
+        #     self.experiment.log_metric(
+        #         "campaign/episode_ruins_cleared",
+        #         ruin_count,
+        #         step=self.num_timesteps,
+        #     )
 
         self._episode_ruins_cleared[env_index] = 0
 
@@ -1026,17 +1028,18 @@ class CampaignMetricsCallback(BaseCallback):
         if sold_flag:
             self.sale_episodes += 1
 
-        if self.experiment is not None:
-            self.experiment.log_metric(
-                "campaign/episode_sold_items",
-                sold_items,
-                step=self.num_timesteps,
-            )
-            self.experiment.log_metric(
-                "campaign/episode_merchant_sale_gold",
-                sale_gold,
-                step=self.num_timesteps,
-            )
+        # Disabled campaign graphs. Uncomment to restore per-episode sale logging.
+        # if self.experiment is not None:
+        #     self.experiment.log_metric(
+        #         "campaign/episode_sold_items",
+        #         sold_items,
+        #         step=self.num_timesteps,
+        #     )
+        #     self.experiment.log_metric(
+        #         "campaign/episode_merchant_sale_gold",
+        #         sale_gold,
+        #         step=self.num_timesteps,
+        #     )
 
         self._episode_sold_items[env_index] = 0
         self._episode_sale_gold[env_index] = 0.0
@@ -1057,12 +1060,13 @@ class CampaignMetricsCallback(BaseCallback):
         if learned_flag:
             self.spell_learning_episodes += 1
 
-        if self.experiment is not None:
-            self.experiment.log_metric(
-                "campaign/episode_spells_learned",
-                spell_count,
-                step=self.num_timesteps,
-            )
+        # Disabled campaign graph. Uncomment to restore per-episode spell learning logging.
+        # if self.experiment is not None:
+        #     self.experiment.log_metric(
+        #         "campaign/episode_spells_learned",
+        #         spell_count,
+        #         step=self.num_timesteps,
+        #     )
 
         self._episode_spells_learned[env_index] = 0
 
@@ -1084,12 +1088,13 @@ class CampaignMetricsCallback(BaseCallback):
         if cast_flag:
             self.spell_cast_episodes += 1
 
-        if self.experiment is not None:
-            self.experiment.log_metric(
-                "campaign/episode_spell_casts",
-                cast_count,
-                step=self.num_timesteps,
-            )
+        # Disabled campaign graph. Uncomment to restore per-episode spell cast logging.
+        # if self.experiment is not None:
+        #     self.experiment.log_metric(
+        #         "campaign/episode_spell_casts",
+        #         cast_count,
+        #         step=self.num_timesteps,
+        #     )
 
         self._episode_spell_casts[env_index] = 0
 
@@ -1116,12 +1121,13 @@ class CampaignMetricsCallback(BaseCallback):
         if summon_flag:
             self.summon_episodes += 1
 
-        if self.experiment is not None:
-            self.experiment.log_metric(
-                "campaign/episode_summoned_units",
-                summoned_units,
-                step=self.num_timesteps,
-            )
+        # Disabled campaign graph. Uncomment to restore per-episode summon logging.
+        # if self.experiment is not None:
+        #     self.experiment.log_metric(
+        #         "campaign/episode_summoned_units",
+        #         summoned_units,
+        #         step=self.num_timesteps,
+        #     )
 
         self._episode_summoned_units[env_index] = 0
 
@@ -1148,12 +1154,13 @@ class CampaignMetricsCallback(BaseCallback):
         if hired_flag:
             self.hire_episodes += 1
 
-        if self.experiment is not None:
-            self.experiment.log_metric(
-                "campaign/episode_hired_units",
-                hired_units,
-                step=self.num_timesteps,
-            )
+        # Disabled campaign graph. Uncomment to restore per-episode hire logging.
+        # if self.experiment is not None:
+        #     self.experiment.log_metric(
+        #         "campaign/episode_hired_units",
+        #         hired_units,
+        #         step=self.num_timesteps,
+        #     )
 
         self._episode_hired_units[env_index] = 0
 
@@ -1193,17 +1200,18 @@ class CampaignMetricsCallback(BaseCallback):
         if used_flag:
             self.battle_item_use_episodes += 1
 
-        if self.experiment is not None:
-            self.experiment.log_metric(
-                "campaign/episode_battle_items_equipped",
-                equipped_count,
-                step=self.num_timesteps,
-            )
-            self.experiment.log_metric(
-                "campaign/episode_battle_items_used",
-                used_count,
-                step=self.num_timesteps,
-            )
+        # Disabled campaign graphs. Uncomment to restore per-episode battle-item logging.
+        # if self.experiment is not None:
+        #     self.experiment.log_metric(
+        #         "campaign/episode_battle_items_equipped",
+        #         equipped_count,
+        #         step=self.num_timesteps,
+        #     )
+        #     self.experiment.log_metric(
+        #         "campaign/episode_battle_items_used",
+        #         used_count,
+        #         step=self.num_timesteps,
+        #     )
 
         self._episode_battle_items_equipped[env_index] = 0
         self._episode_battle_items_used[env_index] = 0
@@ -1324,16 +1332,12 @@ class CampaignMetricsCallback(BaseCallback):
         self.best_recent_victory_rate = max(self.best_recent_victory_rate, recent_victory_rate)
 
         payload: dict[str, float] = {
+            # Core campaign dashboard: keep these 33 graphs active.
             "campaign/episodes_total": total_episodes,
             "campaign/victories_total": float(self.victories),
-            "campaign/defeats_total": float(self.defeats),
-            "campaign/timeouts_total": float(self.timeouts),
             "campaign/victory_rate": _safe_rate(self.victories, total_episodes),
             "campaign/defeat_rate": _safe_rate(self.defeats, total_episodes),
             "campaign/timeout_rate": _safe_rate(self.timeouts, total_episodes),
-            "campaign/battles_total": total_battles,
-            "campaign/battle_victories_total": float(self.battle_counter.get("victory", 0)),
-            "campaign/battle_defeats_total": float(self.battle_counter.get("defeat", 0)),
             "campaign/battle_victories_per_episode_mean": _safe_rate(
                 self.battle_counter.get("victory", 0),
                 total_episodes,
@@ -1343,22 +1347,14 @@ class CampaignMetricsCallback(BaseCallback):
                 total_battles,
             ),
             "campaign/unit_upgrades_total": float(self.total_unit_upgrades),
-            "campaign/castle_heal_uses_total": float(self.total_castle_heal_uses),
-            "campaign/castle_healed_hp_total": float(self.total_castle_healed_hp),
             "campaign/castle_heal_episodes_rate": _safe_rate(
                 self.castle_heal_episodes,
                 total_episodes,
             ),
-            "campaign/chests_collected_total": float(self.total_chests_collected),
             "campaign/chests_collected_per_episode_mean": _safe_rate(
                 self.total_chests_collected,
                 total_episodes,
             ),
-            "campaign/chest_collection_episodes_rate": _safe_rate(
-                self.chest_collection_episodes,
-                total_episodes,
-            ),
-            "campaign/ruins_cleared_total": float(self.total_ruins_cleared),
             "campaign/ruins_cleared_per_episode_mean": _safe_rate(
                 self.total_ruins_cleared,
                 total_episodes,
@@ -1367,30 +1363,18 @@ class CampaignMetricsCallback(BaseCallback):
                 self.ruin_clear_episodes,
                 total_episodes,
             ),
-            "campaign/sold_items_total": float(self.total_sold_items),
             "campaign/sold_items_per_episode_mean": _safe_rate(
                 self.total_sold_items,
                 total_episodes,
             ),
-            "campaign/merchant_sale_gold_total": float(self.total_merchant_sale_gold),
             "campaign/merchant_sale_gold_per_episode_mean": _safe_rate(
                 self.total_merchant_sale_gold,
                 total_episodes,
             ),
-            "campaign/sale_episodes_rate": _safe_rate(
-                self.sale_episodes,
-                total_episodes,
-            ),
-            "campaign/spells_learned_total": float(self.total_spells_learned),
             "campaign/spells_learned_per_episode_mean": _safe_rate(
                 self.total_spells_learned,
                 total_episodes,
             ),
-            "campaign/spell_learning_episodes_rate": _safe_rate(
-                self.spell_learning_episodes,
-                total_episodes,
-            ),
-            "campaign/spell_casts_total": float(self.total_spell_casts),
             "campaign/spell_casts_per_episode_mean": _safe_rate(
                 self.total_spell_casts,
                 total_episodes,
@@ -1399,7 +1383,6 @@ class CampaignMetricsCallback(BaseCallback):
                 self.spell_cast_episodes,
                 total_episodes,
             ),
-            "campaign/summoned_units_total": float(self.total_summoned_units),
             "campaign/summoned_units_per_episode_mean": _safe_rate(
                 self.total_summoned_units,
                 total_episodes,
@@ -1408,7 +1391,6 @@ class CampaignMetricsCallback(BaseCallback):
                 self.summon_episodes,
                 total_episodes,
             ),
-            "campaign/hired_units_total": float(self.total_hired_units),
             "campaign/hired_units_per_episode_mean": _safe_rate(
                 self.total_hired_units,
                 total_episodes,
@@ -1417,16 +1399,6 @@ class CampaignMetricsCallback(BaseCallback):
                 self.hire_episodes,
                 total_episodes,
             ),
-            "campaign/battle_items_equipped_total": float(self.total_battle_items_equipped),
-            "campaign/battle_items_equipped_per_episode_mean": _safe_rate(
-                self.total_battle_items_equipped,
-                total_episodes,
-            ),
-            "campaign/battle_item_equip_episodes_rate": _safe_rate(
-                self.battle_item_equip_episodes,
-                total_episodes,
-            ),
-            "campaign/battle_items_used_total": float(self.total_battle_items_used),
             "campaign/battle_items_used_per_episode_mean": _safe_rate(
                 self.total_battle_items_used,
                 total_episodes,
@@ -1435,63 +1407,6 @@ class CampaignMetricsCallback(BaseCallback):
                 self.battle_item_use_episodes,
                 total_episodes,
             ),
-            "campaign/recent_episodes": float(len(self.recent_episode_rewards)),
-            "campaign/recent_episode_reward_mean": _safe_mean(self.recent_episode_rewards),
-            "campaign/recent_episode_length_mean": _safe_mean(self.recent_episode_lengths),
-            "campaign/recent_blue_hp_ratio_mean": _safe_mean(self.recent_blue_hp_ratios),
-            "campaign/recent_unit_upgrades_mean": _safe_mean(self.recent_unit_upgrades),
-            "campaign/recent_enemy_defeat_reward_mean": _safe_mean(self.recent_enemy_defeat_rewards),
-            "campaign/recent_blue_exp_reward_mean": _safe_mean(self.recent_blue_exp_rewards),
-            "campaign/recent_final_objective_reward_mean": _safe_mean(self.recent_final_objective_rewards),
-            "campaign/recent_castle_heal_uses_mean": _safe_mean(self.recent_castle_heal_uses),
-            "campaign/recent_castle_heal_episodes_rate": _safe_mean(
-                self.recent_castle_heal_episode_flags
-            ),
-            "campaign/recent_castle_healed_hp_mean": _safe_mean(self.recent_castle_healed_hp),
-            "campaign/recent_chests_collected_mean": _safe_mean(self.recent_chests_collected),
-            "campaign/recent_chest_collection_episodes_rate": _safe_mean(
-                self.recent_chest_episode_flags
-            ),
-            "campaign/recent_ruins_cleared_mean": _safe_mean(self.recent_ruins_cleared),
-            "campaign/recent_ruin_clear_episodes_rate": _safe_mean(
-                self.recent_ruin_episode_flags
-            ),
-            "campaign/recent_sold_items_mean": _safe_mean(self.recent_sold_items),
-            "campaign/recent_sale_episodes_rate": _safe_mean(
-                self.recent_sale_episode_flags
-            ),
-            "campaign/recent_merchant_sale_gold_mean": _safe_mean(self.recent_sale_gold),
-            "campaign/recent_spells_learned_mean": _safe_mean(self.recent_spells_learned),
-            "campaign/recent_spell_learning_episodes_rate": _safe_mean(
-                self.recent_spell_learning_episode_flags
-            ),
-            "campaign/recent_spell_casts_mean": _safe_mean(self.recent_spell_casts),
-            "campaign/recent_spell_cast_episodes_rate": _safe_mean(
-                self.recent_spell_cast_episode_flags
-            ),
-            "campaign/recent_summoned_units_mean": _safe_mean(self.recent_summoned_units),
-            "campaign/recent_summon_episodes_rate": _safe_mean(
-                self.recent_summon_episode_flags
-            ),
-            "campaign/recent_hired_units_mean": _safe_mean(self.recent_hired_units),
-            "campaign/recent_hire_episodes_rate": _safe_mean(
-                self.recent_hire_episode_flags
-            ),
-            "campaign/recent_battle_items_equipped_mean": _safe_mean(
-                self.recent_battle_items_equipped
-            ),
-            "campaign/recent_battle_item_equip_episodes_rate": _safe_mean(
-                self.recent_battle_item_equip_episode_flags
-            ),
-            "campaign/recent_battle_items_used_mean": _safe_mean(
-                self.recent_battle_items_used
-            ),
-            "campaign/recent_battle_item_use_episodes_rate": _safe_mean(
-                self.recent_battle_item_use_episode_flags
-            ),
-            "campaign/recent_turns_mean": _safe_mean(self.recent_turns),
-            "campaign/recent_gold_mean": _safe_mean(self.recent_gold),
-            "campaign/recent_moves_mean": _safe_mean(self.recent_moves),
             "campaign/window/episodes": float(window_episodes),
             "campaign/window/victory_rate": recent_victory_rate,
             "campaign/window/defeat_rate": _safe_rate(
@@ -1502,29 +1417,129 @@ class CampaignMetricsCallback(BaseCallback):
                 self.window_result_counter.get("timeout", 0),
                 window_episodes,
             ),
-            "campaign/window/battles": float(window_battles),
             "campaign/window/battle_win_rate": _safe_rate(
                 self.window_battle_counter.get("victory", 0),
                 window_battles,
             ),
             "campaign/window/chests_collected_mean": _safe_mean(self.recent_chests_collected),
             "campaign/window/ruins_cleared_mean": _safe_mean(self.recent_ruins_cleared),
-            "campaign/window/sold_items_mean": _safe_mean(self.recent_sold_items),
-            "campaign/window/spells_learned_mean": _safe_mean(self.recent_spells_learned),
             "campaign/window/spell_casts_mean": _safe_mean(self.recent_spell_casts),
-            "campaign/window/summoned_units_mean": _safe_mean(self.recent_summoned_units),
             "campaign/window/hired_units_mean": _safe_mean(self.recent_hired_units),
-            "campaign/window/battle_items_equipped_mean": _safe_mean(
-                self.recent_battle_items_equipped
-            ),
-            "campaign/window/battle_items_used_mean": _safe_mean(
-                self.recent_battle_items_used
-            ),
             "campaign/best_recent_victory_rate": self.best_recent_victory_rate,
+            # Disabled campaign graphs. Uncomment individual entries to restore them.
+            # "campaign/defeats_total": float(self.defeats),
+            # "campaign/timeouts_total": float(self.timeouts),
+            # "campaign/battles_total": total_battles,
+            # "campaign/battle_victories_total": float(self.battle_counter.get("victory", 0)),
+            # "campaign/battle_defeats_total": float(self.battle_counter.get("defeat", 0)),
+            # "campaign/castle_heal_uses_total": float(self.total_castle_heal_uses),
+            # "campaign/castle_healed_hp_total": float(self.total_castle_healed_hp),
+            # "campaign/chests_collected_total": float(self.total_chests_collected),
+            # "campaign/chest_collection_episodes_rate": _safe_rate(
+            #     self.chest_collection_episodes,
+            #     total_episodes,
+            # ),
+            # "campaign/ruins_cleared_total": float(self.total_ruins_cleared),
+            # "campaign/sold_items_total": float(self.total_sold_items),
+            # "campaign/merchant_sale_gold_total": float(self.total_merchant_sale_gold),
+            # "campaign/sale_episodes_rate": _safe_rate(
+            #     self.sale_episodes,
+            #     total_episodes,
+            # ),
+            # "campaign/spells_learned_total": float(self.total_spells_learned),
+            # "campaign/spell_learning_episodes_rate": _safe_rate(
+            #     self.spell_learning_episodes,
+            #     total_episodes,
+            # ),
+            # "campaign/spell_casts_total": float(self.total_spell_casts),
+            # "campaign/summoned_units_total": float(self.total_summoned_units),
+            # "campaign/hired_units_total": float(self.total_hired_units),
+            # "campaign/battle_items_equipped_total": float(self.total_battle_items_equipped),
+            # "campaign/battle_items_equipped_per_episode_mean": _safe_rate(
+            #     self.total_battle_items_equipped,
+            #     total_episodes,
+            # ),
+            # "campaign/battle_item_equip_episodes_rate": _safe_rate(
+            #     self.battle_item_equip_episodes,
+            #     total_episodes,
+            # ),
+            # "campaign/battle_items_used_total": float(self.total_battle_items_used),
+            # "campaign/recent_episodes": float(len(self.recent_episode_rewards)),
+            # "campaign/recent_episode_reward_mean": _safe_mean(self.recent_episode_rewards),
+            # "campaign/recent_episode_length_mean": _safe_mean(self.recent_episode_lengths),
+            # "campaign/recent_blue_hp_ratio_mean": _safe_mean(self.recent_blue_hp_ratios),
+            # "campaign/recent_unit_upgrades_mean": _safe_mean(self.recent_unit_upgrades),
+            # "campaign/recent_enemy_defeat_reward_mean": _safe_mean(
+            #     self.recent_enemy_defeat_rewards
+            # ),
+            # "campaign/recent_blue_exp_reward_mean": _safe_mean(self.recent_blue_exp_rewards),
+            # "campaign/recent_final_objective_reward_mean": _safe_mean(
+            #     self.recent_final_objective_rewards
+            # ),
+            # "campaign/recent_castle_heal_uses_mean": _safe_mean(self.recent_castle_heal_uses),
+            # "campaign/recent_castle_heal_episodes_rate": _safe_mean(
+            #     self.recent_castle_heal_episode_flags
+            # ),
+            # "campaign/recent_castle_healed_hp_mean": _safe_mean(self.recent_castle_healed_hp),
+            # "campaign/recent_chests_collected_mean": _safe_mean(self.recent_chests_collected),
+            # "campaign/recent_chest_collection_episodes_rate": _safe_mean(
+            #     self.recent_chest_episode_flags
+            # ),
+            # "campaign/recent_ruins_cleared_mean": _safe_mean(self.recent_ruins_cleared),
+            # "campaign/recent_ruin_clear_episodes_rate": _safe_mean(
+            #     self.recent_ruin_episode_flags
+            # ),
+            # "campaign/recent_sold_items_mean": _safe_mean(self.recent_sold_items),
+            # "campaign/recent_sale_episodes_rate": _safe_mean(
+            #     self.recent_sale_episode_flags
+            # ),
+            # "campaign/recent_merchant_sale_gold_mean": _safe_mean(self.recent_sale_gold),
+            # "campaign/recent_spells_learned_mean": _safe_mean(self.recent_spells_learned),
+            # "campaign/recent_spell_learning_episodes_rate": _safe_mean(
+            #     self.recent_spell_learning_episode_flags
+            # ),
+            # "campaign/recent_spell_casts_mean": _safe_mean(self.recent_spell_casts),
+            # "campaign/recent_spell_cast_episodes_rate": _safe_mean(
+            #     self.recent_spell_cast_episode_flags
+            # ),
+            # "campaign/recent_summoned_units_mean": _safe_mean(self.recent_summoned_units),
+            # "campaign/recent_summon_episodes_rate": _safe_mean(
+            #     self.recent_summon_episode_flags
+            # ),
+            # "campaign/recent_hired_units_mean": _safe_mean(self.recent_hired_units),
+            # "campaign/recent_hire_episodes_rate": _safe_mean(
+            #     self.recent_hire_episode_flags
+            # ),
+            # "campaign/recent_battle_items_equipped_mean": _safe_mean(
+            #     self.recent_battle_items_equipped
+            # ),
+            # "campaign/recent_battle_item_equip_episodes_rate": _safe_mean(
+            #     self.recent_battle_item_equip_episode_flags
+            # ),
+            # "campaign/recent_battle_items_used_mean": _safe_mean(
+            #     self.recent_battle_items_used
+            # ),
+            # "campaign/recent_battle_item_use_episodes_rate": _safe_mean(
+            #     self.recent_battle_item_use_episode_flags
+            # ),
+            # "campaign/recent_turns_mean": _safe_mean(self.recent_turns),
+            # "campaign/recent_gold_mean": _safe_mean(self.recent_gold),
+            # "campaign/recent_moves_mean": _safe_mean(self.recent_moves),
+            # "campaign/window/battles": float(window_battles),
+            # "campaign/window/sold_items_mean": _safe_mean(self.recent_sold_items),
+            # "campaign/window/spells_learned_mean": _safe_mean(self.recent_spells_learned),
+            # "campaign/window/summoned_units_mean": _safe_mean(self.recent_summoned_units),
+            # "campaign/window/battle_items_equipped_mean": _safe_mean(
+            #     self.recent_battle_items_equipped
+            # ),
+            # "campaign/window/battle_items_used_mean": _safe_mean(
+            #     self.recent_battle_items_used
+            # ),
         }
 
-        for reason, count in sorted(self.window_victory_reason_counter.items()):
-            payload[f"campaign/window_victory_reasons/{_metric_token(reason)}"] = float(count)
+        # Disabled dynamic campaign graphs. Uncomment to restore per-reason victory metrics.
+        # for reason, count in sorted(self.window_victory_reason_counter.items()):
+        #     payload[f"campaign/window_victory_reasons/{_metric_token(reason)}"] = float(count)
 
         return payload
 
