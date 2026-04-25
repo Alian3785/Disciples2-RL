@@ -105,12 +105,16 @@ class ConsoleVisualizer:
             self.vec_env.norm_reward = True
             print(f"VecNormalize загружен из: {vec_normalize_path}")
         else:
-            vec_env = make_vec_env(lambda: self.env, n_envs=1)
-            self.vec_env = vec_normalize_path
+            self.vec_env = make_vec_env(lambda: self.env, n_envs=1)
             print("VecNormalize не найден, используется базовая среда")
 
         self.model = PPO.load(self.checkpoint_path, device="auto")
         print(f"Модель загружена из: {self.checkpoint_path}")
+
+    def _base_env(self):
+        """Вернуть исходную среду из VecNormalize или обычного DummyVecEnv."""
+        vec_env = self.vec_env.venv if hasattr(self.vec_env, "venv") else self.vec_env
+        return vec_env.envs[0].env
 
     def _clear_screen(self):
         """Очистить экран консоли"""
@@ -257,7 +261,7 @@ class ConsoleVisualizer:
         self.next_target = 0
 
         # Обновляем состояние из базовой среды
-        base_env = self.vec_env.venv.envs[0].env
+        base_env = self._base_env()
         self.agent_pos = tuple(base_env.pos)
         self.agent_pos_history.clear()
         self.enemy_positions = [tuple(pos) for pos in base_env.enemy_positions]
@@ -286,7 +290,7 @@ class ConsoleVisualizer:
             obs = obs[0]  # Берем первое наблюдение из батча
         else:
             # Получить наблюдение из текущего состояния среды
-            base_env = self.vec_env.venv.envs[0].env
+            base_env = self._base_env()
             obs = [
                 float(base_env.pos[0]),
                 float(base_env.pos[1]),
@@ -322,7 +326,7 @@ class ConsoleVisualizer:
         self.total_reward += reward
 
         # Обновить состояние из базовой среды
-        base_env = self.vec_env.venv.envs[0].env
+        base_env = self._base_env()
         old_pos = self.agent_pos
         self.agent_pos = tuple(base_env.pos)
         self.agent_level = base_env.agent_level

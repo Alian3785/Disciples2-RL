@@ -129,6 +129,11 @@ class GridWorldVisualizer:
         self.model = PPO.load(self.checkpoint_path, device="auto")
         print(f"Модель загружена из: {self.checkpoint_path}")
 
+    def _base_env(self):
+        """Вернуть исходную среду из VecNormalize или обычного DummyVecEnv."""
+        vec_env = self.vec_env.venv if hasattr(self.vec_env, "venv") else self.vec_env
+        return vec_env.envs[0].env
+
     def _get_cell_center(self, x: int, y: int) -> Tuple[int, int]:
         """Получить центр клетки"""
         return (FIELD_X + x * CELL_SIZE + CELL_SIZE // 2,
@@ -366,7 +371,7 @@ class GridWorldVisualizer:
         self.next_target = 0
 
         # Обновляем состояние агента из базовой среды
-        base_env = self.vec_env.venv.envs[0].env  # Получаем базовую среду
+        base_env = self._base_env()
         self.agent_pos = tuple(base_env.pos)
         self.agent_pos_history.clear()  # Очищаем историю позиций
         self.enemy_positions = [tuple(pos) for pos in base_env.enemy_positions]
@@ -386,7 +391,7 @@ class GridWorldVisualizer:
             obs = obs[0]  # Берем первое наблюдение из батча
         else:
             # Получить наблюдение из текущего состояния среды
-            base_env = self.vec_env.venv.envs[0].env
+            base_env = self._base_env()
             obs = np.array([
                 float(base_env.pos[0]),
                 float(base_env.pos[1]),
@@ -421,7 +426,7 @@ class GridWorldVisualizer:
         self.total_reward += reward
 
         # Обновить состояние из базовой среды
-        base_env = self.vec_env.venv.envs[0].env
+        base_env = self._base_env()
         old_pos = self.agent_pos
         self.agent_pos = tuple(base_env.pos)
         self.agent_level = base_env.agent_level
