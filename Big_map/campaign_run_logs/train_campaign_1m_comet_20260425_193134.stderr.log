@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/workspace/Big_map/train_campaign.py", line 60, in <module>
+    from campaign_env import CampaignEnv
+  File "/workspace/Big_map/campaign_env.py", line 29, in <module>
+    from battle_env import BattleEnv, UNITS_BLUE, FEATURES_PER_UNIT
+  File "/workspace/Big_map/battle_env.py", line 26, in <module>
+    from data_dicts_compact_lines import DATA as UNIT_DATA
+  File "/workspace/Big_map/data_dicts_compact_lines.py", line 257, in <module>
+    from tkinter import Tk, Toplevel, Frame, Label, Button, messagebox, StringVar
+ModuleNotFoundError: No module named 'tkinter'
