@@ -9,11 +9,7 @@
 # + Action Masking (sb3_contrib: MaskablePPO + ActionMasker)
 # ============================================================
 
-try:
-    import gymnasium as gym
-except Exception:
-    # noqa
-    import gymnasium as gym
+import gymnasium as gym
 
 import os
 import random
@@ -1422,7 +1418,7 @@ class BattleEnv(gym.Env):
             or recipient.get("running_away", 0) == 1
         ):
             self._log(
-                f"?? Дополнительный ход без эффекта: {recipient['team'].upper()} {recipient['name']}#{recipient['position']} не может получить бонус от алхимика."
+                f"Дополнительный ход без эффекта: {recipient['team'].upper()} {recipient['name']}#{recipient['position']} не может получить бонус от алхимика."
             )
             return False
 
@@ -1431,7 +1427,7 @@ class BattleEnv(gym.Env):
         recipient["initiative"] = base_ini
         recipient["bonusturn"] += 1
         self._log(
-            f"?? Дополнительный ход: {alchemist['team'].upper()} {alchemist['name']}#{alchemist['position']} восстанавливает инициативу "
+            f"Дополнительный ход: {alchemist['team'].upper()} {alchemist['name']}#{alchemist['position']} восстанавливает инициативу "
             f"{recipient['team'].upper()} {recipient['name']}#{recipient['position']} до {base_ini} и увеличивает bonusturn до {recipient['bonusturn']}."
         )
         return True
@@ -1846,7 +1842,7 @@ class BattleEnv(gym.Env):
 
         if cleared:
             self._log(
-                f"?? Очищение: {unit['team'].upper()} {unit['name']}#{unit['position']} избавляется от негативных эффектов."
+                f"Очищение: {unit['team'].upper()} {unit['name']}#{unit['position']} избавляется от негативных эффектов."
             )
         return cleared
 
@@ -1949,7 +1945,7 @@ class BattleEnv(gym.Env):
                 distributed_this_round += heal
                 shared_any = True
                 self._log(
-                    f"?? Делёж крови: {vampire['team'].upper()} {vampire['name']}#{vampire['position']} "
+                    f"Делёж крови: {vampire['team'].upper()} {vampire['name']}#{vampire['position']} "
                     f"передаёт {heal} HP для {ally['team'].upper()} {ally['name']}#{ally['position']} ({before_hp}>{ally['health']})."
                 )
 
@@ -1966,7 +1962,7 @@ class BattleEnv(gym.Env):
                     distributed_this_round += 1
                     shared_any = True
                     self._log(
-                        f"?? Делёж крови: {vampire['team'].upper()} {vampire['name']}#{vampire['position']} "
+                        f"Делёж крови: {vampire['team'].upper()} {vampire['name']}#{vampire['position']} "
                         f"добавляет 1 HP для {ally['team'].upper()} {ally['name']}#{ally['position']} ({before_hp}>{ally['health']})."
                     )
                 if distributed_this_round == 0:
@@ -1993,7 +1989,7 @@ class BattleEnv(gym.Env):
             if healed > 0:
                 attacker["health"] = before_hp + healed
                 self._log(
-                    f"?? Кровопийство: {atk_team} {attacker_name}#{attacker_pos} восстанавливает {healed} HP "
+                    f"Кровопийство: {atk_team} {attacker_name}#{attacker_pos} восстанавливает {healed} HP "
                     f"({before_hp}>{attacker['health']}) из {leeched} похищенных."
                 )
 
@@ -2004,15 +2000,15 @@ class BattleEnv(gym.Env):
             )
             if not had_targets:
                 self._log(
-                    f"?? Делёж крови: {atk_team} {attacker_name}#{attacker_pos} — раненых союзников нет."
+                    f"Делёж крови: {atk_team} {attacker_name}#{attacker_pos} — раненых союзников нет."
                 )
             elif leftover > 0 and shared_any:
                 self._log(
-                    f"?? Делёж крови: {atk_team} {attacker_name}#{attacker_pos} не смог распределить {leftover} HP — союзники уже восстановлены."
+                    f"Делёж крови: {atk_team} {attacker_name}#{attacker_pos} не смог распределить {leftover} HP — союзники уже восстановлены."
                 )
             elif leftover > 0:
                 self._log(
-                    f"?? Делёж крови: {atk_team} {attacker_name}#{attacker_pos} не нашёл, кому передать {leftover} HP."
+                    f"Делёж крови: {atk_team} {attacker_name}#{attacker_pos} не нашёл, кому передать {leftover} HP."
                 )
 
     def _apply_cached_poison(
@@ -2030,7 +2026,7 @@ class BattleEnv(gym.Env):
         roll = self._roll_status(acc2)
         atk_team = (attacker.get("team") or "").upper()
         self._log(
-            f"?? Шанс отравления {int(acc2)}% - "
+            f"Шанс отравления {int(acc2)}% - "
             + ("успех" if roll else "неудача")
             + f" по {victim['team'].upper()} {victim['name']}#{victim['position']}."
         )
@@ -2039,7 +2035,7 @@ class BattleEnv(gym.Env):
 
         if self._is_immune_status(attacker, victim):
             self._log(
-                f"?? Иммунитет к эффекту '{attacker.get('attack_type_secondary', '')}' — яд не действует на "
+                f"Иммунитет к эффекту '{attacker.get('attack_type_secondary', '')}' — яд не действует на "
                 f"{victim['team'].upper()} {victim['name']}#{victim['position']}."
             )
             return
@@ -2089,7 +2085,7 @@ class BattleEnv(gym.Env):
         recipient["powerup"] = 1
 
         self._log(
-            f"?? Усиление травницы: {healer['team'].upper()} {healer['name']}#{healer['position']} увеличивает урон "
+            f"Усиление травницы: {healer['team'].upper()} {healer['name']}#{healer['position']} увеличивает урон "
             f"{recipient['team'].upper()} {recipient['name']}#{recipient['position']} до {buffed_damage}."
         )
         return True
@@ -2207,11 +2203,11 @@ class BattleEnv(gym.Env):
             has_targets = self._has_transform_targets()
             if unit.get("unit_type") == "Doppelganger" and not has_targets:
                 unit["unit_type"] = "Warrior"
-                self._log("?? Двойник: целей нет — тип переключён на Warrior.")
+                self._log("Двойник: целей нет — тип переключён на Warrior.")
             elif unit.get("unit_type") == "Warrior" and has_targets:
                 unit["unit_type"] = "Doppelganger"
                 self._log(
-                    "?? Двойник: цели появились — тип переключён на Doppelganger."
+                    "Двойник: цели появились — тип переключён на Doppelganger."
                 )
 
         if unit.get("unit_type") == "Sundancer":
@@ -2308,7 +2304,7 @@ class BattleEnv(gym.Env):
                 current_ini = int(unit.get("initiative", 0) or 0)
                 unit["initiative"] = max(current_ini, new_base)
                 self._log(
-                    f"?? Hermit slow fades: {unit['team'].upper()} {unit['name']}#{unit['position']} восстанавливает инициативу "
+                    f"Hermit slow fades: {unit['team'].upper()} {unit['name']}#{unit['position']} восстанавливает инициативу "
                     f"{old_base}->{new_base}."
                 )
 
@@ -2323,7 +2319,7 @@ class BattleEnv(gym.Env):
                 unit["poison_turns_left"] = 0
                 unit["poison_damage_per_tick"] = 0
                 self._log(
-                    f"?? Иммунитет к эффекту 'poison' — яд не действует на {unit['team'].upper()} {unit['name']}#{unit['position']}."
+                    f"Иммунитет к эффекту 'poison' — яд не действует на {unit['team'].upper()} {unit['name']}#{unit['position']}."
                 )
             else:
                 tick = int(unit.get("poison_damage_per_tick", 0) or 0)
@@ -2365,7 +2361,7 @@ class BattleEnv(gym.Env):
                 unit["burn_damage_per_tick"] = 0
                 self._release_lord_burn_from_unit(unit)
                 self._log(
-                    f"?? Иммунитет к эффекту 'Fire' — поджог не действует на {unit['team'].upper()} {unit['name']}#{unit['position']}."
+                    f"Иммунитет к эффекту 'Fire' — поджог не действует на {unit['team'].upper()} {unit['name']}#{unit['position']}."
                 )
             else:
                 tick = int(unit.get("burn_damage_per_tick", 0) or BURN_DAMAGE)
@@ -2375,7 +2371,7 @@ class BattleEnv(gym.Env):
                     unit["burn_turns_left"] -= 1
                     after = unit["health"]
                     self._log(
-                        f"?? Поджог поражает {unit['team'].upper()} {unit['name']}#{unit['position']}: "
+                        f"Поджог поражает {unit['team'].upper()} {unit['name']}#{unit['position']}: "
                         f"{tick} ({before}>{max(0, after)}); осталось ходов: {unit['burn_turns_left']}"
                     )
                     if unit["health"] <= 0:
@@ -2404,7 +2400,7 @@ class BattleEnv(gym.Env):
                 unit["uran_turns_left"] = 0
                 unit["uran_damage_per_tick"] = 0
                 self._log(
-                    f"?? Иммунитет к эффекту 'Water' — вода не действует на {unit['team'].upper()} {unit['name']}#{unit['position']}."
+                    f"Иммунитет к эффекту 'Water' — вода не действует на {unit['team'].upper()} {unit['name']}#{unit['position']}."
                 )
             else:
                 tick = int(unit.get("uran_damage_per_tick", 0) or URAN_DAMAGE)
@@ -2436,7 +2432,7 @@ class BattleEnv(gym.Env):
         if unit.get("running_away", 0) == 1 and self._alive(unit):
             if unit.get("paralyzed", 0) == 0 and unit.get("long_paralyzed", 0) == 0:
                 self._log(
-                    f"?? {unit['team'].upper()} {unit['name']}#{unit['position']} в панике покидает бой."
+                    f"{unit['team'].upper()} {unit['name']}#{unit['position']} в панике покидает бой."
                 )
                 snapshot = deepcopy(unit)
                 self.survived_inits.append(snapshot)
@@ -2468,7 +2464,7 @@ class BattleEnv(gym.Env):
             # если был паралич — снимаем флаг бегства, отложив на следующий ход
             else:
                 self._log(
-                    f"?? {unit['team'].upper()} {unit['name']}#{unit['position']} пока парализован и не может бежать."
+                    f"{unit['team'].upper()} {unit['name']}#{unit['position']} пока парализован и не может бежать."
                 )
 
         basestats = unit.get("basestats")
@@ -2490,7 +2486,7 @@ class BattleEnv(gym.Env):
                     recover_chance = DEFAULT_TRANSFORM_RECOVERY_CHANCE
                 if self.rng.random() < recover_chance:
                     self._restore_transformed_unit(unit)
-                    self._log(f"?? {unit['basestats']}")
+                    self._log(f"{unit['basestats']}")
 
         return True
 
@@ -2609,7 +2605,7 @@ class BattleEnv(gym.Env):
                 original_tag = res_map.get(tag_lower, tag)
                 victim.setdefault("resilience_used_types", []).append(original_tag)
                 self._log(
-                    f"?? Стойкость — первый удар типа '{tag}' по "
+                    f"Стойкость — первый удар типа '{tag}' по "
                     f"{victim['team'].upper()} {victim['name']}#{victim['position']} поглощён."
                 )
                 return True
@@ -2656,7 +2652,7 @@ class BattleEnv(gym.Env):
         resist = set(victim.get("resistance") or [])
         if atk_type and atk_type in immun:
             self._log(
-                f"?? Страх Баронессы не действует на {victim['team'].upper()} {victim['name']}#{victim['position']} — тип атаки '{atk_type}' поглощён."
+                f"Страх Баронессы не действует на {victim['team'].upper()} {victim['name']}#{victim['position']} — тип атаки '{atk_type}' поглощён."
             )
             return False
         if atk_type and atk_type in resist:
@@ -2664,12 +2660,12 @@ class BattleEnv(gym.Env):
             if atk_type not in used:
                 victim.setdefault("resilience_used_types", []).append(atk_type)
                 self._log(
-                    f"?? Страх Баронессы не действует на {victim['team'].upper()} {victim['name']}#{victim['position']} — тип атаки '{atk_type}' поглощён."
+                    f"Страх Баронессы не действует на {victim['team'].upper()} {victim['name']}#{victim['position']} — тип атаки '{atk_type}' поглощён."
                 )
                 return False
         victim["running_away"] = 1
         self._log(
-            f"?? {attacker['team'].upper()} {attacker['name']}#{attacker['position']} вселяет страх в "
+            f"{attacker['team'].upper()} {attacker['name']}#{attacker['position']} вселяет страх в "
             f"{victim['team'].upper()} {victim['name']}#{victim['position']}: бегство!"
         )
         return True
@@ -2695,7 +2691,7 @@ class BattleEnv(gym.Env):
             if effect_type_lower not in used_lower:
                 victim.setdefault("resilience_used_types", []).append(effect_type)
                 self._log(
-                    f"?? Стойкость — первый эффект типа '{effect_type}' по "
+                    f"Стойкость — первый эффект типа '{effect_type}' по "
                     f"{victim['team'].upper()} {victim['name']}#{victim['position']} поглощён."
                 )
                 return False
@@ -2748,7 +2744,7 @@ class BattleEnv(gym.Env):
         victim["resilience_used_types"] = []
         victim["transformed"] = 1
         self._log(
-            f"?? Ведьма меняет характеристики {victim['team'].upper()} {victim['name']}#{victim['position']}: "
+            f"Ведьма меняет характеристики {victim['team'].upper()} {victim['name']}#{victim['position']}: "
             f"accuracy=80, damage={victim['damage']}, initiative={victim['initiative']}"
         )
 
@@ -2854,7 +2850,7 @@ class BattleEnv(gym.Env):
             if effect_type_lower not in used_lower:
                 victim.setdefault("resilience_used_types", []).append(res_map[effect_type_lower])
                 self._log(
-                    f"?? Стойкость — первый эффект типа '{effect_type}' по "
+                    f"Стойкость — первый эффект типа '{effect_type}' по "
                     f"{victim['team'].upper()} {victim['name']}#{victim['position']} поглощён."
                 )
                 return False
@@ -3241,7 +3237,7 @@ class BattleEnv(gym.Env):
             for victim in targets:
                 if not self._roll_hit(attacker):
                     self._log(
-                        f"?? Промах: {atk_team.upper()} {attacker['name']}#{attacker['position']} по "
+                        f"Промах: {atk_team.upper()} {attacker['name']}#{attacker['position']} по "
                         f"{victim['team'].upper()} {victim['name']}#{victim['position']}."
                     )
                     continue
@@ -3264,13 +3260,13 @@ class BattleEnv(gym.Env):
             for victim in targets:
                 if not self._roll_hit(attacker):
                     self._log(
-                        f"?? Промах: {atk_team.upper()} {attacker['name']}#{attacker['position']} по "
+                        f"Промах: {atk_team.upper()} {attacker['name']}#{attacker['position']} по "
                         f"{victim['team'].upper()} {victim['name']}#{victim['position']}."
                     )
                     continue
                 if self._is_immune_damage(attacker, victim):
                     self._log(
-                        f"?? Иммунитет к урону '{attacker.get('attack_type_primary', '')}' — "
+                        f"Иммунитет к урону '{attacker.get('attack_type_primary', '')}' — "
                         f"{victim['team'].upper()} {victim['name']}#{victim['position']}: урон 0."
                     )
                     continue
@@ -3320,14 +3316,14 @@ class BattleEnv(gym.Env):
                     acc2 = float(attacker.get("accuracy_secondary", 0) or 0)
                     roll = self._roll_status(acc2)
                     self._log(
-                        f"?? Шанс отравления {int(acc2)}% — "
+                        f"Шанс отравления {int(acc2)}% — "
                         + ("успех" if roll else "неудача")
                         + f" по {victim['team'].upper()} {victim['name']}#{victim['position']}."
                     )
                     if roll:
                         if self._is_immune_status(attacker, victim):
                             self._log(
-                                f"?? Иммунитет к эффекту '{attacker.get('attack_type_secondary', '')}' — яд НЕ накладывается "
+                                f"Иммунитет к эффекту '{attacker.get('attack_type_secondary', '')}' — яд НЕ накладывается "
                                 f"на {victim['team'].upper()} {victim['name']}#{victim['position']}."
                             )
                         else:
@@ -3385,14 +3381,14 @@ class BattleEnv(gym.Env):
                     acc2 = float(attacker.get("accuracy_secondary", 0) or 0)
                     roll = self._roll_status(acc2)
                     self._log(
-                        f"?? Шанс водного проклятия {int(acc2)}% — "
+                        f"Шанс водного проклятия {int(acc2)}% — "
                         + ("успех" if roll else "неудача")
                         + f" по {victim['team'].upper()} {victim['name']}#{victim['position']}."
                     )
                     if roll:
                         if self._is_immune_status(attacker, victim):
                             self._log(
-                                f"?? Иммунитет к эффекту '{attacker.get('attack_type_secondary', '')}' — вода НЕ накладывается "
+                                f"Иммунитет к эффекту '{attacker.get('attack_type_secondary', '')}' — вода НЕ накладывается "
                                 f"на {victim['team'].upper()} {victim['name']}#{victim['position']}."
                             )
                         else:
@@ -3417,7 +3413,7 @@ class BattleEnv(gym.Env):
                     acc2 = float(attacker.get("accuracy_secondary", 0) or 0)
                     roll = self._roll_status(acc2)
                     self._log(
-                        f"?? Шанс замедления {int(acc2)}% — "
+                        f"Шанс замедления {int(acc2)}% — "
                         + ("успех" if roll else "неудача")
                         + f" по {victim['team'].upper()} {victim['name']}#{victim['position']}."
                     )
@@ -3452,7 +3448,7 @@ class BattleEnv(gym.Env):
                     acc2 = float(attacker.get("accuracy_secondary", 0) or 0)
                     roll = self._roll_status(acc2)
                     self._log(
-                        f"?? Шанс ослабления урона {int(acc2)}% — "
+                        f"Шанс ослабления урона {int(acc2)}% — "
                         + ("успех" if roll else "неудача")
                         + f" по {victim['team'].upper()} {victim['name']}#{victim['position']}."
                     )
@@ -3480,14 +3476,14 @@ class BattleEnv(gym.Env):
 
             if not self._roll_hit(attacker):
                 self._log(
-                    f"?? Промах: {atk_team.upper()} {attacker['name']}#{attacker['position']} по "
+                    f"Промах: {atk_team.upper()} {attacker['name']}#{attacker['position']} по "
                     f"{victim['team'].upper()} {victim['name']}#{victim['position']}."
                 )
                 return True, "miss"
 
             if self._is_immune_damage(attacker, victim):
                 self._log(
-                    f"?? Иммунитет к урону '{attacker.get('attack_type_primary', '')}' — "
+                    f"Иммунитет к урону '{attacker.get('attack_type_primary', '')}' — "
                     f"{victim['team'].upper()} {victim['name']}#{victim['position']}: атака наносит 0."
                 )
                 return True, "immune_damage"
@@ -3536,7 +3532,7 @@ class BattleEnv(gym.Env):
 
                 if unit_type == "Baroness":
                     self._apply_fear_effect(attacker, victim)
-                    self._log("?? Baroness inspires fear.")
+                    self._log("Baroness inspires fear.")
 
                 if unit_type == "Aleman" and dmg > 0:
                     acc2 = float(attacker.get("accuracy_secondary", 0) or 0)
@@ -3560,7 +3556,7 @@ class BattleEnv(gym.Env):
                     # Иммунитет/стойкость к «превращению»
                     if self._is_immune_status(attacker, victim):
                         self._log(
-                            f"?? Иммунитет к эффекту '{attacker.get('attack_type_secondary', '')}' — превращение НЕ накладывается "
+                            f"Иммунитет к эффекту '{attacker.get('attack_type_secondary', '')}' — превращение НЕ накладывается "
                             f"на {victim['team'].upper()} {victim['name']}#{victim['position']}."
                         )
                     elif victim.get("name") in forbiddenwitch_names:
@@ -3608,14 +3604,14 @@ class BattleEnv(gym.Env):
 
                     if unit_type == "Death" and victim.get("poison_turns_left", 0) <= 0:
                         self._log(
-                            f"?? Шанс отравления {int(acc2)}% — "
+                            f"Шанс отравления {int(acc2)}% — "
                             + ("успех" if roll else "неудача")
                             + f" по {victim['team'].upper()} {victim['name']}#{victim['position']}."
                         )
                         if roll:
                             if self._is_immune_status(attacker, victim):
                                 self._log(
-                                    f"?? Иммунитет к эффекту '{attacker.get('attack_type_secondary', '')}' — яд НЕ накладывается "
+                                    f"Иммунитет к эффекту '{attacker.get('attack_type_secondary', '')}' — яд НЕ накладывается "
                                     f"на {victim['team'].upper()} {victim['name']}#{victim['position']}."
                                 )
                             else:
@@ -3644,14 +3640,14 @@ class BattleEnv(gym.Env):
                             )
                         else:
                             self._log(
-                                f"?? Wight drain chance {int(acc2)}% - "
+                                f"Wight drain chance {int(acc2)}% - "
                                 + ("success" if roll else "fail")
                                 + f" vs {victim['team'].upper()} {victim['name']}#{victim['position']}."
                             )
                             if roll:
                                 if self._is_immune_status(attacker, victim):
                                     self._log(
-                                        f"?? Immunity blocks '{attacker.get('attack_type_secondary', '')}' - "
+                                        f"Immunity blocks '{attacker.get('attack_type_secondary', '')}' - "
                                         f"{victim['team'].upper()} {victim['name']}#{victim['position']}."
                                     )
                                 else:
@@ -3667,14 +3663,14 @@ class BattleEnv(gym.Env):
                         unit_type == "Sentry" and victim.get("uran_turns_left", 0) <= 0
                     ):
                         self._log(
-                            f"?? Шанс наложить воду {int(acc2)}% — "
+                            f"Шанс наложить воду {int(acc2)}% — "
                             + ("успех" if roll else "неудача")
                             + f" по {victim['team'].upper()} {victim['name']}#{victim['position']}."
                         )
                         if roll:
                             if self._is_immune_status(attacker, victim):
                                 self._log(
-                                    f"?? Иммунитет к эффекту '{attacker.get('attack_type_secondary', '')}' — вода НЕ накладывается "
+                                    f"Иммунитет к эффекту '{attacker.get('attack_type_secondary', '')}' — вода НЕ накладывается "
                                     f"на {victim['team'].upper()} {victim['name']}#{victim['position']}."
                                 )
                             else:
@@ -3699,7 +3695,7 @@ class BattleEnv(gym.Env):
                         unit_type == "Watcher" and victim.get("burn_turns_left", 0) <= 0
                     ):
                         self._log(
-                            f"?? Ignite chance {int(acc2)}% — "
+                            f"Ignite chance {int(acc2)}% — "
                             + ("success" if roll else "fail")
                             + f" vs {victim['team'].upper()} {victim['name']}#{victim['position']}."
                         )
@@ -3732,14 +3728,14 @@ class BattleEnv(gym.Env):
                         pos = attacker["position"]
                         if not self._lord_applied_burn.get(pos, False):
                             self._log(
-                                f"?? Шанс наложить поджог {int(acc2)}% — "
+                                f"Шанс наложить поджог {int(acc2)}% — "
                                 + ("успех" if roll else "неудача")
                                 + f" по {victim['team'].upper()} {victim['name']}#{victim['position']}."
                             )
                             if roll:
                                 if self._is_immune_status(attacker, victim):
                                     self._log(
-                                        f"?? Иммунитет к эффекту '{attacker.get('attack_type_secondary', '')}' — поджог НЕ накладывается "
+                                        f"Иммунитет к эффекту '{attacker.get('attack_type_secondary', '')}' — поджог НЕ накладывается "
                                         f"на {victim['team'].upper()} {victim['name']}#{victim['position']}."
                                     )
                                 else:
@@ -3757,7 +3753,7 @@ class BattleEnv(gym.Env):
                                         victim["burn_source_lord_pos"] = pos
                                         self._lord_applied_burn[pos] = True
                                         self._log(
-                                            f"?? {atk_team.upper()} {attacker['name']}#{pos} накладывает поджог "
+                                            f"{atk_team.upper()} {attacker['name']}#{pos} накладывает поджог "
                                             f"({victim['burn_damage_per_tick']} урона/ход) на "
                                             f"{victim['team'].upper()} {victim['name']}#{victim['position']} на {turns} хода."
                                         )
@@ -3766,14 +3762,14 @@ class BattleEnv(gym.Env):
                         pos = attacker["position"]
                         if not self._ismir_applied_uran.get(pos, False):
                             self._log(
-                                f"?? Шанс наложить воду {int(acc2)}% — "
+                                f"Шанс наложить воду {int(acc2)}% — "
                                 + ("успех" if roll else "неудача")
                                 + f" по {victim['team'].upper()} {victim['name']}#{victim['position']}."
                             )
                             if roll:
                                 if self._is_immune_status(attacker, victim):
                                     self._log(
-                                        f"?? Иммунитет к эффекту '{attacker.get('attack_type_secondary', '')}' — вода НЕ накладывается "
+                                        f"Иммунитет к эффекту '{attacker.get('attack_type_secondary', '')}' — вода НЕ накладывается "
                                         f"на {victim['team'].upper()} {victim['name']}#{victim['position']}."
                                     )
                                 else:
@@ -3852,7 +3848,7 @@ class BattleEnv(gym.Env):
                 # Иммунитет/стойкость к «превращению»
                 if self._is_immune_status(attacker, v):
                     self._log(
-                        f"?? Иммунитет к эффекту '{attacker.get('attack_type_secondary', '')}' — превращение НЕ накладывается "
+                        f"Иммунитет к эффекту '{attacker.get('attack_type_secondary', '')}' — превращение НЕ накладывается "
                         f"на {v['team'].upper()} {v['name']}#{v['position']}."
                     )
                 elif v.get("name") in forbiddenwitch_names:
@@ -3871,7 +3867,7 @@ class BattleEnv(gym.Env):
         elif unit_type in ("Cliric", "Deva roshi"):
             if target_pos is None:
                 self._log(
-                    f"?? Лечение не сработало: {atk_team.upper()} {attacker['name']}#{attacker['position']} — не указана цель."
+                    f"Лечение не сработало: {atk_team.upper()} {attacker['name']}#{attacker['position']} — не указана цель."
                 )
                 return False, "dead_or_absent"
             opposite_pos = self._opposite_position(target_pos, attacker["team"])
@@ -3886,7 +3882,7 @@ class BattleEnv(gym.Env):
                 or not self._alive(recipient)
             ):
                 self._log(
-                    f"?? Лечение не сработало: {atk_team.upper()} {attacker['name']}#{attacker['position']} не находит союзника на противоположной позиции."
+                    f"Лечение не сработало: {atk_team.upper()} {attacker['name']}#{attacker['position']} не находит союзника на противоположной позиции."
                 )
                 return False, "dead_or_absent"
             healed = self._apply_cliric_heal(attacker, recipient)
@@ -3899,7 +3895,7 @@ class BattleEnv(gym.Env):
         elif unit_type == "Patriach":
             if target_pos is None:
                 self._log(
-                    f"?? Помощь без указания: {atk_team.upper()} {attacker['name']}#{attacker['position']} - не выбрана цель."
+                    f"Помощь без указания: {atk_team.upper()} {attacker['name']}#{attacker['position']} - не выбрана цель."
                 )
                 return False, "dead_or_absent"
             opposite_pos = self._opposite_position(target_pos, attacker["team"])
@@ -3911,7 +3907,7 @@ class BattleEnv(gym.Env):
             result = self._apply_patriach_support(attacker, recipient)
             if result == "invalid":
                 self._log(
-                    f"?? Помощь без цели: {atk_team.upper()} {attacker['name']}#{attacker['position']} не может выбрать союзника на противоположной клетке."
+                    f"Помощь без цели: {atk_team.upper()} {attacker['name']}#{attacker['position']} не может выбрать союзника на противоположной клетке."
                 )
                 return False, "dead_or_absent"
             if result == "revive_failed" and recipient is not None:
@@ -3934,7 +3930,7 @@ class BattleEnv(gym.Env):
         ):
             if target_pos is None:
                 self._log(
-                    f"?? Усиление не сработало: {atk_team.upper()} {attacker['name']}#{attacker['position']} — не указана цель."
+                    f"Усиление не сработало: {atk_team.upper()} {attacker['name']}#{attacker['position']} — не указана цель."
                 )
                 return False, "dead_or_absent"
             opposite_pos = self._opposite_position(target_pos, attacker["team"])
@@ -3949,18 +3945,18 @@ class BattleEnv(gym.Env):
                 or not self._alive(recipient)
             ):
                 self._log(
-                    f"?? Усиление не сработало: {atk_team.upper()} {attacker['name']}#{attacker['position']} не находит союзника на противоположной позиции."
+                    f"Усиление не сработало: {atk_team.upper()} {attacker['name']}#{attacker['position']} не находит союзника на противоположной позиции."
                 )
                 return False, "dead_or_absent"
 
             if unit_type == "Alchemist":
                 if self._apply_alchemist_support(attacker, recipient):
                     self._log(
-                        f"?? Поддержка: {atk_team.upper()} {attacker['name']}#{attacker['position']} восстанавливает инициативу союзника на pos{recipient['position']}."
+                        f"Поддержка: {atk_team.upper()} {attacker['name']}#{attacker['position']} восстанавливает инициативу союзника на pos{recipient['position']}."
                     )
                 else:
                     self._log(
-                        f"?? Поддержка без эффекта: {recipient['team'].upper()} {recipient['name']}#{recipient['position']} не получает бонус."
+                        f"Поддержка без эффекта: {recipient['team'].upper()} {recipient['name']}#{recipient['position']} не получает бонус."
                     )
             else:
                 cleanse_support = unit_type in ("Dwarfdruid", "Arhidruid")
@@ -3974,23 +3970,23 @@ class BattleEnv(gym.Env):
                 if buffed:
                     if cleanse_support and cleansed:
                         self._log(
-                            f"?? Усиление и очищение: {atk_team.upper()} {attacker['name']}#{attacker['position']} усиливает и снимает негатив с союзника на pos{recipient['position']}."
+                            f"Усиление и очищение: {atk_team.upper()} {attacker['name']}#{attacker['position']} усиливает и снимает негатив с союзника на pos{recipient['position']}."
                         )
                     else:
                         self._log(
-                            f"?? Усиление: {atk_team.upper()} {attacker['name']}#{attacker['position']} повышает урон союзника на pos{recipient['position']}"
+                            f"Усиление: {atk_team.upper()} {attacker['name']}#{attacker['position']} повышает урон союзника на pos{recipient['position']}"
                         )
                 else:
                     self._log(
-                        f"?? Усиление без эффекта: {recipient['team'].upper()} {recipient['name']}#{recipient['position']} не может быть усилен."
+                        f"Усиление без эффекта: {recipient['team'].upper()} {recipient['name']}#{recipient['position']} не может быть усилен."
                     )
                     if cleanse_support and cleansed:
                         self._log(
-                            f"?? Очищение: {atk_team.upper()} {attacker['name']}#{attacker['position']} всё же снимает негативные эффекты с союзника на pos{recipient['position']}."
+                            f"Очищение: {atk_team.upper()} {attacker['name']}#{attacker['position']} всё же снимает негативные эффекты с союзника на pos{recipient['position']}."
                         )
                     elif cleanse_support:
                         self._log(
-                            f"?? Очищение без эффекта: {recipient['team'].upper()} {recipient['name']}#{recipient['position']} не имел негативных эффектов."
+                            f"Очищение без эффекта: {recipient['team'].upper()} {recipient['name']}#{recipient['position']} не имел негативных эффектов."
                         )
             return True, "ok"
 
@@ -4106,7 +4102,7 @@ class BattleEnv(gym.Env):
         elif unit_type == "summoner":
             if target_pos is None:
                 self._log(
-                    f"?? Призыв не сработал: {atk_team.upper()} {attacker['name']}#{attacker['position']} — не указана цель."
+                    f"Призыв не сработал: {atk_team.upper()} {attacker['name']}#{attacker['position']} — не указана цель."
                 )
                 return False, "dead_or_absent"
 
@@ -4114,7 +4110,7 @@ class BattleEnv(gym.Env):
             dest = self._opposite_position(target_pos, attacker["team"])
             if dest is None:
                 self._log(
-                    f"?? Призыв не сработал: не удалось сопоставить pos{target_pos} для команды {atk_team}."
+                    f"Призыв не сработал: не удалось сопоставить pos{target_pos} для команды {atk_team}."
                 )
                 return False, "dead_or_absent"
 
@@ -4145,7 +4141,7 @@ class BattleEnv(gym.Env):
             if occupied or partner_blocked:
                 reason = "занята" if occupied else "заблокирована большим союзником"
                 self._log(
-                    f"?? Призыв отменён: клетка pos{dest} {reason} для {atk_team.upper()} {attacker['name']}#{attacker['position']}."
+                    f"Призыв отменён: клетка pos{dest} {reason} для {atk_team.upper()} {attacker['name']}#{attacker['position']}."
                 )
                 return False, "dead_or_absent"
 
@@ -4216,7 +4212,7 @@ class BattleEnv(gym.Env):
                 }
             else:
                 self._log(
-                    f"?? Призыв отменён: {atk_team.upper()} {attacker['name']}#{attacker['position']} не умеет призывать существ."
+                    f"Призыв отменён: {atk_team.upper()} {attacker['name']}#{attacker['position']} не умеет призывать существ."
                 )
                 return False, "dead_or_absent"
 
@@ -4256,7 +4252,7 @@ class BattleEnv(gym.Env):
                 slot.update(spawn)
 
             self._log(
-                f"?? Призыв: {atk_team.upper()} {attacker['name']}#{attacker['position']} "
+                f"Призыв: {atk_team.upper()} {attacker['name']}#{attacker['position']} "
                 f"призывает {spawn['name']} на pos{dest} ({spawn['stand']})."
             )
             return True, "ok"
@@ -4293,7 +4289,7 @@ class BattleEnv(gym.Env):
             total_exp += float(u.get("exp_kill", 0) or 0)
 
         self.last_battle_exp = total_exp
-        self._log(f"?? Опыт за бой: {total_exp:g}")
+        self._log(f"Опыт за бой: {total_exp:g}")
 
         winning_team = "red" if losing_team == "blue" else "blue"
         winners = [
@@ -4346,14 +4342,14 @@ class BattleEnv(gym.Env):
             self._revert_fenrir_survivors()
             self._restore_default_doppelgangers()
             self._restore_all_transformed_units()
-            self._log("?? Победа RED!")
+            self._log("Победа RED!")
             self._apply_battle_exp("blue")
         elif not self._team_alive("red"):
             self.winner = "blue"
             self._revert_fenrir_survivors()
             self._restore_default_doppelgangers()
             self._restore_all_transformed_units()
-            self._log("?? Победа BLUE!")
+            self._log("Победа BLUE!")
             self._apply_battle_exp("red")
 
     def _advance_until_blue_turn(self) -> bool:
@@ -5177,11 +5173,11 @@ class BattleEnv(gym.Env):
                                 )
                             )
                             self._log(
-                                f"?? Doppelganger выбор: pos{target_pos} → "
+                                f"Doppelganger выбор: pos{target_pos} → "
                                 f"{target_unit['team'].upper()} {target_unit['name']}#{target_unit['position']}"
                             )
                         else:
-                            self._log(f"?? Doppelganger выбор: pos{target_pos} → пусто")
+                            self._log(f"Doppelganger выбор: pos{target_pos} → пусто")
                         self._check_victory_after_hit()
 
                     elif attacker.get("unit_type") in (

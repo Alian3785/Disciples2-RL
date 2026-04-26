@@ -816,7 +816,7 @@ class BattleVisualizer:
 
         m = self.vict_re.match(line)
         if m:
-            self.draw_board(headline=f"?? {line}", active_pos=None)
+            self.draw_board(headline=f"{line}", active_pos=None)
             self.wait(1.2)
             return
 

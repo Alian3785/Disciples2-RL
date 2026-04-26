@@ -84,7 +84,7 @@ def handle_lyf_action(
             slot.clear()
             slot.update(summoned)
 
-        battle._log(f"?? OCCULTMASTER: призван {summoned['name']} на pos{position} ({summoned['stand']}).")
+        battle._log(f"LYF: призван {summoned['name']} на pos{position} ({summoned['stand']}).")
         spawned_any = True
 
     spider_template = {
