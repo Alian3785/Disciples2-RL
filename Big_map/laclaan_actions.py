@@ -84,7 +84,7 @@ def handle_laclaan_action(
             slot.clear()
             slot.update(summoned)
 
-        battle._log(f"?? LACLAAN: призван {summoned['name']} на pos{position} ({summoned['stand']}).")
+        battle._log(f"LACLAAN: призван {summoned['name']} на pos{position} ({summoned['stand']}).")
         spawned_any = True
 
     black_dragon_template = {

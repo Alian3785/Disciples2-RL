@@ -14,6 +14,7 @@ import time
 from typing import Tuple
 
 import numpy as np
+from sb3_contrib.common.maskable.utils import get_action_masks
 from sb3_contrib.ppo_mask import MaskablePPO
 from sb3_contrib.common.wrappers import ActionMasker
 from stable_baselines3.common.monitor import Monitor
@@ -41,7 +42,12 @@ def run_episode(
     obs, _ = env.reset()
 
     for step in range(max_steps):
-        action, _ = model.predict(obs, deterministic=deterministic)
+        action_masks = get_action_masks(env)
+        action, _ = model.predict(
+            obs,
+            deterministic=deterministic,
+            action_masks=action_masks,
+        )
         obs, reward, terminated, truncated, info = env.step(action)
         env.render()
         if sleep_s > 0:
