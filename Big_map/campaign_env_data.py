@@ -1,0 +1,750 @@
+# campaign_env_data.py
+"""Shared imports, data mappings, and constants for CampaignEnv modules."""
+
+from __future__ import annotations
+
+import gymnasium as gym
+from gymnasium import spaces
+import numpy as np
+from collections import deque
+from functools import lru_cache
+from typing import Optional, Dict, List, Tuple
+from copy import deepcopy
+from pathlib import Path
+
+from battle_env import BattleEnv, UNITS_BLUE, FEATURES_PER_UNIT
+from enemy_configs import ENEMY_CONFIGS, ENEMY_DESCRIPTIONS
+from grid import (
+    CAPITAL_HEAL_TILE_ARMOR_BONUS,
+    CAPITAL_INTERNAL_STACK_OVERRIDES,
+    RUIN_STACK_OVERRIDES,
+    are_targets_reachable,
+    DEFAULT_GRID_SIZE,
+    DEFAULT_HERO_GRID_POSITION,
+    HEAL_TILE_COUNT,
+    SETTLEMENT_ARMOR_BONUS_BY_LEVEL,
+    SETTLEMENT_DEFENDER_LEVEL_BY_ENEMY_ID,
+    resolve_chests,
+    resolve_legions_settlement_territory_sources,
+    resolve_mana_sources,
+    resolve_obstacle_tiles,
+    resolve_heal_tiles,
+    scale_static_tiles,
+    scale_enemy_positions,
+    VILLAGE_INTERNAL_GARRISON_OVERRIDES,
+    VILLAGE_LINKED_STACK_OVERRIDES,
+)
+from grid_world_env import GridWorldEnv
+from data_dicts_compact_lines import DATA as UNIT_DATA, map_unit_to_battle, placeholder_unit
+from Buildings import (
+    empire_buildings_d2,
+    mountain_clans_buildings_d2,
+    undead_hordes_buildings_d2,
+    legions_buildings_d2,
+    elves_buildings_d2,
+)
+from spells import (
+    empire_spells_d2,
+    mountain_clans_spells_d2,
+    undead_hordes_spells_d2,
+    legions_spells_d2,
+    elves_spells_d2,
+)
+from hire import (
+    empire_hire_d2,
+    mountain_clans_hire_d2,
+    undead_hordes_hire_d2,
+    legions_hire_d2,
+    elves_hire_d2,
+)
+from scroll_spell_data import SCROLL_ITEM_ALIASES, SCROLL_ITEM_DEFINITIONS
+
+from campaign_env_scenario import *
+
+BUILDINGS_D2 = {
+    "empire": empire_buildings_d2,
+    "mountain_clans": mountain_clans_buildings_d2,
+    "undead_hordes": undead_hordes_buildings_d2,
+    "legions": legions_buildings_d2,
+    "elves": elves_buildings_d2,
+}
+BUILDINGS_D2_TEMPLATE = {key: deepcopy(value) for key, value in BUILDINGS_D2.items()}
+SPELLS_D2 = {
+    "empire": empire_spells_d2,
+    "mountain_clans": mountain_clans_spells_d2,
+    "undead_hordes": undead_hordes_spells_d2,
+    "legions": legions_spells_d2,
+    "elves": elves_spells_d2,
+}
+SPELLS_D2_TEMPLATE = {key: deepcopy(value) for key, value in SPELLS_D2.items()}
+HIRE_D2 = {
+    "empire": empire_hire_d2,
+    "mountain_clans": mountain_clans_hire_d2,
+    "undead_hordes": undead_hordes_hire_d2,
+    "legions": legions_hire_d2,
+    "elves": elves_hire_d2,
+}
+
+
+class HeroInventoryItem(str):
+    """String-compatible inventory entry that also stores gold value."""
+
+    def __new__(cls, name: str, gold: int = 0):
+        obj = str.__new__(cls, str(name or ""))
+        obj.gold = max(0, int(gold or 0))
+        return obj
+
+    def __repr__(self) -> str:
+        return f"HeroInventoryItem(name={str.__repr__(self)}, gold={int(self.gold)})"
+
+
+class CampaignConstantsMixin:
+
+    metadata = {"render_modes": ["human", "ansi"]}
+
+    MODE_GRID = 0
+    MODE_BATTLE = 1
+
+    GRID_OBS_SIZE = 0  # вычисляется в __init__
+    BATTLE_OBS_SIZE = FEATURES_PER_UNIT * 12
+    MOVES_PER_TURN = 20
+    GRID_STEPS_PER_TURN = MOVES_PER_TURN
+    HERO_PATHFINDING_LEVEL = 2
+    HERO_LEADERSHIP_LEVEL = 3
+    HERO_ENDURANCE_LEVEL = 4
+    HERO_STRENGTH_LEVEL = 5
+    HERO_SECOND_LEADERSHIP_LEVEL = 6
+    HERO_PATHFINDING_MOVE_BONUS_PCT = 0.20
+    TYPEOFLORD_TWO_SPELL_LEARNING_COST_MULTIPLIER = 0.5
+    TYPEOFLORD_TWO_SAME_SPELL_CASTS_PER_TURN = 2
+    TYPEOFLORD_THREE_BUILDING_COST_MULTIPLIER = 0.5
+    TYPEOFLORD_ONE_REST_HEAL_BONUS_PERCENT = 0.15
+    DEFAULT_REST_HEAL_PERCENT = 0.05
+    PLAYER_TERRITORY_REST_HEAL_PERCENT = 0.15
+    GOLD_PER_TURN = 100.0
+    BUILDING_GOLD_COST_MULTIPLIER = 100.0
+    LEGIONS_GOLD_MINE_GOLD_PER_TURN = 50.0
+    BASE_INFERNAL_MANA_PER_TURN = 25.0
+    LEGIONS_MANA_SOURCE_MANA_PER_TURN = 50.0
+    MANA_KIND_ORDER = ("infernal", "life", "death", "runes", "elves")
+    MANA_ATTR_BY_KIND = {
+        "infernal": "infernal_mana",
+        "life": "life_mana",
+        "death": "death_mana",
+        "runes": "runes_mana",
+        "elves": "elven_mana",
+    }
+    MANA_LABEL_BY_KIND = {
+        "infernal": "Мана преисподней",
+        "life": "Мана жизни",
+        "death": "Мана смерти",
+        "runes": "Мана рун",
+        "elves": "Мана эльфов",
+    }
+    SPELL_COST_MANA_KIND_BY_SUFFIX = {
+        "hell": "infernal",
+        "life": "life",
+        "death": "death",
+        "rune": "runes",
+        "nature": "elves",
+    }
+    MAGIC_TOWER_BUILDING_NAME = "Башня магии"
+    TEMPLE_BUILDING_NAME = "Храм"
+    GRID_BOTTLE_ACTION_START = 9
+    GRID_BOTTLE_POSITIONS = list(range(7, 13))  # 6 позиций BLUE
+    HEAL_BOTTLE_AMOUNT = 100.0
+    MAX_HEAL_BOTTLES = 3
+    HEALING_BOTTLE_AMOUNT = 50.0
+    MAX_HEALING_BOTTLES = 3
+    HEALING_OINTMENT_AMOUNT = 200.0
+    GRID_REVIVE_ACTION_START = GRID_BOTTLE_ACTION_START + len(GRID_BOTTLE_POSITIONS)  # 15
+    REVIVE_BOTTLE_POSITIONS = GRID_BOTTLE_POSITIONS
+    MAX_REVIVE_BOTTLES = 3
+    GRID_INVULNERABILITY_ACTION_START = GRID_REVIVE_ACTION_START + len(REVIVE_BOTTLE_POSITIONS)  # 21
+    INVULNERABILITY_POTION_POSITIONS = GRID_BOTTLE_POSITIONS
+    INVULNERABILITY_POTION_ITEM_NAME = "Potion of Invulnerability"
+    INVULNERABILITY_POTION_ARMOR_BONUS = 50
+    GRID_STRENGTH_ACTION_START = (
+        GRID_INVULNERABILITY_ACTION_START + len(INVULNERABILITY_POTION_POSITIONS)
+    )  # 27
+    STRENGTH_POTION_POSITIONS = GRID_BOTTLE_POSITIONS
+    STRENGTH_POTION_ITEM_NAME = "Potion of Strength"
+    STRENGTH_POTION_DAMAGE_MULTIPLIER = 1.30
+    CASTLE_POS = DEFAULT_HERO_GRID_POSITION
+    CASTLE_HEAL_TILE_COUNT = HEAL_TILE_COUNT
+    SETTLEMENT_UPGRADE_GOLD_COST_BY_LEVEL = {
+        1: 150.0,
+        2: 250.0,
+        3: 500.0,
+        4: 750.0,
+    }
+    MAX_SETTLEMENT_LEVEL = 5
+    SETTLEMENT_REST_HEAL_BONUS_BY_LEVEL = {
+        1: 10.0,
+        2: 15.0,
+        3: 20.0,
+        4: 25.0,
+        5: 30.0,
+    }
+    LEGIONS_TERRITORY_EXPANSION_PER_TURN = 10
+    EMPIRE_TERRITORY_SOURCE_ENEMY_ID = 75
+    EMPIRE_TERRITORY_SOURCE_TILE = (26, 10)
+    EMPIRE_TERRITORY_EXPANSION_PER_TURN = LEGIONS_TERRITORY_EXPANSION_PER_TURN
+    GRID_CASTLE_HEAL_ACTION_START = GRID_STRENGTH_ACTION_START + len(STRENGTH_POTION_POSITIONS)  # 33
+    CASTLE_HEAL_POSITIONS = GRID_BOTTLE_POSITIONS
+    GRID_CASTLE_REVIVE_ACTION_START = GRID_CASTLE_HEAL_ACTION_START + len(CASTLE_HEAL_POSITIONS)  # 39
+    CASTLE_REVIVE_POSITIONS = REVIVE_BOTTLE_POSITIONS
+    HIRE_FRONT_POSITIONS = (7, 9)
+    HIRE_BACK_POSITIONS = (10, 11, 12)
+    GRID_HIRE_ACTION_START = GRID_CASTLE_REVIVE_ACTION_START + len(CASTLE_REVIVE_POSITIONS)  # 45
+    GRID_MERCENARY_HIRE_ACTION_START = GRID_HIRE_ACTION_START
+    GRID_TRAINER_ACTION_START = GRID_MERCENARY_HIRE_ACTION_START
+    TRAINER_POSITIONS = GRID_BOTTLE_POSITIONS
+    GRID_MERCHANT_BUY_ACTION_START = GRID_TRAINER_ACTION_START
+    GRID_SPELL_SHOP_BUY_ACTION_START = GRID_MERCHANT_BUY_ACTION_START + 10
+    ENERGY_ELIXIR_POSITIONS = GRID_BOTTLE_POSITIONS
+    GRID_ENERGY_ACTION_START = GRID_SPELL_SHOP_BUY_ACTION_START + 2
+    HASTE_ELIXIR_POSITIONS = GRID_BOTTLE_POSITIONS
+    GRID_HASTE_ACTION_START = GRID_ENERGY_ACTION_START + len(ENERGY_ELIXIR_POSITIONS)
+    FIRE_WARD_POSITIONS = GRID_BOTTLE_POSITIONS
+    GRID_FIRE_WARD_ACTION_START = GRID_HASTE_ACTION_START + len(HASTE_ELIXIR_POSITIONS)
+    EARTH_WARD_POSITIONS = GRID_BOTTLE_POSITIONS
+    GRID_EARTH_WARD_ACTION_START = GRID_FIRE_WARD_ACTION_START + len(FIRE_WARD_POSITIONS)
+    WATER_WARD_POSITIONS = GRID_BOTTLE_POSITIONS
+    GRID_WATER_WARD_ACTION_START = GRID_EARTH_WARD_ACTION_START + len(EARTH_WARD_POSITIONS)
+    AIR_WARD_POSITIONS = GRID_BOTTLE_POSITIONS
+    GRID_AIR_WARD_ACTION_START = GRID_WATER_WARD_ACTION_START + len(WATER_WARD_POSITIONS)
+    TITAN_ELIXIR_POSITIONS = GRID_BOTTLE_POSITIONS
+    GRID_TITAN_ELIXIR_ACTION_START = GRID_AIR_WARD_ACTION_START + len(AIR_WARD_POSITIONS)
+    SUPREME_ELIXIR_POSITIONS = GRID_BOTTLE_POSITIONS
+    GRID_SUPREME_ELIXIR_ACTION_START = (
+        GRID_TITAN_ELIXIR_ACTION_START + len(TITAN_ELIXIR_POSITIONS)
+    )
+    FINAL_OBJECTIVE_CITIES = {
+        "Порт Полонис": (34, 68),
+        "Соругирилла": (35, 69),
+    }
+    BASE_MERCHANT_SITE_DATA = {
+        "Лавка Алара": {
+            "anchor": (21, 34),
+            "interaction_tiles": (
+                (24, 35),
+                (24, 36),
+                (22, 37),
+                (23, 37),
+                (24, 37),
+            ),
+        },
+        "Лавка Тралара": {
+            "anchor": (36, 1),
+            "interaction_tiles": (
+                (39, 2),
+                (39, 3),
+                (37, 4),
+                (38, 4),
+                (39, 4),
+            ),
+        },
+    }
+    BASE_SPELL_SHOP_SITE_DATA = {
+        "Лавка заклинаний Маллавиена": {
+            "site_id": "S001SI0009",
+            "anchor": (42, 2),
+            "interaction_tiles": (
+                (45, 3),
+                (45, 4),
+                (43, 5),
+                (44, 5),
+                (45, 5),
+            ),
+        },
+    }
+    BASE_MERCENARY_SITE_DATA = {
+        "Лагерь северных варваров": {
+            "site_id": "S001SI0002",
+            "anchor": (9, 42),
+            "interaction_tiles": (
+                (12, 43),
+                (12, 44),
+                (10, 45),
+                (11, 45),
+                (12, 45),
+            ),
+            "roster": (
+                {
+                    "slot": 0,
+                    "unit_id": "g000uu5040",
+                    "unit_name": "Варвар",
+                    "gold": 850.0,
+                    "stock": 1,
+                },
+            ),
+        },
+        "Пустой лагерь наёмников": {
+            "site_id": "S001SI0007",
+            "anchor": (15, 1),
+            "interaction_tiles": (
+                (18, 2),
+                (18, 3),
+                (16, 4),
+                (17, 4),
+                (18, 4),
+            ),
+            "roster": (
+                {
+                    "slot": 0,
+                    "unit_id": "g000uu5017",
+                    "unit_name": "Гоблин",
+                    "gold": 50.0,
+                    "stock": 1,
+                },
+                {
+                    "slot": 1,
+                    "unit_id": "g000uu5018",
+                    "unit_name": "Гоблин лучник",
+                    "gold": 50.0,
+                    "stock": 1,
+                },
+            ),
+        },
+    }
+    BASE_TRAINER_SITE_DATA = {
+        "Тренировочный лагерь": {
+            "site_id": "S001SI0006",
+            "anchor": (38, 30),
+            "interaction_tiles": (
+                (41, 31),
+                (41, 32),
+                (39, 33),
+                (40, 33),
+                (41, 33),
+            ),
+        },
+    }
+    MERCENARY_FRONTLINE_UNIT_TYPES = frozenset(
+        {
+            "Warrior",
+            "Demon",
+            "Lord",
+            "Bone Lord",
+            "Dregazul",
+            "Spider",
+            "Centaur Savage",
+            "Aleman",
+            "Uter",
+            "Abyss Devil",
+            "Ismir son",
+            "Gumtic",
+            "Uter Demon",
+        }
+    )
+    MERCENARY_BACKLINE_UNIT_TYPES = frozenset(
+        {
+            "Archer",
+            "Mage",
+            "Summoner",
+            "Cliric",
+            "Profit",
+            "Patriach",
+            "Death",
+            "Ghost",
+            "Shadow",
+            "Vampire",
+            "Highvampire",
+            "Wight",
+            "Incub",
+            "Succub",
+            "Doppelganger",
+            "Witch",
+            "Baroness",
+            "Sentry",
+            "Watcher",
+            "Hermit",
+            "Teurg",
+            "Shamanka",
+            "Drulliaan",
+        }
+    )
+    FINAL_OBJECTIVE_CITY_REWARD_MULTIPLIER = 5.0
+    CHEST_PICKUP_RADIUS = 1
+    BONUS_SMALL_HEAL_SOURCE_ITEM = "Potion of Healing"
+    BONUS_SMALL_HEAL_ITEM_NAME = "Банка исцеления (+50 HP)"
+    BONUS_LARGE_HEAL_ITEM_NAME = "Бутыль лечения (+100 HP)"
+    HEALING_OINTMENT_ITEM_NAME = "Целебная мазь"
+    BONUS_REVIVE_SOURCE_ITEM = "Life Potion"
+    BONUS_REVIVE_ITEM_NAME = "Зелье воскрешения (+1)"
+    BATTLE_EQUIP_SLOTS = 2
+    BATTLE_EQUIPPABLE_ITEM_NAMES = (
+        BONUS_SMALL_HEAL_ITEM_NAME,
+        BONUS_LARGE_HEAL_ITEM_NAME,
+        HEALING_OINTMENT_ITEM_NAME,
+        BONUS_REVIVE_ITEM_NAME,
+    )
+    # Map-targeted offensive spells cast on the nearest enemy stack.
+    # Keep existing Legion damage-spell order stable for trained policies, then append debuffs.
+    LEGION_DAMAGE_SPELL_ACTION_SPECS = (
+        {"id": "lod_d2_s003", "kind": "damage", "damage": 15.0, "damage_type": "Fire"},
+        {"id": "lod_d2_s004", "kind": "damage", "damage": 15.0, "damage_type": "Mind"},
+        {"id": "lod_d2_s008", "kind": "damage", "damage": 30.0, "damage_type": "Fire"},
+        {"id": "lod_d2_s014", "kind": "damage", "damage": 50.0, "damage_type": "Mind"},
+        {"id": "lod_d2_s017", "kind": "damage", "damage": 75.0, "damage_type": "Fire"},
+        {"id": "lod_d2_s018", "kind": "damage", "damage": 75.0, "damage_type": "Earth"},
+        {"id": "lod_d2_s019", "kind": "damage", "damage": 60.0, "damage_type": "Fire"},
+        {"id": "lod_d2_s023", "kind": "damage", "damage": 125.0, "damage_type": "Fire"},
+        {"id": "lod_d2_s005", "kind": "debuff", "debuff_type": "armor", "armor_delta": -50},
+        {"id": "lod_d2_s009", "kind": "debuff", "debuff_type": "damage", "damage_multiplier": 0.85},
+        {"id": "lod_d2_s010", "kind": "debuff", "debuff_type": "initiative", "initiative_multiplier": 0.85},
+        {"id": "lod_d2_s015", "kind": "debuff", "debuff_type": "accuracy", "accuracy_multiplier": 0.75},
+        {"id": "lod_d2_s016", "kind": "debuff", "debuff_type": "accuracy", "accuracy_multiplier": 0.67},
+        {"id": "lod_d2_s020", "kind": "debuff", "debuff_type": "initiative", "initiative_multiplier": 0.67},
+        {
+            "id": "lod_d2_s001",
+            "kind": "summon_battle",
+            "summon_unit_name": "Адская гончая",
+            "targets_untargetable_stacks": True,
+        },
+        {
+            "id": "lod_d2_s006",
+            "kind": "summon_battle",
+            "summon_unit_name": "Белиарх",
+            "targets_untargetable_stacks": True,
+        },
+        {
+            "id": "lod_d2_s021",
+            "kind": "summon_battle",
+            "summon_unit_name": "Мститель",
+            "targets_untargetable_stacks": True,
+        },
+    )
+    # Map-targeted Undead Horde spells cast on the nearest enemy stack.
+    # AoE damage spells are temporarily mapped to the nearest enemy stack only.
+    UNDEAD_DAMAGE_SPELL_ACTION_SPECS = (
+        {
+            "id": "und_d2_s001",
+            "kind": "summon_battle",
+            "summon_unit_name": "Скелет",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "und_d2_s002", "kind": "damage", "damage": 15.0, "damage_type": "Death"},
+        {"id": "und_d2_s003", "kind": "damage", "damage": 15.0, "damage_type": "Water"},
+        {"id": "und_d2_s004", "kind": "debuff", "debuff_type": "accuracy", "accuracy_multiplier": 0.90},
+        {"id": "und_d2_s005", "kind": "debuff", "debuff_type": "armor", "armor_delta": -50},
+        {
+            "id": "und_d2_s006",
+            "kind": "summon_battle",
+            "summon_unit_name": "Темный энт",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "und_d2_s007", "kind": "damage", "damage": 30.0, "damage_type": "Death"},
+        {"id": "und_d2_s009", "kind": "debuff", "debuff_type": "damage", "damage_multiplier": 0.85},
+        {"id": "und_d2_s010", "kind": "damage", "damage": 30.0, "damage_type": "Earth"},
+        {
+            "id": "und_d2_s011",
+            "kind": "summon_battle",
+            "summon_unit_name": "Кошмар",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "und_d2_s012", "kind": "damage", "damage": 50.0, "damage_type": "Death"},
+        {"id": "und_d2_s013", "kind": "debuff", "debuff_type": "accuracy", "accuracy_multiplier": 0.80},
+        {"id": "und_d2_s015", "kind": "damage", "damage": 40.0, "damage_type": "Earth"},
+        {"id": "und_d2_s016", "kind": "debuff", "debuff_type": "initiative", "initiative_multiplier": 0.67},
+        {"id": "und_d2_s017", "kind": "debuff", "debuff_type": "damage", "damage_multiplier": 0.67},
+        {"id": "und_d2_s018", "kind": "damage", "damage": 75.0, "damage_type": "Fire"},
+        {
+            "id": "und_d2_s021",
+            "kind": "summon_battle",
+            "summon_unit_name": "Танатос",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "und_d2_s023", "kind": "damage", "damage": 125.0, "damage_type": "Death"},
+        {"id": "und_d2_s024", "kind": "damage", "damage": 80.0, "damage_type": "Death"},
+    )
+    EMPIRE_DAMAGE_SPELL_ACTION_SPECS = (
+        {"id": "emp_d2_s004", "kind": "damage", "damage": 15.0, "damage_type": "Air"},
+        {
+            "id": "emp_d2_s008",
+            "kind": "summon_battle",
+            "summon_unit_name": "Оживший доспех",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "emp_d2_s014", "kind": "damage", "damage": 50.0, "damage_type": "Air"},
+        {
+            "id": "emp_d2_s016",
+            "kind": "summon_battle",
+            "summon_unit_name": "Голем",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "emp_d2_s015", "kind": "damage", "damage": 40.0, "damage_type": "Air"},
+        {"id": "emp_d2_s022", "kind": "damage", "damage": 125.0, "damage_type": "Air"},
+    )
+    EMPIRE_SUPPORT_SPELL_ACTION_SPECS = (
+        {"id": "emp_d2_s001", "kind": "ward", "buff_type": "resistance", "resistance_type": "Air"},
+        {"id": "emp_d2_s002", "kind": "buff", "buff_type": "initiative", "initiative_multiplier": 1.10},
+        {"id": "emp_d2_s003", "kind": "buff", "buff_type": "damage", "damage_multiplier": 1.10},
+        {"id": "emp_d2_s005", "kind": "ward", "buff_type": "resistance", "resistance_type": "Water"},
+        {"id": "emp_d2_s006", "kind": "moves", "moves_restore_fraction": 0.50},
+        {"id": "emp_d2_s007", "kind": "heal", "heal_amount": 30.0},
+        {"id": "emp_d2_s010", "kind": "ward", "buff_type": "resistance", "resistance_type": "Earth"},
+        {"id": "emp_d2_s011", "kind": "ward", "buff_type": "resistance", "resistance_type": "Mind"},
+        {"id": "emp_d2_s012", "kind": "buff", "buff_type": "armor", "armor_delta": 20},
+        {"id": "emp_d2_s013", "kind": "buff", "buff_type": "accuracy", "accuracy_multiplier": 1.20},
+        {"id": "emp_d2_s017", "kind": "ward", "buff_type": "resistance", "resistance_type": "Fire"},
+        {"id": "emp_d2_s018", "kind": "buff", "buff_type": "damage", "damage_multiplier": 1.33},
+        {"id": "emp_d2_s019", "kind": "heal", "heal_amount": 60.0},
+        {"id": "emp_d2_s021", "kind": "ward", "buff_type": "resistance", "resistance_type": "Death"},
+        {"id": "emp_d2_s023", "kind": "heal", "heal_amount": 150.0},
+        {"id": "emp_d2_s024", "kind": "heal", "heal_amount": 80.0},
+    )
+    MOUNTAIN_SUPPORT_SPELL_ACTION_SPECS = (
+        {"id": "mcl_d2_s001", "kind": "buff", "buff_type": "armor", "armor_delta": 10},
+        {"id": "mcl_d2_s003", "kind": "buff", "buff_type": "damage", "damage_multiplier": 1.10},
+        {"id": "mcl_d2_s006", "kind": "buff", "buff_type": "initiative", "initiative_multiplier": 1.15},
+        {"id": "mcl_d2_s009", "kind": "heal", "heal_amount": 30.0},
+        {"id": "mcl_d2_s012", "kind": "moves", "moves_restore_fraction": 1.00},
+        {"id": "mcl_d2_s014", "kind": "buff", "buff_type": "accuracy", "accuracy_multiplier": 1.25},
+        {"id": "mcl_d2_s015", "kind": "buff", "buff_type": "damage", "damage_multiplier": 1.20},
+        {"id": "mcl_d2_s016", "kind": "buff", "buff_type": "armor", "armor_delta": 33},
+        {"id": "mcl_d2_s017", "kind": "buff", "buff_type": "accuracy", "accuracy_multiplier": 1.33},
+        {"id": "mcl_d2_s020", "kind": "moves", "moves_restore_fraction": 1.00},
+        {"id": "mcl_d2_s023", "kind": "buff", "buff_type": "damage", "damage_multiplier": 1.50},
+        {"id": "mcl_d2_s024", "kind": "buff", "buff_type": "armor", "armor_delta": 33},
+    )
+    MOUNTAIN_DAMAGE_SPELL_ACTION_SPECS = (
+        {
+            "id": "mcl_d2_s005",
+            "kind": "summon_battle",
+            "summon_unit_name": "Рух",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "mcl_d2_s004", "kind": "damage", "damage": 15.0, "damage_type": "Water"},
+        {"id": "mcl_d2_s008", "kind": "damage", "damage": 30.0, "damage_type": "Water"},
+        {
+            "id": "mcl_d2_s011",
+            "kind": "summon_battle",
+            "summon_unit_name": "Валькирия",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "mcl_d2_s013", "kind": "damage", "damage": 60.0, "damage_type": "Earth"},
+        {"id": "mcl_d2_s018", "kind": "damage", "damage": 75.0, "damage_type": "Water"},
+        {"id": "mcl_d2_s019", "kind": "damage", "damage": 60.0, "damage_type": "Water"},
+        {
+            "id": "mcl_d2_s021",
+            "kind": "summon_battle",
+            "summon_unit_name": "Каменный предок",
+            "targets_untargetable_stacks": True,
+        },
+    )
+    ELVES_DAMAGE_SPELL_ACTION_SPECS = (
+        {"id": "elf_d2_s001", "kind": "damage", "damage": 15.0, "damage_type": "Earth"},
+        {
+            "id": "elf_d2_s002",
+            "kind": "summon_battle",
+            "summon_unit_name": "Малый энт",
+            "targets_untargetable_stacks": True,
+        },
+        {
+            "id": "elf_d2_s007",
+            "kind": "summon_battle",
+            "summon_unit_name": "Энт",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "elf_d2_s008", "kind": "damage", "damage": 30.0, "damage_type": "Fire"},
+        {"id": "elf_d2_s009", "kind": "damage", "damage": 30.0, "damage_type": "Water"},
+        {"id": "elf_d2_s010", "kind": "debuff", "debuff_type": "initiative", "initiative_multiplier": 0.85},
+        {
+            "id": "elf_d2_s012",
+            "kind": "summon_battle",
+            "summon_unit_name": "Великий энт",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "elf_d2_s013", "kind": "damage", "damage": 50.0, "damage_type": "Mind"},
+        {"id": "elf_d2_s015", "kind": "debuff", "debuff_type": "accuracy", "accuracy_multiplier": 0.80},
+        {"id": "elf_d2_s016", "kind": "damage", "damage": 60.0, "damage_type": "Earth"},
+        {"id": "elf_d2_s017", "kind": "damage", "damage": 75.0, "damage_type": "Air"},
+        {"id": "elf_d2_s018", "kind": "debuff", "debuff_type": "armor", "armor_delta": -80},
+        {"id": "elf_d2_s019", "kind": "debuff", "debuff_type": "damage", "damage_multiplier": 0.67},
+        {
+            "id": "elf_d2_s021",
+            "kind": "summon_battle",
+            "summon_unit_name": "Буйный энт",
+            "targets_untargetable_stacks": True,
+        },
+        {"id": "elf_d2_s022", "kind": "damage", "damage": 125.0, "damage_type": "Earth"},
+    )
+    ELVES_SUPPORT_SPELL_ACTION_SPECS = (
+        {"id": "elf_d2_s004", "kind": "moves", "moves_restore_fraction": 0.30},
+        {"id": "elf_d2_s005", "kind": "buff", "buff_type": "armor", "armor_delta": 10},
+        {"id": "elf_d2_s006", "kind": "heal", "heal_amount": 30.0},
+        {"id": "elf_d2_s014", "kind": "heal", "heal_amount": 50.0},
+        {"id": "elf_d2_s020", "kind": "health_bonus", "buff_type": "health", "health_delta": 50},
+    )
+    UNDEAD_SUPPORT_SPELL_ACTION_SPECS = (
+        {"id": "und_d2_s022", "kind": "ward", "buff_type": "resistance", "resistance_type": "Weapon"},
+    )
+    MAP_OFFENSIVE_SPELL_ACTION_SPECS_BY_CAPITAL = {
+        1: EMPIRE_DAMAGE_SPELL_ACTION_SPECS,
+        2: LEGION_DAMAGE_SPELL_ACTION_SPECS,
+        3: MOUNTAIN_DAMAGE_SPELL_ACTION_SPECS,
+        4: UNDEAD_DAMAGE_SPELL_ACTION_SPECS,
+        5: ELVES_DAMAGE_SPELL_ACTION_SPECS,
+    }
+    MAP_SUPPORT_SPELL_ACTION_SPECS_BY_CAPITAL = {
+        1: EMPIRE_SUPPORT_SPELL_ACTION_SPECS,
+        3: MOUNTAIN_SUPPORT_SPELL_ACTION_SPECS,
+        4: UNDEAD_SUPPORT_SPELL_ACTION_SPECS,
+        5: ELVES_SUPPORT_SPELL_ACTION_SPECS,
+    }
+    ENERGY_ELIXIR_ITEM_NAME = "Эликсир энергии"
+    FIRE_WARD_ITEM_NAME = "Эликсир защиты от магии Огня"
+    EARTH_WARD_ITEM_NAME = "Эликсир защиты от магии Земли"
+    WATER_WARD_ITEM_NAME = "Эликсир защиты от магии Воды"
+    AIR_WARD_ITEM_NAME = "Эликсир защиты от магии Воздуха"
+    HASTE_ELIXIR_ITEM_NAME = "Эликсир быстроты"
+    RUIN_LIFE_ELIXIR_ITEM_NAME = "Эликсир Жизни"
+    RUIN_INVULNERABILITY_ELIXIR_ITEM_NAME = "Эликсир неуязвимости"
+    TITAN_ELIXIR_ITEM_NAME = "Эликсир Силы титана"
+    SUPREME_ELIXIR_ITEM_NAME = "Эликсир Всевышнего"
+    RING_OF_AGES_ITEM_NAME = "Кольцо веков (Артефакт)"
+    RING_OF_AGES_ENGLISH_ITEM_NAME = "Ring of the Ages (Artifact)"
+    DWARVEN_BRACER_ITEM_NAME = "Dwarven Bracer (Artifact)"
+    UNHOLY_CHALICE_ARTIFACT_ITEM_NAME = "Unholy Chalice (Artifact)"
+    RING_OF_STRENGTH_ITEM_NAME = "Ring of Strength (Artifact)"
+    RUNIC_BLADE_ITEM_NAME = "Runic Blade (Artifact)"
+    MJOLNIRS_CROWN_ITEM_NAME = "Mjolnir's Crown (Artifact)"
+    BETHREZENS_CLAW_ITEM_NAME = "Bethrezen's Claw (Artifact)"
+    RUNESTONE_ARTIFACT_ITEM_NAME = "Runestone (Artifact)"
+    HOLY_CHALICE_ARTIFACT_ITEM_NAME = "Holy Chalice (Artifact)"
+    SKULL_BRACERS_ITEM_NAME = "Skull Bracers (Artifact)"
+    HORN_OF_AWARENESS_ITEM_NAME = "Horn of Awareness (Artifact)"
+    ETCHED_CIRCLET_ITEM_NAME = "Etched Circlet (Artifact)"
+    SOUL_CRYSTAL_ARTIFACT_ITEM_NAME = "Soul Crystal (Artifact)"
+    HORN_OF_INCUBUS_ARTIFACT_ITEM_NAME = "Horn of Incubus (Artifact)"
+    UNHOLY_DAGGER_ARTIFACT_ITEM_NAME = "Unholy Dagger (Artifact)"
+    THANATOS_BLADE_ARTIFACT_ITEM_NAME = "Thanatos Blade (Artifact)"
+    SKULL_OF_THANATOS_ARTIFACT_ITEM_NAME = "Skull of Thanatos (Artifact)"
+    HAGS_RING_ARTIFACT_ITEM_NAME = "Hag's Ring (Artifact)"
+    ARTIFACT_EQUIP_SLOTS = 2
+    ENERGY_ELIXIR_DAMAGE_MULTIPLIER = 1.50
+    HASTE_ELIXIR_INITIATIVE_MULTIPLIER = 1.60
+    TITAN_ELIXIR_DAMAGE_MULTIPLIER = 1.10
+    SUPREME_ELIXIR_HEALTH_MULTIPLIER = 1.15
+    RING_OF_AGES_DAMAGE_MULTIPLIER = 1.40
+    RING_OF_AGES_INITIATIVE_MULTIPLIER = 1.25
+    DWARVEN_BRACER_DAMAGE_MULTIPLIER = 1.10
+    UNHOLY_CHALICE_ARTIFACT_DAMAGE_MULTIPLIER = 1.15
+    RING_OF_STRENGTH_DAMAGE_MULTIPLIER = 1.20
+    RUNIC_BLADE_DAMAGE_MULTIPLIER = 1.25
+    MJOLNIRS_CROWN_DAMAGE_MULTIPLIER = 1.35
+    BETHREZENS_CLAW_DAMAGE_MULTIPLIER = 1.40
+    BETHREZENS_CLAW_INITIATIVE_MULTIPLIER = 1.50
+    RUNESTONE_ARTIFACT_ARMOR_BONUS = 10
+    HOLY_CHALICE_ARTIFACT_ARMOR_BONUS = 15
+    SKULL_BRACERS_ARMOR_BONUS = 20
+    HORN_OF_AWARENESS_ARMOR_BONUS = 25
+    ETCHED_CIRCLET_ARMOR_BONUS = 35
+    MERCHANT_BUY_ITEMS = (
+        {"name": RUIN_LIFE_ELIXIR_ITEM_NAME, "price": 400.0, "stock": 10, "grant": "revive_bonus"},
+        {"name": "Эликсир исцеления", "price": 150.0, "stock": 10, "grant": "small_heal_bonus"},
+        {"name": "Эликсир восстановления", "price": 300.0, "stock": 10, "grant": "large_heal_bonus"},
+        {"name": "Целебная мазь", "price": 600.0, "stock": 10, "grant": "inventory"},
+        {"name": "Эликсир энергии", "price": 200.0, "stock": 1, "grant": "inventory"},
+        {"name": "Эликсир защиты от магии Огня", "price": 400.0, "stock": 1, "grant": "inventory"},
+        {"name": "Эликсир защиты от магии Земли", "price": 400.0, "stock": 1, "grant": "inventory"},
+        {"name": "Эликсир защиты от магии Воды", "price": 400.0, "stock": 1, "grant": "inventory"},
+        {"name": "Эликсир защиты от магии Воздуха", "price": 400.0, "stock": 1, "grant": "inventory"},
+        {"name": "Эликсир быстроты", "price": 600.0, "stock": 1, "grant": "inventory"},
+    )
+    SPELL_SHOP_BUY_SPELLS = (
+        {"name": "Армагеддон", "spell_id": "emp_d2_s022", "price": 1000.0, "stock": 1},
+        {"name": "Вызов Мстителя", "spell_id": "lod_d2_s021", "price": 1000.0, "stock": 1},
+    )
+    MAX_SPELL_SHOP_CAST_ACTIONS = 5
+    SCROLL_MAGE_UNLOCK_GOLD_COST = 500.0
+    MAX_SCROLL_CAST_ACTIONS = 5
+    GRID_BUILD_ACTION_START = (
+        GRID_SUPREME_ELIXIR_ACTION_START + len(SUPREME_ELIXIR_POSITIONS)
+    )
+    CHEST_ITEM_GOLD_VALUES = {
+        "Potion of Healing": 150,
+        "Life Potion": 400,
+        "Potion of Strength": 450,
+        "Potion of Invulnerability": 700,
+        "Banner of Might": 1000,
+        "Banner of War": 5000,
+        "Tome of Arcanum": 900,
+        "Vampire Orb": 800,
+        "Orb of Life": 800,
+        "Lich Orb": 800,
+        "Mind ward scroll": 600,
+        "Bronze Ring (Valuable)": 250,
+        "Ruby (Valuable)": 1250,
+        "Diamond (Valuable)": 1750,
+        BONUS_SMALL_HEAL_ITEM_NAME: 150,
+        BONUS_LARGE_HEAL_ITEM_NAME: 300,
+        BONUS_REVIVE_ITEM_NAME: 400,
+        RUIN_LIFE_ELIXIR_ITEM_NAME: 400,
+        RUIN_INVULNERABILITY_ELIXIR_ITEM_NAME: 700,
+        TITAN_ELIXIR_ITEM_NAME: 800,
+        SUPREME_ELIXIR_ITEM_NAME: 800,
+        RING_OF_AGES_ITEM_NAME: 3750,
+        RING_OF_AGES_ENGLISH_ITEM_NAME: 3750,
+        SOUL_CRYSTAL_ARTIFACT_ITEM_NAME: 2000,
+        HORN_OF_INCUBUS_ARTIFACT_ITEM_NAME: 2000,
+        UNHOLY_DAGGER_ARTIFACT_ITEM_NAME: 1500,
+        THANATOS_BLADE_ARTIFACT_ITEM_NAME: 1500,
+        SKULL_OF_THANATOS_ARTIFACT_ITEM_NAME: 3750,
+        HAGS_RING_ARTIFACT_ITEM_NAME: 2500,
+    }
+    AUTO_CONSUMED_CHEST_ITEMS = (
+        BONUS_SMALL_HEAL_SOURCE_ITEM,
+        BONUS_REVIVE_SOURCE_ITEM,
+    )
+    ENEMY_REWARD_MULTIPLIERS = {}
+    RUIN_REWARD_BY_ENEMY_ID: Dict[int, Dict[str, object]] = {
+        70: {
+            "title": "Замок орка",
+            "ruin_pos": (15, 9),
+            "marker_pos": (17, 11),
+            "item": TITAN_ELIXIR_ITEM_NAME,
+            "gold": 200,
+        },
+        71: {
+            "title": "Храм Мараши",
+            "ruin_pos": (3, 20),
+            "marker_pos": (5, 22),
+            "item": RUIN_INVULNERABILITY_ELIXIR_ITEM_NAME,
+            "gold": 300,
+        },
+        72: {
+            "title": "Руины (30, 22)",
+            "ruin_pos": (30, 22),
+            "marker_pos": (32, 24),
+            "item": RUIN_LIFE_ELIXIR_ITEM_NAME,
+            "gold": 300,
+        },
+        73: {
+            "title": "Руины Бритона",
+            "ruin_pos": (19, 29),
+            "marker_pos": (21, 31),
+            "item": SUPREME_ELIXIR_ITEM_NAME,
+            "gold": 150,
+        },
+        74: {
+            "title": "Замок Ху'Ларша",
+            "ruin_pos": (43, 34),
+            "marker_pos": (45, 36),
+            "item": RING_OF_AGES_ITEM_NAME,
+            "gold": 400,
+        },
+    }
+    RUIN_REWARD_ITEM_NAMES = frozenset(
+        {
+            str(reward_data.get("item", "") or "")
+            for reward_data in RUIN_REWARD_BY_ENEMY_ID.values()
+            if str(reward_data.get("item", "") or "")
+        }
+    )
+
+
+
+__all__ = [name for name in globals() if not name.startswith("__")]
