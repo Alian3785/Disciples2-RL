@@ -361,7 +361,6 @@ class CampaignMapSitesMixin:
         hero_needaunit = self._resolve_hero_needaunit(hero) if hero is not None else 0
         reward = self._hire_reward_value() if hired else 0.0
         matching_site_in_range = bool(site_name) and site_name in site_names
-        insufficient_gold = matching_site_in_range and bool(unit_name) and float(self.gold or 0.0) < hire_cost
         out_of_stock = matching_site_in_range and stock_before <= 0
 
         info = {

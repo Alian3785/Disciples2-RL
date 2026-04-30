@@ -1000,7 +1000,6 @@ def render_png_map(
     stack_cells = {(stack["x"], stack["y"]) for stack in stacks}
     render_objects = extract_render_objects(data)
     settlement_objects = parse_settlement_objects(data)
-    settlement_entry_cells = build_settlement_entry_cells(settlement_objects)
     rendered_ruin_interaction_tiles: set[tuple[int, int]] = set()
     suppressed_stack_cells = {
         (info["x"], info["y"])

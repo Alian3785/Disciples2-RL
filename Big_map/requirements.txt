@@ -1,4 +1,12 @@
 # Explicitly tracked project packages updated for the Big_map environment.
 gymnasium==1.2.3
 stable-baselines3==2.8.0
-opik==1.10.58
+sb3-contrib==2.8.0
+opik==2.0.16
+torch==2.11.0
+numpy==2.4.4
+pandas==3.0.2
+matplotlib==3.10.9
+pytest==9.0.3
+ruff==0.15.12
+wandb==0.26.1

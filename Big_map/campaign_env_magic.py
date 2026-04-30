@@ -539,7 +539,8 @@ class CampaignMagicMixin:
             return False
         if not self._is_spell_learned(normalized_spell_key):
             return False
-        if not self._hero_stack_has_living_units():
+        spell_spec = self._map_support_spell_spec(normalized_spell_key)
+        if not self._support_spell_spec_would_apply(normalized_spell_key, spell_spec):
             return False
         return self._has_mana_for_costs(self._get_spell_use_costs(spell))
     def _can_cast_spell_shop_spell(
@@ -588,7 +589,7 @@ class CampaignMagicMixin:
 
         support_spec = self._map_support_spell_spec(normalized_spell_key)
         if support_spec:
-            if not self._hero_stack_has_living_units():
+            if not self._support_spell_spec_would_apply(normalized_spell_key, support_spec):
                 return False
             return self._has_mana_for_costs(self._get_spell_use_costs(spell))
 
@@ -664,7 +665,7 @@ class CampaignMagicMixin:
                 return False
             return self._enemy_team_has_living_units(nearest_enemy.get("enemy_id"))
         if self._spell_kind_is_support(spell_kind):
-            return self._hero_stack_has_living_units()
+            return self._support_spell_spec_would_apply(spell_key, slot_entry)
         return False
     def _cast_from_spell_spec(
         self,
@@ -736,6 +737,12 @@ class CampaignMagicMixin:
             ),
             "reward": 0.0,
         }
+        if self._spell_kind_is_support(spell_kind) and not self._support_spell_spec_would_apply(
+            normalized_spell_key,
+            spell_spec,
+        ):
+            return result
+
         if spend_mana and mana_costs:
             self._spend_mana_costs(mana_costs)
         if enforce_turn_limit and normalized_spell_key:
@@ -1278,6 +1285,49 @@ class CampaignMagicMixin:
             if max_hp > 0.0 and current_hp > 0.0:
                 return True
         return False
+    def _blue_stack_has_healable_units(self, heal_amount: float) -> bool:
+        if float(heal_amount or 0.0) <= 0.0:
+            return False
+        for unit in self._get_blue_state():
+            max_hp = float(unit.get("max_health", 0) or unit.get("maxhp", 0) or 0.0)
+            current_hp = float(unit.get("health", 0) or unit.get("hp", 0) or 0.0)
+            if max_hp > 0.0 and 0.0 < current_hp < max_hp:
+                return True
+        return False
+    def _grid_moves_restore_amount(self, restore_fraction: float) -> float:
+        current_moves = max(0.0, float(self.moves or 0.0))
+        move_cap = max(0.0, float(self.moves_per_turn or 0.0))
+        if move_cap <= 0.0 or float(restore_fraction or 0.0) <= 0.0:
+            return 0.0
+        restore_amount = max(0.0, round(move_cap * float(restore_fraction)))
+        next_moves = min(move_cap, current_moves + restore_amount)
+        return float(max(0.0, next_moves - current_moves))
+    def _support_spell_spec_would_apply(
+        self,
+        spell_key: str,
+        spell_spec: Dict[str, object],
+    ) -> bool:
+        if not isinstance(spell_spec, dict):
+            return False
+        if not self._hero_stack_has_living_units():
+            return False
+
+        spell_kind = str(spell_spec.get("spell_kind", spell_spec.get("kind", "")) or "")
+        if spell_kind == "moves":
+            restore_fraction = float(spell_spec.get("moves_restore_fraction", 0.0) or 0.0)
+            return self._grid_moves_restore_amount(restore_fraction) > 0.0
+        if spell_kind == "heal":
+            heal_amount = float(spell_spec.get("heal_amount", 0.0) or 0.0)
+            return self._blue_stack_has_healable_units(heal_amount)
+        if spell_kind in {"buff", "ward", "health_bonus"}:
+            normalized_spell_key = str(
+                spell_key
+                or spell_spec.get("spell_id", "")
+                or spell_spec.get("id", "")
+                or ""
+            )
+            return bool(normalized_spell_key) and normalized_spell_key not in self.blue_map_spell_effects
+        return False
     def _blue_stack_spell_effect_summary(self) -> Dict[str, object]:
         active_spell_ids = sorted(str(spell_id) for spell_id in self.blue_map_spell_effects if str(spell_id))
         specs_by_id = self._combined_map_support_spell_specs_by_id()
@@ -1608,7 +1658,6 @@ class CampaignMagicMixin:
             str(spell_key)
         )
         blocked_by_typeoflord = self._is_spell_blocked_by_typeoflord(spell)
-        insufficient_mana = not self._has_mana_for_costs(mana_costs) if mana_costs else True
         nearest_enemy = (
             self._get_map_offensive_spell_target(str(spell_key))
             if spell_key
@@ -1628,9 +1677,6 @@ class CampaignMagicMixin:
         spell_enemy_defeated = False
         enemy_reward = 0.0
         ruin_clear_bonus_reward = 0.0
-        newly_captured_objective_cities: List[str] = []
-        newly_activated_settlement_territories: List[str] = []
-        final_objective_reward = 0.0
         spell_cast_reward = 0.0
 
         can_cast = (
@@ -1680,15 +1726,6 @@ class CampaignMagicMixin:
             enemy_reward = float(cast_result.get("enemy_defeat_reward", 0.0) or 0.0)
             ruin_clear_bonus_reward = float(
                 cast_result.get("ruin_clear_bonus_reward", 0.0) or 0.0
-            )
-            newly_captured_objective_cities = list(
-                cast_result.get("newly_captured_objective_cities", []) or []
-            )
-            newly_activated_settlement_territories = list(
-                cast_result.get("newly_activated_settlement_territories", []) or []
-            )
-            final_objective_reward = float(
-                cast_result.get("final_objective_reward", 0.0) or 0.0
             )
         else:
             cast_result = {}
@@ -1814,7 +1851,7 @@ class CampaignMagicMixin:
             and spell_known
             and not blocked_by_typeoflord
             and not spell_used_this_turn
-            and self._hero_stack_has_living_units()
+            and self._support_spell_spec_would_apply(str(spell_key), spell_spec)
             and self._has_mana_for_costs(mana_costs)
         )
 
@@ -1989,9 +2026,6 @@ class CampaignMagicMixin:
         spell_enemy_defeated = False
         enemy_reward = 0.0
         ruin_clear_bonus_reward = 0.0
-        newly_captured_objective_cities: List[str] = []
-        newly_activated_settlement_territories: List[str] = []
-        final_objective_reward = 0.0
         spell_effect_summary: Dict[str, object]
         if support_spec:
             spell_effect_summary = self._blue_stack_spell_effect_summary()
@@ -2039,15 +2073,6 @@ class CampaignMagicMixin:
             enemy_reward = float(cast_result.get("enemy_defeat_reward", 0.0) or 0.0)
             ruin_clear_bonus_reward = float(
                 cast_result.get("ruin_clear_bonus_reward", 0.0) or 0.0
-            )
-            newly_captured_objective_cities = list(
-                cast_result.get("newly_captured_objective_cities", []) or []
-            )
-            newly_activated_settlement_territories = list(
-                cast_result.get("newly_activated_settlement_territories", []) or []
-            )
-            final_objective_reward = float(
-                cast_result.get("final_objective_reward", 0.0) or 0.0
             )
         else:
             cast_result = {}
@@ -2235,9 +2260,6 @@ class CampaignMagicMixin:
         spell_enemy_defeated = False
         enemy_reward = 0.0
         ruin_clear_bonus_reward = 0.0
-        newly_captured_objective_cities: List[str] = []
-        newly_activated_settlement_territories: List[str] = []
-        final_objective_reward = 0.0
         spell_effect_summary: Dict[str, object] = (
             self._blue_stack_spell_effect_summary()
             if self._spell_kind_is_support(spell_kind)
@@ -2291,15 +2313,6 @@ class CampaignMagicMixin:
             enemy_reward = float(cast_result.get("enemy_defeat_reward", 0.0) or 0.0)
             ruin_clear_bonus_reward = float(
                 cast_result.get("ruin_clear_bonus_reward", 0.0) or 0.0
-            )
-            newly_captured_objective_cities = list(
-                cast_result.get("newly_captured_objective_cities", []) or []
-            )
-            newly_activated_settlement_territories = list(
-                cast_result.get("newly_activated_settlement_territories", []) or []
-            )
-            final_objective_reward = float(
-                cast_result.get("final_objective_reward", 0.0) or 0.0
             )
             scroll_item_consumed = bool(cast_result.get("scroll_item_consumed", False))
             scroll_copies_after = int(cast_result.get("scroll_copies_after", 0) or 0)

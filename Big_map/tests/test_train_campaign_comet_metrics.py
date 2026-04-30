@@ -287,6 +287,23 @@ def test_campaign_metrics_callback_saves_cumulative_hired_units_plot(tmp_path):
     assert output_path.stat().st_size > 0
 
 
+def test_campaign_metrics_plot_save_failure_returns_none(monkeypatch, tmp_path):
+    import matplotlib.figure
+
+    def raise_save_error(self, *args, **kwargs):
+        raise OSError(22, "Invalid argument")
+
+    callback = CampaignMetricsCallback(log_freq=1000, episode_window=4, experiment=None)
+    callback.episode_hired_units = [0.0, 1.0]
+    monkeypatch.setattr(matplotlib.figure.Figure, "savefig", raise_save_error)
+
+    saved_path = callback.save_cumulative_hired_units_plot(
+        f'"{tmp_path / "campaign_hired_units_cumulative.png"}\n'
+    )
+
+    assert saved_path is None
+
+
 def test_campaign_metrics_callback_saves_battle_item_activity_plot(tmp_path):
     callback = CampaignMetricsCallback(log_freq=1000, episode_window=4, experiment=None)
     callback.episode_battle_items_equipped = [1.0, 0.0, 2.0, 1.0]

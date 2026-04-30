@@ -40,13 +40,13 @@ from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.evaluation import evaluate_policy as sb3_evaluate_policy
 from stable_baselines3.common.vec_env import (
     DummyVecEnv,
+    SubprocVecEnv,
     VecCheckNan,
     VecNormalize,
     sync_envs_normalization,
 )
 
 from sb3_contrib.ppo_mask import MaskablePPO
-from sb3_contrib.common.wrappers import ActionMasker
 
 try:
     from sb3_contrib.common.maskable.evaluation import (
@@ -183,17 +183,6 @@ def _safe_rate(numerator: int, denominator: int) -> float:
     return float(numerator) / float(denominator)
 
 
-def _metric_token(value: Any) -> str:
-    """Normalize dynamic metric suffixes to a predictable ASCII token."""
-    token = re.sub(r"[^0-9A-Za-z_]+", "_", str(value).strip()).strip("_").lower()
-    return token or "unknown"
-
-
-def mask_fn(env: CampaignEnv) -> np.ndarray:
-    """Функция маскирования для ActionMasker."""
-    return env.compute_action_mask()
-
-
 class EvalStepCapWrapper(gym.Wrapper):
     """Hard-stop eval episodes after a fixed number of env steps."""
 
@@ -222,7 +211,7 @@ class EvalStepCapWrapper(gym.Wrapper):
 
 def make_env(log_enabled: bool = False, eval_max_episode_steps: int | None = None):
     """Фабрика создания среды."""
-    base = CampaignEnv(
+    env = CampaignEnv(
         grid_size=DEFAULT_GRID_SIZE,
         # Основная цель: пройти всю кампанию (4/4 врага).
         **REWARD_CONFIG,
@@ -231,10 +220,18 @@ def make_env(log_enabled: bool = False, eval_max_episode_steps: int | None = Non
         max_grid_steps=1800,
         realcapital=2,
     )
-    env = ActionMasker(base, mask_fn)
     if eval_max_episode_steps is not None:
         env = EvalStepCapWrapper(env, max_steps=eval_max_episode_steps)
     return Monitor(env)
+
+
+def resolve_training_vec_env_config(vec_env_mode: str):
+    """Return the VecEnv class and kwargs for the selected rollout mode."""
+    if vec_env_mode == "subproc":
+        return SubprocVecEnv, {"start_method": "spawn"}
+    if vec_env_mode == "dummy":
+        return DummyVecEnv, {}
+    raise ValueError(f"Unsupported vec env mode: {vec_env_mode!r}")
 
 
 def _to_numpy_array(value: Any) -> np.ndarray | None:
@@ -1537,10 +1534,6 @@ class CampaignMetricsCallback(BaseCallback):
             # ),
         }
 
-        # Disabled dynamic campaign graphs. Uncomment to restore per-reason victory metrics.
-        # for reason, count in sorted(self.window_victory_reason_counter.items()):
-        #     payload[f"campaign/window_victory_reasons/{_metric_token(reason)}"] = float(count)
-
         return payload
 
     def _reset_log_window(self) -> None:
@@ -1591,13 +1584,35 @@ class CampaignMetricsCallback(BaseCallback):
     def _on_training_end(self) -> None:
         self._log_to_experiment(force=True)
 
+    @staticmethod
+    def _normalize_plot_path(path: str | os.PathLike[str]) -> Path:
+        raw_path = os.fspath(path)
+        if isinstance(raw_path, str):
+            raw_path = "".join(ch for ch in raw_path.strip().strip('"') if ch >= " " and ch != "\x7f")
+        return Path(raw_path)
+
+    @classmethod
+    def _save_plot_figure(cls, fig, path: str | os.PathLike[str]) -> Path | None:
+        import matplotlib.pyplot as plt
+
+        target = cls._normalize_plot_path(path)
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            fig.savefig(str(target), dpi=160)
+            return target
+        except OSError as exc:
+            print(f"[WARN] Failed to save campaign plot to {target}: {exc}")
+            return None
+        finally:
+            plt.close(fig)
+
     def save_chests_per_episode_plot(self, path: str | os.PathLike[str]) -> Path | None:
         if not self.episode_chests_collected:
             return None
 
         import matplotlib.pyplot as plt
 
-        target = Path(path)
+        target = self._normalize_plot_path(path)
         target.parent.mkdir(parents=True, exist_ok=True)
 
         episodes = np.arange(1, len(self.episode_chests_collected) + 1)
@@ -1626,9 +1641,7 @@ class CampaignMetricsCallback(BaseCallback):
         ax.grid(True, alpha=0.25, linewidth=0.6)
         ax.legend(loc="upper right")
         fig.tight_layout()
-        fig.savefig(target, dpi=160)
-        plt.close(fig)
-        return target
+        return self._save_plot_figure(fig, target)
 
     def save_sold_items_per_episode_plot(self, path: str | os.PathLike[str]) -> Path | None:
         if not self.episode_sold_items:
@@ -1636,7 +1649,7 @@ class CampaignMetricsCallback(BaseCallback):
 
         import matplotlib.pyplot as plt
 
-        target = Path(path)
+        target = self._normalize_plot_path(path)
         target.parent.mkdir(parents=True, exist_ok=True)
 
         episodes = np.arange(1, len(self.episode_sold_items) + 1)
@@ -1665,9 +1678,7 @@ class CampaignMetricsCallback(BaseCallback):
         ax.grid(True, alpha=0.25, linewidth=0.6)
         ax.legend(loc="upper right")
         fig.tight_layout()
-        fig.savefig(target, dpi=160)
-        plt.close(fig)
-        return target
+        return self._save_plot_figure(fig, target)
 
     def save_ruins_cleared_per_episode_plot(self, path: str | os.PathLike[str]) -> Path | None:
         if not self.episode_ruins_cleared:
@@ -1675,7 +1686,7 @@ class CampaignMetricsCallback(BaseCallback):
 
         import matplotlib.pyplot as plt
 
-        target = Path(path)
+        target = self._normalize_plot_path(path)
         target.parent.mkdir(parents=True, exist_ok=True)
 
         episodes = np.arange(1, len(self.episode_ruins_cleared) + 1)
@@ -1704,9 +1715,7 @@ class CampaignMetricsCallback(BaseCallback):
         ax.grid(True, alpha=0.25, linewidth=0.6)
         ax.legend(loc="upper right")
         fig.tight_layout()
-        fig.savefig(target, dpi=160)
-        plt.close(fig)
-        return target
+        return self._save_plot_figure(fig, target)
 
     def save_spells_learned_per_episode_plot(self, path: str | os.PathLike[str]) -> Path | None:
         if not self.episode_spells_learned:
@@ -1714,7 +1723,7 @@ class CampaignMetricsCallback(BaseCallback):
 
         import matplotlib.pyplot as plt
 
-        target = Path(path)
+        target = self._normalize_plot_path(path)
         target.parent.mkdir(parents=True, exist_ok=True)
 
         episodes = np.arange(1, len(self.episode_spells_learned) + 1)
@@ -1743,9 +1752,7 @@ class CampaignMetricsCallback(BaseCallback):
         ax.grid(True, alpha=0.25, linewidth=0.6)
         ax.legend(loc="upper right")
         fig.tight_layout()
-        fig.savefig(target, dpi=160)
-        plt.close(fig)
-        return target
+        return self._save_plot_figure(fig, target)
 
     def save_spell_cast_activity_plot(self, path: str | os.PathLike[str]) -> Path | None:
         if not self.episode_spell_casts:
@@ -1753,7 +1760,7 @@ class CampaignMetricsCallback(BaseCallback):
 
         import matplotlib.pyplot as plt
 
-        target = Path(path)
+        target = self._normalize_plot_path(path)
         target.parent.mkdir(parents=True, exist_ok=True)
 
         episodes = np.arange(1, len(self.episode_spell_casts) + 1)
@@ -1802,9 +1809,7 @@ class CampaignMetricsCallback(BaseCallback):
         ax_bottom.legend(loc="upper left")
 
         fig.tight_layout()
-        fig.savefig(target, dpi=160)
-        plt.close(fig)
-        return target
+        return self._save_plot_figure(fig, target)
 
     def save_summoned_units_per_episode_plot(self, path: str | os.PathLike[str]) -> Path | None:
         if not self.episode_summoned_units:
@@ -1812,7 +1817,7 @@ class CampaignMetricsCallback(BaseCallback):
 
         import matplotlib.pyplot as plt
 
-        target = Path(path)
+        target = self._normalize_plot_path(path)
         target.parent.mkdir(parents=True, exist_ok=True)
 
         episodes = np.arange(1, len(self.episode_summoned_units) + 1)
@@ -1847,9 +1852,7 @@ class CampaignMetricsCallback(BaseCallback):
         ax.grid(True, alpha=0.25, linewidth=0.6)
         ax.legend(loc="upper right")
         fig.tight_layout()
-        fig.savefig(target, dpi=160)
-        plt.close(fig)
-        return target
+        return self._save_plot_figure(fig, target)
 
     def save_cumulative_summoned_units_plot(self, path: str | os.PathLike[str]) -> Path | None:
         if not self.episode_summoned_units:
@@ -1857,7 +1860,7 @@ class CampaignMetricsCallback(BaseCallback):
 
         import matplotlib.pyplot as plt
 
-        target = Path(path)
+        target = self._normalize_plot_path(path)
         target.parent.mkdir(parents=True, exist_ok=True)
 
         episodes = np.arange(1, len(self.episode_summoned_units) + 1)
@@ -1878,9 +1881,7 @@ class CampaignMetricsCallback(BaseCallback):
         ax.grid(True, alpha=0.25, linewidth=0.6)
         ax.legend(loc="upper left")
         fig.tight_layout()
-        fig.savefig(target, dpi=160)
-        plt.close(fig)
-        return target
+        return self._save_plot_figure(fig, target)
 
     def save_hired_units_per_episode_plot(self, path: str | os.PathLike[str]) -> Path | None:
         if not self.episode_hired_units:
@@ -1888,7 +1889,7 @@ class CampaignMetricsCallback(BaseCallback):
 
         import matplotlib.pyplot as plt
 
-        target = Path(path)
+        target = self._normalize_plot_path(path)
         target.parent.mkdir(parents=True, exist_ok=True)
 
         episodes = np.arange(1, len(self.episode_hired_units) + 1)
@@ -1917,9 +1918,7 @@ class CampaignMetricsCallback(BaseCallback):
         ax.grid(True, alpha=0.25, linewidth=0.6)
         ax.legend(loc="upper right")
         fig.tight_layout()
-        fig.savefig(target, dpi=160)
-        plt.close(fig)
-        return target
+        return self._save_plot_figure(fig, target)
 
     def save_battle_item_activity_plot(self, path: str | os.PathLike[str]) -> Path | None:
         if not self.episode_battle_items_equipped and not self.episode_battle_items_used:
@@ -1933,7 +1932,7 @@ class CampaignMetricsCallback(BaseCallback):
         if episode_count <= 0:
             return None
 
-        target = Path(path)
+        target = self._normalize_plot_path(path)
         target.parent.mkdir(parents=True, exist_ok=True)
 
         episodes = np.arange(1, episode_count + 1)
@@ -1993,9 +1992,7 @@ class CampaignMetricsCallback(BaseCallback):
         ax.grid(True, alpha=0.25, linewidth=0.6)
         ax.legend(loc="upper right")
         fig.tight_layout()
-        fig.savefig(target, dpi=160)
-        plt.close(fig)
-        return target
+        return self._save_plot_figure(fig, target)
 
     def save_cumulative_hired_units_plot(self, path: str | os.PathLike[str]) -> Path | None:
         if not self.episode_hired_units:
@@ -2003,7 +2000,7 @@ class CampaignMetricsCallback(BaseCallback):
 
         import matplotlib.pyplot as plt
 
-        target = Path(path)
+        target = self._normalize_plot_path(path)
         target.parent.mkdir(parents=True, exist_ok=True)
 
         episodes = np.arange(1, len(self.episode_hired_units) + 1)
@@ -2024,9 +2021,7 @@ class CampaignMetricsCallback(BaseCallback):
         ax.grid(True, alpha=0.25, linewidth=0.6)
         ax.legend(loc="upper left")
         fig.tight_layout()
-        fig.savefig(target, dpi=160)
-        plt.close(fig)
-        return target
+        return self._save_plot_figure(fig, target)
 
 
 if __name__ == "__main__":
@@ -2034,7 +2029,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Train Campaign Agent")
     parser.add_argument("--total-steps", type=int, default=2_000_000, help="Total training steps")
-    parser.add_argument("--n-envs", type=int, default=8, help="Number of parallel environments")
+    parser.add_argument("--n-envs", type=int, default=12, help="Number of parallel environments")
+    parser.add_argument(
+        "--vec-env",
+        choices=("subproc", "dummy"),
+        default="subproc",
+        help="Vectorized rollout environment backend",
+    )
+    parser.add_argument("--seed", type=int, default=None, help="Optional random seed")
     parser.add_argument("--checkpoint-freq", type=int, default=500_000, help="Checkpoint frequency")
     parser.add_argument("--eval-freq", type=int, default=50_000, help="Evaluation frequency")
     parser.add_argument("--no-comet", action="store_true", help="Disable Comet logging")
@@ -2090,6 +2092,8 @@ if __name__ == "__main__":
     # -------------------- Параметры --------------------
     TOTAL_STEPS = args.total_steps
     N_ENVS = args.n_envs
+    VEC_ENV_MODE = args.vec_env
+    SEED = args.seed
     CHECKPOINT_FREQ = args.checkpoint_freq
     EVAL_FREQ = args.eval_freq
     EVAL_EPISODES = 20
@@ -2112,6 +2116,9 @@ if __name__ == "__main__":
             "algo": "MaskablePPO",
             "total_timesteps": TOTAL_STEPS,
             "n_envs": N_ENVS,
+            "vec_env": VEC_ENV_MODE,
+            "vec_env_start_method": "spawn" if VEC_ENV_MODE == "subproc" else None,
+            "seed": SEED,
             "n_steps": 2048,
             "batch_size": 256,
             "gamma": 0.995,
@@ -2188,8 +2195,15 @@ if __name__ == "__main__":
         )
 
     # -------------------- Создание сред --------------------
-    print(f"Создание {N_ENVS} параллельных сред...")
-    vec_env = make_vec_env(make_env, n_envs=N_ENVS)
+    vec_env_cls, vec_env_kwargs = resolve_training_vec_env_config(VEC_ENV_MODE)
+    print(f"Создание {N_ENVS} параллельных сред ({VEC_ENV_MODE})...")
+    vec_env = make_vec_env(
+        make_env,
+        n_envs=N_ENVS,
+        seed=SEED,
+        vec_env_cls=vec_env_cls,
+        vec_env_kwargs=vec_env_kwargs,
+    )
     # Normalize only rewards to stabilize PPO targets; observation normalization stays disabled.
     vec_env = VecNormalize(
         vec_env,
@@ -2247,6 +2261,7 @@ if __name__ == "__main__":
         clip_range=0.2,
         ent_coef=0.01,
         vf_coef=0.5,
+        seed=SEED,
         tensorboard_log=TB_LOG_DIR,
     )
 
@@ -2300,6 +2315,9 @@ if __name__ == "__main__":
     print("Запуск обучения Campaign Agent")
     print(f"Всего шагов: {TOTAL_STEPS:,}")
     print(f"Параллельных сред: {N_ENVS}")
+    print(f"VecEnv: {VEC_ENV_MODE}")
+    if SEED is not None:
+        print(f"Seed: {SEED}")
     print(f"Checkpoint каждые: {CHECKPOINT_FREQ:,} шагов")
     print(f"Evaluation каждые: {EVAL_FREQ:,} шагов")
     print(f"Eval эпизодов на режим: {EVAL_EPISODES}")

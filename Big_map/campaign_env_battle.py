@@ -109,6 +109,35 @@ class CampaignBattleMixin:
                     winner=winner,
                 )
 
+            if truncated and winner is None:
+                self._log(
+                    f"=== БОЙ ПРОТИВ ВРАГА {self.current_enemy_id} ЗАВЕРШЁН ПО ЛИМИТУ БЕЗ ПОБЕДИТЕЛЯ ==="
+                )
+                self._save_enemy_state_from_battle(self.current_enemy_id)
+                if self.persist_blue_hp:
+                    self._save_blue_state()
+                    self._log("Состояние BLUE сохранено после таймаута боя")
+
+                self.mode = self.MODE_GRID
+                self.battle_env = None
+                self._clear_current_battle_context()
+                info["battle_result"] = "timeout"
+                info["battle_timeout_no_winner"] = True
+                info["mode"] = "grid"
+                info["agent_pos"] = self._restore_agent_to_battle_origin()
+                info["enemies_alive"] = dict(self.grid_env.enemies_alive)
+                info["enemy_state_saved"] = True
+                info["blue_state_saved"] = bool(self.persist_blue_hp)
+
+                grid_obs = self._get_grid_obs()
+                return self._finalize_grid_step_result(
+                    grid_obs=grid_obs,
+                    reward=reward,
+                    terminated=False,
+                    truncated=False,
+                    info=info,
+                )
+
             if winner == "blue":
                 exp_reward, exp_raw = self._compute_blue_exp_reward()
                 survival_reward, blue_alive_ratio, blue_hp_ratio = self._compute_blue_survival_reward()
