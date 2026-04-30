@@ -24,7 +24,14 @@ class _DummyBattleEnv:
 
 
 class _StepRewardBattleEnv:
-    def __init__(self, reward: float, *, terminated: bool = False, winner: str | None = None):
+    def __init__(
+        self,
+        reward: float,
+        *,
+        terminated: bool = False,
+        truncated: bool = False,
+        winner: str | None = None,
+    ):
         self.winner = None
         self.action_space = type("ActionSpace", (), {"n": 15})()
         self.last_battle_exp = 0.0
@@ -32,6 +39,7 @@ class _StepRewardBattleEnv:
         self.combined = deepcopy(UNITS_BLUE)
         self._reward = float(reward)
         self._terminated = bool(terminated)
+        self._truncated = bool(truncated)
         self._winner_after_step = winner
 
     def _obs(self):
@@ -41,7 +49,7 @@ class _StepRewardBattleEnv:
         del action
         if self._terminated:
             self.winner = self._winner_after_step
-        return self._obs(), self._reward, self._terminated, False, {}
+        return self._obs(), self._reward, self._terminated, self._truncated, {}
 
 
 def _make_reward_isolated_env() -> CampaignEnv:
@@ -190,6 +198,31 @@ def test_campaign_battle_step_uses_scaled_battle_reward():
     assert info.get("battle_ongoing") is True
     assert float(info.get("battle_reward_raw", 0.0)) == pytest.approx(2.4)
     assert float(info.get("battle_reward_scaled", 0.0)) == pytest.approx(0.6)
+
+
+def test_battle_timeout_without_winner_returns_to_grid_without_campaign_defeat():
+    env = _make_reward_isolated_env()
+    env.reset(seed=123)
+    env.mode = env.MODE_BATTLE
+    env.current_enemy_id = 1
+    env.battle_origin_pos = (2, 2)
+    env.grid_env.agent_pos = (3, 2)
+    env.grid_env.enemies_alive[1] = True
+    env.battle_reward_scale = 0.25
+    env.battle_env = _StepRewardBattleEnv(reward=-0.4, truncated=True, winner=None)
+
+    _, reward, terminated, truncated, info = env.step(0)
+
+    assert terminated is False
+    assert truncated is False
+    assert env.mode == env.MODE_GRID
+    assert env.battle_env is None
+    assert info.get("battle_result") == "timeout"
+    assert info.get("battle_timeout_no_winner") is True
+    assert "campaign_result" not in info
+    assert env.grid_env.enemies_alive[1] is True
+    assert tuple(env.grid_env.agent_pos) == (2, 2)
+    assert reward == pytest.approx(-0.1)
 
 
 def test_init_battle_passes_campaign_battle_reward_settings_to_battle_env():

@@ -136,6 +136,30 @@ def test_hero_item_action_revives_target_and_clears_second_slot():
     assert truncated is False
 
 
+def test_non_hero_item_action_is_safe_noop_if_mask_is_bypassed():
+    env = BattleEnv(log_enabled=False)
+    env.reset(seed=123)
+    _restore_blue_health(env)
+    env.equipped_hero_items = ["Test heal", None]
+    env.hero_item_effects = {"Test heal": {"kind": "heal", "amount": 50.0}}
+
+    attacker = _set_blue_turn(env, 7)
+    attacker["hero"] = False
+    env._advance_until_blue_turn = lambda: None
+
+    _, reward, terminated, truncated, info = env.step(FIRST_HERO_ITEM_ACTION_START)
+
+    assert attacker["initiative"] == 0
+    assert info["battle_hero_item_action"] is True
+    assert info["battle_hero_item_name"] == "Test heal"
+    assert info["battle_hero_item_applied"] is False
+    assert info["battle_hero_item_consumed"] is False
+    assert env.equipped_hero_items == ["Test heal", None]
+    assert reward == pytest.approx(env.reward_step)
+    assert terminated is False
+    assert truncated is False
+
+
 def test_hero_item_actions_follow_explicit_hero_flag_not_blue_pos8():
     env = BattleEnv(log_enabled=False)
     env.reset(seed=123)

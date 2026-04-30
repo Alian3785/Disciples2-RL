@@ -100,6 +100,13 @@ def _support_spell_action_index(env: CampaignEnv, spell_key: str) -> int:
     raise AssertionError(f"support spell action not found: {spell_key}")
 
 
+def _scroll_spell_action_index(env: CampaignEnv, spell_key: str) -> int:
+    for idx, slot_entry in enumerate(env.scroll_cast_slot_entries()):
+        if str(slot_entry.get("spell_id", "") or "") == str(spell_key):
+            return env.grid_scroll_cast_action_start + idx
+    raise AssertionError(f"scroll spell action not found: {spell_key}")
+
+
 def _battle_target_action(position: int) -> int:
     return int(position) - 1
 
@@ -1417,7 +1424,114 @@ def test_empire_movement_spell_restores_half_of_grid_moves_and_is_locked_per_tur
     assert env.moves == 16
 
     env._advance_turns(1)
+    assert bool(env.compute_action_mask()[action]) is False
+    env.moves = 6
     assert bool(env.compute_action_mask()[action]) is True
+
+
+def test_support_heal_spell_at_full_hp_is_not_rewarded_or_charged():
+    env = _make_empire_env()
+    spell_key = "emp_d2_s007"
+    env.active_spells[spell_key]["learned"] = 1
+    _set_spell_use_mana(env, spell_key)
+    mana_before = env._current_mana_totals()
+
+    action = _support_spell_action_index(env, spell_key)
+    assert bool(env.compute_action_mask()[action]) is False
+
+    _, reward, terminated, truncated, info = env.step(action)
+
+    assert terminated is False
+    assert truncated is False
+    assert reward == pytest.approx(0.0)
+    assert info["spell_cast_applied"] is False
+    assert info["spell_cast_executed"] is False
+    assert info["spell_cast_reward"] == pytest.approx(0.0)
+    assert env._current_mana_totals() == pytest.approx(mana_before)
+    assert env._spell_cast_limit_reached_this_turn(spell_key) is False
+
+
+def test_heal_scroll_at_full_hp_is_not_rewarded_or_consumed_until_it_heals():
+    env = _make_empire_env()
+    spell_key = "g000ss0029"
+    item_name = str(env._scroll_spell_definition_by_id(spell_key)["item_name"])
+    env.scroll_magic_unlocked = True
+    env.heroitems = [item_name]
+    env._invalidate_inventory_cache()
+
+    action = _scroll_spell_action_index(env, spell_key)
+    assert env.count_scroll_item(item_name) == 1
+    assert bool(env.compute_action_mask()[action]) is False
+
+    _, reward, terminated, truncated, info = env.step(action)
+
+    assert terminated is False
+    assert truncated is False
+    assert reward == pytest.approx(0.0)
+    assert info["spell_cast_applied"] is False
+    assert info["spell_cast_executed"] is False
+    assert info["spell_cast_reward"] == pytest.approx(0.0)
+    assert info["scroll_item_consumed"] is False
+    assert info["scroll_copies_before"] == 1
+    assert info["scroll_copies_after"] == 1
+    assert env.count_scroll_item(item_name) == 1
+
+    first_unit = env._get_blue_state()[0]
+    first_unit["health"] = 70.0
+    first_unit["hp"] = 70.0
+
+    assert bool(env.compute_action_mask()[action]) is True
+    _, reward, terminated, truncated, info = env.step(action)
+
+    assert terminated is False
+    assert truncated is False
+    assert reward == pytest.approx(env.reward_spell_cast)
+    assert info["spell_cast_applied"] is True
+    assert info["spell_cast_executed"] is True
+    assert info["spell_heal_total"] == pytest.approx(30.0)
+    assert info["scroll_item_consumed"] is True
+    assert info["scroll_copies_before"] == 1
+    assert info["scroll_copies_after"] == 0
+    assert env.count_scroll_item(item_name) == 0
+
+
+def test_movement_scroll_at_move_cap_is_not_rewarded_or_consumed_until_it_restores_moves():
+    env = _make_empire_env()
+    spell_key = "g000ss0006"
+    item_name = str(env._scroll_spell_definition_by_id(spell_key)["item_name"])
+    env.scroll_magic_unlocked = True
+    env.heroitems = [item_name]
+    env.moves = env.moves_per_turn
+    env._invalidate_inventory_cache()
+
+    action = _scroll_spell_action_index(env, spell_key)
+    assert env.count_scroll_item(item_name) == 1
+    assert bool(env.compute_action_mask()[action]) is False
+
+    _, reward, terminated, truncated, info = env.step(action)
+
+    assert terminated is False
+    assert truncated is False
+    assert reward == pytest.approx(0.0)
+    assert info["spell_cast_applied"] is False
+    assert info["spell_cast_executed"] is False
+    assert info["scroll_item_consumed"] is False
+    assert info["scroll_copies_after"] == 1
+    assert env.count_scroll_item(item_name) == 1
+
+    env.moves = 0
+    assert bool(env.compute_action_mask()[action]) is True
+    _, reward, terminated, truncated, info = env.step(action)
+
+    assert terminated is False
+    assert truncated is False
+    assert reward == pytest.approx(env.reward_spell_cast)
+    assert info["spell_cast_applied"] is True
+    assert info["spell_cast_executed"] is True
+    assert info["spell_moves_restored"] == pytest.approx(10.0)
+    assert info["scroll_item_consumed"] is True
+    assert info["scroll_copies_after"] == 0
+    assert env.count_scroll_item(item_name) == 0
 
 
 def test_typeoflord_two_allows_same_support_spell_twice_per_turn():

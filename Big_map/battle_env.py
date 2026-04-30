@@ -5021,22 +5021,10 @@ class BattleEnv(gym.Env):
                                 f"пытается использовать предмет {hero_item_no} '{hero_item_name}' на слот {hero_item_slot} "
                                 f"(pos{hero_item_target_pos}) без эффекта."
                             )
-                    elif False:
-                        self._log(
-                            f"BLUE действие: {attacker['name']}#{attacker['position']} "
-                            f"использует предмет {item_no} на свой слот {hero_item_slot} "
-                            f"(pos{hero_item_target_pos}, {slot_unit['name']}#{slot_unit['position']})."
-                        )
-                    elif _is_combat_hero_unit(attacker):
-                        self._log(
-                            f"BLUE действие: {attacker['name']}#{attacker['position']} "
-                            f"пытается использовать предмет {item_no} на слот {hero_item_slot} "
-                            f"(pos{hero_item_target_pos}) без эффекта."
-                        )
                     else:
                         self._log(
                             f"BLUE действие: {attacker['name']}#{attacker['position']} "
-                            f"выбирает hero-only предмет {item_no} на слот {hero_item_slot} "
+                            f"выбирает hero-only предмет {hero_item_no} на слот {hero_item_slot} "
                             f"без эффекта."
                         )
                 else:

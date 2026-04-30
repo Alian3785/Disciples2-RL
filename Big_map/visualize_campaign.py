@@ -649,7 +649,11 @@ class BattleVisualizer:
 
         m = self.atk_re.match(line)
         if m:
-            src_team, src_pos, dst_team, dst_pos, dmg, after = m.group(1), int(m.group(2)), m.group(3), int(m.group(4)), int(m.group(5)), int(m.group(7))
+            src_team = m.group(1)
+            src_pos = int(m.group(2))
+            dst_pos = int(m.group(4))
+            dmg = int(m.group(5))
+            after = int(m.group(7))
             self._set_hp(dst_pos, after)
             self.draw_board(arrows=[{"src": src_pos, "dst": dst_pos, "team": src_team, "text": str(dmg)}], headline=line, active_pos=src_pos)
             self.wait(0.9)
@@ -2275,7 +2279,6 @@ def run_campaign_visualization(
             grid_viz.add_to_path(agent_pos)
 
             # Заголовок
-            action_names = ["↑", "↓", "←", "→", "↖", "↗", "↙", "↘", "⊙"]
             action_name = _format_grid_action_label(action, info)
             title = f"Step {step_count} | Action: {action_name} | Reward: {total_reward:.2f}"
             (

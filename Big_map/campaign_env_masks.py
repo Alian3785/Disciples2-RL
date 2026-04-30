@@ -7,6 +7,10 @@ from campaign_env_data import *
 
 
 class CampaignMaskMixin:
+    def action_masks(self):
+        """SB3-contrib MaskablePPO hook for invalid action masking."""
+        return self.compute_action_mask()
+
     def compute_action_mask(self) -> np.ndarray:
         """Маска действий в зависимости от режима."""
         mask = np.zeros(self.action_space.n, dtype=bool)

@@ -5,9 +5,13 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 import gymnasium as gym
 import numpy as np
+from sb3_contrib.common.maskable.utils import get_action_masks
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 from train_campaign import is_better_campaign_eval
 from train_campaign import EvalStepCapWrapper
+from train_campaign import make_env
+from train_campaign import resolve_training_vec_env_config
 
 
 def test_victory_rate_beats_higher_reward():
@@ -41,6 +45,45 @@ def test_mean_reward_breaks_tie_when_victory_rate_matches():
         best_victory_rate=0.3,
         best_mean_reward=50.0,
     )
+
+
+def test_resolve_training_vec_env_config_uses_subproc_spawn():
+    vec_env_cls, vec_env_kwargs = resolve_training_vec_env_config("subproc")
+
+    assert vec_env_cls is SubprocVecEnv
+    assert vec_env_kwargs == {"start_method": "spawn"}
+
+
+def test_resolve_training_vec_env_config_keeps_dummy_fallback():
+    vec_env_cls, vec_env_kwargs = resolve_training_vec_env_config("dummy")
+
+    assert vec_env_cls is DummyVecEnv
+    assert vec_env_kwargs == {}
+
+
+def test_make_env_exposes_native_action_masks_for_subproc():
+    env = make_env()
+    try:
+        base_env = env.unwrapped
+
+        assert callable(base_env.action_masks)
+        np.testing.assert_array_equal(
+            base_env.action_masks(),
+            base_env.compute_action_mask(),
+        )
+    finally:
+        env.close()
+
+
+def test_eval_wrapped_make_env_exposes_action_masks():
+    env = DummyVecEnv([lambda: make_env(eval_max_episode_steps=3)])
+    try:
+        masks = get_action_masks(env)
+
+        assert masks.shape == (1, env.action_space.n)
+        assert masks.dtype == np.bool_
+    finally:
+        env.close()
 
 
 class DummyInfiniteEnv(gym.Env):
