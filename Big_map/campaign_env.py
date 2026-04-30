@@ -27,6 +27,7 @@ from campaign_env_magic import CampaignMagicMixin
 from campaign_env_map import CampaignMapSitesMixin
 from campaign_env_masks import CampaignMaskMixin
 from campaign_env_observation import CampaignObservationMixin
+from campaign_env_scripted_bot import CampaignScriptedBotMixin
 from campaign_env_territory import CampaignTerritoryMixin
 
 
@@ -39,6 +40,7 @@ class CampaignEnv(
     CampaignInventoryMixin,
     CampaignEconomyMixin,
     CampaignMapSitesMixin,
+    CampaignScriptedBotMixin,
     CampaignTerritoryMixin,
     gym.Env,
 ):
@@ -417,6 +419,7 @@ class CampaignEnv(
         self.captured_objective_cities: set[str] = set()
         self.cleared_ruin_enemy_ids: set[int] = set()
         self.last_ruin_reward: Optional[Dict[str, object]] = None
+        self._init_scripted_capital_bot_state()
         self._refresh_faction_territories()
         self._sync_grid_chest_positions()
         self._sync_grid_mana_sources()
@@ -537,6 +540,8 @@ class CampaignEnv(
         self.action_space = spaces.Discrete(total_actions)
 
         grid_obs, grid_info = self.grid_env.reset(seed=seed)
+        self._reset_scripted_capital_bot_state()
+        grid_obs = self.grid_env._get_obs()
         grid_obs = self._augment_grid_obs(grid_obs)
         self._reset_stagnation_tracking(self.grid_env.agent_pos)
 
@@ -590,6 +595,7 @@ class CampaignEnv(
         info.update(self._spell_state_info())
         info.update(self._ruin_progress_info())
         info.update(self._artifact_state_info())
+        info.update(self._scripted_capital_bot_info())
         info.update(self._merchant_context_info(self.grid_env.agent_pos))
         info.update(self._spell_shop_context_info(self.grid_env.agent_pos))
         info.update(self._mercenary_context_info(self.grid_env.agent_pos))
@@ -1030,6 +1036,7 @@ class CampaignEnv(
         finalized_info.update(self._mana_state_info())
         finalized_info.update(self._spell_state_info())
         finalized_info.update(self._ruin_progress_info())
+        finalized_info.update(self._scripted_capital_bot_info())
         finalized_info.update(self._merchant_context_info(position))
         finalized_info.update(self._spell_shop_context_info(position))
         finalized_info.update(self._mercenary_context_info(position))

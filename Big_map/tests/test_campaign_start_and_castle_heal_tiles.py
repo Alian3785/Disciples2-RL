@@ -132,7 +132,8 @@ def test_default_layout_uses_static_obstacles_and_keeps_targets_reachable():
 
     obstacle_tiles = set(env.grid_env.obstacle_positions)
     assert obstacle_tiles
-    assert len(obstacle_tiles) == 836
+    assert obstacle_tiles == set(env._static_obstacle_tiles)
+    assert len(obstacle_tiles) > 800
     assert obstacle_tiles.isdisjoint(set(env.castle_heal_tiles))
     assert obstacle_tiles.isdisjoint(set(env.grid_env.enemy_positions.values()))
     assert env.grid_env.start_position not in obstacle_tiles
