@@ -844,6 +844,7 @@ class CampaignVisualizer:
 
     # Цвета
     COLOR_AGENT = (0.2, 0.5, 0.9, 0.9)
+    COLOR_SCRIPTED_BOT = (0.6, 0.15, 0.85, 0.95)
     COLOR_ENEMY_ALIVE = (0.9, 0.3, 0.3, 0.8)
     COLOR_ENEMY_DEAD = (0.5, 0.5, 0.5, 0.4)
     COLOR_DRAGON_TILE = (0.10, 0.75, 0.32, 0.28)
@@ -1435,6 +1436,7 @@ class CampaignVisualizer:
         ruins_cleared: int = 0,
         ruins_total: int = 0,
         last_ruin_reward: dict | None = None,
+        scripted_bot: dict | None = None,
     ):
         """Отрисовка карты."""
         self.ax.clear()
@@ -1820,6 +1822,16 @@ class CampaignVisualizer:
         self._draw_mana_source_overlays(mana_sources)
         self._draw_ruin_overlays()
 
+        bot_data = dict(scripted_bot or {})
+        bot_enabled = bool(bot_data.get("enabled", False))
+        bot_pos_raw = bot_data.get("position")
+        bot_pos = None
+        if bot_enabled and isinstance(bot_pos_raw, (list, tuple)) and len(bot_pos_raw) >= 2:
+            try:
+                bot_pos = (int(bot_pos_raw[0]), int(bot_pos_raw[1]))
+            except Exception:
+                bot_pos = None
+
         # Враги
         for enemy_id, (ex, ey) in enemy_positions.items():
             draw_x, draw_y = self._display_tile(int(ex), int(ey))
@@ -1863,6 +1875,29 @@ class CampaignVisualizer:
                 ha="center", va="center",
                 fontsize=10, fontweight="bold",
                 color="white" if is_alive else "gray",
+            )
+
+        if bot_pos is not None:
+            draw_bot_x, draw_bot_y = self._display_tile(int(bot_pos[0]), int(bot_pos[1]))
+            bot_circle = plt.Circle(
+                (draw_bot_x, draw_bot_y),
+                0.34,
+                facecolor=self.COLOR_SCRIPTED_BOT,
+                edgecolor=(0.22, 0.03, 0.35),
+                linewidth=2,
+                zorder=3.1,
+            )
+            self.ax.add_patch(bot_circle)
+            self.ax.text(
+                draw_bot_x,
+                draw_bot_y,
+                str(bot_data.get("symbol", "B") or "B")[:1],
+                ha="center",
+                va="center",
+                fontsize=12,
+                fontweight="bold",
+                color="white",
+                zorder=3.2,
             )
 
         # Агент
@@ -1996,6 +2031,11 @@ class CampaignVisualizer:
             f"used={int(battle_items_used_total)}"
         )
         hero_name = str(hero_name or "").strip()
+        if bot_enabled:
+            info_lines.append(
+                f"Бот столицы: {bot_data.get('state', 'unknown')} "
+                f"@ {tuple(bot_pos) if bot_pos is not None else '?'}"
+            )
         hero_abilities = list(hero_abilities or [])
         if hero_name:
             info_lines.append(f"Герой: {hero_name} (ур. {hero_level})")
@@ -2334,6 +2374,7 @@ def run_campaign_visualization(
                 ruins_cleared=len(getattr(env_base, "cleared_ruin_enemy_ids", ())),
                 ruins_total=len(getattr(env_base, "RUIN_REWARD_BY_ENEMY_ID", {})),
                 last_ruin_reward=getattr(env_base, "last_ruin_reward", None),
+                scripted_bot=env_base._scripted_capital_bot_info()["scripted_capital_bot"],
             )
 
             # Проверяем, был ли только что бой
@@ -2414,6 +2455,7 @@ def run_campaign_visualization(
                     ruins_cleared=len(getattr(env_base, "cleared_ruin_enemy_ids", ())),
                     ruins_total=len(getattr(env_base, "RUIN_REWARD_BY_ENEMY_ID", {})),
                     last_ruin_reward=getattr(env_base, "last_ruin_reward", None),
+                    scripted_bot=env_base._scripted_capital_bot_info()["scripted_capital_bot"],
                 )
                 grid_viz.show_battle_start(enemy_id)
                 time.sleep(delay * 2)
@@ -2565,6 +2607,7 @@ def run_campaign_visualization(
         ruins_cleared=len(getattr(env_base, "cleared_ruin_enemy_ids", ())),
         ruins_total=len(getattr(env_base, "RUIN_REWARD_BY_ENEMY_ID", {})),
         last_ruin_reward=getattr(env_base, "last_ruin_reward", None),
+        scripted_bot=env_base._scripted_capital_bot_info()["scripted_capital_bot"],
     )
 
     # Закрываем визуализатор боя если открыт

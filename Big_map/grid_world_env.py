@@ -113,6 +113,9 @@ class GridWorldEnv(gym.Env):
         self.mercenary_positions: Set[Tuple[int, int]] = set()
         self.trainer_positions: Set[Tuple[int, int]] = set()
         self.mana_sources: Dict[Tuple[int, int], Dict[str, object]] = {}
+        self.dynamic_blocked_positions: Set[Tuple[int, int]] = set()
+        self.scripted_bot_position: Optional[Tuple[int, int]] = None
+        self.scripted_bot_symbol: str = "B"
         self.step_count = 0
 
     @staticmethod
@@ -192,7 +195,7 @@ class GridWorldEnv(gym.Env):
             if not self._is_within_grid(target_pos):
                 info["blocked_by_boundary"] = True
                 info["blocked_target"] = target_pos
-            elif target_pos in self.obstacle_positions:
+            elif target_pos in self.obstacle_positions or target_pos in self.dynamic_blocked_positions:
                 reward += self.obstacle_penalty
                 info["blocked_by_obstacle"] = True
                 info["blocked_target"] = target_pos
@@ -300,6 +303,10 @@ class GridWorldEnv(gym.Env):
             self._clamp_to_grid(pos)
             for pos in getattr(self, "trainer_positions", set()) or set()
         }
+        scripted_bot_position = getattr(self, "scripted_bot_position", None)
+        if scripted_bot_position is not None:
+            scripted_bot_position = self._clamp_to_grid(scripted_bot_position)
+        scripted_bot_symbol = str(getattr(self, "scripted_bot_symbol", "B") or "B")[:1]
         mana_sources = {
             self._clamp_to_grid(pos): dict(meta or {})
             for pos, meta in (getattr(self, "mana_sources", {}) or {}).items()
@@ -313,6 +320,8 @@ class GridWorldEnv(gym.Env):
                 pos = (x, y)
                 if pos == self.agent_pos:
                     row += "A "
+                elif scripted_bot_position is not None and pos == scripted_bot_position:
+                    row += f"{scripted_bot_symbol} "
                 elif pos in self.obstacle_positions:
                     row += "# "
                 elif pos in merchant_positions:
@@ -368,6 +377,7 @@ class GridWorldEnv(gym.Env):
             target_pos = self._target_pos_for_action(action)
             mask[action] = self._is_within_grid(target_pos) and (
                 target_pos not in self.obstacle_positions
+                and target_pos not in self.dynamic_blocked_positions
             )
 
         return mask

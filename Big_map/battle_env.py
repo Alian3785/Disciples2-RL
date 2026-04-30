@@ -4707,6 +4707,77 @@ class BattleEnv(gym.Env):
             self._reset_powerup(nxt)
         return False
 
+    def scripted_action_for_current_blue(self) -> int:
+        """Choose a deterministic script action for the current BLUE unit."""
+        mask = self.compute_action_mask()
+        true_indexes = [int(index) for index, allowed in enumerate(mask) if bool(allowed)]
+        if not true_indexes:
+            return WAIT_ACTION_INDEX
+
+        attacker = self._unit_by_position(self.current_blue_attacker_pos)
+        if attacker is None or not self._alive(attacker):
+            return WAIT_ACTION_INDEX if bool(mask[WAIT_ACTION_INDEX]) else true_indexes[0]
+
+        unit_type = str(attacker.get("unit_type", "") or "")
+
+        if unit_type == "Cliric":
+            target_pos = self._cliric_auto_target(attacker)
+            if target_pos in TARGET_POSITIONS:
+                action_index = TARGET_POSITIONS.index(target_pos)
+                if bool(mask[action_index]):
+                    return int(action_index)
+
+        if unit_type == "Patriach":
+            target_pos = self._patriach_auto_target(attacker)
+            if target_pos in TARGET_POSITIONS:
+                action_index = TARGET_POSITIONS.index(target_pos)
+                if bool(mask[action_index]):
+                    return int(action_index)
+
+        if unit_type == "Profit":
+            for action_index, target_pos in enumerate(TARGET_POSITIONS):
+                target = self._unit_by_position(target_pos)
+                if (
+                    bool(mask[action_index])
+                    and target is not None
+                    and target.get("team") == attacker.get("team")
+                    and self._alive(target)
+                ):
+                    return int(action_index)
+
+        target_actions = [idx for idx in range(len(TARGET_POSITIONS)) if bool(mask[idx])]
+        if target_actions:
+            enemy_targets = [
+                idx
+                for idx in target_actions
+                if (
+                    (target := self._unit_by_position(TARGET_POSITIONS[idx])) is not None
+                    and target.get("team") != attacker.get("team")
+                    and self._alive(target)
+                )
+            ]
+            if enemy_targets:
+                return int(
+                    min(
+                        enemy_targets,
+                        key=lambda idx: (
+                            float(
+                                self._unit_by_position(TARGET_POSITIONS[idx]).get("health", 0)
+                                or 0
+                            ),
+                            TARGET_POSITIONS[idx],
+                        ),
+                    )
+                )
+
+            return int(target_actions[0])
+
+        if bool(mask[DEFEND_ACTION_INDEX]):
+            return DEFEND_ACTION_INDEX
+        if bool(mask[WAIT_ACTION_INDEX]):
+            return WAIT_ACTION_INDEX
+        return true_indexes[0]
+
     # ------------------ Наблюдение для агента ------------------
 
     def _obs(self) -> np.ndarray:

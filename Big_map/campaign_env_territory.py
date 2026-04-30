@@ -312,6 +312,7 @@ class CampaignTerritoryMixin:
             units=self.blue_team_state,
         )
         total_gold_income = 0.0
+        scripted_bot_turn_infos = []
         for _ in range(int(delta_turns)):
             self.turns += 1
             self._refresh_faction_territories()
@@ -320,9 +321,14 @@ class CampaignTerritoryMixin:
             total_gold_income += self._legions_gold_income_per_turn()
             self._apply_mana_income_for_turn()
             self._heal_wounded_enemy_teams_for_turn()
+            advance_bot = getattr(self, "_advance_scripted_capital_bot_one_turn", None)
+            if callable(advance_bot):
+                scripted_bot_turn_infos.append(advance_bot())
         self._clear_expired_combat_potion_effects()
         self.combat_potion_battle_bonus_pending = False
         self.gold += float(total_gold_income)
+        if scripted_bot_turn_infos:
+            self.scripted_capital_bot_turn_infos = scripted_bot_turn_infos
         self.moves = self.moves_per_turn
         self.active_buildings["alredybuilt"] = 0
         self.spell_learning_locked = False
