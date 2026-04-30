@@ -9,3 +9,4 @@ campaign_checkpoints/
 campaign_eval/
 campaign_models/
 campaign_tb_logs/
+campaign_diagnostics/

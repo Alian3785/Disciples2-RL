@@ -7,6 +7,7 @@ torch==2.11.0
 numpy==2.4.4
 pandas==3.0.2
 matplotlib==3.10.9
+tensorboard==2.20.0
 pytest==9.0.3
 ruff==0.15.12
 wandb==0.26.1
