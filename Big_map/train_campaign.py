@@ -832,6 +832,9 @@ class CampaignMetricsCallback(BaseCallback):
         self.episode_battle_items_used: list[float] = []
         self.recent_battle_items_used = deque(maxlen=self.episode_window)
         self.recent_battle_item_use_episode_flags = deque(maxlen=self.episode_window)
+        self.episode_scripted_bot_victories: list[float] = []
+        self.recent_scripted_bot_victories = deque(maxlen=self.episode_window)
+        self.recent_scripted_bot_victory_episode_flags = deque(maxlen=self.episode_window)
         self.recent_turns = deque(maxlen=self.step_window)
         self.recent_gold = deque(maxlen=self.step_window)
         self.recent_moves = deque(maxlen=self.step_window)
@@ -869,6 +872,8 @@ class CampaignMetricsCallback(BaseCallback):
         self.battle_item_equip_episodes = 0
         self.total_battle_items_used = 0
         self.battle_item_use_episodes = 0
+        self.total_scripted_bot_victories = 0
+        self.scripted_bot_victory_episodes = 0
         self.best_recent_victory_rate = 0.0
         self._last_logged_step = 0
         self._episode_castle_heal_uses: list[int] = []
@@ -1277,6 +1282,7 @@ class CampaignMetricsCallback(BaseCallback):
                 self._finalize_episode_summons(env_index)
                 self._finalize_episode_hires(env_index)
                 self._finalize_episode_battle_item_activity(env_index)
+                self._finalize_episode_scripted_bot(info)
 
         campaign_result = info.get("campaign_result")
         if campaign_result:
@@ -1315,6 +1321,20 @@ class CampaignMetricsCallback(BaseCallback):
                 self.total_unit_upgrades += upgrade_count
                 self.recent_unit_upgrades.append(float(upgrade_count))
             self._append_recent_stat(info, "final_objective_reward", self.recent_final_objective_rewards)
+
+    def _finalize_episode_scripted_bot(self, info: dict[str, Any]) -> None:
+        try:
+            victories = int(info.get("scripted_capital_bot_enemies_defeated", 0) or 0)
+        except (TypeError, ValueError):
+            victories = 0
+
+        victories = max(0, victories)
+        self.total_scripted_bot_victories += victories
+        self.episode_scripted_bot_victories.append(float(victories))
+        self.recent_scripted_bot_victories.append(float(victories))
+        self.recent_scripted_bot_victory_episode_flags.append(1.0 if victories > 0 else 0.0)
+        if victories > 0:
+            self.scripted_bot_victory_episodes += 1
 
     def _build_log_payload(self) -> dict[str, float]:
         total_episodes = int(sum(self.result_counter.values()))
@@ -1400,6 +1420,14 @@ class CampaignMetricsCallback(BaseCallback):
                 self.total_battle_items_used,
                 total_episodes,
             ),
+            "campaign/scripted_bot_victories_per_episode_mean": _safe_rate(
+                self.total_scripted_bot_victories,
+                total_episodes,
+            ),
+            "campaign/scripted_bot_victory_episodes_rate": _safe_rate(
+                self.scripted_bot_victory_episodes,
+                total_episodes,
+            ),
             "campaign/battle_item_use_episodes_rate": _safe_rate(
                 self.battle_item_use_episodes,
                 total_episodes,
@@ -1422,6 +1450,9 @@ class CampaignMetricsCallback(BaseCallback):
             "campaign/window/ruins_cleared_mean": _safe_mean(self.recent_ruins_cleared),
             "campaign/window/spell_casts_mean": _safe_mean(self.recent_spell_casts),
             "campaign/window/hired_units_mean": _safe_mean(self.recent_hired_units),
+            "campaign/window/scripted_bot_victories_mean": _safe_mean(
+                self.recent_scripted_bot_victories
+            ),
             "campaign/best_recent_victory_rate": self.best_recent_victory_rate,
             # Disabled campaign graphs. Uncomment individual entries to restore them.
             # "campaign/defeats_total": float(self.defeats),
@@ -1461,6 +1492,13 @@ class CampaignMetricsCallback(BaseCallback):
             #     total_episodes,
             # ),
             # "campaign/battle_items_used_total": float(self.total_battle_items_used),
+            # "campaign/scripted_bot_victories_total": float(self.total_scripted_bot_victories),
+            # "campaign/recent_scripted_bot_victories_mean": _safe_mean(
+            #     self.recent_scripted_bot_victories
+            # ),
+            # "campaign/recent_scripted_bot_victory_episodes_rate": _safe_mean(
+            #     self.recent_scripted_bot_victory_episode_flags
+            # ),
             # "campaign/recent_episodes": float(len(self.recent_episode_rewards)),
             # "campaign/recent_episode_reward_mean": _safe_mean(self.recent_episode_rewards),
             # "campaign/recent_episode_length_mean": _safe_mean(self.recent_episode_lengths),
@@ -1994,6 +2032,66 @@ class CampaignMetricsCallback(BaseCallback):
         fig.tight_layout()
         return self._save_plot_figure(fig, target)
 
+    def save_scripted_bot_victories_per_episode_plot(
+        self,
+        path: str | os.PathLike[str],
+    ) -> Path | None:
+        if not self.episode_scripted_bot_victories:
+            return None
+
+        import matplotlib.pyplot as plt
+
+        target = self._normalize_plot_path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+        episodes = np.arange(1, len(self.episode_scripted_bot_victories) + 1)
+        victory_counts = np.asarray(self.episode_scripted_bot_victories, dtype=float)
+        cumulative_victories = np.cumsum(victory_counts)
+
+        fig, (ax_top, ax_bottom) = plt.subplots(2, 1, figsize=(10, 8.0), sharex=True)
+
+        ax_top.plot(
+            episodes,
+            victory_counts,
+            color="#6D28D9",
+            linewidth=1.8,
+            label="Bot victories per episode",
+        )
+        ax_top.fill_between(episodes, victory_counts, color="#C4B5FD", alpha=0.28)
+        if len(victory_counts) >= 5:
+            window = min(25, len(victory_counts))
+            kernel = np.ones(window, dtype=float) / float(window)
+            rolling = np.convolve(victory_counts, kernel, mode="valid")
+            rolling_x = episodes[window - 1 :]
+            ax_top.plot(
+                rolling_x,
+                rolling,
+                color="#312E81",
+                linewidth=2.0,
+                linestyle="--",
+                label=f"Rolling mean ({window})",
+            )
+        ax_top.set_title("Scripted Capital Bot Victories")
+        ax_top.set_ylabel("Enemies defeated")
+        ax_top.grid(True, alpha=0.25, linewidth=0.6)
+        ax_top.legend(loc="upper right")
+
+        ax_bottom.plot(
+            episodes,
+            cumulative_victories,
+            color="#0F766E",
+            linewidth=2.1,
+            label="Cumulative bot victories",
+        )
+        ax_bottom.fill_between(episodes, cumulative_victories, color="#99F6E4", alpha=0.22)
+        ax_bottom.set_xlabel("Episode")
+        ax_bottom.set_ylabel("Total enemies defeated")
+        ax_bottom.grid(True, alpha=0.25, linewidth=0.6)
+        ax_bottom.legend(loc="upper left")
+
+        fig.tight_layout()
+        return self._save_plot_figure(fig, target)
+
     def save_cumulative_hired_units_plot(self, path: str | os.PathLike[str]) -> Path | None:
         if not self.episode_hired_units:
             return None
@@ -2360,6 +2458,7 @@ if __name__ == "__main__":
     print(f"  Побед: {metrics_cb.victories}")
     print(f"  Поражений: {metrics_cb.defeats}")
     print(f"  Таймаутов: {metrics_cb.timeouts}")
+    print(f"  Побед бота столицы над врагами: {metrics_cb.total_scripted_bot_victories}")
     total = metrics_cb.victories + metrics_cb.defeats + metrics_cb.timeouts
     if total > 0:
         print(f"  Winrate: {100 * metrics_cb.victories / total:.1f}%")
@@ -2393,6 +2492,13 @@ if __name__ == "__main__":
     saved_battle_item_plot = metrics_cb.save_battle_item_activity_plot(battle_item_plot_path)
     if saved_battle_item_plot is not None:
         print(f"  График боевых предметов: {saved_battle_item_plot}")
+
+    scripted_bot_plot_path = BASE_DIR / "outputs" / "campaign_scripted_bot_victories_per_episode.png"
+    saved_scripted_bot_plot = metrics_cb.save_scripted_bot_victories_per_episode_plot(
+        scripted_bot_plot_path
+    )
+    if saved_scripted_bot_plot is not None:
+        print(f"  График побед бота столицы за эпизод: {saved_scripted_bot_plot}")
 
     spell_cast_plot_path = BASE_DIR / "outputs" / "campaign_spell_cast_activity.png"
     saved_spell_cast_plot = metrics_cb.save_spell_cast_activity_plot(spell_cast_plot_path)
@@ -2444,6 +2550,14 @@ if __name__ == "__main__":
                 )
             except Exception as exc:
                 print(f"[WARN] Failed to upload battle-item plot to Comet: {exc}")
+        if saved_scripted_bot_plot is not None and hasattr(comet_experiment, "log_image"):
+            try:
+                comet_experiment.log_image(
+                    str(saved_scripted_bot_plot),
+                    name="campaign_scripted_bot_victories_per_episode",
+                )
+            except Exception as exc:
+                print(f"[WARN] Failed to upload scripted-bot plot to Comet: {exc}")
         if saved_spell_cast_plot is not None and hasattr(comet_experiment, "log_image"):
             try:
                 comet_experiment.log_image(
