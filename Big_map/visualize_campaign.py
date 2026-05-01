@@ -1928,6 +1928,13 @@ class CampaignVisualizer:
             f"Исц. бутылки: {healing_bottles_left}/{max_healing_bottles}",
             f"Воскр. бутылки: {revive_bottles_left}/{max_revive_bottles}",
         ]
+        bot_panel = dict(scripted_bot or {})
+        if bot_panel.get("enabled"):
+            try:
+                bot_episode_kills = int(bot_panel.get("enemies_defeated", 0) or 0)
+            except (TypeError, ValueError):
+                bot_episode_kills = 0
+            info_lines.append(f"Бот столицы (B): побед над отрядами {bot_episode_kills}")
         built_buildings = built_buildings or []
         if built_buildings:
             info_lines.append("Постройки:")
@@ -2553,6 +2560,17 @@ def run_campaign_visualization(
                     f"[HERO pos{pos} {name}] exp_kill={exp_kill} "
                     f"exp_required={exp_required} exp_current={exp_current}"
                 )
+
+    try:
+        scripted_bot_episode_kills = int(
+            getattr(env_base, "scripted_capital_bot_enemies_defeated", 0) or 0
+        )
+    except (TypeError, ValueError):
+        scripted_bot_episode_kills = 0
+    print(
+        f"\nИтог эпизода — побед бота столицы над отрядами врагов: "
+        f"{scripted_bot_episode_kills}"
+    )
 
     # Финальная отрисовка
     (

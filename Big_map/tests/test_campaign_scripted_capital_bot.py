@@ -72,6 +72,8 @@ def test_scripted_capital_bot_victory_marks_enemy_defeated_and_returns(monkeypat
     assert result["winner"] == "blue"
     assert env.grid_env.enemies_alive[enemy_id] is False
     assert env.scripted_capital_bot_state == "returning"
+    assert env.scripted_capital_bot_enemies_defeated == 1
+    assert env._scripted_capital_bot_info()["scripted_capital_bot_enemies_defeated"] == 1
     saved_unit = next(unit for unit in env.scripted_capital_bot_team_state if unit["name"] == first_unit["name"])
     assert saved_unit["hp"] == 10
 

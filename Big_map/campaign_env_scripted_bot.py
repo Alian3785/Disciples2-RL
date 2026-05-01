@@ -31,10 +31,12 @@ class CampaignScriptedBotMixin:
         self.scripted_capital_bot_respawn_turns_left = 0
         self.scripted_capital_bot_rest_turns_left = 0
         self.scripted_capital_bot_team_state = self._create_scripted_capital_bot_team()
+        self.scripted_capital_bot_enemies_defeated = 0
         self.scripted_capital_bot_last_info: Dict[str, object] = {
             "enabled": True,
             "state": self.scripted_capital_bot_state,
             "position": self.scripted_capital_bot_position,
+            "enemies_defeated": 0,
             "events": [],
         }
         self._sync_scripted_capital_bot_grid_state()
@@ -47,10 +49,12 @@ class CampaignScriptedBotMixin:
         self.scripted_capital_bot_respawn_turns_left = 0
         self.scripted_capital_bot_rest_turns_left = 0
         self.scripted_capital_bot_team_state = self._create_scripted_capital_bot_team()
+        self.scripted_capital_bot_enemies_defeated = 0
         self.scripted_capital_bot_last_info = {
             "enabled": True,
             "state": self.scripted_capital_bot_state,
             "position": self.scripted_capital_bot_position,
+            "enemies_defeated": 0,
             "events": ["reset"],
         }
         self._sync_scripted_capital_bot_grid_state()
@@ -83,9 +87,15 @@ class CampaignScriptedBotMixin:
                 "position": tuple(getattr(self, "scripted_capital_bot_position", ())),
                 "home": tuple(getattr(self, "scripted_capital_bot_home", ())),
                 "symbol": self.SCRIPTED_CAPITAL_BOT_SYMBOL,
+                "enemies_defeated": int(
+                    getattr(self, "scripted_capital_bot_enemies_defeated", 0) or 0
+                ),
             }
         )
-        return {"scripted_capital_bot": info}
+        return {
+            "scripted_capital_bot": info,
+            "scripted_capital_bot_enemies_defeated": int(info["enemies_defeated"]),
+        }
 
     def _sync_scripted_capital_bot_grid_state(self) -> None:
         if not hasattr(self, "grid_env"):
@@ -166,13 +176,16 @@ class CampaignScriptedBotMixin:
                 events.append("arrived_home")
                 self._log("Бот столицы людей вернулся в столицу и отдыхает 1 ход.")
         else:
-            target = self._find_scripted_bot_nearest_enemy()
+            came_from, enemy_distances = self._scripted_bot_explore_for_enemies()
+            target = self._pick_scripted_bot_nearest_enemy(enemy_distances)
             info["target"] = target
             if target is None:
                 events.append("no_target")
             else:
                 target_pos = tuple(target["position"])
-                path = self._scripted_bot_path_to(target_pos)
+                path = self._scripted_bot_path_from_came_from(came_from, target_pos)
+                if not path:
+                    path = self._scripted_bot_path_to(target_pos)
                 moved_path = self._move_scripted_bot_along_path(path)
                 events.append("hunting")
                 info["path"] = moved_path
@@ -304,29 +317,96 @@ class CampaignScriptedBotMixin:
             )
         return movement
 
-    def _find_scripted_bot_nearest_enemy(self) -> Optional[Dict[str, object]]:
-        candidates: List[Tuple[int, int, int, int, Tuple[int, int]]] = []
+    def _scripted_bot_alive_enemy_tiles(self) -> Dict[Tuple[int, int], int]:
+        """Карта тайл -> enemy_id для всех живых врагов (кроме самого бота)."""
         bot_enemy_id = int(self.scripted_capital_bot_enemy_id)
+        enemies_alive = getattr(self.grid_env, "enemies_alive", {}) or {}
+        result: Dict[Tuple[int, int], int] = {}
         for raw_enemy_id, raw_pos in (getattr(self.grid_env, "enemy_positions", {}) or {}).items():
             enemy_id = int(raw_enemy_id)
             if enemy_id == bot_enemy_id:
                 continue
-            if not bool(getattr(self.grid_env, "enemies_alive", {}).get(enemy_id, False)):
+            if not bool(enemies_alive.get(enemy_id, False)):
                 continue
             if not self._enemy_team_has_living_units(enemy_id):
                 continue
-            target_pos = (int(raw_pos[0]), int(raw_pos[1]))
-            path = self._scripted_bot_path_to(target_pos)
-            if path and path[-1] == target_pos:
-                distance = max(0, len(path) - 1)
-                candidates.append((distance, enemy_id, target_pos[1], target_pos[0], target_pos))
-            else:
-                bot_pos = tuple(self.scripted_capital_bot_position)
-                fallback = max(abs(bot_pos[0] - target_pos[0]), abs(bot_pos[1] - target_pos[1]))
-                candidates.append((fallback + 10000, enemy_id, target_pos[1], target_pos[0], target_pos))
+            tile = (int(raw_pos[0]), int(raw_pos[1]))
+            result[tile] = enemy_id
+        return result
 
-        if not candidates:
+    def _scripted_bot_explore_for_enemies(
+        self,
+    ) -> Tuple[Dict[Tuple[int, int], Optional[Tuple[int, int]]], Dict[Tuple[int, int], int]]:
+        """Один BFS из позиции бота. Враги — терминальные клетки (через них не идём).
+
+        Возвращает (came_from, distances_to_enemy_tiles).
+        """
+        start = tuple(int(coord) for coord in self.scripted_capital_bot_position)
+        enemy_tiles = self._scripted_bot_alive_enemy_tiles()
+        blocked = {
+            (int(pos[0]), int(pos[1]))
+            for pos in (getattr(self.grid_env, "obstacle_positions", set()) or set())
+        }
+        agent_pos = tuple(getattr(self.grid_env, "agent_pos", ()))
+        if len(agent_pos) == 2:
+            blocked.add((int(agent_pos[0]), int(agent_pos[1])))
+        blocked.discard(start)
+
+        grid_size = int(self.grid_size)
+        neighbor_offsets = (
+            (-1, -1), (0, -1), (1, -1),
+            (-1, 0),           (1, 0),
+            (-1, 1),  (0, 1),  (1, 1),
+        )
+
+        came_from: Dict[Tuple[int, int], Optional[Tuple[int, int]]] = {start: None}
+        distances: Dict[Tuple[int, int], int] = {start: 0}
+        enemy_distances: Dict[Tuple[int, int], int] = {}
+        if start in enemy_tiles:
+            enemy_distances[start] = 0
+
+        frontier = deque([start])
+        while frontier:
+            current = frontier.popleft()
+            if current in enemy_tiles and current != start:
+                continue
+            cx, cy = current
+            current_dist = distances[current]
+            for dx, dy in neighbor_offsets:
+                tile = (cx + dx, cy + dy)
+                if not (0 <= tile[0] < grid_size and 0 <= tile[1] < grid_size):
+                    continue
+                if tile in came_from:
+                    continue
+                if tile in blocked:
+                    continue
+                came_from[tile] = current
+                distances[tile] = current_dist + 1
+                if tile in enemy_tiles:
+                    enemy_distances[tile] = current_dist + 1
+                else:
+                    frontier.append(tile)
+
+        return came_from, enemy_distances
+
+    def _pick_scripted_bot_nearest_enemy(
+        self,
+        enemy_distances: Dict[Tuple[int, int], int],
+    ) -> Optional[Dict[str, object]]:
+        enemy_tiles = self._scripted_bot_alive_enemy_tiles()
+        if not enemy_tiles:
             return None
+
+        bot_pos = tuple(self.scripted_capital_bot_position)
+        candidates: List[Tuple[int, int, int, int, Tuple[int, int]]] = []
+        for tile, enemy_id in enemy_tiles.items():
+            if tile in enemy_distances:
+                distance = enemy_distances[tile]
+                candidates.append((distance, enemy_id, tile[1], tile[0], tile))
+            else:
+                fallback = max(abs(bot_pos[0] - tile[0]), abs(bot_pos[1] - tile[1]))
+                candidates.append((fallback + 10000, enemy_id, tile[1], tile[0], tile))
+
         distance, enemy_id, _y, _x, position = min(candidates)
         return {
             "enemy_id": int(enemy_id),
@@ -335,6 +415,25 @@ class CampaignScriptedBotMixin:
             "fallback_distance": None if distance < 10000 else int(distance - 10000),
             "description": ENEMY_DESCRIPTIONS.get(int(enemy_id), "Неизвестный враг"),
         }
+
+    def _scripted_bot_path_from_came_from(
+        self,
+        came_from: Dict[Tuple[int, int], Optional[Tuple[int, int]]],
+        target: Tuple[int, int],
+    ) -> List[Tuple[int, int]]:
+        if target not in came_from:
+            return []
+        path: List[Tuple[int, int]] = [target]
+        current: Optional[Tuple[int, int]] = target
+        while came_from.get(current) is not None:
+            current = came_from[current]
+            path.append(current)  # type: ignore[arg-type]
+        path.reverse()
+        return path
+
+    def _find_scripted_bot_nearest_enemy(self) -> Optional[Dict[str, object]]:
+        _came_from, enemy_distances = self._scripted_bot_explore_for_enemies()
+        return self._pick_scripted_bot_nearest_enemy(enemy_distances)
 
     def _run_scripted_capital_bot_battle(self, enemy_id: int) -> Dict[str, object]:
         self._log(f"Бот столицы людей вступает в бой с врагом {enemy_id}.")
@@ -371,6 +470,7 @@ class CampaignScriptedBotMixin:
             self._clear_enemy_map_spell_effects_for_enemy(enemy_id)
             self._capture_objective_city_if_cleared(enemy_id)
             self._activate_legions_settlement_territory_if_cleared(enemy_id)
+            self.scripted_capital_bot_enemies_defeated += 1
             self.scripted_capital_bot_state = "returning"
             self._log(
                 f"Бот столицы людей победил врага {enemy_id}; "
@@ -389,6 +489,7 @@ class CampaignScriptedBotMixin:
             "steps": int(steps),
             "exp": float(getattr(battle_env, "last_battle_exp", 0.0) or 0.0),
             "levelups": list(getattr(battle_env, "last_levelups", []) or []),
+            "enemies_defeated": int(self.scripted_capital_bot_enemies_defeated),
         }
 
     def _save_enemy_state_from_battle_env(self, enemy_id: int, battle_env: BattleEnv) -> None:
