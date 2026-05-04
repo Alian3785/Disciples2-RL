@@ -7,6 +7,70 @@ from campaign_env_data import *
 
 
 class CampaignInventoryMixin:
+    @classmethod
+    def _is_battle_orb_item_name(cls, item_name: str) -> bool:
+        normalized_name = str(item_name or "").strip()
+        if not normalized_name:
+            return False
+        normalized_lower = normalized_name.lower()
+        return normalized_lower.startswith("orb of ") or normalized_lower.endswith(" orb")
+
+    def _scenario_battle_orb_item_names(self) -> Tuple[str, ...]:
+        orb_names: List[str] = []
+        seen_names: set[str] = set()
+
+        for item_names in getattr(self, "_static_chests", {}).values():
+            for item_name in tuple(item_names or ()):
+                normalized_name = str(item_name or "").strip()
+                if not self._is_battle_orb_item_name(normalized_name):
+                    continue
+                if normalized_name in seen_names:
+                    continue
+                seen_names.add(normalized_name)
+                orb_names.append(normalized_name)
+
+        for item_data in tuple(getattr(self, "MERCHANT_BUY_ITEMS", ()) or ()):
+            if not isinstance(item_data, dict):
+                continue
+            try:
+                stock = int(item_data.get("stock", 0) or 0)
+            except (TypeError, ValueError):
+                stock = 0
+            if stock <= 0:
+                continue
+            normalized_name = str(item_data.get("name", "") or "").strip()
+            if not self._is_battle_orb_item_name(normalized_name):
+                continue
+            if normalized_name in seen_names:
+                continue
+            seen_names.add(normalized_name)
+            orb_names.append(normalized_name)
+
+        return tuple(orb_names)
+
+    def _refresh_battle_equippable_item_names(self) -> Tuple[str, ...]:
+        base_names = tuple(
+            str(item_name)
+            for item_name in getattr(
+                self,
+                "BASE_BATTLE_EQUIPPABLE_ITEM_NAMES",
+                self.BATTLE_EQUIPPABLE_ITEM_NAMES,
+            )
+        )
+        scenario_orb_names = self._scenario_battle_orb_item_names()
+        battle_item_names: List[str] = []
+        seen_names: set[str] = set()
+        for item_name in (*base_names, *scenario_orb_names):
+            normalized_name = str(item_name or "").strip()
+            if not normalized_name or normalized_name in seen_names:
+                continue
+            seen_names.add(normalized_name)
+            battle_item_names.append(normalized_name)
+
+        self.scenario_battle_orb_item_names = tuple(scenario_orb_names)
+        self.BATTLE_EQUIPPABLE_ITEM_NAMES = tuple(battle_item_names)
+        return self.BATTLE_EQUIPPABLE_ITEM_NAMES
+
     def _hire_reward_value(self) -> float:
         return max(0.0, 3.0 * float(self.reward_defeat_enemy))
     def _max_heal_bottles_available(self) -> int:
@@ -23,7 +87,7 @@ class CampaignInventoryMixin:
         return max(0, self._max_revive_bottles_available() - int(self.revive_bottles_used or 0))
     @classmethod
     def _battle_item_effect_definitions(cls) -> Dict[str, Dict[str, object]]:
-        return {
+        effects: Dict[str, Dict[str, object]] = {
             cls.BONUS_SMALL_HEAL_ITEM_NAME: {
                 "kind": "heal",
                 "amount": float(cls.HEALING_BOTTLE_AMOUNT),
@@ -41,6 +105,245 @@ class CampaignInventoryMixin:
                 "amount": 1.0,
             },
         }
+
+        summon_orbs = {
+            "Squire Orb": "Скваер",
+            "Angel Orb": "Ангел",
+            "Venerable Warrior Orb": "Старый ветеран",
+            "Imp Orb": "Бес",
+            "Infernal Knight Orb": "Адский рыцарь",
+            "Incubus Orb": "Инкуб",
+            "Zombie Orb": "Зомби",
+            "Skeleton Champion Orb": "Скелет рыцарь",
+            "Vampire Orb": "Вампир",
+            "Lich Orb": "Лич",
+            "Elder Vampire Orb": "Высший вампир",
+            "Elf Lord Orb": "Лесной лорд",
+            "Goblin Orb": "Гоблин",
+            "Orc Orb": "Орк",
+            "Lizard Man Orb": "Человек ящер",
+        }
+        for item_name, unit_name in summon_orbs.items():
+            effects[item_name] = {
+                "kind": "summon",
+                "target_team": "blue",
+                "target_state": "empty_or_dead",
+                "summon_unit_name": unit_name,
+            }
+
+        effects.update(
+            {
+                "Orb of Healing": {
+                    "kind": "heal",
+                    "amount": 100.0,
+                    "target_team": "blue",
+                    "target_state": "alive",
+                },
+                "Orb of Restoration": {
+                    "kind": "heal",
+                    "amount": 30.0,
+                    "target_team": "blue",
+                    "target_state": "alive",
+                    "scope": "party",
+                },
+                "Orb of Regeneration": {
+                    "kind": "heal",
+                    "amount": 75.0,
+                    "target_team": "blue",
+                    "target_state": "alive",
+                    "scope": "party",
+                },
+                "Orb of Life": {
+                    "kind": "revive",
+                    "amount": 1.0,
+                    "target_team": "blue",
+                    "target_state": "dead",
+                },
+                "Orb of Vigor": {
+                    "kind": "damage_buff",
+                    "damage_multiplier": 1.25,
+                    "target_team": "blue",
+                    "target_state": "alive",
+                },
+                "Orb of Strength": {
+                    "kind": "damage_buff",
+                    "damage_multiplier": 1.50,
+                    "target_team": "blue",
+                    "target_state": "alive",
+                },
+                "Orb of Rage": {
+                    "kind": "extra_turn",
+                    "target_team": "blue",
+                    "target_state": "alive",
+                },
+                "Orb of Fire": {
+                    "kind": "damage",
+                    "amount": 25.0,
+                    "damage_type": "Fire",
+                    "target_team": "red",
+                    "target_state": "alive",
+                },
+                "Orb of Inferno": {
+                    "kind": "damage",
+                    "amount": 75.0,
+                    "damage_type": "Fire",
+                    "target_team": "red",
+                    "target_state": "alive",
+                },
+                "Orb of Lightning": {
+                    "kind": "damage",
+                    "amount": 50.0,
+                    "damage_type": "Air",
+                    "target_team": "red",
+                    "target_state": "alive",
+                },
+                "Orb of Thunder": {
+                    "kind": "damage",
+                    "amount": 100.0,
+                    "damage_type": "Air",
+                    "target_team": "red",
+                    "target_state": "alive",
+                },
+                "Orb of Earth": {
+                    "kind": "damage",
+                    "amount": 25.0,
+                    "damage_type": "Earth",
+                    "target_team": "red",
+                    "target_state": "alive",
+                },
+                "Orb of Stone Rain": {
+                    "kind": "damage",
+                    "amount": 75.0,
+                    "damage_type": "Earth",
+                    "target_team": "red",
+                    "target_state": "alive",
+                },
+                "Orb of Water": {
+                    "kind": "damage",
+                    "amount": 25.0,
+                    "damage_type": "Water",
+                    "target_team": "red",
+                    "target_state": "alive",
+                },
+                "Orb of Icefall": {
+                    "kind": "damage",
+                    "amount": 75.0,
+                    "damage_type": "Water",
+                    "target_team": "red",
+                    "target_state": "alive",
+                },
+                "Orb of Nosferat": {
+                    "kind": "drain",
+                    "amount": 25.0,
+                    "damage_type": "Death",
+                    "target_team": "red",
+                    "target_state": "alive",
+                },
+                "Orb of Vampire": {
+                    "kind": "drain",
+                    "amount": 75.0,
+                    "damage_type": "Death",
+                    "target_team": "red",
+                    "target_state": "alive",
+                },
+                "Orb of Elder Vampires": {
+                    "kind": "drain",
+                    "amount": 75.0,
+                    "damage_type": "Death",
+                    "target_team": "red",
+                    "target_state": "alive",
+                    "share_leftover": True,
+                },
+                "Orb of Poison": {
+                    "kind": "dot",
+                    "dot_type": "poison",
+                    "amount": 20.0,
+                    "damage_type": "Poison",
+                    "target_team": "red",
+                    "target_state": "alive",
+                },
+                "Orb of Venom": {
+                    "kind": "dot",
+                    "dot_type": "poison",
+                    "amount": 30.0,
+                    "damage_type": "Poison",
+                    "target_team": "red",
+                    "target_state": "alive",
+                },
+                "Orb of Bane": {
+                    "kind": "dot",
+                    "dot_type": "poison",
+                    "amount": 10.0,
+                    "damage_type": "Poison",
+                    "target_team": "red",
+                    "target_state": "alive",
+                    "scope": "party",
+                },
+                "Orb of Thanatos": {
+                    "kind": "dot",
+                    "dot_type": "poison",
+                    "amount": 30.0,
+                    "damage_type": "Poison",
+                    "target_team": "red",
+                    "target_state": "alive",
+                    "scope": "party",
+                },
+                "Orb of Frost": {
+                    "kind": "dot",
+                    "dot_type": "water",
+                    "amount": 10.0,
+                    "damage_type": "Water",
+                    "target_team": "red",
+                    "target_state": "alive",
+                    "scope": "party",
+                },
+                "Orb of Freezing": {
+                    "kind": "dot",
+                    "dot_type": "water",
+                    "amount": 30.0,
+                    "damage_type": "Water",
+                    "target_team": "red",
+                    "target_state": "alive",
+                    "scope": "party",
+                },
+                "Orb of Flame": {
+                    "kind": "dot",
+                    "dot_type": "burn",
+                    "amount": 15.0,
+                    "damage_type": "Fire",
+                    "target_team": "red",
+                    "target_state": "alive",
+                    "scope": "party",
+                },
+                "Orb of Fear": {
+                    "kind": "paralysis",
+                    "damage_type": "Mind",
+                    "target_team": "red",
+                    "target_state": "alive",
+                },
+                "Orb of Witches": {
+                    "kind": "transform",
+                    "damage_type": "Mind",
+                    "target_team": "red",
+                    "target_state": "alive",
+                },
+                "Orb of Lycanthropy": {
+                    "kind": "lycanthropy",
+                    "damage_type": "Mind",
+                    "transform_unit_name": "Оборотень",
+                    "target_team": "red",
+                    "target_state": "alive",
+                },
+                "Orb of Weakening": {
+                    "kind": "debuff_damage",
+                    "damage_multiplier": 0.67,
+                    "damage_type": "Mind",
+                    "target_team": "red",
+                    "target_state": "alive",
+                },
+            }
+        )
+        return effects
     def _battle_equip_item_available_count(self, item_name: str) -> int:
         normalized_name = str(item_name or "")
         if normalized_name == self.BONUS_SMALL_HEAL_ITEM_NAME:
@@ -51,7 +354,52 @@ class CampaignInventoryMixin:
             return int(self._revive_bottles_left())
         if normalized_name == self.HEALING_OINTMENT_ITEM_NAME:
             return int(self._count_hero_item(self.HEALING_OINTMENT_ITEM_NAME))
+        if normalized_name in self.BATTLE_EQUIPPABLE_ITEM_NAMES:
+            return int(self._count_hero_item(normalized_name))
         return 0
+    @classmethod
+    def _counter_backed_battle_item_names(cls) -> Tuple[str, str, str]:
+        return (
+            cls.BONUS_SMALL_HEAL_ITEM_NAME,
+            cls.BONUS_LARGE_HEAL_ITEM_NAME,
+            cls.BONUS_REVIVE_ITEM_NAME,
+        )
+    def _counter_backed_battle_item_counts(self) -> Dict[str, int]:
+        return {
+            self.BONUS_SMALL_HEAL_ITEM_NAME: int(self._healing_bottles_left()),
+            self.BONUS_LARGE_HEAL_ITEM_NAME: int(self._heal_bottles_left()),
+            self.BONUS_REVIVE_ITEM_NAME: int(self._revive_bottles_left()),
+        }
+    def _sync_counter_backed_battle_items(self) -> None:
+        target_counts = self._counter_backed_battle_item_counts()
+        counter_item_names = set(target_counts)
+        current_counts = {item_name: 0 for item_name in counter_item_names}
+        synced_items: List[object] = []
+        changed = False
+
+        for entry in list(getattr(self, "heroitems", []) or []):
+            item_name = self._hero_item_name(entry)
+            if item_name not in counter_item_names:
+                synced_items.append(entry)
+                continue
+
+            if current_counts[item_name] < int(target_counts.get(item_name, 0) or 0):
+                synced_items.append(entry)
+                current_counts[item_name] += 1
+            else:
+                changed = True
+
+        for item_name in self._counter_backed_battle_item_names():
+            target_count = int(target_counts.get(item_name, 0) or 0)
+            while current_counts[item_name] < target_count:
+                synced_items.append(self._make_hero_item_entry(item_name))
+                current_counts[item_name] += 1
+                changed = True
+
+        if changed or len(synced_items) != len(getattr(self, "heroitems", []) or []):
+            self.heroitems = synced_items
+            self._invalidate_inventory_cache()
+            self._sync_equipped_hero_items()
     def _count_equipped_battle_items(
         self,
         item_name: str,
@@ -85,57 +433,74 @@ class CampaignInventoryMixin:
             normalized_slots[slot_index] = item_name
             reserved[item_name] = already_reserved + 1
         self.equipped_hero_items = normalized_slots
-    def _can_equip_battle_item(self, slot_index: int, item_name: str) -> bool:
+    def _battle_equip_slot_for_item(self, item_name: str) -> Optional[int]:
         normalized_name = str(item_name or "")
         if normalized_name not in self.BATTLE_EQUIPPABLE_ITEM_NAMES:
-            return False
-        if not (0 <= int(slot_index) < int(self.BATTLE_EQUIP_SLOTS)):
-            return False
+            return None
         if self.battle_item_equip_used_this_turn:
-            return False
+            return None
+        self._sync_counter_backed_battle_items()
         self._sync_equipped_hero_items()
-        if str(self.equipped_hero_items[int(slot_index)] or "") == normalized_name:
-            return False
+        slot_index = None
+        for candidate_index in range(int(self.BATTLE_EQUIP_SLOTS)):
+            equipped_name = ""
+            if candidate_index < len(self.equipped_hero_items):
+                equipped_name = str(self.equipped_hero_items[candidate_index] or "")
+            if not equipped_name:
+                slot_index = candidate_index
+                break
+        if slot_index is None:
+            return None
         available_count = int(self._battle_equip_item_available_count(normalized_name))
-        reserved_elsewhere = self._count_equipped_battle_items(
-            normalized_name,
-            exclude_slot=int(slot_index),
-        )
-        return available_count > reserved_elsewhere
-    def _equip_battle_item(self, slot_index: int, item_name: str) -> bool:
-        if not self._can_equip_battle_item(slot_index, item_name):
-            return False
-        self.equipped_hero_items[int(slot_index)] = str(item_name)
+        reserved = self._count_equipped_battle_items(normalized_name)
+        if available_count <= reserved:
+            return None
+        return int(slot_index)
+    @staticmethod
+    def _normalize_battle_equip_item_arg(item_name: object, maybe_item_name: object = None) -> str:
+        return str(maybe_item_name if maybe_item_name is not None else item_name or "")
+    def _can_equip_battle_item(self, item_name: object, maybe_item_name: object = None) -> bool:
+        normalized_name = self._normalize_battle_equip_item_arg(item_name, maybe_item_name)
+        return self._battle_equip_slot_for_item(normalized_name) is not None
+    def _equip_battle_item(self, item_name: object, maybe_item_name: object = None) -> Optional[int]:
+        normalized_name = self._normalize_battle_equip_item_arg(item_name, maybe_item_name)
+        slot_index = self._battle_equip_slot_for_item(normalized_name)
+        if slot_index is None:
+            return None
+        self.equipped_hero_items[int(slot_index)] = str(normalized_name)
         self._sync_equipped_hero_items()
-        return True
+        return int(slot_index)
     def _consume_counter_backed_item(self, item_name: str) -> bool:
         normalized_name = str(item_name or "")
         if normalized_name == self.BONUS_SMALL_HEAL_ITEM_NAME:
+            self._sync_counter_backed_battle_items()
             if self._healing_bottles_left() <= 0:
                 return False
             self.healing_bottles_used = min(
                 self.healing_bottles_used + 1,
                 self._max_healing_bottles_available(),
             )
-            self._consume_hero_item(self.BONUS_SMALL_HEAL_ITEM_NAME)
+            self._sync_counter_backed_battle_items()
             return True
         if normalized_name == self.BONUS_LARGE_HEAL_ITEM_NAME:
+            self._sync_counter_backed_battle_items()
             if self._heal_bottles_left() <= 0:
                 return False
             self.heal_bottles_used = min(
                 self.heal_bottles_used + 1,
                 self._max_heal_bottles_available(),
             )
-            self._consume_hero_item(self.BONUS_LARGE_HEAL_ITEM_NAME)
+            self._sync_counter_backed_battle_items()
             return True
         if normalized_name == self.BONUS_REVIVE_ITEM_NAME:
+            self._sync_counter_backed_battle_items()
             if self._revive_bottles_left() <= 0:
                 return False
             self.revive_bottles_used = min(
                 self.revive_bottles_used + 1,
                 self._max_revive_bottles_available(),
             )
-            self._consume_hero_item(self.BONUS_REVIVE_ITEM_NAME)
+            self._sync_counter_backed_battle_items()
             return True
         return False
     def _consume_battle_equipable_item(self, item_name: str) -> bool:
@@ -143,8 +508,10 @@ class CampaignInventoryMixin:
         consumed = False
         if normalized_name == self.HEALING_OINTMENT_ITEM_NAME:
             consumed = self._consume_hero_item(self.HEALING_OINTMENT_ITEM_NAME)
-        else:
+        elif normalized_name in self._counter_backed_battle_item_names():
             consumed = self._consume_counter_backed_item(normalized_name)
+        elif normalized_name in self.BATTLE_EQUIPPABLE_ITEM_NAMES:
+            consumed = self._consume_hero_item(normalized_name)
         self._sync_equipped_hero_items()
         return bool(consumed)
     @staticmethod
@@ -325,38 +692,96 @@ class CampaignInventoryMixin:
         if not normalized_name:
             return False
         return "(artifact)" in normalized_name or "(артефакт)" in normalized_name
-    def _sync_equipped_artifact_items(self) -> None:
-        normalized_slots: List[Optional[str]] = [None] * int(self.ARTIFACT_EQUIP_SLOTS)
-        reserved: Dict[str, int] = {}
-        current_slots = list(getattr(self, "equipped_artifact_items", []) or [])
-        available_counts: Dict[str, int] = {}
+    @classmethod
+    def _is_banner_item_name(cls, item_name: str) -> bool:
+        normalized_name = str(item_name or "").strip()
+        if not normalized_name:
+            return False
+        return normalized_name in set(cls.BANNER_ITEM_NAMES)
+    @classmethod
+    def _is_boot_item_name(cls, item_name: str) -> bool:
+        normalized_name = str(item_name or "").strip()
+        if not normalized_name:
+            return False
+        return normalized_name in set(cls.BOOT_ITEM_NAMES)
+    def _sync_equipped_banner_items(self, units: Optional[List[Dict]] = None) -> None:
+        normalized_slots: List[Optional[str]] = [None] * int(self.BANNER_EQUIP_SLOTS)
+        if not self._hero_has_banner_bearer(units=units):
+            self.equipped_banner_items = normalized_slots
+            return
 
-        for entry in self.heroitems:
+        available_banner_names = {
+            self._hero_item_name(entry)
+            for entry in self.heroitems
+            if self._is_banner_item_name(self._hero_item_name(entry))
+        }
+        selected_banner = next(
+            (
+                item_name
+                for item_name in self.BANNER_EQUIP_PRIORITY
+                if item_name in available_banner_names
+            ),
+            None,
+        )
+        if selected_banner:
+            normalized_slots[0] = str(selected_banner)
+        self.equipped_banner_items = normalized_slots
+    def _sync_equipped_boot_items(self, units: Optional[List[Dict]] = None) -> None:
+        normalized_slots: List[Optional[str]] = [None] * int(self.BOOTS_EQUIP_SLOTS)
+        if not self._hero_has_marching_lore(units=units):
+            self.equipped_boot_items = normalized_slots
+            return
+
+        ranked_boots: List[Tuple[int, int, int, str]] = []
+        for inventory_index, entry in enumerate(getattr(self, "heroitems", []) or []):
+            item_name = self._hero_item_name(entry)
+            if not self._is_boot_item_name(item_name):
+                continue
+            effect = self._boot_effect_definition(item_name)
+            ranked_boots.append(
+                (
+                    -int(effect.get("move_bonus", 0) or 0),
+                    -int(self._hero_item_gold_value_by_name(item_name)),
+                    int(inventory_index),
+                    item_name,
+                )
+            )
+
+        ranked_boots.sort()
+        for slot_index, (_, _, _, item_name) in enumerate(
+            ranked_boots[: int(self.BOOTS_EQUIP_SLOTS)]
+        ):
+            normalized_slots[slot_index] = item_name
+
+        self.equipped_boot_items = normalized_slots
+    def _sync_equipped_artifact_items(self, units: Optional[List[Dict]] = None) -> None:
+        normalized_slots: List[Optional[str]] = [None] * int(self.ARTIFACT_EQUIP_SLOTS)
+        if not self._hero_has_artifact_knowledge(units=units):
+            self.equipped_artifact_items = normalized_slots
+            self.artifact_auto_equip_next_slot = 0
+            return
+
+        ranked_artifacts: List[Tuple[int, int, str]] = []
+        for inventory_index, entry in enumerate(self.heroitems):
             item_name = self._hero_item_name(entry)
             if not self._is_artifact_item_name(item_name):
                 continue
-            available_counts[item_name] = available_counts.get(item_name, 0) + 1
-
-        for slot_index in range(int(self.ARTIFACT_EQUIP_SLOTS)):
-            item_name = (
-                str(current_slots[slot_index] or "")
-                if slot_index < len(current_slots) and current_slots[slot_index] is not None
-                else ""
+            ranked_artifacts.append(
+                (
+                    -int(self._hero_item_gold_value_by_name(item_name)),
+                    int(inventory_index),
+                    item_name,
+                )
             )
-            if not self._is_artifact_item_name(item_name):
-                continue
-            available_count = int(available_counts.get(item_name, 0) or 0)
-            already_reserved = int(reserved.get(item_name, 0) or 0)
-            if already_reserved >= available_count:
-                continue
+
+        ranked_artifacts.sort()
+        for slot_index, (_, _, item_name) in enumerate(
+            ranked_artifacts[: int(self.ARTIFACT_EQUIP_SLOTS)]
+        ):
             normalized_slots[slot_index] = item_name
-            reserved[item_name] = already_reserved + 1
 
         self.equipped_artifact_items = normalized_slots
-        self.artifact_auto_equip_next_slot = (
-            int(getattr(self, "artifact_auto_equip_next_slot", 0) or 0)
-            % max(1, int(self.ARTIFACT_EQUIP_SLOTS))
-        )
+        self.artifact_auto_equip_next_slot = 0
     def _auto_equip_artifact_item(self, item_name: str) -> Dict[str, object]:
         normalized_name = str(item_name or "")
         if not self._is_artifact_item_name(normalized_name):
@@ -366,24 +791,35 @@ class CampaignInventoryMixin:
                 "artifact_auto_equip_previous": None,
             }
 
+        previous_slots = list(getattr(self, "equipped_artifact_items", []) or [])
         self._sync_equipped_artifact_items()
-        slot_index = int(self.artifact_auto_equip_next_slot or 0) % max(
-            1,
-            int(self.ARTIFACT_EQUIP_SLOTS),
+        equipped_slots = list(self.equipped_artifact_items or [])
+        equipped_slot_index = next(
+            (
+                slot_index
+                for slot_index, item in enumerate(equipped_slots)
+                if item == normalized_name
+                and item
+                != (previous_slots[slot_index] if slot_index < len(previous_slots) else None)
+            ),
+            None,
         )
-        previous_item = self.equipped_artifact_items[slot_index]
-        self.equipped_artifact_items[slot_index] = normalized_name
-        self.artifact_auto_equip_next_slot = (slot_index + 1) % max(
-            1,
-            int(self.ARTIFACT_EQUIP_SLOTS),
+        artifact_equipped = equipped_slot_index is not None
+        previous_item = (
+            previous_slots[equipped_slot_index]
+            if equipped_slot_index is not None and equipped_slot_index < len(previous_slots)
+            else None
         )
-        self._log(
-            f"Артефакт '{normalized_name}' автоматически экипирован в слот "
-            f"{slot_index + 1} (предыдущий: {previous_item or 'пусто'})."
-        )
+        if artifact_equipped:
+            self._log(
+                f"Артефакт '{normalized_name}' автоматически экипирован в слот "
+                f"{equipped_slot_index + 1} (предыдущий: {previous_item or 'пусто'})."
+            )
         return {
-            "artifact_auto_equipped": True,
-            "artifact_auto_equip_slot": int(slot_index + 1),
+            "artifact_auto_equipped": bool(artifact_equipped),
+            "artifact_auto_equip_slot": (
+                int(equipped_slot_index + 1) if equipped_slot_index is not None else None
+            ),
             "artifact_auto_equip_previous": previous_item,
         }
     def _append_hero_item(self, item_name: str) -> None:
@@ -392,16 +828,85 @@ class CampaignInventoryMixin:
         self._invalidate_inventory_cache()
     def _add_hero_item(self, item_name: str) -> Dict[str, object]:
         normalized_name = str(item_name or "")
+        previous_boot_slots = list(getattr(self, "equipped_boot_items", []) or [])
         self._append_hero_item(normalized_name)
         artifact_info = self._auto_equip_artifact_item(normalized_name)
-        if bool(artifact_info.get("artifact_auto_equipped")):
-            self._refresh_campaign_artifact_effects(log=True)
-        return artifact_info
+        if (
+            bool(artifact_info.get("artifact_auto_equipped"))
+            or self._is_artifact_item_name(normalized_name)
+            or self._is_banner_item_name(normalized_name)
+        ):
+            self._refresh_campaign_equipment_effects(log=True)
+        else:
+            self._sync_equipped_banner_items()
+        boot_info = {
+            "boot_auto_equipped": False,
+            "boot_auto_equip_slot": None,
+            "boot_auto_equip_previous": None,
+            "active_boot_move_bonus": int(self._active_boot_move_bonus()),
+        }
+        if self._is_boot_item_name(normalized_name):
+            self._sync_moves_per_turn_with_hero(
+                units=self.blue_team_state,
+                grant_delta=True,
+            )
+            equipped_boot_slots = list(self.equipped_boot_items or [])
+            equipped_slot_index = next(
+                (
+                    slot_index
+                    for slot_index, item in enumerate(equipped_boot_slots)
+                    if item == normalized_name
+                    and item
+                    != (
+                        previous_boot_slots[slot_index]
+                        if slot_index < len(previous_boot_slots)
+                        else None
+                    )
+                ),
+                None,
+            )
+            previous_item = (
+                previous_boot_slots[equipped_slot_index]
+                if equipped_slot_index is not None
+                and equipped_slot_index < len(previous_boot_slots)
+                else None
+            )
+            if equipped_slot_index is not None:
+                self._log(
+                    f"Boots '{normalized_name}' auto-equipped in slot "
+                    f"{equipped_slot_index + 1} (previous: {previous_item or 'empty'})."
+                )
+            boot_info.update(
+                {
+                    "boot_auto_equipped": equipped_slot_index is not None,
+                    "boot_auto_equip_slot": (
+                        int(equipped_slot_index + 1)
+                        if equipped_slot_index is not None
+                        else None
+                    ),
+                    "boot_auto_equip_previous": previous_item,
+                    "active_boot_move_bonus": int(self._active_boot_move_bonus()),
+                }
+            )
+        else:
+            self._sync_equipped_boot_items()
+        return {**artifact_info, **boot_info}
     def _artifact_state_info(self) -> Dict[str, object]:
-        self._refresh_campaign_artifact_effects(log=False)
+        self._refresh_campaign_equipment_effects(log=False)
         return {
             "equipped_artifact_items": list(self.equipped_artifact_items),
             "artifact_auto_equip_next_slot": int(self.artifact_auto_equip_next_slot),
+        }
+    def _banner_state_info(self) -> Dict[str, object]:
+        self._refresh_campaign_equipment_effects(log=False)
+        return {
+            "equipped_banner_items": list(self.equipped_banner_items),
+        }
+    def _boot_state_info(self) -> Dict[str, object]:
+        self._sync_equipped_boot_items()
+        return {
+            "equipped_boot_items": list(self.equipped_boot_items),
+            "active_boot_move_bonus": int(self._active_boot_move_bonus()),
         }
     @classmethod
     def _artifact_effect_definition(cls, item_name: str) -> Dict[str, object]:
@@ -440,6 +945,28 @@ class CampaignInventoryMixin:
             effect["armor_bonus"] = int(armor_bonuses[normalized_name])
         return effect
     @classmethod
+    def _banner_effect_definition(cls, item_name: str) -> Dict[str, object]:
+        normalized_name = str(item_name or "").strip()
+        return dict(cls.BANNER_EFFECT_DEFINITIONS.get(normalized_name, {}))
+    @classmethod
+    def _boot_effect_definition(cls, item_name: str) -> Dict[str, object]:
+        normalized_name = str(item_name or "").strip()
+        return dict(cls.BOOT_EFFECT_DEFINITIONS.get(normalized_name, {}))
+    def _active_boot_move_bonus(self, units: Optional[List[Dict]] = None) -> int:
+        self._sync_equipped_boot_items(units=units)
+        active_boot = next(
+            (
+                str(item_name)
+                for item_name in list(self.equipped_boot_items or [])
+                if self._is_boot_item_name(str(item_name or ""))
+            ),
+            None,
+        )
+        if not active_boot:
+            return 0
+        effect = self._boot_effect_definition(active_boot)
+        return max(0, int(effect.get("move_bonus", 0) or 0))
+    @classmethod
     def _hero_item_aliases(cls, item_name: str) -> Tuple[str, ...]:
         normalized_name = str(item_name or "")
         aliases = {normalized_name}
@@ -477,7 +1004,9 @@ class CampaignInventoryMixin:
                 del self.heroitems[idx]
                 self._invalidate_inventory_cache()
                 self._sync_equipped_artifact_items()
-                self._refresh_campaign_artifact_effects(log=False)
+                self._sync_equipped_boot_items()
+                self._refresh_campaign_equipment_effects(log=False)
+                self._sync_moves_per_turn_with_hero(units=self.blue_team_state)
                 return True
         return False
     def _hero_item_sell_value(self, entry: object) -> int:
@@ -488,6 +1017,12 @@ class CampaignInventoryMixin:
     def _is_useful_hero_item_name(self, item_name: str) -> bool:
         normalized_name = str(item_name or "")
         if self._is_artifact_item_name(normalized_name):
+            return True
+        if self._is_banner_item_name(normalized_name):
+            return True
+        if self._is_boot_item_name(normalized_name):
+            return True
+        if normalized_name in set(getattr(self, "scenario_battle_orb_item_names", ())):
             return True
         return normalized_name in {
             self.BONUS_SMALL_HEAL_ITEM_NAME,
@@ -545,7 +1080,9 @@ class CampaignInventoryMixin:
         self.heroitems = kept_items
         self._invalidate_inventory_cache()
         self._sync_equipped_artifact_items()
-        self._refresh_campaign_artifact_effects(log=False)
+        self._sync_equipped_boot_items()
+        self._refresh_campaign_equipment_effects(log=False)
+        self._sync_moves_per_turn_with_hero(units=self.blue_team_state)
         self.gold = max(0.0, float(self.gold or 0.0)) + float(total_gold)
         sale_reward = float(len(sold_items)) * float(self.reward_sell_junk_item)
         sale_info.update(
@@ -666,11 +1203,7 @@ class CampaignInventoryMixin:
         dy = abs(int(agent_pos[1]) - int(chest_pos[1]))
         return max(dx, dy) <= int(cls.CHEST_PICKUP_RADIUS)
     def _step_equip_battle_item(self, action: int):
-        slot_index = 0
         action_start = self.GRID_EQUIP_BATTLE_ITEM1_ACTION_START
-        if int(action) >= self.GRID_EQUIP_BATTLE_ITEM2_ACTION_START:
-            slot_index = 1
-            action_start = self.GRID_EQUIP_BATTLE_ITEM2_ACTION_START
         idx = int(action) - int(action_start)
         item_name = (
             self.BATTLE_EQUIPPABLE_ITEM_NAMES[idx]
@@ -685,21 +1218,21 @@ class CampaignInventoryMixin:
 
         previous_item = None
         equipped = False
+        equipped_slot_index = None
         equip_turn_locked = bool(self.battle_item_equip_used_this_turn)
-        if (
-            not equip_turn_locked
-            and item_name is not None
-            and 0 <= int(slot_index) < len(self.equipped_hero_items)
-        ):
-            previous_item = self.equipped_hero_items[int(slot_index)]
-            equipped = self._equip_battle_item(int(slot_index), str(item_name))
+        if not equip_turn_locked and item_name is not None:
+            target_slot_index = self._battle_equip_slot_for_item(str(item_name))
+            if target_slot_index is not None:
+                previous_item = self.equipped_hero_items[int(target_slot_index)]
+                equipped_slot_index = self._equip_battle_item(str(item_name))
+                equipped = equipped_slot_index is not None
             if equipped:
                 self.battle_item_equip_used_this_turn = True
                 self.battle_items_equipped_total += 1
                 if not previous_item:
                     reward = float(self.reward_battle_item_equip)
                 self._log(
-                    f"Боевой слот {int(slot_index) + 1}: экипирован предмет '{str(item_name)}'"
+                    f"Боевой слот {int(equipped_slot_index) + 1}: экипирован предмет '{str(item_name)}'"
                 )
 
         info = {
@@ -708,7 +1241,9 @@ class CampaignInventoryMixin:
             "enemies_alive": dict(self.grid_env.enemies_alive),
             "battle_triggered": False,
             "equip_battle_item_action": True,
-            "equip_battle_item_slot": int(slot_index) + 1,
+            "equip_battle_item_slot": (
+                int(equipped_slot_index) + 1 if equipped_slot_index is not None else 0
+            ),
             "equip_battle_item_name": str(item_name or ""),
             "equip_battle_item_previous": previous_item,
             "equip_battle_item_applied": bool(equipped),
@@ -1712,6 +2247,150 @@ class CampaignInventoryMixin:
                 "Активна защита от магии заклинаниями героя для позиций "
                 f"{sorted(buffed_resistance)} перед началом боя: {', '.join(resistance_types)}."
             )
+    def _refresh_campaign_equipment_effects(self, *, log: bool = False) -> None:
+        if self.blue_team_state is None:
+            return
+        self._clear_equipped_banner_effects(self.blue_team_state)
+        self._apply_equipped_artifact_effects(self.blue_team_state, log=log)
+        self._apply_equipped_banner_effects(self.blue_team_state, log=log)
+    def _clear_equipped_banner_effects(self, blue_team: Optional[List[Dict]]) -> None:
+        if not blue_team:
+            return
+
+        for unit in blue_team:
+            if not isinstance(unit, dict):
+                continue
+            if "campaign_banner_base_damage" in unit:
+                unit["damage"] = self._normalize_damage_value(
+                    unit.get(
+                        "campaign_banner_base_damage",
+                        unit.get("damage", 0),
+                    )
+                )
+            if "campaign_banner_base_accuracy" in unit:
+                unit["accuracy"] = self._normalize_accuracy_value(
+                    unit.get(
+                        "campaign_banner_base_accuracy",
+                        unit.get("accuracy", 0),
+                    )
+                )
+            if "campaign_banner_base_initiative" in unit:
+                base_initiative = int(
+                    self._normalize_damage_value(
+                        unit.get(
+                            "campaign_banner_base_initiative",
+                            unit.get("initiative_base", unit.get("initiative", 0)),
+                        )
+                    )
+                )
+                unit["initiative_base"] = int(base_initiative)
+                unit["initiative"] = int(base_initiative)
+            if "campaign_banner_base_armor" in unit:
+                base_armor = self._normalize_armor_value(
+                    unit.get(
+                        "campaign_banner_base_armor",
+                        unit.get("armor", 0),
+                    )
+                )
+                unit["armor"] = int(base_armor)
+                unit["base_armor"] = int(base_armor)
+            unit.pop("campaign_banner_base_damage", None)
+            unit.pop("campaign_banner_base_accuracy", None)
+            unit.pop("campaign_banner_base_initiative", None)
+            unit.pop("campaign_banner_base_armor", None)
+            unit.pop("campaign_banner_damage_multiplier", None)
+            unit.pop("campaign_banner_accuracy_bonus", None)
+            unit.pop("campaign_banner_initiative_multiplier", None)
+            unit.pop("campaign_banner_armor_bonus", None)
+            unit.pop("campaign_active_banner", None)
+    def _refresh_campaign_banner_effects(self, *, log: bool = False) -> None:
+        if self.blue_team_state is None:
+            return
+        self._apply_equipped_banner_effects(self.blue_team_state, log=log)
+    def _apply_equipped_banner_effects(
+        self,
+        blue_team: List[Dict],
+        *,
+        log: bool = True,
+    ) -> None:
+        self._clear_equipped_banner_effects(blue_team)
+        if not blue_team:
+            return
+
+        if not self._hero_has_banner_bearer(units=blue_team):
+            self.equipped_banner_items = [None] * int(self.BANNER_EQUIP_SLOTS)
+            return
+
+        self._sync_equipped_banner_items(units=blue_team)
+        active_banner = next(
+            (
+                str(item_name)
+                for item_name in list(self.equipped_banner_items or [])
+                if self._is_banner_item_name(str(item_name or ""))
+            ),
+            None,
+        )
+        if not active_banner:
+            return
+
+        effect = self._banner_effect_definition(active_banner)
+        damage_multiplier = float(effect.get("damage_multiplier", 1.0) or 1.0)
+        accuracy_bonus = int(effect.get("accuracy_bonus", 0) or 0)
+        initiative_multiplier = float(effect.get("initiative_multiplier", 1.0) or 1.0)
+        armor_bonus = int(effect.get("armor_bonus", 0) or 0)
+        affected_units = 0
+
+        for unit in blue_team:
+            if not isinstance(unit, dict) or self._is_empty_blue_unit(unit):
+                continue
+
+            unit["campaign_active_banner"] = str(active_banner)
+            affected_units += 1
+            if abs(damage_multiplier - 1.0) > 1e-9:
+                base_damage = self._normalize_damage_value(unit.get("damage", 0))
+                unit["campaign_banner_base_damage"] = int(base_damage)
+                unit["campaign_banner_damage_multiplier"] = float(damage_multiplier)
+                unit["damage"] = self._normalize_damage_value(
+                    float(base_damage) * float(damage_multiplier)
+                )
+
+            if accuracy_bonus != 0:
+                base_accuracy = self._normalize_accuracy_value(unit.get("accuracy", 0))
+                unit["campaign_banner_base_accuracy"] = int(base_accuracy)
+                unit["campaign_banner_accuracy_bonus"] = int(accuracy_bonus)
+                unit["accuracy"] = self._normalize_accuracy_value(
+                    int(base_accuracy) + int(accuracy_bonus)
+                )
+
+            if abs(initiative_multiplier - 1.0) > 1e-9:
+                base_initiative = int(
+                    self._normalize_damage_value(
+                        unit.get("initiative_base", unit.get("initiative", 0))
+                    )
+                )
+                unit["campaign_banner_base_initiative"] = int(base_initiative)
+                unit["campaign_banner_initiative_multiplier"] = float(initiative_multiplier)
+                boosted_initiative = self._normalize_damage_value(
+                    float(base_initiative) * float(initiative_multiplier)
+                )
+                unit["initiative_base"] = int(boosted_initiative)
+                unit["initiative"] = int(boosted_initiative)
+
+            if armor_bonus != 0:
+                base_armor = self._normalize_armor_value(unit.get("armor", 0))
+                unit["campaign_banner_base_armor"] = int(base_armor)
+                unit["campaign_banner_armor_bonus"] = int(armor_bonus)
+                unit["armor"] = self._normalize_armor_value(
+                    int(base_armor) + int(armor_bonus)
+                )
+                unit["base_armor"] = int(unit.get("armor", 0) or 0)
+
+        if log and affected_units > 0:
+            self._log(
+                f"Active banner '{active_banner}' applied to {affected_units} BLUE units "
+                f"(damage x{damage_multiplier:.3g}, accuracy +{accuracy_bonus}, "
+                f"initiative x{initiative_multiplier:.3g}, armor +{armor_bonus})."
+            )
     def _clear_equipped_artifact_effects(self, blue_team: Optional[List[Dict]]) -> None:
         if not blue_team:
             return
@@ -1753,9 +2432,7 @@ class CampaignInventoryMixin:
             unit.pop("campaign_artifact_armor_bonus", None)
             unit.pop("campaign_active_artifacts", None)
     def _refresh_campaign_artifact_effects(self, *, log: bool = False) -> None:
-        if self.blue_team_state is None:
-            return
-        self._apply_equipped_artifact_effects(self.blue_team_state, log=log)
+        self._refresh_campaign_equipment_effects(log=log)
     def _apply_equipped_artifact_effects(
         self,
         blue_team: List[Dict],
@@ -1766,7 +2443,12 @@ class CampaignInventoryMixin:
         if not blue_team:
             return
 
-        self._sync_equipped_artifact_items()
+        if not self._hero_has_artifact_knowledge(units=blue_team):
+            self.equipped_artifact_items = [None] * int(self.ARTIFACT_EQUIP_SLOTS)
+            self.artifact_auto_equip_next_slot = 0
+            return
+
+        self._sync_equipped_artifact_items(units=blue_team)
         active_artifacts = [
             str(item_name)
             for item_name in list(self.equipped_artifact_items or [])
