@@ -24,6 +24,10 @@ def _battle_blue_unit(env: CampaignEnv, position: int) -> dict:
     )
 
 
+def _hero_item_names(env: CampaignEnv) -> list[str]:
+    return [env._hero_item_name(entry) for entry in env.heroitems]
+
+
 def _invulnerability_action_index(env: CampaignEnv, target_pos: int) -> int:
     return env.GRID_INVULNERABILITY_ACTION_START + env.INVULNERABILITY_POTION_POSITIONS.index(
         target_pos
@@ -245,7 +249,7 @@ def test_invulnerability_potion_use_consumes_item_rewards_and_buffs_next_battle(
     assert info.get("combat_potion_consumed") is True
     assert info.get("combat_potion_item") == env.INVULNERABILITY_POTION_ITEM_NAME
     assert info.get("combat_potion_target_pos") == target_pos
-    assert env.heroitems == []
+    assert env.INVULNERABILITY_POTION_ITEM_NAME not in _hero_item_names(env)
     assert target_pos in env.active_invulnerability_potion_positions
     assert int(unit.get("armor", 0) or 0) == base_armor
 
@@ -273,7 +277,7 @@ def test_strength_potion_use_consumes_item_rewards_and_buffs_next_battle():
     assert info.get("combat_potion_consumed") is True
     assert info.get("combat_potion_item") == env.STRENGTH_POTION_ITEM_NAME
     assert info.get("combat_potion_target_pos") == target_pos
-    assert env.heroitems == []
+    assert env.STRENGTH_POTION_ITEM_NAME not in _hero_item_names(env)
     assert target_pos in env.active_strength_potion_positions
     assert int(unit.get("damage", 0) or 0) == base_damage
 
@@ -304,7 +308,7 @@ def test_energy_elixir_use_consumes_item_rewards_and_buffs_next_battle_damage():
     assert info.get("combat_potion_consumed") is True
     assert info.get("combat_potion_item") == env.ENERGY_ELIXIR_ITEM_NAME
     assert info.get("combat_potion_target_pos") == target_pos
-    assert env.heroitems == []
+    assert env.ENERGY_ELIXIR_ITEM_NAME not in _hero_item_names(env)
     assert target_pos in env.active_energy_elixir_positions
     assert int(unit.get("damage", 0) or 0) == base_damage
     assert int(unit.get("damage_secondary", 0) or 0) == base_damage_secondary
@@ -350,7 +354,7 @@ def test_titan_elixir_permanently_buffs_damage_through_turn_and_battle():
     assert info.get("persistent_elixir_target_pos") == target_pos
     assert info.get("persistent_elixir_applied") is True
     assert info.get("persistent_elixir_consumed") is True
-    assert env.heroitems == []
+    assert env.TITAN_ELIXIR_ITEM_NAME not in _hero_item_names(env)
     assert int(unit.get("damage", 0) or 0) == expected_damage
     assert int(unit.get("damage_secondary", 0) or 0) == expected_damage_secondary
 
@@ -401,7 +405,7 @@ def test_supreme_elixir_permanently_buffs_health_through_turn_and_battle():
     assert info.get("persistent_elixir_target_pos") == target_pos
     assert info.get("persistent_elixir_applied") is True
     assert info.get("persistent_elixir_consumed") is True
-    assert env.heroitems == []
+    assert env.SUPREME_ELIXIR_ITEM_NAME not in _hero_item_names(env)
     assert int(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0) == expected_max_hp
     assert int(unit.get("hp", 0) or unit.get("health", 0) or 0) == expected_hp
 
@@ -527,7 +531,7 @@ def test_haste_elixir_buffs_next_battle_and_restore_after_save():
     assert info.get("combat_potion_consumed") is True
     assert info.get("combat_potion_target_pos") == target_pos
     assert info.get("combat_potion_item") == env.HASTE_ELIXIR_ITEM_NAME
-    assert env.heroitems == []
+    assert env.HASTE_ELIXIR_ITEM_NAME not in _hero_item_names(env)
 
     env._init_battle(enemy_id=1)
     battle_unit = _battle_blue_unit(env, target_pos)

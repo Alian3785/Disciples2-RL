@@ -20,8 +20,11 @@ class CampaignMaskMixin:
             # В grid режиме движение доступно только при moves > 0.
             # REST (8) доступен при ранении или когда очки перемещения закончились.
             grid_mask = self.grid_env.compute_action_mask()
-            mask[:8] = bool(self.moves > 0) & grid_mask[:8]
-            mask[8] = bool(grid_mask[8]) and (self._has_wounded_blue() or self.moves <= 0)
+            grid_move_cost = max(1, int(self.GRID_MOVE_COST))
+            mask[:8] = bool(self.moves >= grid_move_cost) & grid_mask[:8]
+            mask[8] = bool(grid_mask[8]) and (
+                self._has_wounded_blue() or self.moves < grid_move_cost
+            )
             # Общее действие лечения банками на позиции 7-12.
             if self._has_any_heal_bottle_left():
                 for idx, pos in enumerate(self.GRID_BOTTLE_POSITIONS):
@@ -175,11 +178,6 @@ class CampaignMaskMixin:
                 )
             for idx, item_name in enumerate(self.BATTLE_EQUIPPABLE_ITEM_NAMES):
                 mask[self.GRID_EQUIP_BATTLE_ITEM1_ACTION_START + idx] = self._can_equip_battle_item(
-                    0,
-                    item_name,
-                )
-                mask[self.GRID_EQUIP_BATTLE_ITEM2_ACTION_START + idx] = self._can_equip_battle_item(
-                    1,
                     item_name,
                 )
             nearest_targetable_enemy = self._get_nearest_enemy_stack_for_mask(

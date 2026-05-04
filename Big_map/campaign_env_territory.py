@@ -329,6 +329,7 @@ class CampaignTerritoryMixin:
         self.gold += float(total_gold_income)
         if scripted_bot_turn_infos:
             self.scripted_capital_bot_turn_infos = scripted_bot_turn_infos
+        self._sync_moves_per_turn_with_hero(units=self.blue_team_state)
         self.moves = self.moves_per_turn
         self.active_buildings["alredybuilt"] = 0
         self.spell_learning_locked = False

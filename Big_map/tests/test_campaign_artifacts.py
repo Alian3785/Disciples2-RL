@@ -9,6 +9,16 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from campaign_env import CampaignEnv
 
 
+def _set_hero_level(env: CampaignEnv, level: int) -> dict:
+    env.typeoflord = 2
+    env.Typeoflord = 2
+    hero = env._resolve_travel_hero()
+    assert hero is not None
+    hero["Level"] = int(level)
+    env._sync_moves_per_turn_with_hero(units=env.blue_team_state, grant_delta=True)
+    return hero
+
+
 def _blue_state_unit(env: CampaignEnv, position: int) -> dict:
     roster = env.blue_team_state if env.blue_team_state is not None else env._get_blue_state()
     return next(
@@ -46,6 +56,7 @@ def _battle_red_target(env: CampaignEnv) -> dict:
 def _prepare_artifact_attack(item_name: str):
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
+    _set_hero_level(env, 9)
     env._add_hero_item(item_name)
     env._init_battle(enemy_id=1)
 
@@ -73,44 +84,107 @@ def _prepare_artifact_attack(item_name: str):
     return env, hero, target, status_chances
 
 
-def test_artifacts_auto_equip_into_two_rotating_slots():
+def test_artifacts_without_artifact_knowledge_stay_in_inventory_without_effects():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
+    env.typeoflord = 2
+    env.Typeoflord = 2
+    _set_hero_level(env, 8)
+    hero_before = deepcopy(env._resolve_travel_hero())
+
+    equip_info = env._add_hero_item(env.RING_OF_AGES_ITEM_NAME)
+
+    hero_after = env._resolve_travel_hero()
+    assert equip_info["artifact_auto_equipped"] is False
+    assert equip_info["artifact_auto_equip_slot"] is None
+    assert env.equipped_artifact_items == [None, None]
+    assert env.RING_OF_AGES_ITEM_NAME in [env._hero_item_name(entry) for entry in env.heroitems]
+    assert hero_after["damage"] == hero_before["damage"]
+    assert hero_after["damage_secondary"] == hero_before["damage_secondary"]
+    assert hero_after["initiative_base"] == hero_before["initiative_base"]
+    assert "campaign_active_artifacts" not in hero_after
+
+
+def test_warrior_lord_can_use_artifacts_from_level_one():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+    hero_before = deepcopy(env._resolve_travel_hero())
+
+    equip_info = env._add_hero_item(env.RING_OF_AGES_ITEM_NAME)
+
+    expected_damage = env._normalize_damage_value(
+        float(hero_before["damage"]) * float(env.RING_OF_AGES_DAMAGE_MULTIPLIER)
+    )
+    hero_after = env._resolve_travel_hero()
+    assert equip_info["artifact_auto_equipped"] is True
+    assert env.equipped_artifact_items == [env.RING_OF_AGES_ITEM_NAME, None]
+    assert hero_after["damage"] == expected_damage
+    assert hero_after["damage_secondary"] == hero_before["damage_secondary"]
+    assert hero_after["campaign_active_artifacts"] == [env.RING_OF_AGES_ITEM_NAME]
+
+
+def test_artifact_knowledge_ability_token_unlocks_artifacts_below_level_nine():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+    hero = _set_hero_level(env, 8)
+    hero["hero_abilities"] = ["artifact_knowledge"]
+
+    equip_info = env._add_hero_item(env.RING_OF_AGES_ITEM_NAME)
+
+    assert equip_info["artifact_auto_equipped"] is True
+    assert env.equipped_artifact_items == [env.RING_OF_AGES_ITEM_NAME, None]
+    assert "Знание артефактов" in " ".join(env.get_travel_hero_visual_info()["abilities"])
+
+
+def test_artifacts_auto_equip_best_two_by_gold_value():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+    _set_hero_level(env, 9)
 
     ring_info = env._grant_ruin_reward(74)
     assert ring_info["artifact_auto_equipped"] is True
     assert ring_info["artifact_auto_equip_slot"] == 1
     assert env.equipped_artifact_items == [env.RING_OF_AGES_ITEM_NAME, None]
 
-    env._add_hero_item("Holy Chalice (Artifact)")
+    holy_info = env._add_hero_item("Holy Chalice (Artifact)")
+    assert holy_info["artifact_auto_equipped"] is True
+    assert holy_info["artifact_auto_equip_slot"] == 2
     assert env.equipped_artifact_items == [
         env.RING_OF_AGES_ITEM_NAME,
         "Holy Chalice (Artifact)",
     ]
 
-    env._add_hero_item("Unholy Chalice (Artifact)")
+    unholy_info = env._add_hero_item("Unholy Chalice (Artifact)")
+    assert unholy_info["artifact_auto_equipped"] is False
+    assert unholy_info["artifact_auto_equip_slot"] is None
     assert env.equipped_artifact_items == [
-        "Unholy Chalice (Artifact)",
+        env.RING_OF_AGES_ITEM_NAME,
         "Holy Chalice (Artifact)",
     ]
 
-    env._add_hero_item("Runestone (Artifact)")
+    bethrezen_info = env._add_hero_item(env.BETHREZENS_CLAW_ITEM_NAME)
+    assert bethrezen_info["artifact_auto_equipped"] is True
+    assert bethrezen_info["artifact_auto_equip_slot"] == 1
+    assert bethrezen_info["artifact_auto_equip_previous"] == env.RING_OF_AGES_ITEM_NAME
     assert env.equipped_artifact_items == [
-        "Unholy Chalice (Artifact)",
-        "Runestone (Artifact)",
+        env.BETHREZENS_CLAW_ITEM_NAME,
+        env.RING_OF_AGES_ITEM_NAME,
     ]
 
-    env._add_hero_item("Talisman of Ages (Artifact)")
+    skull_info = env._add_hero_item(env.SKULL_OF_THANATOS_ARTIFACT_ITEM_NAME)
+    assert skull_info["artifact_auto_equipped"] is False
+    assert skull_info["artifact_auto_equip_slot"] is None
     assert env.equipped_artifact_items == [
-        "Talisman of Ages (Artifact)",
-        "Runestone (Artifact)",
+        env.BETHREZENS_CLAW_ITEM_NAME,
+        env.RING_OF_AGES_ITEM_NAME,
     ]
-    assert env.artifact_auto_equip_next_slot == 1
+    assert env.artifact_auto_equip_next_slot == 0
 
 
 def test_ring_of_ages_buffs_only_hero_and_persists_after_battle_save():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
+    _set_hero_level(env, 9)
 
     hero_before = deepcopy(env._resolve_travel_hero())
     ally_before = deepcopy(_blue_state_unit(env, 7))
@@ -164,9 +238,14 @@ def test_ring_of_ages_buffs_only_hero_and_persists_after_battle_save():
 
     env._add_hero_item("Holy Chalice (Artifact)")
     env._add_hero_item("Runestone (Artifact)")
+    assert env.equipped_artifact_items == [
+        env.RING_OF_AGES_ITEM_NAME,
+        "Holy Chalice (Artifact)",
+    ]
+    assert env._consume_hero_item(env.RING_OF_AGES_ITEM_NAME) is True
 
     hero_unequipped = env._resolve_travel_hero()
-    assert env.equipped_artifact_items == ["Runestone (Artifact)", "Holy Chalice (Artifact)"]
+    assert env.equipped_artifact_items == ["Holy Chalice (Artifact)", "Runestone (Artifact)"]
     assert hero_unequipped["damage"] == hero_before["damage"]
     assert hero_unequipped["damage_secondary"] == hero_before["damage_secondary"]
     assert hero_unequipped["initiative_base"] == hero_before["initiative_base"]
@@ -221,6 +300,7 @@ def test_weapon_artifacts_buff_equipped_hero_in_campaign_and_battle(
 ):
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
+    _set_hero_level(env, 9)
 
     hero = env._resolve_travel_hero()
     hero["damage_secondary"] = 13
@@ -284,6 +364,7 @@ def test_armor_artifacts_buff_hero_armor_in_campaign_and_battle(
 ):
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
+    _set_hero_level(env, 9)
 
     hero = env._resolve_travel_hero()
     hero["damage_secondary"] = 13
@@ -329,6 +410,7 @@ def test_armor_artifacts_buff_hero_armor_in_campaign_and_battle(
 def test_render_and_state_summary_include_equipped_artifacts(capsys: pytest.CaptureFixture[str]):
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
+    _set_hero_level(env, 9)
 
     env._add_hero_item("Holy Chalice (Artifact)")
     env._add_hero_item("Runestone (Artifact)")

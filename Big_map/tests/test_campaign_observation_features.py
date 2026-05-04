@@ -467,6 +467,7 @@ def test_campaign_obs_includes_spell_learning_features():
         + len(env.spell_keys)
         + env.grid_legion_spell_used_obs_size
         + env.grid_nearest_enemy_debuff_obs_size
+        + env.grid_scroll_obs_size
     )
 
     baseline = env._build_spell_grid_obs()
@@ -1054,13 +1055,25 @@ def test_campaign_visualizer_draws_mana_source_letters():
             gold=env.gold,
             steps=env.moves,
         )
-        text_values = [text.get_text() for text in viz.ax.texts]
+        text_values = [
+            text.get_text()
+            for axis in (viz.ax, viz.info_ax)
+            for text in axis.texts
+        ]
         assert "П" in text_values
         assert "Ж" in text_values
         assert "С" in text_values
         assert "Р" in text_values
-        assert any("Мана преисподней: 0 (+25/ход)" in text for text in text_values)
-        assert any("Мана эльфов: 0 (+0/ход)" in text for text in text_values)
+        assert any(
+            "\u041c\u0430\u043d\u0430 \u043f\u0440\u0435\u0438\u0441\u043f\u043e\u0434\u043d\u0435\u0439: 0 (+25/\u0445\u043e\u0434)"
+            in text
+            for text in text_values
+        )
+        assert any(
+            "\u041c\u0430\u043d\u0430 \u044d\u043b\u044c\u0444\u043e\u0432: 0 (+0/\u0445\u043e\u0434)"
+            in text
+            for text in text_values
+        )
     finally:
         plt.close(viz.fig)
 
