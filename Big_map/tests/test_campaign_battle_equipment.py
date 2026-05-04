@@ -8,7 +8,6 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from battle_env import (
     FIRST_HERO_ITEM_ACTION_START,
     HERO_ITEM_TARGET_SLOTS,
-    SECOND_HERO_ITEM_ACTION_START,
 )
 from campaign_env import CampaignEnv
 
@@ -28,13 +27,11 @@ def _battle_blue_unit(env: CampaignEnv, position: int) -> dict:
     )
 
 
-def _equip_action(env: CampaignEnv, slot_no: int, item_name: str) -> int:
-    action_start = (
+def _equip_action(env: CampaignEnv, item_name: str) -> int:
+    return (
         env.GRID_EQUIP_BATTLE_ITEM1_ACTION_START
-        if int(slot_no) == 1
-        else env.GRID_EQUIP_BATTLE_ITEM2_ACTION_START
+        + env.BATTLE_EQUIPPABLE_ITEM_NAMES.index(item_name)
     )
-    return action_start + env.BATTLE_EQUIPPABLE_ITEM_NAMES.index(item_name)
 
 
 def _set_battle_hero_turn(env: CampaignEnv, position: int = 8) -> dict:
@@ -50,32 +47,110 @@ def _set_battle_hero_turn(env: CampaignEnv, position: int = 8) -> dict:
     return hero
 
 
+def test_counter_backed_battle_items_are_synced_into_heroitems_on_reset():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    assert env._count_hero_item(env.BONUS_SMALL_HEAL_ITEM_NAME) == env._healing_bottles_left()
+    assert env._count_hero_item(env.BONUS_LARGE_HEAL_ITEM_NAME) == env._heal_bottles_left()
+    assert env._count_hero_item(env.BONUS_REVIVE_ITEM_NAME) == env._revive_bottles_left()
+
+
+def test_battle_equip_actions_include_only_orbs_present_on_current_map():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    assert env.scenario_battle_orb_item_names == (
+        "Vampire Orb",
+        "Orb of Life",
+        "Lich Orb",
+    )
+    assert env.BATTLE_EQUIPPABLE_ITEM_NAMES[: len(env.BASE_BATTLE_EQUIPPABLE_ITEM_NAMES)] == (
+        env.BASE_BATTLE_EQUIPPABLE_ITEM_NAMES
+    )
+    assert env.BATTLE_EQUIPPABLE_ITEM_NAMES[
+        len(env.BASE_BATTLE_EQUIPPABLE_ITEM_NAMES) :
+    ] == env.scenario_battle_orb_item_names
+    assert env.grid_legion_damage_spell_action_start == (
+        env.GRID_EQUIP_BATTLE_ITEM1_ACTION_START
+        + len(env.BATTLE_EQUIPPABLE_ITEM_NAMES)
+    )
+
+
+def test_orb_equip_action_is_masked_until_orb_enters_heroitems():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    item_name = "Vampire Orb"
+    action = _equip_action(env, item_name)
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is False
+
+    env._append_hero_item(item_name)
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is True
+
+    _, reward, terminated, truncated, info = env.step(action)
+
+    assert terminated is False
+    assert truncated is False
+    assert reward == pytest.approx(env.reward_battle_item_equip)
+    assert info["equip_battle_item_applied"] is True
+    assert info["equip_battle_item_slot"] == 1
+    assert info["equip_battle_item_name"] == item_name
+    assert env.equipped_hero_items[0] == item_name
+
+
+def test_merchant_orbs_reserve_equip_actions_but_stay_masked_until_owned():
+    class MerchantOrbCampaignEnv(CampaignEnv):
+        MERCHANT_BUY_ITEMS = CampaignEnv.MERCHANT_BUY_ITEMS + (
+            {"name": "Angel Orb", "price": 800.0, "stock": 1, "grant": "inventory"},
+        )
+
+    env = MerchantOrbCampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    assert "Angel Orb" in env.scenario_battle_orb_item_names
+    assert "Angel Orb" in env.BATTLE_EQUIPPABLE_ITEM_NAMES
+    assert any("Angel Orb" in site_stock for site_stock in env.merchant_stocks.values())
+
+    action = _equip_action(env, "Angel Orb")
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is False
+
+    env._append_hero_item("Angel Orb")
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is True
+
+
 @pytest.mark.parametrize(
-    ("item_name", "slot_no", "missing_hp", "used_attr"),
+    ("item_name", "missing_hp", "used_attr"),
     [
-        (CampaignEnv.BONUS_SMALL_HEAL_ITEM_NAME, 1, 35, "healing_bottles_used"),
-        (CampaignEnv.BONUS_LARGE_HEAL_ITEM_NAME, 1, 80, "heal_bottles_used"),
-        (CampaignEnv.HEALING_OINTMENT_ITEM_NAME, 1, 100, None),
+        (CampaignEnv.BONUS_SMALL_HEAL_ITEM_NAME, 35, "healing_bottles_used"),
+        (CampaignEnv.BONUS_LARGE_HEAL_ITEM_NAME, 80, "heal_bottles_used"),
+        (CampaignEnv.HEALING_OINTMENT_ITEM_NAME, 100, None),
     ],
 )
 def test_equipped_healing_item_applies_in_battle_and_consumes_source(
     item_name: str,
-    slot_no: int,
     missing_hp: int,
     used_attr: str | None,
 ):
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
 
-    env.heroitems.append(env._make_hero_item_entry(item_name))
+    if item_name == env.HEALING_OINTMENT_ITEM_NAME:
+        env._append_hero_item(item_name)
+    starting_item_count = env._count_hero_item(item_name)
 
-    _, _, terminated, truncated, equip_info = env.step(_equip_action(env, slot_no, item_name))
+    _, _, terminated, truncated, equip_info = env.step(_equip_action(env, item_name))
     assert terminated is False
     assert truncated is False
     assert equip_info["equip_battle_item_applied"] is True
+    assert equip_info["equip_battle_item_slot"] == 1
     assert equip_info["equip_battle_item_reward"] == pytest.approx(env.reward_battle_item_equip)
     assert equip_info["battle_items_equipped_total"] == 1
-    assert env.equipped_hero_items[slot_no - 1] == item_name
+    assert env.equipped_hero_items[0] == item_name
 
     env.current_enemy_id = 1
     env._init_battle(enemy_id=1)
@@ -103,9 +178,9 @@ def test_equipped_healing_item_applies_in_battle_and_consumes_source(
     assert info["battle_items_used_total"] == 1
     assert env.battle_items_equipped_total == 1
     assert env.battle_items_used_total == 1
-    assert env.equipped_hero_items[slot_no - 1] is None
-    assert env.battle_env.equipped_hero_items[slot_no - 1] is None
-    assert env._count_hero_item(item_name) == 0
+    assert env.equipped_hero_items[0] is None
+    assert env.battle_env.equipped_hero_items[0] is None
+    assert env._count_hero_item(item_name) == starting_item_count - 1
     if used_attr is not None:
         assert int(getattr(env, used_attr)) == 1
     else:
@@ -120,14 +195,15 @@ def test_equipped_revive_item_applies_in_battle_and_consumes_source():
     env.reset(seed=123)
 
     item_name = env.BONUS_REVIVE_ITEM_NAME
-    env.heroitems.append(env._make_hero_item_entry(item_name))
+    starting_item_count = env._count_hero_item(item_name)
 
-    _, _, terminated, truncated, equip_info = env.step(_equip_action(env, 2, item_name))
+    _, _, terminated, truncated, equip_info = env.step(_equip_action(env, item_name))
     assert terminated is False
     assert truncated is False
     assert equip_info["equip_battle_item_applied"] is True
+    assert equip_info["equip_battle_item_slot"] == 1
     assert equip_info["equip_battle_item_reward"] == pytest.approx(env.reward_battle_item_equip)
-    assert env.equipped_hero_items[1] == item_name
+    assert env.equipped_hero_items[0] == item_name
 
     dead_slot = 5
     target_pos = 6 + dead_slot
@@ -142,7 +218,7 @@ def test_equipped_revive_item_applies_in_battle_and_consumes_source():
     if "hp" in battle_target:
         battle_target["hp"] = 0.0
 
-    action = SECOND_HERO_ITEM_ACTION_START + HERO_ITEM_TARGET_SLOTS.index(dead_slot)
+    action = FIRST_HERO_ITEM_ACTION_START + HERO_ITEM_TARGET_SLOTS.index(dead_slot)
     _, _, terminated, truncated, info = env.step(action)
 
     assert int(battle_target.get("health", 0) or 0) == 1
@@ -154,9 +230,86 @@ def test_equipped_revive_item_applies_in_battle_and_consumes_source():
     assert env.battle_items_equipped_total == 1
     assert env.battle_items_used_total == 1
     assert env.revive_bottles_used == 1
-    assert env._count_hero_item(item_name) == 0
-    assert env.equipped_hero_items[1] is None
-    assert env.battle_env.equipped_hero_items[1] is None
+    assert env._count_hero_item(item_name) == starting_item_count - 1
+    assert env.equipped_hero_items[0] is None
+    assert env.battle_env.equipped_hero_items[0] is None
+    assert terminated is False
+    assert truncated is False
+
+
+def test_equipped_orb_of_life_revives_and_consumes_hero_item_source():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    item_name = "Orb of Life"
+    env._append_hero_item(item_name)
+    starting_item_count = env._count_hero_item(item_name)
+
+    _, _, _, _, equip_info = env.step(_equip_action(env, item_name))
+    assert equip_info["equip_battle_item_applied"] is True
+    assert env.equipped_hero_items[0] == item_name
+
+    dead_slot = 5
+    target_pos = 6 + dead_slot
+    env.current_enemy_id = 1
+    env._init_battle(enemy_id=1)
+    env.mode = env.MODE_BATTLE
+    env.battle_env._advance_until_blue_turn = lambda: None
+    _set_battle_hero_turn(env, 8)
+
+    battle_target = _battle_blue_unit(env, target_pos)
+    battle_target["health"] = 0.0
+    if "hp" in battle_target:
+        battle_target["hp"] = 0.0
+
+    action = FIRST_HERO_ITEM_ACTION_START + HERO_ITEM_TARGET_SLOTS.index(dead_slot)
+    _, _, terminated, truncated, info = env.step(action)
+
+    assert int(battle_target.get("health", 0) or 0) == 1
+    assert info["battle_hero_item_name"] == item_name
+    assert info["battle_hero_item_effect_kind"] == "revive"
+    assert info["battle_hero_item_consumed"] is True
+    assert info["battle_item_use_reward"] == pytest.approx(env.reward_battle_item_use)
+    assert env.battle_items_used_total == 1
+    assert env._count_hero_item(item_name) == starting_item_count - 1
+    assert env.equipped_hero_items[0] is None
+    assert env.battle_env.equipped_hero_items[0] is None
+    assert terminated is False
+    assert truncated is False
+
+
+def test_equipped_vampire_orb_summons_and_consumes_hero_item_source():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    item_name = "Vampire Orb"
+    env._append_hero_item(item_name)
+    starting_item_count = env._count_hero_item(item_name)
+
+    _, _, _, _, equip_info = env.step(_equip_action(env, item_name))
+    assert equip_info["equip_battle_item_applied"] is True
+    assert env.equipped_hero_items[0] == item_name
+
+    env.current_enemy_id = 1
+    env._init_battle(enemy_id=1)
+    env.mode = env.MODE_BATTLE
+    env.battle_env._advance_until_blue_turn = lambda: None
+    _set_battle_hero_turn(env, 8)
+
+    action = FIRST_HERO_ITEM_ACTION_START + HERO_ITEM_TARGET_SLOTS.index(4)
+    _, _, terminated, truncated, info = env.step(action)
+
+    summoned = _battle_blue_unit(env, 10)
+    assert summoned["name"] == "Вампир"
+    assert summoned["Summoned"] == 8
+    assert info["battle_hero_item_name"] == item_name
+    assert info["battle_hero_item_effect_kind"] == "summon"
+    assert info["battle_hero_item_consumed"] is True
+    assert info["battle_item_use_reward"] == pytest.approx(env.reward_battle_item_use)
+    assert env.battle_items_used_total == 1
+    assert env._count_hero_item(item_name) == starting_item_count - 1
+    assert env.equipped_hero_items[0] is None
+    assert env.battle_env.equipped_hero_items[0] is None
     assert terminated is False
     assert truncated is False
 
@@ -165,16 +318,15 @@ def test_re_equip_is_blocked_until_next_game_turn():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
 
-    env.heroitems.append(env._make_hero_item_entry(env.BONUS_SMALL_HEAL_ITEM_NAME))
-    env.heroitems.append(env._make_hero_item_entry(env.BONUS_LARGE_HEAL_ITEM_NAME))
-
-    _, _, _, _, first_info = env.step(_equip_action(env, 1, env.BONUS_SMALL_HEAL_ITEM_NAME))
-    _, reward, _, _, second_info = env.step(_equip_action(env, 1, env.BONUS_LARGE_HEAL_ITEM_NAME))
+    _, _, _, _, first_info = env.step(_equip_action(env, env.BONUS_SMALL_HEAL_ITEM_NAME))
+    _, reward, _, _, second_info = env.step(_equip_action(env, env.BONUS_LARGE_HEAL_ITEM_NAME))
 
     assert first_info["equip_battle_item_reward"] == pytest.approx(env.reward_battle_item_equip)
+    assert first_info["equip_battle_item_slot"] == 1
     assert second_info["equip_battle_item_applied"] is False
     assert second_info["equip_battle_item_turn_locked"] is True
     assert second_info["equip_battle_item_previous"] is None
+    assert second_info["equip_battle_item_slot"] == 0
     assert second_info["equip_battle_item_reward"] == pytest.approx(0.0)
     assert reward == pytest.approx(0.0)
     assert env.battle_items_equipped_total == 1
@@ -182,12 +334,49 @@ def test_re_equip_is_blocked_until_next_game_turn():
 
     env._advance_turns(1)
 
-    _, reward, _, _, third_info = env.step(_equip_action(env, 1, env.BONUS_LARGE_HEAL_ITEM_NAME))
+    _, reward, _, _, third_info = env.step(_equip_action(env, env.BONUS_LARGE_HEAL_ITEM_NAME))
 
     assert third_info["equip_battle_item_applied"] is True
     assert third_info["equip_battle_item_turn_locked"] is False
-    assert third_info["equip_battle_item_previous"] == env.BONUS_SMALL_HEAL_ITEM_NAME
-    assert third_info["equip_battle_item_reward"] == pytest.approx(0.0)
-    assert reward == pytest.approx(0.0)
+    assert third_info["equip_battle_item_previous"] is None
+    assert third_info["equip_battle_item_slot"] == 2
+    assert third_info["equip_battle_item_reward"] == pytest.approx(env.reward_battle_item_equip)
+    assert reward == pytest.approx(env.reward_battle_item_equip)
     assert env.battle_items_equipped_total == 2
-    assert env.equipped_hero_items[0] == env.BONUS_LARGE_HEAL_ITEM_NAME
+    assert env.equipped_hero_items[0] == env.BONUS_SMALL_HEAL_ITEM_NAME
+    assert env.equipped_hero_items[1] == env.BONUS_LARGE_HEAL_ITEM_NAME
+
+
+def test_battle_item_equip_actions_are_masked_when_both_slots_are_full():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    env._append_hero_item(env.HEALING_OINTMENT_ITEM_NAME)
+
+    _, _, _, _, first_info = env.step(_equip_action(env, env.BONUS_SMALL_HEAL_ITEM_NAME))
+    env._advance_turns(1)
+    _, _, _, _, second_info = env.step(_equip_action(env, env.BONUS_LARGE_HEAL_ITEM_NAME))
+
+    assert first_info["equip_battle_item_slot"] == 1
+    assert second_info["equip_battle_item_slot"] == 2
+    assert env.equipped_hero_items == [
+        env.BONUS_SMALL_HEAL_ITEM_NAME,
+        env.BONUS_LARGE_HEAL_ITEM_NAME,
+    ]
+
+    mask = env.compute_action_mask()
+    equip_start = env.GRID_EQUIP_BATTLE_ITEM1_ACTION_START
+    equip_end = equip_start + len(env.BATTLE_EQUIPPABLE_ITEM_NAMES)
+    assert mask[equip_start:equip_end].tolist() == [False] * len(
+        env.BATTLE_EQUIPPABLE_ITEM_NAMES
+    )
+
+    _, reward, _, _, blocked_info = env.step(_equip_action(env, env.HEALING_OINTMENT_ITEM_NAME))
+
+    assert blocked_info["equip_battle_item_applied"] is False
+    assert blocked_info["equip_battle_item_slot"] == 0
+    assert reward == pytest.approx(0.0)
+    assert env.equipped_hero_items == [
+        env.BONUS_SMALL_HEAL_ITEM_NAME,
+        env.BONUS_LARGE_HEAL_ITEM_NAME,
+    ]

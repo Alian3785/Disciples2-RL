@@ -1,6 +1,6 @@
 # ============================================================
 # КАСТОМНАЯ СРЕДА Gymnasium «RED vs BLUE»
-# Версия: action space = 27 (12 pos-действий + защита + ожидание + побег + 12 hero item actions)
+# Version: action space = 39 (12 pos actions + defend + wait + run + 24 hero item actions)
 # + big-юниты: Dead dragon (3-6), Asterot (7-10), Gargoyle (9-12)
 # + Чекпоинты каждые 1,000,000 шагов
 # + Тест с логами и улучшенной визуализацией (большие карточки)
@@ -374,6 +374,10 @@ HERO_LEADERSHIP_LEVEL = 3
 HERO_ENDURANCE_LEVEL = 4
 HERO_STRENGTH_LEVEL = 5
 HERO_SECOND_LEADERSHIP_LEVEL = 6
+HERO_BANNER_BEARER_LEVEL = 7
+HERO_MARCHING_LORE_LEVEL = 8
+HERO_ARTIFACT_KNOWLEDGE_LEVEL = 9
+HERO_SORCERY_LORE_LEVEL = 10
 HERO_ENDURANCE_HEALTH_MULTIPLIER = 1.20
 HERO_STRENGTH_DAMAGE_MULTIPLIER = 1.25
 
@@ -721,9 +725,17 @@ FIRST_HERO_ITEM_ACTION_START: int = len(TARGET_POSITIONS) + 3
 SECOND_HERO_ITEM_ACTION_START: int = FIRST_HERO_ITEM_ACTION_START + len(
     HERO_ITEM_TARGET_SLOTS
 )
+FIRST_HERO_ITEM_ENEMY_ACTION_START: int = SECOND_HERO_ITEM_ACTION_START + len(
+    HERO_ITEM_TARGET_SLOTS
+)
+SECOND_HERO_ITEM_ENEMY_ACTION_START: int = FIRST_HERO_ITEM_ENEMY_ACTION_START + len(
+    HERO_ITEM_TARGET_SLOTS
+)
 DEFEND_ARMOR_BONUS: int = 50
 WAIT_INIT_DIVISOR: int = 10
-TOTAL_AGENT_ACTIONS: int = SECOND_HERO_ITEM_ACTION_START + len(HERO_ITEM_TARGET_SLOTS)  # 27
+TOTAL_AGENT_ACTIONS: int = SECOND_HERO_ITEM_ENEMY_ACTION_START + len(
+    HERO_ITEM_TARGET_SLOTS
+)  # 39
 
 RED_FRONT_POSITIONS: List[int] = [1, 2, 3]
 RED_BACK_POSITIONS: List[int] = [4, 5, 6]
@@ -795,8 +807,8 @@ def _to01_bool(v) -> float:
 class BattleEnv(gym.Env):
     """
     Observation (720): 12 слотов ? 60 признаков (добавлены типы Betrezen, Uter и Uter Demon).
-    Action space: Discrete(27) — 12 выборов pos1..pos12 + защита + ожидание + побег
-    + hero-only действия "первый/второй предмет" по своим слотам 1..6.
+    Action space: Discrete(39): 12 position actions + defend + wait + run
+    + hero-only item slot 1/2 actions against blue and red positions 1..6.
     """
 
     metadata = {"render_modes": []}
@@ -823,8 +835,8 @@ class BattleEnv(gym.Env):
         self.last_battle_exp: float = 0.0
         self.last_levelups: List[str] = []
 
-        # Action space = 12 целей + защита + ожидание + побег + 12 hero item actions
-        self.action_space = spaces.Discrete(TOTAL_AGENT_ACTIONS)  # 27
+        # Action space = 12 targets + defend/wait/run + 24 hero item actions.
+        self.action_space = spaces.Discrete(TOTAL_AGENT_ACTIONS)  # 39
 
         # Observation space contract: each component is expected in [0, 1].
         low_unit = np.zeros(FEATURES_PER_UNIT, dtype=np.float32)
@@ -862,6 +874,719 @@ class BattleEnv(gym.Env):
         effect = self.hero_item_effects.get(str(item_name), {})
         return dict(effect) if isinstance(effect, dict) else {}
 
+    @staticmethod
+    def _normalize_hero_item_target_team(value: object) -> str:
+        normalized = str(value or "").strip().lower()
+        if normalized in ("ally", "allies", "own", "self", "blue"):
+            return "blue"
+        if normalized in ("enemy", "enemies", "red"):
+            return "red"
+        return normalized
+
+    def _hero_item_effect_target_team(
+        self,
+        *,
+        effect: Dict[str, object],
+        effect_kind: str,
+    ) -> str:
+        explicit_team = self._normalize_hero_item_target_team(effect.get("target_team"))
+        if explicit_team:
+            return explicit_team
+        if effect_kind in ("heal", "revive", "summon", "damage_buff", "extra_turn"):
+            return "blue"
+        if effect_kind in (
+            "damage",
+            "drain",
+            "dot",
+            "paralysis",
+            "transform",
+            "lycanthropy",
+            "debuff_damage",
+        ):
+            return "red"
+        return ""
+
+    @staticmethod
+    def _hero_item_effect_scope(effect: Dict[str, object]) -> str:
+        normalized = str(effect.get("scope", "single") or "single").strip().lower()
+        return "party" if normalized in ("party", "group", "all") else "single"
+
+    @staticmethod
+    def _hero_item_effect_amount(effect: Dict[str, object]) -> float:
+        try:
+            return float(effect.get("amount", effect.get("damage", 0.0)) or 0.0)
+        except (TypeError, ValueError):
+            return 0.0
+
+    @staticmethod
+    def _hero_item_position_team(pos: int) -> str:
+        if int(pos) in BLUE_POSITIONS:
+            return "blue"
+        if int(pos) in RED_POSITIONS:
+            return "red"
+        return ""
+
+    @staticmethod
+    def _is_empty_battle_unit(unit: Optional[Dict]) -> bool:
+        if not isinstance(unit, dict):
+            return True
+        name = str(unit.get("name", "") or "").strip().lower()
+        if name in ("пусто", "РїСѓСЃС‚Рѕ".lower()):
+            return True
+        health = float(unit.get("health", 0) or unit.get("hp", 0) or 0)
+        max_health = float(unit.get("max_health", 0) or unit.get("maxhp", 0) or 0)
+        return health <= 0 and max_health <= 0
+
+    def _hero_item_target_state(self, effect: Dict[str, object], effect_kind: str) -> str:
+        explicit_state = str(effect.get("target_state", "") or "").strip().lower()
+        if explicit_state:
+            return explicit_state
+        if effect_kind == "summon":
+            return "empty_or_dead"
+        if effect_kind == "revive":
+            return "dead"
+        return "alive"
+
+    def _hero_item_target_matches_state(
+        self,
+        *,
+        effect: Dict[str, object],
+        effect_kind: str,
+        target_team: str,
+        target_pos: int,
+        target_unit: Optional[Dict],
+    ) -> bool:
+        if self._hero_item_position_team(target_pos) != target_team:
+            return False
+        if isinstance(target_unit, dict) and target_unit.get("team") != target_team:
+            return False
+
+        target_state = self._hero_item_target_state(effect, effect_kind)
+        is_empty = self._is_empty_battle_unit(target_unit)
+        health = (
+            float(target_unit.get("health", 0) or target_unit.get("hp", 0) or 0)
+            if isinstance(target_unit, dict)
+            else 0.0
+        )
+        max_health = (
+            float(target_unit.get("max_health", 0) or target_unit.get("maxhp", 0) or 0)
+            if isinstance(target_unit, dict)
+            else 0.0
+        )
+        alive = bool(isinstance(target_unit, dict) and not is_empty and health > 0)
+
+        if target_state == "alive":
+            return alive
+        if target_state == "dead":
+            return bool(
+                isinstance(target_unit, dict)
+                and not is_empty
+                and max_health > 0
+                and health <= 0
+            )
+        if target_state == "empty_or_dead":
+            if target_team != "blue":
+                return False
+            if target_pos in BLUE_BACK_POSITIONS and self._is_position_behind_big(target_pos):
+                return False
+            return bool(is_empty or (max_health > 0 and health <= 0))
+        return False
+
+    @staticmethod
+    def _hero_item_dot_fields(dot_type: object) -> Tuple[str, str]:
+        normalized = str(dot_type or "").strip().lower()
+        if normalized == "burn":
+            return "burn_turns_left", "burn_damage_per_tick"
+        if normalized in ("water", "frost", "freezing", "uran"):
+            return "uran_turns_left", "uran_damage_per_tick"
+        return "poison_turns_left", "poison_damage_per_tick"
+
+    @staticmethod
+    def _hero_item_unit_blocks_type(unit: Dict, damage_type: object) -> bool:
+        normalized_type = str(damage_type or "").strip()
+        if not normalized_type:
+            return False
+        normalized_lower = normalized_type.lower()
+        immunities_lower = {
+            str(value or "").strip().lower() for value in (unit.get("immunity") or [])
+        }
+        if normalized_lower in immunities_lower:
+            return True
+        resistances_lower = {
+            str(value or "").strip().lower() for value in (unit.get("resistance") or [])
+        }
+        if normalized_lower in resistances_lower:
+            return True
+        defence_flag_names = (
+            f"{normalized_type}defence",
+            f"{normalized_type}Defense",
+            f"{normalized_lower}defence",
+            f"{normalized_lower}_defence",
+        )
+        for flag_name in defence_flag_names:
+            try:
+                if int(unit.get(flag_name, 0) or 0) == 1:
+                    return True
+            except (TypeError, ValueError):
+                continue
+        return False
+
+    def _hero_item_find_unit_template(self, unit_name: str) -> Dict[str, object]:
+        normalized_name = str(unit_name or "").strip()
+        if not normalized_name:
+            return {}
+        template = BATTLE_TEMPLATE_BY_NAME.get(normalized_name, {})
+        return dict(template) if isinstance(template, dict) else {}
+
+    def _hero_item_party_targets(
+        self,
+        *,
+        target_team: str,
+        target_pos: int,
+        target_unit: Optional[Dict],
+    ) -> Tuple[Dict, ...]:
+        if self._hero_item_position_team(target_pos) != target_team:
+            return ()
+        if not isinstance(target_unit, dict) or target_unit.get("team") != target_team:
+            return ()
+        if self._is_empty_battle_unit(target_unit) or not self._alive(target_unit):
+            return ()
+        return tuple(
+            unit
+            for unit in self.combined
+            if unit.get("team") == target_team
+            and not self._is_empty_battle_unit(unit)
+            and self._alive(unit)
+        )
+
+    def _hero_item_effect_targets(
+        self,
+        *,
+        effect: Dict[str, object],
+        effect_kind: str,
+        target_team: str,
+        target_pos: int,
+        target_unit: Optional[Dict],
+    ) -> Tuple[Dict, ...]:
+        if not self._hero_item_target_matches_state(
+            effect=effect,
+            effect_kind=effect_kind,
+            target_team=target_team,
+            target_pos=target_pos,
+            target_unit=target_unit,
+        ):
+            return ()
+        if self._hero_item_effect_scope(effect) == "party":
+            return self._hero_item_party_targets(
+                target_team=target_team,
+                target_pos=target_pos,
+                target_unit=target_unit,
+            )
+        return (target_unit,) if isinstance(target_unit, dict) else ()
+
+    @staticmethod
+    def _hero_item_unit_defence_blocks_type(unit: Dict, damage_type: object) -> bool:
+        normalized_type = str(damage_type or "").strip()
+        if not normalized_type:
+            return False
+        normalized_lower = normalized_type.lower()
+        defence_flag_names = (
+            f"{normalized_type}defence",
+            f"{normalized_type}Defense",
+            f"{normalized_lower}defence",
+            f"{normalized_lower}_defence",
+        )
+        for flag_name in defence_flag_names:
+            try:
+                if int(unit.get(flag_name, 0) or 0) == 1:
+                    return True
+            except (TypeError, ValueError):
+                continue
+        return False
+
+    def _hero_item_attacker_proxy(
+        self,
+        source_unit: Optional[Dict],
+        effect: Dict[str, object],
+        *,
+        primary: bool = False,
+        unit_type: Optional[str] = None,
+    ) -> Dict:
+        proxy = dict(source_unit) if isinstance(source_unit, dict) else {}
+        proxy.setdefault("team", "blue")
+        proxy.setdefault("name", "Hero item")
+        proxy.setdefault("position", 0)
+        damage_type = str(effect.get("damage_type", "") or "").strip()
+        if damage_type:
+            if primary:
+                proxy["attack_type_primary"] = damage_type
+            proxy["attack_type_secondary"] = damage_type
+        if unit_type:
+            proxy["unit_type"] = str(unit_type)
+        return proxy
+
+    def _hero_item_type_effect_blocked(
+        self,
+        *,
+        source_unit: Optional[Dict],
+        target_unit: Dict,
+        effect: Dict[str, object],
+        primary_damage: bool = False,
+        status: bool = False,
+    ) -> bool:
+        damage_type = str(effect.get("damage_type", "") or "").strip()
+        if not damage_type:
+            return False
+
+        proxy = self._hero_item_attacker_proxy(
+            source_unit,
+            effect,
+            primary=primary_damage,
+        )
+        if primary_damage and self._is_immune_damage(proxy, target_unit):
+            self._log(
+                f"Hero item '{damage_type}' damage is blocked by immunity on "
+                f"{target_unit.get('team', '').upper()} {target_unit.get('name')}#{target_unit.get('position')}."
+            )
+            return True
+        if status and self._is_immune_status(proxy, target_unit):
+            self._log(
+                f"Hero item '{damage_type}' status is blocked by immunity on "
+                f"{target_unit.get('team', '').upper()} {target_unit.get('name')}#{target_unit.get('position')}."
+            )
+            return True
+        if self._resilience_blocks(proxy, target_unit, custom_tag=damage_type):
+            return True
+        if self._hero_item_unit_defence_blocks_type(target_unit, damage_type):
+            self._log(
+                f"Hero item '{damage_type}' is blocked by defence on "
+                f"{target_unit.get('team', '').upper()} {target_unit.get('name')}#{target_unit.get('position')}."
+            )
+            return True
+        return False
+
+    def _apply_hero_item_heal(self, target_unit: Dict, amount: float) -> float:
+        current_health = float(target_unit.get("health", 0) or 0)
+        max_health = float(
+            target_unit.get("max_health", 0) or target_unit.get("health", 0) or 0
+        )
+        if max_health <= 0 or current_health <= 0 or current_health >= max_health:
+            return 0.0
+        new_health = min(max_health, current_health + float(amount or 0.0))
+        healed = max(0.0, new_health - current_health)
+        target_unit["health"] = int(round(new_health))
+        if "hp" in target_unit:
+            target_unit["hp"] = int(round(new_health))
+        return healed
+
+    def _apply_hero_item_revive(self, target_unit: Dict, amount: float) -> float:
+        current_health = float(target_unit.get("health", 0) or 0)
+        max_health = float(
+            target_unit.get("max_health", 0) or target_unit.get("health", 0) or 0
+        )
+        if max_health <= 0 or current_health > 0:
+            return 0.0
+        revive_hp = min(max_health, max(1.0, float(amount or 0.0)))
+        target_unit["health"] = int(round(revive_hp))
+        if "hp" in target_unit:
+            target_unit["hp"] = int(round(revive_hp))
+        target_unit["paralyzed"] = 0
+        target_unit["long_paralyzed"] = 0
+        target_unit["running_away"] = 0
+        return revive_hp
+
+    def _apply_hero_item_damage(
+        self,
+        *,
+        source_unit: Optional[Dict],
+        target_unit: Dict,
+        effect: Dict[str, object],
+    ) -> float:
+        effect_amount = self._hero_item_effect_amount(effect)
+        current_health = float(target_unit.get("health", 0) or 0)
+        if effect_amount <= 0 or current_health <= 0:
+            return 0.0
+        if self._hero_item_type_effect_blocked(
+            source_unit=source_unit,
+            target_unit=target_unit,
+            effect=effect,
+            primary_damage=True,
+        ):
+            return 0.0
+        damage = min(current_health, effect_amount)
+        new_health = max(0.0, current_health - damage)
+        target_unit["health"] = int(round(new_health))
+        if "hp" in target_unit:
+            target_unit["hp"] = int(round(new_health))
+        if new_health <= 0:
+            target_unit["initiative"] = 0
+            self._kill_linked_summons(target_unit)
+            self._release_lord_burn_from_unit(target_unit)
+        return damage
+
+    def _apply_hero_item_drain(
+        self,
+        *,
+        source_unit: Optional[Dict],
+        target_unit: Dict,
+        effect: Dict[str, object],
+    ) -> float:
+        damage = self._apply_hero_item_damage(
+            source_unit=source_unit,
+            target_unit=target_unit,
+            effect=effect,
+        )
+        if damage > 0 and isinstance(source_unit, dict):
+            self._apply_vampiric_heal(
+                source_unit,
+                int(round(damage)),
+                share_leftover=bool(effect.get("share_leftover", False)),
+            )
+        return damage
+
+    def _apply_hero_item_dot(
+        self,
+        *,
+        source_unit: Optional[Dict],
+        target_unit: Dict,
+        effect: Dict[str, object],
+    ) -> float:
+        if not self._alive(target_unit):
+            return 0.0
+        amount = self._hero_item_effect_amount(effect)
+        if amount <= 0:
+            return 0.0
+        if self._hero_item_type_effect_blocked(
+            source_unit=source_unit,
+            target_unit=target_unit,
+            effect=effect,
+            status=True,
+        ):
+            return 0.0
+
+        turns_key, damage_key = self._hero_item_dot_fields(effect.get("dot_type"))
+        max_turns = POISON_TURNS
+        if turns_key == "burn_turns_left":
+            max_turns = BURN_TURNS
+        elif turns_key == "uran_turns_left":
+            max_turns = URAN_TURNS
+        existing_turns = int(target_unit.get(turns_key, 0) or 0)
+        existing_damage = int(target_unit.get(damage_key, 0) or 0)
+        if existing_turns > 0 and existing_damage >= int(round(amount)):
+            return 0.0
+
+        target_unit[turns_key] = self.rng.randint(1, max_turns)
+        target_unit[damage_key] = int(round(amount))
+        return float(amount)
+
+    def _apply_hero_item_damage_buff(
+        self,
+        *,
+        target_unit: Dict,
+        effect: Dict[str, object],
+    ) -> float:
+        try:
+            multiplier = float(effect.get("damage_multiplier", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            multiplier = 0.0
+        if multiplier <= 0.0 or not self._alive(target_unit):
+            return 0.0
+        base_damage = int(target_unit.get("original_damage", 0) or 0)
+        if base_damage <= 0:
+            base_damage = int(target_unit.get("damage", 0) or 0)
+        if base_damage <= 0:
+            return 0.0
+        target_unit["original_damage"] = base_damage
+        new_damage = max(0, int(round(base_damage * multiplier)))
+        if new_damage == int(target_unit.get("damage", 0) or 0):
+            return 0.0
+        target_unit["damage"] = new_damage
+        target_unit["powerup"] = 1
+        return float(new_damage - base_damage)
+
+    def _apply_hero_item_extra_turn(
+        self,
+        *,
+        source_unit: Optional[Dict],
+        target_unit: Dict,
+    ) -> float:
+        if not self._alive(target_unit):
+            return 0.0
+        base_ini = int(target_unit.get("initiative_base", 0) or 0)
+        target_unit["initiative"] = base_ini
+        target_unit.setdefault("bonusturn", 0)
+        target_unit["bonusturn"] = int(target_unit.get("bonusturn", 0) or 0) + 1
+        return 1.0
+
+    def _apply_hero_item_paralysis(
+        self,
+        *,
+        source_unit: Optional[Dict],
+        target_unit: Dict,
+        effect: Dict[str, object],
+    ) -> float:
+        proxy = self._hero_item_attacker_proxy(source_unit, effect, primary=True)
+        return 1.0 if self._apply_paralysis_effect(proxy, target_unit) else 0.0
+
+    def _apply_hero_item_transform(
+        self,
+        *,
+        source_unit: Optional[Dict],
+        target_unit: Dict,
+        effect: Dict[str, object],
+    ) -> float:
+        proxy = self._hero_item_attacker_proxy(source_unit, effect)
+        if self._hero_item_type_effect_blocked(
+            source_unit=proxy,
+            target_unit=target_unit,
+            effect=effect,
+            status=True,
+        ):
+            return 0.0
+        if target_unit.get("transformed", 0) == 1:
+            return 0.0
+        self._apply_witch_effect(proxy, target_unit)
+        return 1.0
+
+    def _apply_hero_item_lycanthropy(
+        self,
+        *,
+        source_unit: Optional[Dict],
+        target_unit: Dict,
+        effect: Dict[str, object],
+    ) -> float:
+        if self._hero_item_type_effect_blocked(
+            source_unit=source_unit,
+            target_unit=target_unit,
+            effect=effect,
+            status=True,
+        ):
+            return 0.0
+        unit_name = str(effect.get("transform_unit_name", "") or "").strip()
+        template = self._hero_item_find_unit_template(unit_name)
+        if not template or target_unit.get("transformed", 0) == 1:
+            return 0.0
+
+        self._ensure_transform_snapshot(target_unit, include_health_fields=True)
+        old_hp = target_unit.get("health", 0)
+        old_max = target_unit.get("max_health", old_hp)
+        new_max = int(template.get("max_health", 0) or 0)
+        new_health = self._scale_health_to_new_max(old_hp, old_max, new_max)
+        old_initiative = target_unit.get("initiative", 0)
+
+        target_unit["name"] = template.get("form_name", unit_name)
+        target_unit["accuracy"] = int(template.get("accuracy", 0) or 0)
+        target_unit["accuracy_secondary"] = int(template.get("accuracy_secondary", 0) or 0)
+        target_unit["damage"] = int(template.get("damage", 0) or 0)
+        target_unit["damage_secondary"] = int(template.get("damage_secondary", 0) or 0)
+        target_unit["original_damage"] = target_unit["damage"]
+        target_unit["attack_type_primary"] = template.get("attack_type_primary", "Weapon")
+        target_unit["attack_type_secondary"] = template.get("attack_type_secondary", "")
+        target_unit["initiative_base"] = int(template.get("initiative_base", 0) or 0)
+        target_unit["initiative"] = (
+            old_initiative if int(old_initiative or 0) == 0 else target_unit["initiative_base"]
+        )
+        target_unit["unit_type"] = template.get("unit_type", target_unit.get("unit_type", ""))
+        target_unit["stand"] = template.get("stand", target_unit.get("stand", "ahead"))
+        target_unit["armor"] = int(template.get("armor", 0) or 0)
+        target_unit["immunity"] = list(template.get("immunity", []))
+        target_unit["resistance"] = list(template.get("resistance", []))
+        target_unit["resilience_used_types"] = []
+        target_unit["big"] = bool(template.get("big", False))
+        target_unit["Level"] = int(template.get("Level", target_unit.get("Level", 0)) or 0)
+        target_unit["max_health"] = new_max
+        target_unit["health"] = new_health
+        if "maxhp" in target_unit:
+            target_unit["maxhp"] = new_max
+        if "hp" in target_unit:
+            target_unit["hp"] = new_health
+        target_unit["transformed"] = 1
+        target_unit["transform_effect"] = "lycanthropy"
+        return 1.0
+
+    def _apply_hero_item_damage_debuff(
+        self,
+        *,
+        source_unit: Optional[Dict],
+        target_unit: Dict,
+        effect: Dict[str, object],
+    ) -> float:
+        if self._hero_item_type_effect_blocked(
+            source_unit=source_unit,
+            target_unit=target_unit,
+            effect=effect,
+            status=True,
+        ):
+            return 0.0
+        if target_unit.get("teamated", 0) == 1:
+            return 0.0
+        try:
+            multiplier = float(effect.get("damage_multiplier", 1.0) or 1.0)
+        except (TypeError, ValueError):
+            multiplier = 1.0
+        current_damage = int(target_unit.get("damage", 0) or 0)
+        new_damage = max(0, int(round(current_damage * max(0.0, multiplier))))
+        target_unit["teamated"] = 1
+        target_unit["damage"] = new_damage
+        return float(max(0, current_damage - new_damage))
+
+    def _build_hero_item_summon_unit(
+        self,
+        *,
+        source_unit: Optional[Dict],
+        target_team: str,
+        target_pos: int,
+        effect: Dict[str, object],
+    ) -> Optional[Dict]:
+        unit_name = str(effect.get("summon_unit_name", "") or "").strip()
+        template = self._hero_item_find_unit_template(unit_name)
+        if not template:
+            return None
+
+        max_health = int(template.get("max_health", 0) or 0)
+        summon_unit = {
+            "name": template.get("form_name", unit_name),
+            "initiative": int(template.get("initiative_base", 0) or 0),
+            "initiative_base": int(template.get("initiative_base", 0) or 0),
+            "team": str(target_team),
+            "position": int(target_pos),
+            "stand": "ahead" if int(target_pos) in (RED_FRONT_POSITIONS + BLUE_FRONT_POSITIONS) else "behind",
+            "unit_type": template.get("unit_type", "Warrior"),
+            "Level": int(template.get("Level", 0) or 0),
+            "damage": int(template.get("damage", 0) or 0),
+            "damage_secondary": int(template.get("damage_secondary", 0) or 0),
+            "original_damage": int(template.get("damage", 0) or 0),
+            "health": max_health,
+            "max_health": max_health,
+            "armor": int(template.get("armor", 0) or 0),
+            "accuracy": int(template.get("accuracy", 0) or 0),
+            "accuracy_secondary": int(template.get("accuracy_secondary", 0) or 0),
+            "immunity": list(template.get("immunity", [])),
+            "resistance": list(template.get("resistance", [])),
+            "attack_type_primary": template.get("attack_type_primary", "Weapon"),
+            "attack_type_secondary": template.get("attack_type_secondary", ""),
+            "big": bool(template.get("big", False)),
+            "paralyzed": 0,
+            "long_paralyzed": 0,
+            "running_away": 0,
+            "transformed": 0,
+            "hero": False,
+            "basestats": {},
+            "exp_kill": 0,
+            "exp_required": 0,
+            "exp_current": 0,
+            "next_level_exp": 0,
+            "needaunit": 0,
+            "turns_into": [],
+            "bonusturn": 0,
+            "defense": 0,
+            "waited": 0,
+            "poison_turns_left": 0,
+            "poison_damage_per_tick": 0,
+            "burn_turns_left": 0,
+            "burn_damage_per_tick": 0,
+            "burn_source_lord_pos": None,
+            "uran_turns_left": 0,
+            "uran_damage_per_tick": 0,
+            "resilience_used_types": [],
+            "base_armor": int(template.get("armor", 0) or 0),
+        }
+        if isinstance(source_unit, dict):
+            summon_unit["Summoned"] = int(source_unit.get("position", 0) or 0)
+        _apply_transformations_to_unit(summon_unit)
+        return summon_unit
+
+    def _apply_hero_item_summon(
+        self,
+        *,
+        source_unit: Optional[Dict],
+        target_team: str,
+        target_pos: int,
+        target_unit: Dict,
+        effect: Dict[str, object],
+    ) -> float:
+        summon_unit = self._build_hero_item_summon_unit(
+            source_unit=source_unit,
+            target_team=target_team,
+            target_pos=target_pos,
+            effect=effect,
+        )
+        if not summon_unit:
+            return 0.0
+        if bool(summon_unit.get("big", False)) and int(target_pos) in (RED_BACK_POSITIONS + BLUE_BACK_POSITIONS):
+            return 0.0
+        if int(target_pos) in (RED_BACK_POSITIONS + BLUE_BACK_POSITIONS) and self._is_position_behind_big(target_pos):
+            return 0.0
+
+        target_unit.clear()
+        target_unit.update(summon_unit)
+        return 1.0
+
+    def _hero_item_effect_can_apply_to_target(
+        self,
+        *,
+        effect: Dict[str, object],
+        effect_kind: str,
+        target_unit: Dict,
+    ) -> bool:
+        if effect_kind == "heal":
+            return self._alive(target_unit)
+        if effect_kind == "revive":
+            current_health = float(target_unit.get("health", 0) or 0)
+            max_health = float(
+                target_unit.get("max_health", 0) or target_unit.get("health", 0) or 0
+            )
+            return max_health > 0 and current_health <= 0
+        if effect_kind == "summon":
+            target_pos = int(target_unit.get("position", 0) or 0)
+            unit_name = str(effect.get("summon_unit_name", "") or "").strip()
+            template = self._hero_item_find_unit_template(unit_name)
+            if not template:
+                return False
+            if bool(template.get("big", False)) and target_pos in (
+                RED_BACK_POSITIONS + BLUE_BACK_POSITIONS
+            ):
+                return False
+            if (
+                target_pos in (RED_BACK_POSITIONS + BLUE_BACK_POSITIONS)
+                and self._is_position_behind_big(target_pos)
+            ):
+                return False
+            return True
+        if effect_kind in ("damage", "drain"):
+            return self._hero_item_effect_amount(effect) > 0 and self._alive(target_unit)
+        if effect_kind == "dot":
+            amount = int(round(self._hero_item_effect_amount(effect)))
+            return amount > 0 and self._alive(target_unit)
+        if effect_kind == "damage_buff":
+            if not self._alive(target_unit):
+                return False
+            try:
+                multiplier = float(effect.get("damage_multiplier", 0.0) or 0.0)
+            except (TypeError, ValueError):
+                multiplier = 0.0
+            base_damage = int(target_unit.get("original_damage", 0) or 0)
+            if base_damage <= 0:
+                base_damage = int(target_unit.get("damage", 0) or 0)
+            return base_damage > 0 and int(round(base_damage * multiplier)) != int(
+                target_unit.get("damage", 0) or 0
+            )
+        if effect_kind == "extra_turn":
+            return self._alive(target_unit)
+        if effect_kind == "paralysis":
+            return self._alive(target_unit)
+        if effect_kind == "transform":
+            return self._alive(target_unit)
+        if effect_kind == "lycanthropy":
+            unit_name = str(effect.get("transform_unit_name", "") or "").strip()
+            return (
+                self._alive(target_unit)
+                and bool(self._hero_item_find_unit_template(unit_name))
+            )
+        if effect_kind == "debuff_damage":
+            return self._alive(target_unit)
+        return False
+
     def _hero_item_target_allowed(self, *, item_name: str, target_pos: Optional[int]) -> bool:
         effect = self._hero_item_effect(item_name)
         if not effect or target_pos is None:
@@ -870,17 +1595,29 @@ class BattleEnv(gym.Env):
         target_unit = self._unit_by_position(int(target_pos))
         if not isinstance(target_unit, dict):
             return False
-        if target_unit.get("team") != "blue":
+        target_team = self._hero_item_effect_target_team(
+            effect=effect,
+            effect_kind=effect_kind,
+        )
+        if not target_team or target_unit.get("team") != target_team:
             return False
-        if str(target_unit.get("name", "") or "").strip().lower() == "пусто":
+        targets = self._hero_item_effect_targets(
+            effect=effect,
+            effect_kind=effect_kind,
+            target_team=target_team,
+            target_pos=int(target_pos),
+            target_unit=target_unit,
+        )
+        if not targets:
             return False
-        health = float(target_unit.get("health", 0) or 0)
-        max_health = float(target_unit.get("max_health", 0) or target_unit.get("health", 0) or 0)
-        if effect_kind == "heal":
-            return max_health > 0 and health > 0 and health < max_health
-        if effect_kind == "revive":
-            return max_health > 0 and health <= 0
-        return False
+        return any(
+            self._hero_item_effect_can_apply_to_target(
+                effect=effect,
+                effect_kind=effect_kind,
+                target_unit=target,
+            )
+            for target in targets
+        )
 
     def _apply_hero_item_effect(
         self,
@@ -895,33 +1632,115 @@ class BattleEnv(gym.Env):
         if not isinstance(target_unit, dict):
             return False, None, 0.0
         effect_kind = str(effect.get("kind", "") or "").strip().lower()
-        effect_amount = float(effect.get("amount", 0.0) or 0.0)
-        if effect_kind == "heal":
-            current_health = float(target_unit.get("health", 0) or 0)
-            max_health = float(
-                target_unit.get("max_health", 0) or target_unit.get("health", 0) or 0
+        target_team = self._hero_item_effect_target_team(
+            effect=effect,
+            effect_kind=effect_kind,
+        )
+        if not target_team or target_unit.get("team") != target_team:
+            return False, None, 0.0
+        targets = self._hero_item_effect_targets(
+            effect=effect,
+            effect_kind=effect_kind,
+            target_team=target_team,
+            target_pos=int(target_pos),
+            target_unit=target_unit,
+        )
+        if not targets:
+            return False, None, 0.0
+
+        source_unit = (
+            self._unit_by_position(self.current_blue_attacker_pos)
+            if self.current_blue_attacker_pos is not None
+            else None
+        )
+        valid_attempt = any(
+            self._hero_item_effect_can_apply_to_target(
+                effect=effect,
+                effect_kind=effect_kind,
+                target_unit=target,
             )
-            if max_health <= 0 or current_health <= 0 or current_health >= max_health:
-                return False, None, 0.0
-            new_health = min(max_health, current_health + effect_amount)
-            healed = max(0.0, new_health - current_health)
-            target_unit["health"] = int(round(new_health))
-            if "hp" in target_unit:
-                target_unit["hp"] = int(round(new_health))
-            return healed > 0.0, "heal", healed
-        if effect_kind == "revive":
-            current_health = float(target_unit.get("health", 0) or 0)
-            max_health = float(
-                target_unit.get("max_health", 0) or target_unit.get("health", 0) or 0
-            )
-            if max_health <= 0 or current_health > 0:
-                return False, None, 0.0
-            revive_hp = max(1.0, effect_amount)
-            target_unit["health"] = int(round(revive_hp))
-            if "hp" in target_unit:
-                target_unit["hp"] = int(round(revive_hp))
-            return True, "revive", revive_hp
-        return False, None, 0.0
+            for target in targets
+        )
+        if not valid_attempt:
+            return False, None, 0.0
+
+        total_value = 0.0
+        for target in targets:
+            if effect_kind == "heal":
+                value = self._apply_hero_item_heal(
+                    target,
+                    self._hero_item_effect_amount(effect),
+                )
+            elif effect_kind == "revive":
+                value = self._apply_hero_item_revive(
+                    target,
+                    self._hero_item_effect_amount(effect),
+                )
+            elif effect_kind == "damage":
+                value = self._apply_hero_item_damage(
+                    source_unit=source_unit,
+                    target_unit=target,
+                    effect=effect,
+                )
+            elif effect_kind == "drain":
+                value = self._apply_hero_item_drain(
+                    source_unit=source_unit,
+                    target_unit=target,
+                    effect=effect,
+                )
+            elif effect_kind == "dot":
+                value = self._apply_hero_item_dot(
+                    source_unit=source_unit,
+                    target_unit=target,
+                    effect=effect,
+                )
+            elif effect_kind == "damage_buff":
+                value = self._apply_hero_item_damage_buff(
+                    target_unit=target,
+                    effect=effect,
+                )
+            elif effect_kind == "extra_turn":
+                value = self._apply_hero_item_extra_turn(
+                    source_unit=source_unit,
+                    target_unit=target,
+                )
+            elif effect_kind == "paralysis":
+                value = self._apply_hero_item_paralysis(
+                    source_unit=source_unit,
+                    target_unit=target,
+                    effect=effect,
+                )
+            elif effect_kind == "transform":
+                value = self._apply_hero_item_transform(
+                    source_unit=source_unit,
+                    target_unit=target,
+                    effect=effect,
+                )
+            elif effect_kind == "lycanthropy":
+                value = self._apply_hero_item_lycanthropy(
+                    source_unit=source_unit,
+                    target_unit=target,
+                    effect=effect,
+                )
+            elif effect_kind == "debuff_damage":
+                value = self._apply_hero_item_damage_debuff(
+                    source_unit=source_unit,
+                    target_unit=target,
+                    effect=effect,
+                )
+            elif effect_kind == "summon":
+                value = self._apply_hero_item_summon(
+                    source_unit=source_unit,
+                    target_team=target_team,
+                    target_pos=int(target_pos),
+                    target_unit=target,
+                    effect=effect,
+                )
+            else:
+                value = 0.0
+            total_value += max(0.0, float(value or 0.0))
+
+        return True, effect_kind, total_value
 
     def compute_action_mask(self) -> np.ndarray:
         """
@@ -945,11 +1764,21 @@ class BattleEnv(gym.Env):
             SECOND_HERO_ITEM_ACTION_START : SECOND_HERO_ITEM_ACTION_START
             + len(HERO_ITEM_TARGET_SLOTS)
         ]
+        first_enemy_item_mask = mask[
+            FIRST_HERO_ITEM_ENEMY_ACTION_START : FIRST_HERO_ITEM_ENEMY_ACTION_START
+            + len(HERO_ITEM_TARGET_SLOTS)
+        ]
+        second_enemy_item_mask = mask[
+            SECOND_HERO_ITEM_ENEMY_ACTION_START : SECOND_HERO_ITEM_ENEMY_ACTION_START
+            + len(HERO_ITEM_TARGET_SLOTS)
+        ]
         mask[DEFEND_ACTION_INDEX] = True
         mask[WAIT_ACTION_INDEX] = True
         mask[RUN_AWAY_ACTION_INDEX] = True
         first_item_mask[:] = False
         second_item_mask[:] = False
+        first_enemy_item_mask[:] = False
+        second_enemy_item_mask[:] = False
 
         # Если не ход BLUE или нет текущего атакера — не ограничиваем
         if self.current_blue_attacker_pos is None:
@@ -975,6 +1804,7 @@ class BattleEnv(gym.Env):
             second_item_name = self._hero_item_name_for_slot(2)
             for idx, slot_no in enumerate(HERO_ITEM_TARGET_SLOTS):
                 battle_pos = BLUE_POSITIONS[slot_no - 1]
+                enemy_battle_pos = RED_POSITIONS[slot_no - 1]
                 first_item_mask[idx] = self._hero_item_target_allowed(
                     item_name=first_item_name,
                     target_pos=battle_pos,
@@ -982,6 +1812,14 @@ class BattleEnv(gym.Env):
                 second_item_mask[idx] = self._hero_item_target_allowed(
                     item_name=second_item_name,
                     target_pos=battle_pos,
+                )
+                first_enemy_item_mask[idx] = self._hero_item_target_allowed(
+                    item_name=first_item_name,
+                    target_pos=enemy_battle_pos,
+                )
+                second_enemy_item_mask[idx] = self._hero_item_target_allowed(
+                    item_name=second_item_name,
+                    target_pos=enemy_battle_pos,
                 )
 
         def is_alive_red(pos: int) -> bool:
@@ -4967,7 +5805,22 @@ class BattleEnv(gym.Env):
         is_second_hero_item_action = SECOND_HERO_ITEM_ACTION_START <= action_idx < (
             SECOND_HERO_ITEM_ACTION_START + len(HERO_ITEM_TARGET_SLOTS)
         )
-        is_hero_item_action = is_first_hero_item_action or is_second_hero_item_action
+        is_first_hero_item_enemy_action = (
+            FIRST_HERO_ITEM_ENEMY_ACTION_START
+            <= action_idx
+            < (FIRST_HERO_ITEM_ENEMY_ACTION_START + len(HERO_ITEM_TARGET_SLOTS))
+        )
+        is_second_hero_item_enemy_action = (
+            SECOND_HERO_ITEM_ENEMY_ACTION_START
+            <= action_idx
+            < (SECOND_HERO_ITEM_ENEMY_ACTION_START + len(HERO_ITEM_TARGET_SLOTS))
+        )
+        is_hero_item_action = (
+            is_first_hero_item_action
+            or is_second_hero_item_action
+            or is_first_hero_item_enemy_action
+            or is_second_hero_item_enemy_action
+        )
         target_pos = None
         hero_item_slot = None
         hero_item_target_pos = None
@@ -4977,6 +5830,7 @@ class BattleEnv(gym.Env):
         hero_item_effect_kind = None
         hero_item_effect_value = 0.0
         hero_item_consumed = False
+        hero_item_target_team = ""
         if action_idx < len(TARGET_POSITIONS):
             target_pos = TARGET_POSITIONS[action_idx]
         elif is_first_hero_item_action:
@@ -4985,12 +5839,28 @@ class BattleEnv(gym.Env):
                 action_idx - FIRST_HERO_ITEM_ACTION_START
             ]
             hero_item_target_pos = BLUE_POSITIONS[hero_item_slot - 1]
+            hero_item_target_team = "blue"
         elif is_second_hero_item_action:
             hero_item_no = 2
             hero_item_slot = HERO_ITEM_TARGET_SLOTS[
                 action_idx - SECOND_HERO_ITEM_ACTION_START
             ]
             hero_item_target_pos = BLUE_POSITIONS[hero_item_slot - 1]
+            hero_item_target_team = "blue"
+        elif is_first_hero_item_enemy_action:
+            hero_item_no = 1
+            hero_item_slot = HERO_ITEM_TARGET_SLOTS[
+                action_idx - FIRST_HERO_ITEM_ENEMY_ACTION_START
+            ]
+            hero_item_target_pos = RED_POSITIONS[hero_item_slot - 1]
+            hero_item_target_team = "red"
+        elif is_second_hero_item_enemy_action:
+            hero_item_no = 2
+            hero_item_slot = HERO_ITEM_TARGET_SLOTS[
+                action_idx - SECOND_HERO_ITEM_ENEMY_ACTION_START
+            ]
+            hero_item_target_pos = RED_POSITIONS[hero_item_slot - 1]
+            hero_item_target_team = "red"
         if hero_item_no is not None:
             hero_item_name = self._hero_item_name_for_slot(hero_item_no)
 
@@ -5068,6 +5938,8 @@ class BattleEnv(gym.Env):
                             if 0 <= slot_index < len(self.equipped_hero_items):
                                 self.equipped_hero_items[slot_index] = None
                             hero_item_consumed = True
+                            if hero_item_effect_kind in ("damage", "drain"):
+                                self._check_victory_after_hit()
 
                         target_label = (
                             f"{target_unit['name']}#{target_unit['position']}"
@@ -5079,6 +5951,12 @@ class BattleEnv(gym.Env):
                                 f"BLUE действие: {attacker['name']}#{attacker['position']} "
                                 f"использует предмет {hero_item_no} '{hero_item_name}' на слот {hero_item_slot} "
                                 f"({target_label}) и лечит на {int(round(hero_item_effect_value))} HP."
+                            )
+                        elif hero_item_applied and hero_item_effect_kind == "damage":
+                            self._log(
+                                f"BLUE action: {attacker['name']}#{attacker['position']} "
+                                f"uses item {hero_item_no} '{hero_item_name}' on {target_label} "
+                                f"for {int(round(hero_item_effect_value))} damage."
                             )
                         elif hero_item_applied and hero_item_effect_kind == "revive":
                             self._log(
@@ -5291,6 +6169,7 @@ class BattleEnv(gym.Env):
             "battle_hero_item_target_pos": (
                 int(hero_item_target_pos) if hero_item_target_pos is not None else None
             ),
+            "battle_hero_item_target_team": str(hero_item_target_team or ""),
             "battle_hero_item_name": str(hero_item_name or ""),
             "battle_hero_item_effect_kind": (
                 str(hero_item_effect_kind) if hero_item_effect_kind else ""
