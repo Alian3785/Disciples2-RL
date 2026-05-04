@@ -388,6 +388,12 @@ class CampaignEnv(
         self.equipped_artifact_items: List[Optional[str]] = [None] * int(
             self.ARTIFACT_EQUIP_SLOTS
         )
+        self.equipped_banner_items: List[Optional[str]] = [None] * int(
+            self.BANNER_EQUIP_SLOTS
+        )
+        self.equipped_boot_items: List[Optional[str]] = [None] * int(
+            self.BOOTS_EQUIP_SLOTS
+        )
         self.artifact_auto_equip_next_slot: int = 0
         self.battle_item_equip_used_this_turn: bool = False
         self.enemy_team_states: Dict[int, List[Dict]] = self._create_initial_enemy_team_states()
@@ -438,7 +444,7 @@ class CampaignEnv(
             self.grid_scroll_cast_action_start
             + int(self.MAX_SCROLL_CAST_ACTIONS)
         )
-        # Action space: максимум из двух режимов (battle = 27 действий, grid расширен для экономики и заклинаний)
+        # Action space: grid is wider than battle (battle = 39 actions).
         self.action_space = spaces.Discrete(total_actions)
 
         # Observation space: режим + grid + battle + ход + золото
@@ -479,14 +485,16 @@ class CampaignEnv(
         self.turns = 0
         self.gold = 0.0
         self.spell_learning_locked = False
-        self._sync_moves_per_turn_with_hero(units=self.blue_team_state, refill=True)
         self.battle_env = None
         self._campaign_logs = []
         self.heroitems = []
         self._invalidate_inventory_cache()
         self.equipped_hero_items = [None] * int(self.BATTLE_EQUIP_SLOTS)
         self.equipped_artifact_items = [None] * int(self.ARTIFACT_EQUIP_SLOTS)
+        self.equipped_banner_items = [None] * int(self.BANNER_EQUIP_SLOTS)
+        self.equipped_boot_items = [None] * int(self.BOOTS_EQUIP_SLOTS)
         self.artifact_auto_equip_next_slot = 0
+        self._sync_moves_per_turn_with_hero(units=self.blue_team_state, refill=True)
         self.battle_item_equip_used_this_turn = False
         self.enemy_team_states = self._create_initial_enemy_team_states()
         self.enemy_map_spell_effects = {}
@@ -497,6 +505,7 @@ class CampaignEnv(
         self.extra_heal_bottles = 0
         self.extra_healing_bottles = 0
         self.extra_revive_bottles = 0
+        self._sync_counter_backed_battle_items()
         self.merchant_stocks = self._create_initial_merchant_stocks()
         self.spell_shop_stocks = self._create_initial_spell_shop_stocks()
         self.spell_shop_purchased_spell_ids = set()
@@ -595,6 +604,8 @@ class CampaignEnv(
         info.update(self._spell_state_info())
         info.update(self._ruin_progress_info())
         info.update(self._artifact_state_info())
+        info.update(self._banner_state_info())
+        info.update(self._boot_state_info())
         info.update(self._scripted_capital_bot_info())
         info.update(self._merchant_context_info(self.grid_env.agent_pos))
         info.update(self._spell_shop_context_info(self.grid_env.agent_pos))
@@ -636,8 +647,6 @@ class CampaignEnv(
             return self._step_cast_support_spell(action)
         if action >= self.grid_legion_damage_spell_action_start:
             return self._step_cast_legion_damage_spell(action)
-        if action >= self.GRID_EQUIP_BATTLE_ITEM2_ACTION_START:
-            return self._step_equip_battle_item(action)
         if action >= self.GRID_EQUIP_BATTLE_ITEM1_ACTION_START:
             return self._step_equip_battle_item(action)
         if action >= self.grid_settlement_upgrade_action_start:
@@ -685,7 +694,9 @@ class CampaignEnv(
         if action >= self.GRID_BOTTLE_ACTION_START:
             return self._step_heal_with_bottle(action)
 
-        if 0 <= action <= 7 and self.moves <= 0:
+        grid_move_cost = int(self.GRID_MOVE_COST)
+
+        if 0 <= action <= 7 and self.moves < grid_move_cost:
             grid_obs = self._get_grid_obs()
             info = {
                 "mode": "grid",
@@ -693,6 +704,7 @@ class CampaignEnv(
                 "enemies_alive": dict(self.grid_env.enemies_alive),
                 "battle_triggered": False,
                 "blocked_by_moves": True,
+                "move_cost": int(grid_move_cost),
                 "turns": self.turns,
                 "gold": self.gold,
                 "moves": self.moves,
@@ -729,6 +741,8 @@ class CampaignEnv(
         battle_engage_bonus = 0.0
         summon_hero_battle_bonus = 0.0
         combat_potion_battle_bonus = 0.0
+        battle_move_cost = 0
+        battle_move_spent = 0
 
         if old_pos != new_pos:
             self._log(f"Перемещение: {old_pos} -> {new_pos}")
@@ -745,7 +759,7 @@ class CampaignEnv(
             if not grid_info.get("blocked_by_obstacle", False):
                 stagnation_penalty = self._compute_stagnation_penalty(old_pos, new_pos)
             reward += stagnation_penalty
-            self._spend_moves(1)
+            self._spend_moves(grid_move_cost)
 
         if grid_info.get("battle_triggered"):
             enemy_id = grid_info.get("enemy_id")
@@ -765,7 +779,8 @@ class CampaignEnv(
                 )
                 reward += combat_potion_battle_bonus
                 self.combat_potion_battle_bonus_pending = False
-            self._apply_battle_grid_steps(extra_steps=10)
+            battle_move_cost = int(self._battle_grid_move_cost())
+            battle_move_spent = int(self._apply_battle_grid_steps())
         collected_chests = self._collect_adjacent_chests()
         collected_combat_potions = self._count_collected_combat_potions(collected_chests)
         combat_potion_pickup_reward = (
@@ -782,6 +797,7 @@ class CampaignEnv(
             "blocked_by_obstacle": grid_info.get("blocked_by_obstacle", False),
             "blocked_by_boundary": grid_info.get("blocked_by_boundary", False),
             "blocked_obstacle_pos": grid_info.get("blocked_target"),
+            "move_cost": int(grid_move_cost) if 0 <= grid_action <= 7 else 0,
             "grid_reward_raw": float(_grid_reward),
             "grid_reward_scaled": float(reward),
             "stagnation_penalty": float(stagnation_penalty),
@@ -793,6 +809,8 @@ class CampaignEnv(
                 int(enemy_id) for enemy_id in self.summon_hero_battle_bonus_enemy_ids_this_turn
             ),
             "combat_potion_battle_bonus": float(combat_potion_battle_bonus),
+            "battle_move_cost": int(battle_move_cost),
+            "battle_move_spent": int(battle_move_spent),
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
@@ -887,7 +905,13 @@ class CampaignEnv(
         if grid_info.get("battle_triggered"):
             enemy_id = grid_info["enemy_id"]
             self.current_enemy_id = enemy_id
-            self.battle_origin_pos = (int(old_pos[0]), int(old_pos[1]))
+            battle_origin_raw = (
+                new_pos if grid_info.get("battle_triggered_by") == "adjacent" else old_pos
+            )
+            self.battle_origin_pos = (
+                int(battle_origin_raw[0]),
+                int(battle_origin_raw[1]),
+            )
             self.current_battle_context = {"kind": "hero"}
             self.mode = self.MODE_BATTLE
 
@@ -954,8 +978,9 @@ class CampaignEnv(
         sale_info = self._sell_sell_only_heroitems_at_merchant(position=position)
         finalized_reward = float(reward) + float(sale_info["merchant_sale_reward"])
         finalized_info.update(sale_info)
+        self._sync_counter_backed_battle_items()
         self._sync_equipped_hero_items()
-        self._refresh_campaign_artifact_effects(log=False)
+        self._refresh_campaign_equipment_effects(log=False)
 
         if "grid_reward_scaled" in finalized_info:
             try:
@@ -974,6 +999,8 @@ class CampaignEnv(
         finalized_info["heroitems"] = list(self.heroitems)
         finalized_info["equipped_hero_items"] = list(self.equipped_hero_items)
         finalized_info.update(self._artifact_state_info())
+        finalized_info.update(self._banner_state_info())
+        finalized_info.update(self._boot_state_info())
         finalized_info["battle_items_equipped_total"] = int(self.battle_items_equipped_total)
         finalized_info["battle_items_used_total"] = int(self.battle_items_used_total)
         finalized_info["extra_heal_bottles"] = int(self.extra_heal_bottles or 0)
@@ -1069,7 +1096,8 @@ class CampaignEnv(
         if mode != "ansi":
             return None
 
-        self._refresh_campaign_artifact_effects(log=False)
+        self._refresh_campaign_equipment_effects(log=False)
+        self._sync_equipped_boot_items()
         lines = []
         lines.append(f"=== CAMPAIGN MODE: {'GRID' if self.mode == self.MODE_GRID else 'BATTLE'} ===")
 
@@ -1145,6 +1173,14 @@ class CampaignEnv(
             str(item_name or "пусто") for item_name in list(self.equipped_artifact_items or [])
         ]
         lines.append(f"Экипированные артефакты: [{', '.join(artifact_labels)}]")
+        banner_labels = [
+            str(item_name or "пусто") for item_name in list(self.equipped_banner_items or [])
+        ]
+        lines.append(f"Экипированное знамя: [{', '.join(banner_labels)}]")
+        boot_labels = [
+            str(item_name or "пусто") for item_name in list(self.equipped_boot_items or [])
+        ]
+        lines.append(f"Экипированные сапоги: [{', '.join(boot_labels)}]")
         lines.append(
             f"Боевые предметы: экипировано {int(self.battle_items_equipped_total)}, "
             f"использовано {int(self.battle_items_used_total)}"
@@ -1184,8 +1220,10 @@ class CampaignEnv(
         return result
     def get_state_summary(self) -> Dict:
         """Возвращает сводку текущего состояния."""
-        self._refresh_campaign_artifact_effects(log=False)
+        self._refresh_campaign_equipment_effects(log=False)
+        self._sync_equipped_boot_items()
         scroll_state = self._scroll_state_info()
+        boot_state = self._boot_state_info()
         return {
             "mode": "grid" if self.mode == self.MODE_GRID else "battle",
             "agent_pos": self.grid_env.agent_pos,
@@ -1204,6 +1242,9 @@ class CampaignEnv(
             "heroitems": list(self.heroitems),
             "equipped_hero_items": list(self.equipped_hero_items),
             "equipped_artifact_items": list(self.equipped_artifact_items),
+            "equipped_banner_items": list(self.equipped_banner_items),
+            "equipped_boot_items": list(boot_state["equipped_boot_items"]),
+            "active_boot_move_bonus": int(boot_state["active_boot_move_bonus"]),
             "artifact_auto_equip_next_slot": int(self.artifact_auto_equip_next_slot),
             "battle_items_equipped_total": int(self.battle_items_equipped_total),
             "battle_items_used_total": int(self.battle_items_used_total),

@@ -5,11 +5,13 @@
 - Текстовый (по умолчанию)
 - Графический (matplotlib) через флаг --viz
 
-По умолчанию берёт финальный чекпоинт:
-./campaign_models/offline-1765058113/final_model.zip
+Если --model-path не указан, подставляется последний по дате файла
+best/best_model.zip или final_model.zip в ./campaign_models (см. --checkpoint).
 """
 
 import argparse
+import os
+import sys
 import time
 from typing import Tuple
 
@@ -31,12 +33,59 @@ def mask_fn(env: CampaignEnv) -> np.ndarray:
     return env.compute_action_mask()
 
 
+def find_latest_checkpoint(
+    model_kind: str,
+    base_dir: str = "campaign_models",
+) -> str | None:
+    """Последний по mtime чекпоинт: ``final`` (final_model.zip) или ``best`` (best/best_model.zip)."""
+    if not os.path.isdir(base_dir):
+        return None
+    candidates: list[tuple[str, float]] = []
+    for name in os.listdir(base_dir):
+        run_dir = os.path.join(base_dir, name)
+        if not os.path.isdir(run_dir):
+            continue
+        if model_kind == "best":
+            path = os.path.join(run_dir, "best", "best_model.zip")
+        else:
+            path = os.path.join(run_dir, "final_model.zip")
+        if os.path.isfile(path):
+            candidates.append((path, os.path.getmtime(path)))
+    if not candidates:
+        return None
+    return max(candidates, key=lambda x: x[1])[0]
+
+
+def resolve_model_path(model_path: str | None, checkpoint: str) -> str:
+    if model_path:
+        return model_path
+    path = find_latest_checkpoint(checkpoint)
+    if path:
+        print(f"[model] {checkpoint}: {path}", file=sys.stderr)
+        return path
+    if checkpoint == "best":
+        fallback = find_latest_checkpoint("final")
+        if fallback:
+            print(
+                "[model] best_model.zip не найден, используется последний final_model.zip: "
+                f"{fallback}",
+                file=sys.stderr,
+            )
+            return fallback
+    raise SystemExit(
+        f"Не найдена модель в {os.path.abspath('campaign_models')}. "
+        "Укажите --model-path или обучите модель."
+    )
+
+
 def run_episode(
     model: MaskablePPO,
     env: Monitor,
     max_steps: int,
     deterministic: bool,
     sleep_s: float,
+    *,
+    quiet: bool = False,
 ) -> Tuple[int, dict]:
     """Выполняет один эпизод и печатает состояние после каждого шага."""
     obs, _ = env.reset()
@@ -49,7 +98,8 @@ def run_episode(
             action_masks=action_masks,
         )
         obs, reward, terminated, truncated, info = env.step(action)
-        env.render()
+        if not quiet:
+            env.render()
         if sleep_s > 0:
             time.sleep(sleep_s)
         if terminated or truncated:
@@ -62,11 +112,22 @@ def main():
     parser = argparse.ArgumentParser(description="Визуализация финальной модели Campaign")
     parser.add_argument(
         "--model-path",
-        default="./campaign_models/offline-1765058113/final_model.zip",
-        help="Путь к .zip модели MaskablePPO",
+        default=None,
+        help="Путь к .zip модели MaskablePPO (если не задан — авто из campaign_models)",
+    )
+    parser.add_argument(
+        "--checkpoint",
+        choices=("best", "final"),
+        default="best",
+        help="Какой чекпоинт брать при авто-поиске: best_model или final_model",
     )
     parser.add_argument("--steps", type=int, default=500, help="Максимум шагов за эпизод")
     parser.add_argument("--episodes", type=int, default=1, help="Сколько эпизодов запустить подряд")
+    parser.add_argument(
+        "--quiet-eval",
+        action="store_true",
+        help="Без логов кампании и без env.render(); по эпизоду — компактная строка ПОБЕДА/НЕТ",
+    )
     parser.add_argument(
         "--deterministic",
         action="store_true",
@@ -99,12 +160,14 @@ def main():
     )
     args = parser.parse_args()
 
+    model_file = resolve_model_path(args.model_path, args.checkpoint)
+
     # Графическая визуализация (matplotlib)
     if args.viz:
         from visualize_campaign import run_campaign_visualization
 
         run_campaign_visualization(
-            model_path=args.model_path,
+            model_path=model_file,
             delay=args.sleep or 0.3,
             deterministic=args.deterministic,
             map_png_path=args.map_png,
@@ -112,19 +175,41 @@ def main():
         )
         return
 
-    env = Monitor(ActionMasker(CampaignEnv(log_enabled=True, realcapital=2), mask_fn))
-    model = MaskablePPO.load(args.model_path, env=env)
+    log_ok = not args.quiet_eval
+    env = Monitor(
+        ActionMasker(CampaignEnv(log_enabled=log_ok, realcapital=2), mask_fn),
+    )
+    model = MaskablePPO.load(model_file, env=env)
 
+    wins = 0
     for ep in range(1, args.episodes + 1):
-        print(f"\n=== Эпизод {ep}/{args.episodes} ===")
+        if not args.quiet_eval:
+            print(f"\n=== Эпизод {ep}/{args.episodes} ===")
         steps_done, info = run_episode(
             model=model,
             env=env,
             max_steps=args.steps,
             deterministic=args.deterministic,
             sleep_s=args.sleep,
+            quiet=args.quiet_eval,
         )
-        print(f"Эпизод завершён за {steps_done} шаг(ов). Info: {info}")
+        campaign_result = info.get("campaign_result")
+        is_win = campaign_result == "victory"
+        wins += int(is_win)
+        if args.quiet_eval:
+            outcome = "ПОБЕДА" if is_win else "НЕТ"
+            print(
+                f"Эпизод {ep}/{args.episodes}: {outcome}  "
+                f"(campaign_result={campaign_result}, шагов={steps_done})"
+            )
+        else:
+            print(f"Эпизод завершён за {steps_done} шаг(ов). Info: {info}")
+
+    if args.quiet_eval and args.episodes > 0:
+        print(
+            f"Итого побед в кампании: {wins}/{args.episodes} "
+            f"({100.0 * wins / args.episodes:.1f}%)",
+        )
 
     env.close()
 

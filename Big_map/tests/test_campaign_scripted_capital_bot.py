@@ -43,9 +43,71 @@ def test_scripted_capital_bot_moves_up_to_twenty_tiles_without_crossing_obstacle
     info = env._advance_scripted_capital_bot_one_turn()
     path = info["path"]
 
-    assert 0 < len(path) <= env.SCRIPTED_CAPITAL_BOT_MAX_STEPS_PER_TURN
+    assert 0 < len(path) <= env._scripted_bot_max_grid_moves_per_turn()
+    assert info["move_cost"] == 2
+    assert info["move_points_spent"] == len(path) * 2
     assert all(tuple(tile) not in env.grid_env.obstacle_positions for tile in path)
     assert env.scripted_capital_bot_position == tuple(path[-1])
+
+
+def test_scripted_capital_bot_uses_two_move_points_per_grid_step():
+    env = _make_env()
+    env.grid_env.enemy_positions = {
+        env.EMPIRE_TERRITORY_SOURCE_ENEMY_ID: env.empire_territory_source_tile,
+        1: (1, 1),
+    }
+    env.grid_env.enemies_alive = {
+        env.EMPIRE_TERRITORY_SOURCE_ENEMY_ID: False,
+        1: True,
+    }
+    env.grid_env.obstacle_positions = set()
+    env.scripted_capital_bot_position = env.empire_territory_source_tile
+    env._sync_scripted_capital_bot_grid_state()
+
+    info = env._advance_scripted_capital_bot_one_turn()
+    path = info["path"]
+
+    assert len(path) == env.SCRIPTED_CAPITAL_BOT_MAX_STEPS_PER_TURN // 2
+    assert info["move_points_budget"] == env.SCRIPTED_CAPITAL_BOT_MAX_STEPS_PER_TURN
+    assert info["move_points_spent"] == 20
+
+
+def test_scripted_capital_bot_battle_starts_from_adjacent_tile(monkeypatch):
+    env = _make_env()
+    enemy_id = 1
+    env.scripted_capital_bot_position = (5, 5)
+    env.grid_env.enemy_positions = {
+        env.EMPIRE_TERRITORY_SOURCE_ENEMY_ID: env.empire_territory_source_tile,
+        enemy_id: (7, 5),
+    }
+    env.grid_env.enemies_alive = {
+        env.EMPIRE_TERRITORY_SOURCE_ENEMY_ID: False,
+        enemy_id: True,
+    }
+    env.grid_env.obstacle_positions = set()
+    env.grid_env.dynamic_blocked_positions = set()
+
+    battles = []
+
+    def fake_battle(target_enemy_id: int):
+        battles.append(int(target_enemy_id))
+        env.grid_env.mark_enemy_defeated(int(target_enemy_id))
+        env.scripted_capital_bot_state = "returning"
+        return {"enemy_id": int(target_enemy_id), "winner": "blue"}
+
+    monkeypatch.setattr(env, "_run_scripted_capital_bot_battle", fake_battle)
+
+    info = env._advance_scripted_capital_bot_one_turn()
+
+    assert battles == [enemy_id]
+    assert "battle" in info["events"]
+    assert max(
+        abs(env.scripted_capital_bot_position[0] - env.grid_env.enemy_positions[enemy_id][0]),
+        abs(env.scripted_capital_bot_position[1] - env.grid_env.enemy_positions[enemy_id][1]),
+    ) == 1
+    assert env.scripted_capital_bot_position != env.grid_env.enemy_positions[enemy_id]
+    assert len(info["path"]) == 1
+    assert info["move_points_spent"] == 2
 
 
 def test_scripted_capital_bot_victory_marks_enemy_defeated_and_returns(monkeypatch):

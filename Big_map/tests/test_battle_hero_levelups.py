@@ -20,6 +20,11 @@ def _make_enemy(exp_kill: int) -> dict:
     }
 
 
+def _set_lord_type(env: CampaignEnv, lord_type: int) -> None:
+    env.typeoflord = int(lord_type)
+    env.Typeoflord = int(lord_type)
+
+
 def test_hero_levelup_raises_level_resets_exp_and_buffs_hero_stats():
     env = BattleEnv(log_enabled=False)
     duke = deepcopy(next(u for u in UNITS_BLUE if int(u.get("position", -1)) == 8))
@@ -151,7 +156,10 @@ def test_campaign_moves_per_turn_scales_with_travel_hero_level():
     assert env.get_travel_hero_visual_info() == {
         "name": duke["name"],
         "level": 2,
-        "abilities": ["Нахождение пути (+20% шагов)"],
+        "abilities": [
+            "Нахождение пути (+20% шагов)",
+            "Знание артефактов (Позволяет предводителю использовать артефакты.)",
+        ],
     }
 
     env._advance_turns(1)
@@ -174,6 +182,7 @@ def test_campaign_travel_hero_visual_info_shows_leadership_on_level_three():
         "abilities": [
             "Нахождение пути (+20% шагов)",
             "Лидерство",
+            "Знание артефактов (Позволяет предводителю использовать артефакты.)",
         ],
     }
 
@@ -195,5 +204,170 @@ def test_campaign_travel_hero_visual_info_shows_endurance_on_level_four():
             "Нахождение пути (+20% шагов)",
             "Лидерство",
             "Выносливость",
+            "Знание артефактов (Позволяет предводителю использовать артефакты.)",
         ],
     }
+
+
+def test_lord_types_grant_their_starting_hero_knowledge():
+    cases = [
+        (
+            1,
+            "Знание артефактов (Позволяет предводителю использовать артефакты.)",
+        ),
+        (
+            2,
+            "Колдовские знания (Позволяет предводителю экипировать и использовать сферы в бою)",
+        ),
+        (
+            3,
+            "Походные знания (Позволяет предводителю носить магические ботинки)",
+        ),
+    ]
+    for lord_type, expected_ability in cases:
+        env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+        env.reset(seed=123)
+        _set_lord_type(env, lord_type)
+
+        info = env.get_travel_hero_visual_info()
+
+        assert info["level"] == 1
+        assert info["abilities"] == [expected_ability]
+
+
+def test_campaign_travel_hero_visual_info_shows_banner_bearer_on_level_seven():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    duke = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
+    duke["Level"] = 7
+    duke["needaunit"] = 0
+
+    env._sync_moves_per_turn_with_hero(units=env.blue_team_state, grant_delta=True)
+
+    assert env.get_travel_hero_visual_info() == {
+        "name": duke["name"],
+        "level": 7,
+        "abilities": [
+            "Нахождение пути (+20% шагов)",
+            "Лидерство x2",
+            "Выносливость",
+            "Сила (+25% основной урон)",
+            "Знаменосец (Позволяет предводителю использовать знамёна)",
+            "Знание артефактов (Позволяет предводителю использовать артефакты.)",
+        ],
+    }
+
+
+def test_campaign_travel_hero_visual_info_shows_marching_lore_on_level_eight():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    duke = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
+    duke["Level"] = 8
+    duke["needaunit"] = 0
+
+    env._sync_moves_per_turn_with_hero(units=env.blue_team_state, grant_delta=True)
+
+    assert env.get_travel_hero_visual_info() == {
+        "name": duke["name"],
+        "level": 8,
+        "abilities": [
+            "Нахождение пути (+20% шагов)",
+            "Лидерство x2",
+            "Выносливость",
+            "Сила (+25% основной урон)",
+            "Знаменосец (Позволяет предводителю использовать знамёна)",
+            "Походные знания (Позволяет предводителю носить магические ботинки)",
+            "Знание артефактов (Позволяет предводителю использовать артефакты.)",
+        ],
+    }
+
+
+def test_campaign_travel_hero_visual_info_shows_artifact_knowledge_on_level_nine():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    duke = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
+    duke["Level"] = 9
+    duke["needaunit"] = 0
+
+    env._sync_moves_per_turn_with_hero(units=env.blue_team_state, grant_delta=True)
+
+    info = env.get_travel_hero_visual_info()
+    assert info["name"] == duke["name"]
+    assert info["level"] == 9
+    assert (
+        "Знание артефактов (Позволяет предводителю использовать артефакты.)"
+        in info["abilities"]
+    )
+    assert info["abilities"][-1] == (
+        "Мощь (+25% основной урон героя)"
+    )
+
+
+def test_campaign_travel_hero_visual_info_shows_sorcery_lore_on_level_ten():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    duke = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
+    duke["Level"] = 10
+    duke["needaunit"] = 0
+
+    env._sync_moves_per_turn_with_hero(units=env.blue_team_state, grant_delta=True)
+
+    info = env.get_travel_hero_visual_info()
+    assert info["name"] == duke["name"]
+    assert info["level"] == 10
+    assert (
+        "Колдовские знания (Позволяет предводителю экипировать и использовать сферы в бою)"
+        in info["abilities"]
+    )
+    assert info["abilities"][-1] == (
+        "Мощь (+25% основной урон героя)"
+    )
+
+
+def test_replacement_might_bonus_applies_once_and_only_to_primary_damage():
+    cases = [
+        (1, 9),
+        (2, 10),
+        (3, 8),
+    ]
+    for lord_type, replacement_level in cases:
+        env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+        env.reset(seed=123)
+        _set_lord_type(env, lord_type)
+
+        battle_units = deepcopy(UNITS_BLUE)
+        duke = next(u for u in battle_units if int(u.get("position", -1)) == 8)
+        duke["Level"] = replacement_level
+        duke["damage"] = 100
+        duke["original_damage"] = 100
+        duke["damage_secondary"] = 17
+        duke["health"] = 150
+        duke["hp"] = 150
+        duke["max_health"] = 150
+        duke["maxhp"] = 150
+
+        env.battle_env = type("DummyBattle", (), {"combined": battle_units})()
+        env._save_blue_state()
+
+        saved_duke = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
+        assert saved_duke["damage"] == 125
+        assert saved_duke["original_damage"] == 125
+        assert saved_duke["damage_secondary"] == 17
+        assert saved_duke["campaign_lord_might_bonus_levels"] == [replacement_level]
+        assert "Мощь (+25% основной урон героя)" in env.get_travel_hero_visual_info()["abilities"]
+
+        env.battle_env = type(
+            "DummyBattle",
+            (),
+            {"combined": deepcopy(env.blue_team_state)},
+        )()
+        env._save_blue_state()
+
+        saved_again = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
+        assert saved_again["damage"] == 125
+        assert saved_again.get("original_damage", saved_again["damage"]) == 125
+        assert saved_again["damage_secondary"] == 17

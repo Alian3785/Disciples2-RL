@@ -182,6 +182,28 @@ class CampaignEconomyMixin:
             return max(0, int(round(float(hero.get("Level", 0) or 0))))
         except (TypeError, ValueError):
             return 0
+    @classmethod
+    def _hero_ability_tokens(cls, hero: Optional[Dict]) -> set[str]:
+        if not isinstance(hero, dict):
+            return set()
+
+        raw_tokens = hero.get("hero_abilities", ())
+        if isinstance(raw_tokens, str):
+            token_values = raw_tokens.replace(",", " ").replace(";", " ").split()
+        elif isinstance(raw_tokens, dict):
+            token_values = [
+                key for key, value in raw_tokens.items() if bool(value)
+            ]
+        elif isinstance(raw_tokens, (list, tuple, set)):
+            token_values = list(raw_tokens)
+        else:
+            token_values = []
+
+        return {
+            str(token or "").strip().lower()
+            for token in token_values
+            if str(token or "").strip()
+        }
     def _hero_needs_faction_hire(self, units: Optional[List[Dict]] = None) -> bool:
         hero = self._resolve_travel_hero(units=units)
         if hero is None:
@@ -215,6 +237,84 @@ class CampaignEconomyMixin:
         return self._hero_level(units=units) >= int(self.HERO_ENDURANCE_LEVEL)
     def _hero_has_strength(self, units: Optional[List[Dict]] = None) -> bool:
         return self._hero_level(units=units) >= int(self.HERO_STRENGTH_LEVEL)
+    def _hero_has_banner_bearer(self, units: Optional[List[Dict]] = None) -> bool:
+        if self._hero_level(units=units) >= int(self.HERO_BANNER_BEARER_LEVEL):
+            return True
+        hero = self._resolve_travel_hero(units=units)
+        return str(self.HERO_BANNER_BEARER_ABILITY_KEY).lower() in self._hero_ability_tokens(hero)
+    def _hero_has_marching_lore(self, units: Optional[List[Dict]] = None) -> bool:
+        if int(self.typeoflord) == 3:
+            return True
+        if self._hero_level(units=units) >= int(self.HERO_MARCHING_LORE_LEVEL):
+            return True
+        hero = self._resolve_travel_hero(units=units)
+        return str(self.HERO_MARCHING_LORE_ABILITY_KEY).lower() in self._hero_ability_tokens(hero)
+    def _hero_has_artifact_knowledge(self, units: Optional[List[Dict]] = None) -> bool:
+        if int(self.typeoflord) == 1:
+            return True
+        if self._hero_level(units=units) >= int(self.HERO_ARTIFACT_KNOWLEDGE_LEVEL):
+            return True
+        hero = self._resolve_travel_hero(units=units)
+        return str(self.HERO_ARTIFACT_KNOWLEDGE_ABILITY_KEY).lower() in self._hero_ability_tokens(hero)
+    def _hero_has_sorcery_lore(self, units: Optional[List[Dict]] = None) -> bool:
+        if int(self.typeoflord) == 2:
+            return True
+        if self._hero_level(units=units) >= int(self.HERO_SORCERY_LORE_LEVEL):
+            return True
+        hero = self._resolve_travel_hero(units=units)
+        return str(self.HERO_SORCERY_LORE_ABILITY_KEY).lower() in self._hero_ability_tokens(hero)
+    def _lord_replacement_might_level(self) -> Optional[int]:
+        lord_type = int(self.typeoflord)
+        if lord_type == 1:
+            return int(self.HERO_ARTIFACT_KNOWLEDGE_LEVEL)
+        if lord_type == 2:
+            return int(self.HERO_SORCERY_LORE_LEVEL)
+        if lord_type == 3:
+            return int(self.HERO_MARCHING_LORE_LEVEL)
+        return None
+    def _hero_has_might(self, units: Optional[List[Dict]] = None) -> bool:
+        hero = self._resolve_travel_hero(units=units)
+        if str(self.HERO_MIGHT_ABILITY_KEY).lower() in self._hero_ability_tokens(hero):
+            return True
+        might_level = self._lord_replacement_might_level()
+        if might_level is None:
+            return False
+        return self._hero_level(units=units) >= int(might_level)
+    def _apply_lord_replacement_might_bonus(self, hero: Optional[Dict]) -> bool:
+        if not isinstance(hero, dict) or not self._is_hero_unit(hero):
+            return False
+
+        might_level = self._lord_replacement_might_level()
+        if might_level is None:
+            return False
+
+        try:
+            hero_level = int(round(float(hero.get("Level", 0) or 0)))
+        except (TypeError, ValueError):
+            hero_level = 0
+        if hero_level < int(might_level):
+            return False
+
+        applied_levels: set[int] = set()
+        for level in hero.get("campaign_lord_might_bonus_levels") or []:
+            try:
+                applied_levels.add(int(level))
+            except (TypeError, ValueError):
+                continue
+        if int(might_level) in applied_levels:
+            return False
+
+        base_damage = self._normalize_damage_value(
+            hero.get("original_damage", hero.get("damage", 0))
+        )
+        boosted_damage = self._normalize_damage_value(
+            float(base_damage) * float(self.HERO_MIGHT_DAMAGE_MULTIPLIER)
+        )
+        hero["damage"] = int(boosted_damage)
+        hero["original_damage"] = int(boosted_damage)
+        applied_levels.add(int(might_level))
+        hero["campaign_lord_might_bonus_levels"] = sorted(applied_levels)
+        return True
     @staticmethod
     def _is_empty_blue_unit(unit: Optional[Dict]) -> bool:
         if not isinstance(unit, dict):
@@ -437,6 +537,7 @@ class CampaignEconomyMixin:
         grant_delta: bool = False,
     ) -> None:
         previous_cap = int(self.moves_per_turn)
+        self._sync_equipped_boot_items(units=units)
         new_cap = int(self.MOVES_PER_TURN) + self._hero_move_bonus(units=units)
         self.moves_per_turn = new_cap
         if refill:
@@ -1074,6 +1175,7 @@ class CampaignEconomyMixin:
     def _refresh_dynamic_action_layout(self) -> None:
         self.active_hire_options = self._get_hire_options_for_capital(self.Realcapital)
         self.active_mercenary_hire_options = self._get_mercenary_hire_options()
+        self._refresh_battle_equippable_item_names()
         self.GRID_MERCENARY_HIRE_ACTION_START = (
             self.GRID_HIRE_ACTION_START + len(self.active_hire_options)
         )
@@ -1124,7 +1226,7 @@ class CampaignEconomyMixin:
             self.GRID_EQUIP_BATTLE_ITEM1_ACTION_START + len(self.BATTLE_EQUIPPABLE_ITEM_NAMES)
         )
         self.grid_legion_damage_spell_action_start = (
-            self.GRID_EQUIP_BATTLE_ITEM2_ACTION_START + len(self.BATTLE_EQUIPPABLE_ITEM_NAMES)
+            self.GRID_EQUIP_BATTLE_ITEM1_ACTION_START + len(self.BATTLE_EQUIPPABLE_ITEM_NAMES)
         )
         self.grid_map_support_spell_action_start = (
             self.grid_legion_damage_spell_action_start + self._map_offensive_spell_action_max_count()

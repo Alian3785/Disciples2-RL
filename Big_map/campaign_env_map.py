@@ -48,7 +48,11 @@ class CampaignMapSitesMixin:
             int(round(float(self.MOVES_PER_TURN) * float(self.HERO_PATHFINDING_MOVE_BONUS_PCT))),
         )
     def _hero_move_bonus(self, units: Optional[List[Dict]] = None) -> int:
-        return self._hero_level(units=units) + self._hero_pathfinding_move_bonus(units=units)
+        return (
+            self._hero_level(units=units)
+            + self._hero_pathfinding_move_bonus(units=units)
+            + self._active_boot_move_bonus(units=units)
+        )
     def get_travel_hero_visual_info(self) -> Optional[Dict]:
         hero = self._resolve_travel_hero()
         if hero is None:
@@ -67,6 +71,24 @@ class CampaignMapSitesMixin:
             abilities.append("Выносливость")
         if self._hero_has_strength(units=[hero]):
             abilities.append("Сила (+25% основной урон)")
+        if self._hero_has_banner_bearer(units=[hero]):
+            abilities.append(
+                f"Знаменосец ({self.HERO_BANNER_BEARER_DESCRIPTION})"
+            )
+        if self._hero_has_marching_lore(units=[hero]):
+            abilities.append(
+                f"Походные знания ({self.HERO_MARCHING_LORE_DESCRIPTION})"
+            )
+        if self._hero_has_artifact_knowledge(units=[hero]):
+            abilities.append(
+                f"Знание артефактов ({self.HERO_ARTIFACT_KNOWLEDGE_DESCRIPTION})"
+            )
+        if self._hero_has_sorcery_lore(units=[hero]):
+            abilities.append(
+                f"Колдовские знания ({self.HERO_SORCERY_LORE_DESCRIPTION})"
+            )
+        if self._hero_has_might(units=[hero]):
+            abilities.append(f"Мощь ({self.HERO_MIGHT_DESCRIPTION})")
 
         return {
             "name": str(hero.get("name", "") or "").strip(),

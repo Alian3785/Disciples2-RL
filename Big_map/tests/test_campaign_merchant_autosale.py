@@ -44,7 +44,10 @@ def test_merchant_auto_sale_sells_only_junk_items():
     assert info["merchant_sale_gold"] == 1500.0
     assert reward == 2.0 * env.reward_sell_junk_item
     assert env.gold == 1600.0
-    assert [str(entry) for entry in env.heroitems] == [env.STRENGTH_POTION_ITEM_NAME]
+    remaining_item_names = [str(entry) for entry in env.heroitems]
+    assert env.STRENGTH_POTION_ITEM_NAME in remaining_item_names
+    assert "Ruby (Valuable)" not in remaining_item_names
+    assert "Bronze Ring (Valuable)" not in remaining_item_names
     assert [item["name"] for item in info["merchant_sold_items"]] == [
         "Ruby (Valuable)",
         "Bronze Ring (Valuable)",

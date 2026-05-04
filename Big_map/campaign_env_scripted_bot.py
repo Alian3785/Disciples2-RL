@@ -7,6 +7,7 @@ from campaign_env_data import *
 
 class CampaignScriptedBotMixin:
     SCRIPTED_CAPITAL_BOT_MAX_STEPS_PER_TURN = 20
+    SCRIPTED_CAPITAL_BOT_GRID_MOVE_COST = 2
     SCRIPTED_CAPITAL_BOT_BATTLE_STEP_LIMIT = 300
     SCRIPTED_CAPITAL_BOT_SYMBOL = "B"
     SCRIPTED_CAPITAL_BOT_COLOR = (0.6, 0.15, 0.85, 0.95)
@@ -170,6 +171,7 @@ class CampaignScriptedBotMixin:
             moved_path = self._move_scripted_bot_along_path(path)
             events.append("returning")
             info["path"] = moved_path
+            info.update(self._scripted_bot_movement_info(moved_path))
             if tuple(self.scripted_capital_bot_position) == tuple(self.scripted_capital_bot_home):
                 self.scripted_capital_bot_state = "resting"
                 self.scripted_capital_bot_rest_turns_left = 1
@@ -186,11 +188,16 @@ class CampaignScriptedBotMixin:
                 path = self._scripted_bot_path_from_came_from(came_from, target_pos)
                 if not path:
                     path = self._scripted_bot_path_to(target_pos)
+                path = self._scripted_bot_path_to_engagement_tile(path, target_pos)
                 moved_path = self._move_scripted_bot_along_path(path)
                 events.append("hunting")
                 info["path"] = moved_path
+                info.update(self._scripted_bot_movement_info(moved_path))
                 info["target_enemy_id"] = int(target["enemy_id"])
-                if tuple(self.scripted_capital_bot_position) == target_pos:
+                if self._scripted_bot_can_engage_enemy_from_position(
+                    self.scripted_capital_bot_position,
+                    target_pos,
+                ):
                     battle_info = self._run_scripted_capital_bot_battle(int(target["enemy_id"]))
                     info["battle"] = battle_info
                     events.append("battle")
@@ -279,7 +286,7 @@ class CampaignScriptedBotMixin:
     ) -> List[Tuple[int, int]]:
         current = tuple(int(coord) for coord in self.scripted_capital_bot_position)
         path = [current]
-        for _ in range(int(self.SCRIPTED_CAPITAL_BOT_MAX_STEPS_PER_TURN)):
+        for _ in range(self._scripted_bot_max_grid_moves_per_turn()):
             if current == target:
                 break
             candidates = []
@@ -306,7 +313,7 @@ class CampaignScriptedBotMixin:
     def _move_scripted_bot_along_path(self, path: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
         if not path:
             return []
-        max_steps = int(self.SCRIPTED_CAPITAL_BOT_MAX_STEPS_PER_TURN)
+        max_steps = self._scripted_bot_max_grid_moves_per_turn()
         movement = list(path[1 : max_steps + 1])
         if movement:
             old_pos = tuple(self.scripted_capital_bot_position)
@@ -316,6 +323,44 @@ class CampaignScriptedBotMixin:
                 f"({len(movement)} шаг.)"
             )
         return movement
+
+    def _scripted_bot_grid_move_cost(self) -> int:
+        return max(1, int(self.SCRIPTED_CAPITAL_BOT_GRID_MOVE_COST))
+
+    def _scripted_bot_max_grid_moves_per_turn(self) -> int:
+        movement_budget = max(0, int(self.SCRIPTED_CAPITAL_BOT_MAX_STEPS_PER_TURN))
+        return movement_budget // self._scripted_bot_grid_move_cost()
+
+    def _scripted_bot_move_points_spent(self, moved_path: List[Tuple[int, int]]) -> int:
+        return int(len(moved_path)) * self._scripted_bot_grid_move_cost()
+
+    def _scripted_bot_movement_info(self, moved_path: List[Tuple[int, int]]) -> Dict[str, int]:
+        return {
+            "move_cost": int(self._scripted_bot_grid_move_cost()),
+            "move_points_budget": int(self.SCRIPTED_CAPITAL_BOT_MAX_STEPS_PER_TURN),
+            "move_points_spent": int(self._scripted_bot_move_points_spent(moved_path)),
+        }
+
+    def _scripted_bot_path_to_engagement_tile(
+        self,
+        path: List[Tuple[int, int]],
+        enemy_tile: Tuple[int, int],
+    ) -> List[Tuple[int, int]]:
+        if not path:
+            return []
+        normalized_enemy_tile = (int(enemy_tile[0]), int(enemy_tile[1]))
+        if tuple(path[-1]) == normalized_enemy_tile and len(path) > 1:
+            return list(path[:-1])
+        return list(path)
+
+    @staticmethod
+    def _scripted_bot_can_engage_enemy_from_position(
+        position: Tuple[int, int],
+        enemy_tile: Tuple[int, int],
+    ) -> bool:
+        px, py = int(position[0]), int(position[1])
+        ex, ey = int(enemy_tile[0]), int(enemy_tile[1])
+        return max(abs(px - ex), abs(py - ey)) <= 1
 
     def _scripted_bot_alive_enemy_tiles(self) -> Dict[Tuple[int, int], int]:
         """Карта тайл -> enemy_id для всех живых врагов (кроме самого бота)."""

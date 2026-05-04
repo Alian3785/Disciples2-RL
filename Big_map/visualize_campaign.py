@@ -38,6 +38,8 @@ from battle_env import (
     RUN_AWAY_ACTION_INDEX,
     FIRST_HERO_ITEM_ACTION_START,
     SECOND_HERO_ITEM_ACTION_START,
+    FIRST_HERO_ITEM_ENEMY_ACTION_START,
+    SECOND_HERO_ITEM_ENEMY_ACTION_START,
     HERO_ITEM_TARGET_SLOTS,
     DEFEND_ARMOR_BONUS,
 )
@@ -952,11 +954,19 @@ class CampaignVisualizer:
             wrapped_lines.extend(wrapped or [line])
         return "\n".join(wrapped_lines)
 
-    def _draw_info_panel(self, title: str, info_text: str) -> None:
+    def _draw_info_panel(
+        self,
+        title: str,
+        info_text: str,
+        *,
+        highlight_line: str | None = None,
+    ) -> None:
         self.info_ax.clear()
         self.info_ax.set_facecolor((0.96, 0.97, 0.99))
         self.info_ax.axis("off")
         line_count = max(1, info_text.count("\n") + 1)
+        if highlight_line:
+            line_count += 1
         if line_count <= 34:
             body_fontsize = 10.5
         elif line_count <= 40:
@@ -989,9 +999,25 @@ class CampaignVisualizer:
                 color="black",
                 linespacing=1.1,
             )
+        body_top = 0.92
+        if highlight_line:
+            r, g, b, _a = self.COLOR_SCRIPTED_BOT
+            self.info_ax.text(
+                0.06,
+                body_top,
+                str(highlight_line),
+                transform=self.info_ax.transAxes,
+                ha="left",
+                va="top",
+                fontsize=11.6,
+                fontweight="bold",
+                color=(r, g, b),
+                linespacing=1.1,
+            )
+            body_top = 0.885
         self.info_ax.text(
             0.06,
-            0.92,
+            body_top,
             info_text,
             transform=self.info_ax.transAxes,
             ha="left",
@@ -1920,6 +1946,12 @@ class CampaignVisualizer:
         self.ax.set_title(title, fontsize=14, fontweight="bold")
 
         # Ход, золото, шаги и постройки справа от грида
+        bot_panel_early = dict(scripted_bot or {})
+        try:
+            bot_victims_count = int(bot_panel_early.get("enemies_defeated", 0) or 0)
+        except (TypeError, ValueError):
+            bot_victims_count = 0
+
         info_lines = [
             f"Ход: {turns}",
             f"Золото: {gold:g}",
@@ -1928,13 +1960,6 @@ class CampaignVisualizer:
             f"Исц. бутылки: {healing_bottles_left}/{max_healing_bottles}",
             f"Воскр. бутылки: {revive_bottles_left}/{max_revive_bottles}",
         ]
-        bot_panel = dict(scripted_bot or {})
-        if bot_panel.get("enabled"):
-            try:
-                bot_episode_kills = int(bot_panel.get("enemies_defeated", 0) or 0)
-            except (TypeError, ValueError):
-                bot_episode_kills = 0
-            info_lines.append(f"Бот столицы (B): побед над отрядами {bot_episode_kills}")
         built_buildings = built_buildings or []
         if built_buildings:
             info_lines.append("Постройки:")
@@ -2052,7 +2077,8 @@ class CampaignVisualizer:
             else:
                 info_lines.append("- нет")
         info_text = self._format_info_text(info_lines)
-        self._draw_info_panel(title=title, info_text=info_text)
+        bot_highlight = f"Врагов победил бот (B): {bot_victims_count}"
+        self._draw_info_panel(title=title, info_text=info_text, highlight_line=bot_highlight)
 
         # Легенда
         legend_text = f"Visited: {len(visited_cells)}/{self.grid_size**2}"
@@ -2306,6 +2332,32 @@ def run_campaign_visualization(
                 chosen_line = (
                     f"[STEP {step_count}] Agent chooses action={action_idx} > "
                     f"item 2 ({item_name or 'empty'}) on own slot {slot_no}"
+                )
+            elif FIRST_HERO_ITEM_ENEMY_ACTION_START <= action_idx < (
+                FIRST_HERO_ITEM_ENEMY_ACTION_START + len(HERO_ITEM_TARGET_SLOTS)
+            ):
+                slot_no = HERO_ITEM_TARGET_SLOTS[
+                    action_idx - FIRST_HERO_ITEM_ENEMY_ACTION_START
+                ]
+                item_name = ""
+                if getattr(env_base.battle_env, "equipped_hero_items", None):
+                    item_name = str(env_base.battle_env.equipped_hero_items[0] or "")
+                chosen_line = (
+                    f"[STEP {step_count}] Agent chooses action={action_idx} > "
+                    f"item 1 ({item_name or 'empty'}) on enemy slot {slot_no}"
+                )
+            elif SECOND_HERO_ITEM_ENEMY_ACTION_START <= action_idx < (
+                SECOND_HERO_ITEM_ENEMY_ACTION_START + len(HERO_ITEM_TARGET_SLOTS)
+            ):
+                slot_no = HERO_ITEM_TARGET_SLOTS[
+                    action_idx - SECOND_HERO_ITEM_ENEMY_ACTION_START
+                ]
+                item_name = ""
+                if getattr(env_base.battle_env, "equipped_hero_items", None):
+                    item_name = str(env_base.battle_env.equipped_hero_items[1] or "")
+                chosen_line = (
+                    f"[STEP {step_count}] Agent chooses action={action_idx} > "
+                    f"item 2 ({item_name or 'empty'}) on enemy slot {slot_no}"
                 )
             else:
                 chosen_line = f"[STEP {step_count}] Агент выбирает action={action_idx}"

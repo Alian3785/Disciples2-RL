@@ -96,6 +96,7 @@ class CampaignBattleMixin:
         if isinstance(battle_info, dict):
             info.update(battle_info)
         info.update(self._artifact_state_info())
+        info.update(self._banner_state_info())
 
         if terminated or truncated:
             winner = self.battle_env.winner
@@ -505,22 +506,26 @@ class CampaignBattleMixin:
                 "blue",
                 self.blue_team_state,
             )
+            self._clear_equipped_banner_effects(prepared_blue_team)
             self._clear_equipped_artifact_effects(prepared_blue_team)
             self._apply_hero_heal_tile_armor_bonus(prepared_blue_team)
             self._apply_active_blue_potion_effects(prepared_blue_team)
             self._apply_active_blue_support_spell_effects(prepared_blue_team)
             self._apply_equipped_artifact_effects(prepared_blue_team)
+            self._apply_equipped_banner_effects(prepared_blue_team)
             self._sync_equipped_hero_items()
             equipped_hero_items = list(self.equipped_hero_items)
             hero_item_effects = dict(self._battle_item_effect_definitions())
             self._log("Загружено сохранённое состояние BLUE команды")
         else:
             prepared_blue_team = self._build_battle_team_with_placeholders("blue", UNITS_BLUE)
+            self._clear_equipped_banner_effects(prepared_blue_team)
             self._clear_equipped_artifact_effects(prepared_blue_team)
             self._apply_hero_heal_tile_armor_bonus(prepared_blue_team)
             self._apply_active_blue_potion_effects(prepared_blue_team)
             self._apply_active_blue_support_spell_effects(prepared_blue_team)
             self._apply_equipped_artifact_effects(prepared_blue_team)
+            self._apply_equipped_banner_effects(prepared_blue_team)
             self._sync_equipped_hero_items()
             equipped_hero_items = list(self.equipped_hero_items)
             hero_item_effects = dict(self._battle_item_effect_definitions())
@@ -547,17 +552,46 @@ class CampaignBattleMixin:
             return
 
         # Сохраняем только базовые позиции BLUE (без призванных юнитов)
-        base_positions = {u["position"] for u in UNITS_BLUE}
-
-        self.blue_team_state = []
+        ordered_base_positions = tuple(int(u["position"]) for u in UNITS_BLUE)
+        base_positions = set(ordered_base_positions)
+        original_blue_team = self._build_battle_team_with_placeholders(
+            "blue",
+            self.blue_team_state if self.blue_team_state is not None else UNITS_BLUE,
+        )
+        original_by_position = {
+            int(unit.get("position", -1) or -1): deepcopy(unit)
+            for unit in original_blue_team
+        }
+        start_empty_positions = {
+            position
+            for position, unit in original_by_position.items()
+            if self._is_empty_blue_unit(unit)
+        }
+        saved_by_position: Dict[int, Dict] = {}
 
         for u in self.battle_env.combined:
             if u.get("team") != "blue":
                 continue
             
-            pos = u["position"]
+            try:
+                pos = int(u.get("position", -1) or -1)
+            except (TypeError, ValueError):
+                continue
             if pos not in base_positions:
                 # Юнит не относится к базовым позициям (призванный?) — пропускаем
+                continue
+            if pos in start_empty_positions:
+                # Эта позиция была пустой в начале боя. Любой появившийся здесь юнит временный.
+                continue
+            if bool(u.get("Summoned")):
+                original_unit = deepcopy(
+                    original_by_position.get(pos, placeholder_unit("blue", pos))
+                )
+                if not self._is_empty_blue_unit(original_unit) and pos not in saved_by_position:
+                    original_unit["health"] = 0.0
+                    original_unit["hp"] = 0.0
+                    original_unit["initiative"] = 0
+                    saved_by_position[pos] = original_unit
                 continue
 
             # Сохраняем юнита в текущей форме (после улучшений)
@@ -591,6 +625,42 @@ class CampaignBattleMixin:
             restored_unit["bonusturn"] = 0
             restored_unit.pop("resilience_used_types", None)
             position = int(restored_unit.get("position", -1) or -1)
+            if "campaign_banner_base_damage" in restored_unit:
+                restored_unit["damage"] = self._normalize_damage_value(
+                    restored_unit.get(
+                        "campaign_banner_base_damage",
+                        restored_unit.get("damage", 0),
+                    )
+                )
+            if "campaign_banner_base_accuracy" in restored_unit:
+                restored_unit["accuracy"] = self._normalize_accuracy_value(
+                    restored_unit.get(
+                        "campaign_banner_base_accuracy",
+                        restored_unit.get("accuracy", 0),
+                    )
+                )
+            if "campaign_banner_base_initiative" in restored_unit:
+                restored_unit["initiative_base"] = int(
+                    self._normalize_damage_value(
+                        restored_unit.get(
+                            "campaign_banner_base_initiative",
+                            restored_unit.get(
+                                "initiative_base",
+                                restored_unit.get("initiative", 0),
+                            ),
+                        )
+                    )
+                )
+                restored_unit["initiative"] = int(restored_unit.get("initiative_base", 0) or 0)
+            if "campaign_banner_base_armor" in restored_unit:
+                base_armor = self._normalize_armor_value(
+                    restored_unit.get(
+                        "campaign_banner_base_armor",
+                        restored_unit.get("armor", 0),
+                    )
+                )
+                restored_unit["armor"] = int(base_armor)
+                restored_unit["base_armor"] = int(base_armor)
             if "campaign_artifact_base_damage" in restored_unit:
                 restored_unit["damage"] = self._normalize_damage_value(
                     restored_unit.get(
@@ -703,6 +773,15 @@ class CampaignBattleMixin:
             restored_unit.pop("campaign_map_spell_health_bonus", None)
             restored_unit.pop("campaign_map_spell_added_resistance", None)
             restored_unit.pop("campaign_map_spell_base_armor", None)
+            restored_unit.pop("campaign_banner_base_damage", None)
+            restored_unit.pop("campaign_banner_base_accuracy", None)
+            restored_unit.pop("campaign_banner_base_initiative", None)
+            restored_unit.pop("campaign_banner_base_armor", None)
+            restored_unit.pop("campaign_banner_damage_multiplier", None)
+            restored_unit.pop("campaign_banner_accuracy_bonus", None)
+            restored_unit.pop("campaign_banner_initiative_multiplier", None)
+            restored_unit.pop("campaign_banner_armor_bonus", None)
+            restored_unit.pop("campaign_active_banner", None)
             restored_unit.pop("campaign_artifact_base_damage", None)
             restored_unit.pop("campaign_artifact_base_damage_secondary", None)
             restored_unit.pop("campaign_artifact_base_initiative", None)
@@ -783,12 +862,21 @@ class CampaignBattleMixin:
             # Восстанавливаем initiative к базовому значению
             restored_unit["initiative"] = restored_unit.get("initiative_base", 0)
             restored_unit["needaunit"] = self._resolve_hero_needaunit(restored_unit)
+            if self._apply_lord_replacement_might_bonus(restored_unit):
+                self._log(
+                    f"Герой {restored_unit.get('name', 'Герой')} получает умение Мощь: "
+                    f"primary damage -> {int(restored_unit.get('damage', 0) or 0)}."
+                )
             
-            self.blue_team_state.append(restored_unit)
+            saved_by_position[position] = restored_unit
 
+        self.blue_team_state = [
+            saved_by_position.get(position, placeholder_unit("blue", position))
+            for position in ordered_base_positions
+        ]
         self._sync_hero_progression_flags(self.blue_team_state)
         self._sync_moves_per_turn_with_hero(units=self.blue_team_state, grant_delta=True)
-        self._refresh_campaign_artifact_effects(log=False)
+        self._refresh_campaign_equipment_effects(log=False)
         self._log("Состояние BLUE команды сохранено (HP не восстановлено)")
     def _find_unit_data_by_name(self, name: str) -> Optional[Dict]:
         for entry in UNIT_DATA:
@@ -1017,7 +1105,7 @@ class CampaignBattleMixin:
             if int(unit.get("position", -1)) == int(pos):
                 self.blue_team_state[idx] = deepcopy(upgraded)
                 self._sync_moves_per_turn_with_hero(units=self.blue_team_state)
-                self._refresh_campaign_artifact_effects(log=False)
+                self._refresh_campaign_equipment_effects(log=False)
                 return
     def _log_turns_into_levelups(self) -> int:
         """Applies BLUE unit upgrades after level-up checks and returns applied count."""
@@ -1171,8 +1259,16 @@ class CampaignBattleMixin:
         else:
             self._sync_hero_progression_flags(self.blue_team_state)
         return self.blue_team_state
-    def _apply_battle_grid_steps(self, extra_steps: int = 10) -> None:
+    def _battle_grid_move_cost(self) -> int:
+        """Returns the combat entry cost based on the hero's full movement cap."""
+        move_cap = max(0, int(self.moves_per_turn or 0))
+        return max(0, (move_cap + 1) // 2)
+
+    def _apply_battle_grid_steps(self, extra_steps: Optional[int] = None) -> int:
         """Списывает дополнительные очки перемещения из-за входа в бой."""
-        if extra_steps <= 0:
-            return
-        self._spend_moves(extra_steps)
+        spent_moves = self._battle_grid_move_cost() if extra_steps is None else int(extra_steps)
+        if spent_moves <= 0:
+            return 0
+        moves_before = int(self.moves)
+        self._spend_moves(spent_moves)
+        return max(0, moves_before - int(self.moves))
