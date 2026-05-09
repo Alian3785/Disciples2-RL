@@ -285,6 +285,146 @@ class CampaignMagicMixin:
         return dict(
             self._scroll_supported_spell_definitions_by_id().get(str(spell_key or ""), {})
         )
+
+    @classmethod
+    @lru_cache(maxsize=1)
+    def _staff_spell_definitions_by_item_name(cls) -> Dict[str, Dict[str, object]]:
+        return {
+            str(entry.get("item_name", "") or ""): dict(entry)
+            for entry in cls.STAFF_SPELL_ITEM_DEFINITIONS
+            if str(entry.get("item_name", "") or "")
+            and str(entry.get("spell_id", "") or "")
+        }
+
+    def _staff_spell_definition_by_item_name(self, item_name: str) -> Dict[str, object]:
+        return dict(
+            self._staff_spell_definitions_by_item_name().get(str(item_name or "").strip(), {})
+        )
+
+    def _staff_spell_action_entry_for_item(self, item_name: str) -> Dict[str, object]:
+        definition = self._staff_spell_definition_by_item_name(item_name)
+        spell_key = str(definition.get("spell_id", "") or "")
+        if not spell_key:
+            return {}
+
+        spell = self._spell_entry_by_id(spell_key)
+        if not isinstance(spell, dict):
+            return {}
+
+        spell_spec = self._map_offensive_spell_spec(spell_key)
+        if not spell_spec:
+            spell_spec = self._map_support_spell_spec(spell_key)
+        if not spell_spec:
+            return {}
+
+        entry = dict(definition)
+        entry.update(dict(spell_spec))
+        entry["item_name"] = str(definition.get("item_name", "") or "")
+        entry["spell_id"] = spell_key
+        entry["id"] = spell_key
+        entry["spell_kind"] = str(spell_spec.get("kind", "") or "")
+        entry["spell_name"] = str(spell.get("name", "") or spell_key)
+        entry["spell_description"] = str(spell.get("description", "") or spell_key)
+        entry["spell_level"] = self._spell_level_from_entry(spell)
+        return entry
+
+    def _refresh_staff_spell_action_entries(self) -> Tuple[Dict[str, object], ...]:
+        self.scenario_staff_spell_item_names = self._scenario_staff_spell_item_names()
+        entries: List[Dict[str, object]] = []
+        item_counts: Dict[str, int] = {}
+        for item_name in self.scenario_staff_spell_item_names:
+            item_counts[item_name] = int(item_counts.get(item_name, 0) or 0) + 1
+            entry = self._staff_spell_action_entry_for_item(item_name)
+            if entry:
+                entry["required_item_count"] = int(item_counts[item_name])
+                entries.append(entry)
+        self._staff_spell_action_entries_cache = tuple(entries)
+        return self._staff_spell_action_entries_cache
+
+    def staff_spell_action_entries(self) -> Tuple[Dict[str, object], ...]:
+        entries = getattr(self, "_staff_spell_action_entries_cache", None)
+        if entries is None:
+            entries = self._refresh_staff_spell_action_entries()
+        return tuple(entries)
+
+    def available_staff_spell_unlock_entries(self) -> Tuple[Dict[str, object], ...]:
+        available_entries: List[Dict[str, object]] = []
+        for entry in self.staff_spell_action_entries():
+            item_name = str(entry.get("item_name", "") or "").strip()
+            if not item_name:
+                continue
+            try:
+                required_item_count = max(
+                    1,
+                    int(entry.get("required_item_count", 1) or 1),
+                )
+            except (TypeError, ValueError):
+                required_item_count = 1
+            if self._count_hero_item(item_name) >= required_item_count:
+                available_entries.append(dict(entry))
+        return tuple(available_entries)
+
+    def _has_scroll_or_staff_magic_unlock_source(self) -> bool:
+        return bool(
+            self.available_scroll_spell_entries()
+            or self.available_staff_spell_unlock_entries()
+        )
+
+    def _can_cast_staff_spell(
+        self,
+        slot_entry: Dict[str, object],
+        *,
+        nearest_targetable_enemy: Optional[Dict[str, object]] = None,
+        nearest_any_enemy: Optional[Dict[str, object]] = None,
+    ) -> bool:
+        if not bool(self.scroll_magic_unlocked):
+            return False
+        if not isinstance(slot_entry, dict):
+            return False
+        item_name = str(slot_entry.get("item_name", "") or "").strip()
+        spell_key = str(slot_entry.get("spell_id", slot_entry.get("id", "")) or "")
+        spell_kind = str(slot_entry.get("spell_kind", slot_entry.get("kind", "")) or "")
+        if not item_name or not spell_key or not self._is_staff_spell_item_name(item_name):
+            return False
+        try:
+            required_item_count = max(1, int(slot_entry.get("required_item_count", 1) or 1))
+        except (TypeError, ValueError):
+            required_item_count = 1
+        if self._count_hero_item(item_name) < required_item_count:
+            return False
+        if not self._hero_has_sorcery_lore():
+            return False
+
+        spell = self._spell_entry_by_id(spell_key)
+        if not isinstance(spell, dict):
+            return False
+        if self._is_spell_blocked_by_typeoflord(spell):
+            return False
+        if not self._has_mana_for_costs(self._get_spell_use_costs(spell)):
+            return False
+
+        if self._spell_kind_is_offensive(spell_kind):
+            if spell_kind == "summon_battle":
+                summon_unit_name = str(slot_entry.get("summon_unit_name", "") or "").strip()
+                if not summon_unit_name or not isinstance(
+                    self._find_unit_data_by_name(summon_unit_name),
+                    dict,
+                ):
+                    return False
+            nearest_enemy = self._resolve_spell_target_enemy(
+                spell_key,
+                slot_entry,
+                nearest_targetable_enemy=nearest_targetable_enemy,
+                nearest_any_enemy=nearest_any_enemy,
+            )
+            if nearest_enemy is None:
+                return False
+            return self._enemy_team_has_living_units(nearest_enemy.get("enemy_id"))
+
+        if self._spell_kind_is_support(spell_kind):
+            return self._support_spell_spec_would_apply(spell_key, slot_entry)
+
+        return False
     @classmethod
     @lru_cache(maxsize=1)
     def _scroll_offensive_spell_specs_by_id(cls) -> Dict[str, Dict[str, object]]:
@@ -426,8 +566,32 @@ class CampaignMagicMixin:
             "spell_shop_purchased_spells": spell_shop_purchased_spells,
             "spell_shop_purchased_spells_count": int(len(spell_shop_purchased_spells)),
         }
+        info.update(self._staff_spell_state_info())
         info.update(self._scroll_state_info())
         return info
+    def _staff_spell_state_info(self) -> Dict[str, object]:
+        slot_entries = self.staff_spell_action_entries()
+        return {
+            "staff_spell_cast_slots": [
+                {
+                    "slot": int(idx),
+                    "item_name": str(entry.get("item_name", "") or ""),
+                    "spell_id": str(entry.get("spell_id", "") or ""),
+                    "spell_name": str(entry.get("spell_name", "") or ""),
+                    "spell_kind": str(entry.get("spell_kind", "") or ""),
+                    "spell_level": int(entry.get("spell_level", 0) or 0),
+                    "required_item_count": int(
+                        entry.get("required_item_count", 1) or 1
+                    ),
+                    "owned": bool(
+                        self._count_hero_item(str(entry.get("item_name", "") or ""))
+                        >= int(entry.get("required_item_count", 1) or 1)
+                    ),
+                }
+                for idx, entry in enumerate(slot_entries)
+            ],
+            "staff_spell_cast_slots_count": int(len(slot_entries)),
+        }
     def _total_scroll_count(self) -> int:
         self._ensure_inventory_cache()
         return int(self._total_scroll_count_cache)
@@ -2161,16 +2325,230 @@ class CampaignMagicMixin:
             info=info,
             cast_result=cast_result,
         )
+    def _step_cast_staff_spell(self, action: int):
+        idx = int(action) - int(self.grid_staff_spell_action_start)
+        reward = 0.0
+        slot_entries = self.staff_spell_action_entries()
+        spell_data = dict(slot_entries[idx]) if 0 <= idx < len(slot_entries) else {}
+        spell_key = str(spell_data.get("spell_id", "") or "")
+        spell = self._spell_entry_by_id(spell_key)
+        spell_description = str(
+            spell_data.get("spell_name", "")
+            or spell_data.get("spell_description", "")
+            or spell_key
+        ).strip()
+        spell_level = int(spell_data.get("spell_level", 0) or 0) if spell_data else None
+        spell_kind = str(spell_data.get("spell_kind", "") or "")
+        spell_damage = float(spell_data.get("damage", 0.0) or 0.0)
+        spell_damage_type = str(spell_data.get("damage_type", "") or "") or None
+        spell_debuff_type = str(spell_data.get("debuff_type", "") or "") or None
+        summon_unit_name = str(spell_data.get("summon_unit_name", "") or "") or None
+        spell_buff_type = str(spell_data.get("buff_type", "") or "") or None
+        spell_resistance_type = str(spell_data.get("resistance_type", "") or "") or None
+        spell_heal_amount = float(spell_data.get("heal_amount", 0.0) or 0.0)
+        spell_health_delta = int(spell_data.get("health_delta", 0) or 0)
+        spell_moves_restore_fraction = float(
+            spell_data.get("moves_restore_fraction", 0.0) or 0.0
+        )
+        item_name = str(spell_data.get("item_name", "") or "")
+        required_item_count = int(spell_data.get("required_item_count", 1) or 1)
+        item_owned = bool(item_name) and self._count_hero_item(item_name) >= required_item_count
+        has_sorcery_lore = self._hero_has_sorcery_lore()
+        mana_costs = self._get_spell_use_costs(spell) if isinstance(spell, dict) else {}
+        blocked_by_typeoflord = self._is_spell_blocked_by_typeoflord(spell)
+        nearest_targetable_enemy = self._get_nearest_enemy_stack_for_mask(
+            spell_targetable_only=True
+        )
+        nearest_any_enemy = self._get_nearest_enemy_stack_for_mask(
+            spell_targetable_only=False
+        )
+        can_cast = bool(spell_key) and self._can_cast_staff_spell(
+            spell_data,
+            nearest_targetable_enemy=nearest_targetable_enemy,
+            nearest_any_enemy=nearest_any_enemy,
+        )
+
+        spell_cast_applied = False
+        spell_cast_executed = False
+        spell_cast_reward = 0.0
+        spell_units_affected = 0
+        spell_heal_total = 0.0
+        spell_moves_restored = 0.0
+        actual_damage = 0.0
+        units_hit = 0
+        defeated_units = 0
+        blocked_units = 0
+        spell_enemy_defeated = False
+        enemy_reward = 0.0
+        ruin_clear_bonus_reward = 0.0
+        moves_before_cast = float(self.moves or 0.0)
+        spell_effect_summary: Dict[str, object] = (
+            self._blue_stack_spell_effect_summary()
+            if self._spell_kind_is_support(spell_kind)
+            else {
+                "active_spell_ids": [],
+                "debuff_types": [],
+                "armor_delta": 0,
+                "damage_multiplier": 1.0,
+                "initiative_multiplier": 1.0,
+                "accuracy_multiplier": 1.0,
+            }
+        )
+        target_enemy_id = None
+        target_position = None
+        target_reachable = False
+        target_description = None
+
+        if can_cast:
+            cast_result = self._cast_from_spell_spec(
+                source="staff_spell",
+                spell_key=spell_key,
+                spell_description=spell_description,
+                spell_spec=spell_data,
+                mana_costs=mana_costs,
+                spend_mana=True,
+                enforce_turn_limit=False,
+                nearest_targetable_enemy=nearest_targetable_enemy,
+                nearest_any_enemy=nearest_any_enemy,
+            )
+            spell_cast_applied = bool(cast_result.get("spell_cast_applied", False))
+            spell_cast_executed = bool(cast_result.get("spell_cast_executed", False))
+            spell_cast_reward = float(cast_result.get("spell_cast_reward", 0.0) or 0.0)
+            reward += float(cast_result.get("reward", 0.0) or 0.0)
+            spell_units_affected = int(cast_result.get("spell_units_affected", 0) or 0)
+            spell_heal_total = float(cast_result.get("spell_heal_total", 0.0) or 0.0)
+            spell_moves_restored = float(
+                cast_result.get("spell_moves_restored", 0.0) or 0.0
+            )
+            actual_damage = float(cast_result.get("spell_damage_total", 0.0) or 0.0)
+            units_hit = int(cast_result.get("spell_damage_units_hit", 0) or 0)
+            defeated_units = int(
+                cast_result.get("spell_damage_units_defeated", 0) or 0
+            )
+            blocked_units = int(cast_result.get("spell_damage_units_blocked", 0) or 0)
+            spell_effect_summary = dict(cast_result.get("spell_effect_summary", {}))
+            target_enemy_id = cast_result.get("target_enemy_id")
+            target_position = cast_result.get("target_enemy_position")
+            target_reachable = bool(cast_result.get("target_enemy_reachable", False))
+            target_description = cast_result.get("target_enemy_description")
+            spell_enemy_defeated = bool(cast_result.get("spell_enemy_defeated", False))
+            enemy_reward = float(cast_result.get("enemy_defeat_reward", 0.0) or 0.0)
+            ruin_clear_bonus_reward = float(
+                cast_result.get("ruin_clear_bonus_reward", 0.0) or 0.0
+            )
+        else:
+            cast_result = {}
+
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            "spell_cast_action": True,
+            "staff_spell_cast_action": True,
+            "staff_spell_cast_slot": int(idx),
+            "staff_item_name": item_name,
+            "staff_item_owned": bool(item_owned),
+            "staff_required_item_count": int(required_item_count),
+            "staff_magic_unlocked": bool(self.scroll_magic_unlocked),
+            "staff_requires_sorcery_lore": True,
+            "staff_has_sorcery_lore": bool(has_sorcery_lore),
+            "staff_spell_key": spell_key,
+            "staff_spell_kind": spell_kind,
+            "spell_key": spell_key,
+            "spell_description": spell_description,
+            "spell_level": spell_level,
+            "spell_kind": spell_kind,
+            "spell_damage": float(spell_damage),
+            "spell_damage_type": spell_damage_type,
+            "spell_debuff_type": spell_debuff_type,
+            "spell_summon_unit_name": summon_unit_name,
+            "spell_buff_type": spell_buff_type,
+            "spell_resistance_type": spell_resistance_type,
+            "spell_heal_amount": float(spell_heal_amount),
+            "spell_health_delta": int(spell_health_delta),
+            "spell_moves_restore_fraction": float(spell_moves_restore_fraction),
+            "spell_heal_total": float(spell_heal_total),
+            "spell_moves_restored": float(spell_moves_restored),
+            "spell_cast_applied": bool(spell_cast_applied),
+            "spell_cast_executed": bool(spell_cast_executed),
+            "spell_cast_reward": float(spell_cast_reward),
+            "spell_cast_used_this_turn": False,
+            "spell_is_learned": bool(spell_key and self._is_spell_learned(spell_key)),
+            "blocked_by_typeoflord": bool(blocked_by_typeoflord),
+            "spell_use_costs": dict(mana_costs),
+            "insufficient_mana": bool(
+                not can_cast and mana_costs and not self._has_mana_for_costs(mana_costs)
+            ),
+            "target_enemy_id": target_enemy_id,
+            "target_enemy_position": target_position,
+            "target_enemy_reachable": bool(target_reachable),
+            "target_enemy_description": target_description,
+            "spell_damage_total": float(actual_damage),
+            "spell_damage_units_hit": int(units_hit),
+            "spell_damage_units_defeated": int(defeated_units),
+            "spell_damage_units_blocked": int(blocked_units),
+            "spell_units_affected": int(spell_units_affected),
+            "spell_effect_active_ids": list(
+                spell_effect_summary.get("active_spell_ids", [])
+            ),
+            "spell_effect_types": list(
+                spell_effect_summary.get(
+                    "debuff_types"
+                    if self._spell_kind_is_offensive(spell_kind)
+                    else "buff_types",
+                    [],
+                )
+            ),
+            "spell_effect_resistance_types": list(
+                spell_effect_summary.get("resistance_types", [])
+            ),
+            "spell_effect_armor_delta": int(
+                spell_effect_summary.get("armor_delta", 0) or 0
+            ),
+            "spell_effect_damage_multiplier": float(
+                spell_effect_summary.get("damage_multiplier", 1.0) or 1.0
+            ),
+            "spell_effect_initiative_multiplier": float(
+                spell_effect_summary.get("initiative_multiplier", 1.0) or 1.0
+            ),
+            "spell_effect_accuracy_multiplier": float(
+                spell_effect_summary.get("accuracy_multiplier", 1.0) or 1.0
+            ),
+            "spell_effect_health_delta": int(
+                spell_effect_summary.get("health_delta", 0) or 0
+            ),
+            "spell_enemy_defeated": bool(spell_enemy_defeated),
+            "enemy_defeat_reward": float(enemy_reward),
+            "enemy_defeat_reward_base": float(self.reward_defeat_enemy)
+            if spell_enemy_defeated
+            else 0.0,
+            "blue_exp_reward": 0.0,
+            "blue_exp_raw": 0.0,
+            "ruin_clear_bonus_reward": float(ruin_clear_bonus_reward),
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+            "moves_before_cast": float(moves_before_cast),
+            "moves_after_cast": float(self.moves or 0.0),
+        }
+        return self._finalize_map_spell_step(
+            reward=reward,
+            info=info,
+            cast_result=cast_result,
+        )
     def _step_unlock_scroll_magic(self, action: int):
         reward = 0.0
         scroll_magic_unlocked_before = bool(self.scroll_magic_unlocked)
         supported_entries = self.available_scroll_spell_entries()
+        supported_staff_entries = self.available_staff_spell_unlock_entries()
+        has_unlock_source = bool(supported_entries or supported_staff_entries)
         can_unlock = (
             int(action) == int(self.GRID_UNLOCK_SCROLL_MAGIC_ACTION)
             and self.mode == self.MODE_GRID
             and not scroll_magic_unlocked_before
             and float(self.gold or 0.0) >= float(self.SCROLL_MAGE_UNLOCK_GOLD_COST)
-            and bool(supported_entries)
+            and has_unlock_source
         )
         gold_spent = 0.0
         if can_unlock:
@@ -2191,8 +2569,10 @@ class CampaignMagicMixin:
             "scroll_magic_unlocked_after": bool(self.scroll_magic_unlocked),
             "scroll_magic_unlock_gold_spent": float(gold_spent),
             "scroll_magic_unlock_available": bool(
-                not scroll_magic_unlocked_before and bool(supported_entries)
+                not scroll_magic_unlocked_before and has_unlock_source
             ),
+            "scroll_magic_unlock_scroll_slots": int(len(supported_entries)),
+            "scroll_magic_unlock_staff_slots": int(len(supported_staff_entries)),
             "scroll_magic_unlock_can_afford": bool(
                 float(self.gold or 0.0) + gold_spent
                 >= float(self.SCROLL_MAGE_UNLOCK_GOLD_COST)

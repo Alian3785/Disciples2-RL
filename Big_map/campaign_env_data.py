@@ -127,6 +127,9 @@ class CampaignConstantsMixin:
     HERO_SORCERY_LORE_LEVEL = 10
     HERO_SORCERY_LORE_DESCRIPTION = "Позволяет предводителю экипировать и использовать сферы в бою"
     HERO_SORCERY_LORE_ABILITY_KEY = "sorcery_lore"
+    HERO_BOOK_LORE_LEVEL = 11
+    HERO_BOOK_LORE_DESCRIPTION = "Позволяет предводителю читать магические книги"
+    HERO_BOOK_LORE_ABILITY_KEY = "book_lore"
     HERO_MIGHT_DESCRIPTION = "+25% основной урон героя"
     HERO_MIGHT_ABILITY_KEY = "might"
     HERO_MIGHT_DAMAGE_MULTIPLIER = 1.25
@@ -390,6 +393,7 @@ class CampaignConstantsMixin:
     BONUS_REVIVE_SOURCE_ITEM = "Life Potion"
     BONUS_REVIVE_ITEM_NAME = "Зелье воскрешения (+1)"
     BATTLE_EQUIP_SLOTS = 2
+    TALISMAN_USES_PER_ITEM = 5
     BASE_BATTLE_EQUIPPABLE_ITEM_NAMES = (
         BONUS_SMALL_HEAL_ITEM_NAME,
         BONUS_LARGE_HEAL_ITEM_NAME,
@@ -721,6 +725,45 @@ class CampaignConstantsMixin:
         BANNER_OF_MIGHT_ITEM_NAME: {"damage_multiplier": 1.15},
         BANNER_OF_WAR_ITEM_NAME: {"damage_multiplier": 1.20},
     }
+    TOME_OF_AIR_ITEM_NAME = "Tome of Air"
+    TOME_OF_WATER_ITEM_NAME = "Tome of Water"
+    TOME_OF_EARTH_ITEM_NAME = "Tome of Earth"
+    TOME_OF_FIRE_ITEM_NAME = "Tome of Fire"
+    TOME_OF_WAR_ITEM_NAME = "Tome of War"
+    TOME_OF_ARCANUM_ITEM_NAME = "Tome of Arcanum"
+    TOME_OF_SORCERY_ITEM_NAME = "Tome of Sorcery"
+    TOME_OF_MIND_ITEM_NAME = "Tome of Mind"
+    BOOK_EQUIP_SLOTS = 1
+    BOOK_ITEM_NAMES = (
+        TOME_OF_AIR_ITEM_NAME,
+        TOME_OF_WATER_ITEM_NAME,
+        TOME_OF_EARTH_ITEM_NAME,
+        TOME_OF_FIRE_ITEM_NAME,
+        TOME_OF_WAR_ITEM_NAME,
+        TOME_OF_ARCANUM_ITEM_NAME,
+        TOME_OF_SORCERY_ITEM_NAME,
+        TOME_OF_MIND_ITEM_NAME,
+    )
+    BOOK_ITEM_GOLD_VALUES = {
+        TOME_OF_AIR_ITEM_NAME: 400,
+        TOME_OF_WATER_ITEM_NAME: 400,
+        TOME_OF_EARTH_ITEM_NAME: 400,
+        TOME_OF_FIRE_ITEM_NAME: 400,
+        TOME_OF_WAR_ITEM_NAME: 600,
+        TOME_OF_ARCANUM_ITEM_NAME: 900,
+        TOME_OF_SORCERY_ITEM_NAME: 1200,
+        TOME_OF_MIND_ITEM_NAME: 900,
+    }
+    BOOK_EFFECT_DEFINITIONS = {
+        TOME_OF_AIR_ITEM_NAME: {"resistance_type": "Air"},
+        TOME_OF_WATER_ITEM_NAME: {"resistance_type": "Water"},
+        TOME_OF_EARTH_ITEM_NAME: {"resistance_type": "Earth"},
+        TOME_OF_FIRE_ITEM_NAME: {"resistance_type": "Fire"},
+        TOME_OF_MIND_ITEM_NAME: {"resistance_type": "Mind"},
+        TOME_OF_WAR_ITEM_NAME: {"exp_multiplier": 1.25},
+        TOME_OF_ARCANUM_ITEM_NAME: {"unlocks_orbs": True},
+        TOME_OF_SORCERY_ITEM_NAME: {"unlocks_talismans": True},
+    }
     ELVEN_BOOTS_ITEM_NAME = "Elven Boots"
     BOOTS_OF_THE_ELEMENTS_ITEM_NAME = "Boots of the Elements"
     BOOTS_OF_SPEED_ITEM_NAME = "Boots of Speed"
@@ -783,6 +826,32 @@ class CampaignConstantsMixin:
         {"name": "Вызов Мстителя", "spell_id": "lod_d2_s021", "price": 1000.0, "stock": 1},
     )
     MAX_SPELL_SHOP_CAST_ACTIONS = 5
+    STAFF_SPELL_ITEM_DEFINITIONS = (
+        {"item_name": "Staff of Celerity", "spell_id": "emp_d2_s002"},
+        {"item_name": "Staff of Necromancy", "spell_id": "und_d2_s001"},
+        {"item_name": "Staff of Thunder", "spell_id": "emp_d2_s004"},
+        {"item_name": "Staff of Holiness", "spell_id": "emp_d2_s007"},
+        {"item_name": "Staff of Traveling", "spell_id": "emp_d2_s006"},
+        {"item_name": "Staff of Tree Summoning", "spell_id": "elf_d2_s012"},
+        {"item_name": "Spirit Staff", "spell_id": "emp_d2_s011"},
+        {"item_name": "Staff of Dragon Mastering", "spell_id": "und_d2_s012"},
+        {"item_name": "Staff of Clumsiness", "spell_id": "und_d2_s013"},
+        {"item_name": "Staff of Protection", "spell_id": "emp_d2_s012"},
+        {"item_name": "Highfather Staff", "spell_id": "emp_d2_s019"},
+        {"item_name": "Staff of Demonology", "spell_id": "lod_d2_s017"},
+        {"item_name": "Staff of Earth Elemental Control", "spell_id": "emp_d2_s016"},
+        {"item_name": "Staff of Ice Spirits", "spell_id": "mcl_d2_s019"},
+    )
+    STAFF_SPELL_ITEM_NAMES = frozenset(
+        str(definition.get("item_name", "") or "")
+        for definition in STAFF_SPELL_ITEM_DEFINITIONS
+        if str(definition.get("item_name", "") or "")
+    )
+    STAFF_SPELL_ITEM_GOLD_VALUES = {
+        str(definition.get("item_name", "") or ""): 1200
+        for definition in STAFF_SPELL_ITEM_DEFINITIONS
+        if str(definition.get("item_name", "") or "")
+    }
     SCROLL_MAGE_UNLOCK_GOLD_COST = 500.0
     MAX_SCROLL_CAST_ACTIONS = 5
     GRID_BUILD_ACTION_START = (
@@ -803,10 +872,11 @@ class CampaignConstantsMixin:
         BANNER_OF_MIGHT_ITEM_NAME: 3000,
         BANNER_OF_FORTITUDE_ITEM_NAME: 5000,
         BANNER_OF_WAR_ITEM_NAME: 5000,
-        "Tome of Arcanum": 900,
+        **BOOK_ITEM_GOLD_VALUES,
         "Vampire Orb": 800,
         "Orb of Life": 800,
         "Lich Orb": 800,
+        "Zombie Talisman": 4000,
         "Mind ward scroll": 600,
         "Bronze Ring (Valuable)": 250,
         "Ruby (Valuable)": 1250,
@@ -818,6 +888,7 @@ class CampaignConstantsMixin:
         RUIN_INVULNERABILITY_ELIXIR_ITEM_NAME: 700,
         TITAN_ELIXIR_ITEM_NAME: 800,
         SUPREME_ELIXIR_ITEM_NAME: 800,
+        **STAFF_SPELL_ITEM_GOLD_VALUES,
         **BOOT_ITEM_GOLD_VALUES,
         **ARTIFACT_ITEM_GOLD_VALUES,
     }

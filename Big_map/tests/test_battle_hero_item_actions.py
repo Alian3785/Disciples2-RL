@@ -379,6 +379,63 @@ def test_summon_orbs_create_temporary_blue_units(item_name: str, expected_name: 
     assert truncated is False
 
 
+def test_talisman_spends_charge_once_per_battle_and_keeps_slot():
+    env = BattleEnv(log_enabled=False)
+    env.reset(seed=123)
+    _restore_blue_health(env)
+    _configure_campaign_orbs(env)
+    env.equipped_hero_items = ["Zombie Talisman", None]
+    env.equipped_hero_item_uses_left = [5, None]
+
+    _set_blue_turn(env, 8)
+    env._advance_until_blue_turn = lambda: None
+    action = FIRST_HERO_ITEM_ACTION_START + HERO_ITEM_TARGET_SLOTS.index(4)
+    _, _, terminated, truncated, info = env.step(action)
+
+    summoned = _blue_unit(env, 10)
+    expected_name = CampaignEnv._battle_item_effect_definitions()["Zombie Talisman"][
+        "summon_unit_name"
+    ]
+    assert summoned["name"] == expected_name
+    assert info["battle_hero_item_effect_kind"] == "summon"
+    assert info["battle_hero_item_applied"] is True
+    assert info["battle_hero_item_consumed"] is False
+    assert info["battle_hero_item_charge_spent"] is True
+    assert info["battle_hero_item_uses_left"] == 4
+    assert info["equipped_hero_items"] == ["Zombie Talisman", None]
+    assert info["equipped_hero_item_uses_left"] == [4, None]
+    assert env.equipped_hero_items == ["Zombie Talisman", None]
+    assert env.equipped_hero_item_uses_left == [4, None]
+
+    _set_blue_turn(env, 8)
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is False
+    assert terminated is False
+    assert truncated is False
+
+
+def test_talisman_final_charge_clears_slot():
+    env = BattleEnv(log_enabled=False)
+    env.reset(seed=123)
+    _restore_blue_health(env)
+    _configure_campaign_orbs(env)
+    env.equipped_hero_items = ["Zombie Talisman", None]
+    env.equipped_hero_item_uses_left = [1, None]
+
+    _set_blue_turn(env, 8)
+    env._advance_until_blue_turn = lambda: None
+    action = FIRST_HERO_ITEM_ACTION_START + HERO_ITEM_TARGET_SLOTS.index(4)
+    _, _, _, _, info = env.step(action)
+
+    assert info["battle_hero_item_effect_kind"] == "summon"
+    assert info["battle_hero_item_applied"] is True
+    assert info["battle_hero_item_consumed"] is True
+    assert info["battle_hero_item_charge_spent"] is True
+    assert info["battle_hero_item_uses_left"] == 0
+    assert env.equipped_hero_items == [None, None]
+    assert env.equipped_hero_item_uses_left == [None, None]
+
+
 def test_orb_of_life_revives_dead_blue_unit():
     env = BattleEnv(log_enabled=False)
     env.reset(seed=123)
@@ -578,3 +635,57 @@ def test_status_transform_weakening_and_rage_orbs_apply():
     assert ally["initiative"] == ally["initiative_base"]
     assert ally["bonusturn"] == 1
     assert rage_info["battle_hero_item_effect_kind"] == "extra_turn"
+
+
+def test_talisman_of_nightmare_fears_single_living_red_target():
+    env = BattleEnv(log_enabled=False)
+    env.reset(seed=123)
+    _configure_campaign_orbs(env)
+    env.equipped_hero_items = ["Talisman of Nightmare", None]
+    env.equipped_hero_item_uses_left = [5, None]
+
+    for unit in env.combined:
+        if unit.get("team") == "red" and int(unit.get("position", 0)) != 1:
+            unit["health"] = 0
+    target = _red_unit(env, 1)
+    target["health"] = max(1, int(target.get("max_health", 1) or 1))
+
+    _set_blue_turn(env, 8)
+    mask = env.compute_action_mask()
+    assert bool(mask[FIRST_HERO_ITEM_ACTION_START]) is False
+    assert bool(mask[FIRST_HERO_ITEM_ENEMY_ACTION_START]) is True
+
+    env._advance_until_blue_turn = lambda: None
+    _, _, _, _, info = env.step(FIRST_HERO_ITEM_ENEMY_ACTION_START)
+
+    assert target["running_away"] == 1
+    assert info["battle_hero_item_effect_kind"] == "fear"
+    assert info["battle_hero_item_applied"] is True
+    assert info["battle_hero_item_effect_value"] == pytest.approx(1.0)
+    assert info["battle_hero_item_consumed"] is False
+    assert info["battle_hero_item_charge_spent"] is True
+    assert info["battle_hero_item_uses_left"] == 4
+
+
+def test_talisman_of_nightmare_mind_resistance_blocks_fear_but_spends_charge():
+    env = BattleEnv(log_enabled=False)
+    env.reset(seed=123)
+    _configure_campaign_orbs(env)
+    env.equipped_hero_items = ["Talisman of Nightmare", None]
+    env.equipped_hero_item_uses_left = [5, None]
+    target = _red_unit(env, 1)
+    target["health"] = max(1, int(target.get("max_health", 1) or 1))
+    target["resistance"] = ["Mind"]
+
+    _set_blue_turn(env, 8)
+    env._advance_until_blue_turn = lambda: None
+    _, _, _, _, info = env.step(FIRST_HERO_ITEM_ENEMY_ACTION_START)
+
+    assert target["running_away"] == 0
+    assert info["battle_hero_item_effect_kind"] == "fear"
+    assert info["battle_hero_item_applied"] is True
+    assert info["battle_hero_item_effect_value"] == pytest.approx(0.0)
+    assert info["battle_hero_item_consumed"] is False
+    assert info["battle_hero_item_charge_spent"] is True
+    assert info["battle_hero_item_uses_left"] == 4
+    assert env.equipped_hero_items == ["Talisman of Nightmare", None]

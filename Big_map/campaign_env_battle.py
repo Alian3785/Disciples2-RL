@@ -45,24 +45,35 @@ class CampaignBattleMixin:
                 consumed_item_name = str(
                     battle_info.get("battle_hero_item_name", "") or ""
                 )
+                hero_item_action = bool(battle_info.get("battle_hero_item_action"))
+                hero_item_applied = bool(battle_info.get("battle_hero_item_applied"))
+                hero_item_consumed = bool(battle_info.get("battle_hero_item_consumed"))
+                hero_item_charge_spent = bool(
+                    battle_info.get("battle_hero_item_charge_spent")
+                )
                 if (
-                    battle_info.get("battle_hero_item_action")
-                    and battle_info.get("battle_hero_item_consumed")
+                    hero_item_action
+                    and hero_item_consumed
                     and consumed_item_name
                 ):
                     self._consume_battle_equipable_item(consumed_item_name)
-                    if battle_info.get("battle_hero_item_applied"):
-                        self.battle_items_used_total += 1
-                        battle_item_use_reward = float(self.reward_battle_item_use)
-                    else:
-                        battle_item_use_reward = 0.0
+                else:
+                    self._sync_equipped_hero_items()
+                if hero_item_action and hero_item_applied and (
+                    hero_item_charge_spent or hero_item_consumed
+                ):
+                    self.battle_items_used_total += 1
+                    battle_item_use_reward = float(self.reward_battle_item_use)
                 else:
                     battle_item_use_reward = 0.0
                 equipped_items = battle_info.get("equipped_hero_items")
+                equipped_item_uses_left = battle_info.get("equipped_hero_item_uses_left")
                 if isinstance(equipped_items, list) and str(
                     self.current_battle_context.get("kind", "hero") or "hero"
                 ) != "summon_spell":
                     self.equipped_hero_items = list(equipped_items)
+                    if isinstance(equipped_item_uses_left, list):
+                        self.equipped_hero_item_uses_left = list(equipped_item_uses_left)
                     self._sync_equipped_hero_items()
             else:
                 battle_item_use_reward = 0.0
@@ -498,7 +509,11 @@ class CampaignBattleMixin:
         # Восстанавливаем состояние BLUE или берём дефолтное.
         if blue_team is not None:
             prepared_blue_team = self._build_battle_team_with_placeholders("blue", blue_team)
+            self._apply_equipped_book_battle_effects(prepared_blue_team)
             equipped_hero_items: List[Optional[str]] = [None] * int(self.BATTLE_EQUIP_SLOTS)
+            equipped_hero_item_uses_left: List[Optional[int]] = [None] * int(
+                self.BATTLE_EQUIP_SLOTS
+            )
             hero_item_effects: Dict[str, Dict[str, object]] = {}
             self._log("Используется кастомная BLUE команда")
         elif self.persist_blue_hp and self.blue_team_state is not None:
@@ -511,10 +526,12 @@ class CampaignBattleMixin:
             self._apply_hero_heal_tile_armor_bonus(prepared_blue_team)
             self._apply_active_blue_potion_effects(prepared_blue_team)
             self._apply_active_blue_support_spell_effects(prepared_blue_team)
+            self._apply_equipped_book_battle_effects(prepared_blue_team)
             self._apply_equipped_artifact_effects(prepared_blue_team)
             self._apply_equipped_banner_effects(prepared_blue_team)
             self._sync_equipped_hero_items()
             equipped_hero_items = list(self.equipped_hero_items)
+            equipped_hero_item_uses_left = list(self.equipped_hero_item_uses_left)
             hero_item_effects = dict(self._battle_item_effect_definitions())
             self._log("Загружено сохранённое состояние BLUE команды")
         else:
@@ -524,10 +541,12 @@ class CampaignBattleMixin:
             self._apply_hero_heal_tile_armor_bonus(prepared_blue_team)
             self._apply_active_blue_potion_effects(prepared_blue_team)
             self._apply_active_blue_support_spell_effects(prepared_blue_team)
+            self._apply_equipped_book_battle_effects(prepared_blue_team)
             self._apply_equipped_artifact_effects(prepared_blue_team)
             self._apply_equipped_banner_effects(prepared_blue_team)
             self._sync_equipped_hero_items()
             equipped_hero_items = list(self.equipped_hero_items)
+            equipped_hero_item_uses_left = list(self.equipped_hero_item_uses_left)
             hero_item_effects = dict(self._battle_item_effect_definitions())
             self._log("Используется дефолтная BLUE команда")
 
@@ -538,7 +557,9 @@ class CampaignBattleMixin:
             log_enabled=self.log_enabled,
         )
         self.battle_env.equipped_hero_items = list(equipped_hero_items)
+        self.battle_env.equipped_hero_item_uses_left = list(equipped_hero_item_uses_left)
         self.battle_env.hero_item_effects = dict(hero_item_effects)
+        self.battle_env.exp_multiplier = float(self._active_book_exp_multiplier())
 
         # Инициализируем бой с кастомными командами
         self.battle_env._init_with_custom_teams(red_team, prepared_blue_team)
@@ -756,6 +777,17 @@ class CampaignBattleMixin:
                     for res in (restored_unit.get("resistance") or [])
                     if str(res) not in set(added_spell_resistance)
                 ]
+            added_book_resistance = [
+                str(res)
+                for res in (restored_unit.get("campaign_book_added_resistance") or [])
+                if str(res)
+            ]
+            if added_book_resistance:
+                restored_unit["resistance"] = [
+                    res
+                    for res in (restored_unit.get("resistance") or [])
+                    if str(res) not in set(added_book_resistance)
+                ]
             if "campaign_map_spell_base_armor" in restored_unit:
                 restored_unit["armor"] = self._normalize_armor_value(
                     restored_unit.get(
@@ -772,6 +804,8 @@ class CampaignBattleMixin:
             restored_unit.pop("campaign_map_spell_base_max_health", None)
             restored_unit.pop("campaign_map_spell_health_bonus", None)
             restored_unit.pop("campaign_map_spell_added_resistance", None)
+            restored_unit.pop("campaign_book_added_resistance", None)
+            restored_unit.pop("campaign_active_book", None)
             restored_unit.pop("campaign_map_spell_base_armor", None)
             restored_unit.pop("campaign_banner_base_damage", None)
             restored_unit.pop("campaign_banner_base_accuracy", None)

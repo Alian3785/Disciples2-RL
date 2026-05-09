@@ -46,7 +46,18 @@ class CampaignObservationMixin:
         self.grid_battle_equipment_obs_size = (
             int(self.BATTLE_EQUIP_SLOTS) * self.grid_battle_equipment_features_per_slot
         )
-        self.grid_resource_core_obs_size = 11 + self.grid_battle_equipment_obs_size
+        self.grid_book_equipment_item_names = tuple(
+            str(item_name) for item_name in getattr(self, "scenario_book_item_names", ())
+        )
+        self.grid_book_equipment_features_per_slot = (
+            len(self.grid_book_equipment_item_names) + 1
+        )
+        self.grid_book_equipment_obs_size = (
+            int(self.BOOK_EQUIP_SLOTS) * self.grid_book_equipment_features_per_slot
+        )
+        self.grid_resource_core_obs_size = (
+            11 + self.grid_battle_equipment_obs_size + self.grid_book_equipment_obs_size
+        )
         self.grid_mana_total_kinds = tuple(str(kind) for kind in self.MANA_KIND_ORDER)
         self.grid_mana_total_obs_size = len(self.grid_mana_total_kinds)
         self.grid_resource_obs_size = (
@@ -382,6 +393,51 @@ class CampaignObservationMixin:
             + self.grid_mercenary_roster_obs_size
             + self.grid_trainer_obs_size
         )
+    def _refresh_book_observation_layout(self) -> None:
+        if not hasattr(self, "grid_battle_equipment_obs_size"):
+            return
+
+        old_resource_obs_size = getattr(self, "grid_resource_obs_size", None)
+        self.grid_book_equipment_item_names = tuple(
+            str(item_name) for item_name in getattr(self, "scenario_book_item_names", ())
+        )
+        self.grid_book_equipment_features_per_slot = (
+            len(self.grid_book_equipment_item_names) + 1
+        )
+        self.grid_book_equipment_obs_size = (
+            int(self.BOOK_EQUIP_SLOTS) * self.grid_book_equipment_features_per_slot
+        )
+        self.grid_resource_core_obs_size = (
+            11 + self.grid_battle_equipment_obs_size + self.grid_book_equipment_obs_size
+        )
+        self.grid_mana_total_kinds = tuple(str(kind) for kind in self.MANA_KIND_ORDER)
+        self.grid_mana_total_obs_size = len(self.grid_mana_total_kinds)
+        self.grid_resource_obs_size = (
+            self.grid_resource_core_obs_size + self.grid_mana_total_obs_size
+        )
+
+        if old_resource_obs_size is not None and hasattr(self, "grid_campaign_obs_size"):
+            self.grid_campaign_obs_size += int(self.grid_resource_obs_size) - int(
+                old_resource_obs_size
+            )
+        if (
+            hasattr(self, "grid_obs_base_size")
+            and hasattr(self, "grid_enemy_obs_size")
+            and hasattr(self, "grid_campaign_obs_size")
+        ):
+            self.GRID_OBS_SIZE = (
+                int(self.grid_obs_base_size)
+                + int(self.grid_enemy_obs_size)
+                + int(self.grid_campaign_obs_size)
+            )
+        if hasattr(self, "observation_space"):
+            total_obs = 1 + int(self.GRID_OBS_SIZE) + int(self.BATTLE_OBS_SIZE) + 2
+            self.observation_space = spaces.Box(
+                low=np.zeros(total_obs, dtype=np.float32),
+                high=np.ones(total_obs, dtype=np.float32),
+                shape=(total_obs,),
+                dtype=np.float32,
+            )
     def _encode_enemy_unit_type(self, unit_type: Optional[str]) -> List[float]:
         if self.grid_enemy_unit_type_feature_size <= 0:
             return []
@@ -525,6 +581,13 @@ class CampaignObservationMixin:
                 equipped_name = str(self.equipped_hero_items[slot_index] or "")
             resource_obs.append(1.0 if not equipped_name else 0.0)
             for item_name in self.grid_battle_equipment_item_names:
+                resource_obs.append(1.0 if equipped_name == item_name else 0.0)
+        for slot_index in range(int(self.BOOK_EQUIP_SLOTS)):
+            equipped_name = ""
+            if slot_index < len(self.equipped_book_items):
+                equipped_name = str(self.equipped_book_items[slot_index] or "")
+            resource_obs.append(1.0 if not equipped_name else 0.0)
+            for item_name in self.grid_book_equipment_item_names:
                 resource_obs.append(1.0 if equipped_name == item_name else 0.0)
         for mana_kind in self.grid_mana_total_kinds:
             mana_attr = str(self.MANA_ATTR_BY_KIND.get(str(mana_kind), "") or "")

@@ -328,6 +328,28 @@ def test_campaign_travel_hero_visual_info_shows_sorcery_lore_on_level_ten():
     )
 
 
+def test_campaign_travel_hero_visual_info_shows_book_lore_on_level_eleven():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    duke = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
+    duke["Level"] = 11
+    duke["needaunit"] = 0
+
+    env._sync_moves_per_turn_with_hero(units=env.blue_team_state, grant_delta=True)
+
+    info = env.get_travel_hero_visual_info()
+    assert info["name"] == duke["name"]
+    assert info["level"] == 11
+    assert (
+        "Колдовство (Позволяет предводителю читать магические книги)"
+        in info["abilities"]
+    )
+    assert info["abilities"][-1] == (
+        "Мощь (+25% основной урон героя)"
+    )
+
+
 def test_replacement_might_bonus_applies_once_and_only_to_primary_damage():
     cases = [
         (1, 9),

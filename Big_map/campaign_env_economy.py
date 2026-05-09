@@ -263,6 +263,11 @@ class CampaignEconomyMixin:
             return True
         hero = self._resolve_travel_hero(units=units)
         return str(self.HERO_SORCERY_LORE_ABILITY_KEY).lower() in self._hero_ability_tokens(hero)
+    def _hero_has_book_lore(self, units: Optional[List[Dict]] = None) -> bool:
+        if self._hero_level(units=units) >= int(self.HERO_BOOK_LORE_LEVEL):
+            return True
+        hero = self._resolve_travel_hero(units=units)
+        return str(self.HERO_BOOK_LORE_ABILITY_KEY).lower() in self._hero_ability_tokens(hero)
     def _lord_replacement_might_level(self) -> Optional[int]:
         lord_type = int(self.typeoflord)
         if lord_type == 1:
@@ -1176,6 +1181,8 @@ class CampaignEconomyMixin:
         self.active_hire_options = self._get_hire_options_for_capital(self.Realcapital)
         self.active_mercenary_hire_options = self._get_mercenary_hire_options()
         self._refresh_battle_equippable_item_names()
+        self._refresh_book_item_names()
+        self._refresh_staff_spell_action_entries()
         self.GRID_MERCENARY_HIRE_ACTION_START = (
             self.GRID_HIRE_ACTION_START + len(self.active_hire_options)
         )
@@ -1225,8 +1232,11 @@ class CampaignEconomyMixin:
         self.GRID_EQUIP_BATTLE_ITEM2_ACTION_START = (
             self.GRID_EQUIP_BATTLE_ITEM1_ACTION_START + len(self.BATTLE_EQUIPPABLE_ITEM_NAMES)
         )
-        self.grid_legion_damage_spell_action_start = (
+        self.GRID_EQUIP_BOOK_ACTION_START = (
             self.GRID_EQUIP_BATTLE_ITEM1_ACTION_START + len(self.BATTLE_EQUIPPABLE_ITEM_NAMES)
+        )
+        self.grid_legion_damage_spell_action_start = (
+            self.GRID_EQUIP_BOOK_ACTION_START + len(self.scenario_book_item_names)
         )
         self.grid_map_support_spell_action_start = (
             self.grid_legion_damage_spell_action_start + self._map_offensive_spell_action_max_count()
@@ -1234,10 +1244,14 @@ class CampaignEconomyMixin:
         self.grid_spell_shop_cast_action_start = (
             self.grid_map_support_spell_action_start + self._map_support_spell_action_max_count()
         )
-        self.GRID_UNLOCK_SCROLL_MAGIC_ACTION = (
+        self.grid_staff_spell_action_start = (
             self.grid_spell_shop_cast_action_start + int(self.MAX_SPELL_SHOP_CAST_ACTIONS)
         )
+        self.GRID_UNLOCK_SCROLL_MAGIC_ACTION = (
+            self.grid_staff_spell_action_start + len(self.staff_spell_action_entries())
+        )
         self.grid_scroll_cast_action_start = self.GRID_UNLOCK_SCROLL_MAGIC_ACTION + 1
+        self._refresh_book_observation_layout()
     def _spend_moves(self, spent_moves: int) -> None:
         """Списывает очки перемещения в grid-режиме."""
         if spent_moves <= 0:

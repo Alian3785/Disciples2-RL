@@ -180,6 +180,10 @@ class CampaignMaskMixin:
                 mask[self.GRID_EQUIP_BATTLE_ITEM1_ACTION_START + idx] = self._can_equip_battle_item(
                     item_name,
                 )
+            for idx, item_name in enumerate(getattr(self, "scenario_book_item_names", ()) or ()):
+                mask[self.GRID_EQUIP_BOOK_ACTION_START + idx] = self._can_equip_book_item(
+                    item_name,
+                )
             nearest_targetable_enemy = self._get_nearest_enemy_stack_for_mask(
                 spell_targetable_only=True
             )
@@ -225,10 +229,20 @@ class CampaignMaskMixin:
                         nearest_any_enemy=nearest_any_enemy,
                     )
                 )
+            current_staff_specs = self.staff_spell_action_entries()
+            for idx, staff_entry in enumerate(current_staff_specs):
+                mask[self.grid_staff_spell_action_start + idx] = (
+                    bool(staff_entry)
+                    and self._can_cast_staff_spell(
+                        staff_entry,
+                        nearest_targetable_enemy=nearest_targetable_enemy,
+                        nearest_any_enemy=nearest_any_enemy,
+                    )
+                )
             mask[self.GRID_UNLOCK_SCROLL_MAGIC_ACTION] = (
                 not bool(self.scroll_magic_unlocked)
                 and float(self.gold or 0.0) >= float(self.SCROLL_MAGE_UNLOCK_GOLD_COST)
-                and bool(self._available_scroll_spell_entries_cache)
+                and self._has_scroll_or_staff_magic_unlock_source()
             )
             current_scroll_specs = self._scroll_cast_slot_entries_cache
             for idx in range(int(self.MAX_SCROLL_CAST_ACTIONS)):

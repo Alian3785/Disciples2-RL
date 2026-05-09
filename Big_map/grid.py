@@ -258,6 +258,7 @@ BASE_STATIC_CHESTS: Tuple[Tuple[Tuple[int, int], Tuple[str, ...]], ...] = (
     ((22, 27), ("Vampire Orb",)),
     ((46, 6), ("Orb of Life",)),
     ((45, 40), ("Lich Orb",)),
+    ((37, 22), ("Zombie Talisman",)),
     ((11, 11), ("Ruby (Valuable)",)),
     ((13, 19), ("Ruby (Valuable)",)),
     ((32, 41), ("Potion of Healing", "Diamond (Valuable)")),

@@ -1173,7 +1173,10 @@ class CampaignMetricsCallback(BaseCallback):
         used = (
             bool(info.get("battle_hero_item_action"))
             and bool(info.get("battle_hero_item_applied"))
-            and bool(info.get("battle_hero_item_consumed"))
+            and (
+                bool(info.get("battle_hero_item_charge_spent"))
+                or bool(info.get("battle_hero_item_consumed"))
+            )
         )
 
         if equipped:
