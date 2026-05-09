@@ -34,6 +34,14 @@ def _equip_action(env: CampaignEnv, item_name: str) -> int:
     )
 
 
+def _grant_sorcery_lore(env: CampaignEnv) -> dict:
+    hero = env._resolve_travel_hero(units=env.blue_team_state)
+    assert hero is not None
+    hero["hero_abilities"] = [env.HERO_SORCERY_LORE_ABILITY_KEY]
+    assert env._hero_has_sorcery_lore()
+    return hero
+
+
 def _set_battle_hero_turn(env: CampaignEnv, position: int = 8) -> dict:
     assert env.battle_env is not None
     hero = next(
@@ -56,28 +64,34 @@ def test_counter_backed_battle_items_are_synced_into_heroitems_on_reset():
     assert env._count_hero_item(env.BONUS_REVIVE_ITEM_NAME) == env._revive_bottles_left()
 
 
-def test_battle_equip_actions_include_only_orbs_present_on_current_map():
+def test_battle_equip_actions_include_magic_items_present_on_current_map():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
 
-    assert env.scenario_battle_orb_item_names == (
+    assert env.scenario_battle_magic_item_names == (
         "Vampire Orb",
         "Orb of Life",
         "Lich Orb",
+        "Zombie Talisman",
     )
+    assert env.scenario_battle_orb_item_names == env.scenario_battle_magic_item_names
     assert env.BATTLE_EQUIPPABLE_ITEM_NAMES[: len(env.BASE_BATTLE_EQUIPPABLE_ITEM_NAMES)] == (
         env.BASE_BATTLE_EQUIPPABLE_ITEM_NAMES
     )
     assert env.BATTLE_EQUIPPABLE_ITEM_NAMES[
         len(env.BASE_BATTLE_EQUIPPABLE_ITEM_NAMES) :
-    ] == env.scenario_battle_orb_item_names
-    assert env.grid_legion_damage_spell_action_start == (
+    ] == env.scenario_battle_magic_item_names
+    assert env.GRID_EQUIP_BOOK_ACTION_START == (
         env.GRID_EQUIP_BATTLE_ITEM1_ACTION_START
         + len(env.BATTLE_EQUIPPABLE_ITEM_NAMES)
     )
+    assert env.scenario_book_item_names == (env.TOME_OF_ARCANUM_ITEM_NAME,)
+    assert env.grid_legion_damage_spell_action_start == (
+        env.GRID_EQUIP_BOOK_ACTION_START + len(env.scenario_book_item_names)
+    )
 
 
-def test_orb_equip_action_is_masked_until_orb_enters_heroitems():
+def test_orb_equip_action_requires_owned_orb_and_sorcery_lore():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
 
@@ -87,6 +101,10 @@ def test_orb_equip_action_is_masked_until_orb_enters_heroitems():
     assert bool(mask[action]) is False
 
     env._append_hero_item(item_name)
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is False
+
+    _grant_sorcery_lore(env)
     mask = env.compute_action_mask()
     assert bool(mask[action]) is True
 
@@ -120,7 +138,41 @@ def test_merchant_orbs_reserve_equip_actions_but_stay_masked_until_owned():
 
     env._append_hero_item("Angel Orb")
     mask = env.compute_action_mask()
+    assert bool(mask[action]) is False
+
+    _grant_sorcery_lore(env)
+    mask = env.compute_action_mask()
     assert bool(mask[action]) is True
+
+
+def test_talisman_equip_action_requires_owned_item_and_sorcery_lore():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    item_name = "Zombie Talisman"
+    action = _equip_action(env, item_name)
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is False
+
+    env._append_hero_item(item_name)
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is False
+
+    _grant_sorcery_lore(env)
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is True
+
+    _, reward, terminated, truncated, info = env.step(action)
+
+    assert terminated is False
+    assert truncated is False
+    assert reward == pytest.approx(env.reward_battle_item_equip)
+    assert info["equip_battle_item_applied"] is True
+    assert info["equip_battle_item_slot"] == 1
+    assert info["equip_battle_item_name"] == item_name
+    assert info["equip_battle_item_uses_left"] == env.TALISMAN_USES_PER_ITEM
+    assert env.equipped_hero_items[0] == item_name
+    assert env.equipped_hero_item_uses_left[0] == env.TALISMAN_USES_PER_ITEM
 
 
 @pytest.mark.parametrize(
@@ -243,6 +295,7 @@ def test_equipped_orb_of_life_revives_and_consumes_hero_item_source():
 
     item_name = "Orb of Life"
     env._append_hero_item(item_name)
+    _grant_sorcery_lore(env)
     starting_item_count = env._count_hero_item(item_name)
 
     _, _, _, _, equip_info = env.step(_equip_action(env, item_name))
@@ -284,6 +337,7 @@ def test_equipped_vampire_orb_summons_and_consumes_hero_item_source():
 
     item_name = "Vampire Orb"
     env._append_hero_item(item_name)
+    _grant_sorcery_lore(env)
     starting_item_count = env._count_hero_item(item_name)
 
     _, _, _, _, equip_info = env.step(_equip_action(env, item_name))
@@ -309,6 +363,102 @@ def test_equipped_vampire_orb_summons_and_consumes_hero_item_source():
     assert env.battle_items_used_total == 1
     assert env._count_hero_item(item_name) == starting_item_count - 1
     assert env.equipped_hero_items[0] is None
+    assert env.battle_env.equipped_hero_items[0] is None
+    assert terminated is False
+    assert truncated is False
+
+
+def test_equipped_talisman_spends_charge_without_consuming_source():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    item_name = "Zombie Talisman"
+    env._append_hero_item(item_name)
+    _grant_sorcery_lore(env)
+    starting_item_count = env._count_hero_item(item_name)
+
+    _, _, _, _, equip_info = env.step(_equip_action(env, item_name))
+    assert equip_info["equip_battle_item_applied"] is True
+    assert env.equipped_hero_items[0] == item_name
+    assert env.equipped_hero_item_uses_left[0] == env.TALISMAN_USES_PER_ITEM
+
+    env.current_enemy_id = 1
+    env._init_battle(enemy_id=1)
+    env.mode = env.MODE_BATTLE
+    env.battle_env._advance_until_blue_turn = lambda: None
+    _set_battle_hero_turn(env, 8)
+
+    action = FIRST_HERO_ITEM_ACTION_START + HERO_ITEM_TARGET_SLOTS.index(4)
+    _, _, terminated, truncated, info = env.step(action)
+
+    summoned = _battle_blue_unit(env, 10)
+    expected_name = env._battle_item_effect_definitions()["Zombie Talisman"][
+        "summon_unit_name"
+    ]
+    assert summoned["name"] == expected_name
+    assert info["battle_hero_item_name"] == item_name
+    assert info["battle_hero_item_effect_kind"] == "summon"
+    assert info["battle_hero_item_applied"] is True
+    assert info["battle_hero_item_consumed"] is False
+    assert info["battle_hero_item_charge_spent"] is True
+    assert info["battle_hero_item_uses_left"] == env.TALISMAN_USES_PER_ITEM - 1
+    assert info["battle_item_use_reward"] == pytest.approx(env.reward_battle_item_use)
+    assert env.battle_items_used_total == 1
+    assert env._count_hero_item(item_name) == starting_item_count
+    assert env.equipped_hero_items[0] == item_name
+    assert env.equipped_hero_item_uses_left[0] == env.TALISMAN_USES_PER_ITEM - 1
+    assert env.battle_env.equipped_hero_items[0] == item_name
+    assert env.battle_env.equipped_hero_item_uses_left[0] == env.TALISMAN_USES_PER_ITEM - 1
+
+    _set_battle_hero_turn(env, 8)
+    mask = env.battle_env.compute_action_mask()
+    assert bool(mask[action]) is False
+
+    env.current_enemy_id = 1
+    env._init_battle(enemy_id=1)
+    env.mode = env.MODE_BATTLE
+    env.battle_env._advance_until_blue_turn = lambda: None
+    _set_battle_hero_turn(env, 8)
+    next_battle_mask = env.battle_env.compute_action_mask()
+    assert env.battle_env.equipped_hero_item_uses_left[0] == env.TALISMAN_USES_PER_ITEM - 1
+    assert bool(next_battle_mask[action]) is True
+    assert terminated is False
+    assert truncated is False
+
+
+def test_talisman_final_charge_consumes_source_and_clears_slot():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    item_name = "Zombie Talisman"
+    env._append_hero_item(item_name)
+    _grant_sorcery_lore(env)
+    starting_item_count = env._count_hero_item(item_name)
+
+    _, _, _, _, equip_info = env.step(_equip_action(env, item_name))
+    assert equip_info["equip_battle_item_applied"] is True
+    env.equipped_hero_item_uses_left[0] = 1
+    env.equipped_hero_item_uses_left_item_names[0] = item_name
+
+    env.current_enemy_id = 1
+    env._init_battle(enemy_id=1)
+    env.mode = env.MODE_BATTLE
+    env.battle_env._advance_until_blue_turn = lambda: None
+    _set_battle_hero_turn(env, 8)
+
+    action = FIRST_HERO_ITEM_ACTION_START + HERO_ITEM_TARGET_SLOTS.index(4)
+    _, _, terminated, truncated, info = env.step(action)
+
+    assert info["battle_hero_item_name"] == item_name
+    assert info["battle_hero_item_effect_kind"] == "summon"
+    assert info["battle_hero_item_applied"] is True
+    assert info["battle_hero_item_consumed"] is True
+    assert info["battle_hero_item_charge_spent"] is True
+    assert info["battle_hero_item_uses_left"] == 0
+    assert env.battle_items_used_total == 1
+    assert env._count_hero_item(item_name) == starting_item_count - 1
+    assert env.equipped_hero_items[0] is None
+    assert env.equipped_hero_item_uses_left[0] is None
     assert env.battle_env.equipped_hero_items[0] is None
     assert terminated is False
     assert truncated is False

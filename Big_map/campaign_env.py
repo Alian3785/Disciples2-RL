@@ -385,17 +385,27 @@ class CampaignEnv(
         self._scroll_cast_slot_entries_cache: Tuple[Dict[str, object], ...] = ()
         self._total_scroll_count_cache: int = 0
         self.equipped_hero_items: List[Optional[str]] = [None] * int(self.BATTLE_EQUIP_SLOTS)
+        self.equipped_hero_item_uses_left: List[Optional[int]] = [None] * int(
+            self.BATTLE_EQUIP_SLOTS
+        )
+        self.equipped_hero_item_uses_left_item_names: List[Optional[str]] = [None] * int(
+            self.BATTLE_EQUIP_SLOTS
+        )
         self.equipped_artifact_items: List[Optional[str]] = [None] * int(
             self.ARTIFACT_EQUIP_SLOTS
         )
         self.equipped_banner_items: List[Optional[str]] = [None] * int(
             self.BANNER_EQUIP_SLOTS
         )
+        self.equipped_book_items: List[Optional[str]] = [None] * int(
+            self.BOOK_EQUIP_SLOTS
+        )
         self.equipped_boot_items: List[Optional[str]] = [None] * int(
             self.BOOTS_EQUIP_SLOTS
         )
         self.artifact_auto_equip_next_slot: int = 0
         self.battle_item_equip_used_this_turn: bool = False
+        self.book_equip_used_this_turn: bool = False
         self.enemy_team_states: Dict[int, List[Dict]] = self._create_initial_enemy_team_states()
         self.enemy_map_spell_effects: Dict[int, set[str]] = {}
         self.blue_map_spell_effects: set[str] = set()
@@ -422,6 +432,7 @@ class CampaignEnv(
         self.active_air_ward_positions: set[int] = set()
         self.battle_items_equipped_total: int = 0
         self.battle_items_used_total: int = 0
+        self.books_equipped_total: int = 0
         self.captured_objective_cities: set[str] = set()
         self.cleared_ruin_enemy_ids: set[int] = set()
         self.last_ruin_reward: Optional[Dict[str, object]] = None
@@ -490,12 +501,18 @@ class CampaignEnv(
         self.heroitems = []
         self._invalidate_inventory_cache()
         self.equipped_hero_items = [None] * int(self.BATTLE_EQUIP_SLOTS)
+        self.equipped_hero_item_uses_left = [None] * int(self.BATTLE_EQUIP_SLOTS)
+        self.equipped_hero_item_uses_left_item_names = [None] * int(
+            self.BATTLE_EQUIP_SLOTS
+        )
         self.equipped_artifact_items = [None] * int(self.ARTIFACT_EQUIP_SLOTS)
         self.equipped_banner_items = [None] * int(self.BANNER_EQUIP_SLOTS)
+        self.equipped_book_items = [None] * int(self.BOOK_EQUIP_SLOTS)
         self.equipped_boot_items = [None] * int(self.BOOTS_EQUIP_SLOTS)
         self.artifact_auto_equip_next_slot = 0
         self._sync_moves_per_turn_with_hero(units=self.blue_team_state, refill=True)
         self.battle_item_equip_used_this_turn = False
+        self.book_equip_used_this_turn = False
         self.enemy_team_states = self._create_initial_enemy_team_states()
         self.enemy_map_spell_effects = {}
         self.blue_map_spell_effects = set()
@@ -521,6 +538,7 @@ class CampaignEnv(
         self.active_air_ward_positions = set()
         self.battle_items_equipped_total = 0
         self.battle_items_used_total = 0
+        self.books_equipped_total = 0
         self.combat_potion_battle_bonus_pending = False
         self.captured_objective_cities = set()
         self.cleared_ruin_enemy_ids = set()
@@ -571,8 +589,11 @@ class CampaignEnv(
             "typeoflord": int(self.typeoflord),
             "heroitems": list(self.heroitems),
             "equipped_hero_items": list(self.equipped_hero_items),
+            "equipped_hero_item_uses_left": list(self.equipped_hero_item_uses_left),
             "battle_items_equipped_total": int(self.battle_items_equipped_total),
             "battle_items_used_total": int(self.battle_items_used_total),
+            "books_equipped_total": int(self.books_equipped_total),
+            "book_equip_used_this_turn": bool(self.book_equip_used_this_turn),
             "extra_heal_bottles": int(self.extra_heal_bottles or 0),
             "extra_healing_bottles": int(self.extra_healing_bottles or 0),
             "extra_revive_bottles": int(self.extra_revive_bottles or 0),
@@ -605,6 +626,7 @@ class CampaignEnv(
         info.update(self._ruin_progress_info())
         info.update(self._artifact_state_info())
         info.update(self._banner_state_info())
+        info.update(self._book_state_info())
         info.update(self._boot_state_info())
         info.update(self._scripted_capital_bot_info())
         info.update(self._merchant_context_info(self.grid_env.agent_pos))
@@ -641,12 +663,16 @@ class CampaignEnv(
             return self._step_cast_scroll_spell(action)
         if action >= self.GRID_UNLOCK_SCROLL_MAGIC_ACTION:
             return self._step_unlock_scroll_magic(action)
+        if action >= self.grid_staff_spell_action_start:
+            return self._step_cast_staff_spell(action)
         if action >= self.grid_spell_shop_cast_action_start:
             return self._step_cast_spell_shop_spell(action)
         if action >= self.grid_map_support_spell_action_start:
             return self._step_cast_support_spell(action)
         if action >= self.grid_legion_damage_spell_action_start:
             return self._step_cast_legion_damage_spell(action)
+        if action >= self.GRID_EQUIP_BOOK_ACTION_START:
+            return self._step_equip_book_item(action)
         if action >= self.GRID_EQUIP_BATTLE_ITEM1_ACTION_START:
             return self._step_equip_battle_item(action)
         if action >= self.grid_settlement_upgrade_action_start:
@@ -710,6 +736,7 @@ class CampaignEnv(
                 "moves": self.moves,
                 "heroitems": list(self.heroitems),
                 "equipped_hero_items": list(self.equipped_hero_items),
+                "equipped_hero_item_uses_left": list(self.equipped_hero_item_uses_left),
                 "extra_healing_bottles": int(self.extra_healing_bottles or 0),
                 "extra_revive_bottles": int(self.extra_revive_bottles or 0),
                 "active_invulnerability_positions": sorted(self.active_invulnerability_potion_positions),
@@ -998,11 +1025,17 @@ class CampaignEnv(
         finalized_info["typeoflord"] = int(self.typeoflord)
         finalized_info["heroitems"] = list(self.heroitems)
         finalized_info["equipped_hero_items"] = list(self.equipped_hero_items)
+        finalized_info["equipped_hero_item_uses_left"] = list(
+            self.equipped_hero_item_uses_left
+        )
         finalized_info.update(self._artifact_state_info())
         finalized_info.update(self._banner_state_info())
+        finalized_info.update(self._book_state_info())
         finalized_info.update(self._boot_state_info())
         finalized_info["battle_items_equipped_total"] = int(self.battle_items_equipped_total)
         finalized_info["battle_items_used_total"] = int(self.battle_items_used_total)
+        finalized_info["books_equipped_total"] = int(self.books_equipped_total)
+        finalized_info["book_equip_used_this_turn"] = bool(self.book_equip_used_this_turn)
         finalized_info["extra_heal_bottles"] = int(self.extra_heal_bottles or 0)
         finalized_info["extra_healing_bottles"] = int(self.extra_healing_bottles or 0)
         finalized_info["extra_revive_bottles"] = int(self.extra_revive_bottles or 0)
@@ -1097,6 +1130,7 @@ class CampaignEnv(
             return None
 
         self._refresh_campaign_equipment_effects(log=False)
+        self._sync_equipped_book_items()
         self._sync_equipped_boot_items()
         lines = []
         lines.append(f"=== CAMPAIGN MODE: {'GRID' if self.mode == self.MODE_GRID else 'BATTLE'} ===")
@@ -1177,6 +1211,10 @@ class CampaignEnv(
             str(item_name or "пусто") for item_name in list(self.equipped_banner_items or [])
         ]
         lines.append(f"Экипированное знамя: [{', '.join(banner_labels)}]")
+        book_labels = [
+            str(item_name or "empty") for item_name in list(self.equipped_book_items or [])
+        ]
+        lines.append(f"Equipped book: [{', '.join(book_labels)}]")
         boot_labels = [
             str(item_name or "пусто") for item_name in list(self.equipped_boot_items or [])
         ]
@@ -1221,8 +1259,10 @@ class CampaignEnv(
     def get_state_summary(self) -> Dict:
         """Возвращает сводку текущего состояния."""
         self._refresh_campaign_equipment_effects(log=False)
+        self._sync_equipped_book_items()
         self._sync_equipped_boot_items()
         scroll_state = self._scroll_state_info()
+        book_state = self._book_state_info()
         boot_state = self._boot_state_info()
         return {
             "mode": "grid" if self.mode == self.MODE_GRID else "battle",
@@ -1241,13 +1281,17 @@ class CampaignEnv(
             "typeoflord": int(self.typeoflord),
             "heroitems": list(self.heroitems),
             "equipped_hero_items": list(self.equipped_hero_items),
+            "equipped_hero_item_uses_left": list(self.equipped_hero_item_uses_left),
             "equipped_artifact_items": list(self.equipped_artifact_items),
             "equipped_banner_items": list(self.equipped_banner_items),
+            "equipped_book_items": list(book_state["equipped_book_items"]),
             "equipped_boot_items": list(boot_state["equipped_boot_items"]),
             "active_boot_move_bonus": int(boot_state["active_boot_move_bonus"]),
             "artifact_auto_equip_next_slot": int(self.artifact_auto_equip_next_slot),
+            "book_equip_used_this_turn": bool(book_state["book_equip_used_this_turn"]),
             "battle_items_equipped_total": int(self.battle_items_equipped_total),
             "battle_items_used_total": int(self.battle_items_used_total),
+            "books_equipped_total": int(book_state["books_equipped_total"]),
             "learned_spells": list(self.get_learned_spell_descriptions()),
             "learned_spells_count": len(self.get_learned_spell_descriptions()),
             "spells_total": len(self.spell_keys),

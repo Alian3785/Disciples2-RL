@@ -87,6 +87,10 @@ class CampaignMapSitesMixin:
             abilities.append(
                 f"Колдовские знания ({self.HERO_SORCERY_LORE_DESCRIPTION})"
             )
+        if self._hero_has_book_lore(units=[hero]):
+            abilities.append(
+                f"Колдовство ({self.HERO_BOOK_LORE_DESCRIPTION})"
+            )
         if self._hero_has_might(units=[hero]):
             abilities.append(f"Мощь ({self.HERO_MIGHT_DESCRIPTION})")
 

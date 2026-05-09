@@ -334,6 +334,7 @@ class CampaignTerritoryMixin:
         self.active_buildings["alredybuilt"] = 0
         self.spell_learning_locked = False
         self.battle_item_equip_used_this_turn = False
+        self.book_equip_used_this_turn = False
         self.spell_cast_counts_by_id_this_turn = {}
         self.summon_hero_battle_bonus_pending = False
         self.summon_hero_battle_bonus_enemy_ids_this_turn = set()

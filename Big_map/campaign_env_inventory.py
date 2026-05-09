@@ -15,19 +15,80 @@ class CampaignInventoryMixin:
         normalized_lower = normalized_name.lower()
         return normalized_lower.startswith("orb of ") or normalized_lower.endswith(" orb")
 
-    def _scenario_battle_orb_item_names(self) -> Tuple[str, ...]:
-        orb_names: List[str] = []
+    @classmethod
+    def _is_battle_talisman_item_name(cls, item_name: str) -> bool:
+        normalized_name = str(item_name or "").strip()
+        if not normalized_name:
+            return False
+        normalized_lower = normalized_name.lower()
+        return normalized_lower.startswith("talisman of ") or normalized_lower.endswith(
+            " talisman"
+        )
+
+    @classmethod
+    def _is_battle_magic_item_name(cls, item_name: str) -> bool:
+        return cls._is_battle_orb_item_name(item_name) or cls._is_battle_talisman_item_name(
+            item_name
+        )
+
+    @classmethod
+    def _is_staff_spell_item_name(cls, item_name: str) -> bool:
+        normalized_name = str(item_name or "").strip()
+        return bool(normalized_name) and normalized_name in set(cls.STAFF_SPELL_ITEM_NAMES)
+
+    def _scenario_staff_spell_item_names(self) -> Tuple[str, ...]:
+        staff_item_names: List[str] = []
+
+        def add_if_staff(raw_item_name: object) -> None:
+            normalized_name = str(raw_item_name or "").strip()
+            if not self._is_staff_spell_item_name(normalized_name):
+                return
+            staff_item_names.append(normalized_name)
+
+        for item_names in getattr(self, "_static_chests", {}).values():
+            for item_name in tuple(item_names or ()):
+                add_if_staff(item_name)
+
+        for reward_data in tuple(getattr(self, "RUIN_REWARD_BY_ENEMY_ID", {}).values()):
+            if not isinstance(reward_data, dict):
+                continue
+            add_if_staff(reward_data.get("item", ""))
+
+        for item_data in tuple(getattr(self, "MERCHANT_BUY_ITEMS", ()) or ()):
+            if not isinstance(item_data, dict):
+                continue
+            try:
+                stock = int(item_data.get("stock", 0) or 0)
+            except (TypeError, ValueError):
+                stock = 0
+            if stock <= 0:
+                continue
+            add_if_staff(item_data.get("name", ""))
+
+        return tuple(staff_item_names)
+
+    @classmethod
+    def _battle_item_default_uses_left(cls, item_name: str) -> Optional[int]:
+        if cls._is_battle_talisman_item_name(item_name):
+            return int(cls.TALISMAN_USES_PER_ITEM)
+        normalized_name = str(item_name or "")
+        if normalized_name:
+            return 1
+        return None
+
+    def _scenario_battle_magic_item_names(self) -> Tuple[str, ...]:
+        magic_item_names: List[str] = []
         seen_names: set[str] = set()
 
         for item_names in getattr(self, "_static_chests", {}).values():
             for item_name in tuple(item_names or ()):
                 normalized_name = str(item_name or "").strip()
-                if not self._is_battle_orb_item_name(normalized_name):
+                if not self._is_battle_magic_item_name(normalized_name):
                     continue
                 if normalized_name in seen_names:
                     continue
                 seen_names.add(normalized_name)
-                orb_names.append(normalized_name)
+                magic_item_names.append(normalized_name)
 
         for item_data in tuple(getattr(self, "MERCHANT_BUY_ITEMS", ()) or ()):
             if not isinstance(item_data, dict):
@@ -39,14 +100,60 @@ class CampaignInventoryMixin:
             if stock <= 0:
                 continue
             normalized_name = str(item_data.get("name", "") or "").strip()
-            if not self._is_battle_orb_item_name(normalized_name):
+            if not self._is_battle_magic_item_name(normalized_name):
                 continue
             if normalized_name in seen_names:
                 continue
             seen_names.add(normalized_name)
-            orb_names.append(normalized_name)
+            magic_item_names.append(normalized_name)
 
-        return tuple(orb_names)
+        return tuple(magic_item_names)
+
+    def _scenario_battle_orb_item_names(self) -> Tuple[str, ...]:
+        return self._scenario_battle_magic_item_names()
+
+    @classmethod
+    def _is_book_item_name(cls, item_name: str) -> bool:
+        normalized_name = str(item_name or "").strip()
+        return bool(normalized_name) and normalized_name in set(cls.BOOK_ITEM_NAMES)
+
+    def _scenario_book_item_names(self) -> Tuple[str, ...]:
+        book_item_names: List[str] = []
+        seen_names: set[str] = set()
+
+        def add_if_book(raw_item_name: object) -> None:
+            normalized_name = str(raw_item_name or "").strip()
+            if not self._is_book_item_name(normalized_name):
+                return
+            if normalized_name in seen_names:
+                return
+            seen_names.add(normalized_name)
+            book_item_names.append(normalized_name)
+
+        for item_names in getattr(self, "_static_chests", {}).values():
+            for item_name in tuple(item_names or ()):
+                add_if_book(item_name)
+
+        for reward_data in tuple(getattr(self, "RUIN_REWARD_BY_ENEMY_ID", {}).values()):
+            if isinstance(reward_data, dict):
+                add_if_book(reward_data.get("item", ""))
+
+        for item_data in tuple(getattr(self, "MERCHANT_BUY_ITEMS", ()) or ()):
+            if not isinstance(item_data, dict):
+                continue
+            try:
+                stock = int(item_data.get("stock", 0) or 0)
+            except (TypeError, ValueError):
+                stock = 0
+            if stock <= 0:
+                continue
+            add_if_book(item_data.get("name", ""))
+
+        return tuple(book_item_names)
+
+    def _refresh_book_item_names(self) -> Tuple[str, ...]:
+        self.scenario_book_item_names = self._scenario_book_item_names()
+        return self.scenario_book_item_names
 
     def _refresh_battle_equippable_item_names(self) -> Tuple[str, ...]:
         base_names = tuple(
@@ -57,17 +164,18 @@ class CampaignInventoryMixin:
                 self.BATTLE_EQUIPPABLE_ITEM_NAMES,
             )
         )
-        scenario_orb_names = self._scenario_battle_orb_item_names()
+        scenario_magic_item_names = self._scenario_battle_magic_item_names()
         battle_item_names: List[str] = []
         seen_names: set[str] = set()
-        for item_name in (*base_names, *scenario_orb_names):
+        for item_name in (*base_names, *scenario_magic_item_names):
             normalized_name = str(item_name or "").strip()
             if not normalized_name or normalized_name in seen_names:
                 continue
             seen_names.add(normalized_name)
             battle_item_names.append(normalized_name)
 
-        self.scenario_battle_orb_item_names = tuple(scenario_orb_names)
+        self.scenario_battle_magic_item_names = tuple(scenario_magic_item_names)
+        self.scenario_battle_orb_item_names = tuple(scenario_magic_item_names)
         self.BATTLE_EQUIPPABLE_ITEM_NAMES = tuple(battle_item_names)
         return self.BATTLE_EQUIPPABLE_ITEM_NAMES
 
@@ -343,6 +451,77 @@ class CampaignInventoryMixin:
                 },
             }
         )
+        summon_talismans = {
+            "Squire Talisman": "Скваер",
+            "Angel Talisman": "Ангел",
+            "Venerable Warrior Talisman": "Старый ветеран",
+            "Imp Talisman": "Бес",
+            "Infernal Knight Talisman": "Адский рыцарь",
+            "Incubus Talisman": "Инкуб",
+            "Zombie Talisman": "Зомби",
+            "Skeleton Champion Talisman": "Скелет рыцарь",
+            "Vampire Talisman": "Вампир",
+            "Lich Talisman": "Лич",
+            "Elder Vampire Talisman": "Высший вампир",
+            "Elf Lord Talisman": "Лесной лорд",
+            "Goblin Talisman": "Гоблин",
+            "Orc Talisman": "Орк",
+            "Lizard Man Talisman": "Человек ящер",
+        }
+        for item_name, unit_name in summon_talismans.items():
+            effects[item_name] = {
+                "kind": "summon",
+                "target_team": "blue",
+                "target_state": "empty_or_dead",
+                "summon_unit_name": unit_name,
+                "item_category": "talisman",
+                "uses_per_item": int(cls.TALISMAN_USES_PER_ITEM),
+            }
+
+        talisman_orb_pairs = {
+            "Talisman of Healing": "Orb of Healing",
+            "Talisman of Restoration": "Orb of Restoration",
+            "Talisman of Regeneration": "Orb of Regeneration",
+            "Talisman of Life": "Orb of Life",
+            "Talisman of Vigor": "Orb of Vigor",
+            "Talisman of Strength": "Orb of Strength",
+            "Talisman of Fire": "Orb of Fire",
+            "Talisman of Inferno": "Orb of Inferno",
+            "Talisman of Nosferat": "Orb of Nosferat",
+            "Talisman of Vampire": "Orb of Vampire",
+            "Talisman of Elder Vampires": "Orb of Elder Vampires",
+            "Talisman of Lightning": "Orb of Lightning",
+            "Talisman of Thunder": "Orb of Thunder",
+            "Talisman of Earth": "Orb of Earth",
+            "Talisman of Stone Rain": "Orb of Stone Rain",
+            "Talisman of Water": "Orb of Water",
+            "Talisman of Icefall": "Orb of Icefall",
+            "Talisman of Poison": "Orb of Poison",
+            "Talisman of Venom": "Orb of Venom",
+            "Talisman of Bane": "Orb of Bane",
+            "Talisman of Thanatos": "Orb of Thanatos",
+            "Talisman of Frost": "Orb of Frost",
+            "Talisman of Freezing": "Orb of Freezing",
+            "Talisman of Fear": "Orb of Fear",
+            "Talisman of Witches": "Orb of Witches",
+        }
+        for talisman_name, orb_name in talisman_orb_pairs.items():
+            if orb_name not in effects:
+                continue
+            talisman_effect = dict(effects[orb_name])
+            talisman_effect["item_category"] = "talisman"
+            talisman_effect["uses_per_item"] = int(cls.TALISMAN_USES_PER_ITEM)
+            effects[talisman_name] = talisman_effect
+
+        effects["Talisman of Nightmare"] = {
+            "kind": "fear",
+            "damage_type": "Mind",
+            "target_team": "red",
+            "target_state": "alive",
+            "scope": "single",
+            "item_category": "talisman",
+            "uses_per_item": int(cls.TALISMAN_USES_PER_ITEM),
+        }
         return effects
     def _battle_equip_item_available_count(self, item_name: str) -> int:
         normalized_name = str(item_name or "")
@@ -416,8 +595,16 @@ class CampaignInventoryMixin:
         return count
     def _sync_equipped_hero_items(self) -> None:
         normalized_slots: List[Optional[str]] = [None] * int(self.BATTLE_EQUIP_SLOTS)
+        normalized_uses_left: List[Optional[int]] = [None] * int(self.BATTLE_EQUIP_SLOTS)
+        normalized_uses_left_item_names: List[Optional[str]] = [None] * int(
+            self.BATTLE_EQUIP_SLOTS
+        )
         reserved: Dict[str, int] = {}
         current_slots = list(self.equipped_hero_items or [])
+        current_uses_left = list(getattr(self, "equipped_hero_item_uses_left", []) or [])
+        current_uses_left_item_names = list(
+            getattr(self, "equipped_hero_item_uses_left_item_names", []) or []
+        )
         for slot_index in range(int(self.BATTLE_EQUIP_SLOTS)):
             item_name = (
                 str(current_slots[slot_index] or "")
@@ -426,16 +613,45 @@ class CampaignInventoryMixin:
             )
             if item_name not in self.BATTLE_EQUIPPABLE_ITEM_NAMES:
                 continue
+            if not self._battle_magic_item_access_allowed(item_name):
+                continue
             available_count = int(self._battle_equip_item_available_count(item_name))
             already_reserved = int(reserved.get(item_name, 0))
             if already_reserved >= available_count:
                 continue
+            default_uses_left = self._battle_item_default_uses_left(item_name)
+            uses_left = default_uses_left
+            item_name_matches_saved_charge = (
+                not current_uses_left_item_names
+                or (
+                    slot_index < len(current_uses_left_item_names)
+                    and str(current_uses_left_item_names[slot_index] or "") == item_name
+                )
+            )
+            if item_name_matches_saved_charge and slot_index < len(current_uses_left):
+                try:
+                    existing_uses_left = int(current_uses_left[slot_index])
+                except (TypeError, ValueError):
+                    existing_uses_left = 0
+                if existing_uses_left > 0:
+                    uses_left = existing_uses_left
+            if self._is_battle_talisman_item_name(item_name):
+                try:
+                    uses_left = max(1, min(int(self.TALISMAN_USES_PER_ITEM), int(uses_left or 0)))
+                except (TypeError, ValueError):
+                    uses_left = int(self.TALISMAN_USES_PER_ITEM)
             normalized_slots[slot_index] = item_name
+            normalized_uses_left[slot_index] = uses_left
+            normalized_uses_left_item_names[slot_index] = item_name
             reserved[item_name] = already_reserved + 1
         self.equipped_hero_items = normalized_slots
+        self.equipped_hero_item_uses_left = normalized_uses_left
+        self.equipped_hero_item_uses_left_item_names = normalized_uses_left_item_names
     def _battle_equip_slot_for_item(self, item_name: str) -> Optional[int]:
         normalized_name = str(item_name or "")
         if normalized_name not in self.BATTLE_EQUIPPABLE_ITEM_NAMES:
+            return None
+        if not self._battle_magic_item_access_allowed(normalized_name):
             return None
         if self.battle_item_equip_used_this_turn:
             return None
@@ -467,7 +683,14 @@ class CampaignInventoryMixin:
         slot_index = self._battle_equip_slot_for_item(normalized_name)
         if slot_index is None:
             return None
+        if len(getattr(self, "equipped_hero_item_uses_left", []) or []) != int(
+            self.BATTLE_EQUIP_SLOTS
+        ):
+            self.equipped_hero_item_uses_left = [None] * int(self.BATTLE_EQUIP_SLOTS)
         self.equipped_hero_items[int(slot_index)] = str(normalized_name)
+        self.equipped_hero_item_uses_left[int(slot_index)] = self._battle_item_default_uses_left(
+            normalized_name
+        )
         self._sync_equipped_hero_items()
         return int(slot_index)
     def _consume_counter_backed_item(self, item_name: str) -> bool:
@@ -754,6 +977,31 @@ class CampaignInventoryMixin:
             normalized_slots[slot_index] = item_name
 
         self.equipped_boot_items = normalized_slots
+    def _sync_equipped_book_items(self) -> None:
+        normalized_slots: List[Optional[str]] = [None] * int(self.BOOK_EQUIP_SLOTS)
+        if not self._hero_has_book_lore():
+            self.equipped_book_items = normalized_slots
+            return
+
+        current_slots = list(getattr(self, "equipped_book_items", []) or [])
+        reserved: Dict[str, int] = {}
+
+        for slot_index in range(int(self.BOOK_EQUIP_SLOTS)):
+            item_name = (
+                str(current_slots[slot_index] or "")
+                if slot_index < len(current_slots) and current_slots[slot_index] is not None
+                else ""
+            )
+            if not self._is_book_item_name(item_name):
+                continue
+            available_count = int(self._count_hero_item(item_name))
+            already_reserved = int(reserved.get(item_name, 0))
+            if already_reserved >= available_count:
+                continue
+            normalized_slots[slot_index] = item_name
+            reserved[item_name] = already_reserved + 1
+
+        self.equipped_book_items = normalized_slots
     def _sync_equipped_artifact_items(self, units: Optional[List[Dict]] = None) -> None:
         normalized_slots: List[Optional[str]] = [None] * int(self.ARTIFACT_EQUIP_SLOTS)
         if not self._hero_has_artifact_knowledge(units=units):
@@ -822,6 +1070,50 @@ class CampaignInventoryMixin:
             ),
             "artifact_auto_equip_previous": previous_item,
         }
+    def _auto_equip_book_item(self, item_name: str) -> Dict[str, object]:
+        normalized_name = str(item_name or "")
+        if not self._is_book_item_name(normalized_name):
+            return {
+                "book_auto_equipped": False,
+                "book_auto_equip_slot": None,
+                "book_auto_equip_previous": None,
+            }
+        if not self._hero_has_book_lore():
+            self._sync_equipped_book_items()
+            return {
+                "book_auto_equipped": False,
+                "book_auto_equip_slot": None,
+                "book_auto_equip_previous": None,
+            }
+
+        previous_slots = list(getattr(self, "equipped_book_items", []) or [])
+        self._sync_equipped_book_items()
+        current_slots = list(getattr(self, "equipped_book_items", []) or [])
+        if current_slots and current_slots[0]:
+            return {
+                "book_auto_equipped": False,
+                "book_auto_equip_slot": None,
+                "book_auto_equip_previous": current_slots[0],
+            }
+
+        self.equipped_book_items = [None] * int(self.BOOK_EQUIP_SLOTS)
+        self.equipped_book_items[0] = normalized_name
+        self._sync_equipped_book_items()
+        equipped = self.equipped_book_items[0] == normalized_name
+        previous_item = previous_slots[0] if previous_slots else None
+        if equipped:
+            self._sync_equipped_hero_items()
+            self.book_equip_used_this_turn = True
+            self.books_equipped_total += 1
+            self._log(
+                f"Book '{normalized_name}' auto-equipped in slot 1 "
+                f"(previous: {previous_item or 'empty'})."
+            )
+        return {
+            "book_auto_equipped": bool(equipped),
+            "book_auto_equip_slot": 1 if equipped else None,
+            "book_auto_equip_previous": previous_item,
+        }
     def _append_hero_item(self, item_name: str) -> None:
         normalized_name = str(item_name or "")
         self.heroitems.append(self._make_hero_item_entry(normalized_name))
@@ -831,10 +1123,13 @@ class CampaignInventoryMixin:
         previous_boot_slots = list(getattr(self, "equipped_boot_items", []) or [])
         self._append_hero_item(normalized_name)
         artifact_info = self._auto_equip_artifact_item(normalized_name)
+        book_info = self._auto_equip_book_item(normalized_name)
         if (
             bool(artifact_info.get("artifact_auto_equipped"))
+            or bool(book_info.get("book_auto_equipped"))
             or self._is_artifact_item_name(normalized_name)
             or self._is_banner_item_name(normalized_name)
+            or self._is_book_item_name(normalized_name)
         ):
             self._refresh_campaign_equipment_effects(log=True)
         else:
@@ -890,7 +1185,7 @@ class CampaignInventoryMixin:
             )
         else:
             self._sync_equipped_boot_items()
-        return {**artifact_info, **boot_info}
+        return {**artifact_info, **book_info, **boot_info}
     def _artifact_state_info(self) -> Dict[str, object]:
         self._refresh_campaign_equipment_effects(log=False)
         return {
@@ -907,6 +1202,13 @@ class CampaignInventoryMixin:
         return {
             "equipped_boot_items": list(self.equipped_boot_items),
             "active_boot_move_bonus": int(self._active_boot_move_bonus()),
+        }
+    def _book_state_info(self) -> Dict[str, object]:
+        self._sync_equipped_book_items()
+        return {
+            "equipped_book_items": list(self.equipped_book_items),
+            "book_equip_used_this_turn": bool(self.book_equip_used_this_turn),
+            "books_equipped_total": int(self.books_equipped_total),
         }
     @classmethod
     def _artifact_effect_definition(cls, item_name: str) -> Dict[str, object]:
@@ -952,6 +1254,43 @@ class CampaignInventoryMixin:
     def _boot_effect_definition(cls, item_name: str) -> Dict[str, object]:
         normalized_name = str(item_name or "").strip()
         return dict(cls.BOOT_EFFECT_DEFINITIONS.get(normalized_name, {}))
+    @classmethod
+    def _book_effect_definition(cls, item_name: str) -> Dict[str, object]:
+        normalized_name = str(item_name or "").strip()
+        return dict(cls.BOOK_EFFECT_DEFINITIONS.get(normalized_name, {}))
+    def _active_book_item_name(self) -> Optional[str]:
+        self._sync_equipped_book_items()
+        return next(
+            (
+                str(item_name)
+                for item_name in list(getattr(self, "equipped_book_items", []) or [])
+                if self._is_book_item_name(str(item_name or ""))
+            ),
+            None,
+        )
+    def _active_book_effect_definition(self) -> Dict[str, object]:
+        active_book = self._active_book_item_name()
+        if not active_book:
+            return {}
+        return self._book_effect_definition(active_book)
+    def _active_book_exp_multiplier(self) -> float:
+        effect = self._active_book_effect_definition()
+        try:
+            return max(0.0, float(effect.get("exp_multiplier", 1.0) or 1.0))
+        except (TypeError, ValueError):
+            return 1.0
+    def _battle_magic_item_access_allowed(self, item_name: str) -> bool:
+        normalized_name = str(item_name or "").strip()
+        if not self._is_battle_magic_item_name(normalized_name):
+            return True
+        if self._hero_has_sorcery_lore():
+            return True
+        effect = self._active_book_effect_definition()
+        if self._is_battle_orb_item_name(normalized_name):
+            return bool(effect.get("unlocks_orbs", False))
+        if self._is_battle_talisman_item_name(normalized_name):
+            return bool(effect.get("unlocks_talismans", False))
+        return False
     def _active_boot_move_bonus(self, units: Optional[List[Dict]] = None) -> int:
         self._sync_equipped_boot_items(units=units)
         active_boot = next(
@@ -1003,8 +1342,10 @@ class CampaignInventoryMixin:
             if self._hero_item_name(entry) in normalized_names:
                 del self.heroitems[idx]
                 self._invalidate_inventory_cache()
+                self._sync_equipped_book_items()
                 self._sync_equipped_artifact_items()
                 self._sync_equipped_boot_items()
+                self._sync_equipped_hero_items()
                 self._refresh_campaign_equipment_effects(log=False)
                 self._sync_moves_per_turn_with_hero(units=self.blue_team_state)
                 return True
@@ -1022,7 +1363,11 @@ class CampaignInventoryMixin:
             return True
         if self._is_boot_item_name(normalized_name):
             return True
-        if normalized_name in set(getattr(self, "scenario_battle_orb_item_names", ())):
+        if self._is_book_item_name(normalized_name):
+            return True
+        if self._is_staff_spell_item_name(normalized_name):
+            return True
+        if normalized_name in set(getattr(self, "scenario_battle_magic_item_names", ())):
             return True
         return normalized_name in {
             self.BONUS_SMALL_HEAL_ITEM_NAME,
@@ -1079,8 +1424,10 @@ class CampaignInventoryMixin:
 
         self.heroitems = kept_items
         self._invalidate_inventory_cache()
+        self._sync_equipped_book_items()
         self._sync_equipped_artifact_items()
         self._sync_equipped_boot_items()
+        self._sync_equipped_hero_items()
         self._refresh_campaign_equipment_effects(log=False)
         self._sync_moves_per_turn_with_hero(units=self.blue_team_state)
         self.gold = max(0.0, float(self.gold or 0.0)) + float(total_gold)
@@ -1202,6 +1549,32 @@ class CampaignInventoryMixin:
         dx = abs(int(agent_pos[0]) - int(chest_pos[0]))
         dy = abs(int(agent_pos[1]) - int(chest_pos[1]))
         return max(dx, dy) <= int(cls.CHEST_PICKUP_RADIUS)
+    def _can_equip_book_item(self, item_name: object) -> bool:
+        normalized_name = str(item_name or "").strip()
+        if not self._is_book_item_name(normalized_name):
+            return False
+        if not self._hero_has_book_lore():
+            return False
+        if normalized_name not in tuple(getattr(self, "scenario_book_item_names", ()) or ()):
+            return False
+        if self.book_equip_used_this_turn:
+            return False
+        self._sync_equipped_book_items()
+        if normalized_name in set(str(item or "") for item in self.equipped_book_items):
+            return False
+        return self._count_hero_item(normalized_name) > 0
+    def _equip_book_item(self, item_name: object) -> Optional[int]:
+        normalized_name = str(item_name or "").strip()
+        if not self._can_equip_book_item(normalized_name):
+            return None
+        if len(getattr(self, "equipped_book_items", []) or []) != int(self.BOOK_EQUIP_SLOTS):
+            self.equipped_book_items = [None] * int(self.BOOK_EQUIP_SLOTS)
+        self.equipped_book_items[0] = normalized_name
+        self._sync_equipped_book_items()
+        self._sync_equipped_hero_items()
+        if self.equipped_book_items and self.equipped_book_items[0] == normalized_name:
+            return 0
+        return None
     def _step_equip_battle_item(self, action: int):
         action_start = self.GRID_EQUIP_BATTLE_ITEM1_ACTION_START
         idx = int(action) - int(action_start)
@@ -1252,6 +1625,72 @@ class CampaignInventoryMixin:
             "battle_items_equipped_total": int(self.battle_items_equipped_total),
             "battle_items_used_total": int(self.battle_items_used_total),
             "equipped_hero_items": list(self.equipped_hero_items),
+            "equipped_hero_item_uses_left": list(self.equipped_hero_item_uses_left),
+            "equip_battle_item_uses_left": (
+                self.equipped_hero_item_uses_left[int(equipped_slot_index)]
+                if equipped_slot_index is not None
+                and int(equipped_slot_index) < len(self.equipped_hero_item_uses_left)
+                else None
+            ),
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+        }
+        info.update(self._merchant_context_info(self.grid_env.agent_pos))
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
+    def _step_equip_book_item(self, action: int):
+        action_start = self.GRID_EQUIP_BOOK_ACTION_START
+        idx = int(action) - int(action_start)
+        book_names = tuple(getattr(self, "scenario_book_item_names", ()) or ())
+        item_name = book_names[idx] if 0 <= idx < len(book_names) else None
+
+        grid_obs = self._get_grid_obs()
+        reward = 0.0
+        terminated = False
+        truncated = False
+
+        previous_item = None
+        equipped = False
+        equipped_slot_index = None
+        equip_turn_locked = bool(self.book_equip_used_this_turn)
+        if not equip_turn_locked and item_name is not None:
+            self._sync_equipped_book_items()
+            previous_item = (
+                self.equipped_book_items[0]
+                if getattr(self, "equipped_book_items", None)
+                else None
+            )
+            equipped_slot_index = self._equip_book_item(str(item_name))
+            equipped = equipped_slot_index is not None
+            if equipped:
+                self.book_equip_used_this_turn = True
+                self.books_equipped_total += 1
+                self._log(
+                    f"Book slot {int(equipped_slot_index) + 1}: equipped '{str(item_name)}'"
+                )
+
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            "equip_book_action": True,
+            "equip_book_slot": (
+                int(equipped_slot_index) + 1 if equipped_slot_index is not None else 0
+            ),
+            "equip_book_name": str(item_name or ""),
+            "equip_book_previous": previous_item,
+            "equip_book_applied": bool(equipped),
+            "equip_book_turn_locked": bool(equip_turn_locked),
+            "equipped_book_items": list(self.equipped_book_items),
+            "book_equip_used_this_turn": bool(self.book_equip_used_this_turn),
+            "books_equipped_total": int(self.books_equipped_total),
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
@@ -2253,6 +2692,55 @@ class CampaignInventoryMixin:
         self._clear_equipped_banner_effects(self.blue_team_state)
         self._apply_equipped_artifact_effects(self.blue_team_state, log=log)
         self._apply_equipped_banner_effects(self.blue_team_state, log=log)
+    def _clear_equipped_book_effects(self, blue_team: Optional[List[Dict]]) -> None:
+        if not blue_team:
+            return
+        for unit in blue_team:
+            if not isinstance(unit, dict):
+                continue
+            added_resistance = [
+                str(res)
+                for res in (unit.get("campaign_book_added_resistance") or [])
+                if str(res)
+            ]
+            if added_resistance:
+                unit["resistance"] = [
+                    res
+                    for res in (unit.get("resistance") or [])
+                    if str(res) not in set(added_resistance)
+                ]
+            unit.pop("campaign_book_added_resistance", None)
+            unit.pop("campaign_active_book", None)
+    def _apply_equipped_book_battle_effects(
+        self,
+        blue_team: List[Dict],
+        *,
+        log: bool = True,
+    ) -> None:
+        self._clear_equipped_book_effects(blue_team)
+        if not blue_team:
+            return
+        active_book = self._active_book_item_name()
+        if not active_book:
+            return
+        hero = self._resolve_travel_hero(units=blue_team)
+        if hero is None:
+            return
+
+        hero["campaign_active_book"] = str(active_book)
+        effect = self._book_effect_definition(active_book)
+        resistance_type = str(effect.get("resistance_type", "") or "").strip()
+        if not resistance_type:
+            return
+
+        resistance = [str(res) for res in (hero.get("resistance") or [])]
+        if resistance_type not in resistance:
+            hero["resistance"] = resistance + [resistance_type]
+            hero["campaign_book_added_resistance"] = [resistance_type]
+            if log:
+                self._log(
+                    f"Book '{active_book}' grants hero resistance {resistance_type} for the next battle."
+                )
     def _clear_equipped_banner_effects(self, blue_team: Optional[List[Dict]]) -> None:
         if not blue_team:
             return

@@ -834,6 +834,7 @@ class BattleEnv(gym.Env):
         self._pretty_events: List[str] = []
         self.last_battle_exp: float = 0.0
         self.last_levelups: List[str] = []
+        self.exp_multiplier: float = 1.0
 
         # Action space = 12 targets + defend/wait/run + 24 hero item actions.
         self.action_space = spaces.Discrete(TOTAL_AGENT_ACTIONS)  # 39
@@ -859,6 +860,8 @@ class BattleEnv(gym.Env):
         self.survived_inits: List[Dict] = []
         self.step_count: int = 0
         self.equipped_hero_items: List[Optional[str]] = [None, None]
+        self.equipped_hero_item_uses_left: List[Optional[int]] = [None, None]
+        self.hero_item_slots_used_this_battle: List[bool] = [False, False]
         self.hero_item_effects: Dict[str, Dict[str, object]] = {}
 
     # ------------------ [MASKING] Маска допустимых действий ------------------
@@ -873,6 +876,34 @@ class BattleEnv(gym.Env):
             return {}
         effect = self.hero_item_effects.get(str(item_name), {})
         return dict(effect) if isinstance(effect, dict) else {}
+
+    @staticmethod
+    def _hero_item_is_talisman(effect: Dict[str, object]) -> bool:
+        return str(effect.get("item_category", "") or "").strip().lower() == "talisman"
+
+    def _hero_item_slot_uses_left(self, slot_index: int, effect: Dict[str, object]) -> Optional[int]:
+        if not self._hero_item_is_talisman(effect):
+            return 1
+        default_uses = int(effect.get("uses_per_item", 5) or 5)
+        if len(getattr(self, "equipped_hero_item_uses_left", []) or []) < len(
+            self.equipped_hero_items
+        ):
+            self.equipped_hero_item_uses_left = [None] * len(self.equipped_hero_items)
+
+        try:
+            uses_left = int(self.equipped_hero_item_uses_left[int(slot_index)])
+        except (TypeError, ValueError, IndexError):
+            uses_left = default_uses
+        return max(0, min(default_uses, int(uses_left)))
+
+    def _hero_item_slot_available(self, slot_index: int, effect: Dict[str, object]) -> bool:
+        if not self._hero_item_is_talisman(effect):
+            return True
+        if 0 <= int(slot_index) < len(getattr(self, "hero_item_slots_used_this_battle", [])):
+            if bool(self.hero_item_slots_used_this_battle[int(slot_index)]):
+                return False
+        uses_left = self._hero_item_slot_uses_left(int(slot_index), effect)
+        return bool(uses_left and int(uses_left) > 0)
 
     @staticmethod
     def _normalize_hero_item_target_team(value: object) -> str:
@@ -1328,6 +1359,16 @@ class BattleEnv(gym.Env):
         proxy = self._hero_item_attacker_proxy(source_unit, effect, primary=True)
         return 1.0 if self._apply_paralysis_effect(proxy, target_unit) else 0.0
 
+    def _apply_hero_item_fear(
+        self,
+        *,
+        source_unit: Optional[Dict],
+        target_unit: Dict,
+        effect: Dict[str, object],
+    ) -> float:
+        proxy = self._hero_item_attacker_proxy(source_unit, effect, primary=True)
+        return 1.0 if self._apply_fear_effect(proxy, target_unit) else 0.0
+
     def _apply_hero_item_transform(
         self,
         *,
@@ -1575,6 +1616,8 @@ class BattleEnv(gym.Env):
             return self._alive(target_unit)
         if effect_kind == "paralysis":
             return self._alive(target_unit)
+        if effect_kind == "fear":
+            return self._alive(target_unit)
         if effect_kind == "transform":
             return self._alive(target_unit)
         if effect_kind == "lycanthropy":
@@ -1710,6 +1753,12 @@ class BattleEnv(gym.Env):
                     target_unit=target,
                     effect=effect,
                 )
+            elif effect_kind == "fear":
+                value = self._apply_hero_item_fear(
+                    source_unit=source_unit,
+                    target_unit=target,
+                    effect=effect,
+                )
             elif effect_kind == "transform":
                 value = self._apply_hero_item_transform(
                     source_unit=source_unit,
@@ -1802,22 +1851,32 @@ class BattleEnv(gym.Env):
         if _is_combat_hero_unit(attacker):
             first_item_name = self._hero_item_name_for_slot(1)
             second_item_name = self._hero_item_name_for_slot(2)
+            first_item_effect = self._hero_item_effect(first_item_name)
+            second_item_effect = self._hero_item_effect(second_item_name)
+            first_item_available = bool(first_item_effect) and self._hero_item_slot_available(
+                0,
+                first_item_effect,
+            )
+            second_item_available = bool(second_item_effect) and self._hero_item_slot_available(
+                1,
+                second_item_effect,
+            )
             for idx, slot_no in enumerate(HERO_ITEM_TARGET_SLOTS):
                 battle_pos = BLUE_POSITIONS[slot_no - 1]
                 enemy_battle_pos = RED_POSITIONS[slot_no - 1]
-                first_item_mask[idx] = self._hero_item_target_allowed(
+                first_item_mask[idx] = first_item_available and self._hero_item_target_allowed(
                     item_name=first_item_name,
                     target_pos=battle_pos,
                 )
-                second_item_mask[idx] = self._hero_item_target_allowed(
+                second_item_mask[idx] = second_item_available and self._hero_item_target_allowed(
                     item_name=second_item_name,
                     target_pos=battle_pos,
                 )
-                first_enemy_item_mask[idx] = self._hero_item_target_allowed(
+                first_enemy_item_mask[idx] = first_item_available and self._hero_item_target_allowed(
                     item_name=first_item_name,
                     target_pos=enemy_battle_pos,
                 )
-                second_enemy_item_mask[idx] = self._hero_item_target_allowed(
+                second_enemy_item_mask[idx] = second_item_available and self._hero_item_target_allowed(
                     item_name=second_item_name,
                     target_pos=enemy_battle_pos,
                 )
@@ -3379,6 +3438,11 @@ class BattleEnv(gym.Env):
         self._ismir_applied_uran = {}
         self.survived_inits = []
         self.step_count = 0
+        self.hero_item_slots_used_this_battle = [False] * len(self.equipped_hero_items)
+        if len(getattr(self, "equipped_hero_item_uses_left", []) or []) < len(
+            self.equipped_hero_items
+        ):
+            self.equipped_hero_item_uses_left = [None] * len(self.equipped_hero_items)
         self._log(f"Эпизод начат. Раунд {self.round_no}.")
 
     def _candidates(self):
@@ -5126,10 +5190,18 @@ class BattleEnv(gym.Env):
                 continue
             total_exp += float(u.get("exp_kill", 0) or 0)
 
+        winning_team = "red" if losing_team == "blue" else "blue"
+
+        try:
+            exp_multiplier = max(0.0, float(getattr(self, "exp_multiplier", 1.0) or 1.0))
+        except (TypeError, ValueError):
+            exp_multiplier = 1.0
+        if winning_team == "blue" and abs(exp_multiplier - 1.0) > 1e-9:
+            total_exp *= exp_multiplier
+
         self.last_battle_exp = total_exp
         self._log(f"Опыт за бой: {total_exp:g}")
 
-        winning_team = "red" if losing_team == "blue" else "blue"
         winners = [
             u
             for u in self.combined
@@ -5830,6 +5902,8 @@ class BattleEnv(gym.Env):
         hero_item_effect_kind = None
         hero_item_effect_value = 0.0
         hero_item_consumed = False
+        hero_item_charge_spent = False
+        hero_item_uses_left = None
         hero_item_target_team = ""
         if action_idx < len(TARGET_POSITIONS):
             target_pos = TARGET_POSITIONS[action_idx]
@@ -5924,7 +5998,14 @@ class BattleEnv(gym.Env):
                         if hero_item_target_pos is not None
                         else None
                     )
-                    if _is_combat_hero_unit(attacker):
+                    hero_item_effect = self._hero_item_effect(hero_item_name)
+                    slot_index = int(hero_item_no) - 1 if hero_item_no is not None else -1
+                    if (
+                        _is_combat_hero_unit(attacker)
+                        and hero_item_effect
+                        and 0 <= slot_index < len(self.equipped_hero_items)
+                        and self._hero_item_slot_available(slot_index, hero_item_effect)
+                    ):
                         (
                             hero_item_applied,
                             hero_item_effect_kind,
@@ -5934,10 +6015,39 @@ class BattleEnv(gym.Env):
                             target_pos=hero_item_target_pos,
                         )
                         if hero_item_applied and hero_item_no is not None:
-                            slot_index = int(hero_item_no) - 1
-                            if 0 <= slot_index < len(self.equipped_hero_items):
+                            if len(getattr(self, "equipped_hero_item_uses_left", []) or []) < len(
+                                self.equipped_hero_items
+                            ):
+                                self.equipped_hero_item_uses_left = [None] * len(
+                                    self.equipped_hero_items
+                                )
+                            if len(
+                                getattr(self, "hero_item_slots_used_this_battle", []) or []
+                            ) < len(self.equipped_hero_items):
+                                self.hero_item_slots_used_this_battle = [False] * len(
+                                    self.equipped_hero_items
+                                )
+                            hero_item_charge_spent = True
+                            if self._hero_item_is_talisman(hero_item_effect):
+                                uses_before = self._hero_item_slot_uses_left(
+                                    slot_index,
+                                    hero_item_effect,
+                                )
+                                uses_after = max(0, int(uses_before or 0) - 1)
+                                self.hero_item_slots_used_this_battle[slot_index] = True
+                                if uses_after > 0:
+                                    self.equipped_hero_item_uses_left[slot_index] = uses_after
+                                    hero_item_uses_left = uses_after
+                                else:
+                                    self.equipped_hero_item_uses_left[slot_index] = None
+                                    self.equipped_hero_items[slot_index] = None
+                                    hero_item_consumed = True
+                                    hero_item_uses_left = 0
+                            else:
                                 self.equipped_hero_items[slot_index] = None
-                            hero_item_consumed = True
+                                self.equipped_hero_item_uses_left[slot_index] = None
+                                hero_item_consumed = True
+                                hero_item_uses_left = 0
                             if hero_item_effect_kind in ("damage", "drain"):
                                 self._check_victory_after_hit()
 
@@ -6177,7 +6287,10 @@ class BattleEnv(gym.Env):
             "battle_hero_item_effect_value": float(hero_item_effect_value or 0.0),
             "battle_hero_item_applied": bool(hero_item_applied),
             "battle_hero_item_consumed": bool(hero_item_consumed),
+            "battle_hero_item_charge_spent": bool(hero_item_charge_spent),
+            "battle_hero_item_uses_left": hero_item_uses_left,
             "equipped_hero_items": list(self.equipped_hero_items),
+            "equipped_hero_item_uses_left": list(self.equipped_hero_item_uses_left),
         }
 
         if self.winner is None:
@@ -6275,6 +6388,11 @@ class BattleEnv(gym.Env):
         self._ismir_applied_uran = {}
         self.survived_inits = []
         self.step_count = 0
+        self.hero_item_slots_used_this_battle = [False] * len(self.equipped_hero_items)
+        if len(getattr(self, "equipped_hero_item_uses_left", []) or []) < len(
+            self.equipped_hero_items
+        ):
+            self.equipped_hero_item_uses_left = [None] * len(self.equipped_hero_items)
 
         self._log(f"Бой начат с кастомными командами. Раунд {self.round_no}.")
 
