@@ -116,16 +116,23 @@ class CampaignMapSitesMixin:
         self.grid_env.trainer_positions = set(self.trainer_interaction_tiles)
     def _apply_chest_item_rewards(self, item_name: str) -> List[str]:
         granted_items: List[str] = []
-        if item_name == self.BONUS_SMALL_HEAL_SOURCE_ITEM:
+        definition = self._potion_item_definition(item_name)
+        grant_kind = str((definition or {}).get("merchant_grant", "") or "")
+        if grant_kind == "small_heal_bonus":
             self.extra_healing_bottles = max(0, int(self.extra_healing_bottles or 0)) + 1
             granted_items.append(self.BONUS_SMALL_HEAL_ITEM_NAME)
-        if item_name == self.BONUS_REVIVE_SOURCE_ITEM:
+        elif grant_kind == "large_heal_bonus":
+            self.extra_heal_bottles = max(0, int(self.extra_heal_bottles or 0)) + 1
+            granted_items.append(self.BONUS_LARGE_HEAL_ITEM_NAME)
+        elif grant_kind == "revive_bonus":
             self.extra_revive_bottles = max(0, int(self.extra_revive_bottles or 0)) + 1
             granted_items.append(self.BONUS_REVIVE_ITEM_NAME)
         return granted_items
     @classmethod
     def _is_auto_consumed_chest_item(cls, item_name: str) -> bool:
-        return str(item_name or "") in cls.AUTO_CONSUMED_CHEST_ITEMS
+        definition = cls._potion_item_definition(item_name)
+        grant_kind = str((definition or {}).get("merchant_grant", "") or "")
+        return grant_kind in {"small_heal_bonus", "large_heal_bonus", "revive_bonus"}
     def _collect_adjacent_chests(self) -> List[Dict]:
         if not self.chests:
             return []
@@ -216,14 +223,19 @@ class CampaignMapSitesMixin:
             self._add_hero_item(granted_item)
         return granted_items
     def _step_buy_merchant_item(self, action: int):
-        idx = action - self.GRID_MERCHANT_BUY_ACTION_START
+        idx = action - self.GRID_MERCHANT_POTION_BUY_ACTION_START
         grid_obs = self._get_grid_obs()
         reward = 0.0
         terminated = False
         truncated = False
 
-        item_data = self.MERCHANT_BUY_ITEMS[idx] if 0 <= idx < len(self.MERCHANT_BUY_ITEMS) else {}
-        item_name = str(item_data.get("name", "") or "")
+        item_name = (
+            self.scenario_merchant_potion_item_names[idx]
+            if 0 <= idx < len(self.scenario_merchant_potion_item_names)
+            else ""
+        )
+        item_data = self._merchant_item_definition(item_name) or {}
+        item_name = str(item_data.get("name", item_name) or "")
         item_price = float(item_data.get("price", 0.0) or 0.0)
         site_names = self._merchant_sites_at_position(self.grid_env.agent_pos)
         site_name = self._merchant_site_for_item(item_name, position=self.grid_env.agent_pos)

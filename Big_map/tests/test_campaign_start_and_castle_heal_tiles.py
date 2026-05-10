@@ -32,6 +32,13 @@ def _heal_bottle_action_index(env: CampaignEnv, target_pos: int) -> int:
     return env.GRID_BOTTLE_ACTION_START + env.GRID_BOTTLE_POSITIONS.index(target_pos)
 
 
+def _potion_use_action_index(env: CampaignEnv, item_name: str, target_pos: int) -> int:
+    return (
+        env._potion_action_start_for_item(item_name)
+        + env.GRID_POTION_USE_POSITIONS.index(target_pos)
+    )
+
+
 def _mark_temple_built(env: CampaignEnv) -> None:
     for build_key in env.building_keys:
         building = env.active_buildings.get(build_key)
@@ -224,7 +231,7 @@ def test_default_campaign_uses_all_real_map_chests():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
 
-    assert len(env.chests) == 17
+    assert len(env.chests) == 18
     assert env.chests[(36, 38)] == ("Potion of Healing", "Life Potion")
     assert env.chests[(24, 30)] == ("Potion of Healing", "Bronze Ring (Valuable)")
 
@@ -621,12 +628,12 @@ def test_castle_revive_action_is_blocked_when_gold_is_below_required_cost():
     assert float(info.get("castle_revive_reward", -1.0)) == pytest.approx(0.0)
 
 
-def test_combined_heal_action_prefers_50_hp_bottle_when_it_is_enough():
+def test_small_heal_potion_action_uses_50_hp_bottle():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
 
     target_pos = 7
-    action = _heal_bottle_action_index(env, target_pos)
+    action = _potion_use_action_index(env, env.BONUS_SMALL_HEAL_ITEM_NAME, target_pos)
     unit = next(u for u in env.blue_team_state if int(u.get("position", -1)) == target_pos)
     max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0))
 
@@ -640,7 +647,8 @@ def test_combined_heal_action_prefers_50_hp_bottle_when_it_is_enough():
     assert reward == pytest.approx(0.0)
     assert info.get("heal_action") is True
     assert info.get("heal_target_pos") == target_pos
-    assert info.get("selected_heal_bottle_kind") == "small"
+    assert info.get("potion_item") == env.BONUS_SMALL_HEAL_ITEM_NAME
+    assert info.get("selected_heal_bottle_kind") == env.BONUS_SMALL_HEAL_ITEM_NAME
     assert float(info.get("selected_heal_bottle_amount", 0.0)) == pytest.approx(50.0)
     assert float(info.get("healed_amount", 0.0)) == pytest.approx(40.0)
     assert float(unit.get("hp", 0) or 0.0) == pytest.approx(max_hp)
@@ -652,12 +660,12 @@ def test_combined_heal_action_prefers_50_hp_bottle_when_it_is_enough():
     assert int(info.get("heal_bottles_left", -1)) == 3
 
 
-def test_combined_heal_action_prefers_100_hp_bottle_when_50_is_not_enough():
+def test_large_heal_potion_action_uses_100_hp_bottle():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
 
     target_pos = 7
-    action = _heal_bottle_action_index(env, target_pos)
+    action = _potion_use_action_index(env, env.BONUS_LARGE_HEAL_ITEM_NAME, target_pos)
     unit = next(u for u in env.blue_team_state if int(u.get("position", -1)) == target_pos)
     max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0))
 
@@ -671,7 +679,8 @@ def test_combined_heal_action_prefers_100_hp_bottle_when_50_is_not_enough():
     assert reward == pytest.approx(0.0)
     assert info.get("heal_action") is True
     assert info.get("heal_target_pos") == target_pos
-    assert info.get("selected_heal_bottle_kind") == "large"
+    assert info.get("potion_item") == env.BONUS_LARGE_HEAL_ITEM_NAME
+    assert info.get("selected_heal_bottle_kind") == env.BONUS_LARGE_HEAL_ITEM_NAME
     assert float(info.get("selected_heal_bottle_amount", 0.0)) == pytest.approx(100.0)
     assert float(info.get("healed_amount", 0.0)) == pytest.approx(60.0)
     assert float(unit.get("hp", 0) or 0.0) == pytest.approx(max_hp)
@@ -689,7 +698,7 @@ def test_combined_heal_action_prefers_100_hp_bottle_when_50_is_not_enough():
         (0, 3, 80.0, "large", 80.0),
     ],
 )
-def test_combined_heal_action_falls_back_to_other_available_bottle(
+def test_exact_heal_potion_action_uses_requested_available_bottle(
     large_used,
     small_used,
     missing_hp,
@@ -700,7 +709,12 @@ def test_combined_heal_action_falls_back_to_other_available_bottle(
     env.reset(seed=123)
 
     target_pos = 7
-    action = _heal_bottle_action_index(env, target_pos)
+    item_name = (
+        env.BONUS_SMALL_HEAL_ITEM_NAME
+        if expected_kind == "small"
+        else env.BONUS_LARGE_HEAL_ITEM_NAME
+    )
+    action = _potion_use_action_index(env, item_name, target_pos)
     unit = next(u for u in env.blue_team_state if int(u.get("position", -1)) == target_pos)
     max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0))
 
@@ -711,17 +725,19 @@ def test_combined_heal_action_falls_back_to_other_available_bottle(
 
     _, _, _, _, info = env.step(action)
 
-    assert info.get("selected_heal_bottle_kind") == expected_kind
+    assert info.get("potion_item") == item_name
+    assert info.get("selected_heal_bottle_kind") == item_name
     assert float(info.get("healed_amount", 0.0)) == pytest.approx(expected_healed)
     assert float(unit.get("hp", 0) or 0.0) == pytest.approx(max_hp)
 
 
-def test_combined_heal_action_mask_requires_alive_wounded_unit_and_any_stock():
+def test_exact_heal_potion_masks_require_alive_wounded_unit_and_matching_stock():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
 
     target_pos = 7
-    action = _heal_bottle_action_index(env, target_pos)
+    action = _potion_use_action_index(env, env.BONUS_SMALL_HEAL_ITEM_NAME, target_pos)
+    large_action = _potion_use_action_index(env, env.BONUS_LARGE_HEAL_ITEM_NAME, target_pos)
     unit = next(u for u in env.blue_team_state if int(u.get("position", -1)) == target_pos)
     max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0))
     empty_action = _heal_bottle_action_index(env, 10)
@@ -749,8 +765,10 @@ def test_combined_heal_action_mask_requires_alive_wounded_unit_and_any_stock():
     unit["health"] = unit["hp"]
     env.healing_bottles_used = env.MAX_HEALING_BOTTLES
     mask = env.compute_action_mask()
-    assert bool(mask[action]) is True
+    assert bool(mask[action]) is False
+    assert bool(mask[large_action]) is True
 
     env.heal_bottles_used = env.MAX_HEAL_BOTTLES
     mask = env.compute_action_mask()
     assert bool(mask[action]) is False
+    assert bool(mask[large_action]) is False

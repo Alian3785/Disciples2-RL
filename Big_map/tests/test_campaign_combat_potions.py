@@ -70,6 +70,48 @@ def _supreme_elixir_action_index(env: CampaignEnv, target_pos: int) -> int:
     return env.GRID_SUPREME_ELIXIR_ACTION_START + env.SUPREME_ELIXIR_POSITIONS.index(target_pos)
 
 
+def test_current_map_dynamic_potion_action_layout_counts_are_scenario_driven():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    assert len(env.scenario_potion_item_names) == 14
+    assert len(env.scenario_merchant_potion_item_names) == 10
+    assert len(env.scenario_battle_potion_equip_names) == 4
+    assert env.GRID_POTION_USE_ACTION_COUNT == 14 * 6
+    assert env.GRID_MERCHANT_POTION_BUY_ACTION_COUNT == 10
+    assert env.GRID_EQUIP_BATTLE_POTION_ACTION_COUNT == 4
+    assert (
+        env.GRID_POTION_USE_ACTION_COUNT
+        + env.GRID_MERCHANT_POTION_BUY_ACTION_COUNT
+        + env.GRID_EQUIP_BATTLE_POTION_ACTION_COUNT
+    ) == 98
+
+
+def test_dynamic_potion_layout_does_not_reserve_missing_potion_types():
+    class SparsePotionCampaignEnv(CampaignEnv):
+        MAX_HEAL_BOTTLES = 0
+        MAX_HEALING_BOTTLES = 0
+        MAX_REVIVE_BOTTLES = 0
+        MERCHANT_BUY_ITEMS = ()
+        RUIN_REWARD_BY_ENEMY_ID = {}
+        RUIN_REWARD_ITEM_NAMES = frozenset()
+
+    env = SparsePotionCampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+    env._static_chests = {(1, 1): ("Potion of Strength",)}
+    env._refresh_dynamic_action_layout()
+    env.action_space = env.action_space.__class__(
+        env.grid_scroll_cast_action_start + int(env.MAX_SCROLL_CAST_ACTIONS)
+    )
+
+    assert env.scenario_potion_item_names == (env.STRENGTH_POTION_ITEM_NAME,)
+    assert env.scenario_merchant_potion_item_names == ()
+    assert env.scenario_battle_potion_equip_names == ()
+    assert env.GRID_POTION_USE_ACTION_COUNT == 6
+    assert env.GRID_MERCHANT_POTION_BUY_ACTION_COUNT == 0
+    assert env.GRID_EQUIP_BATTLE_POTION_ACTION_COUNT == 0
+
+
 def test_collecting_combat_potions_adds_inventory_and_pickup_reward():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
@@ -255,7 +297,8 @@ def test_invulnerability_potion_use_consumes_item_rewards_and_buffs_next_battle(
 
     env._init_battle(enemy_id=1)
     battle_unit = _battle_blue_unit(env, target_pos)
-    assert int(battle_unit.get("armor", 0) or 0) == base_armor + env.INVULNERABILITY_POTION_ARMOR_BONUS
+    assert int(battle_unit.get("armor", 0) or 0) == base_armor
+    assert float(battle_unit.get("incoming_damage_multiplier", 1.0) or 1.0) == pytest.approx(0.5)
 
 
 def test_strength_potion_use_consumes_item_rewards_and_buffs_next_battle():
@@ -640,7 +683,8 @@ def test_battle_save_strips_combat_potion_bonuses_from_persistent_blue_state():
     env._init_battle(enemy_id=1)
 
     battle_unit = _battle_blue_unit(env, target_pos)
-    assert int(battle_unit.get("armor", 0) or 0) == base_armor + env.INVULNERABILITY_POTION_ARMOR_BONUS
+    assert int(battle_unit.get("armor", 0) or 0) == base_armor
+    assert float(battle_unit.get("incoming_damage_multiplier", 1.0) or 1.0) == pytest.approx(0.5)
     assert int(battle_unit.get("damage", 0) or 0) == int(
         round(base_damage * env.STRENGTH_POTION_DAMAGE_MULTIPLIER)
     )
@@ -649,6 +693,7 @@ def test_battle_save_strips_combat_potion_bonuses_from_persistent_blue_state():
 
     saved_unit = _blue_state_unit(env, target_pos)
     assert int(saved_unit.get("armor", 0) or 0) == base_armor
+    assert float(saved_unit.get("incoming_damage_multiplier", 1.0) or 1.0) == pytest.approx(1.0)
     assert int(saved_unit.get("damage", 0) or 0) == base_damage
 
 

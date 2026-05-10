@@ -32,6 +32,169 @@ class CampaignInventoryMixin:
         )
 
     @classmethod
+    @lru_cache(maxsize=None)
+    def _potion_lookup_tables(
+        cls,
+    ) -> Tuple[
+        Dict[str, Dict[str, object]],
+        Dict[str, str],
+        Dict[str, Tuple[str, ...]],
+    ]:
+        definitions: Dict[str, Dict[str, object]] = {}
+        alias_to_canonical: Dict[str, str] = {}
+        aliases_by_canonical: Dict[str, Tuple[str, ...]] = {}
+        for definition in tuple(getattr(cls, "POTION_ITEM_DEFINITIONS", ()) or ()):
+            if not isinstance(definition, dict):
+                continue
+            canonical_name = str(definition.get("name", "") or "").strip()
+            if not canonical_name:
+                continue
+            normalized_definition = dict(definition)
+            normalized_definition["name"] = canonical_name
+            definitions[canonical_name] = normalized_definition
+
+            alias_names = {canonical_name}
+            alias_to_canonical[canonical_name] = canonical_name
+            for alias_name in tuple(definition.get("aliases", ()) or ()):
+                normalized_alias = str(alias_name or "").strip()
+                if normalized_alias:
+                    alias_to_canonical[normalized_alias] = canonical_name
+                    alias_names.add(normalized_alias)
+            aliases_by_canonical[canonical_name] = tuple(alias_names)
+
+        return definitions, alias_to_canonical, aliases_by_canonical
+
+    @classmethod
+    def _potion_definitions_by_canonical(cls) -> Dict[str, Dict[str, object]]:
+        return cls._potion_lookup_tables()[0]
+
+    @classmethod
+    def _potion_alias_to_canonical(cls) -> Dict[str, str]:
+        return cls._potion_lookup_tables()[1]
+
+    @classmethod
+    def _canonical_potion_item_name(cls, item_name: object) -> str:
+        normalized_name = str(item_name or "").strip()
+        if not normalized_name:
+            return ""
+        return str(cls._potion_alias_to_canonical().get(normalized_name, "") or "")
+
+    @classmethod
+    def _potion_item_definition(cls, item_name: object) -> Dict[str, object]:
+        canonical_name = cls._canonical_potion_item_name(item_name)
+        if not canonical_name:
+            return {}
+        return dict(cls._potion_definitions_by_canonical().get(canonical_name, {}))
+
+    @classmethod
+    def _is_potion_item_name(cls, item_name: object) -> bool:
+        return bool(cls._canonical_potion_item_name(item_name))
+
+    @classmethod
+    def _potion_item_aliases_for_name(cls, item_name: object) -> Tuple[str, ...]:
+        canonical_name = cls._canonical_potion_item_name(item_name)
+        if not canonical_name:
+            return ()
+        return cls._potion_lookup_tables()[2].get(canonical_name, ())
+
+    def _scenario_merchant_potion_item_entries(self) -> Tuple[Dict[str, object], ...]:
+        entries: List[Dict[str, object]] = []
+        for item_data in tuple(getattr(self, "MERCHANT_BUY_ITEMS", ()) or ()):
+            if not isinstance(item_data, dict):
+                continue
+            item_name = str(item_data.get("name", "") or "").strip()
+            if not item_name or not self._is_potion_item_name(item_name):
+                continue
+            try:
+                stock = int(item_data.get("stock", 0) or 0)
+            except (TypeError, ValueError):
+                stock = 0
+            if stock <= 0:
+                continue
+            entries.append(dict(item_data))
+        return tuple(entries)
+
+    def _scenario_merchant_potion_item_names(self) -> Tuple[str, ...]:
+        return tuple(
+            str(item_data.get("name", "") or "")
+            for item_data in self._scenario_merchant_potion_item_entries()
+        )
+
+    def _scenario_potion_item_names(self) -> Tuple[str, ...]:
+        present_names: set[str] = set()
+
+        def add_if_potion(raw_item_name: object) -> None:
+            canonical_name = self._canonical_potion_item_name(raw_item_name)
+            if canonical_name:
+                present_names.add(canonical_name)
+
+        for item_names in getattr(self, "_static_chests", {}).values():
+            for item_name in tuple(item_names or ()):
+                add_if_potion(item_name)
+
+        for reward_data in tuple(getattr(self, "RUIN_REWARD_BY_ENEMY_ID", {}).values()):
+            if isinstance(reward_data, dict):
+                add_if_potion(reward_data.get("item", ""))
+
+        for item_data in self._scenario_merchant_potion_item_entries():
+            add_if_potion(item_data.get("name", ""))
+
+        if int(getattr(self, "MAX_HEALING_BOTTLES", 0) or 0) > 0:
+            add_if_potion(self.BONUS_SMALL_HEAL_ITEM_NAME)
+        if int(getattr(self, "MAX_HEAL_BOTTLES", 0) or 0) > 0:
+            add_if_potion(self.BONUS_LARGE_HEAL_ITEM_NAME)
+        if int(getattr(self, "MAX_REVIVE_BOTTLES", 0) or 0) > 0:
+            add_if_potion(self.BONUS_REVIVE_ITEM_NAME)
+
+        ordered_names: List[str] = []
+        for definition in tuple(getattr(self, "POTION_ITEM_DEFINITIONS", ()) or ()):
+            canonical_name = str((definition or {}).get("name", "") or "").strip()
+            if canonical_name and canonical_name in present_names:
+                ordered_names.append(canonical_name)
+        return tuple(ordered_names)
+
+    def _scenario_battle_potion_equip_names(self) -> Tuple[str, ...]:
+        scenario_potion_names = set(getattr(self, "scenario_potion_item_names", ()) or ())
+        base_names = (
+            self.BONUS_SMALL_HEAL_ITEM_NAME,
+            self.BONUS_LARGE_HEAL_ITEM_NAME,
+            self.HEALING_OINTMENT_ITEM_NAME,
+            self.BONUS_REVIVE_ITEM_NAME,
+        )
+        return tuple(
+            item_name
+            for item_name in base_names
+            if self._canonical_potion_item_name(item_name) in scenario_potion_names
+        )
+
+    def _refresh_potion_item_names(self) -> Tuple[str, ...]:
+        self.scenario_potion_item_names = self._scenario_potion_item_names()
+        self.scenario_merchant_potion_item_names = self._scenario_merchant_potion_item_names()
+        self.scenario_battle_potion_equip_names = self._scenario_battle_potion_equip_names()
+        self.GRID_POTION_USE_ACTION_COUNT = (
+            len(self.scenario_potion_item_names) * len(self.GRID_POTION_USE_POSITIONS)
+        )
+        self.GRID_MERCHANT_POTION_BUY_ACTION_COUNT = len(
+            self.scenario_merchant_potion_item_names
+        )
+        self.GRID_EQUIP_BATTLE_POTION_ACTION_COUNT = len(
+            self.scenario_battle_potion_equip_names
+        )
+        return self.scenario_potion_item_names
+
+    def _potion_action_start_for_item(self, item_name: object) -> int:
+        canonical_name = self._canonical_potion_item_name(item_name)
+        if not canonical_name:
+            return int(getattr(self, "GRID_POTION_USE_ACTION_START", 9))
+        try:
+            potion_idx = list(self.scenario_potion_item_names).index(canonical_name)
+        except ValueError:
+            return int(getattr(self, "GRID_POTION_USE_ACTION_START", 9))
+        return int(self.GRID_POTION_USE_ACTION_START) + int(potion_idx) * len(
+            self.GRID_POTION_USE_POSITIONS
+        )
+
+    @classmethod
     def _is_staff_spell_item_name(cls, item_name: str) -> bool:
         normalized_name = str(item_name or "").strip()
         return bool(normalized_name) and normalized_name in set(cls.STAFF_SPELL_ITEM_NAMES)
@@ -160,8 +323,8 @@ class CampaignInventoryMixin:
             str(item_name)
             for item_name in getattr(
                 self,
-                "BASE_BATTLE_EQUIPPABLE_ITEM_NAMES",
-                self.BATTLE_EQUIPPABLE_ITEM_NAMES,
+                "scenario_battle_potion_equip_names",
+                self.BASE_BATTLE_EQUIPPABLE_ITEM_NAMES,
             )
         )
         scenario_magic_item_names = self._scenario_battle_magic_item_names()
@@ -536,6 +699,19 @@ class CampaignInventoryMixin:
         if normalized_name in self.BATTLE_EQUIPPABLE_ITEM_NAMES:
             return int(self._count_hero_item(normalized_name))
         return 0
+    def _potion_available_count(self, item_name: object) -> int:
+        canonical_name = self._canonical_potion_item_name(item_name)
+        if not canonical_name:
+            return 0
+        if canonical_name == self.BONUS_SMALL_HEAL_ITEM_NAME:
+            return int(self._healing_bottles_left())
+        if canonical_name == self.BONUS_LARGE_HEAL_ITEM_NAME:
+            return int(self._heal_bottles_left())
+        if canonical_name == self.BONUS_REVIVE_ITEM_NAME:
+            return int(self._revive_bottles_left())
+        return int(self._count_hero_item(canonical_name))
+    def _potion_available(self, item_name: object) -> bool:
+        return self._potion_available_count(item_name) > 0
     @classmethod
     def _counter_backed_battle_item_names(cls) -> Tuple[str, str, str]:
         return (
@@ -894,6 +1070,12 @@ class CampaignInventoryMixin:
                         or 0
                     ),
                 )
+            except (TypeError, ValueError):
+                return 0
+        potion_definition = cls._potion_item_definition(item_name)
+        if potion_definition:
+            try:
+                return max(0, int(potion_definition.get("gold_value", 0) or 0))
             except (TypeError, ValueError):
                 return 0
         try:
@@ -1309,6 +1491,9 @@ class CampaignInventoryMixin:
     def _hero_item_aliases(cls, item_name: str) -> Tuple[str, ...]:
         normalized_name = str(item_name or "")
         aliases = {normalized_name}
+        potion_aliases = cls._potion_item_aliases_for_name(normalized_name)
+        if potion_aliases:
+            aliases.update(potion_aliases)
         canonical_scroll_name = cls._canonical_scroll_item_name(normalized_name)
         if canonical_scroll_name:
             aliases.add(canonical_scroll_name)
@@ -1366,6 +1551,8 @@ class CampaignInventoryMixin:
         if self._is_book_item_name(normalized_name):
             return True
         if self._is_staff_spell_item_name(normalized_name):
+            return True
+        if self._is_potion_item_name(normalized_name):
             return True
         if normalized_name in set(getattr(self, "scenario_battle_magic_item_names", ())):
             return True
@@ -1451,14 +1638,11 @@ class CampaignInventoryMixin:
     def _combat_potion_reward_value(self) -> float:
         return float(self.reward_defeat_enemy)
     def _count_collected_combat_potions(self, collected_chests: List[Dict]) -> int:
-        tracked_items = {
-            self.INVULNERABILITY_POTION_ITEM_NAME,
-            self.STRENGTH_POTION_ITEM_NAME,
-        }
         count = 0
         for chest_data in collected_chests:
             for item_name in chest_data.get("items", []):
-                if str(item_name or "") in tracked_items:
+                definition = self._potion_item_definition(item_name)
+                if definition and str(definition.get("duration", "") or "") == "temporary":
                     count += 1
         return int(count)
     def _active_invulnerability_bonus_for_position(self, position: int) -> int:
@@ -1474,6 +1658,13 @@ class CampaignInventoryMixin:
             else 1.0
         )
     def _clear_expired_combat_potion_effects(self) -> None:
+        for item_name, positions in sorted(
+            getattr(self, "active_potion_effect_positions", {}).items()
+        ):
+            if positions:
+                self._log(
+                    f"Эффект зелья {item_name} завершён на позициях {sorted(positions)}"
+                )
         if self.active_invulnerability_potion_positions:
             self._log(
                 "Эффект зелья неуязвимости завершён на позициях "
@@ -1522,6 +1713,7 @@ class CampaignInventoryMixin:
         self.active_earth_ward_positions.clear()
         self.active_water_ward_positions.clear()
         self.active_air_ward_positions.clear()
+        self.active_potion_effect_positions.clear()
     def get_bottle_inventory_counters(self) -> Dict[str, int]:
         max_heal = self._max_heal_bottles_available()
         max_healing = self._max_healing_bottles_available()
@@ -1831,6 +2023,315 @@ class CampaignInventoryMixin:
             truncated=truncated,
             info=info,
         )
+    def _active_potion_positions(self, item_name: object) -> set[int]:
+        canonical_name = self._canonical_potion_item_name(item_name)
+        if not canonical_name:
+            return set()
+        definition = self._potion_item_definition(canonical_name)
+        active_attr = str(definition.get("active_attr", "") or "")
+        if active_attr:
+            current_value = getattr(self, active_attr, None)
+            if not isinstance(current_value, set):
+                current_value = set()
+                setattr(self, active_attr, current_value)
+            return current_value
+        if not hasattr(self, "active_potion_effect_positions"):
+            self.active_potion_effect_positions = {}
+        return self.active_potion_effect_positions.setdefault(canonical_name, set())
+
+    def _consume_potion_item(self, item_name: object) -> bool:
+        canonical_name = self._canonical_potion_item_name(item_name)
+        if not canonical_name:
+            return False
+        if canonical_name in {
+            self.BONUS_SMALL_HEAL_ITEM_NAME,
+            self.BONUS_LARGE_HEAL_ITEM_NAME,
+            self.HEALING_OINTMENT_ITEM_NAME,
+            self.BONUS_REVIVE_ITEM_NAME,
+        }:
+            return self._consume_battle_equipable_item(canonical_name)
+        return self._consume_hero_item(canonical_name)
+
+    def _apply_temporary_potion_to_position(
+        self,
+        item_name: object,
+        position: int,
+    ) -> Tuple[bool, Optional[str], float]:
+        state = self._get_blue_state()
+        active_positions = self._active_potion_positions(item_name)
+        for unit in state:
+            if int(unit.get("position", -1)) != int(position):
+                continue
+            hp = float(unit.get("hp", 0) or unit.get("health", 0))
+            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
+            if max_hp <= 0 or hp <= 0 or int(position) in active_positions:
+                return False, None, 0.0
+            active_positions.add(int(position))
+            canonical_name = self._canonical_potion_item_name(item_name)
+            name = str(unit.get("name", f"pos_{position}") or f"pos_{position}")
+            self._log(
+                f"{canonical_name}: {name} (pos {position}) получает эффект до конца текущего хода"
+            )
+            return True, name, 0.0
+        return False, None, 0.0
+
+    def _apply_permanent_potion_bonus_to_unit(
+        self,
+        unit: Dict,
+        definition: Dict[str, object],
+        *,
+        increment_uses: bool = True,
+    ) -> None:
+        effect = dict(definition.get("effect", {}) or {})
+        effect_kind = str(effect.get("kind", "") or "")
+        canonical_name = str(definition.get("name", "") or "")
+        if effect_kind == "damage":
+            multiplier = max(0.0, float(effect.get("multiplier", 1.0) or 1.0))
+            base_damage = self._normalize_damage_value(unit.get("damage", 0))
+            base_damage_secondary = self._normalize_damage_value(
+                unit.get("damage_secondary", 0)
+            )
+            unit["damage"] = self._normalize_damage_value(float(base_damage) * multiplier)
+            unit["damage_secondary"] = self._normalize_damage_value(
+                float(base_damage_secondary) * multiplier
+            )
+            unit["original_damage"] = int(unit["damage"])
+        elif effect_kind == "health":
+            hp = float(unit.get("hp", 0) or unit.get("health", 0) or 0)
+            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
+            multiplier = max(0.0, float(effect.get("multiplier", 1.0) or 1.0))
+            new_max_hp = self._normalize_health_value(float(max_hp) * multiplier)
+            if new_max_hp <= int(round(max_hp)):
+                new_max_hp = int(round(max_hp)) + 1
+            new_hp = min(
+                new_max_hp,
+                self._normalize_health_value(float(hp) * multiplier),
+            )
+            unit["maxhp"] = int(new_max_hp)
+            unit["max_health"] = int(new_max_hp)
+            unit["hp"] = int(new_hp)
+            unit["health"] = int(new_hp)
+        elif effect_kind == "damage_reduction":
+            multiplier = max(
+                0.0,
+                float(effect.get("incoming_damage_multiplier", 1.0) or 1.0),
+            )
+            base_multiplier = float(unit.get("incoming_damage_multiplier", 1.0) or 1.0)
+            unit["incoming_damage_multiplier"] = max(0.0, base_multiplier * multiplier)
+        elif effect_kind == "accuracy":
+            multiplier = max(0.0, float(effect.get("multiplier", 1.0) or 1.0))
+            base_accuracy = self._normalize_accuracy_value(unit.get("accuracy", 0))
+            base_accuracy_secondary = self._normalize_accuracy_value(
+                unit.get("accuracy_secondary", 0)
+            )
+            unit["accuracy"] = self._normalize_accuracy_value(
+                float(base_accuracy) * multiplier
+            )
+            unit["accuracy_secondary"] = self._normalize_accuracy_value(
+                float(base_accuracy_secondary) * multiplier
+            )
+        elif effect_kind == "initiative":
+            multiplier = max(0.0, float(effect.get("multiplier", 1.0) or 1.0))
+            base_initiative = int(
+                unit.get("initiative_base", unit.get("initiative", 0)) or 0
+            )
+            boosted_initiative = self._normalize_damage_value(
+                float(base_initiative) * multiplier
+            )
+            unit["initiative_base"] = int(boosted_initiative)
+            unit["initiative"] = int(boosted_initiative)
+
+        if increment_uses:
+            counter_key = str(definition.get("permanent_counter_key", "") or "")
+            if counter_key:
+                unit[counter_key] = max(0, int(unit.get(counter_key, 0) or 0)) + 1
+            applied_names = [
+                str(name)
+                for name in (unit.get("campaign_permanent_potions", []) or [])
+                if str(name)
+            ]
+            applied_names.append(canonical_name)
+            unit["campaign_permanent_potions"] = applied_names
+
+    def _apply_permanent_potion_to_position(
+        self,
+        item_name: object,
+        position: int,
+    ) -> Tuple[bool, Optional[str], float]:
+        definition = self._potion_item_definition(item_name)
+        state = self._get_blue_state()
+        for unit in state:
+            if int(unit.get("position", -1)) != int(position):
+                continue
+            hp = float(unit.get("hp", 0) or unit.get("health", 0) or 0)
+            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
+            if max_hp <= 0 or hp <= 0:
+                return False, None, 0.0
+
+            self._apply_permanent_potion_bonus_to_unit(
+                unit,
+                definition,
+                increment_uses=True,
+            )
+            name = str(unit.get("name", f"pos_{position}") or f"pos_{position}")
+            self._log(
+                f"{definition.get('name', item_name)}: {name} (pos {position}) "
+                "получает постоянный эффект"
+            )
+            return True, name, 0.0
+        return False, None, 0.0
+
+    def _apply_potion_to_position(
+        self,
+        item_name: object,
+        position: int,
+    ) -> Tuple[bool, Optional[str], float]:
+        definition = self._potion_item_definition(item_name)
+        effect = dict(definition.get("effect", {}) or {})
+        effect_kind = str(effect.get("kind", "") or "")
+        if effect_kind == "heal":
+            healed_amount, unit_name = self._heal_unit_at_position(
+                position=position,
+                heal_amount=float(effect.get("amount", 0.0) or 0.0),
+                source_label=str(definition.get("name", item_name) or item_name),
+            )
+            return healed_amount > 0.0, unit_name, float(healed_amount)
+        if effect_kind == "revive":
+            revived, unit_name = self._revive_unit_at_position(position=position)
+            return bool(revived), unit_name, float(effect.get("amount", 1.0) or 1.0)
+        if str(definition.get("duration", "") or "") == "permanent":
+            return self._apply_permanent_potion_to_position(item_name, position)
+        return self._apply_temporary_potion_to_position(item_name, position)
+
+    def _step_use_potion(self, action: int):
+        idx = action - self.GRID_POTION_USE_ACTION_START
+        target_count = len(self.GRID_POTION_USE_POSITIONS)
+        potion_idx = int(idx // target_count) if target_count > 0 else -1
+        target_idx = int(idx % target_count) if target_count > 0 else -1
+        item_name = (
+            self.scenario_potion_item_names[potion_idx]
+            if 0 <= potion_idx < len(self.scenario_potion_item_names)
+            else ""
+        )
+        target_pos = (
+            self.GRID_POTION_USE_POSITIONS[target_idx]
+            if 0 <= target_idx < len(self.GRID_POTION_USE_POSITIONS)
+            else None
+        )
+        definition = self._potion_item_definition(item_name)
+        effect = dict(definition.get("effect", {}) or {})
+        effect_kind = str(effect.get("kind", "") or "")
+        duration = str(definition.get("duration", "") or "")
+
+        grid_obs = self._get_grid_obs()
+        reward = 0.0
+        terminated = False
+        truncated = False
+
+        applied = False
+        consumed = False
+        unit_name = None
+        applied_amount = 0.0
+        if target_pos is not None and self._can_use_potion_on_position(item_name, target_pos):
+            consumed = self._consume_potion_item(item_name)
+            if consumed:
+                applied, unit_name, applied_amount = self._apply_potion_to_position(
+                    item_name,
+                    target_pos,
+                )
+                if not applied and effect_kind not in {"heal", "revive"}:
+                    self._append_hero_item(str(item_name or ""))
+                    consumed = False
+                if applied and duration == "temporary":
+                    reward = self._combat_potion_reward_value()
+                    self.combat_potion_battle_bonus_pending = True
+
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            "potion_action": True,
+            "potion_item": item_name,
+            "potion_effect_kind": effect_kind,
+            "potion_target_pos": target_pos,
+            "potion_applied": applied,
+            "potion_consumed": consumed,
+            "potion_unit_name": unit_name,
+            "potion_amount": float(applied_amount),
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+            "heroitems": list(self.heroitems),
+            "heal_bottles_used": self.heal_bottles_used,
+            "extra_heal_bottles": self.extra_heal_bottles,
+            "heal_bottles_left": self._heal_bottles_left(),
+            "max_heal_bottles": self._max_heal_bottles_available(),
+            "healing_bottles_used": self.healing_bottles_used,
+            "extra_healing_bottles": self.extra_healing_bottles,
+            "healing_bottles_left": self._healing_bottles_left(),
+            "max_healing_bottles": self._max_healing_bottles_available(),
+            "revive_bottles_used": self.revive_bottles_used,
+            "extra_revive_bottles": self.extra_revive_bottles,
+            "revive_bottles_left": self._revive_bottles_left(),
+            "max_revive_bottles": self._max_revive_bottles_available(),
+            "healing_ointment_left": self._count_hero_item(self.HEALING_OINTMENT_ITEM_NAME),
+        }
+        if effect_kind == "heal":
+            info.update(
+                {
+                    "heal_action": True,
+                    "heal_target_pos": target_pos,
+                    "healed_amount": float(applied_amount),
+                    "healed_unit_name": unit_name,
+                    "selected_heal_bottle_kind": item_name,
+                    "selected_heal_bottle_amount": float(effect.get("amount", 0.0) or 0.0),
+                }
+            )
+        if effect_kind == "revive":
+            info.update(
+                {
+                    "revive_action": True,
+                    "revive_target_pos": target_pos,
+                    "revived": bool(applied),
+                    "revived_unit_name": unit_name,
+                }
+            )
+        if duration == "temporary":
+            info.update(
+                {
+                    "combat_potion_action": True,
+                    "combat_potion_item": item_name,
+                    "combat_potion_target_pos": target_pos,
+                    "combat_potion_applied": applied,
+                    "combat_potion_consumed": consumed,
+                    "combat_potion_unit_name": unit_name,
+                    "combat_potion_reward": float(reward),
+                    "combat_potion_battle_bonus_pending": bool(
+                        self.combat_potion_battle_bonus_pending
+                    ),
+                }
+            )
+        if duration == "permanent":
+            info.update(
+                {
+                    "persistent_elixir_action": True,
+                    "persistent_elixir_item": item_name,
+                    "persistent_elixir_target_pos": target_pos,
+                    "persistent_elixir_applied": applied,
+                    "persistent_elixir_consumed": consumed,
+                    "persistent_elixir_unit_name": unit_name,
+                }
+            )
+        info.update(self._merchant_context_info(self.grid_env.agent_pos))
+
+        return self._finalize_grid_step_result(
+            grid_obs=grid_obs,
+            reward=reward,
+            terminated=terminated,
+            truncated=truncated,
+            info=info,
+        )
     def _apply_invulnerability_potion_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
         state = self._get_blue_state()
         for unit in state:
@@ -2048,16 +2549,22 @@ class CampaignInventoryMixin:
         source_unit: Dict,
         upgraded_unit: Dict,
     ) -> None:
-        upgraded_unit.pop("campaign_titan_elixir_uses", None)
-        upgraded_unit.pop("campaign_supreme_elixir_uses", None)
-
-        titan_uses = max(0, int(source_unit.get("campaign_titan_elixir_uses", 0) or 0))
-        supreme_uses = max(0, int(source_unit.get("campaign_supreme_elixir_uses", 0) or 0))
-
-        for _ in range(titan_uses):
-            self._apply_titan_elixir_bonus_to_unit(upgraded_unit, increment_uses=True)
-        for _ in range(supreme_uses):
-            self._apply_supreme_elixir_bonus_to_unit(upgraded_unit, increment_uses=True)
+        for definition in tuple(getattr(self, "POTION_ITEM_DEFINITIONS", ()) or ()):
+            if not isinstance(definition, dict):
+                continue
+            if str(definition.get("duration", "") or "") != "permanent":
+                continue
+            counter_key = str(definition.get("permanent_counter_key", "") or "")
+            if not counter_key:
+                continue
+            upgraded_unit.pop(counter_key, None)
+            uses = max(0, int(source_unit.get(counter_key, 0) or 0))
+            for _ in range(uses):
+                self._apply_permanent_potion_bonus_to_unit(
+                    upgraded_unit,
+                    dict(definition),
+                    increment_uses=True,
+                )
     def _apply_titan_elixir_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
         state = self._get_blue_state()
         for unit in state:
@@ -2420,14 +2927,19 @@ class CampaignInventoryMixin:
         if not blue_team:
             return
 
-        buffed_invulnerability: List[int] = []
-        buffed_strength: List[int] = []
-        buffed_energy: List[int] = []
-        buffed_haste: List[int] = []
-        buffed_fire: List[int] = []
-        buffed_earth: List[int] = []
-        buffed_water: List[int] = []
-        buffed_air: List[int] = []
+        active_entries: List[Tuple[Dict[str, object], set[int]]] = []
+        for definition in tuple(getattr(self, "POTION_ITEM_DEFINITIONS", ()) or ()):
+            if not isinstance(definition, dict):
+                continue
+            if str(definition.get("duration", "") or "") != "temporary":
+                continue
+            positions = self._active_potion_positions(definition.get("name", ""))
+            if positions:
+                active_entries.append((dict(definition), positions))
+        if not active_entries:
+            return
+
+        buffed_by_item: Dict[str, List[int]] = {}
 
         for unit in blue_team:
             position = int(unit.get("position", -1) or -1)
@@ -2436,21 +2948,44 @@ class CampaignInventoryMixin:
             if position <= 0 or max_hp <= 0 or hp <= 0:
                 continue
 
-            if position in self.active_invulnerability_potion_positions:
-                base_armor = self._normalize_armor_value(unit.get("armor", 0))
-                unit["campaign_potion_base_armor"] = int(base_armor)
-                unit["armor"] = int(base_armor) + int(self.INVULNERABILITY_POTION_ARMOR_BONUS)
-                unit["campaign_invulnerability_potion_bonus"] = int(
-                    self.INVULNERABILITY_POTION_ARMOR_BONUS
-                )
-                buffed_invulnerability.append(position)
-
             damage_multiplier = 1.0
-            if position in self.active_strength_potion_positions:
-                damage_multiplier *= float(self.STRENGTH_POTION_DAMAGE_MULTIPLIER)
-            if position in self.active_energy_elixir_positions:
-                damage_multiplier *= float(self.ENERGY_ELIXIR_DAMAGE_MULTIPLIER)
-            if damage_multiplier > 1.0:
+            initiative_multiplier = 1.0
+            accuracy_multiplier = 1.0
+            incoming_damage_multiplier = 1.0
+            added_resistance: List[str] = []
+            resistance = [str(res) for res in (unit.get("resistance") or [])]
+
+            for definition, active_positions in active_entries:
+                if position not in active_positions:
+                    continue
+                effect = dict(definition.get("effect", {}) or {})
+                effect_kind = str(effect.get("kind", "") or "")
+                item_name = str(definition.get("name", "") or "")
+                buffed_by_item.setdefault(item_name, []).append(position)
+                if effect_kind == "damage":
+                    damage_multiplier *= max(0.0, float(effect.get("multiplier", 1.0) or 1.0))
+                elif effect_kind == "initiative":
+                    initiative_multiplier *= max(
+                        0.0,
+                        float(effect.get("multiplier", 1.0) or 1.0),
+                    )
+                elif effect_kind == "accuracy":
+                    accuracy_multiplier *= max(
+                        0.0,
+                        float(effect.get("multiplier", 1.0) or 1.0),
+                    )
+                elif effect_kind == "damage_reduction":
+                    incoming_damage_multiplier *= max(
+                        0.0,
+                        float(effect.get("incoming_damage_multiplier", 1.0) or 1.0),
+                    )
+                elif effect_kind == "ward":
+                    element = str(effect.get("resistance_type", "") or "")
+                    if element and element not in resistance:
+                        resistance.append(element)
+                        added_resistance.append(element)
+
+            if abs(damage_multiplier - 1.0) > 1e-9:
                 base_damage = self._normalize_damage_value(unit.get("damage", 0))
                 base_damage_secondary = self._normalize_damage_value(unit.get("damage_secondary", 0))
                 unit["campaign_potion_base_damage"] = int(base_damage)
@@ -2462,24 +2997,8 @@ class CampaignInventoryMixin:
                     float(base_damage_secondary) * float(damage_multiplier)
                 )
                 unit["campaign_damage_potion_multiplier"] = float(damage_multiplier)
-                if position in self.active_strength_potion_positions:
-                    unit["campaign_strength_potion_multiplier"] = float(
-                        self.STRENGTH_POTION_DAMAGE_MULTIPLIER
-                    )
-                    buffed_strength.append(position)
-                if position in self.active_energy_elixir_positions:
-                    unit["campaign_energy_elixir_multiplier"] = float(
-                        self.ENERGY_ELIXIR_DAMAGE_MULTIPLIER
-                    )
-                    buffed_energy.append(position)
 
-            initiative_multiplier = 1.0
-            if position in self.active_haste_elixir_positions:
-                initiative_multiplier = max(
-                    initiative_multiplier,
-                    float(self.HASTE_ELIXIR_INITIATIVE_MULTIPLIER),
-                )
-            if initiative_multiplier > 1.0:
+            if abs(initiative_multiplier - 1.0) > 1e-9:
                 base_initiative = int(unit.get("initiative_base", unit.get("initiative", 0)) or 0)
                 unit["campaign_potion_base_initiative"] = int(base_initiative)
                 boosted_initiative = self._normalize_damage_value(
@@ -2488,64 +3007,45 @@ class CampaignInventoryMixin:
                 unit["initiative_base"] = int(boosted_initiative)
                 unit["initiative"] = int(boosted_initiative)
                 unit["campaign_initiative_potion_multiplier"] = float(initiative_multiplier)
-                buffed_haste.append(position)
 
-            added_resistance: List[str] = []
-            resistance = [str(res) for res in (unit.get("resistance") or [])]
-            for active_positions, element, bucket in (
-                (self.active_fire_ward_positions, "Fire", buffed_fire),
-                (self.active_earth_ward_positions, "Earth", buffed_earth),
-                (self.active_water_ward_positions, "Water", buffed_water),
-                (self.active_air_ward_positions, "Air", buffed_air),
-            ):
-                if position not in active_positions or element in resistance:
-                    continue
-                resistance.append(element)
-                added_resistance.append(element)
-                bucket.append(position)
+            if abs(accuracy_multiplier - 1.0) > 1e-9:
+                base_accuracy = self._normalize_accuracy_value(unit.get("accuracy", 0))
+                base_accuracy_secondary = self._normalize_accuracy_value(
+                    unit.get("accuracy_secondary", 0)
+                )
+                unit["campaign_potion_base_accuracy"] = int(base_accuracy)
+                unit["campaign_potion_base_accuracy_secondary"] = int(base_accuracy_secondary)
+                unit["accuracy"] = self._normalize_accuracy_value(
+                    float(base_accuracy) * accuracy_multiplier
+                )
+                unit["accuracy_secondary"] = self._normalize_accuracy_value(
+                    float(base_accuracy_secondary) * accuracy_multiplier
+                )
+                unit["campaign_accuracy_potion_multiplier"] = float(accuracy_multiplier)
+
+            if abs(incoming_damage_multiplier - 1.0) > 1e-9:
+                base_incoming_multiplier = float(
+                    unit.get("incoming_damage_multiplier", 1.0) or 1.0
+                )
+                unit["campaign_potion_base_incoming_damage_multiplier"] = float(
+                    base_incoming_multiplier
+                )
+                unit["incoming_damage_multiplier"] = max(
+                    0.0,
+                    base_incoming_multiplier * incoming_damage_multiplier,
+                )
+                unit["campaign_incoming_damage_potion_multiplier"] = float(
+                    incoming_damage_multiplier
+                )
+
             if added_resistance:
                 unit["resistance"] = resistance
                 unit["campaign_potion_added_resistance"] = added_resistance
 
-        if buffed_invulnerability:
+        for item_name, positions in sorted(buffed_by_item.items()):
             self._log(
-                "Активно зелье неуязвимости для позиций "
-                f"{sorted(buffed_invulnerability)} перед началом боя"
-            )
-        if buffed_strength:
-            self._log(
-                "Активно зелье силы для позиций "
-                f"{sorted(buffed_strength)} перед началом боя"
-            )
-        if buffed_energy:
-            self._log(
-                "Активен эликсир энергии для позиций "
-                f"{sorted(buffed_energy)} перед началом боя"
-            )
-        if buffed_haste:
-            self._log(
-                "Активен эликсир быстроты для позиций "
-                f"{sorted(buffed_haste)} перед началом боя"
-            )
-        if buffed_fire:
-            self._log(
-                "Активна защита от магии Огня для позиций "
-                f"{sorted(buffed_fire)} перед началом боя"
-            )
-        if buffed_earth:
-            self._log(
-                "Активна защита от магии Земли для позиций "
-                f"{sorted(buffed_earth)} перед началом боя"
-            )
-        if buffed_water:
-            self._log(
-                "Активна защита от магии Воды для позиций "
-                f"{sorted(buffed_water)} перед началом боя"
-            )
-        if buffed_air:
-            self._log(
-                "Активна защита от магии Воздуха для позиций "
-                f"{sorted(buffed_air)} перед началом боя"
+                f"Активно зелье {item_name} для позиций {sorted(set(positions))} "
+                "перед началом боя"
             )
     def _apply_active_blue_support_spell_effects(self, blue_team: List[Dict]) -> None:
         if not blue_team:

@@ -171,6 +171,13 @@ class CampaignConstantsMixin:
     TEMPLE_BUILDING_NAME = "Храм"
     GRID_BOTTLE_ACTION_START = 9
     GRID_BOTTLE_POSITIONS = list(range(7, 13))  # 6 позиций BLUE
+    GRID_POTION_USE_ACTION_START = GRID_BOTTLE_ACTION_START
+    GRID_POTION_USE_POSITIONS = GRID_BOTTLE_POSITIONS
+    GRID_POTION_USE_ACTION_COUNT = 0
+    GRID_MERCHANT_POTION_BUY_ACTION_START = GRID_BOTTLE_ACTION_START
+    GRID_MERCHANT_POTION_BUY_ACTION_COUNT = 0
+    GRID_EQUIP_BATTLE_POTION_ACTION_START = GRID_BOTTLE_ACTION_START
+    GRID_EQUIP_BATTLE_POTION_ACTION_COUNT = 0
     HEAL_BOTTLE_AMOUNT = 100.0
     MAX_HEAL_BOTTLES = 3
     HEALING_BOTTLE_AMOUNT = 50.0
@@ -181,13 +188,13 @@ class CampaignConstantsMixin:
     MAX_REVIVE_BOTTLES = 3
     GRID_INVULNERABILITY_ACTION_START = GRID_REVIVE_ACTION_START + len(REVIVE_BOTTLE_POSITIONS)  # 21
     INVULNERABILITY_POTION_POSITIONS = GRID_BOTTLE_POSITIONS
-    INVULNERABILITY_POTION_ITEM_NAME = "Potion of Invulnerability"
+    INVULNERABILITY_POTION_ITEM_NAME = "Эликсир неуязвимости"
     INVULNERABILITY_POTION_ARMOR_BONUS = 50
     GRID_STRENGTH_ACTION_START = (
         GRID_INVULNERABILITY_ACTION_START + len(INVULNERABILITY_POTION_POSITIONS)
     )  # 27
     STRENGTH_POTION_POSITIONS = GRID_BOTTLE_POSITIONS
-    STRENGTH_POTION_ITEM_NAME = "Potion of Strength"
+    STRENGTH_POTION_ITEM_NAME = "Зелье силы (+30%)"
     STRENGTH_POTION_DAMAGE_MULTIPLIER = 1.30
     CASTLE_POS = DEFAULT_HERO_GRID_POSITION
     CASTLE_HEAL_TILE_COUNT = HEAL_TILE_COUNT
@@ -795,6 +802,30 @@ class CampaignConstantsMixin:
     HASTE_ELIXIR_INITIATIVE_MULTIPLIER = 1.60
     TITAN_ELIXIR_DAMAGE_MULTIPLIER = 1.10
     SUPREME_ELIXIR_HEALTH_MULTIPLIER = 1.15
+    PROTECTION_POTION_ITEM_NAME = "Зелье защиты (-15%)"
+    BARK_POTION_ITEM_NAME = "Зелье коры дерева (-30%)"
+    IRON_SKIN_POTION_ITEM_NAME = "Зелье железной кожи (-10%)"
+    HIT_POTION_ITEM_NAME = "Зелье меткости (+15%)"
+    ACCURACY_POTION_ITEM_NAME = "Зелье точности (+30%)"
+    LUCK_POTION_ITEM_NAME = "Эликсир удачи (+10%)"
+    SWIFTNESS_POTION_ITEM_NAME = "Зелье проворства (+15%)"
+    SPEED_POTION_ITEM_NAME = "Зелье скорости (+30%)"
+    MERCURY_ELIXIR_ITEM_NAME = "Эликсир Меркурия (+60%)"
+    INITIATIVE_ELIXIR_ITEM_NAME = "Эликсир инициативы (+10%)"
+    VIGOR_POTION_ITEM_NAME = "Зелье бодрости (+15%)"
+    MIGHT_POTION_ITEM_NAME = "Зелье мощи (+30%)"
+    STRENGTH_POTION_CANONICAL_ITEM_NAME = "Зелье силы (+30%)"
+    POTION_DAMAGE_REDUCTION_INVULNERABILITY_MULTIPLIER = 0.50
+    POTION_DAMAGE_REDUCTION_BARK_MULTIPLIER = 0.70
+    POTION_DAMAGE_REDUCTION_PROTECTION_MULTIPLIER = 0.85
+    POTION_DAMAGE_REDUCTION_IRON_SKIN_MULTIPLIER = 0.90
+    POTION_ACCURACY_HIT_MULTIPLIER = 1.15
+    POTION_ACCURACY_ACCURACY_MULTIPLIER = 1.30
+    POTION_ACCURACY_LUCK_MULTIPLIER = 1.10
+    POTION_INITIATIVE_SWIFTNESS_MULTIPLIER = 1.15
+    POTION_INITIATIVE_SPEED_MULTIPLIER = 1.30
+    POTION_INITIATIVE_PERMANENT_MULTIPLIER = 1.10
+    POTION_DAMAGE_VIGOR_MULTIPLIER = 1.15
     RING_OF_AGES_DAMAGE_MULTIPLIER = 1.40
     RING_OF_AGES_INITIATIVE_MULTIPLIER = 1.25
     DWARVEN_BRACER_DAMAGE_MULTIPLIER = 1.10
@@ -809,6 +840,362 @@ class CampaignConstantsMixin:
     SKULL_BRACERS_ARMOR_BONUS = 20
     HORN_OF_AWARENESS_ARMOR_BONUS = 25
     ETCHED_CIRCLET_ARMOR_BONUS = 35
+    POTION_ITEM_DEFINITIONS = (
+        {
+            "name": BONUS_SMALL_HEAL_ITEM_NAME,
+            "aliases": (
+                BONUS_SMALL_HEAL_SOURCE_ITEM,
+                "Эликсир исцеления",
+                "Potion of Healing",
+                "Healing Potion",
+                "Small Healing Potion",
+            ),
+            "category": "healing",
+            "effect": {"kind": "heal", "amount": HEALING_BOTTLE_AMOUNT},
+            "duration": "instant",
+            "merchant_grant": "small_heal_bonus",
+            "battle_equip": True,
+            "gold_value": 150,
+        },
+        {
+            "name": BONUS_LARGE_HEAL_ITEM_NAME,
+            "aliases": (
+                "Эликсир восстановления",
+                "Potion of Restoration",
+                "Large Healing Potion",
+                "Healing Bottle",
+            ),
+            "category": "healing",
+            "effect": {"kind": "heal", "amount": HEAL_BOTTLE_AMOUNT},
+            "duration": "instant",
+            "merchant_grant": "large_heal_bonus",
+            "battle_equip": True,
+            "gold_value": 300,
+        },
+        {
+            "name": HEALING_OINTMENT_ITEM_NAME,
+            "aliases": (
+                "Healing Ointment",
+                "Healing Salve",
+                "Ointment of Healing",
+            ),
+            "category": "healing",
+            "effect": {"kind": "heal", "amount": HEALING_OINTMENT_AMOUNT},
+            "duration": "instant",
+            "merchant_grant": "inventory",
+            "battle_equip": True,
+            "gold_value": 600,
+        },
+        {
+            "name": BONUS_REVIVE_ITEM_NAME,
+            "aliases": (
+                BONUS_REVIVE_SOURCE_ITEM,
+                RUIN_LIFE_ELIXIR_ITEM_NAME,
+                "Life Potion",
+                "Potion of Life",
+                "Revive Potion",
+                "Эликсир Жизни",
+            ),
+            "category": "revive",
+            "effect": {"kind": "revive", "amount": 1.0},
+            "duration": "instant",
+            "merchant_grant": "revive_bonus",
+            "battle_equip": True,
+            "gold_value": 400,
+        },
+        {
+            "name": SUPREME_ELIXIR_ITEM_NAME,
+            "aliases": (
+                "Highfather Potion",
+                "Highfather Elixir",
+                "Elixir of the Highfather",
+                "Supreme Elixir",
+            ),
+            "category": "permanent_health",
+            "effect": {"kind": "health", "multiplier": SUPREME_ELIXIR_HEALTH_MULTIPLIER},
+            "duration": "permanent",
+            "battle_equip": False,
+            "permanent_counter_key": "campaign_supreme_elixir_uses",
+            "gold_value": 800,
+        },
+        {
+            "name": PROTECTION_POTION_ITEM_NAME,
+            "aliases": (
+                "Potion of Protection",
+                "Protection Potion",
+                "Зелье защиты",
+            ),
+            "category": "temporary_damage_reduction",
+            "effect": {
+                "kind": "damage_reduction",
+                "incoming_damage_multiplier": POTION_DAMAGE_REDUCTION_PROTECTION_MULTIPLIER,
+            },
+            "duration": "temporary",
+            "battle_equip": False,
+            "gold_value": 350,
+        },
+        {
+            "name": BARK_POTION_ITEM_NAME,
+            "aliases": (
+                "Potion of Bark",
+                "Potion of Barkskin",
+                "Bark Potion",
+                "Barkskin Potion",
+                "Зелье коры дерева",
+            ),
+            "category": "temporary_damage_reduction",
+            "effect": {
+                "kind": "damage_reduction",
+                "incoming_damage_multiplier": POTION_DAMAGE_REDUCTION_BARK_MULTIPLIER,
+            },
+            "duration": "temporary",
+            "battle_equip": False,
+            "gold_value": 500,
+        },
+        {
+            "name": RUIN_INVULNERABILITY_ELIXIR_ITEM_NAME,
+            "aliases": (
+                INVULNERABILITY_POTION_ITEM_NAME,
+                "Potion of Invulnerability",
+                "Invulnerability Potion",
+                "Elixir of Invulnerability",
+            ),
+            "category": "temporary_damage_reduction",
+            "effect": {
+                "kind": "damage_reduction",
+                "incoming_damage_multiplier": POTION_DAMAGE_REDUCTION_INVULNERABILITY_MULTIPLIER,
+            },
+            "duration": "temporary",
+            "battle_equip": False,
+            "active_attr": "active_invulnerability_potion_positions",
+            "gold_value": 700,
+        },
+        {
+            "name": IRON_SKIN_POTION_ITEM_NAME,
+            "aliases": (
+                "Potion of Iron Skin",
+                "Iron Skin Potion",
+                "Зелье железной кожи",
+            ),
+            "category": "permanent_damage_reduction",
+            "effect": {
+                "kind": "damage_reduction",
+                "incoming_damage_multiplier": POTION_DAMAGE_REDUCTION_IRON_SKIN_MULTIPLIER,
+            },
+            "duration": "permanent",
+            "battle_equip": False,
+            "permanent_counter_key": "campaign_iron_skin_potion_uses",
+            "gold_value": 800,
+        },
+        {
+            "name": HIT_POTION_ITEM_NAME,
+            "aliases": ("Potion of Hit", "Hit Potion", "Зелье меткости"),
+            "category": "temporary_accuracy",
+            "effect": {"kind": "accuracy", "multiplier": POTION_ACCURACY_HIT_MULTIPLIER},
+            "duration": "temporary",
+            "battle_equip": False,
+            "gold_value": 250,
+        },
+        {
+            "name": ACCURACY_POTION_ITEM_NAME,
+            "aliases": (
+                "Potion of Accuracy",
+                "Accuracy Potion",
+                "Potion of Precision",
+                "Зелье точности",
+            ),
+            "category": "temporary_accuracy",
+            "effect": {"kind": "accuracy", "multiplier": POTION_ACCURACY_ACCURACY_MULTIPLIER},
+            "duration": "temporary",
+            "battle_equip": False,
+            "gold_value": 400,
+        },
+        {
+            "name": LUCK_POTION_ITEM_NAME,
+            "aliases": ("Potion of Luck", "Luck Potion", "Эликсир удачи"),
+            "category": "permanent_accuracy",
+            "effect": {"kind": "accuracy", "multiplier": POTION_ACCURACY_LUCK_MULTIPLIER},
+            "duration": "permanent",
+            "battle_equip": False,
+            "permanent_counter_key": "campaign_luck_potion_uses",
+            "gold_value": 800,
+        },
+        {
+            "name": SWIFTNESS_POTION_ITEM_NAME,
+            "aliases": ("Potion of Swiftness", "Swiftness Potion", "Зелье проворства"),
+            "category": "temporary_initiative",
+            "effect": {
+                "kind": "initiative",
+                "multiplier": POTION_INITIATIVE_SWIFTNESS_MULTIPLIER,
+            },
+            "duration": "temporary",
+            "battle_equip": False,
+            "gold_value": 250,
+        },
+        {
+            "name": SPEED_POTION_ITEM_NAME,
+            "aliases": ("Potion of Speed", "Speed Potion", "Зелье скорости"),
+            "category": "temporary_initiative",
+            "effect": {"kind": "initiative", "multiplier": POTION_INITIATIVE_SPEED_MULTIPLIER},
+            "duration": "temporary",
+            "battle_equip": False,
+            "gold_value": 400,
+        },
+        {
+            "name": HASTE_ELIXIR_ITEM_NAME,
+            "aliases": (
+                MERCURY_ELIXIR_ITEM_NAME,
+                "Potion of Mercury",
+                "Mercury Potion",
+                "Elixir of Mercury",
+                "Potion of Haste",
+                "Haste Potion",
+                "Эликсир Меркурия",
+                "Эликсир быстроты",
+            ),
+            "category": "temporary_initiative",
+            "effect": {"kind": "initiative", "multiplier": HASTE_ELIXIR_INITIATIVE_MULTIPLIER},
+            "duration": "temporary",
+            "battle_equip": False,
+            "active_attr": "active_haste_elixir_positions",
+            "gold_value": 600,
+        },
+        {
+            "name": INITIATIVE_ELIXIR_ITEM_NAME,
+            "aliases": (
+                "Potion of Initiative",
+                "Initiative Potion",
+                "Эликсир инициативы",
+            ),
+            "category": "permanent_initiative",
+            "effect": {
+                "kind": "initiative",
+                "multiplier": POTION_INITIATIVE_PERMANENT_MULTIPLIER,
+            },
+            "duration": "permanent",
+            "battle_equip": False,
+            "permanent_counter_key": "campaign_initiative_elixir_uses",
+            "gold_value": 800,
+        },
+        {
+            "name": VIGOR_POTION_ITEM_NAME,
+            "aliases": ("Potion of Vigor", "Vigor Potion", "Зелье бодрости"),
+            "category": "temporary_damage",
+            "effect": {"kind": "damage", "multiplier": POTION_DAMAGE_VIGOR_MULTIPLIER},
+            "duration": "temporary",
+            "battle_equip": False,
+            "gold_value": 250,
+        },
+        {
+            "name": STRENGTH_POTION_CANONICAL_ITEM_NAME,
+            "aliases": (
+                STRENGTH_POTION_ITEM_NAME,
+                MIGHT_POTION_ITEM_NAME,
+                "Potion of Strength",
+                "Strength Potion",
+                "Potion of Might",
+                "Might Potion",
+                "Зелье силы",
+                "Зелье мощи",
+            ),
+            "category": "temporary_damage",
+            "effect": {"kind": "damage", "multiplier": STRENGTH_POTION_DAMAGE_MULTIPLIER},
+            "duration": "temporary",
+            "battle_equip": False,
+            "active_attr": "active_strength_potion_positions",
+            "gold_value": 450,
+        },
+        {
+            "name": ENERGY_ELIXIR_ITEM_NAME,
+            "aliases": (
+                "Potion of Energy",
+                "Energy Potion",
+                "Elixir of Energy",
+                "Эликсир энергии",
+            ),
+            "category": "temporary_damage",
+            "effect": {"kind": "damage", "multiplier": ENERGY_ELIXIR_DAMAGE_MULTIPLIER},
+            "duration": "temporary",
+            "battle_equip": False,
+            "active_attr": "active_energy_elixir_positions",
+            "gold_value": 200,
+        },
+        {
+            "name": TITAN_ELIXIR_ITEM_NAME,
+            "aliases": (
+                "Potion of Titan Strength",
+                "Titan Strength Potion",
+                "Titan Elixir",
+                "Elixir of Titan Strength",
+            ),
+            "category": "permanent_damage",
+            "effect": {"kind": "damage", "multiplier": TITAN_ELIXIR_DAMAGE_MULTIPLIER},
+            "duration": "permanent",
+            "battle_equip": False,
+            "permanent_counter_key": "campaign_titan_elixir_uses",
+            "gold_value": 800,
+        },
+        {
+            "name": FIRE_WARD_ITEM_NAME,
+            "aliases": (
+                "Potion of Fire Ward",
+                "Fire Ward Potion",
+                "Fire Ward",
+                "Elixir of Fire Protection",
+            ),
+            "category": "ward",
+            "effect": {"kind": "ward", "resistance_type": "Fire"},
+            "duration": "temporary",
+            "battle_equip": False,
+            "active_attr": "active_fire_ward_positions",
+            "gold_value": 400,
+        },
+        {
+            "name": WATER_WARD_ITEM_NAME,
+            "aliases": (
+                "Potion of Water Ward",
+                "Water Ward Potion",
+                "Water Ward",
+                "Elixir of Water Protection",
+            ),
+            "category": "ward",
+            "effect": {"kind": "ward", "resistance_type": "Water"},
+            "duration": "temporary",
+            "battle_equip": False,
+            "active_attr": "active_water_ward_positions",
+            "gold_value": 400,
+        },
+        {
+            "name": EARTH_WARD_ITEM_NAME,
+            "aliases": (
+                "Potion of Earth Ward",
+                "Earth Ward Potion",
+                "Earth Ward",
+                "Elixir of Earth Protection",
+            ),
+            "category": "ward",
+            "effect": {"kind": "ward", "resistance_type": "Earth"},
+            "duration": "temporary",
+            "battle_equip": False,
+            "active_attr": "active_earth_ward_positions",
+            "gold_value": 400,
+        },
+        {
+            "name": AIR_WARD_ITEM_NAME,
+            "aliases": (
+                "Potion of Air Ward",
+                "Air Ward Potion",
+                "Air Ward",
+                "Elixir of Air Protection",
+            ),
+            "category": "ward",
+            "effect": {"kind": "ward", "resistance_type": "Air"},
+            "duration": "temporary",
+            "battle_equip": False,
+            "active_attr": "active_air_ward_positions",
+            "gold_value": 400,
+        },
+    )
     MERCHANT_BUY_ITEMS = (
         {"name": RUIN_LIFE_ELIXIR_ITEM_NAME, "price": 400.0, "stock": 10, "grant": "revive_bonus"},
         {"name": "Эликсир исцеления", "price": 150.0, "stock": 10, "grant": "small_heal_bonus"},
