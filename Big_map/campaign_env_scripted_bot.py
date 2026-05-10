@@ -33,6 +33,9 @@ class CampaignScriptedBotMixin:
         self.scripted_capital_bot_rest_turns_left = 0
         self.scripted_capital_bot_team_state = self._create_scripted_capital_bot_team()
         self.scripted_capital_bot_enemies_defeated = 0
+        self._scripted_bot_last_move_points_spent = 0
+        self._scripted_bot_last_move_costs = []
+        self._scripted_bot_last_move_terrains = []
         self.scripted_capital_bot_last_info: Dict[str, object] = {
             "enabled": True,
             "state": self.scripted_capital_bot_state,
@@ -51,6 +54,9 @@ class CampaignScriptedBotMixin:
         self.scripted_capital_bot_rest_turns_left = 0
         self.scripted_capital_bot_team_state = self._create_scripted_capital_bot_team()
         self.scripted_capital_bot_enemies_defeated = 0
+        self._scripted_bot_last_move_points_spent = 0
+        self._scripted_bot_last_move_costs = []
+        self._scripted_bot_last_move_terrains = []
         self.scripted_capital_bot_last_info = {
             "enabled": True,
             "state": self.scripted_capital_bot_state,
@@ -77,7 +83,9 @@ class CampaignScriptedBotMixin:
             unit["hp"] = float(unit.get("hp", unit.get("health", 0)) or 0)
             unit["maxhp"] = float(unit.get("maxhp", unit.get("max_health", 0)) or 0)
             bot_units.append(unit)
-        return self._build_battle_team_with_placeholders("blue", bot_units)
+        team = self._build_battle_team_with_placeholders("blue", bot_units)
+        self._sync_hero_progression_flags(team)
+        return team
 
     def _scripted_capital_bot_info(self) -> Dict[str, object]:
         info = dict(getattr(self, "scripted_capital_bot_last_info", {}) or {})
@@ -312,9 +320,36 @@ class CampaignScriptedBotMixin:
 
     def _move_scripted_bot_along_path(self, path: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
         if not path:
+            self._scripted_bot_last_move_points_spent = 0
+            self._scripted_bot_last_move_costs = []
+            self._scripted_bot_last_move_terrains = []
             return []
-        max_steps = self._scripted_bot_max_grid_moves_per_turn()
-        movement = list(path[1 : max_steps + 1])
+        remaining_points = max(0, int(self.SCRIPTED_CAPITAL_BOT_MAX_STEPS_PER_TURN))
+        movement: List[Tuple[int, int]] = []
+        move_costs: List[int] = []
+        move_terrains: List[str] = []
+        for raw_tile in path[1:]:
+            if remaining_points <= 0:
+                break
+            tile = (int(raw_tile[0]), int(raw_tile[1]))
+            move_cost = int(
+                self._campaign_tile_move_cost(
+                    tile,
+                    units=self.scripted_capital_bot_team_state,
+                    allow_boots=False,
+                )
+            )
+            terrain = self._campaign_tile_terrain(tile)
+            spent = min(remaining_points, max(1, int(move_cost)))
+            movement.append(tile)
+            move_costs.append(int(move_cost))
+            move_terrains.append(str(terrain))
+            remaining_points -= int(spent)
+        self._scripted_bot_last_move_points_spent = (
+            max(0, int(self.SCRIPTED_CAPITAL_BOT_MAX_STEPS_PER_TURN)) - remaining_points
+        )
+        self._scripted_bot_last_move_costs = list(move_costs)
+        self._scripted_bot_last_move_terrains = list(move_terrains)
         if movement:
             old_pos = tuple(self.scripted_capital_bot_position)
             self.scripted_capital_bot_position = tuple(movement[-1])
@@ -325,20 +360,28 @@ class CampaignScriptedBotMixin:
         return movement
 
     def _scripted_bot_grid_move_cost(self) -> int:
+        move_costs = list(getattr(self, "_scripted_bot_last_move_costs", []) or [])
+        if move_costs:
+            return max(1, int(move_costs[0]))
         return max(1, int(self.SCRIPTED_CAPITAL_BOT_GRID_MOVE_COST))
 
     def _scripted_bot_max_grid_moves_per_turn(self) -> int:
         movement_budget = max(0, int(self.SCRIPTED_CAPITAL_BOT_MAX_STEPS_PER_TURN))
-        return movement_budget // self._scripted_bot_grid_move_cost()
+        return movement_budget
 
     def _scripted_bot_move_points_spent(self, moved_path: List[Tuple[int, int]]) -> int:
+        spent = getattr(self, "_scripted_bot_last_move_points_spent", None)
+        if spent is not None:
+            return int(spent)
         return int(len(moved_path)) * self._scripted_bot_grid_move_cost()
 
-    def _scripted_bot_movement_info(self, moved_path: List[Tuple[int, int]]) -> Dict[str, int]:
+    def _scripted_bot_movement_info(self, moved_path: List[Tuple[int, int]]) -> Dict[str, object]:
         return {
             "move_cost": int(self._scripted_bot_grid_move_cost()),
             "move_points_budget": int(self.SCRIPTED_CAPITAL_BOT_MAX_STEPS_PER_TURN),
             "move_points_spent": int(self._scripted_bot_move_points_spent(moved_path)),
+            "move_costs": list(getattr(self, "_scripted_bot_last_move_costs", []) or []),
+            "move_terrains": list(getattr(self, "_scripted_bot_last_move_terrains", []) or []),
         }
 
     def _scripted_bot_path_to_engagement_tile(

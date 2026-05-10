@@ -1133,6 +1133,10 @@ class CampaignInventoryMixin:
         self.equipped_banner_items = normalized_slots
     def _sync_equipped_boot_items(self, units: Optional[List[Dict]] = None) -> None:
         normalized_slots: List[Optional[str]] = [None] * int(self.BOOTS_EQUIP_SLOTS)
+        hero = self._resolve_travel_hero(units=units)
+        if hero is None or not self._is_travel_unit_alive(hero):
+            self.equipped_boot_items = normalized_slots
+            return
         if not self._hero_has_marching_lore(units=units):
             self.equipped_boot_items = normalized_slots
             return
@@ -1487,6 +1491,33 @@ class CampaignInventoryMixin:
             return 0
         effect = self._boot_effect_definition(active_boot)
         return max(0, int(effect.get("move_bonus", 0) or 0))
+    def _active_boot_terrain_move_cost(
+        self,
+        terrain: str,
+        units: Optional[List[Dict]] = None,
+    ) -> Optional[int]:
+        self._sync_equipped_boot_items(units=units)
+        active_boot = next(
+            (
+                str(item_name)
+                for item_name in list(self.equipped_boot_items or [])
+                if self._is_boot_item_name(str(item_name or ""))
+            ),
+            None,
+        )
+        if not active_boot:
+            return None
+        effect = self._boot_effect_definition(active_boot)
+        terrain_bonuses = effect.get("terrain_move_bonuses", {})
+        if not isinstance(terrain_bonuses, dict):
+            return None
+        raw_cost = terrain_bonuses.get(str(terrain or ""))
+        if raw_cost is None:
+            return None
+        try:
+            return max(1, int(round(float(raw_cost))))
+        except (TypeError, ValueError):
+            return None
     @classmethod
     def _hero_item_aliases(cls, item_name: str) -> Tuple[str, ...]:
         normalized_name = str(item_name or "")

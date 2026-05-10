@@ -134,8 +134,8 @@ def test_campaign_save_preserves_hero_level_and_exp_threshold_after_battle():
     assert saved_duke["exp_required"] == 650
     assert saved_duke["exp_current"] == 0
     assert saved_duke["next_level_exp"] == 500
-    assert env.moves_per_turn == 21
-    assert env.moves == 21
+    assert env.moves_per_turn == 20
+    assert env.moves == 20
 
 
 def test_campaign_moves_per_turn_scales_with_travel_hero_level():
@@ -145,13 +145,13 @@ def test_campaign_moves_per_turn_scales_with_travel_hero_level():
     duke = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
     assert duke["Level"] == 1
     assert duke["needaunit"] == 0
-    assert env.moves_per_turn == 21
+    assert env.moves_per_turn == 20
     env.moves = 5
     duke["Level"] = 2
 
     env._sync_moves_per_turn_with_hero(units=env.blue_team_state, grant_delta=True)
 
-    assert env.moves_per_turn == 26
+    assert env.moves_per_turn == 25
     assert env.moves == 10
     assert env.get_travel_hero_visual_info() == {
         "name": duke["name"],
@@ -163,7 +163,30 @@ def test_campaign_moves_per_turn_scales_with_travel_hero_level():
     }
 
     env._advance_turns(1)
-    assert env.moves == 26
+    assert env.moves == 25
+
+
+def test_campaign_base_moves_per_turn_uses_alive_hero_type():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env.reset(seed=123)
+
+    hero = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
+    hero["name"] = "Советник"
+    hero["Level"] = 1
+    hero["health"] = 150
+    hero["hp"] = 150
+
+    env._sync_moves_per_turn_with_hero(units=env.blue_team_state, refill=True)
+
+    assert env.moves_per_turn == 35
+    assert env.moves == 35
+
+    hero["health"] = 0
+    hero["hp"] = 0
+    env._sync_moves_per_turn_with_hero(units=env.blue_team_state, refill=True)
+
+    assert env.moves_per_turn == 20
+    assert env.moves == 20
 
 
 def test_campaign_travel_hero_visual_info_shows_leadership_on_level_three():

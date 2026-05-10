@@ -114,13 +114,23 @@ def test_campaign_grid_move_cost_is_two_points_without_battle():
     assert env.moves == 3
 
 
-def test_campaign_grid_move_requires_two_points():
+def test_campaign_grid_move_with_less_than_tile_cost_spends_remaining_point():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
 
+    for eid in list(env.grid_env.enemies_alive.keys()):
+        env.grid_env.enemies_alive[eid] = False
+
+    env.grid_env.agent_pos = (2, 2)
+    env.grid_env.visited_cells = {(2, 2)}
+    env.grid_env.obstacle_positions = set()
+    env.grid_env.dynamic_blocked_positions = set()
     env.moves = 1
 
     _, _, _, _, info = env.step(env.grid_env.ACTION_RIGHT)
 
-    assert info["blocked_by_moves"] is True
+    assert info.get("blocked_by_moves", False) is False
     assert info["move_cost"] == 2
+    assert info["move_points_spent"] == 1
+    assert env.grid_env.agent_pos == (3, 2)
+    assert env.moves == 0

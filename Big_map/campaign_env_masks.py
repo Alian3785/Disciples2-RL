@@ -17,13 +17,14 @@ class CampaignMaskMixin:
 
         if self.mode == self.MODE_GRID:
             self._ensure_inventory_cache()
-            # В grid режиме движение доступно только при moves > 0.
+            # В grid режиме движение доступно при любом положительном остатке moves:
+            # дорогие клетки добирают все оставшиеся очки, если полной стоимости не хватает.
             # REST (8) доступен при ранении или когда очки перемещения закончились.
             grid_mask = self.grid_env.compute_action_mask()
-            grid_move_cost = max(1, int(self.GRID_MOVE_COST))
-            mask[:8] = bool(self.moves >= grid_move_cost) & grid_mask[:8]
+            mask[:8] = bool(self.moves > 0) & grid_mask[:8]
+            movement_available = bool(np.any(mask[:8]))
             mask[8] = bool(grid_mask[8]) and (
-                self._has_wounded_blue() or self.moves < grid_move_cost
+                self._has_wounded_blue() or self.moves <= 0 or not movement_available
             )
             for potion_idx, item_name in enumerate(self.scenario_potion_item_names):
                 action_start = self.GRID_POTION_USE_ACTION_START + potion_idx * len(

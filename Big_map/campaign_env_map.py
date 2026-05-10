@@ -40,19 +40,121 @@ class CampaignMapSitesMixin:
                 roster_entry.get("unit_type", option.get("unit_type", "")) or ""
             )
         return option
-    def _hero_pathfinding_move_bonus(self, units: Optional[List[Dict]] = None) -> int:
+    def _hero_pathfinding_move_bonus(
+        self,
+        units: Optional[List[Dict]] = None,
+        *,
+        base_moves: Optional[int] = None,
+    ) -> int:
         if not self._hero_has_pathfinding(units=units):
             return 0
+        base = int(base_moves) if base_moves is not None else int(self._hero_base_moves(units=units))
         return max(
             0,
-            int(round(float(self.MOVES_PER_TURN) * float(self.HERO_PATHFINDING_MOVE_BONUS_PCT))),
+            int(round(float(base) * float(self.HERO_PATHFINDING_MOVE_BONUS_PCT))),
         )
-    def _hero_move_bonus(self, units: Optional[List[Dict]] = None) -> int:
+    def _hero_level_move_bonus(self, units: Optional[List[Dict]] = None) -> int:
+        return max(0, self._hero_level(units=units) - 1)
+    def _hero_move_bonus(
+        self,
+        units: Optional[List[Dict]] = None,
+        *,
+        base_moves: Optional[int] = None,
+    ) -> int:
+        if units is not None and not units:
+            return 0
         return (
-            self._hero_level(units=units)
-            + self._hero_pathfinding_move_bonus(units=units)
+            self._hero_level_move_bonus(units=units)
+            + self._hero_pathfinding_move_bonus(units=units, base_moves=base_moves)
             + self._active_boot_move_bonus(units=units)
         )
+    def _campaign_terrain_tile_set(self, terrain: str) -> set[Tuple[int, int]]:
+        attr_by_terrain = {
+            self.GRID_TERRAIN_WATER: ("water_tile_set", "water_tiles"),
+            self.GRID_TERRAIN_FOREST: ("forest_tile_set", "forest_tiles"),
+            self.GRID_TERRAIN_ROAD: ("road_tile_set", "road_tiles"),
+        }
+        attrs = attr_by_terrain.get(str(terrain or ""))
+        if not attrs:
+            return set()
+        set_attr_name, tuple_attr_name = attrs
+        cached_tiles = getattr(self, set_attr_name, None)
+        if cached_tiles is not None:
+            return cached_tiles
+
+        built_tiles = {
+            tuple(tile)
+            for tile in getattr(self, tuple_attr_name, ()) or ()
+            if len(tuple(tile)) == 2
+        }
+        setattr(self, set_attr_name, built_tiles)
+        return built_tiles
+    def _campaign_tile_terrain(self, tile: Tuple[int, int]) -> str:
+        normalized_tile = (int(tile[0]), int(tile[1]))
+        if normalized_tile in self._campaign_terrain_tile_set(self.GRID_TERRAIN_ROAD):
+            return str(self.GRID_TERRAIN_ROAD)
+        if normalized_tile in self._campaign_terrain_tile_set(self.GRID_TERRAIN_WATER):
+            return str(self.GRID_TERRAIN_WATER)
+        if normalized_tile in self._campaign_terrain_tile_set(self.GRID_TERRAIN_FOREST):
+            return str(self.GRID_TERRAIN_FOREST)
+        return str(self.GRID_TERRAIN_PLAIN)
+    def _travel_hero_ignores_terrain(self, units: Optional[List[Dict]] = None) -> bool:
+        hero = self._resolve_travel_hero(units=units, alive_only=True)
+        return self._hero_has_flying(hero)
+    def _travel_hero_is_dead(self, units: Optional[List[Dict]] = None) -> bool:
+        hero = self._resolve_travel_hero(units=units)
+        return hero is not None and not self._is_travel_unit_alive(hero)
+    def _campaign_tile_move_cost(
+        self,
+        tile: Tuple[int, int],
+        *,
+        units: Optional[List[Dict]] = None,
+        allow_boots: bool = True,
+    ) -> int:
+        if self._travel_hero_ignores_terrain(units=units):
+            return max(1, int(self.GRID_MOVE_COST))
+
+        terrain = self._campaign_tile_terrain(tile)
+        try:
+            cost = int(self.GRID_TERRAIN_MOVE_COSTS.get(terrain, self.GRID_MOVE_COST))
+        except (TypeError, ValueError):
+            cost = int(self.GRID_MOVE_COST)
+
+        boot_cost = (
+            self._active_boot_terrain_move_cost(terrain, units=units)
+            if bool(allow_boots) and not self._travel_hero_is_dead(units=units)
+            else None
+        )
+        if boot_cost is not None:
+            cost = min(cost, int(boot_cost))
+        if self._travel_hero_is_dead(units=units):
+            cost *= 2
+        return max(1, int(cost))
+    def _grid_move_target_for_action(self, action: int) -> Optional[Tuple[int, int]]:
+        if not (0 <= int(action) <= 7):
+            return None
+        target = tuple(self.grid_env._target_pos_for_action(int(action)))
+        if len(target) != 2:
+            return None
+        if not self.grid_env._is_within_grid(target):
+            return None
+        if target in getattr(self.grid_env, "obstacle_positions", set()):
+            return None
+        if target in getattr(self.grid_env, "dynamic_blocked_positions", set()):
+            return None
+        return (int(target[0]), int(target[1]))
+    def _grid_move_cost_for_action(self, action: int) -> int:
+        target = self._grid_move_target_for_action(action)
+        if target is None:
+            return max(1, int(self.GRID_MOVE_COST))
+        return self._campaign_tile_move_cost(target, units=self.blue_team_state)
+    def _spend_grid_move_cost(self, move_cost: int) -> int:
+        moves_before = max(0, int(self.moves))
+        if moves_before <= 0:
+            return 0
+        spent = min(moves_before, max(1, int(move_cost)))
+        self._spend_moves(spent)
+        return int(spent)
     def get_travel_hero_visual_info(self) -> Optional[Dict]:
         hero = self._resolve_travel_hero()
         if hero is None:
@@ -93,6 +195,8 @@ class CampaignMapSitesMixin:
             )
         if self._hero_has_might(units=[hero]):
             abilities.append(f"Мощь ({self.HERO_MIGHT_DESCRIPTION})")
+        if self._hero_has_flying(hero):
+            abilities.append("Полёт (игнорирует тип клетки при перемещении)")
 
         return {
             "name": str(hero.get("name", "") or "").strip(),
@@ -106,6 +210,13 @@ class CampaignMapSitesMixin:
             tuple(pos): dict(meta)
             for pos, meta in getattr(self, "mana_sources", {}).items()
         }
+    def _sync_grid_terrain_positions(self) -> None:
+        self.water_tile_set = set(getattr(self, "water_tiles", ()) or ())
+        self.forest_tile_set = set(getattr(self, "forest_tiles", ()) or ())
+        self.road_tile_set = set(getattr(self, "road_tiles", ()) or ())
+        self.grid_env.water_positions = self.water_tile_set
+        self.grid_env.forest_positions = self.forest_tile_set
+        self.grid_env.road_positions = self.road_tile_set
     def _sync_grid_merchant_positions(self) -> None:
         self.grid_env.merchant_positions = set(self.merchant_interaction_tiles)
     def _sync_grid_spell_shop_positions(self) -> None:

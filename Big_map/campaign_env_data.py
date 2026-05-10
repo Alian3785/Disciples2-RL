@@ -108,8 +108,60 @@ class CampaignConstantsMixin:
     GRID_OBS_SIZE = 0  # вычисляется в __init__
     BATTLE_OBS_SIZE = FEATURES_PER_UNIT * 12
     MOVES_PER_TURN = 20
+    HERO_BASE_MOVES_BY_NAME = {
+        "Рыцарь на пегасе": 20,
+        "Рыцарь на Пегасе": 20,
+        "Рейнджер людей": 35,
+        "Рейнджер": 35,
+        "Следопыт": 35,
+        "Архимаг": 20,
+        "Архангел": 20,
+        "Герцог": 20,
+        "Советник": 35,
+        "Архидьявол": 20,
+        "Баронесса": 20,
+        "Королевский страж": 20,
+        "Инженер": 30,
+        "Хранитель знаний": 20,
+        "Ученый": 20,
+        "Жезловик гномов": 25,
+        "Старейшина": 25,
+        "Рыцарь смерти": 20,
+        "Рыцарь Смерти": 20,
+        "Носферату": 35,
+        "Королева лич": 20,
+        "Королева личей": 20,
+        "Баньши": 20,
+        "Лесной лорд": 25,
+        "Кентавр Дикарь": 25,
+        "Хранитель леса": 35,
+        "Страж": 35,
+        "Дриада": 25,
+        "Мудрец": 20,
+    }
     GRID_MOVE_COST = 2
+    GRID_TERRAIN_PLAIN = "plain"
+    GRID_TERRAIN_FOREST = "forest"
+    GRID_TERRAIN_WATER = "water"
+    GRID_TERRAIN_ROAD = "road"
+    GRID_TERRAIN_MOVE_COSTS = {
+        GRID_TERRAIN_PLAIN: 2,
+        GRID_TERRAIN_FOREST: 4,
+        GRID_TERRAIN_WATER: 6,
+        GRID_TERRAIN_ROAD: 1,
+    }
+    GRID_TERRAIN_BOOT_MOVE_COST = 2
     GRID_STEPS_PER_TURN = MOVES_PER_TURN
+    HERO_FLYING_ABILITY_KEY = "flying"
+    HERO_FLYING_NAMES = frozenset(
+        {
+            "Рыцарь на пегасе",
+            "Рыцарь на Пегасе",
+            "Архангел",
+            "Архидьявол",
+            "Баньши",
+        }
+    )
     HERO_PATHFINDING_LEVEL = 2
     HERO_LEADERSHIP_LEVEL = 3
     HERO_ENDURANCE_LEVEL = 4
@@ -792,8 +844,8 @@ class CampaignConstantsMixin:
         BOOTS_OF_SEVEN_LEAGUES_ITEM_NAME: 2000,
     }
     BOOT_EFFECT_DEFINITIONS = {
-        ELVEN_BOOTS_ITEM_NAME: {"move_bonus": 0},
-        BOOTS_OF_THE_ELEMENTS_ITEM_NAME: {"move_bonus": 0},
+        ELVEN_BOOTS_ITEM_NAME: {"move_bonus": 0, "terrain_move_bonuses": {"forest": 2}},
+        BOOTS_OF_THE_ELEMENTS_ITEM_NAME: {"move_bonus": 0, "terrain_move_bonuses": {"water": 2}},
         BOOTS_OF_SPEED_ITEM_NAME: {"move_bonus": 4},
         BOOTS_OF_TRAVELING_ITEM_NAME: {"move_bonus": 8},
         BOOTS_OF_SEVEN_LEAGUES_ITEM_NAME: {"move_bonus": 12},
