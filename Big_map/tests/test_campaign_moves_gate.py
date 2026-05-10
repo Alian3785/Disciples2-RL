@@ -9,12 +9,24 @@ from campaign_env import CampaignEnv
 def test_grid_movement_is_blocked_after_all_starting_moves_until_rest():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
     env.reset(seed=123)
+    start_pos = tuple(env.grid_env.agent_pos)
+    far_enemy_id = max(
+        env.grid_env.enemy_positions,
+        key=lambda enemy_id: (
+            abs(env.grid_env.enemy_positions[enemy_id][0] - start_pos[0])
+            + abs(env.grid_env.enemy_positions[enemy_id][1] - start_pos[1])
+        ),
+    )
+    env.grid_env.enemies_alive = {
+        enemy_id: enemy_id == far_enemy_id
+        for enemy_id in env.grid_env.enemy_positions
+    }
 
-    assert env.moves == env.moves_per_turn == 21
+    assert env.moves == env.moves_per_turn == 20
 
     move_mask = env.grid_env.compute_action_mask()
     move_action = next(index for index, allowed in enumerate(move_mask[:8]) if allowed)
-    env.moves = 1
+    env.moves = int(env.GRID_MOVE_COST)
 
     _, reward, terminated, truncated, info = env.step(move_action)
     assert terminated is False
@@ -39,7 +51,7 @@ def test_grid_movement_is_blocked_after_all_starting_moves_until_rest():
     assert terminated is False
     assert truncated is False
     assert rest_info.get("rest_action", False) is True
-    assert env.moves == env.moves_per_turn == 21
+    assert env.moves == env.moves_per_turn == 20
     assert rest_reward < 0.0
 
     mask_after_rest = env.compute_action_mask()

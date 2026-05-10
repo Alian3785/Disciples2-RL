@@ -113,6 +113,9 @@ class GridWorldEnv(gym.Env):
         self.mercenary_positions: Set[Tuple[int, int]] = set()
         self.trainer_positions: Set[Tuple[int, int]] = set()
         self.mana_sources: Dict[Tuple[int, int], Dict[str, object]] = {}
+        self.water_positions: Set[Tuple[int, int]] = set()
+        self.forest_positions: Set[Tuple[int, int]] = set()
+        self.road_positions: Set[Tuple[int, int]] = set()
         self.dynamic_blocked_positions: Set[Tuple[int, int]] = set()
         self.scripted_bot_position: Optional[Tuple[int, int]] = None
         self.scripted_bot_symbol: str = "B"
@@ -332,6 +335,18 @@ class GridWorldEnv(gym.Env):
             self._clamp_to_grid(pos): dict(meta or {})
             for pos, meta in (getattr(self, "mana_sources", {}) or {}).items()
         }
+        water_positions = {
+            self._clamp_to_grid(pos)
+            for pos in getattr(self, "water_positions", set()) or set()
+        }
+        forest_positions = {
+            self._clamp_to_grid(pos)
+            for pos in getattr(self, "forest_positions", set()) or set()
+        }
+        road_positions = {
+            self._clamp_to_grid(pos)
+            for pos in getattr(self, "road_positions", set()) or set()
+        }
 
         lines = []
         lines.append("+" + "-" * (self.grid_size * 2 + 1) + "+")
@@ -363,6 +378,12 @@ class GridWorldEnv(gym.Env):
                 elif pos in [self.enemy_positions.get(i) for i in enemy_ids]:
                     enemy_id = self.get_enemy_at_position(pos)
                     row += f"{enemy_id} " if enemy_id is not None else "x "
+                elif pos in road_positions:
+                    row += "= "
+                elif pos in water_positions:
+                    row += "~ "
+                elif pos in forest_positions:
+                    row += "* "
                 elif pos in self.visited_cells:
                     row += ". "
                 else:
@@ -378,6 +399,9 @@ class GridWorldEnv(gym.Env):
         lines.append(f"Mercenary camps: {sorted(mercenary_positions)}")
         lines.append(f"Trainers: {sorted(trainer_positions)}")
         lines.append(f"Chests: {sorted(chest_positions)}")
+        lines.append(
+            f"Terrain: water={len(water_positions)}, forest={len(forest_positions)}, roads={len(road_positions)}"
+        )
         if mana_sources:
             mana_summary = ", ".join(
                 f"{pos}:{meta.get('name', '')}"

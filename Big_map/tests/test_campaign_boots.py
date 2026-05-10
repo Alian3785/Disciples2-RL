@@ -86,8 +86,8 @@ def test_level_eight_auto_equips_best_boots_by_move_bonus():
 
     assert env.equipped_boot_items == [env.BOOTS_OF_SEVEN_LEAGUES_ITEM_NAME]
     assert env._active_boot_move_bonus() == 12
-    assert env.moves_per_turn == 44
-    assert env.moves == 44
+    assert env.moves_per_turn == 43
+    assert env.moves == 43
 
 
 def test_marching_lore_ability_token_unlocks_boots_below_level_eight():
@@ -99,7 +99,7 @@ def test_marching_lore_ability_token_unlocks_boots_below_level_eight():
 
     assert env.equipped_boot_items == [env.BOOTS_OF_SEVEN_LEAGUES_ITEM_NAME]
     assert env._active_boot_move_bonus() == 12
-    assert env.moves_per_turn == 42
+    assert env.moves_per_turn == 41
     assert "Походные знания" in " ".join(env.get_travel_hero_visual_info()["abilities"])
 
 
@@ -112,7 +112,7 @@ def test_guild_lord_can_use_boots_from_level_one():
 
     assert env.equipped_boot_items == [env.BOOTS_OF_TRAVELING_ITEM_NAME]
     assert env._active_boot_move_bonus() == 8
-    assert env.moves_per_turn == 29
+    assert env.moves_per_turn == 28
     assert "Походные знания" in " ".join(env.get_travel_hero_visual_info()["abilities"])
 
 
@@ -135,7 +135,7 @@ def test_all_boots_change_only_campaign_moves(item_name: str, move_bonus: int):
 
     assert env.equipped_boot_items == [item_name]
     assert env._active_boot_move_bonus() == move_bonus
-    assert env.moves_per_turn == 32 + move_bonus
+    assert env.moves_per_turn == 31 + move_bonus
     assert _snapshot_combat_stats(env) == before
 
 
@@ -159,7 +159,7 @@ def test_boots_are_collected_from_chests_and_auto_equipped():
         env._hero_item_name(entry) for entry in env.heroitems
     ]
     assert env.equipped_boot_items == [env.BOOTS_OF_TRAVELING_ITEM_NAME]
-    assert env.moves_per_turn == 40
+    assert env.moves_per_turn == 39
 
 
 def test_merchant_autosale_keeps_boots_as_useful_items():

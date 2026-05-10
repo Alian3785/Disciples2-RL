@@ -273,6 +273,28 @@ class CampaignEnv(
             start_position=self.CASTLE_POS,
             max_steps=max_grid_steps,
         )
+        base_water_tiles = _load_campaign_base_water_tiles()
+        self.water_tiles: Tuple[Tuple[int, int], ...] = tuple(
+            sorted(
+                tuple(tile)
+                for tile in scale_static_tiles(self.grid_size, base_water_tiles)
+            )
+        ) if base_water_tiles else ()
+        base_forest_tiles = _load_campaign_base_forest_tiles()
+        self.forest_tiles: Tuple[Tuple[int, int], ...] = tuple(
+            sorted(
+                tuple(tile)
+                for tile in scale_static_tiles(self.grid_size, base_forest_tiles)
+            )
+        ) if base_forest_tiles else ()
+        base_road_tiles = _load_campaign_base_road_tiles()
+        self.road_tiles: Tuple[Tuple[int, int], ...] = tuple(
+            sorted(
+                tuple(tile)
+                for tile in scale_static_tiles(self.grid_size, base_road_tiles)
+            )
+        ) if base_road_tiles else ()
+        self._sync_grid_terrain_positions()
         self.legions_territory_source_tile: Tuple[int, int] = tuple(
             int(coord) for coord in self.grid_env.start_position
         )
@@ -556,6 +578,7 @@ class CampaignEnv(
         self._refresh_faction_territories()
         self.grid_env.enemy_positions = dict(self._static_enemy_positions)
         self.grid_env.obstacle_positions = set(self._static_obstacle_tiles)
+        self._sync_grid_terrain_positions()
         self._sync_grid_chest_positions()
         self._sync_grid_mana_sources()
         self._sync_grid_merchant_positions()
@@ -703,9 +726,9 @@ class CampaignEnv(
         if action >= self.GRID_POTION_USE_ACTION_START:
             return self._step_use_potion(action)
 
-        grid_move_cost = int(self.GRID_MOVE_COST)
+        grid_move_cost = self._grid_move_cost_for_action(action)
 
-        if 0 <= action <= 7 and self.moves < grid_move_cost:
+        if 0 <= action <= 7 and self.moves <= 0:
             grid_obs = self._get_grid_obs()
             info = {
                 "mode": "grid",
@@ -714,6 +737,11 @@ class CampaignEnv(
                 "battle_triggered": False,
                 "blocked_by_moves": True,
                 "move_cost": int(grid_move_cost),
+                "move_points_spent": 0,
+                "target_terrain": self._campaign_tile_terrain(
+                    self._grid_move_target_for_action(action)
+                    or tuple(self.grid_env.agent_pos)
+                ),
                 "turns": self.turns,
                 "gold": self.gold,
                 "moves": self.moves,
@@ -753,6 +781,8 @@ class CampaignEnv(
         combat_potion_battle_bonus = 0.0
         battle_move_cost = 0
         battle_move_spent = 0
+        grid_move_spent = 0
+        target_terrain = self._campaign_tile_terrain(new_pos)
 
         if old_pos != new_pos:
             self._log(f"Перемещение: {old_pos} -> {new_pos}")
@@ -769,7 +799,7 @@ class CampaignEnv(
             if not grid_info.get("blocked_by_obstacle", False):
                 stagnation_penalty = self._compute_stagnation_penalty(old_pos, new_pos)
             reward += stagnation_penalty
-            self._spend_moves(grid_move_cost)
+            grid_move_spent = self._spend_grid_move_cost(grid_move_cost)
 
         if grid_info.get("battle_triggered"):
             enemy_id = grid_info.get("enemy_id")
@@ -808,6 +838,8 @@ class CampaignEnv(
             "blocked_by_boundary": grid_info.get("blocked_by_boundary", False),
             "blocked_obstacle_pos": grid_info.get("blocked_target"),
             "move_cost": int(grid_move_cost) if 0 <= grid_action <= 7 else 0,
+            "move_points_spent": int(grid_move_spent),
+            "target_terrain": str(target_terrain) if 0 <= grid_action <= 7 else "",
             "grid_reward_raw": float(_grid_reward),
             "grid_reward_scaled": float(reward),
             "stagnation_penalty": float(stagnation_penalty),

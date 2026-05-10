@@ -161,6 +161,56 @@ class CampaignEconomyMixin:
             return 1 if int(round(float(unit.get("needaunit", 0) or 0))) > 0 else 0
         except (TypeError, ValueError):
             return 0
+    @classmethod
+    def _hero_display_name(cls, unit: Optional[Dict]) -> str:
+        if not isinstance(unit, dict):
+            return ""
+        return str(unit.get("name", unit.get("кто", "")) or "").strip()
+    @staticmethod
+    def _truthy_unit_flag(unit: Dict, *keys: str) -> bool:
+        for key in keys:
+            if key not in unit:
+                continue
+            value = unit.get(key)
+            if isinstance(value, bool):
+                return value
+            if isinstance(value, (int, float)):
+                return int(value) != 0
+            if str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}:
+                return True
+        return False
+    def _hero_has_flying(self, hero: Optional[Dict]) -> bool:
+        if not isinstance(hero, dict):
+            return False
+        if self._truthy_unit_flag(hero, "flying", "can_fly", "flight"):
+            return True
+        if str(self.HERO_FLYING_ABILITY_KEY).lower() in self._hero_ability_tokens(hero):
+            return True
+        return self._hero_display_name(hero) in set(self.HERO_FLYING_NAMES)
+    def _ensure_hero_flying_ability_token(self, hero: Dict) -> None:
+        if not isinstance(hero, dict) or not self._is_hero_unit(hero):
+            return
+        if self._hero_display_name(hero) not in set(self.HERO_FLYING_NAMES):
+            return
+
+        hero["flying"] = True
+        ability_key = str(self.HERO_FLYING_ABILITY_KEY)
+        raw_tokens = hero.get("hero_abilities", [])
+        if isinstance(raw_tokens, dict):
+            raw_tokens[ability_key] = True
+            hero["hero_abilities"] = raw_tokens
+        elif isinstance(raw_tokens, str):
+            tokens = raw_tokens.replace(",", " ").replace(";", " ").split()
+            if ability_key.lower() not in {str(token).strip().lower() for token in tokens}:
+                tokens.append(ability_key)
+            hero["hero_abilities"] = tokens
+        elif isinstance(raw_tokens, (list, tuple, set)):
+            tokens = list(raw_tokens)
+            if ability_key.lower() not in {str(token).strip().lower() for token in tokens}:
+                tokens.append(ability_key)
+            hero["hero_abilities"] = tokens
+        else:
+            hero["hero_abilities"] = [ability_key]
     def _sync_hero_progression_flags(self, units: Optional[List[Dict]] = None) -> None:
         roster = units if units is not None else self.blue_team_state
         if not roster:
@@ -168,12 +218,55 @@ class CampaignEconomyMixin:
         for unit in roster:
             unit["hero"] = self._is_hero_unit(unit)
             unit["needaunit"] = self._resolve_hero_needaunit(unit)
-    def _resolve_travel_hero(self, units: Optional[List[Dict]] = None) -> Optional[Dict]:
+            self._ensure_hero_flying_ability_token(unit)
+    @staticmethod
+    def _is_travel_unit_alive(unit: Dict) -> bool:
+        if not isinstance(unit, dict):
+            return False
+        hp_keys = ("health", "hp")
+        if not any(key in unit for key in hp_keys):
+            return True
+        for key in hp_keys:
+            if key not in unit:
+                continue
+            try:
+                return float(unit.get(key, 0) or 0) > 0.0
+            except (TypeError, ValueError):
+                return False
+        return False
+    def _resolve_travel_hero(
+        self,
+        units: Optional[List[Dict]] = None,
+        *,
+        alive_only: bool = False,
+    ) -> Optional[Dict]:
         roster = units if units is not None else self._get_blue_state()
-        heroes = [unit for unit in roster if self._is_hero_unit(unit)]
+        heroes = [
+            unit
+            for unit in roster
+            if self._is_hero_unit(unit)
+            and (not alive_only or self._is_travel_unit_alive(unit))
+        ]
         if not heroes:
             return None
         return heroes[0]
+    def _hero_base_moves(self, units: Optional[List[Dict]] = None) -> int:
+        hero = self._resolve_travel_hero(units=units)
+        if hero is None:
+            return int(self.MOVES_PER_TURN)
+
+        for key in ("move_points", "movement", "MOVE"):
+            if key not in hero:
+                continue
+            try:
+                move_value = int(round(float(hero.get(key, 0) or 0)))
+            except (TypeError, ValueError):
+                move_value = 0
+            if move_value > 0:
+                return move_value
+
+        hero_name = str(hero.get("name", hero.get("кто", "")) or "").strip()
+        return int(self.HERO_BASE_MOVES_BY_NAME.get(hero_name, self.MOVES_PER_TURN))
     def _hero_level(self, units: Optional[List[Dict]] = None) -> int:
         hero = self._resolve_travel_hero(units=units)
         if hero is None:
@@ -543,7 +636,12 @@ class CampaignEconomyMixin:
     ) -> None:
         previous_cap = int(self.moves_per_turn)
         self._sync_equipped_boot_items(units=units)
-        new_cap = int(self.MOVES_PER_TURN) + self._hero_move_bonus(units=units)
+        movement_hero = self._resolve_travel_hero(units=units)
+        base_moves = self._hero_base_moves(units=units)
+        new_cap = base_moves + self._hero_move_bonus(
+            units=[movement_hero] if movement_hero is not None else [],
+            base_moves=base_moves,
+        )
         self.moves_per_turn = new_cap
         if refill:
             self.moves = new_cap

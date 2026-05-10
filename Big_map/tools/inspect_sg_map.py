@@ -170,6 +170,11 @@ RUIN_INTERACTION_COLOR = (0, 210, 180)
 
 MAPBLOCK_WIDTH = 8
 MAPBLOCK_HEIGHT = 4
+GROUND_PLAIN_ID = 0
+GROUND_FOREST_ID = 1
+GROUND_WATER_ID = 3
+GROUND_MOUNTAIN_ID = 4
+ROAD_CLASS_NAME = ".?AVCMidRoad@@"
 # Keep water detection conservative: transitional shoreline codes were
 # overcounting land as water on exported maps.
 WATER_TILE_CODES = {29}
@@ -393,6 +398,21 @@ def parse_mapblock_tile_grid(data: bytes, map_size: int) -> list[list[int]]:
     return grid
 
 
+def tile_ground_id(tile_code: int) -> int:
+    return (int(tile_code) >> 3) & 7
+
+
+def parse_ground_cells(data: bytes, map_size: int, ground_id: int) -> set[tuple[int, int]]:
+    tile_grid = parse_mapblock_tile_grid(data, map_size)
+    normalized_ground_id = int(ground_id)
+    return {
+        (x, y)
+        for y in range(map_size)
+        for x in range(map_size)
+        if tile_ground_id(tile_grid[y][x]) == normalized_ground_id
+    }
+
+
 def parse_water_cells(data: bytes, map_size: int) -> set[tuple[int, int]]:
     tile_grid = parse_mapblock_tile_grid(data, map_size)
     return {
@@ -401,6 +421,23 @@ def parse_water_cells(data: bytes, map_size: int) -> set[tuple[int, int]]:
         for x in range(map_size)
         if tile_grid[y][x] in WATER_TILE_CODES
     }
+
+
+def parse_forest_cells(data: bytes, map_size: int) -> set[tuple[int, int]]:
+    return parse_ground_cells(data, map_size, GROUND_FOREST_ID)
+
+
+def parse_road_cells(data: bytes, map_size: int | None = None) -> set[tuple[int, int]]:
+    road_cells: set[tuple[int, int]] = set()
+    for obj in parse_positioned_objects(data):
+        if str(obj.get("class", "") or "") != ROAD_CLASS_NAME:
+            continue
+        x = int(obj.get("x", 0) or 0)
+        y = int(obj.get("y", 0) or 0)
+        if map_size is not None and not (0 <= x < int(map_size) and 0 <= y < int(map_size)):
+            continue
+        road_cells.add((x, y))
+    return road_cells
 
 
 def parse_unit_objects(data: bytes) -> dict[str, dict]:
