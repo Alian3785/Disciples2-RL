@@ -430,6 +430,7 @@ class CampaignEnv(
         self.active_earth_ward_positions: set[int] = set()
         self.active_water_ward_positions: set[int] = set()
         self.active_air_ward_positions: set[int] = set()
+        self.active_potion_effect_positions: Dict[str, set[int]] = {}
         self.battle_items_equipped_total: int = 0
         self.battle_items_used_total: int = 0
         self.books_equipped_total: int = 0
@@ -536,6 +537,7 @@ class CampaignEnv(
         self.active_earth_ward_positions = set()
         self.active_water_ward_positions = set()
         self.active_air_ward_positions = set()
+        self.active_potion_effect_positions = {}
         self.battle_items_equipped_total = 0
         self.battle_items_used_total = 0
         self.books_equipped_total = 0
@@ -588,6 +590,9 @@ class CampaignEnv(
             "moves": self.moves,
             "typeoflord": int(self.typeoflord),
             "heroitems": list(self.heroitems),
+            "scenario_potion_item_names": list(self.scenario_potion_item_names),
+            "scenario_merchant_potion_item_names": list(self.scenario_merchant_potion_item_names),
+            "scenario_battle_potion_equip_names": list(self.scenario_battle_potion_equip_names),
             "equipped_hero_items": list(self.equipped_hero_items),
             "equipped_hero_item_uses_left": list(self.equipped_hero_item_uses_left),
             "battle_items_equipped_total": int(self.battle_items_equipped_total),
@@ -681,25 +686,9 @@ class CampaignEnv(
             return self._step_learn_spell(action)
         if action >= self.GRID_BUILD_ACTION_START:
             return self._step_building(action)
-        if action >= self.GRID_SUPREME_ELIXIR_ACTION_START:
-            return self._step_apply_supreme_elixir(action)
-        if action >= self.GRID_TITAN_ELIXIR_ACTION_START:
-            return self._step_apply_titan_elixir(action)
-        if action >= self.GRID_AIR_WARD_ACTION_START:
-            return self._step_apply_air_ward(action)
-        if action >= self.GRID_WATER_WARD_ACTION_START:
-            return self._step_apply_water_ward(action)
-        if action >= self.GRID_EARTH_WARD_ACTION_START:
-            return self._step_apply_earth_ward(action)
-        if action >= self.GRID_FIRE_WARD_ACTION_START:
-            return self._step_apply_fire_ward(action)
-        if action >= self.GRID_HASTE_ACTION_START:
-            return self._step_apply_haste_elixir(action)
-        if action >= self.GRID_ENERGY_ACTION_START:
-            return self._step_apply_energy_elixir(action)
         if action >= self.GRID_SPELL_SHOP_BUY_ACTION_START:
             return self._step_buy_spell_shop_spell(action)
-        if action >= self.GRID_MERCHANT_BUY_ACTION_START:
+        if action >= self.GRID_MERCHANT_POTION_BUY_ACTION_START:
             return self._step_buy_merchant_item(action)
         if action >= self.GRID_TRAINER_ACTION_START:
             return self._step_train_unit_at_trainer(action)
@@ -711,14 +700,8 @@ class CampaignEnv(
             return self._step_revive_in_castle(action)
         if action >= self.GRID_CASTLE_HEAL_ACTION_START:
             return self._step_heal_in_castle(action)
-        if action >= self.GRID_STRENGTH_ACTION_START:
-            return self._step_apply_strength_potion(action)
-        if action >= self.GRID_INVULNERABILITY_ACTION_START:
-            return self._step_apply_invulnerability_potion(action)
-        if action >= self.GRID_REVIVE_ACTION_START:
-            return self._step_revive_with_bottle(action)
-        if action >= self.GRID_BOTTLE_ACTION_START:
-            return self._step_heal_with_bottle(action)
+        if action >= self.GRID_POTION_USE_ACTION_START:
+            return self._step_use_potion(action)
 
         grid_move_cost = int(self.GRID_MOVE_COST)
 
@@ -1024,6 +1007,13 @@ class CampaignEnv(
         finalized_info["moves"] = self.moves
         finalized_info["typeoflord"] = int(self.typeoflord)
         finalized_info["heroitems"] = list(self.heroitems)
+        finalized_info["scenario_potion_item_names"] = list(self.scenario_potion_item_names)
+        finalized_info["scenario_merchant_potion_item_names"] = list(
+            self.scenario_merchant_potion_item_names
+        )
+        finalized_info["scenario_battle_potion_equip_names"] = list(
+            self.scenario_battle_potion_equip_names
+        )
         finalized_info["equipped_hero_items"] = list(self.equipped_hero_items)
         finalized_info["equipped_hero_item_uses_left"] = list(
             self.equipped_hero_item_uses_left
@@ -1073,6 +1063,11 @@ class CampaignEnv(
         finalized_info["active_earth_ward_positions"] = sorted(self.active_earth_ward_positions)
         finalized_info["active_water_ward_positions"] = sorted(self.active_water_ward_positions)
         finalized_info["active_air_ward_positions"] = sorted(self.active_air_ward_positions)
+        finalized_info["active_potion_effect_positions"] = {
+            item_name: sorted(positions)
+            for item_name, positions in self.active_potion_effect_positions.items()
+            if positions
+        }
         finalized_info["combat_potion_battle_bonus_pending"] = bool(
             self.combat_potion_battle_bonus_pending
         )
@@ -1280,6 +1275,9 @@ class CampaignEnv(
             "moves": self.moves,
             "typeoflord": int(self.typeoflord),
             "heroitems": list(self.heroitems),
+            "scenario_potion_item_names": list(self.scenario_potion_item_names),
+            "scenario_merchant_potion_item_names": list(self.scenario_merchant_potion_item_names),
+            "scenario_battle_potion_equip_names": list(self.scenario_battle_potion_equip_names),
             "equipped_hero_items": list(self.equipped_hero_items),
             "equipped_hero_item_uses_left": list(self.equipped_hero_item_uses_left),
             "equipped_artifact_items": list(self.equipped_artifact_items),
@@ -1309,6 +1307,11 @@ class CampaignEnv(
             "strength_potions_left": self._count_hero_item(self.STRENGTH_POTION_ITEM_NAME),
             "active_invulnerability_positions": sorted(self.active_invulnerability_potion_positions),
             "active_strength_positions": sorted(self.active_strength_potion_positions),
+            "active_potion_effect_positions": {
+                item_name: sorted(positions)
+                for item_name, positions in self.active_potion_effect_positions.items()
+                if positions
+            },
             "merchant_stocks": {
                 site_name: self._merchant_stock_snapshot(site_name)
                 for site_name in self.merchant_stocks.keys()

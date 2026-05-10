@@ -1180,55 +1180,93 @@ class CampaignEconomyMixin:
     def _refresh_dynamic_action_layout(self) -> None:
         self.active_hire_options = self._get_hire_options_for_capital(self.Realcapital)
         self.active_mercenary_hire_options = self._get_mercenary_hire_options()
+        self.GRID_POTION_USE_ACTION_START = 9
+        self._refresh_potion_item_names()
         self._refresh_battle_equippable_item_names()
         self._refresh_book_item_names()
         self._refresh_staff_spell_action_entries()
+        self.GRID_BOTTLE_POSITIONS = list(self.GRID_POTION_USE_POSITIONS)
+        self.REVIVE_BOTTLE_POSITIONS = self.GRID_BOTTLE_POSITIONS
+        self.INVULNERABILITY_POTION_POSITIONS = self.GRID_BOTTLE_POSITIONS
+        self.STRENGTH_POTION_POSITIONS = self.GRID_BOTTLE_POSITIONS
+        self.ENERGY_ELIXIR_POSITIONS = self.GRID_BOTTLE_POSITIONS
+        self.HASTE_ELIXIR_POSITIONS = self.GRID_BOTTLE_POSITIONS
+        self.FIRE_WARD_POSITIONS = self.GRID_BOTTLE_POSITIONS
+        self.EARTH_WARD_POSITIONS = self.GRID_BOTTLE_POSITIONS
+        self.WATER_WARD_POSITIONS = self.GRID_BOTTLE_POSITIONS
+        self.AIR_WARD_POSITIONS = self.GRID_BOTTLE_POSITIONS
+        self.TITAN_ELIXIR_POSITIONS = self.GRID_BOTTLE_POSITIONS
+        self.SUPREME_ELIXIR_POSITIONS = self.GRID_BOTTLE_POSITIONS
+        self.GRID_BOTTLE_ACTION_START = self._potion_action_start_for_item(
+            self.BONUS_SMALL_HEAL_ITEM_NAME
+        )
+        self.GRID_REVIVE_ACTION_START = self._potion_action_start_for_item(
+            self.BONUS_REVIVE_ITEM_NAME
+        )
+        self.GRID_INVULNERABILITY_ACTION_START = self._potion_action_start_for_item(
+            self.RUIN_INVULNERABILITY_ELIXIR_ITEM_NAME
+        )
+        self.GRID_STRENGTH_ACTION_START = self._potion_action_start_for_item(
+            self.STRENGTH_POTION_ITEM_NAME
+        )
+        self.GRID_ENERGY_ACTION_START = self._potion_action_start_for_item(
+            self.ENERGY_ELIXIR_ITEM_NAME
+        )
+        self.GRID_HASTE_ACTION_START = self._potion_action_start_for_item(
+            self.HASTE_ELIXIR_ITEM_NAME
+        )
+        self.GRID_FIRE_WARD_ACTION_START = self._potion_action_start_for_item(
+            self.FIRE_WARD_ITEM_NAME
+        )
+        self.GRID_EARTH_WARD_ACTION_START = self._potion_action_start_for_item(
+            self.EARTH_WARD_ITEM_NAME
+        )
+        self.GRID_WATER_WARD_ACTION_START = self._potion_action_start_for_item(
+            self.WATER_WARD_ITEM_NAME
+        )
+        self.GRID_AIR_WARD_ACTION_START = self._potion_action_start_for_item(
+            self.AIR_WARD_ITEM_NAME
+        )
+        self.GRID_TITAN_ELIXIR_ACTION_START = self._potion_action_start_for_item(
+            self.TITAN_ELIXIR_ITEM_NAME
+        )
+        self.GRID_SUPREME_ELIXIR_ACTION_START = self._potion_action_start_for_item(
+            self.SUPREME_ELIXIR_ITEM_NAME
+        )
+        self.GRID_CASTLE_HEAL_ACTION_START = (
+            self.GRID_POTION_USE_ACTION_START + self.GRID_POTION_USE_ACTION_COUNT
+        )
+        self.GRID_CASTLE_REVIVE_ACTION_START = (
+            self.GRID_CASTLE_HEAL_ACTION_START + len(self.CASTLE_HEAL_POSITIONS)
+        )
+        self.GRID_HIRE_ACTION_START = (
+            self.GRID_CASTLE_REVIVE_ACTION_START + len(self.CASTLE_REVIVE_POSITIONS)
+        )
         self.GRID_MERCENARY_HIRE_ACTION_START = (
             self.GRID_HIRE_ACTION_START + len(self.active_hire_options)
         )
         self.GRID_TRAINER_ACTION_START = (
             self.GRID_MERCENARY_HIRE_ACTION_START + len(self.active_mercenary_hire_options)
         )
-        self.GRID_MERCHANT_BUY_ACTION_START = (
+        self.GRID_MERCHANT_POTION_BUY_ACTION_START = (
             self.GRID_TRAINER_ACTION_START + len(self.TRAINER_POSITIONS)
         )
-        self.GRID_SPELL_SHOP_BUY_ACTION_START = self.GRID_MERCHANT_BUY_ACTION_START + len(
-            self.MERCHANT_BUY_ITEMS
+        self.GRID_MERCHANT_BUY_ACTION_START = self.GRID_MERCHANT_POTION_BUY_ACTION_START
+        self.GRID_SPELL_SHOP_BUY_ACTION_START = (
+            self.GRID_MERCHANT_POTION_BUY_ACTION_START
+            + self.GRID_MERCHANT_POTION_BUY_ACTION_COUNT
         )
-        self.GRID_ENERGY_ACTION_START = self.GRID_SPELL_SHOP_BUY_ACTION_START + len(
+        self.GRID_BUILD_ACTION_START = self.GRID_SPELL_SHOP_BUY_ACTION_START + len(
             self.SPELL_SHOP_BUY_SPELLS
-        )
-        self.GRID_HASTE_ACTION_START = self.GRID_ENERGY_ACTION_START + len(
-            self.ENERGY_ELIXIR_POSITIONS
-        )
-        self.GRID_FIRE_WARD_ACTION_START = self.GRID_HASTE_ACTION_START + len(
-            self.HASTE_ELIXIR_POSITIONS
-        )
-        self.GRID_EARTH_WARD_ACTION_START = self.GRID_FIRE_WARD_ACTION_START + len(
-            self.FIRE_WARD_POSITIONS
-        )
-        self.GRID_WATER_WARD_ACTION_START = self.GRID_EARTH_WARD_ACTION_START + len(
-            self.EARTH_WARD_POSITIONS
-        )
-        self.GRID_AIR_WARD_ACTION_START = self.GRID_WATER_WARD_ACTION_START + len(
-            self.WATER_WARD_POSITIONS
-        )
-        self.GRID_TITAN_ELIXIR_ACTION_START = self.GRID_AIR_WARD_ACTION_START + len(
-            self.AIR_WARD_POSITIONS
-        )
-        self.GRID_SUPREME_ELIXIR_ACTION_START = self.GRID_TITAN_ELIXIR_ACTION_START + len(
-            self.TITAN_ELIXIR_POSITIONS
-        )
-        self.GRID_BUILD_ACTION_START = self.GRID_SUPREME_ELIXIR_ACTION_START + len(
-            self.SUPREME_ELIXIR_POSITIONS
         )
         self.grid_spell_action_start = self.GRID_BUILD_ACTION_START + len(self.building_keys)
         self.grid_settlement_upgrade_action_start = self.grid_spell_action_start + len(
             self.spell_keys
         )
-        self.GRID_EQUIP_BATTLE_ITEM1_ACTION_START = (
+        self.GRID_EQUIP_BATTLE_POTION_ACTION_START = (
             self.grid_settlement_upgrade_action_start + len(self.settlement_upgrade_names)
         )
+        self.GRID_EQUIP_BATTLE_ITEM1_ACTION_START = self.GRID_EQUIP_BATTLE_POTION_ACTION_START
         self.GRID_EQUIP_BATTLE_ITEM2_ACTION_START = (
             self.GRID_EQUIP_BATTLE_ITEM1_ACTION_START + len(self.BATTLE_EQUIPPABLE_ITEM_NAMES)
         )

@@ -824,10 +824,7 @@ class CampaignBattleMixin:
             restored_unit.pop("campaign_artifact_initiative_multiplier", None)
             restored_unit.pop("campaign_artifact_armor_bonus", None)
             restored_unit.pop("campaign_active_artifacts", None)
-            if (
-                position in self.active_strength_potion_positions
-                or position in self.active_energy_elixir_positions
-            ):
+            if "campaign_potion_base_damage" in restored_unit:
                 base_damage = self._normalize_damage_value(
                     restored_unit.get(
                         "campaign_potion_base_damage",
@@ -848,7 +845,7 @@ class CampaignBattleMixin:
             restored_unit.pop("campaign_damage_potion_multiplier", None)
             restored_unit.pop("campaign_strength_potion_multiplier", None)
             restored_unit.pop("campaign_energy_elixir_multiplier", None)
-            if position in self.active_haste_elixir_positions:
+            if "campaign_potion_base_initiative" in restored_unit:
                 base_initiative = int(
                     restored_unit.get(
                         "campaign_potion_base_initiative",
@@ -859,6 +856,36 @@ class CampaignBattleMixin:
                 restored_unit["initiative_base"] = int(base_initiative)
             restored_unit.pop("campaign_potion_base_initiative", None)
             restored_unit.pop("campaign_initiative_potion_multiplier", None)
+            if "campaign_potion_base_accuracy" in restored_unit:
+                restored_unit["accuracy"] = self._normalize_accuracy_value(
+                    restored_unit.get(
+                        "campaign_potion_base_accuracy",
+                        restored_unit.get("accuracy", 0),
+                    )
+                )
+            if "campaign_potion_base_accuracy_secondary" in restored_unit:
+                restored_unit["accuracy_secondary"] = self._normalize_accuracy_value(
+                    restored_unit.get(
+                        "campaign_potion_base_accuracy_secondary",
+                        restored_unit.get("accuracy_secondary", 0),
+                    )
+                )
+            restored_unit.pop("campaign_potion_base_accuracy", None)
+            restored_unit.pop("campaign_potion_base_accuracy_secondary", None)
+            restored_unit.pop("campaign_accuracy_potion_multiplier", None)
+            if "campaign_potion_base_incoming_damage_multiplier" in restored_unit:
+                restored_unit["incoming_damage_multiplier"] = max(
+                    0.0,
+                    float(
+                        restored_unit.get(
+                            "campaign_potion_base_incoming_damage_multiplier",
+                            restored_unit.get("incoming_damage_multiplier", 1.0),
+                        )
+                        or 1.0
+                    ),
+                )
+            restored_unit.pop("campaign_potion_base_incoming_damage_multiplier", None)
+            restored_unit.pop("campaign_incoming_damage_potion_multiplier", None)
             added_resistance = [
                 str(res)
                 for res in (restored_unit.get("campaign_potion_added_resistance") or [])

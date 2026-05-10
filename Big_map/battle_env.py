@@ -3536,6 +3536,8 @@ class BattleEnv(gym.Env):
         bonus = self.rng.randint(0, 5)
         boosted = raw_damage + bonus
         eff = boosted * max(0.0, factor)
+        incoming_multiplier = float(victim.get("incoming_damage_multiplier", 1.0) or 1.0)
+        eff *= max(0.0, incoming_multiplier)
         return int(round(eff))
 
     def _roll_hit(self, attacker: Dict) -> bool:

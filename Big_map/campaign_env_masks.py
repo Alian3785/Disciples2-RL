@@ -25,29 +25,20 @@ class CampaignMaskMixin:
             mask[8] = bool(grid_mask[8]) and (
                 self._has_wounded_blue() or self.moves < grid_move_cost
             )
-            # Общее действие лечения банками на позиции 7-12.
-            if self._has_any_heal_bottle_left():
-                for idx, pos in enumerate(self.GRID_BOTTLE_POSITIONS):
-                    mask[self.GRID_BOTTLE_ACTION_START + idx] = self._can_heal_position(pos)
-            # Бутыли воскрешения на позиции 7-12.
-            if self.revive_bottles_used < self._max_revive_bottles_available():
-                for idx, pos in enumerate(self.REVIVE_BOTTLE_POSITIONS):
-                    mask[self.GRID_REVIVE_ACTION_START + idx] = self._can_revive_position(pos)
-            if self._hero_item_available(self.INVULNERABILITY_POTION_ITEM_NAME):
-                for idx, pos in enumerate(self.INVULNERABILITY_POTION_POSITIONS):
-                    mask[self.GRID_INVULNERABILITY_ACTION_START + idx] = (
-                        self._can_apply_invulnerability_potion_position(pos)
-                    )
-            if self._hero_item_available(self.STRENGTH_POTION_ITEM_NAME):
-                for idx, pos in enumerate(self.STRENGTH_POTION_POSITIONS):
-                    mask[self.GRID_STRENGTH_ACTION_START + idx] = (
-                        self._can_apply_strength_potion_position(pos)
+            for potion_idx, item_name in enumerate(self.scenario_potion_item_names):
+                action_start = self.GRID_POTION_USE_ACTION_START + potion_idx * len(
+                    self.GRID_POTION_USE_POSITIONS
+                )
+                for target_idx, pos in enumerate(self.GRID_POTION_USE_POSITIONS):
+                    mask[action_start + target_idx] = self._can_use_potion_on_position(
+                        item_name,
+                        pos,
                     )
             if self._merchant_sites_at_position(self.grid_env.agent_pos):
-                for idx, item_data in enumerate(self.MERCHANT_BUY_ITEMS):
-                    item_name = str(item_data.get("name", "") or "")
+                for idx, item_name in enumerate(self.scenario_merchant_potion_item_names):
+                    item_data = self._merchant_item_definition(item_name) or {}
                     item_price = float(item_data.get("price", 0.0) or 0.0)
-                    mask[self.GRID_MERCHANT_BUY_ACTION_START + idx] = (
+                    mask[self.GRID_MERCHANT_POTION_BUY_ACTION_START + idx] = (
                         bool(item_name)
                         and float(self.gold or 0.0) >= item_price
                         and self._merchant_site_for_item(
@@ -71,47 +62,6 @@ class CampaignMaskMixin:
                         )
                         is not None
                     )
-            if self._hero_item_available(self.ENERGY_ELIXIR_ITEM_NAME):
-                for idx, pos in enumerate(self.ENERGY_ELIXIR_POSITIONS):
-                    mask[self.GRID_ENERGY_ACTION_START + idx] = (
-                        self._can_apply_energy_elixir_position(pos)
-                    )
-            if self._hero_item_available(self.HASTE_ELIXIR_ITEM_NAME):
-                for idx, pos in enumerate(self.HASTE_ELIXIR_POSITIONS):
-                    mask[self.GRID_HASTE_ACTION_START + idx] = (
-                        self._can_apply_haste_elixir_position(pos)
-                    )
-            if self._hero_item_available(self.FIRE_WARD_ITEM_NAME):
-                for idx, pos in enumerate(self.FIRE_WARD_POSITIONS):
-                    mask[self.GRID_FIRE_WARD_ACTION_START + idx] = (
-                        self._can_apply_fire_ward_position(pos)
-                    )
-            if self._hero_item_available(self.EARTH_WARD_ITEM_NAME):
-                for idx, pos in enumerate(self.EARTH_WARD_POSITIONS):
-                    mask[self.GRID_EARTH_WARD_ACTION_START + idx] = (
-                        self._can_apply_earth_ward_position(pos)
-                    )
-            if self._hero_item_available(self.WATER_WARD_ITEM_NAME):
-                for idx, pos in enumerate(self.WATER_WARD_POSITIONS):
-                    mask[self.GRID_WATER_WARD_ACTION_START + idx] = (
-                        self._can_apply_water_ward_position(pos)
-                    )
-            if self._hero_item_available(self.AIR_WARD_ITEM_NAME):
-                for idx, pos in enumerate(self.AIR_WARD_POSITIONS):
-                    mask[self.GRID_AIR_WARD_ACTION_START + idx] = (
-                        self._can_apply_air_ward_position(pos)
-                    )
-            if self._hero_item_available(self.TITAN_ELIXIR_ITEM_NAME):
-                for idx, pos in enumerate(self.TITAN_ELIXIR_POSITIONS):
-                    mask[self.GRID_TITAN_ELIXIR_ACTION_START + idx] = (
-                        self._can_apply_titan_elixir_position(pos)
-                    )
-            if self._hero_item_available(self.SUPREME_ELIXIR_ITEM_NAME):
-                for idx, pos in enumerate(self.SUPREME_ELIXIR_POSITIONS):
-                    mask[self.GRID_SUPREME_ELIXIR_ACTION_START + idx] = (
-                        self._can_apply_supreme_elixir_position(pos)
-                    )
-
             # Лечение и воскрешение за золото доступны только на специальных клетках лечения.
             if self._is_at_castle() and float(self.gold) > 0.0:
                 if self._has_temple_built():
@@ -287,35 +237,42 @@ class CampaignMaskMixin:
             return max_hp > 0 and hp <= 0
         return False
     def _can_apply_invulnerability_potion_position(self, position: int) -> bool:
-        if not self._hero_item_available(self.INVULNERABILITY_POTION_ITEM_NAME):
-            return False
-        state = self._get_blue_state()
-        for unit in state:
-            if int(unit.get("position", -1)) != int(position):
-                continue
-            hp = float(unit.get("hp", 0) or unit.get("health", 0))
-            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
-            return (
-                max_hp > 0
-                and hp > 0
-                and int(position) not in self.active_invulnerability_potion_positions
-            )
-        return False
+        return self._can_use_potion_on_position(
+            self.RUIN_INVULNERABILITY_ELIXIR_ITEM_NAME,
+            position,
+        )
     def _can_apply_strength_potion_position(self, position: int) -> bool:
-        if not self._hero_item_available(self.STRENGTH_POTION_ITEM_NAME):
-            return False
+        return self._can_use_potion_on_position(
+            self.STRENGTH_POTION_ITEM_NAME,
+            position,
+        )
+    def _is_living_blue_position(self, position: int) -> bool:
         state = self._get_blue_state()
         for unit in state:
             if int(unit.get("position", -1)) != int(position):
                 continue
             hp = float(unit.get("hp", 0) or unit.get("health", 0))
             max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
-            return (
-                max_hp > 0
-                and hp > 0
-                and int(position) not in self.active_strength_potion_positions
-            )
+            return max_hp > 0 and hp > 0
         return False
+    def _can_use_potion_on_position(self, item_name: object, position: int) -> bool:
+        canonical_name = self._canonical_potion_item_name(item_name)
+        definition = self._potion_definitions_by_canonical().get(canonical_name, {})
+        if not definition or self._potion_available_count(item_name) <= 0:
+            return False
+        effect = definition.get("effect", {})
+        effect_kind = str((effect or {}).get("kind", "") or "")
+        if effect_kind == "heal":
+            return self._can_heal_position(position)
+        if effect_kind == "revive":
+            return self._can_revive_position(position)
+        if not self._is_living_blue_position(position):
+            return False
+        if str(definition.get("duration", "") or "") == "temporary":
+            active_positions = self._active_potion_positions(definition.get("name", ""))
+            if int(position) in active_positions:
+                return False
+        return True
     def _can_castle_revive_position(self, position: int) -> bool:
         """Можно ли воскресить юнита за золото на клетке лечения."""
         revive_cost = self._castle_revive_cost_at_position(position)

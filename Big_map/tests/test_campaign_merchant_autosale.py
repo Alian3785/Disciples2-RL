@@ -10,6 +10,13 @@ def _merchant_buy_action(env: CampaignEnv, item_index: int) -> int:
     return env.GRID_MERCHANT_BUY_ACTION_START + int(item_index)
 
 
+def _potion_use_action(env: CampaignEnv, item_name: str, target_pos: int) -> int:
+    return (
+        env._potion_action_start_for_item(item_name)
+        + env.GRID_POTION_USE_POSITIONS.index(target_pos)
+    )
+
+
 def _merchant_site_name(env: CampaignEnv, index: int) -> str:
     return list(env.merchant_site_interaction_tiles.keys())[int(index)]
 
@@ -145,32 +152,34 @@ def test_merchant_buys_feed_existing_heal_and_revive_actions():
     max_hp = max(300.0, max_hp)
     target["maxhp"] = max_hp
     target["max_health"] = max_hp
-    heal_action = env.GRID_BOTTLE_ACTION_START + env.GRID_BOTTLE_POSITIONS.index(target_pos)
+    heal_ointment_action = _potion_use_action(env, env.HEALING_OINTMENT_ITEM_NAME, target_pos)
+    heal_large_action = _potion_use_action(env, env.BONUS_LARGE_HEAL_ITEM_NAME, target_pos)
+    heal_small_action = _potion_use_action(env, env.BONUS_SMALL_HEAL_ITEM_NAME, target_pos)
 
     target["hp"] = max_hp - 220.0
     target["health"] = target["hp"]
-    _, _, _, _, heal_ointment_info = env.step(heal_action)
-    assert heal_ointment_info["selected_heal_bottle_kind"] == "ointment"
+    _, _, _, _, heal_ointment_info = env.step(heal_ointment_action)
+    assert heal_ointment_info["selected_heal_bottle_kind"] == env.HEALING_OINTMENT_ITEM_NAME
     assert env.get_bottle_inventory_counters()["ointment_left"] == 1
 
     target["hp"] = max_hp - 80.0
     target["health"] = max_hp - 80.0
-    _, _, _, _, heal_large_info = env.step(heal_action)
-    assert heal_large_info["selected_heal_bottle_kind"] == "large"
+    _, _, _, _, heal_large_info = env.step(heal_large_action)
+    assert heal_large_info["selected_heal_bottle_kind"] == env.BONUS_LARGE_HEAL_ITEM_NAME
     assert env.get_bottle_inventory_counters()["heal_left"] == 3
 
     target["hp"] = max_hp - 40.0
     target["health"] = max_hp - 40.0
-    _, _, _, _, heal_small_info = env.step(heal_action)
-    assert heal_small_info["selected_heal_bottle_kind"] == "small"
+    _, _, _, _, heal_small_info = env.step(heal_small_action)
+    assert heal_small_info["selected_heal_bottle_kind"] == env.BONUS_SMALL_HEAL_ITEM_NAME
     assert env.get_bottle_inventory_counters()["healing_left"] == 3
 
     env.heal_bottles_used = env._max_heal_bottles_available()
     env.healing_bottles_used = env._max_healing_bottles_available()
     target["hp"] = max_hp - 80.0
     target["health"] = max_hp - 80.0
-    _, _, _, _, heal_fallback_ointment_info = env.step(heal_action)
-    assert heal_fallback_ointment_info["selected_heal_bottle_kind"] == "ointment"
+    _, _, _, _, heal_fallback_ointment_info = env.step(heal_ointment_action)
+    assert heal_fallback_ointment_info["selected_heal_bottle_kind"] == env.HEALING_OINTMENT_ITEM_NAME
     assert env.get_bottle_inventory_counters()["ointment_left"] == 0
 
     target["hp"] = 0.0
