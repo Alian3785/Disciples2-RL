@@ -1,5 +1,9 @@
 # campaign_env_territory.py
-"""CampaignTerritoryMixin for CampaignEnv."""
+"""Территориальная логика CampaignEnv.
+
+Миксин отвечает за рост территорий фракций, захват поселений и финальных городов,
+доходы от уже захваченных клеток, награды за руины и служебные кеши для grid observation.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +11,12 @@ from campaign_env_data import *
 
 
 class CampaignTerritoryMixin:
+    """Методы CampaignEnv, связанные с владением клетками глобальной карты."""
+
+    TERRITORY_PATH_DISTANCE_CACHE_SIZE = 64
+
     def _ruin_progress_info(self) -> Dict[str, object]:
+        """Собирает компактный progress-блок по руинам для info после reset/step."""
         last_reward = None
         if isinstance(self.last_ruin_reward, dict):
             last_reward = dict(self.last_ruin_reward)
@@ -18,6 +27,7 @@ class CampaignTerritoryMixin:
             "last_ruin_reward": last_reward,
         }
     def _reset_legions_settlement_territory_state(self) -> None:
+        """Сбрасывает активные поселения Легионов и их уровни перед новым episode."""
         self.legions_active_settlement_territory_capture_turn_by_name: Dict[str, int] = {}
         self.legions_settlement_territory_tiles_by_name: Dict[str, Tuple[Tuple[int, int], ...]] = {
             str(source_name): ()
@@ -34,6 +44,7 @@ class CampaignTerritoryMixin:
             for source_name, source_data in self.legions_settlement_territory_source_by_name.items()
         }
     def _legions_settlement_territory_info(self) -> Dict[str, object]:
+        """Возвращает диагностическое состояние всех поселений и их территорий."""
         return {
             "legions_active_settlement_territories": sorted(
                 self.legions_active_settlement_territory_capture_turn_by_name.keys()
@@ -52,6 +63,11 @@ class CampaignTerritoryMixin:
             },
         }
     def _grant_ruin_reward(self, enemy_id: Optional[int]) -> Dict[str, object]:
+        """Выдает награду за руины, связанные с побежденным enemy_id.
+
+        Метод идемпотентный: повторная победа над тем же ruin enemy не начисляет золото
+        или предмет повторно, а только возвращает текущее состояние прогресса.
+        """
         reward_data = self.RUIN_REWARD_BY_ENEMY_ID.get(int(enemy_id or -1))
         if reward_data is None:
             return {
@@ -67,6 +83,7 @@ class CampaignTerritoryMixin:
         ruin_pos = tuple(int(v) for v in tuple(reward_data.get("ruin_pos", ())))
         marker_pos = tuple(int(v) for v in tuple(reward_data.get("marker_pos", ())))
 
+        # Руины считаются одноразовой наградой, поэтому сначала проверяем историю зачисток.
         if ruin_enemy_id in self.cleared_ruin_enemy_ids:
             return {
                 "ruin_cleared": False,
@@ -80,7 +97,8 @@ class CampaignTerritoryMixin:
         self.gold = max(0.0, float(self.gold or 0.0)) + gold_reward
         artifact_grant_info: Dict[str, object] = {}
         if item_name:
-            artifact_grant_info = self._add_hero_item(item_name)
+            # Предметы выдаются через общий inventory helper, чтобы не обходить его побочные эффекты.
+            artifact_grant_info = self._grant_hero_item_reward(item_name)
 
         self.last_ruin_reward = {
             "enemy_id": ruin_enemy_id,
@@ -125,12 +143,14 @@ class CampaignTerritoryMixin:
         return normalized_position in self.legions_territory_tile_set
     @classmethod
     def _settlement_upgrade_cost_for_level(cls, current_level: int) -> float:
+        """Стоимость апгрейда задается уровнем до улучшения, а не целевым уровнем."""
         try:
             normalized_level = int(current_level)
         except (TypeError, ValueError):
             normalized_level = 0
         return float(cls.SETTLEMENT_UPGRADE_GOLD_COST_BY_LEVEL.get(normalized_level, 0.0))
     def _can_upgrade_settlement(self, settlement_name: str) -> bool:
+        """Проверяет, доступен ли апгрейд уже захваченного поселения за текущее золото."""
         if str(settlement_name) not in self.legions_active_settlement_territory_capture_turn_by_name:
             return False
         current_level = int(self.legions_settlement_level_by_name.get(str(settlement_name), 0) or 0)
@@ -153,6 +173,7 @@ class CampaignTerritoryMixin:
     def _is_final_objective_enemy(self, enemy_id: Optional[int]) -> bool:
         return self.is_final_objective_enemy_id(enemy_id)
     def _objective_city_for_enemy(self, enemy_id: Optional[int]) -> Optional[str]:
+        """Находит целевой город, к которому привязан данный отряд-защитник."""
         try:
             normalized_enemy_id = int(enemy_id)
         except (TypeError, ValueError):
@@ -185,8 +206,10 @@ class CampaignTerritoryMixin:
         self.captured_objective_cities.add(city_name)
         return [city_name]
     def _all_objective_cities_captured(self) -> bool:
+        """True, когда игрок захватил все города из FINAL_OBJECTIVE_CITIES."""
         return len(self.captured_objective_cities) == len(self.FINAL_OBJECTIVE_CITIES)
     def _is_legions_settlement_territory_cleared(self, settlement_name: str) -> bool:
+        """Проверяет, побеждены ли все required enemies, открывающие поселение Легионов."""
         source_data = self.legions_settlement_territory_source_by_name.get(str(settlement_name), {})
         required_enemy_ids = tuple(int(enemy_id) for enemy_id in source_data.get("required_enemy_ids", ()))
         if not required_enemy_ids:
@@ -202,6 +225,7 @@ class CampaignTerritoryMixin:
         self,
         enemy_id: Optional[int],
     ) -> List[str]:
+        """Активирует рост территории поселения после победы над последним защитником."""
         try:
             normalized_enemy_id = int(enemy_id)
         except (TypeError, ValueError):
@@ -214,6 +238,7 @@ class CampaignTerritoryMixin:
         if not self._is_legions_settlement_territory_cleared(settlement_name):
             return []
         self.legions_active_settlement_territory_capture_turn_by_name[str(settlement_name)] = int(self.turns)
+        # Захват поселения сразу добавляет его источник роста территории в общий frontier.
         self._refresh_faction_territories()
         return [str(settlement_name)]
     def _compute_final_objective_reward(
@@ -257,7 +282,16 @@ class CampaignTerritoryMixin:
         if self.battle_env is None:
             return 0.0, 0.0, 0.0
 
-        base_units = [u for u in UNITS_BLUE if int(u.get("position", -1)) >= 0]
+        base_roster = (
+            self.blue_team_state
+            if getattr(self, "blue_team_state", None) is not None
+            else self._create_starting_blue_team()
+        )
+        base_units = [
+            u
+            for u in base_roster
+            if int(u.get("position", -1)) >= 0
+        ]
         if not base_units:
             return 0.0, 0.0, 0.0
 
@@ -300,13 +334,19 @@ class CampaignTerritoryMixin:
         )
         return float(reward), float(alive_ratio), float(hp_ratio)
     def _legions_gold_income_per_turn(self) -> float:
+        """Считает доход за turn: базовое золото плюс доход от захваченных шахт."""
         return float(self.GOLD_PER_TURN) + float(self.legions_captured_gold_mine_count) * float(
             self.LEGIONS_GOLD_MINE_GOLD_PER_TURN
         )
     def _advance_turns(self, delta_turns: int) -> float:
-        """Увеличивает счётчик ходов и золото на заданное количество."""
+        """Продвигает campaign time и выполняет все эффекты начала нового turn.
+
+        Здесь обновляются территории, доходы, мана, временные map effects, лечение врагов,
+        scripted bot и одноразовые флаги действий. Возвращается штраф за прошедшие turn.
+        """
         if delta_turns <= 0:
             return 0.0
+        # Штраф за незанятые hire slots считается до изменения turn, пока текущая команда актуальна.
         pending_hire_penalty = self._pending_hire_turn_penalty(
             delta_turns,
             units=self.blue_team_state,
@@ -315,6 +355,7 @@ class CampaignTerritoryMixin:
         scripted_bot_turn_infos = []
         for _ in range(int(delta_turns)):
             self.turns += 1
+            # Территории растут в начале каждого turn, поэтому доход ниже уже учитывает новые шахты.
             self._refresh_faction_territories()
             self._clear_all_enemy_map_spell_effects()
             self._clear_all_blue_map_spell_effects()
@@ -322,13 +363,13 @@ class CampaignTerritoryMixin:
             self._apply_mana_income_for_turn()
             self._heal_wounded_enemy_teams_for_turn()
             advance_bot = getattr(self, "_advance_scripted_capital_bot_one_turn", None)
-            if callable(advance_bot):
+            if callable(advance_bot) and bool(getattr(self, "scripted_capital_bot_enabled", False)):
                 scripted_bot_turn_infos.append(advance_bot())
+        # Эти флаги ограничивают действие в рамках одного turn и должны сбрасываться после advance.
         self._clear_expired_combat_potion_effects()
         self.combat_potion_battle_bonus_pending = False
         self.gold += float(total_gold_income)
-        if scripted_bot_turn_infos:
-            self.scripted_capital_bot_turn_infos = scripted_bot_turn_infos
+        self.scripted_capital_bot_turn_infos = scripted_bot_turn_infos
         self._sync_moves_per_turn_with_hero(units=self.blue_team_state)
         self.moves = self.moves_per_turn
         self.active_buildings["alredybuilt"] = 0
@@ -336,6 +377,7 @@ class CampaignTerritoryMixin:
         self.battle_item_equip_used_this_turn = False
         self.book_equip_used_this_turn = False
         self.spell_cast_counts_by_id_this_turn = {}
+        self.grid_unit_swap_actions_used_this_turn = set()
         self.summon_hero_battle_bonus_pending = False
         self.summon_hero_battle_bonus_enemy_ids_this_turn = set()
         return -float(delta_turns) * self.reward_turn_penalty - float(pending_hire_penalty)
@@ -368,6 +410,11 @@ class CampaignTerritoryMixin:
         source_tile: Tuple[int, int],
         additional_claimable_tiles: Tuple[Tuple[int, int], ...] = (),
     ) -> Tuple[Tuple[int, int], ...]:
+        """Строит клетки, куда территория не может расширяться.
+
+        Forbidden tiles ограничивают именно владение территорией. Вражеские стеки и явно
+        разрешенные source/anchor tiles исключаются, чтобы территория могла добраться до целей.
+        """
         forbidden_tiles = set(tuple(tile) for tile in self._static_obstacle_tiles)
 
         base_forbidden_tiles = _load_legions_territory_base_forbidden_tiles()
@@ -393,6 +440,7 @@ class CampaignTerritoryMixin:
 
         return tuple(sorted(forbidden_tiles))
     def _build_legions_territory_forbidden_tiles(self) -> Tuple[Tuple[int, int], ...]:
+        """Forbidden mask для территории игрока/Легионов."""
         return self._build_territory_forbidden_tiles(
             source_tile=self.legions_territory_source_tile,
             additional_claimable_tiles=(
@@ -401,6 +449,7 @@ class CampaignTerritoryMixin:
             ),
         )
     def _build_empire_territory_forbidden_tiles(self) -> Tuple[Tuple[int, int], ...]:
+        """Forbidden mask для территории scripted Empire side."""
         return self._build_territory_forbidden_tiles(
             source_tile=self.empire_territory_source_tile,
             additional_claimable_tiles=(
@@ -413,6 +462,11 @@ class CampaignTerritoryMixin:
         *,
         source_tile: Tuple[int, int],
     ) -> Tuple[Tuple[int, int], ...]:
+        """Строит препятствия для BFS-пути роста территории.
+
+        Path blocked tiles используются только для достижимости: вода и статические препятствия
+        не дают frontier перескочить через карту, но source tile всегда остается стартом.
+        """
         blocked_tiles = set(tuple(tile) for tile in self._static_obstacle_tiles)
         base_water_tiles = _load_legions_territory_base_water_tiles()
         if base_water_tiles:
@@ -423,10 +477,12 @@ class CampaignTerritoryMixin:
         blocked_tiles.discard(tuple(source_tile))
         return tuple(sorted(blocked_tiles))
     def _build_legions_territory_path_blocked_tiles(self) -> Tuple[Tuple[int, int], ...]:
+        """BFS-блокеры для роста территории Легионов."""
         return self._build_territory_path_blocked_tiles(
             source_tile=self.legions_territory_source_tile,
         )
     def _build_empire_territory_path_blocked_tiles(self) -> Tuple[Tuple[int, int], ...]:
+        """BFS-блокеры для роста территории Empire side."""
         return self._build_territory_path_blocked_tiles(
             source_tile=self.empire_territory_source_tile,
         )
@@ -436,9 +492,41 @@ class CampaignTerritoryMixin:
         source_tile: Tuple[int, int],
         blocked_tile_set: set[Tuple[int, int]],
     ) -> Dict[Tuple[int, int], int]:
+        """Считает BFS distance от source tile до всех достижимых клеток карты.
+
+        Метод используется не только для роста территории, но и для поиска ближайших
+        целей в action mask/spell логике. Поэтому результаты кешируются по стартовой
+        клетке и набору блокеров: повторный запрос в том же состоянии карты не гоняет BFS.
+        """
         source = (int(source_tile[0]), int(source_tile[1]))
-        if source in blocked_tile_set:
-            return {}
+        blocked_tiles = frozenset(
+            (int(tile[0]), int(tile[1]))
+            for tile in (blocked_tile_set or set())
+        )
+        cache_key = (int(self.grid_size), source, blocked_tiles)
+        cache = getattr(self, "_territory_path_distances_cache", None)
+        if cache is None:
+            cache = {}
+            self._territory_path_distances_cache = cache
+        else:
+            cached_distances = cache.get(cache_key)
+            if cached_distances is not None:
+                # dict сохраняет порядок вставки, поэтому pop+assign работает как простой LRU touch.
+                cache.pop(cache_key, None)
+                cache[cache_key] = cached_distances
+                return cached_distances
+        max_cache_size = max(
+            0,
+            int(getattr(self, "TERRITORY_PATH_DISTANCE_CACHE_SIZE", 64) or 0),
+        )
+
+        if source in blocked_tiles:
+            distances: Dict[Tuple[int, int], int] = {}
+            if max_cache_size > 0:
+                cache[cache_key] = distances
+                while len(cache) > max_cache_size:
+                    cache.pop(next(iter(cache)))
+            return distances
 
         distances: Dict[Tuple[int, int], int] = {source: 0}
         frontier = deque([source])
@@ -461,11 +549,15 @@ class CampaignTerritoryMixin:
                 if not (0 <= nx < int(self.grid_size) and 0 <= ny < int(self.grid_size)):
                     continue
                 tile = (nx, ny)
-                if tile in blocked_tile_set or tile in distances:
+                if tile in blocked_tiles or tile in distances:
                     continue
                 distances[tile] = current_distance + 1
                 frontier.append(tile)
 
+        if max_cache_size > 0:
+            cache[cache_key] = distances
+            while len(cache) > max_cache_size:
+                cache.pop(next(iter(cache)))
         return distances
     def _build_legions_territory_path_distances(self) -> Dict[Tuple[int, int], int]:
         return self._build_territory_path_distances(
@@ -484,6 +576,11 @@ class CampaignTerritoryMixin:
         path_distances: Dict[Tuple[int, int], int],
         sort_key,
     ) -> Tuple[Tuple[int, int], ...]:
+        """Формирует стабильный порядок захвата клеток территории.
+
+        Сначала идет BFS distance от источника, затем локальный sort_key. Это делает рост
+        территории детерминированным и не зависящим от порядка обхода set/dict.
+        """
         allowed_tiles = tuple(
             (x, y)
             for y in range(int(self.grid_size))
@@ -497,12 +594,14 @@ class CampaignTerritoryMixin:
             )
         )
     def _build_legions_territory_order(self) -> Tuple[Tuple[int, int], ...]:
+        """Порядок роста основной территории игрока от стартовой столицы."""
         return self._build_territory_order(
             forbidden_tile_set=self.legions_territory_forbidden_tile_set,
             path_distances=self.legions_territory_path_distances,
             sort_key=self._legions_territory_sort_key,
         )
     def _build_legions_settlement_territory_orders_by_name(self) -> Dict[str, Tuple[Tuple[int, int], ...]]:
+        """Предрасчитывает порядок роста для каждого захватываемого поселения Легионов."""
         orders_by_name: Dict[str, Tuple[Tuple[int, int], ...]] = {}
         for source_data in self._static_legions_settlement_territory_sources:
             settlement_name = str(source_data.get("name", "") or "")
@@ -519,6 +618,7 @@ class CampaignTerritoryMixin:
             )
         return orders_by_name
     def _build_empire_territory_order(self) -> Tuple[Tuple[int, int], ...]:
+        """Порядок роста территории Empire side от ее столицы."""
         return self._build_territory_order(
             forbidden_tile_set=self.empire_territory_forbidden_tile_set,
             path_distances=self.empire_territory_path_distances,
@@ -526,6 +626,7 @@ class CampaignTerritoryMixin:
         )
     @staticmethod
     def _territory_claim_count(total_tiles: int, expansion_per_turn: int, turns: int) -> int:
+        """Количество клеток, которое источник территории должен контролировать к данному turn."""
         return min(
             int(total_tiles),
             1 + max(0, int(turns)) * int(expansion_per_turn),
@@ -535,6 +636,7 @@ class CampaignTerritoryMixin:
         order: Tuple[Tuple[int, int], ...],
         claim_count: int,
     ) -> Tuple[Tuple[int, int], ...]:
+        """Берет первые claim_count клеток из заранее отсортированного порядка захвата."""
         if claim_count <= 0:
             return ()
         return tuple(order[: int(claim_count)])
@@ -545,6 +647,7 @@ class CampaignTerritoryMixin:
         turns: int,
         activation_turn: Optional[int],
     ) -> int:
+        """Считает рост поселения только после turn, на котором оно было активировано."""
         if activation_turn is None:
             return 0
         elapsed_turns = max(0, int(turns) - int(activation_turn))
@@ -553,8 +656,10 @@ class CampaignTerritoryMixin:
             1 + elapsed_turns * max(0, int(expansion_per_turn)),
         )
     def _refresh_legions_territory_tiles(self) -> None:
+        """Совместимый wrapper для старых вызовов: сейчас обновляются все фракционные территории."""
         self._refresh_faction_territories()
     def _refresh_legions_territory_grid_obs_cache(self) -> None:
+        """Обновляет бинарный observation cache клеток территории Легионов."""
         obs_size = int(getattr(self, "grid_legions_territory_obs_size", 0) or 0)
         if obs_size <= 0:
             self._legions_territory_grid_obs_cache = np.zeros(0, dtype=np.float32)
@@ -568,6 +673,7 @@ class CampaignTerritoryMixin:
                 territory_obs[int(tile_index)] = 1.0
         self._legions_territory_grid_obs_cache = territory_obs
     def _refresh_legions_captured_mana_source_state(self) -> None:
+        """Пересчитывает источники маны, которые уже попали в территорию игрока."""
         captured_tiles_by_kind: Dict[str, List[Tuple[int, int]]] = {
             str(kind): []
             for kind in self.MANA_KIND_ORDER
@@ -591,6 +697,11 @@ class CampaignTerritoryMixin:
         }
         self.mana_income_per_turn = self._compute_mana_income_per_turn()
     def _refresh_faction_territories(self) -> None:
+        """Главный пересчет текущих территорий фракций по номеру turn.
+
+        Метод объединяет рост от стартовой столицы и всех активированных поселений,
+        обновляет быстрые set-представления, доходные шахты, источники маны и observation cache.
+        """
         legions_claim_count = self._territory_claim_count(
             len(self.legions_territory_order),
             self.LEGIONS_TERRITORY_EXPANSION_PER_TURN,
@@ -602,6 +713,7 @@ class CampaignTerritoryMixin:
         )
         combined_legions_tiles: List[Tuple[int, int]] = []
         combined_legions_seen: set[Tuple[int, int]] = set()
+        # Сначала добавляем основную территорию столицы, сохраняя порядок для стабильного render/obs.
         for tile in capital_legions_tiles:
             normalized_tile = (int(tile[0]), int(tile[1]))
             if normalized_tile in combined_legions_seen:
@@ -609,6 +721,7 @@ class CampaignTerritoryMixin:
             combined_legions_seen.add(normalized_tile)
             combined_legions_tiles.append(normalized_tile)
 
+        # Затем добавляем территории поселений, которые были открыты победой над required enemies.
         for source_data in self._static_legions_settlement_territory_sources:
             settlement_name = str(source_data.get("name", "") or "")
             source_order = self.legions_settlement_territory_orders_by_name.get(settlement_name, ())
@@ -630,6 +743,7 @@ class CampaignTerritoryMixin:
 
         self.legions_territory_tiles = tuple(combined_legions_tiles)
         self.legions_territory_tile_set = set(self.legions_territory_tiles)
+        # Доходные объекты считаются производными от актуального набора контролируемых клеток.
         self.legions_captured_gold_mine_tiles = tuple(
             tile
             for tile in self.gold_mine_tiles
@@ -637,15 +751,20 @@ class CampaignTerritoryMixin:
         )
         self.legions_captured_gold_mine_count = len(self.legions_captured_gold_mine_tiles)
         self._refresh_legions_captured_mana_source_state()
-        empire_claim_count = self._territory_claim_count(
-            len(self.empire_territory_order),
-            self.EMPIRE_TERRITORY_EXPANSION_PER_TURN,
-            self.turns,
-        )
-        self.empire_territory_tiles = self._claim_territory_tiles(
-            self.empire_territory_order,
-            empire_claim_count,
-        )
-        self.empire_territory_tile_set = set(self.empire_territory_tiles)
+        # Empire territory is optional for speed-focused training runs.
+        if bool(getattr(self, "empire_territory_enabled", True)):
+            empire_claim_count = self._territory_claim_count(
+                len(self.empire_territory_order),
+                self.EMPIRE_TERRITORY_EXPANSION_PER_TURN,
+                self.turns,
+            )
+            self.empire_territory_tiles = self._claim_territory_tiles(
+                self.empire_territory_order,
+                empire_claim_count,
+            )
+            self.empire_territory_tile_set = set(self.empire_territory_tiles)
+        else:
+            self.empire_territory_tiles = ()
+            self.empire_territory_tile_set = set()
         if hasattr(self, "grid_legions_territory_positions"):
             self._refresh_legions_territory_grid_obs_cache()

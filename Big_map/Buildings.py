@@ -117,7 +117,7 @@ legions_buildings_d2 = {
     "lod_d2_b009": {"id": "lod_d2_b009", "name": "Дворец Греха",         "gold": 5,    "requires": ["Дворец Порока"],       "blocks": [],                     "built": 0, "unit": "Колдунья", "blocked": 0},
     "lod_d2_b010": {"id": "lod_d2_b010", "name": "Зал Обмана",           "gold": 15,   "requires": ["Тёмное святилище"],    "blocks": ["Алтарь"],             "built": 0, "unit": "Инкуб", "blocked": 0},
     "lod_d2_b011": {"id": "lod_d2_b011", "name": "Алтарь",               "gold": 15,   "requires": ["Тёмное святилище"],    "blocks": ["Зал Обмана"],         "built": 0, "unit": "Пандемонеус", "blocked": 0},
-    "lod_d2_b012": {"id": "lod_d2_b012", "name": "Высокий храм",         "gold": 15,   "requires": ["Проклятые деревья"],   "blocks": [],                     "built": 0, "unit": "Суккуб", "blocked": 0},
+    "lod_d2_b012": {"id": "lod_d2_b012", "name": "Высокий храм",         "gold": 15,   "requires": ["Дворец Греха"],          "blocks": [],                     "built": 0, "unit": "Суккуб", "blocked": 0},
     "lod_d2_b013": {"id": "lod_d2_b013", "name": "Святыня поклонения",   "gold": 30,   "requires": ["Алтарь"],             "blocks": [],                     "built": 0, "unit": "Модеус", "blocked": 0},
 
     "lod_d2_b014": {"id": "lod_d2_b014", "name": "Шпиль",                "gold": 3,    "requires": [],                     "blocks": [],                     "built": 0, "unit": "Мраморная гаргулья", "blocked": 0},
@@ -167,4 +167,97 @@ elves_buildings_d2 = {
     "elf_d2_b021": {"id": "elf_d2_b021", "name": "Гильдия",            "gold": 1.5,  "requires": [],                   "blocks": [],                     "built": 0, "unit": "Вор эльфов", "blocked": 0},
     "elf_d2_b022": {"id": "elf_d2_b022", "name": "Башня магии",        "gold": 1.5,  "requires": [],                   "blocks": [],                     "built": 0, "unit": None, "blocked": 0},
     "elf_d2_b023": {"id": "elf_d2_b023", "name": "Храм",               "gold": 3,    "requires": [],                   "blocks": [],                     "built": 0, "unit": None, "blocked": 0},
+}
+
+
+_BUILDING_TABLES_D2 = {
+    "empire": empire_buildings_d2,
+    "mountain_clans": mountain_clans_buildings_d2,
+    "undead_hordes": undead_hordes_buildings_d2,
+    "legions": legions_buildings_d2,
+    "elves": elves_buildings_d2,
+}
+
+
+def _building_name_tuple(raw_names):
+    if isinstance(raw_names, str):
+        names_iter = (raw_names,)
+    elif isinstance(raw_names, (list, tuple, set)):
+        names_iter = raw_names
+    else:
+        names_iter = ()
+    return tuple(
+        str(name).strip()
+        for name in names_iter
+        if str(name).strip()
+    )
+
+
+def _normalize_building_table(table):
+    for entry in table.values():
+        if not isinstance(entry, dict):
+            continue
+        entry["requires"] = _building_name_tuple(entry.get("requires", ()))
+        entry["blocks"] = _building_name_tuple(entry.get("blocks", ()))
+
+
+def _build_building_metadata(table):
+    keys = []
+    key_by_name = {}
+    metadata_by_key = {}
+    max_gold = 1.0
+
+    for key, entry in table.items():
+        if not isinstance(entry, dict) or not entry.get("id"):
+            continue
+        key_s = str(key)
+        keys.append(key_s)
+        name = str(entry.get("name", "") or "").strip()
+        if name:
+            key_by_name[name] = key_s
+        try:
+            max_gold = max(max_gold, float(entry.get("gold", 0.0) or 0.0))
+        except (TypeError, ValueError):
+            pass
+
+    for key_s in keys:
+        entry = table[key_s]
+        requirements = _building_name_tuple(entry.get("requires", ()))
+        blocks = _building_name_tuple(entry.get("blocks", ()))
+        try:
+            base_gold = max(0.0, float(entry.get("gold", 0.0) or 0.0))
+        except (TypeError, ValueError):
+            base_gold = 0.0
+        metadata_by_key[key_s] = {
+            "name": str(entry.get("name", "") or "").strip(),
+            "requires": requirements,
+            "blocks": blocks,
+            "requirement_keys": tuple(
+                key_by_name[name]
+                for name in requirements
+                if name in key_by_name
+            ),
+            "block_keys": tuple(
+                key_by_name[name]
+                for name in blocks
+                if name in key_by_name
+            ),
+            "base_gold": base_gold,
+        }
+
+    return {
+        "keys": tuple(keys),
+        "key_by_name": dict(key_by_name),
+        "metadata_by_key": metadata_by_key,
+        "max_gold": float(max_gold),
+    }
+
+
+for _building_table in _BUILDING_TABLES_D2.values():
+    _normalize_building_table(_building_table)
+
+
+BUILDING_METADATA_D2 = {
+    key: _build_building_metadata(table)
+    for key, table in _BUILDING_TABLES_D2.items()
 }

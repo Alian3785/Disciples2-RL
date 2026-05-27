@@ -19,13 +19,16 @@ from copy import deepcopy
 from operator import itemgetter
 from typing import Dict, List, Optional, Tuple
 from gymnasium import spaces
-from data_dicts_compact_lines import DATA as UNIT_DATA
+from data_dicts_compact_lines import DATA as UNIT_DATA, placeholder_unit
 from grid import BLUE_TEAM_TEMPLATE
 
 # Импорт действий юнитов (предполагается, что эти файлы лежат рядом)
-from occultmaster_actions import handle_occultmaster_action
-from lyf_actions import handle_lyf_action
-from laclaan_actions import handle_laclaan_action
+from summon_actions import (
+    handle_laclaan_action,
+    handle_lyf_action,
+    handle_occultmaster_action,
+)
+
 
 SAVE_UNITS_ARRAYS_FLAG = int(os.environ.get("SAVE_UNITS_ARRAYS_FLAG", "1"))
 
@@ -145,6 +148,65 @@ ZERO_DAMAGE_NO_HP_UNIT_TYPES = frozenset(
         "Dwarfdruid",
         "Arhidruid",
     }
+)
+
+DOUBLE_STRIKE_TYPES = frozenset({"Demon", "Elfarcher"})
+
+MELEE_TYPES = frozenset(
+    {
+        "Warrior",
+        "Centaur Savage",
+        "Demon",
+        "Lord",
+        "Bone Lord",
+        "Dregazul",
+        "Ismir son",
+        "Betrezen",
+        "Uter",
+        "Abyss Devil",
+        "Aleman",
+        "Spider",
+    }
+)
+SMART_MELEE_TARGET_TYPES = frozenset({"Betrezen", "Uter"})
+LONG_PARALYSIS_TYPES = frozenset({"Betrezen", "Uter", "Abyss Devil"})
+
+AOE_TYPES = frozenset(
+    {
+        "Mage",
+        "Dead dragon",
+        "Wolf Lord",
+        "Gumtic",
+        "Drulliaan",
+        "Uter Demon",
+        "Tiamat",
+        "Teurg",
+        "Hermit",
+        "Vampire",
+        "Highvampire",
+        "Shamanka",
+    }
+)
+VAMPIRE_AOE_TYPES = frozenset({"Vampire", "Highvampire"})
+
+POINT_HEAL_SUPPORT_TYPES = frozenset({"Cliric", "Deva roshi"})
+PATRIACH_SUPPORT_TYPES = frozenset({"Patriach"})
+POINT_BUFF_SUPPORT_TYPES = frozenset(
+    {
+        "Travnitsa",
+        "Novice",
+        "Alchemist",
+        "Dwarfdruid",
+        "Arhidruid",
+    }
+)
+CLEANSING_SUPPORT_TYPES = frozenset({"Dwarfdruid", "Arhidruid"})
+MASS_HEAL_TYPES = frozenset({"Profit", "Sundancer", "Sylfid"})
+SUPPORT_TYPES = (
+    POINT_HEAL_SUPPORT_TYPES
+    | PATRIACH_SUPPORT_TYPES
+    | POINT_BUFF_SUPPORT_TYPES
+    | MASS_HEAL_TYPES
 )
 
 FEATURES_PER_UNIT = 8 + len(TYPE_LIST) + 5 * len(ATTACK_TYPES) + 14 + 3
@@ -496,150 +558,46 @@ def _apply_hero_levelup_bonuses(unit: Dict) -> None:
         unit["damage"] = strength_damage
         unit["original_damage"] = strength_damage
 
-UNITS_RED = [{'name': 'Скелет рыцарь',
-  'initiative': 50,
-  'initiative_base': 50,
-  'team': 'red',
-  'position': 1,
-  'stand': 'ahead',
-  'unit_type': 'Warrior',
-  'damage': 100,
-  'damage_secondary': 0,
-  'health': 270,
-  'max_health': 270,
-  'armor': 0,
-  'accuracy': 80,
-  'accuracy_secondary': 0,
-  'immunity': ['death'],
-  'resistance': [],
-  'attack_type_primary': 'Weapon',
-  'attack_type_secondary': '',
-  'big': False,
-  'paralyzed': 0,
-  'long_paralyzed': 0,
-  'running_away': 0,
-  'transformed': 0,
-  'basestats': []},
- {'name': 'Рыцарь смерти',
-  'initiative': 50,
-  'initiative_base': 50,
-  'team': 'red',
-  'position': 2,
-  'stand': 'ahead',
-  'unit_type': 'Warrior',
-  'damage': 50,
-  'damage_secondary': 0,
-  'health': 150,
-  'max_health': 150,
-  'armor': 0,
-  'accuracy': 80,
-  'accuracy_secondary': 0,
-  'immunity': ['death'],
-  'resistance': [],
-  'attack_type_primary': 'Weapon',
-  'attack_type_secondary': '',
-  'big': False,
-  'paralyzed': 0,
-  'long_paralyzed': 0,
-  'running_away': 0,
-  'transformed': 0,
-  'basestats': []},
- {'name': 'Змей ужаса',
-  'initiative': 35,
-  'initiative_base': 35,
-  'team': 'red',
-  'position': 3,
-  'stand': 'ahead',
-  'unit_type': 'Dead dragon',
-  'damage': 65,
-  'damage_secondary': 20,
-  'health': 450,
-  'max_health': 450,
-  'armor': 0,
-  'accuracy': 80,
-  'accuracy_secondary': 40,
-  'immunity': ['death'],
-  'resistance': [],
-  'attack_type_primary': 'death',
-  'attack_type_secondary': 'death',
-  'big': True,
-  'paralyzed': 0,
-  'long_paralyzed': 0,
-  'running_away': 0,
-  'transformed': 0,
-  'basestats': []},
- {'name': 'Архилич',
-  'initiative': 40,
-  'initiative_base': 40,
-  'team': 'red',
-  'position': 4,
-  'stand': 'behind',
-  'unit_type': 'Mage',
-  'damage': 90,
-  'damage_secondary': 0,
-  'health': 170,
-  'max_health': 170,
-  'armor': 0,
-  'accuracy': 80,
-  'accuracy_secondary': 0,
-  'immunity': ['death'],
-  'resistance': [],
-  'attack_type_primary': 'death',
-  'attack_type_secondary': '',
-  'big': False,
-  'paralyzed': 0,
-  'long_paralyzed': 0,
-  'running_away': 0,
-  'transformed': 0,
-  'basestats': []},
- {'name': 'Смерть',
-  'initiative': 40,
-  'initiative_base': 40,
-  'team': 'red',
-  'position': 5,
-  'stand': 'behind',
-  'unit_type': 'Death',
-  'damage': 100,
-  'damage_secondary': 20,
-  'health': 125,
-  'max_health': 125,
-  'armor': 0,
-  'accuracy': 80,
-  'accuracy_secondary': 50,
-  'immunity': ['death', 'Weapon'],
-  'resistance': [],
-  'attack_type_primary': 'death',
-  'attack_type_secondary': 'death',
-  'big': False,
-  'paralyzed': 0,
-  'long_paralyzed': 0,
-  'running_away': 0,
-  'transformed': 0,
-  'basestats': []},
- {'name': 'пусто',
-  'initiative': 0,
-  'initiative_base': 0,
-  'team': 'red',
-  'position': 6,
-  'stand': 'behind',
-  'unit_type': 'Archer',
-  'damage': 0,
-  'damage_secondary': 0,
-  'health': 0,
-  'max_health': 0,
-  'armor': 0,
-  'accuracy': 0,
-  'accuracy_secondary': 0,
-  'immunity': [],
-  'resistance': [],
-  'attack_type_primary': 'Weapon',
-  'attack_type_secondary': '',
-  'big': False,
-  'paralyzed': 0,
-  'long_paralyzed': 0,
-  'running_away': 0,
-  'transformed': 0,
-  'basestats': []}]
+DEFAULT_RED_ROSTER: Tuple[Tuple[str, int], ...] = (
+    ("Скелет рыцарь", 1),
+    ("Рыцарь смерти", 2),
+    ("Змей ужаса", 3),
+    ("Архилич", 4),
+    ("Смерть", 5),
+    ("пусто", 6),
+)
+
+
+def _build_default_battle_unit(name: str, team: str, position: int) -> Dict:
+    if name == "пусто":
+        return placeholder_unit(team, position)
+
+    template = BATTLE_TEMPLATE_BY_NAME.get(name)
+    if not isinstance(template, dict):
+        raise KeyError(f"Default battle unit template not found: {name!r}")
+
+    unit = deepcopy(template)
+    unit.update(
+        {
+            "name": name,
+            "initiative": int(unit.get("initiative_base", 0) or 0),
+            "team": team,
+            "position": position,
+            "health": int(unit.get("max_health", 0) or 0),
+            "paralyzed": 0,
+            "long_paralyzed": 0,
+            "running_away": 0,
+            "transformed": 0,
+            "basestats": [],
+        }
+    )
+    return unit
+
+
+UNITS_RED = [
+    _build_default_battle_unit(name, "red", position)
+    for name, position in DEFAULT_RED_ROSTER
+]
 
 UNITS_BLUE = deepcopy(BLUE_TEAM_TEMPLATE)
 
@@ -786,7 +744,14 @@ HP_FALLBACK_MAX = 800.0
 
 
 def _clip01(x: float) -> float:
-    return float(np.clip(float(x), 0.0, 1.0))
+    x = float(x)
+    if x <= 0.0:
+        return 0.0
+    if x >= 1.0:
+        return 1.0
+    if x != x:
+        return 0.0
+    return x
 
 
 def _safe_div(x: float, d: float) -> float:
@@ -794,6 +759,16 @@ def _safe_div(x: float, d: float) -> float:
     if d <= 1e-12:
         return 0.0
     return float(x) / d
+
+
+def _norm_positive(value: object, denominator: float) -> float:
+    denominator = float(denominator)
+    if denominator <= 1e-12:
+        return 0.0
+    value = float(value)
+    if value <= 0.0:
+        return 0.0
+    return _clip01(value / denominator)
 
 
 def _to01_bool(v) -> float:
@@ -857,7 +832,7 @@ class BattleEnv(gym.Env):
         self._spider_applied_poison: Dict[int, bool] = {}
         self._dregazul_applied_poison: Dict[int, bool] = {}
         self._ismir_applied_uran: Dict[int, bool] = {}
-        self.survived_inits: List[Dict] = []
+        self.escaped_units: List[Dict] = []
         self.step_count: int = 0
         self.equipped_hero_items: List[Optional[str]] = [None, None]
         self.equipped_hero_item_uses_left: List[Optional[int]] = [None, None]
@@ -1032,36 +1007,6 @@ class BattleEnv(gym.Env):
             return "uran_turns_left", "uran_damage_per_tick"
         return "poison_turns_left", "poison_damage_per_tick"
 
-    @staticmethod
-    def _hero_item_unit_blocks_type(unit: Dict, damage_type: object) -> bool:
-        normalized_type = str(damage_type or "").strip()
-        if not normalized_type:
-            return False
-        normalized_lower = normalized_type.lower()
-        immunities_lower = {
-            str(value or "").strip().lower() for value in (unit.get("immunity") or [])
-        }
-        if normalized_lower in immunities_lower:
-            return True
-        resistances_lower = {
-            str(value or "").strip().lower() for value in (unit.get("resistance") or [])
-        }
-        if normalized_lower in resistances_lower:
-            return True
-        defence_flag_names = (
-            f"{normalized_type}defence",
-            f"{normalized_type}Defense",
-            f"{normalized_lower}defence",
-            f"{normalized_lower}_defence",
-        )
-        for flag_name in defence_flag_names:
-            try:
-                if int(unit.get(flag_name, 0) or 0) == 1:
-                    return True
-            except (TypeError, ValueError):
-                continue
-        return False
-
     def _hero_item_find_unit_template(self, unit_name: str) -> Dict[str, object]:
         normalized_name = str(unit_name or "").strip()
         if not normalized_name:
@@ -1115,26 +1060,6 @@ class BattleEnv(gym.Env):
             )
         return (target_unit,) if isinstance(target_unit, dict) else ()
 
-    @staticmethod
-    def _hero_item_unit_defence_blocks_type(unit: Dict, damage_type: object) -> bool:
-        normalized_type = str(damage_type or "").strip()
-        if not normalized_type:
-            return False
-        normalized_lower = normalized_type.lower()
-        defence_flag_names = (
-            f"{normalized_type}defence",
-            f"{normalized_type}Defense",
-            f"{normalized_lower}defence",
-            f"{normalized_lower}_defence",
-        )
-        for flag_name in defence_flag_names:
-            try:
-                if int(unit.get(flag_name, 0) or 0) == 1:
-                    return True
-            except (TypeError, ValueError):
-                continue
-        return False
-
     def _hero_item_attacker_proxy(
         self,
         source_unit: Optional[Dict],
@@ -1187,12 +1112,6 @@ class BattleEnv(gym.Env):
             )
             return True
         if self._resilience_blocks(proxy, target_unit, custom_tag=damage_type):
-            return True
-        if self._hero_item_unit_defence_blocks_type(target_unit, damage_type):
-            self._log(
-                f"Hero item '{damage_type}' is blocked by defence on "
-                f"{target_unit.get('team', '').upper()} {target_unit.get('name')}#{target_unit.get('position')}."
-            )
             return True
         return False
 
@@ -1252,7 +1171,6 @@ class BattleEnv(gym.Env):
         if new_health <= 0:
             target_unit["initiative"] = 0
             self._kill_linked_summons(target_unit)
-            self._release_lord_burn_from_unit(target_unit)
         return damage
 
     def _apply_hero_item_drain(
@@ -1526,7 +1444,6 @@ class BattleEnv(gym.Env):
             "poison_damage_per_tick": 0,
             "burn_turns_left": 0,
             "burn_damage_per_tick": 0,
-            "burn_source_lord_pos": None,
             "uran_turns_left": 0,
             "uran_damage_per_tick": 0,
             "resilience_used_types": [],
@@ -1630,12 +1547,22 @@ class BattleEnv(gym.Env):
             return self._alive(target_unit)
         return False
 
-    def _hero_item_target_allowed(self, *, item_name: str, target_pos: Optional[int]) -> bool:
+    def _hero_item_target_allowed(
+        self,
+        *,
+        item_name: str,
+        target_pos: Optional[int],
+        units_by_pos: Optional[Dict[int, Dict]] = None,
+    ) -> bool:
         effect = self._hero_item_effect(item_name)
         if not effect or target_pos is None:
             return False
         effect_kind = str(effect.get("kind", "") or "").strip().lower()
-        target_unit = self._unit_by_position(int(target_pos))
+        target_unit = (
+            units_by_pos.get(int(target_pos))
+            if units_by_pos is not None
+            else self._unit_by_position(int(target_pos))
+        )
         if not isinstance(target_unit, dict):
             return False
         target_team = self._hero_item_effect_target_team(
@@ -1671,7 +1598,8 @@ class BattleEnv(gym.Env):
         effect = self._hero_item_effect(item_name)
         if not effect or target_pos is None:
             return False, None, 0.0
-        target_unit = self._unit_by_position(int(target_pos))
+        units_by_pos = self._units_by_position()
+        target_unit = units_by_pos.get(int(target_pos))
         if not isinstance(target_unit, dict):
             return False, None, 0.0
         effect_kind = str(effect.get("kind", "") or "").strip().lower()
@@ -1692,7 +1620,7 @@ class BattleEnv(gym.Env):
             return False, None, 0.0
 
         source_unit = (
-            self._unit_by_position(self.current_blue_attacker_pos)
+            units_by_pos.get(self.current_blue_attacker_pos)
             if self.current_blue_attacker_pos is not None
             else None
         )
@@ -1799,8 +1727,10 @@ class BattleEnv(gym.Env):
         Для ближников пересекаем с досягаемыми целями (_warrior_allowed_targets).
         Для AoE (Mage, Dead dragon, Gumtic, Uter Demon, Tiamat, Teurg) — разрешаем любые живые цели.
         Для остальных (включая стрелков) — разрешаем любые живые цели.
-        Hero-only действия предметов доступны только на ходу героя и только по занятым
-        своим слотам 1..6.
+        Hero-only действия предметов доступны только на ходу героя. Для каждого
+        предмета есть отдельные окна действий по своим и вражеским позициям 1..6;
+        конкретные разрешенные цели выбираются по target_team/target_state/scope
+        эффекта предмета.
         """
         n_targets = len(TARGET_POSITIONS)
         mask = np.ones(TOTAL_AGENT_ACTIONS, dtype=bool)  # по умолчанию всё разрешено
@@ -1833,14 +1763,15 @@ class BattleEnv(gym.Env):
         if self.current_blue_attacker_pos is None:
             return mask
 
-        attacker = self._unit_by_position(self.current_blue_attacker_pos)
+        units_by_pos = self._units_by_position()
+        attacker = units_by_pos.get(self.current_blue_attacker_pos)
         if attacker is None or not self._alive(attacker):
             return mask
         if attacker.get("waited", 0) == 1:
             mask[WAIT_ACTION_INDEX] = False
 
         demon_second_strike = (
-            attacker.get("unit_type") in ("Demon", "Elfarcher")
+            attacker.get("unit_type") in DOUBLE_STRIKE_TYPES
             and self.blue_attacks_left == 1
         )
         if demon_second_strike:
@@ -1867,22 +1798,26 @@ class BattleEnv(gym.Env):
                 first_item_mask[idx] = first_item_available and self._hero_item_target_allowed(
                     item_name=first_item_name,
                     target_pos=battle_pos,
+                    units_by_pos=units_by_pos,
                 )
                 second_item_mask[idx] = second_item_available and self._hero_item_target_allowed(
                     item_name=second_item_name,
                     target_pos=battle_pos,
+                    units_by_pos=units_by_pos,
                 )
                 first_enemy_item_mask[idx] = first_item_available and self._hero_item_target_allowed(
                     item_name=first_item_name,
                     target_pos=enemy_battle_pos,
+                    units_by_pos=units_by_pos,
                 )
                 second_enemy_item_mask[idx] = second_item_available and self._hero_item_target_allowed(
                     item_name=second_item_name,
                     target_pos=enemy_battle_pos,
+                    units_by_pos=units_by_pos,
                 )
 
         def is_alive_red(pos: int) -> bool:
-            u = self._unit_by_position(pos)
+            u = units_by_pos.get(pos)
             return (u is not None) and self._alive(u) and (u["team"] == "red")
 
         atype = attacker.get("unit_type")
@@ -1903,7 +1838,7 @@ class BattleEnv(gym.Env):
                     mask_targets[i] = False
                     continue
 
-                target_unit = self._unit_by_position(pos)
+                target_unit = units_by_pos.get(pos)
                 if target_unit is None or not self._alive(target_unit):
                     mask_targets[i] = False
                     continue
@@ -1943,35 +1878,9 @@ class BattleEnv(gym.Env):
                 opp_blue = self._opposite_position(red_pos, "blue")
                 mask_targets[i] = opp_blue in empty_blue
 
-        support_types = (
-            "Cliric",
-            "Profit",
-            "Travnitsa",
-            "Sylfid",
-            "Sundancer",
-            "Deva roshi",
-            "Patriach",
-            "Novice",
-            "Alchemist",
-            "Dwarfdruid",
-            "Arhidruid",
-        )
-
         # Ближники: только досягаемые цели
-        if atype in (
-            "Warrior",
-            "Centaur Savage",
-            "Demon",
-            "Lord",
-            "Bone Lord",
-            "Dregazul",
-            "Ismir son",
-            "Uter",
-            "Abyss Devil",
-            "Aleman",
-            "Spider",
-        ):
-            allowed_reach = set(self._warrior_allowed_targets(attacker))
+        if atype in MELEE_TYPES:
+            allowed_reach = set(self._warrior_allowed_targets(attacker, units_by_pos=units_by_pos))
             for i, pos in enumerate(TARGET_POSITIONS):
                 mask_targets[i] = is_alive_red(pos) and (pos in allowed_reach)
 
@@ -1984,19 +1893,7 @@ class BattleEnv(gym.Env):
                     mask_targets[live_idxs] = True
 
         # AoE: формальная цель, запрещаем только мёртвые слоты
-        elif atype in (
-            "Mage",
-            "Dead dragon",
-            "Wolf Lord",
-            "Gumtic",
-            "Uter Demon",
-            "Tiamat",
-            "Teurg",
-            "Hermit",
-            "Vampire",
-            "Highvampire",
-            "Shamanka",
-        ):
+        elif atype in AOE_TYPES:
             attacker_pos = attacker.get("position")
             for i, pos in enumerate(TARGET_POSITIONS):
                 mask_targets[i] = is_alive_red(pos) or (
@@ -2005,14 +1902,14 @@ class BattleEnv(gym.Env):
             if not mask_targets.any():
                 mask_targets[:] = True
         else:
-            if atype in support_types:
+            if atype in SUPPORT_TYPES:
                 for i, pos in enumerate(TARGET_POSITIONS):
                     opposite_pos = self._opposite_position(pos, attacker["team"])
                     if opposite_pos is None:
                         mask_targets[i] = False
                         continue
-                    recipient = self._unit_by_position(opposite_pos)
-                    if atype == "Patriach":
+                    recipient = units_by_pos.get(opposite_pos)
+                    if atype in PATRIACH_SUPPORT_TYPES:
                         mask_targets[i] = (
                             recipient is not None
                             and recipient.get("team") == attacker.get("team")
@@ -2105,29 +2002,11 @@ class BattleEnv(gym.Env):
     def _unit_by_position(self, pos: int):
         return next((u for u in self.combined if u["position"] == pos), None)
 
-    def _occupied_unit_at_position(self, pos: int, team: Optional[str] = None):
-        unit = self._unit_by_position(pos)
-        if (
-            unit is not None
-            and self._alive(unit)
-            and (team is None or unit.get("team") == team)
-            and unit.get("name") != "пусто"
-        ):
-            return unit
-
-        if pos in RED_BACK_POSITIONS or pos in BLUE_BACK_POSITIONS:
-            front_pos = pos - 3
-            partner = self._unit_by_position(front_pos)
-            if (
-                partner is not None
-                and self._alive(partner)
-                and partner.get("big", False)
-                and (team is None or partner.get("team") == team)
-                and partner.get("name") != "пусто"
-            ):
-                return partner
-
-        return None
+    def _units_by_position(self) -> Dict[int, Dict]:
+        units_by_pos: Dict[int, Dict] = {}
+        for unit in self.combined:
+            units_by_pos.setdefault(unit["position"], unit)
+        return units_by_pos
 
     def _live_positions_of(self, team: str):
         return [
@@ -2171,164 +2050,6 @@ class BattleEnv(gym.Env):
             return [0, 1, 2], []
         return [1, 2], [0]
 
-    def _warrior_allowed_targets(self, attacker: Dict) -> List[int]:
-        assert attacker.get("unit_type") in (
-            "Warrior",
-            "Centaur Savage",
-            "Demon",
-            "Lord",
-            "Bone Lord",
-            "Dregazul",
-            "Ismir son",
-            "Uter",
-            "Abyss Devil",
-            "Aleman",
-            "Spider",
-        )
-        if attacker["stand"] == "behind":
-            if any(
-                self._alive(u)
-                and u["team"] == attacker["team"]
-                and u.get("unit_type")
-                in (
-                    "Warrior",
-                    "Centaur Savage",
-                    "Demon",
-                    "Lord",
-                    "Bone Lord",
-                    "Dregazul",
-                    "Ismir son",
-                    "Uter",
-                    "Abyss Devil",
-                    "Aleman",
-                    "Spider",
-                )
-                and u["stand"] == "ahead"
-                for u in self.combined
-            ):
-                return []
-        ahead, behind = self._enemy_rows(attacker["team"])
-        col = self._col_of(attacker["position"])
-        near_cols, far_cols = self._warrior_near_far_cols(col)
-
-        def alive(pos):
-            uu = self._unit_by_position(pos)
-            return uu is not None and self._alive(uu)
-
-        near = [ahead[c] for c in near_cols if alive(ahead[c])]
-        if near:
-            return near
-        far = [ahead[c] for c in far_cols if alive(ahead[c])]
-        if far:
-            return far
-
-        near2 = [behind[c] for c in near_cols if alive(behind[c])]
-        if near2:
-            return near2
-        far2 = [behind[c] for c in far_cols if alive(behind[c])]
-        return far2
-
-    def _travnitsa_auto_target(self, healer: Dict) -> Optional[int]:
-        allies = [
-            u
-            for u in self.combined
-            if u["team"] == healer["team"] and self._alive(u) and u is not healer
-        ]
-        if not allies:
-            return None
-        if healer.get("team") == "red":
-
-            def dmg_val(unit: Dict) -> int:
-                return int(unit.get("damage", 0) or 0)
-
-            max_damage = max(dmg_val(u) for u in allies)
-            top_candidates = [u for u in allies if dmg_val(u) == max_damage]
-            return self.rng.choice(top_candidates)["position"]
-        return self.rng.choice(allies)["position"]
-
-    def _summoner_auto_target(self, summoner: Dict) -> Optional[int]:
-        def slot_empty(pos: int) -> bool:
-            unit = self._unit_by_position(pos)
-            return unit is None or not self._alive(unit)
-
-        front_candidates = [pos for pos in RED_FRONT_POSITIONS if slot_empty(pos)]
-        if front_candidates:
-            chosen_pos = self.rng.choice(front_candidates)
-        else:
-            back_candidates = [
-                pos
-                for pos in RED_BACK_POSITIONS
-                if slot_empty(pos) and not self._is_position_behind_big(pos)
-            ]
-            if not back_candidates:
-                return None
-            chosen_pos = self.rng.choice(back_candidates)
-
-        if chosen_pos in RED_FRONT_POSITIONS:
-            col = RED_FRONT_POSITIONS.index(chosen_pos)
-            return BLUE_FRONT_POSITIONS[col]
-        col = RED_BACK_POSITIONS.index(chosen_pos)
-        return BLUE_BACK_POSITIONS[col]
-
-    def _alchemist_auto_target(self, supporter: Dict) -> Optional[int]:
-        allies = [
-            u
-            for u in self.combined
-            if u["team"] == supporter["team"]
-            and self._alive(u)
-            and u is not supporter
-            and u.get("unit_type") != "Alchemist"
-            and u.get("running_away", 0) != 1
-        ]
-        if not allies:
-            return None
-        needs_help = [
-            u
-            for u in allies
-            if int(u.get("initiative", 0) or 0) < int(u.get("initiative_base", 0) or 0)
-        ]
-        if supporter.get("team") == "red":
-            if not needs_help:
-                return None
-
-            def dmg_value(unit: Dict) -> int:
-                return int(unit.get("damage", 0) or 0)
-
-            positive = [u for u in needs_help if dmg_value(u) > 0]
-            if not positive:
-                return None
-            max_dmg = max(dmg_value(u) for u in positive)
-            best = [u for u in positive if dmg_value(u) == max_dmg]
-            return self.rng.choice(best)["position"]
-
-        pool = needs_help if needs_help else allies
-        chosen = self.rng.choice(pool)
-        return chosen["position"]
-
-    def _apply_alchemist_support(self, alchemist: Dict, recipient: Dict) -> bool:
-        if recipient is None or not self._alive(recipient):
-            return False
-        if recipient is alchemist:
-            return False
-        if (
-            recipient.get("unit_type") == "Alchemist"
-            or recipient.get("running_away", 0) == 1
-        ):
-            self._log(
-                f"Дополнительный ход без эффекта: {recipient['team'].upper()} {recipient['name']}#{recipient['position']} не может получить бонус от алхимика."
-            )
-            return False
-
-        recipient.setdefault("bonusturn", 0)
-        base_ini = int(recipient.get("initiative_base", 0) or 0)
-        recipient["initiative"] = base_ini
-        recipient["bonusturn"] += 1
-        self._log(
-            f"Дополнительный ход: {alchemist['team'].upper()} {alchemist['name']}#{alchemist['position']} восстанавливает инициативу "
-            f"{recipient['team'].upper()} {recipient['name']}#{recipient['position']} до {base_ini} и увеличивает bonusturn до {recipient['bonusturn']}."
-        )
-        return True
-
     def _opposite_position(self, pos: int, team: str) -> Optional[int]:
         col = self._col_of(pos)
         if team == "blue":
@@ -2342,179 +2063,6 @@ class BattleEnv(gym.Env):
             if pos in BLUE_BACK_POSITIONS:
                 return RED_BACK_POSITIONS[col]
         return None
-
-    def _cliric_auto_target(self, healer: Dict) -> Optional[int]:
-        allies = [
-            u
-            for u in self.combined
-            if u["team"] == healer["team"]
-            and self._alive(u)
-            and u["health"] < u.get("max_health", 0)
-        ]
-        if not allies:
-            return None
-        min_hp = min(u["health"] for u in allies)
-        candidates = [u for u in allies if u["health"] == min_hp]
-        return self.rng.choice(candidates)["position"]
-
-    def _apply_cliric_heal(self, healer: Dict, recipient: Optional[Dict]) -> bool:
-        if recipient is None or not self._alive(recipient):
-            return False
-
-        heal_amount = int(healer.get("damage", 0) or 0)
-        if heal_amount <= 0:
-            self._log(
-                f"? Лечение без силы: {healer['team'].upper()} {healer['name']}#{healer['position']} имеет недостаточный урон (damage={heal_amount})."
-            )
-            return False
-
-        if healer.get("unit_type") == "Sundancer":
-            if "resistance" not in recipient:
-                recipient["resistance"] = []
-            if "Fire" not in recipient["resistance"]:
-                recipient["resistance"].append("Fire")
-            recipient.setdefault("resilience_used_types", [])
-            if "Fire" in recipient["resilience_used_types"]:
-                recipient["resilience_used_types"].remove("Fire")
-            recipient["Firedefence"] = 1
-            self._log(
-                f"? Защита от огня: {healer['team'].upper()} {healer['name']}#{healer['position']} даёт огненную защиту "
-                f"для {recipient['team'].upper()} {recipient['name']}#{recipient['position']}"
-            )
-
-        elif healer.get("unit_type") == "Sylfid":
-            if "resistance" not in recipient:
-                recipient["resistance"] = []
-            if "Air" not in recipient["resistance"]:
-                recipient["resistance"].append("Air")
-            recipient.setdefault("resilience_used_types", [])
-            if "Air" in recipient["resilience_used_types"]:
-                recipient["resilience_used_types"].remove("Air")
-            recipient["Airdefence"] = 1
-            self._log(
-                f"? Защита от воздуха: {healer['team'].upper()} {healer['name']}#{healer['position']} даёт воздушную защиту "
-                f"для {recipient['team'].upper()} {recipient['name']}#{recipient['position']}"
-            )
-
-        elif healer.get("unit_type") == "Deva roshi":
-            if "resistance" not in recipient:
-                recipient["resistance"] = []
-            recipient.setdefault("resilience_used_types", [])
-            element_map = (
-                ("Fire", "Firedefence"),
-                ("Air", "Airdefence"),
-                ("Water", "Waterdefence"),
-                ("Earth", "Earthdefence"),
-            )
-            for element, field in element_map:
-                if element not in recipient["resistance"]:
-                    recipient["resistance"].append(element)
-                if element in recipient["resilience_used_types"]:
-                    recipient["resilience_used_types"].remove(element)
-                recipient[field] = 1
-            self._log(
-                f"? Четверная защита: {healer['team'].upper()} {healer['name']}#{healer['position']} усиливает защиту "
-                f"{recipient['team'].upper()} {recipient['name']}#{recipient['position']} от огня, воздуха, воды и земли."
-            )
-
-        before = recipient["health"]
-        max_hp = recipient.get("max_health", before)
-        if before >= max_hp:
-            return False
-
-        healed = min(heal_amount, max_hp - before)
-        if healed <= 0:
-            return False
-
-        recipient["health"] += healed
-        self._log(
-            f"? Лечение: {healer['team'].upper()} {healer['name']}#{healer['position']} восстанавливает {healed} HP "
-            f"для {recipient['team'].upper()} {recipient['name']}#{recipient['position']} ({before}>{recipient['health']})."
-        )
-
-        return True
-
-    def _patriach_targetable_allies(self, healer: Dict) -> List[Dict]:
-        team = healer.get("team")
-        return [
-            unit
-            for unit in self.combined
-            if unit.get("team") == team
-            and unit.get("name") != "пусто"
-            and not bool(unit.get("Summoned"))
-        ]
-
-    def _patriach_auto_target(self, healer: Dict) -> Optional[int]:
-        allies = self._patriach_targetable_allies(healer)
-        dead_allies = [
-            unit
-            for unit in allies
-            if (unit.get("health", 0) or 0) <= 0
-            and int(unit.get("initiative", 0) or 0) <= 0
-        ]
-        if dead_allies:
-            return self.rng.choice(dead_allies)["position"]
-
-        wounded = [
-            unit
-            for unit in allies
-            if self._alive(unit) and unit.get("health", 0) < unit.get("max_health", 0)
-        ]
-        if not wounded:
-            return None
-
-        min_hp = min(u["health"] for u in wounded)
-        candidates = [u for u in wounded if u["health"] == min_hp]
-        return self.rng.choice(candidates)["position"]
-
-    def _apply_patriach_support(self, healer: Dict, recipient: Optional[Dict]) -> str:
-        if recipient is None:
-            return "invalid"
-        if recipient.get("team") != healer.get("team"):
-            return "invalid"
-        if recipient.get("name") == "пусто":
-            return "invalid"
-        if bool(recipient.get("Summoned")):
-            return "invalid"
-
-        if self._alive(recipient):
-            healed = self._apply_cliric_heal(healer, recipient)
-            return "heal_success" if healed else "heal_no_effect"
-
-        health = float(recipient.get("health", 0) or 0)
-        initiative = int(recipient.get("initiative", 0) or 0)
-        if health > 0 or initiative > 0:
-            return "invalid"
-
-        max_hp = int(recipient.get("max_health", 0) or 0)
-        if max_hp <= 0:
-            return "revive_failed"
-
-        restored = max(1, int(round(max_hp * 0.5)))
-        recipient["health"] = restored
-        recipient["initiative"] = 0
-        recipient["paralyzed"] = 0
-        recipient["long_paralyzed"] = 0
-        recipient["running_away"] = 0
-        recipient.setdefault("poison_turns_left", 0)
-        recipient.setdefault("burn_turns_left", 0)
-        recipient.setdefault("uran_turns_left", 0)
-        recipient.setdefault("poison_damage_per_tick", 0)
-        recipient.setdefault("burn_damage_per_tick", 0)
-        recipient.setdefault("uran_damage_per_tick", 0)
-        recipient["poison_turns_left"] = 0
-        recipient["burn_turns_left"] = 0
-        recipient["uran_turns_left"] = 0
-        recipient["poison_damage_per_tick"] = 0
-        recipient["burn_damage_per_tick"] = 0
-        recipient["uran_damage_per_tick"] = 0
-
-        self._cleanse_negative_effects(recipient)
-        self._log(
-            f"? Воскрешение Патриарха: {healer['team'].upper()} {healer['name']}#{healer['position']} "
-            f"возвращает {recipient['team'].upper()} {recipient['name']}#{recipient['position']} к жизни ({restored}/{max_hp})."
-        )
-        return "revive_success"
 
     def _transform_snapshot_keys(self, include_health_fields: bool = False) -> Tuple[str, ...]:
         keys = (
@@ -2679,6 +2227,416 @@ class BattleEnv(gym.Env):
         for unit in self.combined:
             self._restore_transformed_unit(unit)
 
+    def _warrior_allowed_targets(
+        self,
+        attacker: Dict,
+        *,
+        units_by_pos: Optional[Dict[int, Dict]] = None,
+    ) -> List[int]:
+        assert attacker.get("unit_type") in MELEE_TYPES
+        if attacker["stand"] == "behind":
+            if any(
+                self._alive(u)
+                and u["team"] == attacker["team"]
+                and u.get("unit_type") in MELEE_TYPES
+                and u["stand"] == "ahead"
+                for u in self.combined
+            ):
+                return []
+        ahead, behind = self._enemy_rows(attacker["team"])
+        col = self._col_of(attacker["position"])
+        near_cols, far_cols = self._warrior_near_far_cols(col)
+
+        if units_by_pos is None:
+            units_by_pos = self._units_by_position()
+
+        def alive(pos):
+            uu = units_by_pos.get(pos)
+            return uu is not None and self._alive(uu)
+
+        near = [ahead[c] for c in near_cols if alive(ahead[c])]
+        if near:
+            return near
+        far = [ahead[c] for c in far_cols if alive(ahead[c])]
+        if far:
+            return far
+
+        near2 = [behind[c] for c in near_cols if alive(behind[c])]
+        if near2:
+            return near2
+        far2 = [behind[c] for c in far_cols if alive(behind[c])]
+        return far2
+
+    def _travnitsa_auto_target(self, healer: Dict) -> Optional[int]:
+        allies = [
+            u
+            for u in self.combined
+            if u["team"] == healer["team"] and self._alive(u) and u is not healer
+        ]
+        if not allies:
+            return None
+        if healer.get("team") == "red":
+
+            def dmg_val(unit: Dict) -> int:
+                return int(unit.get("damage", 0) or 0)
+
+            max_damage = max(dmg_val(u) for u in allies)
+            top_candidates = [u for u in allies if dmg_val(u) == max_damage]
+            return self.rng.choice(top_candidates)["position"]
+        return self.rng.choice(allies)["position"]
+
+    def _summoner_auto_target(self, summoner: Dict) -> Optional[int]:
+        def slot_empty(pos: int) -> bool:
+            unit = self._unit_by_position(pos)
+            return unit is None or not self._alive(unit)
+
+        front_candidates = [pos for pos in RED_FRONT_POSITIONS if slot_empty(pos)]
+        if front_candidates:
+            chosen_pos = self.rng.choice(front_candidates)
+        else:
+            back_candidates = [
+                pos
+                for pos in RED_BACK_POSITIONS
+                if slot_empty(pos) and not self._is_position_behind_big(pos)
+            ]
+            if not back_candidates:
+                return None
+            chosen_pos = self.rng.choice(back_candidates)
+
+        if chosen_pos in RED_FRONT_POSITIONS:
+            col = RED_FRONT_POSITIONS.index(chosen_pos)
+            return BLUE_FRONT_POSITIONS[col]
+        col = RED_BACK_POSITIONS.index(chosen_pos)
+        return BLUE_BACK_POSITIONS[col]
+
+    def _alchemist_auto_target(self, supporter: Dict) -> Optional[int]:
+        allies = [
+            u
+            for u in self.combined
+            if u["team"] == supporter["team"]
+            and self._alive(u)
+            and u is not supporter
+            and u.get("unit_type") != "Alchemist"
+            and u.get("running_away", 0) != 1
+        ]
+        if not allies:
+            return None
+        needs_help = [
+            u
+            for u in allies
+            if int(u.get("initiative", 0) or 0) < int(u.get("initiative_base", 0) or 0)
+        ]
+        if supporter.get("team") == "red":
+            if not needs_help:
+                return None
+
+            def dmg_value(unit: Dict) -> int:
+                return int(unit.get("damage", 0) or 0)
+
+            positive = [u for u in needs_help if dmg_value(u) > 0]
+            if not positive:
+                return None
+            max_dmg = max(dmg_value(u) for u in positive)
+            best = [u for u in positive if dmg_value(u) == max_dmg]
+            return self.rng.choice(best)["position"]
+
+        pool = needs_help if needs_help else allies
+        chosen = self.rng.choice(pool)
+        return chosen["position"]
+
+    def _cliric_auto_target(self, healer: Dict) -> Optional[int]:
+        allies = [
+            u
+            for u in self.combined
+            if u["team"] == healer["team"]
+            and self._alive(u)
+            and u["health"] < u.get("max_health", 0)
+        ]
+        if not allies:
+            return None
+        min_hp = min(u["health"] for u in allies)
+        candidates = [u for u in allies if u["health"] == min_hp]
+        return self.rng.choice(candidates)["position"]
+
+    def _patriach_targetable_allies(self, healer: Dict) -> List[Dict]:
+        team = healer.get("team")
+        return [
+            unit
+            for unit in self.combined
+            if unit.get("team") == team
+            and unit.get("name") != "пусто"
+            and not bool(unit.get("Summoned"))
+        ]
+
+    def _patriach_auto_target(self, healer: Dict) -> Optional[int]:
+        allies = self._patriach_targetable_allies(healer)
+        dead_allies = [
+            unit
+            for unit in allies
+            if (unit.get("health", 0) or 0) <= 0
+            and int(unit.get("initiative", 0) or 0) <= 0
+        ]
+        if dead_allies:
+            return self.rng.choice(dead_allies)["position"]
+
+        wounded = [
+            unit
+            for unit in allies
+            if self._alive(unit) and unit.get("health", 0) < unit.get("max_health", 0)
+        ]
+        if not wounded:
+            return None
+
+        min_hp = min(u["health"] for u in wounded)
+        candidates = [u for u in wounded if u["health"] == min_hp]
+        return self.rng.choice(candidates)["position"]
+
+    def _pick_lowest_hp(self, positions: List[int]) -> Optional[int]:
+        """
+        Вернуть позицию цели с наименьшим текущим HP среди заданных позиций.
+        Берём только живых; при равенстве HP — случайная из минимальных.
+        """
+        candidates = []
+        for p in positions:
+            u = self._unit_by_position(p)
+            if u is not None and self._alive(u):
+                candidates.append((u["health"], p))
+        if not candidates:
+            return None
+        min_hp = min(hp for hp, _ in candidates)
+        best = [p for hp, p in candidates if hp == min_hp]
+        return self.rng.choice(best)
+
+    def _filter_non_immune_targets(self, attacker: Dict, positions: List[int]) -> List[int]:
+        """Возвращает список позиций, цели на которых НЕ имеют иммунитета к основной атаке атакующего."""
+        attack_type = attacker.get("attack_type_primary", "Weapon")
+        attack_type_lower = str(attack_type).lower()
+        valid_positions = []
+        for p in positions:
+            u = self._unit_by_position(p)
+            if u is None or not self._alive(u):
+                continue
+            immunities = [str(val).lower() for val in (u.get("immunity") or [])]
+            if attack_type_lower not in immunities:
+                valid_positions.append(p)
+        return valid_positions
+
+    def _pick_highest_hp(self, positions: List[int]) -> Optional[int]:
+        candidates = []
+        for p in positions:
+            u = self._unit_by_position(p)
+            if u is not None and self._alive(u):
+                candidates.append((u["health"], p))
+        if not candidates:
+            return None
+        max_hp = max(hp for hp, _ in candidates)
+        best = [p for hp, p in candidates if hp == max_hp]
+        return self.rng.choice(best)
+
+    def _pick_highest_damage_non_paralyzed(self, positions: List[int]) -> Optional[int]:
+        """
+        Выбирает цель с наибольшим показателем damage, на которой нет паралича (обычного или долгого).
+        Если таких целей несколько — выбирается случайная из них.
+        Если подходящих целей нет, возвращается None.
+        """
+        candidates = []
+        for p in positions:
+            u = self._unit_by_position(p)
+            if u is None or not self._alive(u):
+                continue
+            # Проверка на наличие паралича
+            if u.get("paralyzed", 0) == 1 or u.get("long_paralyzed", 0) == 1:
+                continue
+            candidates.append((u.get("damage", 0), p))
+        
+        if not candidates:
+            return None
+            
+        max_dmg = max(dmg for dmg, _ in candidates)
+        best = [p for dmg, p in candidates if dmg == max_dmg]
+        return self.rng.choice(best)
+
+    def _pick_highest_hp_non_big(
+        self, exclude_unit: Optional[Dict] = None
+    ) -> Optional[int]:
+        candidates: List[Tuple[int, int]] = []
+        for unit in self.combined:
+            if not self._alive(unit):
+                continue
+            if bool(unit.get("big", False)):
+                continue
+            if exclude_unit is not None and unit is exclude_unit:
+                continue
+            candidates.append((int(unit.get("health", 0) or 0), unit["position"]))
+        if not candidates:
+            return None
+        max_hp = max(hp for hp, _ in candidates)
+        best = [pos for hp, pos in candidates if hp == max_hp]
+        return self.rng.choice(best)
+
+    def _pick_weapon_immune_or_highest_hp(self, positions: List[int]) -> Optional[int]:
+        immune_candidates = []
+        for p in positions:
+            u = self._unit_by_position(p)
+            if u is None or not self._alive(u):
+                continue
+            immunities = [str(val).lower() for val in (u.get("immunity") or [])]
+            if "weapon" in immunities:
+                immune_candidates.append(p)
+        if immune_candidates:
+            return self.rng.choice(immune_candidates)
+        return self._pick_highest_hp(positions)
+
+    def _apply_alchemist_support(self, alchemist: Dict, recipient: Dict) -> bool:
+        if recipient is None or not self._alive(recipient):
+            return False
+        if recipient is alchemist:
+            return False
+        if (
+            recipient.get("unit_type") == "Alchemist"
+            or recipient.get("running_away", 0) == 1
+        ):
+            self._log(
+                f"Дополнительный ход без эффекта: {recipient['team'].upper()} {recipient['name']}#{recipient['position']} не может получить бонус от алхимика."
+            )
+            return False
+
+        recipient.setdefault("bonusturn", 0)
+        base_ini = int(recipient.get("initiative_base", 0) or 0)
+        recipient["initiative"] = base_ini
+        recipient["bonusturn"] += 1
+        self._log(
+            f"Дополнительный ход: {alchemist['team'].upper()} {alchemist['name']}#{alchemist['position']} восстанавливает инициативу "
+            f"{recipient['team'].upper()} {recipient['name']}#{recipient['position']} до {base_ini} и увеличивает bonusturn до {recipient['bonusturn']}."
+        )
+        return True
+
+    def _apply_cliric_heal(self, healer: Dict, recipient: Optional[Dict]) -> bool:
+        if recipient is None or not self._alive(recipient):
+            return False
+
+        heal_amount = int(healer.get("damage", 0) or 0)
+        if heal_amount <= 0:
+            self._log(
+                f"? Лечение без силы: {healer['team'].upper()} {healer['name']}#{healer['position']} имеет недостаточный урон (damage={heal_amount})."
+            )
+            return False
+
+        if healer.get("unit_type") == "Sundancer":
+            if "resistance" not in recipient:
+                recipient["resistance"] = []
+            if "Fire" not in recipient["resistance"]:
+                recipient["resistance"].append("Fire")
+            recipient.setdefault("resilience_used_types", [])
+            if "Fire" in recipient["resilience_used_types"]:
+                recipient["resilience_used_types"].remove("Fire")
+            recipient["Firedefence"] = 1
+            self._log(
+                f"? Защита от огня: {healer['team'].upper()} {healer['name']}#{healer['position']} даёт огненную защиту "
+                f"для {recipient['team'].upper()} {recipient['name']}#{recipient['position']}"
+            )
+
+        elif healer.get("unit_type") == "Sylfid":
+            if "resistance" not in recipient:
+                recipient["resistance"] = []
+            if "Air" not in recipient["resistance"]:
+                recipient["resistance"].append("Air")
+            recipient.setdefault("resilience_used_types", [])
+            if "Air" in recipient["resilience_used_types"]:
+                recipient["resilience_used_types"].remove("Air")
+            recipient["Airdefence"] = 1
+            self._log(
+                f"? Защита от воздуха: {healer['team'].upper()} {healer['name']}#{healer['position']} даёт воздушную защиту "
+                f"для {recipient['team'].upper()} {recipient['name']}#{recipient['position']}"
+            )
+
+        elif healer.get("unit_type") == "Deva roshi":
+            if "resistance" not in recipient:
+                recipient["resistance"] = []
+            recipient.setdefault("resilience_used_types", [])
+            element_map = (
+                ("Fire", "Firedefence"),
+                ("Air", "Airdefence"),
+                ("Water", "Waterdefence"),
+                ("Earth", "Earthdefence"),
+            )
+            for element, field in element_map:
+                if element not in recipient["resistance"]:
+                    recipient["resistance"].append(element)
+                if element in recipient["resilience_used_types"]:
+                    recipient["resilience_used_types"].remove(element)
+                recipient[field] = 1
+            self._log(
+                f"? Четверная защита: {healer['team'].upper()} {healer['name']}#{healer['position']} усиливает защиту "
+                f"{recipient['team'].upper()} {recipient['name']}#{recipient['position']} от огня, воздуха, воды и земли."
+            )
+
+        before = recipient["health"]
+        max_hp = recipient.get("max_health", before)
+        if before >= max_hp:
+            return False
+
+        healed = min(heal_amount, max_hp - before)
+        if healed <= 0:
+            return False
+
+        recipient["health"] += healed
+        self._log(
+            f"? Лечение: {healer['team'].upper()} {healer['name']}#{healer['position']} восстанавливает {healed} HP "
+            f"для {recipient['team'].upper()} {recipient['name']}#{recipient['position']} ({before}>{recipient['health']})."
+        )
+
+        return True
+
+    def _apply_patriach_support(self, healer: Dict, recipient: Optional[Dict]) -> str:
+        if recipient is None:
+            return "invalid"
+        if recipient.get("team") != healer.get("team"):
+            return "invalid"
+        if recipient.get("name") == "пусто":
+            return "invalid"
+        if bool(recipient.get("Summoned")):
+            return "invalid"
+
+        if self._alive(recipient):
+            healed = self._apply_cliric_heal(healer, recipient)
+            return "heal_success" if healed else "heal_no_effect"
+
+        health = float(recipient.get("health", 0) or 0)
+        initiative = int(recipient.get("initiative", 0) or 0)
+        if health > 0 or initiative > 0:
+            return "invalid"
+
+        max_hp = int(recipient.get("max_health", 0) or 0)
+        if max_hp <= 0:
+            return "revive_failed"
+
+        restored = max(1, int(round(max_hp * 0.5)))
+        recipient["health"] = restored
+        recipient["initiative"] = 0
+        recipient["paralyzed"] = 0
+        recipient["long_paralyzed"] = 0
+        recipient["running_away"] = 0
+        recipient.setdefault("poison_turns_left", 0)
+        recipient.setdefault("burn_turns_left", 0)
+        recipient.setdefault("uran_turns_left", 0)
+        recipient.setdefault("poison_damage_per_tick", 0)
+        recipient.setdefault("burn_damage_per_tick", 0)
+        recipient.setdefault("uran_damage_per_tick", 0)
+        recipient["poison_turns_left"] = 0
+        recipient["burn_turns_left"] = 0
+        recipient["uran_turns_left"] = 0
+        recipient["poison_damage_per_tick"] = 0
+        recipient["burn_damage_per_tick"] = 0
+        recipient["uran_damage_per_tick"] = 0
+
+        self._cleanse_negative_effects(recipient)
+        self._log(
+            f"? Воскрешение Патриарха: {healer['team'].upper()} {healer['name']}#{healer['position']} "
+            f"возвращает {recipient['team'].upper()} {recipient['name']}#{recipient['position']} к жизни ({restored}/{max_hp})."
+        )
+        return "revive_success"
+
     def _cleanse_negative_effects(self, unit: Optional[Dict]) -> bool:
         """Снимает доты/контроль/статовые дебаффы, если юнит жив."""
         if unit is None or not self._alive(unit):
@@ -2728,9 +2686,9 @@ class BattleEnv(gym.Env):
             if self._restore_transformed_unit(unit):
                 cleared = True
 
-        # Если убрали поджог – сбрасываем флажок Владыки, чтобы он мог снова наложить burn.
+        # Если убрали поджог – сбрасываем кэш Владыки так же, как poison/water-кэши.
         if burn_cleared:
-            self._release_lord_burn_from_unit(unit)
+            self._lord_applied_burn.clear()
         if poison_cleared:
             self._spider_applied_poison.clear()
             self._dregazul_applied_poison.clear()
@@ -2742,14 +2700,6 @@ class BattleEnv(gym.Env):
                 f"Очищение: {unit['team'].upper()} {unit['name']}#{unit['position']} избавляется от негативных эффектов."
             )
         return cleared
-
-    def _release_lord_burn_from_unit(self, unit: Optional[Dict]) -> None:
-        """Освобождает слот Владыки, если burn был снят с юнита."""
-        if not unit:
-            return
-        source_pos = unit.pop("burn_source_lord_pos", None)
-        if source_pos is not None:
-            self._lord_applied_burn.pop(source_pos, None)
 
     def _kill_linked_summons(self, summoner: Optional[Dict]) -> None:
         """Kills all alive summons that are linked to the provided summoner."""
@@ -2778,7 +2728,6 @@ class BattleEnv(gym.Env):
             before_hp = int(unit.get("health", 0) or 0)
             unit["health"] = 0
             unit["initiative"] = 0
-            self._release_lord_burn_from_unit(unit)
             unit_team = (unit.get("team") or "").upper()
             unit_name = unit.get("name") or unit.get("unit_type") or "unit"
             unit_pos = unit.get("position")
@@ -2987,103 +2936,6 @@ class BattleEnv(gym.Env):
         )
         return True
 
-    # --- НОВОЕ: выбор позиции с минимальным HP из списка позиций ---
-    def _pick_lowest_hp(self, positions: List[int]) -> Optional[int]:
-        """
-        Вернуть позицию цели с наименьшим текущим HP среди заданных позиций.
-        Берём только живых; при равенстве HP — случайная из минимальных.
-        """
-        candidates = []
-        for p in positions:
-            u = self._unit_by_position(p)
-            if u is not None and self._alive(u):
-                candidates.append((u["health"], p))
-        if not candidates:
-            return None
-        min_hp = min(hp for hp, _ in candidates)
-        best = [p for hp, p in candidates if hp == min_hp]
-        return self.rng.choice(best)
-
-    def _filter_non_immune_targets(self, attacker: Dict, positions: List[int]) -> List[int]:
-        """Возвращает список позиций, цели на которых НЕ имеют иммунитета к основной атаке атакующего."""
-        attack_type = attacker.get("attack_type_primary", "Weapon")
-        attack_type_lower = str(attack_type).lower()
-        valid_positions = []
-        for p in positions:
-            u = self._unit_by_position(p)
-            if u is None or not self._alive(u):
-                continue
-            immunities = [str(val).lower() for val in (u.get("immunity") or [])]
-            if attack_type_lower not in immunities:
-                valid_positions.append(p)
-        return valid_positions
-
-    def _pick_highest_hp(self, positions: List[int]) -> Optional[int]:
-        candidates = []
-        for p in positions:
-            u = self._unit_by_position(p)
-            if u is not None and self._alive(u):
-                candidates.append((u["health"], p))
-        if not candidates:
-            return None
-        max_hp = max(hp for hp, _ in candidates)
-        best = [p for hp, p in candidates if hp == max_hp]
-        return self.rng.choice(best)
-
-    def _pick_highest_damage_non_paralyzed(self, positions: List[int]) -> Optional[int]:
-        """
-        Выбирает цель с наибольшим показателем damage, на которой нет паралича (обычного или долгого).
-        Если таких целей несколько — выбирается случайная из них.
-        Если подходящих целей нет, возвращается None.
-        """
-        candidates = []
-        for p in positions:
-            u = self._unit_by_position(p)
-            if u is None or not self._alive(u):
-                continue
-            # Проверка на наличие паралича
-            if u.get("paralyzed", 0) == 1 or u.get("long_paralyzed", 0) == 1:
-                continue
-            candidates.append((u.get("damage", 0), p))
-        
-        if not candidates:
-            return None
-            
-        max_dmg = max(dmg for dmg, _ in candidates)
-        best = [p for dmg, p in candidates if dmg == max_dmg]
-        return self.rng.choice(best)
-
-    def _pick_highest_hp_non_big(
-        self, exclude_unit: Optional[Dict] = None
-    ) -> Optional[int]:
-        candidates: List[Tuple[int, int]] = []
-        for unit in self.combined:
-            if not self._alive(unit):
-                continue
-            if bool(unit.get("big", False)):
-                continue
-            if exclude_unit is not None and unit is exclude_unit:
-                continue
-            candidates.append((int(unit.get("health", 0) or 0), unit["position"]))
-        if not candidates:
-            return None
-        max_hp = max(hp for hp, _ in candidates)
-        best = [pos for hp, pos in candidates if hp == max_hp]
-        return self.rng.choice(best)
-
-    def _pick_weapon_immune_or_highest_hp(self, positions: List[int]) -> Optional[int]:
-        immune_candidates = []
-        for p in positions:
-            u = self._unit_by_position(p)
-            if u is None or not self._alive(u):
-                continue
-            immunities = [str(val).lower() for val in (u.get("immunity") or [])]
-            if "weapon" in immunities:
-                immune_candidates.append(p)
-        if immune_candidates:
-            return self.rng.choice(immune_candidates)
-        return self._pick_highest_hp(positions)
-
     # ----------- эффекты начала хода (яд/поджог) -----------
     def _apply_start_of_turn_effects(self, unit: Dict) -> bool:
         # DEFEND: временная броня спадает только в начале следующего хода этого юнита.
@@ -3256,7 +3108,6 @@ class BattleEnv(gym.Env):
             if "fire" in immunities_lower:
                 unit["burn_turns_left"] = 0
                 unit["burn_damage_per_tick"] = 0
-                self._release_lord_burn_from_unit(unit)
                 self._log(
                     f"Иммунитет к эффекту 'Fire' — поджог не действует на {unit['team'].upper()} {unit['name']}#{unit['position']}."
                 )
@@ -3278,13 +3129,13 @@ class BattleEnv(gym.Env):
                             f"? {unit['team'].upper()} {unit['name']}#{unit['position']} погибает от поджога."
                         )
                         self._check_victory_after_hit()
-                        self._release_lord_burn_from_unit(unit)
                         return False
                 else:
                     unit["burn_turns_left"] -= 1
                 if unit["burn_turns_left"] <= 0:
                     unit["burn_damage_per_tick"] = 0
-                    self._release_lord_burn_from_unit(unit)
+                    # поджог снят — Владыки могут снова применить эффект
+                    self._lord_applied_burn.clear()
 
         # Вода — наносит периодический урон (для Сына Измира = его урон2)
         if (
@@ -3331,31 +3182,7 @@ class BattleEnv(gym.Env):
                 self._log(
                     f"{unit['team'].upper()} {unit['name']}#{unit['position']} в панике покидает бой."
                 )
-                snapshot = deepcopy(unit)
-                self.survived_inits.append(snapshot)
-                for key in (
-                    "health",
-                    "max_health",
-                    "initiative",
-                    "damage",
-                    "damage_secondary",
-                    "accuracy",
-                    "accuracy_secondary",
-                    "armor",
-                ):
-                    unit[key] = 0
-                for key in (
-                    "poison_turns_left",
-                    "poison_damage_per_tick",
-                    "burn_turns_left",
-                    "burn_damage_per_tick",
-                    "uran_turns_left",
-                    "uran_damage_per_tick",
-                ):
-                    unit[key] = 0
-                unit["paralyzed"] = 0
-                unit["long_paralyzed"] = 0
-                unit["running_away"] = 0
+                self._mark_unit_escaped(unit)
                 self._check_victory_after_hit()
                 return False
             # если был паралич — снимаем флаг бегства, отложив на следующий ход
@@ -3419,7 +3246,6 @@ class BattleEnv(gym.Env):
             u["poison_damage_per_tick"] = 0
             u["burn_turns_left"] = 0
             u["burn_damage_per_tick"] = 0  # per-tick для поджога
-            u["burn_source_lord_pos"] = None
             u["uran_turns_left"] = 0
             u["uran_damage_per_tick"] = 0
             u["resilience_used_types"] = []
@@ -3436,7 +3262,7 @@ class BattleEnv(gym.Env):
         self._spider_applied_poison = {}
         self._dregazul_applied_poison = {}
         self._ismir_applied_uran = {}
-        self.survived_inits = []
+        self.escaped_units = []
         self.step_count = 0
         self.hero_item_slots_used_this_battle = [False] * len(self.equipped_hero_items)
         if len(getattr(self, "equipped_hero_item_uses_left", []) or []) < len(
@@ -3455,6 +3281,47 @@ class BattleEnv(gym.Env):
         self.rng.shuffle(cand)
         cand.sort(key=itemgetter("initiative"), reverse=True)
         return cand[0]
+
+    def _empty_battle_slot(self, team: str, position: int) -> Dict:
+        slot = placeholder_unit(team, int(position))
+        slot.update(
+            {
+                "hp": 0,
+                "maxhp": 0,
+                "base_armor": 0,
+                "defense": 0,
+                "waited": 0,
+                "poison_turns_left": 0,
+                "poison_damage_per_tick": 0,
+                "burn_turns_left": 0,
+                "burn_damage_per_tick": 0,
+                "uran_turns_left": 0,
+                "uran_damage_per_tick": 0,
+                "resilience_used_types": [],
+                "bonusturn": 0,
+                "original_damage": 0,
+                "exp_kill": 0,
+                "exp_required": 0,
+                "exp_current": 0,
+                "next_level_exp": 0,
+                "turns_into": [],
+                "capital": 0,
+                "is_neutral_unit": False,
+            }
+        )
+        return slot
+
+    def _mark_unit_escaped(self, unit: Dict) -> None:
+        snapshot = deepcopy(unit)
+        snapshot["running_away"] = 0
+        self.escaped_units.append(snapshot)
+
+        empty_slot = self._empty_battle_slot(
+            str(unit.get("team", "")),
+            int(unit.get("position", 0) or 0),
+        )
+        unit.clear()
+        unit.update(empty_slot)
 
     def _end_round_restore(self):
         for u in self.combined:
@@ -4121,6 +3988,12 @@ class BattleEnv(gym.Env):
         atk_team = attacker.get("team")
         atk_name = attacker.get("name")
         enemy_team = "blue" if atk_team == "red" else "red"
+        units_by_pos = self._units_by_position()
+
+        def _unit_at(pos: Optional[int]) -> Optional[Dict]:
+            if pos is None:
+                return None
+            return units_by_pos.get(pos)
 
         # ---------- вспомогательные ----------
         def _live_enemies():
@@ -4188,7 +4061,7 @@ class BattleEnv(gym.Env):
                 )
 
                 # Суммируем фактический урон для вампиризма (без оверкилла)
-                if unit_type in ("Vampire", "Highvampire") and dmg > 0:
+                if unit_type in VAMPIRE_AOE_TYPES and dmg > 0:
                     inflicted = min(dmg, max(0, before))
                     vamp_total += max(0, inflicted)
 
@@ -4198,7 +4071,6 @@ class BattleEnv(gym.Env):
                     self._log(
                         f"? {victim['team'].upper()} {victim['name']}#{victim['position']} выведен из строя."
                     )
-                    self._release_lord_burn_from_unit(victim)
                     continue
 
                 # --- тип-специфичные AOE эффекты ---
@@ -4269,7 +4141,6 @@ class BattleEnv(gym.Env):
                             if not self._resilience_blocks(
                                 attacker, victim, custom_tag=status_tag
                             ):
-                                victim.pop("burn_source_lord_pos", None)
                                 turns = self.rng.randint(1, BURN_TURNS)
                                 victim["burn_turns_left"] = turns
                                 victim["burn_damage_per_tick"] = int(
@@ -4360,7 +4231,7 @@ class BattleEnv(gym.Env):
                         self._apply_tiamat_damage_debuff(attacker, victim)
 
             # После цикла — вампиризм
-            if unit_type in ("Vampire", "Highvampire") and vamp_total > 0:
+            if unit_type in VAMPIRE_AOE_TYPES and vamp_total > 0:
                 leeched_total = vamp_total // 2
                 self._apply_vampiric_heal(
                     attacker, leeched_total, share_leftover=(unit_type == "Highvampire")
@@ -4369,9 +4240,7 @@ class BattleEnv(gym.Env):
             return True, "aoe"
 
         def _single_target():
-            victim = (
-                self._unit_by_position(target_pos) if target_pos is not None else None
-            )
+            victim = _unit_at(target_pos)
             if victim is None or not self._alive(victim):
                 self._log(
                     f"{atk_team.upper()} {attacker['name']}#{attacker['position']} бьёт pos{target_pos}: цели нет/мертва/недоступна."
@@ -4474,7 +4343,7 @@ class BattleEnv(gym.Env):
                         ):
                             self._apply_witch_effect(attacker, victim)
 
-                if unit_type in ("Betrezen", "Uter", "Abyss Devil"):
+                if unit_type in LONG_PARALYSIS_TYPES:
                     acc2 = float(attacker.get("accuracy_secondary", 0) or 0)
                     if acc2 > 0:
                         roll = self._roll_status(acc2)
@@ -4616,7 +4485,6 @@ class BattleEnv(gym.Env):
                                 if not self._resilience_blocks(
                                     attacker, victim, custom_tag=status_tag
                                 ):
-                                    victim.pop("burn_source_lord_pos", None)
                                     turns = self.rng.randint(1, BURN_TURNS)
                                     victim["burn_turns_left"] = turns
                                     victim["burn_damage_per_tick"] = int(
@@ -4654,7 +4522,6 @@ class BattleEnv(gym.Env):
                                         victim["burn_damage_per_tick"] = int(
                                             attacker.get("damage_secondary", 0) or 0
                                         )
-                                        victim["burn_source_lord_pos"] = pos
                                         self._lord_applied_burn[pos] = True
                                         self._log(
                                             f"{atk_team.upper()} {attacker['name']}#{pos} накладывает поджог "
@@ -4721,7 +4588,6 @@ class BattleEnv(gym.Env):
                 self._log(
                     f"? {victim['team'].upper()} {victim['name']}#{victim['position']} выведен из строя."
                 )
-                self._release_lord_burn_from_unit(victim)
             return True, "ok"
 
         # ====================== блоки по типам ======================
@@ -4755,6 +4621,7 @@ class BattleEnv(gym.Env):
                         f"Иммунитет к эффекту '{attacker.get('attack_type_secondary', '')}' — превращение НЕ накладывается "
                         f"на {v['team'].upper()} {v['name']}#{v['position']}."
                     )
+                    return
                 elif v.get("name") in forbiddenwitch_names:
                     self._log("Это страж столицы")
                     return
@@ -4768,7 +4635,7 @@ class BattleEnv(gym.Env):
             return _aoe_status_all("превратить", "Succub", _succub_apply)
 
         # --- Саппорты: точечное ЛЕЧЕНИЕ через противоположную клетку ---
-        elif unit_type in ("Cliric", "Deva roshi"):
+        elif unit_type in POINT_HEAL_SUPPORT_TYPES:
             if target_pos is None:
                 self._log(
                     f"Лечение не сработало: {atk_team.upper()} {attacker['name']}#{attacker['position']} — не указана цель."
@@ -4776,7 +4643,7 @@ class BattleEnv(gym.Env):
                 return False, "dead_or_absent"
             opposite_pos = self._opposite_position(target_pos, attacker["team"])
             recipient = (
-                self._unit_by_position(opposite_pos)
+                _unit_at(opposite_pos)
                 if opposite_pos is not None
                 else None
             )
@@ -4804,7 +4671,7 @@ class BattleEnv(gym.Env):
                 return False, "dead_or_absent"
             opposite_pos = self._opposite_position(target_pos, attacker["team"])
             recipient = (
-                self._unit_by_position(opposite_pos)
+                _unit_at(opposite_pos)
                 if opposite_pos is not None
                 else None
             )
@@ -4825,13 +4692,7 @@ class BattleEnv(gym.Env):
             return True, "ok"
 
         # --- Саппорты: точечный БАФФ / доп. ход через противоположную клетку ---
-        elif unit_type in (
-            "Travnitsa",
-            "Novice",
-            "Alchemist",
-            "Dwarfdruid",
-            "Arhidruid",
-        ):
+        elif unit_type in POINT_BUFF_SUPPORT_TYPES:
             if target_pos is None:
                 self._log(
                     f"Усиление не сработало: {atk_team.upper()} {attacker['name']}#{attacker['position']} — не указана цель."
@@ -4839,7 +4700,7 @@ class BattleEnv(gym.Env):
                 return False, "dead_or_absent"
             opposite_pos = self._opposite_position(target_pos, attacker["team"])
             recipient = (
-                self._unit_by_position(opposite_pos)
+                _unit_at(opposite_pos)
                 if opposite_pos is not None
                 else None
             )
@@ -4863,7 +4724,7 @@ class BattleEnv(gym.Env):
                         f"Поддержка без эффекта: {recipient['team'].upper()} {recipient['name']}#{recipient['position']} не получает бонус."
                     )
             else:
-                cleanse_support = unit_type in ("Dwarfdruid", "Arhidruid")
+                cleanse_support = unit_type in CLEANSING_SUPPORT_TYPES
                 cleansed = (
                     self._cleanse_negative_effects(recipient)
                     if cleanse_support
@@ -4895,7 +4756,7 @@ class BattleEnv(gym.Env):
             return True, "ok"
 
         # --- Саппорты: массовое ЛЕЧЕНИЕ (Profit, Sundancer, Sylfid) ---
-        elif unit_type in ("Profit", "Sundancer", "Sylfid"):
+        elif unit_type in MASS_HEAL_TYPES:
             healed_any = False
             cleansed_any = False
             profit_cleanses = unit_type == "Profit"
@@ -5019,7 +4880,7 @@ class BattleEnv(gym.Env):
                 return False, "dead_or_absent"
 
             # Проверка занятости клетки живым юнитом
-            slot = self._unit_by_position(dest)
+            slot = _unit_at(dest)
             occupied = slot is not None and self._alive(slot)
 
             # Если dest — задний ряд, запрещаем призыв, если в той же колонке есть живой большой союзник
@@ -5034,7 +4895,7 @@ class BattleEnv(gym.Env):
             if dest in BLUE_BACK_POSITIONS + RED_BACK_POSITIONS:
                 partner = _partner_cell(dest)
                 if partner is not None:
-                    partner_unit = self._unit_by_position(partner)
+                    partner_unit = _unit_at(partner)
                     partner_blocked = (
                         partner_unit is not None
                         and self._alive(partner_unit)
@@ -5141,7 +5002,6 @@ class BattleEnv(gym.Env):
             spawn.setdefault("poison_damage_per_tick", 0)
             spawn.setdefault("burn_turns_left", 0)
             spawn.setdefault("burn_damage_per_tick", 0)
-            spawn.setdefault("burn_source_lord_pos", None)
             spawn.setdefault("uran_turns_left", 0)
             spawn.setdefault("uran_damage_per_tick", 0)
             spawn.setdefault("resilience_used_types", [])
@@ -5162,20 +5022,7 @@ class BattleEnv(gym.Env):
             return True, "ok"
 
         # --- AOE-урон по врагам (включая Vampire/Highvampire) ---
-        elif unit_type in (
-            "Mage",
-            "Dead dragon",
-            "Wolf Lord",
-            "Gumtic",
-            "Drulliaan",
-            "Uter Demon",
-            "Tiamat",
-            "Teurg",
-            "Hermit",
-            "Vampire",
-            "Highvampire",
-            "Shamanka",
-        ):
+        elif unit_type in AOE_TYPES:
             return _aoe_damage_all()
 
         # --- Обычная одиночная атака и пост-эффекты ---
@@ -5184,11 +5031,21 @@ class BattleEnv(gym.Env):
 
     def _apply_battle_exp(self, losing_team: str) -> None:
         """Начисляет опыт победившей команде и пишет лог."""
+        escaped_keys = {
+            (
+                str(unit.get("team", "")),
+                int(unit.get("position", 0) or 0),
+            )
+            for unit in getattr(self, "escaped_units", []) or []
+            if isinstance(unit, dict)
+        }
         total_exp = 0.0
         for u in self.combined:
             if u.get("team") != losing_team:
                 continue
-            if int(u.get("running_away", 0)) == 1:
+            if (str(u.get("team", "")), int(u.get("position", 0) or 0)) in escaped_keys:
+                continue
+            if int(u.get("running_away", 0)) == 1 and self._alive(u):
                 continue
             total_exp += float(u.get("exp_kill", 0) or 0)
 
@@ -5210,6 +5067,7 @@ class BattleEnv(gym.Env):
             if u.get("team") == winning_team
             and self._alive(u)
             and int(u.get("running_away", 0)) == 0
+            and (str(u.get("team", "")), int(u.get("position", 0) or 0)) not in escaped_keys
         ]
         if not winners:
             return
@@ -5246,11 +5104,17 @@ class BattleEnv(gym.Env):
                 self._log(f"Уровень юнита {unit_name} повышен")
                 self.last_levelups.append(unit_name)
 
+    def _clear_dead_running_away_flags(self) -> None:
+        for unit in self.combined:
+            if int(unit.get("running_away", 0) or 0) == 1 and not self._alive(unit):
+                unit["running_away"] = 0
+
     def _check_victory_after_hit(self):
         if self.winner is not None:
             return
         if not self._team_alive("blue"):
             self.winner = "red"
+            self._clear_dead_running_away_flags()
             self._revert_fenrir_survivors()
             self._restore_default_doppelgangers()
             self._restore_all_transformed_units()
@@ -5258,6 +5122,7 @@ class BattleEnv(gym.Env):
             self._apply_battle_exp("blue")
         elif not self._team_alive("red"):
             self.winner = "blue"
+            self._clear_dead_running_away_flags()
             self._revert_fenrir_survivors()
             self._restore_default_doppelgangers()
             self._restore_all_transformed_units()
@@ -5282,6 +5147,8 @@ class BattleEnv(gym.Env):
                 if self.winner is not None:
                     return False
                 continue
+
+            units_by_pos = self._units_by_position()
 
             if nxt.get("paralyzed", 0) == 1 and self._alive(nxt):
                 nxt["paralyzed"] = 0
@@ -5310,7 +5177,7 @@ class BattleEnv(gym.Env):
             if nxt["team"] == "blue":
                 self.current_blue_attacker_pos = nxt["position"]
                 self.blue_attacks_left = (
-                    2 if nxt.get("unit_type") in ("Demon", "Elfarcher") else 1
+                    2 if nxt.get("unit_type") in DOUBLE_STRIKE_TYPES else 1
                 )
                 self._log(
                     f"Ход BLUE: {nxt['name']}#{nxt['position']} (иниц {nxt['initiative']}). "
@@ -5324,52 +5191,22 @@ class BattleEnv(gym.Env):
 
             # Ход RED (авто)
             nxt["initiative"] = 0
-            strikes = 2 if nxt.get("unit_type") in ("Demon", "Elfarcher") else 1
+            nxt_type = nxt.get("unit_type")
+            strikes = 2 if nxt_type in DOUBLE_STRIKE_TYPES else 1
 
             for hit_i in range(strikes):
                 if self.winner is not None:
                     return False
 
                 target_pos = None
-                if nxt.get("unit_type") in (
-                    "Warrior",
-                    "Centaur Savage",
-                    "Demon",
-                    "Lord",
-                    "Bone Lord",
-                    "Dregazul",
-                    "Ismir son",
-                    "Uter",
-                    "Abyss Devil",
-                    "Aleman",
-                    "Spider",
-                ):
-                    options = self._warrior_allowed_targets(nxt)
-                    valid_options = self._filter_non_immune_targets(nxt, options) if options else []
-
-                    if valid_options:
-                        target_pos = self._pick_lowest_hp(valid_options)
-                        prefix = nxt.get("unit_type")
-                        self._log(
-                            f"RED ход: {nxt['name']}#{nxt['position']} ({prefix}) > цель с мин. HP (non-immune) pos{target_pos} (удар {hit_i + 1}/{strikes})."
-                        )
-                    else:
-                        self._log(
-                            f"RED ход: {nxt['name']}#{nxt['position']} ({nxt.get('unit_type')}) не может атаковать: доступных целей нет."
-                        )
-                        armor_before = int(nxt.get("armor", 0) or 0)
-                        nxt["armor"] = armor_before + DEFEND_ARMOR_BONUS
-                        nxt["defense"] = 1
-                        self._log(
-                            f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает броню +{DEFEND_ARMOR_BONUS} ({armor_before}->{nxt['armor']})."
-                        )
-                        break
-                elif nxt.get("unit_type") in ("Betrezen", "Uter"):
+                if nxt_type in SMART_MELEE_TARGET_TYPES:
                     # Особая логика для юнитов с параличом/окаменением:
                     # Атакуем цель с макс. уроном, без паралича и иммунитета
-                    options = self._warrior_allowed_targets(nxt)
-                    valid_options = self._filter_non_immune_targets(nxt, options) if options else []
-                    
+                    options = self._warrior_allowed_targets(nxt, units_by_pos=units_by_pos)
+                    valid_options = (
+                        self._filter_non_immune_targets(nxt, options) if options else []
+                    )
+
                     target_pos = None
                     if valid_options:
                         # Пытаемся найти самую опасную непарализованную цель
@@ -5381,13 +5218,13 @@ class BattleEnv(gym.Env):
                         else:
                             log_target = "цель с макс. damage (без паралича)"
 
-                        prefix = nxt.get("unit_type")
+                        prefix = nxt_type
                         self._log(
                             f"RED ход: {nxt['name']}#{nxt['position']} ({prefix}) > {log_target} pos{target_pos} (удар {hit_i + 1}/{strikes})."
                         )
                     else:
                         self._log(
-                            f"RED ход: {nxt['name']}#{nxt['position']} ({nxt.get('unit_type')}) не может атаковать: доступных целей нет."
+                            f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) не может атаковать: доступных целей нет."
                         )
                         armor_before = int(nxt.get("armor", 0) or 0)
                         nxt["armor"] = armor_before + DEFEND_ARMOR_BONUS
@@ -5396,43 +5233,42 @@ class BattleEnv(gym.Env):
                             f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает броню +{DEFEND_ARMOR_BONUS} ({armor_before}->{nxt['armor']})."
                         )
                         break
+                elif nxt_type in MELEE_TYPES:
+                    options = self._warrior_allowed_targets(nxt, units_by_pos=units_by_pos)
+                    valid_options = (
+                        self._filter_non_immune_targets(nxt, options) if options else []
+                    )
 
-                elif nxt.get("unit_type") in (
-                    "Mage",
-                    "Dead dragon",
-                    "Wolf Lord",
-                    "Gumtic",
-                    "Drulliaan",
-                    "Uter Demon",
-                    "Tiamat",
-                    "Teurg",
-                    "Vampire",
-                    "Highvampire",
-                    "Shamanka",
-                ):
+                    if valid_options:
+                        target_pos = self._pick_lowest_hp(valid_options)
+                        prefix = nxt_type
+                        self._log(
+                            f"RED ход: {nxt['name']}#{nxt['position']} ({prefix}) > цель с мин. HP (non-immune) pos{target_pos} (удар {hit_i + 1}/{strikes})."
+                        )
+                    else:
+                        self._log(
+                            f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) не может атаковать: доступных целей нет."
+                        )
+                        armor_before = int(nxt.get("armor", 0) or 0)
+                        nxt["armor"] = armor_before + DEFEND_ARMOR_BONUS
+                        nxt["defense"] = 1
+                        self._log(
+                            f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает броню +{DEFEND_ARMOR_BONUS} ({armor_before}->{nxt['armor']})."
+                        )
+                        break
+                elif nxt_type in AOE_TYPES:
                     if hit_i == 0:
                         self._log(
-                            f"RED ход: {nxt['name']}#{nxt['position']} ({nxt.get('unit_type')}) выполняет массовую атаку."
+                            f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) выполняет массовую атаку."
                         )
                     else:
                         break
-                elif nxt.get("unit_type") in (
-                    "Cliric",
-                    "Profit",
-                    "Travnitsa",
-                    "Deva roshi",
-                    "Patriach",
-                    "Novice",
-                    "Alchemist",
-                    "Dwarfdruid",
-                    "Arhidruid",
-                ):
-                    nxt_type = nxt.get("unit_type")
-                    if nxt_type == "Cliric":
+                elif nxt_type in SUPPORT_TYPES:
+                    if nxt_type in POINT_HEAL_SUPPORT_TYPES:
                         ally_pos = self._cliric_auto_target(nxt)
                         if ally_pos is None:
                             self._log(
-                                f"RED ход: {nxt['name']}#{nxt['position']} (Cliric) не находит союзников для лечения."
+                                f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) не находит союзников для лечения."
                             )
                             armor_before = int(nxt.get("armor", 0) or 0)
                             nxt["armor"] = armor_before + DEFEND_ARMOR_BONUS
@@ -5441,15 +5277,15 @@ class BattleEnv(gym.Env):
                                 f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает броню +{DEFEND_ARMOR_BONUS} ({armor_before}->{nxt['armor']})."
                             )
                             break
-                        recipient = self._unit_by_position(ally_pos)
+                        recipient = units_by_pos.get(ally_pos)
                         if recipient is None:
                             break
                         self._log(
-                            f"RED ход: {nxt['name']}#{nxt['position']} (Cliric) лечит союзника на pos{ally_pos}."
+                            f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) лечит союзника на pos{ally_pos}."
                         )
                         self._apply_cliric_heal(nxt, recipient)
                         break
-                    if nxt_type == "Patriach":
+                    if nxt_type in PATRIACH_SUPPORT_TYPES:
                         ally_pos = self._patriach_auto_target(nxt)
                         if ally_pos is None:
                             self._log(
@@ -5462,7 +5298,7 @@ class BattleEnv(gym.Env):
                                 f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает броню +{DEFEND_ARMOR_BONUS} ({armor_before}->{nxt['armor']})."
                             )
                             break
-                        recipient = self._unit_by_position(ally_pos)
+                        recipient = units_by_pos.get(ally_pos)
                         result = self._apply_patriach_support(nxt, recipient)
                         if result == "heal_success":
                             self._log(
@@ -5482,7 +5318,7 @@ class BattleEnv(gym.Env):
                             )
                         break
 
-                    if nxt_type == "Profit":
+                    if nxt_type in MASS_HEAL_TYPES:
                         healed_any = False
                         for ally in self.combined:
                             if (
@@ -5494,11 +5330,11 @@ class BattleEnv(gym.Env):
                                     healed_any = True
                         if healed_any:
                             self._log(
-                                f"RED ход: {nxt['name']}#{nxt['position']} (Profit) массово исцеляет союзников."
+                                f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) массово исцеляет союзников."
                             )
                         else:
                             self._log(
-                                f"RED ход: {nxt['name']}#{nxt['position']} (Profit) не смог исцелить союзников."
+                                f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) не смог исцелить союзников."
                             )
                         break
 
@@ -5520,7 +5356,7 @@ class BattleEnv(gym.Env):
                             )
                         break
 
-                    recipient = self._unit_by_position(buff_pos)
+                    recipient = units_by_pos.get(buff_pos)
                     if recipient is None:
                         break
 
@@ -5542,7 +5378,6 @@ class BattleEnv(gym.Env):
                     self._log(action_log)
                     break
                 else:
-                    nxt_type = nxt.get("unit_type")
                     if nxt_type == "summoner":
                         target_pos = self._summoner_auto_target(nxt)
                         if target_pos is None:
@@ -5585,7 +5420,7 @@ class BattleEnv(gym.Env):
                                 log_target = "цель с мин. HP (non-immune)"
                             else:
                                 self._log(
-                                    f"RED ход: {nxt['name']}#{nxt['position']} ({nxt.get('unit_type')}) не находит уязвимых целей."
+                                    f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) не находит уязвимых целей."
                                 )
                                 armor_before = int(nxt.get("armor", 0) or 0)
                                 nxt["armor"] = armor_before + DEFEND_ARMOR_BONUS
@@ -5594,24 +5429,11 @@ class BattleEnv(gym.Env):
                                     f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает броню +{DEFEND_ARMOR_BONUS} ({armor_before}->{nxt['armor']})."
                                 )
                                 break
-                    ut = nxt.get("unit_type")
                     self._log(
-                        f"RED ход: {nxt['name']}#{nxt['position']} ({ut}) > {log_target} pos{target_pos} (удар {hit_i + 1}/{strikes})."
+                        f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) > {log_target} pos{target_pos} (удар {hit_i + 1}/{strikes})."
                     )
 
-                if target_pos is not None or nxt.get("unit_type") in (
-                    "Mage",
-                    "Dead dragon",
-                    "Wolf Lord",
-                    "Gumtic",
-                    "Drulliaan",
-                    "Uter Demon",
-                    "Tiamat",
-                    "Teurg",
-                    "Vampire",
-                    "Highvampire",
-                    "Shamanka",
-                ):
+                if target_pos is not None or nxt_type in AOE_TYPES:
                     self._attack(nxt, target_pos)
                     self._check_victory_after_hit()
                     if self.winner is not None:
@@ -5626,29 +5448,30 @@ class BattleEnv(gym.Env):
         if not true_indexes:
             return WAIT_ACTION_INDEX
 
-        attacker = self._unit_by_position(self.current_blue_attacker_pos)
+        units_by_pos = self._units_by_position()
+        attacker = units_by_pos.get(self.current_blue_attacker_pos)
         if attacker is None or not self._alive(attacker):
             return WAIT_ACTION_INDEX if bool(mask[WAIT_ACTION_INDEX]) else true_indexes[0]
 
         unit_type = str(attacker.get("unit_type", "") or "")
 
-        if unit_type == "Cliric":
+        if unit_type in POINT_HEAL_SUPPORT_TYPES:
             target_pos = self._cliric_auto_target(attacker)
             if target_pos in TARGET_POSITIONS:
                 action_index = TARGET_POSITIONS.index(target_pos)
                 if bool(mask[action_index]):
                     return int(action_index)
 
-        if unit_type == "Patriach":
+        if unit_type in PATRIACH_SUPPORT_TYPES:
             target_pos = self._patriach_auto_target(attacker)
             if target_pos in TARGET_POSITIONS:
                 action_index = TARGET_POSITIONS.index(target_pos)
                 if bool(mask[action_index]):
                     return int(action_index)
 
-        if unit_type == "Profit":
+        if unit_type in MASS_HEAL_TYPES:
             for action_index, target_pos in enumerate(TARGET_POSITIONS):
-                target = self._unit_by_position(target_pos)
+                target = units_by_pos.get(target_pos)
                 if (
                     bool(mask[action_index])
                     and target is not None
@@ -5659,27 +5482,24 @@ class BattleEnv(gym.Env):
 
         target_actions = [idx for idx in range(len(TARGET_POSITIONS)) if bool(mask[idx])]
         if target_actions:
-            enemy_targets = [
-                idx
-                for idx in target_actions
+            enemy_targets = []
+            for idx in target_actions:
+                target = units_by_pos.get(TARGET_POSITIONS[idx])
                 if (
-                    (target := self._unit_by_position(TARGET_POSITIONS[idx])) is not None
+                    target is not None
                     and target.get("team") != attacker.get("team")
                     and self._alive(target)
-                )
-            ]
+                ):
+                    enemy_targets.append((idx, target))
             if enemy_targets:
                 return int(
                     min(
                         enemy_targets,
-                        key=lambda idx: (
-                            float(
-                                self._unit_by_position(TARGET_POSITIONS[idx]).get("health", 0)
-                                or 0
-                            ),
-                            TARGET_POSITIONS[idx],
+                        key=lambda item: (
+                            float(item[1].get("health", 0) or 0),
+                            TARGET_POSITIONS[item[0]],
                         ),
-                    )
+                    )[0]
                 )
 
             return int(target_actions[0])
@@ -5694,20 +5514,23 @@ class BattleEnv(gym.Env):
 
     def _obs(self) -> np.ndarray:
         vec = []
+        units_by_pos = self._units_by_position()
+
         for pos in RED_POSITIONS + BLUE_POSITIONS:
-            u = self._unit_by_position(pos)
+            u = units_by_pos.get(pos)
             hp_raw = float(u.get("health", 0) or 0)
             max_hp_raw = float(u.get("max_health", 0) or 0)
-            hp = _clip01(
-                _safe_div(max(0.0, hp_raw), max_hp_raw if max_hp_raw > 0 else HP_FALLBACK_MAX)
+            hp = _norm_positive(
+                hp_raw,
+                max_hp_raw if max_hp_raw > 0 else HP_FALLBACK_MAX,
             )
-            ini = _clip01(_safe_div(max(0.0, float(u.get("initiative", 0) or 0)), INIT_CUR_NORM_MAX))
-            ini_b = _clip01(_safe_div(max(0.0, float(u.get("initiative_base", 0) or 0)), INIT_BASE_NORM_MAX))
-            dmg = _clip01(_safe_div(max(0.0, float(u.get("damage", 0) or 0)), DMG_NORM_MAX))
-            dmg2 = _clip01(_safe_div(max(0.0, float(u.get("damage_secondary", 0) or 0)), DMG2_NORM_MAX))
+            ini = _norm_positive(u.get("initiative", 0) or 0, INIT_CUR_NORM_MAX)
+            ini_b = _norm_positive(u.get("initiative_base", 0) or 0, INIT_BASE_NORM_MAX)
+            dmg = _norm_positive(u.get("damage", 0) or 0, DMG_NORM_MAX)
+            dmg2 = _norm_positive(u.get("damage_secondary", 0) or 0, DMG2_NORM_MAX)
             team_v = 0.0 if u["team"] == "red" else 1.0
             pos_raw = float(u.get("position", pos) or pos)
-            pos_v = _clip01(_safe_div(pos_raw - 1.0, POS_NORM_MAX))
+            pos_v = _clip01((pos_raw - 1.0) / POS_NORM_MAX)
             stand_v = 0.0 if u["stand"] == "ahead" else 1.0
 
             t_onehot = _one_hot(u.get("unit_type", "Archer"), TYPE_LIST)
@@ -5723,35 +5546,28 @@ class BattleEnv(gym.Env):
                 else [0.0] * len(ATTACK_TYPES)
             )
             res_mhot = _multi_hot(u.get("resistance", []), ATTACK_TYPES)
-            armor_v = _clip01(_safe_div(max(0.0, float(u.get("armor", 0) or 0)), ARMOR_NORM_MAX))
-            acc_v = _clip01(_safe_div(max(0.0, float(u.get("accuracy", 0) or 0)), ACC_NORM_MAX))
-            acc2_v = _clip01(_safe_div(max(0.0, float(u.get("accuracy_secondary", 0) or 0)), ACC_NORM_MAX))
+            armor_v = _norm_positive(u.get("armor", 0) or 0, ARMOR_NORM_MAX)
+            acc_v = _norm_positive(u.get("accuracy", 0) or 0, ACC_NORM_MAX)
+            acc2_v = _norm_positive(u.get("accuracy_secondary", 0) or 0, ACC_NORM_MAX)
             run_v = _to01_bool(u.get("running_away", 0))
             par_v = _to01_bool(u.get("paralyzed", 0))
             long_par_v = _to01_bool(u.get("long_paralyzed", 0))
             trans_v = _to01_bool(u.get("transformed", 0))
-            bonus_v = _clip01(_safe_div(max(0.0, float(u.get("bonusturn", 0) or 0)), BONUS_NORM_MAX))
+            bonus_v = _norm_positive(u.get("bonusturn", 0) or 0, BONUS_NORM_MAX)
 
             waited_v = _to01_bool(u.get("waited", 0))
             def_v = _to01_bool(u.get("defense", 0))
             big_v = _to01_bool(u.get("big", False))
             res_used_mhot = _multi_hot(u.get("resilience_used_types", []), ATTACK_TYPES)
-            pois_dmg_v = _clip01(
-                _safe_div(max(0.0, float(u.get("poison_damage_per_tick", 0) or 0)), DMG2_NORM_MAX)
-            )
-            burn_dmg_v = _clip01(
-                _safe_div(max(0.0, float(u.get("burn_damage_per_tick", 0) or 0)), DMG2_NORM_MAX)
-            )
-            uran_dmg_v = _clip01(
-                _safe_div(max(0.0, float(u.get("uran_damage_per_tick", 0) or 0)), DMG2_NORM_MAX)
-            )
-            exp_kill_v = _clip01(
-                _safe_div(max(0.0, float(u.get("exp_kill", 0) or 0)), EXP_KILL_NORM_MAX)
-            )
+            pois_dmg_v = _norm_positive(u.get("poison_damage_per_tick", 0) or 0, DMG2_NORM_MAX)
+            burn_dmg_v = _norm_positive(u.get("burn_damage_per_tick", 0) or 0, DMG2_NORM_MAX)
+            uran_dmg_v = _norm_positive(u.get("uran_damage_per_tick", 0) or 0, DMG2_NORM_MAX)
+            exp_kill_v = _norm_positive(u.get("exp_kill", 0) or 0, EXP_KILL_NORM_MAX)
             exp_required_raw = max(0.0, float(u.get("exp_required", 0) or 0))
-            exp_required_v = _clip01(_safe_div(exp_required_raw, EXP_REQ_NORM_MAX))
-            exp_current_v = _clip01(
-                _safe_div(max(0.0, float(u.get("exp_current", 0) or 0)), max(1.0, exp_required_raw))
+            exp_required_v = _norm_positive(exp_required_raw, EXP_REQ_NORM_MAX)
+            exp_current_v = _norm_positive(
+                u.get("exp_current", 0) or 0,
+                max(1.0, exp_required_raw),
             )
 
             vec.extend(
@@ -5940,14 +5756,15 @@ class BattleEnv(gym.Env):
         if hero_item_no is not None:
             hero_item_name = self._hero_item_name_for_slot(hero_item_no)
 
-        attacker = self._unit_by_position(self.current_blue_attacker_pos)
+        units_by_pos = self._units_by_position()
+        attacker = units_by_pos.get(self.current_blue_attacker_pos)
         can_strike = (
             attacker is not None
             and self._alive(attacker)
             and (
                 attacker["initiative"] > 0
                 or (
-                    attacker.get("unit_type") in ("Demon", "Elfarcher")
+                    attacker.get("unit_type") in DOUBLE_STRIKE_TYPES
                     and self.blue_attacks_left > 0
                 )
             )
@@ -5962,7 +5779,7 @@ class BattleEnv(gym.Env):
                 attacker["initiative"] = reduced
                 attacker["waited"] = 1
                 if (
-                    attacker.get("unit_type") in ("Demon", "Elfarcher")
+                    attacker.get("unit_type") in DOUBLE_STRIKE_TYPES
                     and self.blue_attacks_left > 1
                 ):
                     self.blue_attacks_left = 1
@@ -5977,7 +5794,7 @@ class BattleEnv(gym.Env):
                     attacker["armor"] = armor_before + DEFEND_ARMOR_BONUS
                     attacker["defense"] = 1
                     if (
-                        attacker.get("unit_type") in ("Demon", "Elfarcher")
+                        attacker.get("unit_type") in DOUBLE_STRIKE_TYPES
                         and self.blue_attacks_left > 1
                     ):
                         self.blue_attacks_left = 1
@@ -5987,7 +5804,7 @@ class BattleEnv(gym.Env):
                 elif is_run_away_action:
                     attacker["running_away"] = 1
                     if (
-                        attacker.get("unit_type") in ("Demon", "Elfarcher")
+                        attacker.get("unit_type") in DOUBLE_STRIKE_TYPES
                         and self.blue_attacks_left > 1
                     ):
                         self.blue_attacks_left = 1
@@ -5996,7 +5813,7 @@ class BattleEnv(gym.Env):
                     )
                 elif is_hero_item_action:
                     target_unit = (
-                        self._unit_by_position(hero_item_target_pos)
+                        units_by_pos.get(hero_item_target_pos)
                         if hero_item_target_pos is not None
                         else None
                     )
@@ -6144,26 +5961,14 @@ class BattleEnv(gym.Env):
                     # --- Саппорты и лечение/бафф теперь тоже через _attack() ---
                     if wolf_self_select:
                         pass
-                    elif attacker.get("unit_type") in (
-                        "Cliric",
-                        "Profit",
-                        "Travnitsa",
-                        "Sylfid",
-                        "Sundancer",
-                        "Deva roshi",
-                        "Patriach",
-                        "Novice",
-                        "Alchemist",
-                        "Dwarfdruid",
-                        "Arhidruid",
-                    ):
+                    elif attacker.get("unit_type") in SUPPORT_TYPES:
                         hit, reason = self._attack(attacker, target_pos)
                         if not hit and reason == "dead_or_absent":
                             step_shaping += self.penalty_invalid_target
                         self._check_victory_after_hit()
 
                     elif attacker.get("unit_type") == "Doppelganger":
-                        target_unit = self._unit_by_position(target_pos)
+                        target_unit = units_by_pos.get(target_pos)
                         if target_unit is not None and self._alive(target_unit):
                             current_health = float(attacker.get("health", 0) or 0)
                             current_max_health = float(
@@ -6229,19 +6034,8 @@ class BattleEnv(gym.Env):
                             self._log(f"Doppelganger выбор: pos{target_pos} → пусто")
                         self._check_victory_after_hit()
 
-                    elif attacker.get("unit_type") in (
-                        "Warrior",
-                        "Centaur Savage",
-                        "Demon",
-                        "Lord",
-                        "Bone Lord",
-                        "Dregazul",
-                        "Ismir son",
-                        "Uter",
-                        "Abyss Devil",
-                        "Spider",
-                    ):
-                        allowed = self._warrior_allowed_targets(attacker)
+                    elif attacker.get("unit_type") in MELEE_TYPES:
+                        allowed = self._warrior_allowed_targets(attacker, units_by_pos=units_by_pos)
                         if target_pos not in allowed:
                             self._log(
                                 f"BLUE {attacker['name']}#{attacker['position']} ({attacker.get('unit_type')}) не может достать pos{target_pos}. "
@@ -6254,19 +6048,7 @@ class BattleEnv(gym.Env):
                                 step_shaping += self.penalty_invalid_target
                             self._check_victory_after_hit()
 
-                    elif attacker.get("unit_type") in (
-                        "Mage",
-                        "Dead dragon",
-                        "Wolf Lord",
-                        "Gumtic",
-                        "Drulliaan",
-                        "Uter Demon",
-                        "Tiamat",
-                        "Teurg",
-                        "Vampire",
-                        "Highvampire",
-                        "Shamanka",
-                    ):
+                    elif attacker.get("unit_type") in AOE_TYPES:
                         hit, reason = self._attack(attacker, target_pos)
                         self._check_victory_after_hit()
                     else:
@@ -6275,25 +6057,30 @@ class BattleEnv(gym.Env):
                             step_shaping += self.penalty_invalid_target
                         self._check_victory_after_hit()
 
-        step_info = {
-            "battle_hero_item_action": bool(is_hero_item_action),
-            "battle_hero_item_slot": int(hero_item_no) if hero_item_no is not None else None,
-            "battle_hero_item_target_pos": (
-                int(hero_item_target_pos) if hero_item_target_pos is not None else None
-            ),
-            "battle_hero_item_target_team": str(hero_item_target_team or ""),
-            "battle_hero_item_name": str(hero_item_name or ""),
-            "battle_hero_item_effect_kind": (
-                str(hero_item_effect_kind) if hero_item_effect_kind else ""
-            ),
-            "battle_hero_item_effect_value": float(hero_item_effect_value or 0.0),
-            "battle_hero_item_applied": bool(hero_item_applied),
-            "battle_hero_item_consumed": bool(hero_item_consumed),
-            "battle_hero_item_charge_spent": bool(hero_item_charge_spent),
-            "battle_hero_item_uses_left": hero_item_uses_left,
-            "equipped_hero_items": list(self.equipped_hero_items),
-            "equipped_hero_item_uses_left": list(self.equipped_hero_item_uses_left),
-        }
+        step_info = {"battle_hero_item_action": bool(is_hero_item_action)}
+        if is_hero_item_action or self.log_enabled or bool(getattr(self, "debug_info", False)):
+            step_info.update(
+                {
+                    "battle_hero_item_slot": (
+                        int(hero_item_no) if hero_item_no is not None else None
+                    ),
+                    "battle_hero_item_target_pos": (
+                        int(hero_item_target_pos) if hero_item_target_pos is not None else None
+                    ),
+                    "battle_hero_item_target_team": str(hero_item_target_team or ""),
+                    "battle_hero_item_name": str(hero_item_name or ""),
+                    "battle_hero_item_effect_kind": (
+                        str(hero_item_effect_kind) if hero_item_effect_kind else ""
+                    ),
+                    "battle_hero_item_effect_value": float(hero_item_effect_value or 0.0),
+                    "battle_hero_item_applied": bool(hero_item_applied),
+                    "battle_hero_item_consumed": bool(hero_item_consumed),
+                    "battle_hero_item_charge_spent": bool(hero_item_charge_spent),
+                    "battle_hero_item_uses_left": hero_item_uses_left,
+                    "equipped_hero_items": list(self.equipped_hero_items),
+                    "equipped_hero_item_uses_left": list(self.equipped_hero_item_uses_left),
+                }
+            )
 
         if self.winner is None:
             if self.blue_attacks_left > 0:
@@ -6318,6 +6105,7 @@ class BattleEnv(gym.Env):
             self.step_count += 1
             if self.step_count >= 1000:
                 truncated = True
+                self._clear_dead_running_away_flags()
                 self._log("? Лимит по шагам: бой остановлен на 1000 такте.")
         return self._obs(), reward, terminated, truncated, step_info
 
@@ -6369,7 +6157,6 @@ class BattleEnv(gym.Env):
             u["poison_damage_per_tick"] = 0
             u["burn_turns_left"] = 0
             u["burn_damage_per_tick"] = 0
-            u["burn_source_lord_pos"] = None
             u["uran_turns_left"] = 0
             u["uran_damage_per_tick"] = 0
             u["resilience_used_types"] = []
@@ -6388,7 +6175,7 @@ class BattleEnv(gym.Env):
         self._spider_applied_poison = {}
         self._dregazul_applied_poison = {}
         self._ismir_applied_uran = {}
-        self.survived_inits = []
+        self.escaped_units = []
         self.step_count = 0
         self.hero_item_slots_used_this_battle = [False] * len(self.equipped_hero_items)
         if len(getattr(self, "equipped_hero_item_uses_left", []) or []) < len(
