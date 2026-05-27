@@ -1,4 +1,4 @@
-from occultmaster_actions import handle_occultmaster_action
+from summon_actions import handle_occultmaster_action
 
 
 class _FakeBattle:
@@ -33,7 +33,7 @@ def test_occultmaster_summoned_wight_uses_battle_unit_type(monkeypatch):
     battle = _FakeBattle()
     attacker = battle.combined[0]
 
-    monkeypatch.setattr("occultmaster_actions.random.choice", lambda variants: variants[-1])
+    monkeypatch.setattr("summon_actions.random.choice", lambda variants: variants[-1])
 
     spawned, reason = handle_occultmaster_action(
         battle,

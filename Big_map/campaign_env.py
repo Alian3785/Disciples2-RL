@@ -134,6 +134,7 @@ class CampaignEnv(
         reward_battle_item_use: float = 0.05,
         reward_combat_potion_battle_participation: float = 0.05,
         reward_sell_junk_item: float = 0.05,
+        reward_unit_swap_penalty: float = 0.001,
         reward_spell_learn: float = 2.0,
         reward_spell_cast: float = 0.005,
         reward_summon_hero_battle_engage: float = 0.05,
@@ -141,9 +142,22 @@ class CampaignEnv(
         reward_castle_revive: float = 0.5,
         persist_blue_hp: bool = True,
         log_enabled: bool = False,
+        detailed_step_info: bool = True,
+        freeze_dynamic_action_layout: bool = False,
+        scripted_capital_bot_enabled: bool = True,
+        empire_territory_enabled: bool = True,
         max_grid_steps: int = 1800,
-        realcapital: int = 1,
+        Realcapital: int = 1,
+        typeoflord: int = 1,
     ):
+        """Собрать конфигурацию кампании и базовое состояние среды.
+
+        Конструктор нормализует параметры наград, выбранную столицу и тип лорда,
+        подготавливает статическую карту сценария, торговые/магические/наёмные
+        точки, кеши инвентаря, динамическую раскладку действий и Gym spaces.
+        Полное эпизодное состояние пересоздаётся в reset(), но эти атрибуты
+        нужны миксинам, observation и action mask ещё до первого сброса.
+        """
         super().__init__()
 
         self.grid_size = grid_size
@@ -177,6 +191,7 @@ class CampaignEnv(
             float(reward_combat_potion_battle_participation),
         )
         self.reward_sell_junk_item = max(0.0, float(reward_sell_junk_item))
+        self.reward_unit_swap_penalty = max(0.0, float(reward_unit_swap_penalty))
         self.reward_spell_learn = max(0.0, float(reward_spell_learn))
         self.reward_spell_cast = max(0.0, float(reward_spell_cast))
         self.reward_summon_hero_battle_engage = max(
@@ -187,6 +202,10 @@ class CampaignEnv(
         self.reward_castle_revive = max(0.0, float(reward_castle_revive))
         self.persist_blue_hp = persist_blue_hp
         self.log_enabled = log_enabled
+        self.detailed_step_info = bool(detailed_step_info)
+        self.freeze_dynamic_action_layout = bool(freeze_dynamic_action_layout)
+        self.scripted_capital_bot_config_enabled = bool(scripted_capital_bot_enabled)
+        self.empire_territory_enabled = bool(empire_territory_enabled)
         self.max_grid_steps = max(1, int(max_grid_steps))
         # Базовый лимит шагов внутри одного хода кампании.
         self.moves_per_turn = int(self.MOVES_PER_TURN)
@@ -196,14 +215,13 @@ class CampaignEnv(
         )
         self.gold_norm_k = max(1.0, self.turn_norm_k * float(self.GOLD_PER_TURN))
         # Realcapital: 1 = empire, 2 = legions, 3 = mountain_clans, 4 = undead_hordes, 5 = elves
-        self.Realcapital = self._normalize_realcapital(realcapital)
-        # Typeoflord is currently fixed for the campaign layout/state.
+        self.Realcapital = self._normalize_capital_id(Realcapital)
+        # typeoflord: 1 = warrior, 2 = mage, 3 = archer/thief.
         # Значения typeoflord для всех фракций трактуются так:
         #   1 = повелитель воинов
         #   2 = повелитель магов
         #   3 = повелитель воров
-        self.typeoflord = 1
-        self.Typeoflord = int(self.typeoflord)
+        self.typeoflord = self._normalize_typeoflord(typeoflord)
         self._reset_buildings_state()
         self._reset_spells_state()
 
@@ -227,7 +245,15 @@ class CampaignEnv(
             obstacle_tiles=obstacle_tiles,
             start_position=self.CASTLE_POS,
         )
-        mana_sources = resolve_mana_sources(self.grid_size)
+        mana_reserved_tiles = set(enemy_positions.values())
+        mana_reserved_tiles.update(self.castle_heal_tiles)
+        mana_reserved_tiles.update(obstacle_tiles)
+        mana_reserved_tiles.update(chest_contents.keys())
+        mana_reserved_tiles.add(self.CASTLE_POS)
+        mana_sources = resolve_mana_sources(
+            self.grid_size,
+            reserved_tiles=mana_reserved_tiles,
+        )
         self._static_enemy_positions = dict(enemy_positions)
         self._static_castle_heal_tiles: Tuple[Tuple[int, int], ...] = tuple(self.castle_heal_tiles)
         self._static_obstacle_tiles: Tuple[Tuple[int, int], ...] = tuple(obstacle_tiles)
@@ -338,24 +364,32 @@ class CampaignEnv(
         self._reset_legions_settlement_territory_state()
         self.legions_captured_gold_mine_tiles: Tuple[Tuple[int, int], ...] = ()
         self.legions_captured_gold_mine_count: int = 0
-        self.empire_territory_forbidden_tiles: Tuple[Tuple[int, int], ...] = (
-            self._build_empire_territory_forbidden_tiles()
-        )
-        self.empire_territory_forbidden_tile_set: set[Tuple[int, int]] = set(
-            self.empire_territory_forbidden_tiles
-        )
-        self.empire_territory_path_blocked_tiles: Tuple[Tuple[int, int], ...] = (
-            self._build_empire_territory_path_blocked_tiles()
-        )
-        self.empire_territory_path_blocked_tile_set: set[Tuple[int, int]] = set(
-            self.empire_territory_path_blocked_tiles
-        )
-        self.empire_territory_path_distances: Dict[Tuple[int, int], int] = (
-            self._build_empire_territory_path_distances()
-        )
-        self.empire_territory_order: Tuple[Tuple[int, int], ...] = (
-            self._build_empire_territory_order()
-        )
+        if self.empire_territory_enabled:
+            self.empire_territory_forbidden_tiles: Tuple[Tuple[int, int], ...] = (
+                self._build_empire_territory_forbidden_tiles()
+            )
+            self.empire_territory_forbidden_tile_set: set[Tuple[int, int]] = set(
+                self.empire_territory_forbidden_tiles
+            )
+            self.empire_territory_path_blocked_tiles: Tuple[Tuple[int, int], ...] = (
+                self._build_empire_territory_path_blocked_tiles()
+            )
+            self.empire_territory_path_blocked_tile_set: set[Tuple[int, int]] = set(
+                self.empire_territory_path_blocked_tiles
+            )
+            self.empire_territory_path_distances: Dict[Tuple[int, int], int] = (
+                self._build_empire_territory_path_distances()
+            )
+            self.empire_territory_order: Tuple[Tuple[int, int], ...] = (
+                self._build_empire_territory_order()
+            )
+        else:
+            self.empire_territory_forbidden_tiles = ()
+            self.empire_territory_forbidden_tile_set = set()
+            self.empire_territory_path_blocked_tiles = ()
+            self.empire_territory_path_blocked_tile_set = set()
+            self.empire_territory_path_distances = {}
+            self.empire_territory_order = ()
         self.empire_territory_tiles: Tuple[Tuple[int, int], ...] = ()
         self.empire_territory_tile_set: set[Tuple[int, int]] = set()
         self._legions_territory_grid_obs_cache = np.zeros(0, dtype=np.float32)
@@ -390,6 +424,8 @@ class CampaignEnv(
         self.active_mercenary_hire_options: List[Dict[str, object]] = []
         self.settlement_upgrade_names = list(self.legions_settlement_territory_source_by_name.keys())
         self._refresh_dynamic_action_layout()
+        self._dynamic_action_layout_capital = int(self.Realcapital)
+        self._dynamic_action_layout_typeoflord = int(self.typeoflord)
         self.chests: Dict[Tuple[int, int], Tuple[str, ...]] = dict(self._static_chests)
         self.mana_sources: Dict[Tuple[int, int], Dict[str, object]] = {
             tuple(pos): dict(meta)
@@ -397,6 +433,24 @@ class CampaignEnv(
         }
         self._reset_mana_state()
         self.spell_learning_locked = False
+        self._inventory_version: int = 0
+        self._inventory_cache_version: int = -1
+        self.inventory_dirty: bool = True
+        self.equipment_dirty: bool = True
+        self.battle_items_dirty: bool = True
+        self.boots_dirty: bool = True
+        self._equipment_dirty: bool = True
+        self._equipment_refresh_signature: Optional[Tuple[object, ...]] = None
+        self._battle_items_sync_signature: Optional[Tuple[object, ...]] = None
+        self._equipped_hero_items_sync_signature: Optional[Tuple[object, ...]] = None
+        self._equipped_artifact_items_sync_signature: Optional[Tuple[object, ...]] = None
+        self._equipped_banner_items_sync_signature: Optional[Tuple[object, ...]] = None
+        self._equipped_book_items_sync_signature: Optional[Tuple[object, ...]] = None
+        self._equipped_boot_items_sync_signature: Optional[Tuple[object, ...]] = None
+        self._battle_equip_action_mask_signature: Optional[Tuple[object, ...]] = None
+        self._battle_equip_action_mask_cache: Tuple[bool, ...] = ()
+        self._merchant_autosale_checked_inventory_version: Optional[int] = None
+        self._merchant_autosale_checked_position: Optional[Tuple[int, int]] = None
         self.heroitems: List[object] = []
         self._inventory_cache_valid: bool = False
         self._inventory_cache_signature: Tuple[str, ...] = ()
@@ -456,6 +510,8 @@ class CampaignEnv(
         self.battle_items_equipped_total: int = 0
         self.battle_items_used_total: int = 0
         self.books_equipped_total: int = 0
+        self.grid_unit_swap_actions_used_this_turn: set[int] = set()
+        self.grid_unit_swaps_total: int = 0
         self.captured_objective_cities: set[str] = set()
         self.cleared_ruin_enemy_ids: set[int] = set()
         self.last_ruin_reward: Optional[Dict[str, object]] = None
@@ -474,9 +530,11 @@ class CampaignEnv(
             + self.grid_enemy_obs_size
             + self.grid_campaign_obs_size
         )
+        self._refresh_grid_obs_slices()
+        self._refresh_full_obs_slices()
         total_actions = (
-            self.grid_scroll_cast_action_start
-            + int(self.MAX_SCROLL_CAST_ACTIONS)
+            self.GRID_SWAP_UNIT_ACTION_START
+            + int(self.GRID_SWAP_UNIT_ACTION_COUNT)
         )
         # Action space: grid is wider than battle (battle = 39 actions).
         self.action_space = spaces.Discrete(total_actions)
@@ -494,8 +552,166 @@ class CampaignEnv(
         self._campaign_logs: List[str] = []
         self.grid_visit_counts: Dict[Tuple[int, int], int] = {}
         self.recent_positions: List[Tuple[int, int]] = []
+    def _starting_blue_roster_spec(self) -> Optional[Dict[int, str]]:
+        """Подобрать стартовый состав BLUE для текущей фракции и типа лорда.
+
+        Ключ результата — позиция в боевой сетке 7-12, значение — имя юнита из
+        таблиц данных. Если для пары Realcapital/typeoflord нет отдельной
+        раскладки, вызывающий код откатывается к базовому UNITS_BLUE.
+        """
+        lord_type = self._normalize_typeoflord(getattr(self, "typeoflord", 1))
+        Realcapital = self._normalize_capital_id(getattr(self, "Realcapital", 1))
+        roster_specs: Dict[Tuple[int, int], Dict[int, str]] = {
+            (1, 1): {
+                7: "\u0421\u043a\u0432\u0430\u0435\u0440",
+                8: "\u0420\u044b\u0446\u0430\u0440\u044c \u043d\u0430 \u043f\u0435\u0433\u0430\u0441\u0435",
+                9: "\u0421\u043a\u0432\u0430\u0435\u0440",
+                11: "\u0421\u043b\u0443\u0436\u043a\u0430",
+            },
+            (1, 2): {
+                7: "\u0421\u043a\u0432\u0430\u0435\u0440",
+                9: "\u0421\u043a\u0432\u0430\u0435\u0440",
+                10: "\u0410\u0440\u0445\u0438\u043c\u0430\u0433",
+                12: "\u0421\u043b\u0443\u0436\u043a\u0430",
+            },
+            (1, 3): {
+                7: "\u0421\u043a\u0432\u0430\u0435\u0440",
+                9: "\u0421\u043a\u0432\u0430\u0435\u0440",
+                10: "\u0420\u0435\u0439\u043d\u0434\u0436\u0435\u0440 \u043b\u044e\u0434\u0435\u0439",
+                12: "\u0421\u043b\u0443\u0436\u043a\u0430",
+            },
+            (2, 2): {
+                7: "\u041e\u0434\u0435\u0440\u0436\u0438\u043c\u044b\u0439",
+                9: "\u041e\u0434\u0435\u0440\u0436\u0438\u043c\u044b\u0439",
+                10: "\u0410\u0440\u0445\u0438\u0434\u044c\u044f\u0432\u043e\u043b",
+                12: "\u0421\u0435\u043a\u0442\u0430\u043d\u0442",
+            },
+            (2, 3): {
+                7: "\u041e\u0434\u0435\u0440\u0436\u0438\u043c\u044b\u0439",
+                9: "\u041e\u0434\u0435\u0440\u0436\u0438\u043c\u044b\u0439",
+                10: "\u0421\u043e\u0432\u0435\u0442\u043d\u0438\u043a",
+                12: "\u0421\u0435\u043a\u0442\u0430\u043d\u0442",
+            },
+            (3, 1): {
+                7: "\u0413\u043d\u043e\u043c",
+                8: "\u041a\u043e\u0440\u043e\u043b\u0435\u0432\u0441\u043a\u0438\u0439 \u0441\u0442\u0440\u0430\u0436",
+                9: "\u0413\u043d\u043e\u043c",
+                11: "\u0422\u0440\u0430\u0432\u043d\u0438\u0446\u0430",
+            },
+            (3, 2): {
+                7: "\u0413\u043d\u043e\u043c",
+                9: "\u0413\u043d\u043e\u043c",
+                10: "\u0425\u0440\u0430\u043d\u0438\u0442\u0435\u043b\u044c \u0437\u043d\u0430\u043d\u0438\u0439",
+                12: "\u0422\u0440\u0430\u0432\u043d\u0438\u0446\u0430",
+            },
+            (3, 3): {
+                7: "\u0413\u043d\u043e\u043c",
+                9: "\u0413\u043d\u043e\u043c",
+                10: "\u0418\u043d\u0436\u0435\u043d\u0435\u0440",
+                12: "\u0422\u0440\u0430\u0432\u043d\u0438\u0446\u0430",
+            },
+            (4, 1): {
+                7: "\u0412\u043e\u0438\u043d",
+                8: "\u0420\u044b\u0446\u0430\u0440\u044c \u0441\u043c\u0435\u0440\u0442\u0438",
+                9: "\u0412\u043e\u0438\u043d",
+                11: "\u0410\u0434\u0435\u043f\u0442",
+            },
+            (4, 2): {
+                7: "\u0412\u043e\u0438\u043d",
+                9: "\u0412\u043e\u0438\u043d",
+                10: "\u041a\u043e\u0440\u043e\u043b\u0435\u0432\u0430 \u043b\u0438\u0447",
+                12: "\u0410\u0434\u0435\u043f\u0442",
+            },
+            (4, 3): {
+                7: "\u0412\u043e\u0438\u043d",
+                9: "\u0412\u043e\u0438\u043d",
+                10: "\u041d\u043e\u0441\u0444\u0435\u0440\u0430\u0442\u0443",
+                12: "\u0410\u0434\u0435\u043f\u0442",
+            },
+            (5, 1): {
+                7: "\u041a\u0435\u043d\u0442\u0430\u0432\u0440 \u043a\u043e\u043f\u0435\u0439\u0449\u0438\u043a",
+                8: "\u041b\u0435\u0441\u043d\u043e\u0439 \u043b\u043e\u0440\u0434",
+                9: "\u041a\u0435\u043d\u0442\u0430\u0432\u0440 \u043a\u043e\u043f\u0435\u0439\u0449\u0438\u043a",
+                11: "\u041c\u0435\u0434\u0438\u0443\u043c",
+            },
+            (5, 2): {
+                7: "\u041a\u0435\u043d\u0442\u0430\u0432\u0440 \u043a\u043e\u043f\u0435\u0439\u0449\u0438\u043a",
+                9: "\u041a\u0435\u043d\u0442\u0430\u0432\u0440 \u043a\u043e\u043f\u0435\u0439\u0449\u0438\u043a",
+                10: "\u0414\u0440\u0438\u0430\u0434\u0430",
+                12: "\u041c\u0435\u0434\u0438\u0443\u043c",
+            },
+            (5, 3): {
+                7: "\u041a\u0435\u043d\u0442\u0430\u0432\u0440 \u043a\u043e\u043f\u0435\u0439\u0449\u0438\u043a",
+                9: "\u041a\u0435\u043d\u0442\u0430\u0432\u0440 \u043a\u043e\u043f\u0435\u0439\u0449\u0438\u043a",
+                10: "\u0425\u0440\u0430\u043d\u0438\u0442\u0435\u043b\u044c \u043b\u0435\u0441\u0430",
+                12: "\u041c\u0435\u0434\u0438\u0443\u043c",
+            },
+        }
+        return roster_specs.get((Realcapital, lord_type))
+
+    def _create_starting_blue_team(self) -> List[Dict]:
+        """Создать стартовый BLUE-отряд как список боевых unit dict.
+
+        Метод переводит сценарную раскладку из имён юнитов в реальные структуры
+        BattleEnv, добавляет пустые placeholder-слоты для незанятых позиций и
+        сохраняет порядок GRID_BOTTLE_POSITIONS. При отсутствии специальной
+        раскладки используется глубокая копия классического UNITS_BLUE.
+        """
+        spec = self._starting_blue_roster_spec()
+        if spec is None:
+            return deepcopy(UNITS_BLUE)
+
+        team: List[Dict] = []
+        for position in self.GRID_BOTTLE_POSITIONS:
+            unit_name = spec.get(int(position))
+            if not unit_name:
+                team.append(placeholder_unit("blue", int(position)))
+                continue
+            unit_data = self._find_unit_data_by_name(unit_name)
+            if unit_data is None:
+                raise ValueError(f"Unknown starting unit {unit_name!r}")
+            team.append(self._build_unit_from_data(unit_data, "blue", int(position)))
+        return team
+
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
+        """Начать новый эпизод кампании и вернуть первое наблюдение.
+
+        Reset применяет optional Realcapital/typeoflord, пересобирает здания,
+        заклинания и динамический action layout, очищает бой, инвентарь, руины,
+        торговые запасы, ману, эффекты зелий, территории и scripted-bot state.
+        Затем сбрасывает вложенный GridEnv, синхронизирует карту с текущими
+        сундуками/источниками/сайтами и формирует стартовый info для отладки.
+        """
         super().reset(seed=seed)
+        requested_capital = (
+            self._normalize_capital_id(options.get("Realcapital"))
+            if isinstance(options, dict) and "Realcapital" in options
+            else self._normalize_capital_id(getattr(self, "Realcapital", 1))
+        )
+        requested_typeoflord = (
+            self._normalize_typeoflord(options.get("typeoflord"))
+            if isinstance(options, dict) and "typeoflord" in options
+            else self._normalize_typeoflord(getattr(self, "typeoflord", 1))
+        )
+        if bool(getattr(self, "freeze_dynamic_action_layout", False)):
+            layout_capital = int(getattr(self, "_dynamic_action_layout_capital", requested_capital))
+            layout_typeoflord = int(
+                getattr(self, "_dynamic_action_layout_typeoflord", requested_typeoflord)
+            )
+            if requested_capital != layout_capital or requested_typeoflord != layout_typeoflord:
+                raise ValueError(
+                    "Cannot change Realcapital/typeoflord while freeze_dynamic_action_layout=True"
+                )
+            self.Realcapital = layout_capital
+            self.typeoflord = layout_typeoflord
+        else:
+            self.Realcapital = requested_capital
+            self.typeoflord = requested_typeoflord
+        if isinstance(options, dict) and "scripted_capital_bot_enabled" in options:
+            self.scripted_capital_bot_config_enabled = bool(
+                options.get("scripted_capital_bot_enabled")
+            )
+            self.scripted_capital_bot_enabled = bool(self.scripted_capital_bot_config_enabled)
 
         self._reset_buildings_state()
         self.active_buildings = self._get_buildings_for_capital(self.Realcapital)
@@ -504,14 +720,17 @@ class CampaignEnv(
         self.active_spells = self._get_spells_for_capital(self.Realcapital)
         self.spell_keys = self._get_spell_keys(self.active_spells)
         self.settlement_upgrade_names = list(self.legions_settlement_territory_source_by_name.keys())
-        self._refresh_dynamic_action_layout()
+        if not bool(getattr(self, "freeze_dynamic_action_layout", False)):
+            self._refresh_dynamic_action_layout()
+            self._dynamic_action_layout_capital = int(self.Realcapital)
+            self._dynamic_action_layout_typeoflord = int(self.typeoflord)
         self.mode = self.MODE_GRID
         self.current_enemy_id = None
         self.battle_origin_pos = None
         self.current_battle_context = {}
         # Стартовое состояние BLUE — копия базовых юнитов, чтобы
         # вне боя можно было применять лечение до первого боя.
-        self.blue_team_state = deepcopy(UNITS_BLUE)
+        self.blue_team_state = self._create_starting_blue_team()
         self._sync_hero_progression_flags(self.blue_team_state)
         self.heal_bottles_used = 0
         self.healing_bottles_used = 0
@@ -521,6 +740,24 @@ class CampaignEnv(
         self.spell_learning_locked = False
         self.battle_env = None
         self._campaign_logs = []
+        self._inventory_version = int(getattr(self, "_inventory_version", 0) or 0)
+        self._inventory_cache_version = -1
+        self.inventory_dirty = True
+        self.equipment_dirty = True
+        self.battle_items_dirty = True
+        self.boots_dirty = True
+        self._equipment_dirty = True
+        self._equipment_refresh_signature = None
+        self._battle_items_sync_signature = None
+        self._equipped_hero_items_sync_signature = None
+        self._equipped_artifact_items_sync_signature = None
+        self._equipped_banner_items_sync_signature = None
+        self._equipped_book_items_sync_signature = None
+        self._equipped_boot_items_sync_signature = None
+        self._battle_equip_action_mask_signature = None
+        self._battle_equip_action_mask_cache = ()
+        self._merchant_autosale_checked_inventory_version = None
+        self._merchant_autosale_checked_position = None
         self.heroitems = []
         self._invalidate_inventory_cache()
         self.equipped_hero_items = [None] * int(self.BATTLE_EQUIP_SLOTS)
@@ -534,6 +771,10 @@ class CampaignEnv(
         self.equipped_boot_items = [None] * int(self.BOOTS_EQUIP_SLOTS)
         self.artifact_auto_equip_next_slot = 0
         self._sync_moves_per_turn_with_hero(units=self.blue_team_state, refill=True)
+        if bool(getattr(self, "freeze_dynamic_action_layout", False)):
+            self._reset_blue_unit_swap_counters()
+        else:
+            self._reset_blue_unit_swap_state()
         self.battle_item_equip_used_this_turn = False
         self.book_equip_used_this_turn = False
         self.enemy_team_states = self._create_initial_enemy_team_states()
@@ -585,11 +826,12 @@ class CampaignEnv(
         self._sync_grid_spell_shop_positions()
         self._sync_grid_mercenary_positions()
         self._sync_grid_trainer_positions()
-        total_actions = (
-            self.grid_scroll_cast_action_start
-            + int(self.MAX_SCROLL_CAST_ACTIONS)
-        )
-        self.action_space = spaces.Discrete(total_actions)
+        if not bool(getattr(self, "freeze_dynamic_action_layout", False)):
+            total_actions = (
+                self.GRID_SWAP_UNIT_ACTION_START
+                + int(self.GRID_SWAP_UNIT_ACTION_COUNT)
+            )
+            self.action_space = spaces.Discrete(total_actions)
 
         grid_obs, grid_info = self.grid_env.reset(seed=seed)
         self._reset_scripted_capital_bot_state()
@@ -621,6 +863,7 @@ class CampaignEnv(
             "battle_items_equipped_total": int(self.battle_items_equipped_total),
             "battle_items_used_total": int(self.battle_items_used_total),
             "books_equipped_total": int(self.books_equipped_total),
+            "unit_swaps_total": int(self.grid_unit_swaps_total),
             "book_equip_used_this_turn": bool(self.book_equip_used_this_turn),
             "extra_heal_bottles": int(self.extra_heal_bottles or 0),
             "extra_healing_bottles": int(self.extra_healing_bottles or 0),
@@ -664,6 +907,13 @@ class CampaignEnv(
 
         return self._build_obs(grid_obs=grid_obs), info
     def step(self, action: int):
+        """Выполнить один шаг Gym-среды в активном режиме.
+
+        CampaignEnv имеет два режима: grid-режим обрабатывает перемещение,
+        экономику и магию на карте, а battle-режим делегирует действие текущему
+        BattleEnv. Action приводится к int, потому что vectorized wrappers часто
+        передают numpy-скаляры или массивы из одного элемента.
+        """
         # Приводим action к int (может прийти как numpy.ndarray)
         action = int(action)
 
@@ -672,7 +922,15 @@ class CampaignEnv(
         else:
             return self._step_battle(action)
     def _step_grid(self, action: int):
-        """Шаг в режиме перемещения по карте."""
+        """Обработать действие агента на глобальной карте.
+
+        Метод сначала маршрутизирует action в специализированные блоки:
+        перестановки отряда, свитки, staff-магия, магазины, найм, здания,
+        обучение заклинаний, лечение/воскрешение и зелья. Если action относится
+        к движению или отдыху, он обновляет позицию GridEnv, тратит очки хода,
+        собирает сундуки, проверяет столкновения, scripted-бота и условия
+        победы/поражения, после чего передаёт результат в общий финализатор.
+        """
         # В grid режиме:
         #   0-7 — движение, 8 — отдых,
         #   9-14 — применить подходящую банку лечения к позициям 7-12 соответственно.
@@ -687,6 +945,9 @@ class CampaignEnv(
         #   после блока наёмников — покупки у торговца, затем боевые эликсиры и постройки.
         #   после построек — изучение заклинаний активной фракции.
         #   после заклинаний — улучшение захваченных городов.
+        include_detailed_info = self._include_detailed_step_info()
+        if action >= self.GRID_SWAP_UNIT_ACTION_START:
+            return self._step_swap_blue_unit_positions(action)
         if action >= self.grid_scroll_cast_action_start:
             return self._step_cast_scroll_spell(action)
         if action >= self.GRID_UNLOCK_SCROLL_MAGIC_ACTION:
@@ -745,18 +1006,29 @@ class CampaignEnv(
                 "turns": self.turns,
                 "gold": self.gold,
                 "moves": self.moves,
-                "heroitems": list(self.heroitems),
-                "equipped_hero_items": list(self.equipped_hero_items),
-                "equipped_hero_item_uses_left": list(self.equipped_hero_item_uses_left),
-                "extra_healing_bottles": int(self.extra_healing_bottles or 0),
-                "extra_revive_bottles": int(self.extra_revive_bottles or 0),
-                "active_invulnerability_positions": sorted(self.active_invulnerability_potion_positions),
-                "active_strength_positions": sorted(self.active_strength_potion_positions),
                 "combat_potion_battle_bonus_pending": bool(self.combat_potion_battle_bonus_pending),
-                "collected_chests": [],
-                "chests_remaining": len(self.chests),
             }
-            info.update(self._merchant_context_info(self.grid_env.agent_pos))
+            if include_detailed_info:
+                info.update(
+                    {
+                        "heroitems": list(self.heroitems),
+                        "equipped_hero_items": list(self.equipped_hero_items),
+                        "equipped_hero_item_uses_left": list(
+                            self.equipped_hero_item_uses_left
+                        ),
+                        "extra_healing_bottles": int(self.extra_healing_bottles or 0),
+                        "extra_revive_bottles": int(self.extra_revive_bottles or 0),
+                        "active_invulnerability_positions": sorted(
+                            self.active_invulnerability_potion_positions
+                        ),
+                        "active_strength_positions": sorted(
+                            self.active_strength_potion_positions
+                        ),
+                        "collected_chests": [],
+                        "chests_remaining": len(self.chests),
+                    }
+                )
+                info.update(self._merchant_context_info(self.grid_env.agent_pos))
             return self._finalize_grid_step_result(
                 grid_obs=grid_obs,
                 reward=0.0,
@@ -803,7 +1075,10 @@ class CampaignEnv(
 
         if grid_info.get("battle_triggered"):
             enemy_id = grid_info.get("enemy_id")
-            if enemy_id is not None and self.grid_env.enemies_alive.get(enemy_id, False):
+            if (
+                enemy_id is not None
+                and self.grid_env.enemies_alive.get(enemy_id, False)
+            ):
                 battle_engage_bonus = float(self.reward_engage_battle)
                 reward += battle_engage_bonus
                 if int(enemy_id) in self.summon_hero_battle_bonus_enemy_ids_this_turn:
@@ -856,25 +1131,35 @@ class CampaignEnv(
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
-            "heroitems": list(self.heroitems),
-            "extra_healing_bottles": int(self.extra_healing_bottles or 0),
-            "extra_revive_bottles": int(self.extra_revive_bottles or 0),
-            "active_invulnerability_positions": sorted(self.active_invulnerability_potion_positions),
-            "active_strength_positions": sorted(self.active_strength_potion_positions),
             "combat_potion_battle_bonus_pending": bool(self.combat_potion_battle_bonus_pending),
+            "collected_chests_count": int(len(collected_chests)),
             "collected_combat_potions": int(collected_combat_potions),
             "combat_potion_pickup_reward": float(combat_potion_pickup_reward),
-            "collected_chests": [
-                {
-                    "pos": tuple(chest_data["pos"]),
-                    "items": list(chest_data["items"]),
-                    "granted_items": list(chest_data.get("granted_items", [])),
-                }
-                for chest_data in collected_chests
-            ],
-            "chests_remaining": len(self.chests),
         }
-        info.update(self._merchant_context_info(new_pos))
+        if include_detailed_info:
+            info.update(
+                {
+                    "heroitems": list(self.heroitems),
+                    "extra_healing_bottles": int(self.extra_healing_bottles or 0),
+                    "extra_revive_bottles": int(self.extra_revive_bottles or 0),
+                    "active_invulnerability_positions": sorted(
+                        self.active_invulnerability_potion_positions
+                    ),
+                    "active_strength_positions": sorted(
+                        self.active_strength_potion_positions
+                    ),
+                    "collected_chests": [
+                        {
+                            "pos": tuple(chest_data["pos"]),
+                            "items": list(chest_data["items"]),
+                            "granted_items": list(chest_data.get("granted_items", [])),
+                        }
+                        for chest_data in collected_chests
+                    ],
+                    "chests_remaining": len(self.chests),
+                }
+            )
+            info.update(self._merchant_context_info(new_pos))
 
         # Обработка действия REST — восстановление базового процента HP и бонусного лечения на своей столице/городе.
         if grid_info.get("rest_action"):
@@ -997,8 +1282,25 @@ class CampaignEnv(
             info=info,
         )
     def _is_at_castle(self) -> bool:
-        """True если агент стоит на одной из клеток лечения в grid-режиме."""
+        """Проверить, находится ли герой на клетке замка/лечения.
+
+        Эти клетки открывают отдельные действия лечения и воскрешения за золото
+        и используются как часть контекста отдыха на карте.
+        """
         return tuple(self.grid_env.agent_pos) in self.castle_heal_tiles
+    def _include_detailed_step_info(self) -> bool:
+        """Определить, нужно ли собирать тяжёлый подробный info на grid step.
+
+        В обычном обучении достаточно минимального info с наградой, позицией,
+        ходами и ключевыми флагами. Подробные копии инвентаря, экипировки,
+        торговых/магических контекстов и территорий включаются только для
+        debug/log режимов или при явном detailed_step_info.
+        """
+        return bool(
+            getattr(self, "detailed_step_info", True)
+            or getattr(self, "debug_info", False)
+            or getattr(self, "log_enabled", False)
+        )
     def _finalize_grid_step_result(
         self,
         *,
@@ -1008,6 +1310,14 @@ class CampaignEnv(
         truncated: bool,
         info: Dict[str, object],
     ):
+        """Единообразно завершить любой grid-step и собрать итоговый ответ.
+
+        Финализатор добавляет автопродажу мусорных предметов у торговца,
+        обновляет награду, синхронизирует экипировку только при dirty-состоянии,
+        записывает общий минимум info и строит объединённое наблюдение. Если
+        включён подробный info, он дополнительно прикладывает снимки инвентаря,
+        экипировки, зелий, территорий, маны, руин, магазинов и прочих контекстов.
+        """
         position_raw = info.get("agent_pos", self.grid_env.agent_pos)
         if isinstance(position_raw, (list, tuple)) and len(position_raw) >= 2:
             position = (int(position_raw[0]), int(position_raw[1]))
@@ -1020,9 +1330,15 @@ class CampaignEnv(
         sale_info = self._sell_sell_only_heroitems_at_merchant(position=position)
         finalized_reward = float(reward) + float(sale_info["merchant_sale_reward"])
         finalized_info.update(sale_info)
-        self._sync_counter_backed_battle_items()
-        self._sync_equipped_hero_items()
-        self._refresh_campaign_equipment_effects(log=False)
+        equipment_signature = self._equipment_state_signature(units=self.blue_team_state)
+        if (
+            bool(getattr(self, "battle_items_dirty", True))
+            or bool(getattr(self, "equipment_dirty", True))
+            or getattr(self, "_equipment_refresh_signature", None) != equipment_signature
+        ):
+            self._sync_counter_backed_battle_items()
+            self._sync_equipped_hero_items()
+            self._refresh_campaign_equipment_effects(log=False)
 
         if "grid_reward_scaled" in finalized_info:
             try:
@@ -1038,6 +1354,29 @@ class CampaignEnv(
         finalized_info["gold"] = self.gold
         finalized_info["moves"] = self.moves
         finalized_info["typeoflord"] = int(self.typeoflord)
+        finalized_info["reward"] = float(finalized_reward)
+        finalized_info["battle_items_equipped_total"] = int(self.battle_items_equipped_total)
+        finalized_info["battle_items_used_total"] = int(self.battle_items_used_total)
+        finalized_info["books_equipped_total"] = int(self.books_equipped_total)
+        finalized_info["unit_swaps_total"] = int(self.grid_unit_swaps_total)
+        finalized_info["book_equip_used_this_turn"] = bool(self.book_equip_used_this_turn)
+        finalized_info["combat_potion_battle_bonus_pending"] = bool(
+            self.combat_potion_battle_bonus_pending
+        )
+        finalized_info["scripted_capital_bot_enemies_defeated"] = int(
+            getattr(self, "scripted_capital_bot_enemies_defeated", 0) or 0
+        )
+
+        include_detailed_info = self._include_detailed_step_info()
+        if not include_detailed_info:
+            return (
+                self._build_obs(grid_obs=grid_obs),
+                float(finalized_reward),
+                bool(terminated),
+                bool(truncated),
+                finalized_info,
+            )
+
         finalized_info["heroitems"] = list(self.heroitems)
         finalized_info["scenario_potion_item_names"] = list(self.scenario_potion_item_names)
         finalized_info["scenario_merchant_potion_item_names"] = list(
@@ -1054,10 +1393,6 @@ class CampaignEnv(
         finalized_info.update(self._banner_state_info())
         finalized_info.update(self._book_state_info())
         finalized_info.update(self._boot_state_info())
-        finalized_info["battle_items_equipped_total"] = int(self.battle_items_equipped_total)
-        finalized_info["battle_items_used_total"] = int(self.battle_items_used_total)
-        finalized_info["books_equipped_total"] = int(self.books_equipped_total)
-        finalized_info["book_equip_used_this_turn"] = bool(self.book_equip_used_this_turn)
         finalized_info["extra_heal_bottles"] = int(self.extra_heal_bottles or 0)
         finalized_info["extra_healing_bottles"] = int(self.extra_healing_bottles or 0)
         finalized_info["extra_revive_bottles"] = int(self.extra_revive_bottles or 0)
@@ -1100,9 +1435,6 @@ class CampaignEnv(
             for item_name, positions in self.active_potion_effect_positions.items()
             if positions
         }
-        finalized_info["combat_potion_battle_bonus_pending"] = bool(
-            self.combat_potion_battle_bonus_pending
-        )
         finalized_info.setdefault("collected_chests", [])
         finalized_info["chests_remaining"] = len(self.chests)
         finalized_info["legions_territory_tiles"] = tuple(self.legions_territory_tiles)
@@ -1137,22 +1469,26 @@ class CampaignEnv(
             finalized_info,
         )
     def _log(self, message: str):
-        """Добавляет сообщение в лог кампании."""
+        """Записать строку в буфер логов кампании и при необходимости вывести её.
+
+        Буфер используется визуализацией и диагностикой, а log_enabled включает
+        немедленную печать в stdout без изменения логики среды.
+        """
         self._campaign_logs.append(message)
         if self.log_enabled:
             print(f"[CAMPAIGN] {message}")
     def pop_campaign_logs(self) -> List[str]:
-        """Возвращает и очищает логи кампании."""
+        """Вернуть накопленные campaign-логи и очистить внутренний буфер."""
         logs = self._campaign_logs[:]
         self._campaign_logs.clear()
         return logs
     def pop_battle_logs(self) -> List[str]:
-        """Возвращает логи текущего боя (если есть)."""
+        """Забрать pretty-events из текущего BattleEnv, если бой активен."""
         if self.battle_env is not None:
             return self.battle_env.pop_pretty_events()
         return []
     def render(self, mode: str = "ansi") -> Optional[str]:
-        """Отрисовка текущего состояния."""
+        """Build a compact text summary of the current campaign state."""
         if mode != "ansi":
             return None
 
@@ -1164,9 +1500,9 @@ class CampaignEnv(
 
         if self.mode == self.MODE_GRID:
             lines.append("")
-            grid_render = self.grid_env.render(mode="ansi")
-            if grid_render:
-                lines.append(grid_render)
+            lines.append(f"Agent: {self.grid_env.agent_pos}")
+            lines.append(f"Enemies alive: {[k for k, v in self.grid_env.enemies_alive.items() if v]}")
+            lines.append(f"Visited: {len(self.grid_env.visited_cells)}/{self.grid_size**2}")
             lines.append(f"Ход: {self.turns} | Золото: {self.gold:g} | Шаги: {self.moves}")
         else:
             lines.append(f"В бою с врагом {self.current_enemy_id}")
@@ -1284,7 +1620,14 @@ class CampaignEnv(
         print(result)
         return result
     def get_state_summary(self) -> Dict:
-        """Возвращает сводку текущего состояния."""
+        """Вернуть машинно-читаемый snapshot кампании для UI и диагностики.
+
+        В отличие от step info, summary всегда собирает широкий срез состояния:
+        режим, позицию, врагов, ресурсы, инвентарь, экипировку, книги/ботинки,
+        магию, магазины, наёмников, ману и оставшиеся сундуки. Перед сбором
+        синхронизируются эффекты экипировки, чтобы snapshot отражал текущие
+        бонусы, а не устаревший кеш.
+        """
         self._refresh_campaign_equipment_effects(log=False)
         self._sync_equipped_book_items()
         self._sync_equipped_boot_items()
@@ -1322,6 +1665,7 @@ class CampaignEnv(
             "battle_items_equipped_total": int(self.battle_items_equipped_total),
             "battle_items_used_total": int(self.battle_items_used_total),
             "books_equipped_total": int(book_state["books_equipped_total"]),
+            "unit_swaps_total": int(self.grid_unit_swaps_total),
             "learned_spells": list(self.get_learned_spell_descriptions()),
             "learned_spells_count": len(self.get_learned_spell_descriptions()),
             "spells_total": len(self.spell_keys),

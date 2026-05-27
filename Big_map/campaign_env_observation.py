@@ -1,5 +1,11 @@
 # campaign_env_observation.py
-"""CampaignObservationMixin for CampaignEnv."""
+"""CampaignObservationMixin for CampaignEnv.
+
+Файл отвечает за наблюдения агента: превращает внутреннее состояние кампании
+в один плотный np.ndarray с числами в диапазоне [0, 1]. Observation состоит из
+базового grid-наблюдения, признаков врагов на карте, кампанийных признаков,
+пустого/актуального battle-наблюдения и двух глобальных счетчиков хода/золота.
+"""
 
 from __future__ import annotations
 
@@ -7,8 +13,182 @@ from campaign_env_data import *
 
 
 class CampaignObservationMixin:
+    """Mixin, который строит все части observation vector для CampaignEnv.
+
+    Важная идея файла: layout наблюдения должен быть стабильным внутри эпизода.
+    Поэтому сначала инициализируются размеры и порядок блоков, а затем каждый
+    `_build_*_grid_obs()` возвращает массив ровно этого размера. Это позволяет
+    policy получать вектор фиксированной длины, даже когда сундуки собраны,
+    товары куплены, враги побеждены или герой находится не рядом с магазином.
+    """
+
+    @staticmethod
+    def _copy_obs_block(
+        target: np.ndarray,
+        start: int,
+        end: int,
+        source: Optional[np.ndarray],
+    ) -> None:
+        """Copies a 1-D observation block into a fixed slice, padding short blocks."""
+        start_i = int(start)
+        end_i = int(end)
+        block_size = max(0, end_i - start_i)
+        if block_size <= 0:
+            return
+
+        if source is None:
+            target[start_i:end_i] = 0.0
+            return
+
+        source_arr = np.asarray(source, dtype=np.float32).reshape(-1)
+        source_size = int(source_arr.size)
+        if source_size >= block_size:
+            target[start_i:end_i] = source_arr[:block_size]
+            return
+
+        if source_size > 0:
+            target[start_i : start_i + source_size] = source_arr
+        target[start_i + source_size : end_i] = 0.0
+
+    def _enemy_team_for_observation_layout(self, enemy_id: object) -> List[Dict]:
+        try:
+            normalized_enemy_id = int(enemy_id)
+        except (TypeError, ValueError):
+            return []
+        if hasattr(self, "enemy_team_states"):
+            return self._get_enemy_team_state(normalized_enemy_id)
+        return ENEMY_CONFIGS.get(normalized_enemy_id, [])
+
+    def _build_enemy_obs_team_signature(self, enemy_ids: Tuple[object, ...]) -> Tuple[Tuple[int, int, int], ...]:
+        signature: List[Tuple[int, int, int]] = []
+        for enemy_id in enemy_ids:
+            team = self._enemy_team_for_observation_layout(enemy_id)
+            try:
+                normalized_enemy_id = int(enemy_id)
+            except (TypeError, ValueError):
+                normalized_enemy_id = 0
+            signature.append((normalized_enemy_id, id(team), len(team)))
+        return tuple(signature)
+
+    def _refresh_enemy_obs_layout(self) -> None:
+        enemy_positions = getattr(self.grid_env, "enemy_positions", {}) or {}
+        position_signature = tuple(
+            (enemy_id, tuple(pos)) for enemy_id, pos in enemy_positions.items()
+        )
+        grid_scale = max(1, self.grid_env.grid_size - 1)
+        enemy_ids = tuple(sorted(enemy_positions.keys()))
+        enemy_block_size = 2 + self.grid_enemy_unit_slots * self.grid_enemy_unit_feature_size
+        obs_size = len(enemy_ids) * enemy_block_size
+        template = np.zeros(obs_size, dtype=np.float32)
+        enemy_unit_slices: Dict[object, Tuple[int, int]] = {}
+        hp_entries: List[Tuple[object, Dict, int]] = []
+
+        for enemy_index, enemy_id in enumerate(enemy_ids):
+            enemy_offset = enemy_index * enemy_block_size
+            ex, ey = enemy_positions.get(enemy_id, (0, 0))
+            template[enemy_offset] = float(ex) / float(grid_scale)
+            template[enemy_offset + 1] = float(ey) / float(grid_scale)
+
+            unit_start = enemy_offset + 2
+            unit_end = unit_start + self.grid_enemy_unit_slots * self.grid_enemy_unit_feature_size
+            enemy_unit_slices[enemy_id] = (unit_start, unit_end)
+
+            team = self._enemy_team_for_observation_layout(enemy_id)
+            team_sorted = sorted(team, key=lambda u: int(u.get("position", 0)))
+            for slot_index, unit in enumerate(team_sorted[: self.grid_enemy_unit_slots]):
+                if self._is_empty_enemy_unit(unit):
+                    continue
+                slot_offset = unit_start + slot_index * self.grid_enemy_unit_feature_size
+                type_end = slot_offset + self.grid_enemy_unit_type_feature_size
+                template[slot_offset:type_end] = self._encode_enemy_unit_type(unit.get("unit_type"))
+                hp_entries.append((enemy_id, unit, type_end))
+
+        self._enemy_obs_position_signature = position_signature
+        self._enemy_obs_cached_team_signature = self._build_enemy_obs_team_signature(enemy_ids)
+        self._enemy_obs_enemy_ids = enemy_ids
+        self._enemy_obs_template = template
+        self._enemy_obs_enemy_unit_slices = enemy_unit_slices
+        self._enemy_obs_hp_entries = tuple(hp_entries)
+
+    def _ensure_enemy_obs_layout(self) -> None:
+        enemy_positions = getattr(self.grid_env, "enemy_positions", {}) or {}
+        enemy_ids = tuple(getattr(self, "_enemy_obs_enemy_ids", ()))
+        position_signature = tuple(
+            (enemy_id, tuple(pos)) for enemy_id, pos in enemy_positions.items()
+        )
+        team_signature = self._build_enemy_obs_team_signature(enemy_ids)
+        if (
+            position_signature != getattr(self, "_enemy_obs_position_signature", ())
+            or team_signature != getattr(self, "_enemy_obs_cached_team_signature", ())
+        ):
+            self._refresh_enemy_obs_layout()
+
+    def _refresh_campaign_grid_obs_slices(self) -> None:
+        block_sizes = (
+            ("blue", self.grid_blue_obs_size),
+            ("resource", self.grid_resource_obs_size),
+            ("mana_source", self.grid_mana_source_obs_size),
+            ("building", self.grid_building_obs_size),
+            ("spell", self.grid_spell_obs_size),
+            ("chest", self.grid_chest_obs_size),
+            ("heal_tiles", self.grid_heal_tile_obs_size),
+            ("legions_territory", self.grid_legions_territory_obs_size),
+            ("ruin", self.grid_ruin_obs_size),
+            ("objective_city", self.grid_objective_city_obs_size),
+            ("merchant_site", self.grid_merchant_site_obs_size),
+            ("current_merchant_stock", self.grid_current_merchant_stock_obs_size),
+            ("spell_shop_site", self.grid_spell_shop_site_obs_size),
+            ("current_spell_shop_stock", self.grid_current_spell_shop_stock_obs_size),
+            ("mercenary_site", self.grid_mercenary_site_obs_size),
+            ("current_mercenary_roster", self.grid_mercenary_roster_obs_size),
+            ("trainer", self.grid_trainer_obs_size),
+        )
+        offset = 0
+        slices: Dict[str, Tuple[int, int]] = {}
+        for name, size in block_sizes:
+            start = int(offset)
+            offset += int(size)
+            slices[name] = (start, int(offset))
+
+        self.grid_campaign_obs_block_order = tuple(name for name, _ in block_sizes)
+        self.grid_campaign_obs_slices = slices
+        self.grid_campaign_obs_size = int(offset)
+
+    def _refresh_grid_obs_slices(self) -> None:
+        base_start = 0
+        base_end = int(self.grid_obs_base_size)
+        enemy_end = base_end + int(self.grid_enemy_obs_size)
+        campaign_end = enemy_end + int(self.grid_campaign_obs_size)
+        self.grid_obs_slices = {
+            "base": (base_start, base_end),
+            "enemy": (base_end, enemy_end),
+            "campaign": (enemy_end, campaign_end),
+        }
+        self.GRID_OBS_SIZE = int(campaign_end)
+
+    def _refresh_full_obs_slices(self) -> None:
+        mode_end = 1
+        grid_end = mode_end + int(self.GRID_OBS_SIZE)
+        battle_end = grid_end + int(self.BATTLE_OBS_SIZE)
+        extra_end = battle_end + 2
+        self.full_obs_slices = {
+            "mode": (0, mode_end),
+            "grid": (mode_end, grid_end),
+            "battle": (grid_end, battle_end),
+            "extra": (battle_end, extra_end),
+        }
+        self.full_obs_size = int(extra_end)
+
     def _init_enemy_obs_metadata(self) -> None:
-        """Готовит метаданные для grid-наблюдения о врагах."""
+        """
+        Готовит layout для блока врагов в grid-наблюдении.
+
+        Метод проходит по статическим ENEMY_CONFIGS, собирает полный набор
+        типов юнитов и максимальное число слотов в enemy stack. Эти значения
+        задают ширину one-hot кодирования типа юнита и количество повторяемых
+        unit-slot признаков на каждого врага. Само состояние врагов здесь не
+        кодируется; метод только фиксирует размеры и индексы будущего блока.
+        """
         unit_types = set()
         max_units = 0
         for team in ENEMY_CONFIGS.values():
@@ -31,12 +211,31 @@ class CampaignObservationMixin:
         self.grid_enemy_obs_size = self.grid_enemy_count * (
             2 + self.grid_enemy_unit_slots * self.grid_enemy_unit_feature_size
         )
+        self._enemy_obs_position_signature: Tuple[Tuple[object, Tuple[int, int]], ...] = ()
+        self._enemy_obs_cached_team_signature: Tuple[Tuple[int, int, int], ...] = ()
+        self._enemy_obs_enemy_ids: Tuple[object, ...] = ()
+        self._enemy_obs_template = np.zeros(0, dtype=np.float32)
+        self._enemy_obs_enemy_unit_slices: Dict[object, Tuple[int, int]] = {}
+        self._enemy_obs_hp_entries: Tuple[Tuple[object, Dict, int], ...] = ()
     def _init_campaign_grid_obs_metadata(self) -> None:
-        """Готовит метаданные для grid-наблюдения о состоянии кампании."""
+        """
+        Готовит layout всех кампанийных блоков grid-наблюдения.
+
+        Здесь вычисляются размеры, порядок и нормировочные коэффициенты для
+        всех частей campaign observation: BLUE-отряда, ресурсов, маны,
+        построек, заклинаний, сундуков, зон лечения, территорий, руин,
+        финальных городов, торговцев, лавок заклинаний, наемников и тренера.
+        Эти метаданные используются builder-методами ниже, чтобы каждый блок
+        возвращал массив предсказуемой длины.
+        """
+        # BLUE-блок кодирует только фиксированные боевые позиции, поэтому его
+        # размер зависит от числа позиций в раскладке и набора признаков слота.
         self.grid_blue_positions = tuple(int(pos) for pos in self.GRID_BOTTLE_POSITIONS)
         self.grid_blue_features_per_unit = 8
         self.grid_blue_obs_size = len(self.grid_blue_positions) * self.grid_blue_features_per_unit
 
+        # Блок ресурсов включает общие счетчики, состояние экипировки и книги.
+        # Для каждого слота используется "empty" флаг плюс one-hot по предметам.
         self.grid_battle_equipment_item_names = tuple(
             str(item_name) for item_name in self.BATTLE_EQUIPPABLE_ITEM_NAMES
         )
@@ -47,7 +246,7 @@ class CampaignObservationMixin:
             int(self.BATTLE_EQUIP_SLOTS) * self.grid_battle_equipment_features_per_slot
         )
         self.grid_book_equipment_item_names = tuple(
-            str(item_name) for item_name in getattr(self, "scenario_book_item_names", ())
+            str(item_name) for item_name in getattr(self, "BOOK_ITEM_NAMES", ())
         )
         self.grid_book_equipment_features_per_slot = (
             len(self.grid_book_equipment_item_names) + 1
@@ -64,6 +263,9 @@ class CampaignObservationMixin:
             self.grid_resource_core_obs_size + self.grid_mana_total_obs_size
         )
 
+        # Mana source layout фиксирует все источники маны на карте в стабильном
+        # порядке: по типу маны, затем по y/x координатам. Это дает агенту
+        # повторяемую карту целей без необходимости парсить dict-порядок.
         mana_kind_order = {str(kind): index for index, kind in enumerate(self.MANA_KIND_ORDER)}
         self.grid_mana_source_entries = tuple(
             {
@@ -87,6 +289,9 @@ class CampaignObservationMixin:
         self.grid_mana_source_obs_size = (
             len(self.grid_mana_source_entries) * self.grid_mana_source_features_per_entry
         )
+        # Для запасов маны используется saturating-нормализация. half_point
+        # подбирается от потенциального дохода за несколько ходов, чтобы большие
+        # накопления не забивали весь диапазон слишком рано.
         self.grid_mana_total_half_point_by_kind = {}
         for kind in self.MANA_KIND_ORDER:
             source_count = sum(
@@ -95,17 +300,21 @@ class CampaignObservationMixin:
                 if str(mana_meta.get("kind", "") or "") == str(kind)
             )
             max_income = float(source_count) * float(self.LEGIONS_MANA_SOURCE_MANA_PER_TURN)
-            if str(kind) == "infernal":
+            if str(kind) == self._base_mana_kind_for_capital(getattr(self, "Realcapital", 2)):
                 max_income += float(self.BASE_INFERNAL_MANA_PER_TURN)
             self.grid_mana_total_half_point_by_kind[str(kind)] = max(
                 1.0,
                 float(self.turn_norm_k) * max(50.0, max_income),
             )
 
+        # Блок зданий хранит состояние каждого здания из текущего building_keys:
+        # построено, заблокировано, относительная цена.
         self.grid_building_features_per_building = 3
         self.grid_building_obs_size = (
             len(self.building_keys) * self.grid_building_features_per_building
         )
+        # Spell-блок разделен на ядро spellbook, learned-флаги, использованные
+        # за ход map-spells, debuff-флаги ближайшего врага и scroll slots.
         self.grid_spell_core_obs_size = 3
         self.grid_spell_features_per_spell = 1
         self.grid_legion_spell_used_features_per_spell = 1
@@ -123,7 +332,9 @@ class CampaignObservationMixin:
         )
         self.grid_nearest_enemy_debuff_obs_size = len(self.grid_nearest_enemy_debuff_flag_names)
         self.grid_scroll_core_obs_size = 3
-        self.grid_scroll_slot_count = int(self.MAX_SCROLL_CAST_ACTIONS)
+        self.grid_scroll_slot_count = int(
+            getattr(self, "GRID_SCROLL_CAST_ACTION_COUNT", self.MAX_SCROLL_CAST_ACTIONS)
+        )
         self.grid_scroll_slot_features_per_entry = 4
         self.grid_scroll_obs_size = (
             self.grid_scroll_core_obs_size
@@ -137,6 +348,8 @@ class CampaignObservationMixin:
             + self.grid_scroll_obs_size
         )
 
+        # Объекты карты представлены статическим списком позиций плюс динамикой:
+        # сундук еще существует, город захвачен, враги в городе остались и т.д.
         self.grid_chest_positions = tuple(sorted(tuple(pos) for pos in self._static_chests.keys()))
         self.grid_chest_features_per_entry = 3
         self.grid_chest_obs_size = (
@@ -188,6 +401,9 @@ class CampaignObservationMixin:
         self.grid_objective_city_obs_size = (
             len(self.grid_objective_city_names) * self.grid_objective_city_features_per_entry
         )
+        # Магазины и сайты кодируются двумя слоями: общий сайт-блок для всех
+        # известных точек и "current stock/roster" только для сайта рядом с
+        # текущей позицией героя.
         self.grid_merchant_site_names = tuple(
             str(site_name) for site_name in self.BASE_MERCHANT_SITE_DATA.keys()
         )
@@ -243,6 +459,8 @@ class CampaignObservationMixin:
         self.grid_max_mercenary_price = 1.0
         self.grid_max_mercenary_unit_health = 1.0
         self.grid_max_mercenary_unit_damage = 1.0
+        # Initial stock нужен как знаменатель нормализации. Текущий stock может
+        # уменьшаться, а observation должен показывать долю оставшегося запаса.
         for site_name in self.grid_merchant_site_names:
             total_site_stock = 0
             initial_site_stock = self._create_initial_merchant_stocks().get(site_name, {})
@@ -317,6 +535,9 @@ class CampaignObservationMixin:
                 total_site_stock
             )
 
+        # Верхние оценки запасов расходников используются для нормализации
+        # counters в resource-блоке. Сюда входят стартовые лимиты, товары
+        # торговцев и бонусные предметы из статических сундуков.
         merchant_small_heal_stock = int(
             sum(
                 int(item_data.get("stock", 0) or 0)
@@ -363,43 +584,27 @@ class CampaignObservationMixin:
             for item_name in chest_items
             if str(item_name or "") == str(self.STRENGTH_POTION_ITEM_NAME)
         )
-        self.grid_max_build_price = 1.0
-        for build_key in self.building_keys:
-            building = self.active_buildings.get(build_key)
-            if not isinstance(building, dict):
-                continue
-            try:
-                price = float(building.get("gold", 0) or 0.0)
-            except (TypeError, ValueError):
-                price = 0.0
-            self.grid_max_build_price = max(self.grid_max_build_price, price)
+        self.grid_max_build_price = self._current_max_building_gold_cost()
 
-        self.grid_campaign_obs_size = (
-            self.grid_blue_obs_size
-            + self.grid_resource_obs_size
-            + self.grid_mana_source_obs_size
-            + self.grid_building_obs_size
-            + self.grid_spell_obs_size
-            + self.grid_chest_obs_size
-            + self.grid_heal_tile_obs_size
-            + self.grid_legions_territory_obs_size
-            + self.grid_ruin_obs_size
-            + self.grid_objective_city_obs_size
-            + self.grid_merchant_site_obs_size
-            + self.grid_current_merchant_stock_obs_size
-            + self.grid_spell_shop_site_obs_size
-            + self.grid_current_spell_shop_stock_obs_size
-            + self.grid_mercenary_site_obs_size
-            + self.grid_mercenary_roster_obs_size
-            + self.grid_trainer_obs_size
-        )
+        # Финальный размер campaign-блока - сумма всех подблоков в том же
+        # порядке, в котором `_build_campaign_grid_obs()` их потом конкатенирует.
+        self._refresh_campaign_grid_obs_slices()
     def _refresh_book_observation_layout(self) -> None:
+        """
+        Пересчитывает book-сегмент resource observation.
+
+        Observation использует фиксированный словарь `BOOK_ITEM_NAMES`, поэтому
+        сценарный список книг больше не меняет ширину observation. Метод
+        остается точкой синхронизации после пересборки dynamic action layout:
+        он повторно выставляет стабильный book vocabulary и пересчитывает
+        связанные размеры, не завися от `scenario_book_item_names`.
+        """
         if not hasattr(self, "grid_battle_equipment_obs_size"):
             return
 
         old_resource_obs_size = getattr(self, "grid_resource_obs_size", None)
         self.grid_book_equipment_item_names = tuple(
-            str(item_name) for item_name in getattr(self, "scenario_book_item_names", ())
+            str(item_name) for item_name in getattr(self, "BOOK_ITEM_NAMES", ())
         )
         self.grid_book_equipment_features_per_slot = (
             len(self.grid_book_equipment_item_names) + 1
@@ -417,21 +622,17 @@ class CampaignObservationMixin:
         )
 
         if old_resource_obs_size is not None and hasattr(self, "grid_campaign_obs_size"):
-            self.grid_campaign_obs_size += int(self.grid_resource_obs_size) - int(
-                old_resource_obs_size
-            )
+            self._refresh_campaign_grid_obs_slices()
         if (
             hasattr(self, "grid_obs_base_size")
             and hasattr(self, "grid_enemy_obs_size")
             and hasattr(self, "grid_campaign_obs_size")
         ):
-            self.GRID_OBS_SIZE = (
-                int(self.grid_obs_base_size)
-                + int(self.grid_enemy_obs_size)
-                + int(self.grid_campaign_obs_size)
-            )
+            self._refresh_grid_obs_slices()
+        if hasattr(self, "GRID_OBS_SIZE") and hasattr(self, "BATTLE_OBS_SIZE"):
+            self._refresh_full_obs_slices()
         if hasattr(self, "observation_space"):
-            total_obs = 1 + int(self.GRID_OBS_SIZE) + int(self.BATTLE_OBS_SIZE) + 2
+            total_obs = int(getattr(self, "full_obs_size", 1 + int(self.GRID_OBS_SIZE) + int(self.BATTLE_OBS_SIZE) + 2))
             self.observation_space = spaces.Box(
                 low=np.zeros(total_obs, dtype=np.float32),
                 high=np.ones(total_obs, dtype=np.float32),
@@ -439,6 +640,13 @@ class CampaignObservationMixin:
                 dtype=np.float32,
             )
     def _encode_enemy_unit_type(self, unit_type: Optional[str]) -> List[float]:
+        """
+        Кодирует тип вражеского юнита one-hot вектором.
+
+        Индексы типов были подготовлены в `_init_enemy_obs_metadata()`. Если тип
+        неизвестен или набор типов пустой, возвращается нулевой/пустой вектор,
+        чтобы длина enemy unit slot оставалась стабильной.
+        """
         if self.grid_enemy_unit_type_feature_size <= 0:
             return []
         vec = [0.0] * self.grid_enemy_unit_type_feature_size
@@ -448,6 +656,13 @@ class CampaignObservationMixin:
         return vec
     @staticmethod
     def _normalize_unit_health(unit: Dict) -> float:
+        """
+        Нормализует здоровье юнита в диапазон [0, 1].
+
+        Поддерживаются оба набора полей HP, которые встречаются в проекте:
+        `health/max_health` и `hp/maxhp`. Если max HP невалиден, возвращается
+        0.0, чтобы пустые или битые слоты не создавали ложный сигнал.
+        """
         hp = float(unit.get("health", 0) or unit.get("hp", 0) or 0)
         max_hp = float(unit.get("max_health", 0) or unit.get("maxhp", 0) or hp)
         if max_hp <= 0:
@@ -455,6 +670,13 @@ class CampaignObservationMixin:
         return max(0.0, min(1.0, hp / max_hp))
     @staticmethod
     def _normalize_ratio(value: object, max_value: object) -> float:
+        """
+        Делит value на max_value и безопасно зажимает результат в [0, 1].
+
+        Используется для признаков с понятным максимумом: координат, запасов,
+        цен, доли оставшихся врагов и т.п. При ошибках типов или нулевом
+        максимуме возвращает 0.0 вместо исключения.
+        """
         try:
             value_f = float(value or 0.0)
             max_f = float(max_value or 0.0)
@@ -465,6 +687,14 @@ class CampaignObservationMixin:
         return float(np.clip(value_f / max_f, 0.0, 1.0))
     @staticmethod
     def _normalize_saturating_count(value: object, half_point: float = 1.0) -> float:
+        """
+        Сжимает неограниченный счетчик в [0, 1] через value / (value + k).
+
+        В отличие от обычного ratio эта нормализация подходит для ресурсов без
+        жесткого максимума, например золота, маны, опыта или количества
+        доступных действий. `half_point` задает значение, при котором признак
+        равен примерно 0.5.
+        """
         try:
             value_f = max(0.0, float(value or 0.0))
         except (TypeError, ValueError):
@@ -472,38 +702,40 @@ class CampaignObservationMixin:
         k = max(1e-6, float(half_point))
         return float(np.clip(value_f / (value_f + k), 0.0, 1.0))
     def _build_enemy_grid_obs(self) -> np.ndarray:
-        """Строит признаки врагов на карте для grid-наблюдения."""
+        """
+        Строит блок признаков всех enemy stacks на глобальной карте.
+
+        Для каждого врага в стабильном порядке enemy_id записываются координаты
+        стека и фиксированное число unit slots. Каждый slot содержит one-hot
+        типа юнита и нормализованное HP. Если враг побежден, слот пустой или
+        юнита не хватает до максимального размера стека, вектор слота заполняется
+        нулями. Благодаря этому размер блока не зависит от текущих потерь.
+        """
         if self.grid_enemy_obs_size <= 0:
             return np.zeros(0, dtype=np.float32)
 
-        grid_scale = max(1, self.grid_env.grid_size - 1)
-        enemy_obs: List[float] = []
-        zero_enemy_slot = [0.0] * self.grid_enemy_unit_feature_size
+        self._ensure_enemy_obs_layout()
+        enemy_obs = np.array(self._enemy_obs_template, dtype=np.float32, copy=True)
+        enemies_alive = getattr(self.grid_env, "enemies_alive", {}) or {}
 
-        for enemy_id in sorted(self.grid_env.enemy_positions.keys()):
-            ex, ey = self.grid_env.enemy_positions.get(enemy_id, (0, 0))
-            enemy_obs.extend([ex / grid_scale, ey / grid_scale])
+        for enemy_id, (unit_start, unit_end) in self._enemy_obs_enemy_unit_slices.items():
+            if not bool(enemies_alive.get(enemy_id, False)):
+                enemy_obs[unit_start:unit_end] = 0.0
 
-            is_alive = self.grid_env.enemies_alive.get(enemy_id, False)
-            team = self._get_enemy_team_state(enemy_id)
-            team_sorted = sorted(team, key=lambda u: int(u.get("position", 0)))
+        for enemy_id, unit, hp_offset in self._enemy_obs_hp_entries:
+            if bool(enemies_alive.get(enemy_id, False)):
+                enemy_obs[int(hp_offset)] = self._normalize_unit_health(unit)
 
-            for idx in range(self.grid_enemy_unit_slots):
-                if not is_alive or idx >= len(team_sorted):
-                    enemy_obs.extend(zero_enemy_slot)
-                    continue
-
-                unit = team_sorted[idx]
-                if self._is_empty_enemy_unit(unit):
-                    enemy_obs.extend(zero_enemy_slot)
-                    continue
-
-                type_one_hot = self._encode_enemy_unit_type(unit.get("unit_type"))
-                hp_norm = self._normalize_unit_health(unit)
-                enemy_obs.extend([*type_one_hot, hp_norm])
-
-        return np.array(enemy_obs, dtype=np.float32)
+        return enemy_obs
     def _build_blue_team_grid_obs(self) -> np.ndarray:
+        """
+        Строит блок состояния BLUE-отряда по фиксированным боевым позициям.
+
+        Для каждой позиции кодируются признаки, которые важны для решений на
+        карте: жив ли юнит, доля HP, ранен ли он, можно ли воскресить, активны
+        ли временные боевые зелья, является ли юнит героем и приблизительный
+        уровень. Пустые позиции получают нулевые признаки.
+        """
         state_by_pos = {
             int(unit.get("position", -1) or -1): unit for unit in (self._get_blue_state() or [])
         }
@@ -537,6 +769,16 @@ class CampaignObservationMixin:
 
         return np.array(blue_obs, dtype=np.float32)
     def _build_resource_grid_obs(self) -> np.ndarray:
+        """
+        Строит ресурсный блок кампании.
+
+        В него входят текущие/максимальные очки хода, признак нахождения на
+        healing tile, блокировка строительства, запасы бутылок и ключевых
+        зелий, прогресс по сундукам и финальным городам, состояние слотов
+        battle-предметов и книг, а также накопленные значения всех типов маны.
+        Все численные признаки нормализуются, чтобы observation оставался в
+        диапазоне [0, 1].
+        """
         inventory = self.get_bottle_inventory_counters()
         build_locked_flag = self.active_buildings.get("alredybuilt", 0)
         try:
@@ -602,6 +844,13 @@ class CampaignObservationMixin:
             )
         return np.array(resource_obs, dtype=np.float32)
     def _build_mana_source_grid_obs(self) -> np.ndarray:
+        """
+        Кодирует статические источники маны на карте.
+
+        Каждый entry содержит нормализованные координаты источника и числовой
+        код типа маны. Источники не исчезают, поэтому блок остается статичным по
+        длине и помогает агенту планировать сбор нужных ресурсов.
+        """
         if self.grid_mana_source_obs_size <= 0:
             return np.zeros(0, dtype=np.float32)
 
@@ -622,6 +871,14 @@ class CampaignObservationMixin:
             )
         return np.array(mana_obs, dtype=np.float32)
     def _build_building_grid_obs(self) -> np.ndarray:
+        """
+        Строит блок состояния построек текущей фракции.
+
+        Для каждого ключа из `building_keys` записываются три признака:
+        построено ли здание, заблокировано ли оно альтернативной веткой и
+        относительная стоимость строительства. Порядок зданий совпадает с
+        action layout для build actions.
+        """
         building_obs: List[float] = []
         max_build_price = self._current_max_building_gold_cost()
         for build_key in self.building_keys:
@@ -652,6 +909,16 @@ class CampaignObservationMixin:
 
         return np.array(building_obs, dtype=np.float32)
     def _build_spell_grid_obs(self) -> np.ndarray:
+        """
+        Строит блок магии, изученных заклинаний и scroll-состояния.
+
+        Блок начинается с состояния magic tower, lock-а обучения и общей доли
+        изученных spellbook-заклинаний. Затем идут learned-флаги каждого spell,
+        признаки уже использованных в текущем ходу map-spell actions, debuff
+        summary ближайшего targetable врага и информация по scroll magic:
+        разблокирована ли она, сколько доступно scroll slots и какие scroll
+        spells лежат в слотах.
+        """
         self._ensure_inventory_cache()
         spell_obs: List[float] = [
             1.0 if self._has_magic_tower_built() else 0.0,
@@ -709,26 +976,33 @@ class CampaignObservationMixin:
             "ward": 7,
             "health_bonus": 8,
         }
-        scroll_entries = self._scroll_cast_slot_entries_cache
+        scroll_entries = self.scroll_cast_slot_entries()
         available_scroll_entry_count = len(self._available_scroll_spell_entries_cache)
         total_scroll_count = int(self._total_scroll_count_cache)
+        scroll_slot_count = int(getattr(self, "grid_scroll_slot_count", 0) or 0)
         spell_obs.extend(
             [
                 1.0 if self.scroll_magic_unlocked else 0.0,
                 self._normalize_saturating_count(
                     available_scroll_entry_count,
-                    half_point=float(max(1, self.MAX_SCROLL_CAST_ACTIONS)),
+                    half_point=float(max(1, scroll_slot_count)),
                 ),
                 self._normalize_saturating_count(
                     total_scroll_count,
-                    half_point=float(max(1, self.MAX_SCROLL_CAST_ACTIONS)),
+                    half_point=float(max(1, scroll_slot_count)),
                 ),
             ]
         )
-        for idx in range(int(self.MAX_SCROLL_CAST_ACTIONS)):
+        for idx in range(scroll_slot_count):
             scroll_entry: Dict[str, object] = {}
             if idx < len(scroll_entries):
-                scroll_entry = dict(scroll_entries[idx])
+                scroll_entry = scroll_entries[idx]
+                try:
+                    scroll_copies = int(scroll_entry.get("copies", 0) or 0)
+                except (TypeError, ValueError):
+                    scroll_copies = 0
+                if scroll_copies <= 0:
+                    scroll_entry = {}
             spell_kind = str(scroll_entry.get("spell_kind", "") or "")
             try:
                 spell_level = int(scroll_entry.get("spell_level", 0) or 0)
@@ -747,6 +1021,13 @@ class CampaignObservationMixin:
             )
         return np.array(spell_obs, dtype=np.float32)
     def _build_chest_grid_obs(self) -> np.ndarray:
+        """
+        Строит блок сундуков на карте.
+
+        Для каждого статического сундука сохраняются координаты и флаг, лежит
+        ли он еще на карте. После сбора сундук удаляется из `self.chests`, но
+        его slot в observation остается и просто получает active=0.
+        """
         if self.grid_chest_obs_size <= 0:
             return np.zeros(0, dtype=np.float32)
 
@@ -763,6 +1044,13 @@ class CampaignObservationMixin:
             )
         return np.array(chest_obs, dtype=np.float32)
     def _build_heal_tiles_grid_obs(self) -> np.ndarray:
+        """
+        Кодирует координаты специальных клеток лечения/замка.
+
+        Эти клетки открывают платное лечение, воскрешение и часть castle-only
+        действий. Блок статичен: он сообщает агенту, где находятся такие точки,
+        а текущая близость/нахождение дополнительно отражается в resource-блоке.
+        """
         if self.grid_heal_tile_obs_size <= 0:
             return np.zeros(0, dtype=np.float32)
 
@@ -772,12 +1060,28 @@ class CampaignObservationMixin:
             heal_obs.extend([tile_pos[0] / grid_scale, tile_pos[1] / grid_scale])
         return np.array(heal_obs, dtype=np.float32)
     def _build_legions_territory_grid_obs(self) -> np.ndarray:
+        """
+        Возвращает кешированный слой территории Legions.
+
+        Территория занимает потенциально много клеток карты, поэтому сам массив
+        пересчитывается не здесь, а в момент изменения территории. Observation
+        builder только возвращает актуальный cache фиксированной длины.
+        """
         if self.grid_legions_territory_obs_size <= 0:
             return np.zeros(0, dtype=np.float32)
         return self._legions_territory_grid_obs_cache
     def _build_empire_territory_grid_obs(self) -> np.ndarray:
+        """
+        Строит бинарный слой территории Empire по всем клеткам карты.
+
+        Для каждой позиции из общего territory layout записывается 1.0, если
+        клетка входит в `empire_territory_tile_set`, иначе 0.0. Порядок клеток
+        совпадает с legions territory layout.
+        """
         if self.grid_empire_territory_obs_size <= 0:
             return np.zeros(0, dtype=np.float32)
+        if not bool(getattr(self, "empire_territory_enabled", True)):
+            return np.zeros(self.grid_empire_territory_obs_size, dtype=np.float32)
 
         territory_tiles = self.empire_territory_tile_set
         territory_obs = np.fromiter(
@@ -790,6 +1094,13 @@ class CampaignObservationMixin:
         )
         return territory_obs
     def _build_ruin_grid_obs(self) -> np.ndarray:
+        """
+        Кодирует координаты ruin reward точек.
+
+        Руины используются как постоянные ориентиры на карте. В этом блоке нет
+        флага очистки: состояние наград и врагов считывается через другие блоки
+        enemy/objective/spell.
+        """
         if self.grid_ruin_obs_size <= 0:
             return np.zeros(0, dtype=np.float32)
 
@@ -799,6 +1110,14 @@ class CampaignObservationMixin:
             ruin_obs.extend([ruin_pos[0] / grid_scale, ruin_pos[1] / grid_scale])
         return np.array(ruin_obs, dtype=np.float32)
     def _build_objective_city_grid_obs(self) -> np.ndarray:
+        """
+        Строит признаки финальных городов-целей.
+
+        Для каждого objective city берется центроид связанных enemy stacks,
+        флаг захвата города и доля оставшихся живых защитников. Это дает агенту
+        компактный сигнал о прогрессе финальной цели без перечисления логики
+        каждого enemy_id отдельно.
+        """
         if self.grid_objective_city_obs_size <= 0:
             return np.zeros(0, dtype=np.float32)
 
@@ -844,6 +1163,14 @@ class CampaignObservationMixin:
 
         return np.array(objective_obs, dtype=np.float32)
     def _build_merchant_site_grid_obs(self) -> np.ndarray:
+        """
+        Строит общий блок всех торговых лавок на карте.
+
+        Для каждой лавки кодируются anchor-координаты, находится ли герой на
+        одной из interaction tiles, есть ли хоть какой-то товар в запасе и доля
+        оставшегося общего stock. Детальный stock конкретных предметов вынесен
+        в `_build_current_merchant_stock_grid_obs()`.
+        """
         if self.grid_merchant_site_obs_size <= 0:
             return np.zeros(0, dtype=np.float32)
 
@@ -878,6 +1205,13 @@ class CampaignObservationMixin:
 
         return np.array(site_obs, dtype=np.float32)
     def _build_current_merchant_stock_grid_obs(self) -> np.ndarray:
+        """
+        Кодирует stock товаров у торговца рядом с героем.
+
+        Если герой не находится на interaction tile торговца, блок заполняется
+        нулями. Если торговец доступен, для каждого известного merchant item
+        возвращается доля текущего stock от стартового stock именно этого сайта.
+        """
         if self.grid_current_merchant_stock_obs_size <= 0:
             return np.zeros(0, dtype=np.float32)
 
@@ -900,6 +1234,13 @@ class CampaignObservationMixin:
 
         return np.array(stock_obs, dtype=np.float32)
     def _build_spell_shop_site_grid_obs(self) -> np.ndarray:
+        """
+        Строит общий блок лавок заклинаний.
+
+        Формат аналогичен merchant-site блоку: координаты anchor, доступность
+        текущей позиции, наличие stock и доля оставшегося общего ассортимента.
+        Так агент видит и дальние лавки, и возможность покупки прямо сейчас.
+        """
         if self.grid_spell_shop_site_obs_size <= 0:
             return np.zeros(0, dtype=np.float32)
 
@@ -934,6 +1275,13 @@ class CampaignObservationMixin:
 
         return np.array(site_obs, dtype=np.float32)
     def _build_current_spell_shop_stock_grid_obs(self) -> np.ndarray:
+        """
+        Кодирует ассортимент лавки заклинаний рядом с героем.
+
+        Для каждого spell-shop spell записывается доля оставшегося stock.
+        Вне interaction tile блок нулевой, чтобы policy понимала, что сейчас
+        покупать заклинания нельзя, даже если лавки существуют на карте.
+        """
         if self.grid_current_spell_shop_stock_obs_size <= 0:
             return np.zeros(0, dtype=np.float32)
 
@@ -958,6 +1306,13 @@ class CampaignObservationMixin:
 
         return np.array(stock_obs, dtype=np.float32)
     def _build_mercenary_site_grid_obs(self) -> np.ndarray:
+        """
+        Строит общий блок лагерей наемников.
+
+        Каждый лагерь описывается anchor-координатами, флагом доступности с
+        текущей позиции, наличием stock и общей долей оставшихся наемников.
+        Подробности по слотам текущего лагеря строятся отдельным roster-блоком.
+        """
         if self.grid_mercenary_site_obs_size <= 0:
             return np.zeros(0, dtype=np.float32)
 
@@ -992,6 +1347,14 @@ class CampaignObservationMixin:
 
         return np.array(site_obs, dtype=np.float32)
     def _build_current_mercenary_roster_grid_obs(self) -> np.ndarray:
+        """
+        Кодирует roster лагеря наемников рядом с героем.
+
+        Блок имеет фиксированное число slot-ов, равное максимальному roster
+        размеру среди всех лагерей. Для каждого slot записываются: существует
+        ли запись, доля stock, stand ahead/behind, цена, здоровье и урон юнита,
+        а также `hireable_now`, рассчитанный из актуальной action mask найма.
+        """
         if self.grid_mercenary_roster_obs_size <= 0:
             return np.zeros(0, dtype=np.float32)
 
@@ -1020,6 +1383,7 @@ class CampaignObservationMixin:
                     continue
                 option_index_by_slot[slot] = int(idx)
 
+        mercenary_hire_values = self._mercenary_hire_action_mask_values()
         roster_obs: List[float] = []
         for slot in range(int(self.grid_mercenary_slot_count)):
             entry = entries_by_slot.get(int(slot))
@@ -1041,8 +1405,8 @@ class CampaignObservationMixin:
             stand = str(entry.get("stand", "") or "").strip().lower()
             option_idx = option_index_by_slot.get(int(slot))
             hireable_now = 0.0
-            if option_idx is not None:
-                hireable_now = 1.0 if self._can_hire_mercenary_unit_option(self._mercenary_option(option_idx)) else 0.0
+            if option_idx is not None and option_idx < len(mercenary_hire_values):
+                hireable_now = 1.0 if bool(mercenary_hire_values[option_idx]) else 0.0
 
             roster_obs.extend(
                 [
@@ -1068,6 +1432,14 @@ class CampaignObservationMixin:
 
         return np.array(roster_obs, dtype=np.float32)
     def _build_trainer_grid_obs(self) -> np.ndarray:
+        """
+        Строит компактный блок доступности тренера.
+
+        Вектор сообщает направление до ближайшей trainer interaction tile,
+        стоит ли герой сейчас у тренера, какая доля BLUE-позиций может быть
+        натренирована и сколько суммарного affordable XP доступно с текущим
+        золотом. Это помогает policy выбирать момент и позицию для тренировки.
+        """
         if self.grid_trainer_obs_size <= 0:
             return np.zeros(0, dtype=np.float32)
 
@@ -1109,50 +1481,89 @@ class CampaignObservationMixin:
         ]
         return np.array(trainer_obs, dtype=np.float32)
     def _build_campaign_grid_obs(self) -> np.ndarray:
-        campaign_obs = np.concatenate(
-            [
-                self._build_blue_team_grid_obs(),
-                self._build_resource_grid_obs(),
-                self._build_mana_source_grid_obs(),
-                self._build_building_grid_obs(),
-                self._build_spell_grid_obs(),
-                self._build_chest_grid_obs(),
-                self._build_heal_tiles_grid_obs(),
-                self._build_legions_territory_grid_obs(),
-                self._build_ruin_grid_obs(),
-                self._build_objective_city_grid_obs(),
-                self._build_merchant_site_grid_obs(),
-                self._build_current_merchant_stock_grid_obs(),
-                self._build_spell_shop_site_grid_obs(),
-                self._build_current_spell_shop_stock_grid_obs(),
-                self._build_mercenary_site_grid_obs(),
-                self._build_current_mercenary_roster_grid_obs(),
-                self._build_trainer_grid_obs(),
-            ]
+        """
+        Собирает полный campaign-блок grid observation.
+
+        Порядок конкатенации должен совпадать с суммой размеров в
+        `_init_campaign_grid_obs_metadata()`. Каждый подблок отвечает за свою
+        часть состояния, а итоговый массив приводится к float32 без лишнего
+        копирования, если это возможно.
+        """
+        # Порядок здесь является частью observation contract: перестановка
+        # блоков поменяет смысл входов уже обученной policy.
+        if not hasattr(self, "grid_campaign_obs_slices"):
+            self._refresh_campaign_grid_obs_slices()
+
+        campaign_obs = np.empty(int(self.grid_campaign_obs_size), dtype=np.float32)
+        builders = (
+            ("blue", self._build_blue_team_grid_obs),
+            ("resource", self._build_resource_grid_obs),
+            ("mana_source", self._build_mana_source_grid_obs),
+            ("building", self._build_building_grid_obs),
+            ("spell", self._build_spell_grid_obs),
+            ("chest", self._build_chest_grid_obs),
+            ("heal_tiles", self._build_heal_tiles_grid_obs),
+            ("legions_territory", self._build_legions_territory_grid_obs),
+            ("ruin", self._build_ruin_grid_obs),
+            ("objective_city", self._build_objective_city_grid_obs),
+            ("merchant_site", self._build_merchant_site_grid_obs),
+            ("current_merchant_stock", self._build_current_merchant_stock_grid_obs),
+            ("spell_shop_site", self._build_spell_shop_site_grid_obs),
+            ("current_spell_shop_stock", self._build_current_spell_shop_stock_grid_obs),
+            ("mercenary_site", self._build_mercenary_site_grid_obs),
+            ("current_mercenary_roster", self._build_current_mercenary_roster_grid_obs),
+            ("trainer", self._build_trainer_grid_obs),
         )
-        return campaign_obs.astype(np.float32, copy=False)
+        for block_name, builder in builders:
+            start, end = self.grid_campaign_obs_slices[block_name]
+            self._copy_obs_block(campaign_obs, start, end, builder())
+        return campaign_obs
     def _augment_grid_obs(self, base_obs: np.ndarray) -> np.ndarray:
-        enemy_obs = self._build_enemy_grid_obs()
-        campaign_obs = self._build_campaign_grid_obs()
-        if enemy_obs.size == 0 and campaign_obs.size == 0:
-            return base_obs.astype(np.float32, copy=False)
-        return np.concatenate(
-            [
-                base_obs.astype(np.float32, copy=False),
-                enemy_obs,
-                campaign_obs,
-            ]
-        )
+        """
+        Расширяет базовое GridWorld-наблюдение кампанийными признаками.
+
+        `grid_env._get_obs()` знает только локальную карту/позицию. Этот метод
+        добавляет поверх него enemy block и campaign block, чтобы policy видела
+        стратегическое состояние: армию, ресурсы, магазины, заклинания, цели и
+        другие системы кампании.
+        """
+        if not hasattr(self, "grid_obs_slices"):
+            self._refresh_grid_obs_slices()
+
+        grid_obs = np.empty(int(self.GRID_OBS_SIZE), dtype=np.float32)
+        base_start, base_end = self.grid_obs_slices["base"]
+        enemy_start, enemy_end = self.grid_obs_slices["enemy"]
+        campaign_start, campaign_end = self.grid_obs_slices["campaign"]
+        self._copy_obs_block(grid_obs, base_start, base_end, base_obs)
+        self._copy_obs_block(grid_obs, enemy_start, enemy_end, self._build_enemy_grid_obs())
+        self._copy_obs_block(grid_obs, campaign_start, campaign_end, self._build_campaign_grid_obs())
+        return grid_obs
     def _get_grid_obs(self) -> np.ndarray:
-        """Возвращает grid-наблюдение с признаками врагов."""
+        """
+        Возвращает актуальное grid-наблюдение CampaignEnv.
+
+        Метод является удобной точкой входа для grid step/finalize логики:
+        берет базовое наблюдение из GridWorldEnv и добавляет все кампанийные
+        расширения через `_augment_grid_obs()`.
+        """
         return self._augment_grid_obs(self.grid_env._get_obs())
     def _build_obs(
         self,
         grid_obs: Optional[np.ndarray] = None,
         battle_obs: Optional[np.ndarray] = None,
     ) -> np.ndarray:
-        """Строит объединённое наблюдение."""
-        mode_flag = np.array([float(self.mode)], dtype=np.float32)
+        """
+        Строит финальное observation для внешнего Gym API.
+
+        Итоговый вектор имеет формат:
+        `[mode_flag, grid_obs..., battle_obs..., turns_norm, gold_norm]`.
+        В grid-режиме battle_obs обычно нулевой, в battle-режиме grid_obs может
+        быть передан как актуальный контекст карты. После конкатенации все NaN
+        и бесконечности заменяются безопасными значениями, а весь observation
+        зажимается в диапазон [0, 1], совпадающий с observation_space.
+        """
+        if not hasattr(self, "full_obs_slices"):
+            self._refresh_full_obs_slices()
 
         if grid_obs is None:
             grid_obs = np.zeros(self.GRID_OBS_SIZE, dtype=np.float32)
@@ -1164,9 +1575,15 @@ class CampaignObservationMixin:
         gold_raw = max(0.0, float(self.gold))
         turns_norm = self._clip01(turns_raw / (turns_raw + self.turn_norm_k))
         gold_norm = self._clip01(gold_raw / (gold_raw + self.gold_norm_k))
-        extra_obs = np.array([turns_norm, gold_norm], dtype=np.float32)
-
-        obs = np.concatenate([mode_flag, grid_obs, battle_obs, extra_obs])
-        obs = np.nan_to_num(obs, nan=0.0, posinf=1.0, neginf=0.0)
-        obs = np.clip(obs, 0.0, 1.0)
+        obs = np.empty(int(self.full_obs_size), dtype=np.float32)
+        mode_start, mode_end = self.full_obs_slices["mode"]
+        grid_start, grid_end = self.full_obs_slices["grid"]
+        battle_start, battle_end = self.full_obs_slices["battle"]
+        extra_start, extra_end = self.full_obs_slices["extra"]
+        obs[mode_start:mode_end] = float(self.mode)
+        self._copy_obs_block(obs, grid_start, grid_end, grid_obs)
+        self._copy_obs_block(obs, battle_start, battle_end, battle_obs)
+        obs[extra_start:extra_end] = np.array([turns_norm, gold_norm], dtype=np.float32)
+        np.nan_to_num(obs, copy=False, nan=0.0, posinf=1.0, neginf=0.0)
+        np.clip(obs, 0.0, 1.0, out=obs)
         return obs

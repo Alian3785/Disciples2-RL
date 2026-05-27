@@ -16,6 +16,7 @@ from battle_env import BattleEnv, UNITS_BLUE, FEATURES_PER_UNIT
 from enemy_configs import ENEMY_CONFIGS, ENEMY_DESCRIPTIONS
 from grid import (
     CAPITAL_HEAL_TILE_ARMOR_BONUS,
+    CAPITAL_HEAL_TILE_REST_BONUS,
     CAPITAL_INTERNAL_STACK_OVERRIDES,
     RUIN_STACK_OVERRIDES,
     are_targets_reachable,
@@ -37,6 +38,7 @@ from grid import (
 from grid_world_env import GridWorldEnv
 from data_dicts_compact_lines import DATA as UNIT_DATA, map_unit_to_battle, placeholder_unit
 from Buildings import (
+    BUILDING_METADATA_D2,
     empire_buildings_d2,
     mountain_clans_buildings_d2,
     undead_hordes_buildings_d2,
@@ -68,7 +70,7 @@ BUILDINGS_D2 = {
     "legions": legions_buildings_d2,
     "elves": elves_buildings_d2,
 }
-BUILDINGS_D2_TEMPLATE = {key: deepcopy(value) for key, value in BUILDINGS_D2.items()}
+BUILDINGS_D2_TEMPLATE = BUILDINGS_D2
 SPELLS_D2 = {
     "empire": empire_spells_d2,
     "mountain_clans": mountain_clans_spells_d2,
@@ -274,6 +276,16 @@ class CampaignConstantsMixin:
     CASTLE_REVIVE_POSITIONS = REVIVE_BOTTLE_POSITIONS
     HIRE_FRONT_POSITIONS = (7, 9)
     HIRE_BACK_POSITIONS = (10, 11, 12)
+    HIRE_BIG_FRONT_POSITIONS = (7, 8, 9)
+    HIRE_BIG_UNIT_KIND = "faction_big"
+    HIRE_BIG_UNIT_GOLD_COST = 100.0
+    HIRE_BIG_UNIT_NAME_BY_CAPITAL = {
+        1: "\u0422\u0438\u0442\u0430\u043d",
+        2: "\u0427\u0451\u0440\u0442",
+        3: "\u0425\u043e\u043b\u043c\u043e\u0432\u043e\u0439 \u0433\u0438\u0433\u0430\u043d\u0442",
+        4: "\u0412\u0438\u0432\u0435\u0440\u043d\u0430",
+        5: "\u0413\u0440\u0438\u0444\u043e\u043d",
+    }
     GRID_HIRE_ACTION_START = GRID_CASTLE_REVIVE_ACTION_START + len(CASTLE_REVIVE_POSITIONS)  # 45
     GRID_MERCENARY_HIRE_ACTION_START = GRID_HIRE_ACTION_START
     GRID_TRAINER_ACTION_START = GRID_MERCENARY_HIRE_ACTION_START
@@ -1293,6 +1305,7 @@ class CampaignConstantsMixin:
     }
     SCROLL_MAGE_UNLOCK_GOLD_COST = 500.0
     MAX_SCROLL_CAST_ACTIONS = 5
+    GRID_SCROLL_CAST_ACTION_COUNT = 0
     GRID_BUILD_ACTION_START = (
         GRID_SUPREME_ELIXIR_ACTION_START + len(SUPREME_ELIXIR_POSITIONS)
     )
@@ -1318,8 +1331,15 @@ class CampaignConstantsMixin:
         "Zombie Talisman": 4000,
         "Mind ward scroll": 600,
         "Bronze Ring (Valuable)": 250,
+        "Silver Ring (Valuable)": 500,
+        "Emerald (Valuable)": 750,
+        "Gold Ring (Valuable)": 1000,
         "Ruby (Valuable)": 1250,
+        "Sapphire (Valuable)": 1500,
         "Diamond (Valuable)": 1750,
+        "Ancient Relic (Valuable)": 2000,
+        "Royal Scepter (Valuable)": 2500,
+        "Imperial Crown (Valuable)": 5000,
         BONUS_SMALL_HEAL_ITEM_NAME: 150,
         BONUS_LARGE_HEAL_ITEM_NAME: 300,
         BONUS_REVIVE_ITEM_NAME: 400,

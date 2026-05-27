@@ -1,28 +1,23 @@
-﻿# train_campaign.py
-"""
-Скрипт обучения агента в Campaign Mode.
-
-Агент учится:
-1. Перемещаться по карте 40×40
-2. Находить и побеждать 4 разных врагов
-3. Сохранять HP между боями для оптимизации стратегии
-"""
-
 import os
 import re
 import time
 import traceback
 from collections import Counter, deque
+from functools import partial
 from pathlib import Path
 from typing import Any
+
+os.environ.setdefault("TORCH_DISABLE_DYNAMO", "1")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+
 import gymnasium as gym
 import numpy as np
 import torch as th
 from console_encoding import setup_utf8_console
 
-# Отключаем torch._dynamo, чтобы избежать зависимости от sympy/gmpy при обучении.
-# Это стабилизирует запуск на окружениях без полной установки SymPy.
-os.environ.setdefault("TORCH_DISABLE_DYNAMO", "1")
 setup_utf8_console()
 
 try:
@@ -60,8 +55,44 @@ except ImportError:
 from campaign_env import CampaignEnv
 from grid import DEFAULT_GRID_SIZE
 
-# Директория этого файла (чтобы пути были стабильны независимо от cwd)
+
+def _patch_maskable_categorical_cached_probs_validation() -> None:
+    try:
+        from sb3_contrib.common.maskable.distributions import MaskableCategorical
+        from torch.distributions import Categorical
+        from torch.distributions.utils import logits_to_probs
+    except ImportError:
+        return
+
+    current_apply_masking = getattr(MaskableCategorical, "apply_masking", None)
+    if getattr(current_apply_masking, "_campaign_cache_safe_patch", False):
+        return
+
+    def apply_masking(self, masks) -> None:
+        if masks is not None:
+            device = self.logits.device
+            self.masks = th.as_tensor(masks, dtype=th.bool, device=device).reshape(
+                self.logits.shape
+            )
+            huge_neg = th.tensor(-1e8, dtype=self.logits.dtype, device=device)
+            logits = th.where(self.masks, self._original_logits, huge_neg)
+        else:
+            self.masks = None
+            logits = self._original_logits
+
+        self.__dict__.pop("probs", None)
+        self.__dict__.pop("logits", None)
+        Categorical.__init__(self, logits=logits, validate_args=False)
+        self.probs = logits_to_probs(self.logits)
+
+    apply_masking._campaign_cache_safe_patch = True
+    MaskableCategorical.apply_masking = apply_masking
+
+
+_patch_maskable_categorical_cached_probs_validation()
+
 BASE_DIR = Path(__file__).resolve().parent
+
 REWARD_CONFIG = {
     "reward_engage_battle": 0.25,
     "reward_defeat_enemy": 4.0,
@@ -85,6 +116,7 @@ REWARD_CONFIG = {
     "reward_battle_item_equip": 0.02,
     "reward_battle_item_use": 0.05,
     "reward_sell_junk_item": 0.05,
+    "reward_unit_swap_penalty": 0.001,
     "reward_spell_learn": 2.0,
     "reward_spell_cast": 0.005,
 }
@@ -94,7 +126,6 @@ MAX_EVAL_EPISODE_STEPS = 4000
 
 
 def _comet_version_tuple(raw_version: str) -> tuple[int, int, int] | None:
-    """Parse semantic version (major.minor.patch) from a Comet version string."""
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)", raw_version or "")
     if not match:
         return None
@@ -102,7 +133,6 @@ def _comet_version_tuple(raw_version: str) -> tuple[int, int, int] | None:
 
 
 def _comet_version_is_supported() -> bool:
-    """Require comet_ml>=3.57.0 for stable training integration."""
     if comet_ml is None:
         return False
     parsed = _comet_version_tuple(getattr(comet_ml, "__version__", ""))
@@ -110,7 +140,6 @@ def _comet_version_is_supported() -> bool:
 
 
 def _normalize_optional_name(value: str | None) -> str | None:
-    """Normalize optional CLI/env value."""
     if value is None:
         return None
     cleaned = str(value).strip()
@@ -130,7 +159,6 @@ def _init_comet_experiment(
     offline: bool = False,
     offline_directory: str | None = None,
 ):
-    """Initialize Comet online or offline and log the base config."""
     normalized_workspace = _normalize_optional_name(workspace)
     api_key = os.getenv("COMET_API_KEY", "").strip() or None
     common_kwargs = {
@@ -170,21 +198,18 @@ def _init_comet_experiment(
 
 
 def _safe_mean(values) -> float:
-    """Return float mean for a sequence-like container, or 0.0 when empty."""
     if not values:
         return 0.0
     return float(np.mean(list(values)))
 
 
 def _safe_rate(numerator: int, denominator: int) -> float:
-    """Return a safe fraction for counters."""
     if denominator <= 0:
         return 0.0
     return float(numerator) / float(denominator)
 
 
 class EvalStepCapWrapper(gym.Wrapper):
-    """Hard-stop eval episodes after a fixed number of env steps."""
 
     def __init__(self, env: gym.Env, max_steps: int):
         super().__init__(env)
@@ -209,16 +234,24 @@ class EvalStepCapWrapper(gym.Wrapper):
         return obs, reward, terminated, truncated, info
 
 
-def make_env(log_enabled: bool = False, eval_max_episode_steps: int | None = None):
-    """Фабрика создания среды."""
+def make_env(
+    log_enabled: bool = False,
+    eval_max_episode_steps: int | None = None,
+    freeze_dynamic_action_layout: bool = True,
+    scripted_capital_bot_enabled: bool = True,
+    empire_territory_enabled: bool = True,
+):
     env = CampaignEnv(
         grid_size=DEFAULT_GRID_SIZE,
-        # Основная цель: пройти всю кампанию (4/4 врага).
         **REWARD_CONFIG,
         persist_blue_hp=True,
         log_enabled=log_enabled,
+        detailed_step_info=bool(log_enabled),
+        freeze_dynamic_action_layout=freeze_dynamic_action_layout,
+        scripted_capital_bot_enabled=scripted_capital_bot_enabled,
+        empire_territory_enabled=empire_territory_enabled,
         max_grid_steps=1800,
-        realcapital=2,
+        Realcapital=2,
     )
     if eval_max_episode_steps is not None:
         env = EvalStepCapWrapper(env, max_steps=eval_max_episode_steps)
@@ -226,7 +259,6 @@ def make_env(log_enabled: bool = False, eval_max_episode_steps: int | None = Non
 
 
 def resolve_training_vec_env_config(vec_env_mode: str):
-    """Return the VecEnv class and kwargs for the selected rollout mode."""
     if vec_env_mode == "subproc":
         return SubprocVecEnv, {"start_method": "spawn"}
     if vec_env_mode == "dummy":
@@ -457,7 +489,6 @@ def _write_training_diagnostics_report(
 
 
 class CampaignNumericsDiagnosticsCallback(BaseCallback):
-    """Lightweight numerics checks around rollout/train boundaries."""
 
     def __init__(self, report_dir: str, experiment: Any | None = None, verbose: int = 1):
         super().__init__(verbose)
@@ -508,7 +539,6 @@ class CampaignNumericsDiagnosticsCallback(BaseCallback):
 
 
 class CampaignCheckpointCallback(BaseCallback):
-    """Сохраняет модель каждые N шагов."""
 
     def __init__(
         self,
@@ -547,7 +577,6 @@ class CampaignCheckpointCallback(BaseCallback):
 
 
 class SaveVecNormalizeOnBestCallback(BaseCallback):
-    """Сохраняет статистики VecNormalize при обновлении лучшей модели."""
 
     def __init__(self, save_path: str, verbose: int = 0):
         super().__init__(verbose)
@@ -571,7 +600,6 @@ def is_better_campaign_eval(
     best_victory_rate: float,
     best_mean_reward: float,
 ) -> bool:
-    """Choose the best checkpoint by victory rate, using mean reward only as a tie-break."""
     victory_rate = float(victory_rate)
     mean_reward = float(mean_reward)
     best_victory_rate = float(best_victory_rate)
@@ -585,14 +613,17 @@ def is_better_campaign_eval(
 
 
 class CampaignVictoryEvalCallback(EvalCallback):
-    """Eval callback that logs deterministic and stochastic campaign win rates.
 
-    The best checkpoint is still chosen by deterministic victory rate.
-    """
-
-    def __init__(self, *args, use_masking: bool = True, **kwargs):
+    def __init__(
+        self,
+        *args,
+        use_masking: bool = True,
+        stochastic_eval_episodes: int = 0,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self.use_masking = bool(use_masking)
+        self.stochastic_eval_episodes = max(0, int(stochastic_eval_episodes))
         self.best_victory_rate = -np.inf
         self.last_victory_rate = 0.0
         self.last_stochastic_victory_rate = 0.0
@@ -609,14 +640,14 @@ class CampaignVictoryEvalCallback(EvalCallback):
             info = locals_["info"]
             self._eval_victory_buffer.append(info.get("campaign_result") == "victory")
 
-    def _evaluate_policy(self, *, deterministic: bool):
+    def _evaluate_policy(self, *, deterministic: bool, n_eval_episodes: int):
         if self.use_masking:
             if maskable_evaluate_policy is None:
                 raise RuntimeError("Maskable evaluation is unavailable, but use_masking=True.")
             return maskable_evaluate_policy(
                 self.model,  # type: ignore[arg-type]
                 self.eval_env,
-                n_eval_episodes=self.n_eval_episodes,
+                n_eval_episodes=n_eval_episodes,
                 render=self.render,
                 deterministic=deterministic,
                 return_episode_rewards=True,
@@ -627,7 +658,7 @@ class CampaignVictoryEvalCallback(EvalCallback):
         return sb3_evaluate_policy(
             self.model,
             self.eval_env,
-            n_eval_episodes=self.n_eval_episodes,
+            n_eval_episodes=n_eval_episodes,
             render=self.render,
             deterministic=deterministic,
             return_episode_rewards=True,
@@ -635,10 +666,18 @@ class CampaignVictoryEvalCallback(EvalCallback):
             callback=self._log_success_callback,
         )
 
-    def _run_campaign_eval(self, *, deterministic: bool) -> tuple[list[float], list[int], list[bool], list[bool]]:
+    def _run_campaign_eval(
+        self,
+        *,
+        deterministic: bool,
+        n_eval_episodes: int,
+    ) -> tuple[list[float], list[int], list[bool], list[bool]]:
         self._is_success_buffer = []
         self._eval_victory_buffer = []
-        episode_rewards, episode_lengths = self._evaluate_policy(deterministic=deterministic)
+        episode_rewards, episode_lengths = self._evaluate_policy(
+            deterministic=deterministic,
+            n_eval_episodes=n_eval_episodes,
+        )
         return (
             list(episode_rewards),
             list(episode_lengths),
@@ -661,35 +700,45 @@ class CampaignVictoryEvalCallback(EvalCallback):
                     ) from e
 
             det_rewards, det_lengths, det_successes, det_victories = self._run_campaign_eval(
-                deterministic=True
+                deterministic=True,
+                n_eval_episodes=self.n_eval_episodes,
             )
-            stoch_rewards, stoch_lengths, stoch_successes, stoch_victories = self._run_campaign_eval(
-                deterministic=False
-            )
+            stoch_rewards: list[float] = []
+            stoch_lengths: list[int] = []
+            stoch_successes: list[bool] = []
+            stoch_victories: list[bool] = []
+            if self.stochastic_eval_episodes > 0:
+                stoch_rewards, stoch_lengths, stoch_successes, stoch_victories = (
+                    self._run_campaign_eval(
+                        deterministic=False,
+                        n_eval_episodes=self.stochastic_eval_episodes,
+                    )
+                )
 
             if self.log_path is not None:
                 self.evaluations_timesteps.append(self.num_timesteps)
                 self.evaluations_results.append(det_rewards)
                 self.evaluations_length.append(det_lengths)
                 self.evaluations_victories.append(det_victories)
-                self.stochastic_evaluations_results.append(stoch_rewards)
-                self.stochastic_evaluations_length.append(stoch_lengths)
-                self.stochastic_evaluations_victories.append(stoch_victories)
 
                 kwargs = {
                     "victories": self.evaluations_victories,
                     "deterministic_results": self.evaluations_results,
                     "deterministic_ep_lengths": self.evaluations_length,
                     "deterministic_victories": self.evaluations_victories,
-                    "stochastic_results": self.stochastic_evaluations_results,
-                    "stochastic_ep_lengths": self.stochastic_evaluations_length,
-                    "stochastic_victories": self.stochastic_evaluations_victories,
                 }
                 if det_successes:
                     self.evaluations_successes.append(det_successes)
                     kwargs["successes"] = self.evaluations_successes
                     kwargs["deterministic_successes"] = self.evaluations_successes
-                if stoch_successes:
+                if self.stochastic_eval_episodes > 0:
+                    self.stochastic_evaluations_results.append(stoch_rewards)
+                    self.stochastic_evaluations_length.append(stoch_lengths)
+                    self.stochastic_evaluations_victories.append(stoch_victories)
+                    kwargs["stochastic_results"] = self.stochastic_evaluations_results
+                    kwargs["stochastic_ep_lengths"] = self.stochastic_evaluations_length
+                    kwargs["stochastic_victories"] = self.stochastic_evaluations_victories
+                if self.stochastic_eval_episodes > 0 and stoch_successes:
                     self.stochastic_evaluations_successes.append(stoch_successes)
                     kwargs["stochastic_successes"] = self.stochastic_evaluations_successes
 
@@ -706,29 +755,38 @@ class CampaignVictoryEvalCallback(EvalCallback):
             mean_ep_length = float(np.mean(det_lengths))
             std_ep_length = float(np.std(det_lengths))
             victory_rate = float(np.mean(det_victories)) if det_victories else 0.0
-            stochastic_mean_reward = float(np.mean(stoch_rewards))
-            stochastic_std_reward = float(np.std(stoch_rewards))
-            stochastic_mean_ep_length = float(np.mean(stoch_lengths))
-            stochastic_std_ep_length = float(np.std(stoch_lengths))
+            stochastic_enabled = self.stochastic_eval_episodes > 0
+            stochastic_mean_reward = float(np.mean(stoch_rewards)) if stochastic_enabled else 0.0
+            stochastic_std_reward = float(np.std(stoch_rewards)) if stochastic_enabled else 0.0
+            stochastic_mean_ep_length = float(np.mean(stoch_lengths)) if stochastic_enabled else 0.0
+            stochastic_std_ep_length = float(np.std(stoch_lengths)) if stochastic_enabled else 0.0
             stochastic_victory_rate = float(np.mean(stoch_victories)) if stoch_victories else 0.0
             self.last_mean_reward = mean_reward
             self.last_victory_rate = victory_rate
             self.last_stochastic_victory_rate = stochastic_victory_rate
 
             if self.verbose >= 1:
-                print(
-                    f"Eval num_timesteps={self.num_timesteps}, "
-                    f"det_reward={mean_reward:.2f} +/- {std_reward:.2f}, "
-                    f"stoch_reward={stochastic_mean_reward:.2f} +/- {stochastic_std_reward:.2f}"
-                )
-                print(
-                    f"Episode length: det={mean_ep_length:.2f} +/- {std_ep_length:.2f}, "
-                    f"stoch={stochastic_mean_ep_length:.2f} +/- {stochastic_std_ep_length:.2f}"
-                )
-                print(
-                    f"Victory rate: det={100 * victory_rate:.2f}%, "
-                    f"stoch={100 * stochastic_victory_rate:.2f}%"
-                )
+                if stochastic_enabled:
+                    print(
+                        f"Eval num_timesteps={self.num_timesteps}, "
+                        f"det_reward={mean_reward:.2f} +/- {std_reward:.2f}, "
+                        f"stoch_reward={stochastic_mean_reward:.2f} +/- {stochastic_std_reward:.2f}"
+                    )
+                    print(
+                        f"Episode length: det={mean_ep_length:.2f} +/- {std_ep_length:.2f}, "
+                        f"stoch={stochastic_mean_ep_length:.2f} +/- {stochastic_std_ep_length:.2f}"
+                    )
+                    print(
+                        f"Victory rate: det={100 * victory_rate:.2f}%, "
+                        f"stoch={100 * stochastic_victory_rate:.2f}%"
+                    )
+                else:
+                    print(
+                        f"Eval num_timesteps={self.num_timesteps}, "
+                        f"det_reward={mean_reward:.2f} +/- {std_reward:.2f}"
+                    )
+                    print(f"Episode length: det={mean_ep_length:.2f} +/- {std_ep_length:.2f}")
+                    print(f"Victory rate: det={100 * victory_rate:.2f}%")
 
             self.logger.record("eval/mean_reward", mean_reward)
             self.logger.record("eval/mean_ep_length", mean_ep_length)
@@ -736,9 +794,10 @@ class CampaignVictoryEvalCallback(EvalCallback):
             self.logger.record("eval/deterministic_mean_reward", mean_reward)
             self.logger.record("eval/deterministic_mean_ep_length", mean_ep_length)
             self.logger.record("eval/deterministic_victory_rate", victory_rate)
-            self.logger.record("eval/stochastic_mean_reward", stochastic_mean_reward)
-            self.logger.record("eval/stochastic_mean_ep_length", stochastic_mean_ep_length)
-            self.logger.record("eval/stochastic_victory_rate", stochastic_victory_rate)
+            if stochastic_enabled:
+                self.logger.record("eval/stochastic_mean_reward", stochastic_mean_reward)
+                self.logger.record("eval/stochastic_mean_ep_length", stochastic_mean_ep_length)
+                self.logger.record("eval/stochastic_victory_rate", stochastic_victory_rate)
 
             if det_successes:
                 success_rate = float(np.mean(det_successes))
@@ -746,7 +805,7 @@ class CampaignVictoryEvalCallback(EvalCallback):
                     print(f"Success rate: det={100 * success_rate:.2f}%")
                 self.logger.record("eval/success_rate", success_rate)
                 self.logger.record("eval/deterministic_success_rate", success_rate)
-            if stoch_successes:
+            if stochastic_enabled and stoch_successes:
                 stochastic_success_rate = float(np.mean(stoch_successes))
                 if self.verbose >= 1:
                     print(f"Success rate (stochastic): {100 * stochastic_success_rate:.2f}%")
@@ -777,7 +836,6 @@ class CampaignVictoryEvalCallback(EvalCallback):
 
 
 class CampaignMetricsCallback(BaseCallback):
-    """Логирует расширенные метрики кампании в Comet во время обучения."""
 
     def __init__(
         self,
@@ -832,6 +890,9 @@ class CampaignMetricsCallback(BaseCallback):
         self.episode_battle_items_used: list[float] = []
         self.recent_battle_items_used = deque(maxlen=self.episode_window)
         self.recent_battle_item_use_episode_flags = deque(maxlen=self.episode_window)
+        self.episode_unit_swaps: list[float] = []
+        self.recent_unit_swaps = deque(maxlen=self.episode_window)
+        self.recent_unit_swap_episode_flags = deque(maxlen=self.episode_window)
         self.episode_scripted_bot_victories: list[float] = []
         self.recent_scripted_bot_victories = deque(maxlen=self.episode_window)
         self.recent_scripted_bot_victory_episode_flags = deque(maxlen=self.episode_window)
@@ -872,6 +933,8 @@ class CampaignMetricsCallback(BaseCallback):
         self.battle_item_equip_episodes = 0
         self.total_battle_items_used = 0
         self.battle_item_use_episodes = 0
+        self.total_unit_swaps = 0
+        self.unit_swap_episodes = 0
         self.total_scripted_bot_victories = 0
         self.scripted_bot_victory_episodes = 0
         self.best_recent_victory_rate = 0.0
@@ -889,15 +952,7 @@ class CampaignMetricsCallback(BaseCallback):
         self._episode_hired_units: list[int] = []
         self._episode_battle_items_equipped: list[int] = []
         self._episode_battle_items_used: list[int] = []
-
-    def _append_recent_stat(self, info: dict[str, Any], key: str, target: deque) -> None:
-        value = info.get(key)
-        if value is None:
-            return
-        try:
-            target.append(float(value))
-        except (TypeError, ValueError):
-            return
+        self._episode_unit_swaps: list[int] = []
 
     def _ensure_env_trackers(self, env_count: int) -> None:
         if env_count <= len(self._episode_castle_heal_uses):
@@ -916,6 +971,7 @@ class CampaignMetricsCallback(BaseCallback):
         self._episode_hired_units.extend([0] * missing)
         self._episode_battle_items_equipped.extend([0] * missing)
         self._episode_battle_items_used.extend([0] * missing)
+        self._episode_unit_swaps.extend([0] * missing)
 
     def _consume_castle_heal(self, info: dict[str, Any], env_index: int) -> None:
         if not info.get("castle_heal_action"):
@@ -950,9 +1006,13 @@ class CampaignMetricsCallback(BaseCallback):
 
     def _consume_chests(self, info: dict[str, Any], env_index: int) -> None:
         collected = info.get("collected_chests")
-        if not isinstance(collected, (list, tuple)):
-            return
-        chest_count = len(collected)
+        if isinstance(collected, (list, tuple)):
+            chest_count = len(collected)
+        else:
+            try:
+                chest_count = int(info.get("collected_chests_count", 0) or 0)
+            except (TypeError, ValueError):
+                chest_count = 0
         if chest_count <= 0:
             return
         self.total_chests_collected += chest_count
@@ -966,13 +1026,6 @@ class CampaignMetricsCallback(BaseCallback):
         if chest_count > 0.0:
             self.chest_collection_episodes += 1
 
-        # Disabled campaign graph. Uncomment to restore per-episode chest logging.
-        # if self.experiment is not None:
-        #     self.experiment.log_metric(
-        #         "campaign/episode_chests_collected",
-        #         chest_count,
-        #         step=self.num_timesteps,
-        #     )
 
         self._episode_chests_collected[env_index] = 0
 
@@ -990,13 +1043,6 @@ class CampaignMetricsCallback(BaseCallback):
         if ruin_count > 0.0:
             self.ruin_clear_episodes += 1
 
-        # Disabled campaign graph. Uncomment to restore per-episode ruin logging.
-        # if self.experiment is not None:
-        #     self.experiment.log_metric(
-        #         "campaign/episode_ruins_cleared",
-        #         ruin_count,
-        #         step=self.num_timesteps,
-        #     )
 
         self._episode_ruins_cleared[env_index] = 0
 
@@ -1030,18 +1076,6 @@ class CampaignMetricsCallback(BaseCallback):
         if sold_flag:
             self.sale_episodes += 1
 
-        # Disabled campaign graphs. Uncomment to restore per-episode sale logging.
-        # if self.experiment is not None:
-        #     self.experiment.log_metric(
-        #         "campaign/episode_sold_items",
-        #         sold_items,
-        #         step=self.num_timesteps,
-        #     )
-        #     self.experiment.log_metric(
-        #         "campaign/episode_merchant_sale_gold",
-        #         sale_gold,
-        #         step=self.num_timesteps,
-        #     )
 
         self._episode_sold_items[env_index] = 0
         self._episode_sale_gold[env_index] = 0.0
@@ -1062,13 +1096,6 @@ class CampaignMetricsCallback(BaseCallback):
         if learned_flag:
             self.spell_learning_episodes += 1
 
-        # Disabled campaign graph. Uncomment to restore per-episode spell learning logging.
-        # if self.experiment is not None:
-        #     self.experiment.log_metric(
-        #         "campaign/episode_spells_learned",
-        #         spell_count,
-        #         step=self.num_timesteps,
-        #     )
 
         self._episode_spells_learned[env_index] = 0
 
@@ -1090,13 +1117,6 @@ class CampaignMetricsCallback(BaseCallback):
         if cast_flag:
             self.spell_cast_episodes += 1
 
-        # Disabled campaign graph. Uncomment to restore per-episode spell cast logging.
-        # if self.experiment is not None:
-        #     self.experiment.log_metric(
-        #         "campaign/episode_spell_casts",
-        #         cast_count,
-        #         step=self.num_timesteps,
-        #     )
 
         self._episode_spell_casts[env_index] = 0
 
@@ -1123,13 +1143,6 @@ class CampaignMetricsCallback(BaseCallback):
         if summon_flag:
             self.summon_episodes += 1
 
-        # Disabled campaign graph. Uncomment to restore per-episode summon logging.
-        # if self.experiment is not None:
-        #     self.experiment.log_metric(
-        #         "campaign/episode_summoned_units",
-        #         summoned_units,
-        #         step=self.num_timesteps,
-        #     )
 
         self._episode_summoned_units[env_index] = 0
 
@@ -1156,13 +1169,6 @@ class CampaignMetricsCallback(BaseCallback):
         if hired_flag:
             self.hire_episodes += 1
 
-        # Disabled campaign graph. Uncomment to restore per-episode hire logging.
-        # if self.experiment is not None:
-        #     self.experiment.log_metric(
-        #         "campaign/episode_hired_units",
-        #         hired_units,
-        #         step=self.num_timesteps,
-        #     )
 
         self._episode_hired_units[env_index] = 0
 
@@ -1205,51 +1211,27 @@ class CampaignMetricsCallback(BaseCallback):
         if used_flag:
             self.battle_item_use_episodes += 1
 
-        # Disabled campaign graphs. Uncomment to restore per-episode battle-item logging.
-        # if self.experiment is not None:
-        #     self.experiment.log_metric(
-        #         "campaign/episode_battle_items_equipped",
-        #         equipped_count,
-        #         step=self.num_timesteps,
-        #     )
-        #     self.experiment.log_metric(
-        #         "campaign/episode_battle_items_used",
-        #         used_count,
-        #         step=self.num_timesteps,
-        #     )
 
         self._episode_battle_items_equipped[env_index] = 0
         self._episode_battle_items_used[env_index] = 0
 
-    def _record_window_metrics(self, infos: list[dict[str, Any]]) -> None:
-        turns = []
-        gold = []
-        moves = []
-        for info in infos:
-            if not isinstance(info, dict):
-                continue
-            if "turns" in info:
-                try:
-                    turns.append(float(info["turns"]))
-                except (TypeError, ValueError):
-                    pass
-            if "gold" in info:
-                try:
-                    gold.append(float(info["gold"]))
-                except (TypeError, ValueError):
-                    pass
-            if "moves" in info:
-                try:
-                    moves.append(float(info["moves"]))
-                except (TypeError, ValueError):
-                    pass
+    def _consume_unit_swaps(self, info: dict[str, Any], env_index: int) -> None:
+        if not (bool(info.get("unit_swap_action")) and bool(info.get("unit_swap_applied"))):
+            return
+        self.total_unit_swaps += 1
+        self._episode_unit_swaps[env_index] += 1
 
-        if turns:
-            self.recent_turns.append(float(np.mean(turns)))
-        if gold:
-            self.recent_gold.append(float(np.mean(gold)))
-        if moves:
-            self.recent_moves.append(float(np.mean(moves)))
+    def _finalize_episode_unit_swaps(self, env_index: int) -> None:
+        swap_count = float(self._episode_unit_swaps[env_index])
+        swap_flag = swap_count > 0.0
+
+        self.episode_unit_swaps.append(swap_count)
+        self.recent_unit_swaps.append(swap_count)
+        self.recent_unit_swap_episode_flags.append(1.0 if swap_flag else 0.0)
+        if swap_flag:
+            self.unit_swap_episodes += 1
+
+        self._episode_unit_swaps[env_index] = 0
 
     def _consume_info(self, info: dict[str, Any], env_index: int | None = None) -> None:
         if env_index is not None:
@@ -1262,6 +1244,7 @@ class CampaignMetricsCallback(BaseCallback):
             self._consume_summons(info, env_index)
             self._consume_hires(info, env_index)
             self._consume_battle_item_activity(info, env_index)
+            self._consume_unit_swaps(info, env_index)
 
         episode = info.get("episode")
         if isinstance(episode, dict):
@@ -1285,6 +1268,7 @@ class CampaignMetricsCallback(BaseCallback):
                 self._finalize_episode_summons(env_index)
                 self._finalize_episode_hires(env_index)
                 self._finalize_episode_battle_item_activity(env_index)
+                self._finalize_episode_unit_swaps(env_index)
                 self._finalize_episode_scripted_bot(info)
 
         campaign_result = info.get("campaign_result")
@@ -1312,9 +1296,6 @@ class CampaignMetricsCallback(BaseCallback):
             self.window_victory_reason_counter[reason_key] += 1
 
         if battle_result == "victory":
-            self._append_recent_stat(info, "blue_hp_ratio", self.recent_blue_hp_ratios)
-            self._append_recent_stat(info, "enemy_defeat_reward", self.recent_enemy_defeat_rewards)
-            self._append_recent_stat(info, "blue_exp_reward", self.recent_blue_exp_rewards)
             unit_upgrades = info.get("unit_upgrades")
             if unit_upgrades is not None:
                 try:
@@ -1323,7 +1304,6 @@ class CampaignMetricsCallback(BaseCallback):
                     upgrade_count = 0
                 self.total_unit_upgrades += upgrade_count
                 self.recent_unit_upgrades.append(float(upgrade_count))
-            self._append_recent_stat(info, "final_objective_reward", self.recent_final_objective_rewards)
 
     def _finalize_episode_scripted_bot(self, info: dict[str, Any]) -> None:
         try:
@@ -1352,7 +1332,6 @@ class CampaignMetricsCallback(BaseCallback):
         self.best_recent_victory_rate = max(self.best_recent_victory_rate, recent_victory_rate)
 
         payload: dict[str, float] = {
-            # Core campaign dashboard: keep these 33 graphs active.
             "campaign/episodes_total": total_episodes,
             "campaign/victories_total": float(self.victories),
             "campaign/victory_rate": _safe_rate(self.victories, total_episodes),
@@ -1423,6 +1402,14 @@ class CampaignMetricsCallback(BaseCallback):
                 self.total_battle_items_used,
                 total_episodes,
             ),
+            "campaign/unit_swaps_per_episode_mean": _safe_rate(
+                self.total_unit_swaps,
+                total_episodes,
+            ),
+            "campaign/unit_swap_episodes_rate": _safe_rate(
+                self.unit_swap_episodes,
+                total_episodes,
+            ),
             "campaign/scripted_bot_victories_per_episode_mean": _safe_rate(
                 self.total_scripted_bot_victories,
                 total_episodes,
@@ -1453,126 +1440,11 @@ class CampaignMetricsCallback(BaseCallback):
             "campaign/window/ruins_cleared_mean": _safe_mean(self.recent_ruins_cleared),
             "campaign/window/spell_casts_mean": _safe_mean(self.recent_spell_casts),
             "campaign/window/hired_units_mean": _safe_mean(self.recent_hired_units),
+            "campaign/window/unit_swaps_mean": _safe_mean(self.recent_unit_swaps),
             "campaign/window/scripted_bot_victories_mean": _safe_mean(
                 self.recent_scripted_bot_victories
             ),
             "campaign/best_recent_victory_rate": self.best_recent_victory_rate,
-            # Disabled campaign graphs. Uncomment individual entries to restore them.
-            # "campaign/defeats_total": float(self.defeats),
-            # "campaign/timeouts_total": float(self.timeouts),
-            # "campaign/battles_total": total_battles,
-            # "campaign/battle_victories_total": float(self.battle_counter.get("victory", 0)),
-            # "campaign/battle_defeats_total": float(self.battle_counter.get("defeat", 0)),
-            # "campaign/castle_heal_uses_total": float(self.total_castle_heal_uses),
-            # "campaign/castle_healed_hp_total": float(self.total_castle_healed_hp),
-            # "campaign/chests_collected_total": float(self.total_chests_collected),
-            # "campaign/chest_collection_episodes_rate": _safe_rate(
-            #     self.chest_collection_episodes,
-            #     total_episodes,
-            # ),
-            # "campaign/ruins_cleared_total": float(self.total_ruins_cleared),
-            # "campaign/sold_items_total": float(self.total_sold_items),
-            # "campaign/merchant_sale_gold_total": float(self.total_merchant_sale_gold),
-            # "campaign/sale_episodes_rate": _safe_rate(
-            #     self.sale_episodes,
-            #     total_episodes,
-            # ),
-            # "campaign/spells_learned_total": float(self.total_spells_learned),
-            # "campaign/spell_learning_episodes_rate": _safe_rate(
-            #     self.spell_learning_episodes,
-            #     total_episodes,
-            # ),
-            # "campaign/spell_casts_total": float(self.total_spell_casts),
-            # "campaign/summoned_units_total": float(self.total_summoned_units),
-            # "campaign/hired_units_total": float(self.total_hired_units),
-            # "campaign/battle_items_equipped_total": float(self.total_battle_items_equipped),
-            # "campaign/battle_items_equipped_per_episode_mean": _safe_rate(
-            #     self.total_battle_items_equipped,
-            #     total_episodes,
-            # ),
-            # "campaign/battle_item_equip_episodes_rate": _safe_rate(
-            #     self.battle_item_equip_episodes,
-            #     total_episodes,
-            # ),
-            # "campaign/battle_items_used_total": float(self.total_battle_items_used),
-            # "campaign/scripted_bot_victories_total": float(self.total_scripted_bot_victories),
-            # "campaign/recent_scripted_bot_victories_mean": _safe_mean(
-            #     self.recent_scripted_bot_victories
-            # ),
-            # "campaign/recent_scripted_bot_victory_episodes_rate": _safe_mean(
-            #     self.recent_scripted_bot_victory_episode_flags
-            # ),
-            # "campaign/recent_episodes": float(len(self.recent_episode_rewards)),
-            # "campaign/recent_episode_reward_mean": _safe_mean(self.recent_episode_rewards),
-            # "campaign/recent_episode_length_mean": _safe_mean(self.recent_episode_lengths),
-            # "campaign/recent_blue_hp_ratio_mean": _safe_mean(self.recent_blue_hp_ratios),
-            # "campaign/recent_unit_upgrades_mean": _safe_mean(self.recent_unit_upgrades),
-            # "campaign/recent_enemy_defeat_reward_mean": _safe_mean(
-            #     self.recent_enemy_defeat_rewards
-            # ),
-            # "campaign/recent_blue_exp_reward_mean": _safe_mean(self.recent_blue_exp_rewards),
-            # "campaign/recent_final_objective_reward_mean": _safe_mean(
-            #     self.recent_final_objective_rewards
-            # ),
-            # "campaign/recent_castle_heal_uses_mean": _safe_mean(self.recent_castle_heal_uses),
-            # "campaign/recent_castle_heal_episodes_rate": _safe_mean(
-            #     self.recent_castle_heal_episode_flags
-            # ),
-            # "campaign/recent_castle_healed_hp_mean": _safe_mean(self.recent_castle_healed_hp),
-            # "campaign/recent_chests_collected_mean": _safe_mean(self.recent_chests_collected),
-            # "campaign/recent_chest_collection_episodes_rate": _safe_mean(
-            #     self.recent_chest_episode_flags
-            # ),
-            # "campaign/recent_ruins_cleared_mean": _safe_mean(self.recent_ruins_cleared),
-            # "campaign/recent_ruin_clear_episodes_rate": _safe_mean(
-            #     self.recent_ruin_episode_flags
-            # ),
-            # "campaign/recent_sold_items_mean": _safe_mean(self.recent_sold_items),
-            # "campaign/recent_sale_episodes_rate": _safe_mean(
-            #     self.recent_sale_episode_flags
-            # ),
-            # "campaign/recent_merchant_sale_gold_mean": _safe_mean(self.recent_sale_gold),
-            # "campaign/recent_spells_learned_mean": _safe_mean(self.recent_spells_learned),
-            # "campaign/recent_spell_learning_episodes_rate": _safe_mean(
-            #     self.recent_spell_learning_episode_flags
-            # ),
-            # "campaign/recent_spell_casts_mean": _safe_mean(self.recent_spell_casts),
-            # "campaign/recent_spell_cast_episodes_rate": _safe_mean(
-            #     self.recent_spell_cast_episode_flags
-            # ),
-            # "campaign/recent_summoned_units_mean": _safe_mean(self.recent_summoned_units),
-            # "campaign/recent_summon_episodes_rate": _safe_mean(
-            #     self.recent_summon_episode_flags
-            # ),
-            # "campaign/recent_hired_units_mean": _safe_mean(self.recent_hired_units),
-            # "campaign/recent_hire_episodes_rate": _safe_mean(
-            #     self.recent_hire_episode_flags
-            # ),
-            # "campaign/recent_battle_items_equipped_mean": _safe_mean(
-            #     self.recent_battle_items_equipped
-            # ),
-            # "campaign/recent_battle_item_equip_episodes_rate": _safe_mean(
-            #     self.recent_battle_item_equip_episode_flags
-            # ),
-            # "campaign/recent_battle_items_used_mean": _safe_mean(
-            #     self.recent_battle_items_used
-            # ),
-            # "campaign/recent_battle_item_use_episodes_rate": _safe_mean(
-            #     self.recent_battle_item_use_episode_flags
-            # ),
-            # "campaign/recent_turns_mean": _safe_mean(self.recent_turns),
-            # "campaign/recent_gold_mean": _safe_mean(self.recent_gold),
-            # "campaign/recent_moves_mean": _safe_mean(self.recent_moves),
-            # "campaign/window/battles": float(window_battles),
-            # "campaign/window/sold_items_mean": _safe_mean(self.recent_sold_items),
-            # "campaign/window/spells_learned_mean": _safe_mean(self.recent_spells_learned),
-            # "campaign/window/summoned_units_mean": _safe_mean(self.recent_summoned_units),
-            # "campaign/window/battle_items_equipped_mean": _safe_mean(
-            #     self.recent_battle_items_equipped
-            # ),
-            # "campaign/window/battle_items_used_mean": _safe_mean(
-            #     self.recent_battle_items_used
-            # ),
         }
 
         return payload
@@ -1615,7 +1487,6 @@ class CampaignMetricsCallback(BaseCallback):
 
     def _on_step(self) -> bool:
         infos = [info for info in self.locals.get("infos", []) if isinstance(info, dict)]
-        self._record_window_metrics(infos)
         self._ensure_env_trackers(len(infos))
         for env_index, info in enumerate(infos):
             self._consume_info(info, env_index=env_index)
@@ -1646,154 +1517,6 @@ class CampaignMetricsCallback(BaseCallback):
             return None
         finally:
             plt.close(fig)
-
-    def save_chests_per_episode_plot(self, path: str | os.PathLike[str]) -> Path | None:
-        if not self.episode_chests_collected:
-            return None
-
-        import matplotlib.pyplot as plt
-
-        target = self._normalize_plot_path(path)
-        target.parent.mkdir(parents=True, exist_ok=True)
-
-        episodes = np.arange(1, len(self.episode_chests_collected) + 1)
-        chest_counts = np.asarray(self.episode_chests_collected, dtype=float)
-
-        fig, ax = plt.subplots(figsize=(10, 4.5))
-        ax.plot(episodes, chest_counts, color="#8B5A2B", linewidth=1.6, label="Chests per episode")
-        ax.fill_between(episodes, chest_counts, color="#D9B36C", alpha=0.35)
-
-        if len(chest_counts) >= 5:
-            window = min(25, len(chest_counts))
-            kernel = np.ones(window, dtype=float) / float(window)
-            rolling = np.convolve(chest_counts, kernel, mode="valid")
-            rolling_x = episodes[window - 1 :]
-            ax.plot(
-                rolling_x,
-                rolling,
-                color="#2F4858",
-                linewidth=2.0,
-                label=f"Rolling mean ({window})",
-            )
-
-        ax.set_title("Collected Chests Per Episode")
-        ax.set_xlabel("Episode")
-        ax.set_ylabel("Chests")
-        ax.grid(True, alpha=0.25, linewidth=0.6)
-        ax.legend(loc="upper right")
-        fig.tight_layout()
-        return self._save_plot_figure(fig, target)
-
-    def save_sold_items_per_episode_plot(self, path: str | os.PathLike[str]) -> Path | None:
-        if not self.episode_sold_items:
-            return None
-
-        import matplotlib.pyplot as plt
-
-        target = self._normalize_plot_path(path)
-        target.parent.mkdir(parents=True, exist_ok=True)
-
-        episodes = np.arange(1, len(self.episode_sold_items) + 1)
-        sold_counts = np.asarray(self.episode_sold_items, dtype=float)
-
-        fig, ax = plt.subplots(figsize=(10, 4.5))
-        ax.plot(episodes, sold_counts, color="#8C1C13", linewidth=1.6, label="Sold items per episode")
-        ax.fill_between(episodes, sold_counts, color="#D95D39", alpha=0.28)
-
-        if len(sold_counts) >= 5:
-            window = min(25, len(sold_counts))
-            kernel = np.ones(window, dtype=float) / float(window)
-            rolling = np.convolve(sold_counts, kernel, mode="valid")
-            rolling_x = episodes[window - 1 :]
-            ax.plot(
-                rolling_x,
-                rolling,
-                color="#2F4858",
-                linewidth=2.0,
-                label=f"Rolling mean ({window})",
-            )
-
-        ax.set_title("Sold Merchant Items Per Episode")
-        ax.set_xlabel("Episode")
-        ax.set_ylabel("Items sold")
-        ax.grid(True, alpha=0.25, linewidth=0.6)
-        ax.legend(loc="upper right")
-        fig.tight_layout()
-        return self._save_plot_figure(fig, target)
-
-    def save_ruins_cleared_per_episode_plot(self, path: str | os.PathLike[str]) -> Path | None:
-        if not self.episode_ruins_cleared:
-            return None
-
-        import matplotlib.pyplot as plt
-
-        target = self._normalize_plot_path(path)
-        target.parent.mkdir(parents=True, exist_ok=True)
-
-        episodes = np.arange(1, len(self.episode_ruins_cleared) + 1)
-        ruin_counts = np.asarray(self.episode_ruins_cleared, dtype=float)
-
-        fig, ax = plt.subplots(figsize=(10, 4.5))
-        ax.plot(episodes, ruin_counts, color="#7F1D1D", linewidth=1.7, label="Ruins cleared per episode")
-        ax.fill_between(episodes, ruin_counts, color="#DC2626", alpha=0.24)
-
-        if len(ruin_counts) >= 5:
-            window = min(25, len(ruin_counts))
-            kernel = np.ones(window, dtype=float) / float(window)
-            rolling = np.convolve(ruin_counts, kernel, mode="valid")
-            rolling_x = episodes[window - 1 :]
-            ax.plot(
-                rolling_x,
-                rolling,
-                color="#1F2937",
-                linewidth=2.0,
-                label=f"Rolling mean ({window})",
-            )
-
-        ax.set_title("Cleared Ruins Per Episode")
-        ax.set_xlabel("Episode")
-        ax.set_ylabel("Ruins")
-        ax.grid(True, alpha=0.25, linewidth=0.6)
-        ax.legend(loc="upper right")
-        fig.tight_layout()
-        return self._save_plot_figure(fig, target)
-
-    def save_spells_learned_per_episode_plot(self, path: str | os.PathLike[str]) -> Path | None:
-        if not self.episode_spells_learned:
-            return None
-
-        import matplotlib.pyplot as plt
-
-        target = self._normalize_plot_path(path)
-        target.parent.mkdir(parents=True, exist_ok=True)
-
-        episodes = np.arange(1, len(self.episode_spells_learned) + 1)
-        spell_counts = np.asarray(self.episode_spells_learned, dtype=float)
-
-        fig, ax = plt.subplots(figsize=(10, 4.5))
-        ax.plot(episodes, spell_counts, color="#1D4ED8", linewidth=1.7, label="Spells learned per episode")
-        ax.fill_between(episodes, spell_counts, color="#60A5FA", alpha=0.24)
-
-        if len(spell_counts) >= 5:
-            window = min(25, len(spell_counts))
-            kernel = np.ones(window, dtype=float) / float(window)
-            rolling = np.convolve(spell_counts, kernel, mode="valid")
-            rolling_x = episodes[window - 1 :]
-            ax.plot(
-                rolling_x,
-                rolling,
-                color="#0F172A",
-                linewidth=2.0,
-                label=f"Rolling mean ({window})",
-            )
-
-        ax.set_title("Learned Spells Per Episode")
-        ax.set_xlabel("Episode")
-        ax.set_ylabel("Spells")
-        ax.grid(True, alpha=0.25, linewidth=0.6)
-        ax.legend(loc="upper right")
-        fig.tight_layout()
-        return self._save_plot_figure(fig, target)
 
     def save_spell_cast_activity_plot(self, path: str | os.PathLike[str]) -> Path | None:
         if not self.episode_spell_casts:
@@ -1956,6 +1679,49 @@ class CampaignMetricsCallback(BaseCallback):
         ax.set_title("Hired Units Per Episode")
         ax.set_xlabel("Episode")
         ax.set_ylabel("Units hired")
+        ax.grid(True, alpha=0.25, linewidth=0.6)
+        ax.legend(loc="upper right")
+        fig.tight_layout()
+        return self._save_plot_figure(fig, target)
+
+    def save_unit_swaps_per_episode_plot(self, path: str | os.PathLike[str]) -> Path | None:
+        if not self.episode_unit_swaps:
+            return None
+
+        import matplotlib.pyplot as plt
+
+        target = self._normalize_plot_path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+        episodes = np.arange(1, len(self.episode_unit_swaps) + 1)
+        swap_counts = np.asarray(self.episode_unit_swaps, dtype=float)
+
+        fig, ax = plt.subplots(figsize=(10, 4.5))
+        ax.plot(
+            episodes,
+            swap_counts,
+            color="#2563EB",
+            linewidth=1.8,
+            label="Unit swaps per episode",
+        )
+        ax.fill_between(episodes, swap_counts, color="#93C5FD", alpha=0.28)
+
+        if len(swap_counts) >= 5:
+            window = min(25, len(swap_counts))
+            kernel = np.ones(window, dtype=float) / float(window)
+            rolling = np.convolve(swap_counts, kernel, mode="valid")
+            rolling_x = episodes[window - 1 :]
+            ax.plot(
+                rolling_x,
+                rolling,
+                color="#1F2937",
+                linewidth=2.0,
+                label=f"Rolling mean ({window})",
+            )
+
+        ax.set_title("Unit Position Swaps Per Episode")
+        ax.set_xlabel("Episode")
+        ax.set_ylabel("Swaps")
         ax.grid(True, alpha=0.25, linewidth=0.6)
         ax.legend(loc="upper right")
         fig.tight_layout()
@@ -2140,6 +1906,61 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=None, help="Optional random seed")
     parser.add_argument("--checkpoint-freq", type=int, default=500_000, help="Checkpoint frequency")
     parser.add_argument("--eval-freq", type=int, default=50_000, help="Evaluation frequency")
+    parser.add_argument(
+        "--stochastic-eval-episodes",
+        type=int,
+        default=0,
+        help="Run stochastic evaluation for this many episodes; disabled by default",
+    )
+    parser.add_argument(
+        "--no-vec-check-nan",
+        action="store_true",
+        help="Disable VecCheckNan wrappers for faster training",
+    )
+    parser.add_argument(
+        "--torch-num-threads",
+        type=int,
+        default=int(os.getenv("TORCH_NUM_THREADS", "1") or "1"),
+        help="Torch/OpenMP thread limit for each process",
+    )
+    parser.add_argument(
+        "--no-diagnostics",
+        action="store_true",
+        help="Disable numerics diagnostics callback and crash reports",
+    )
+    parser.add_argument(
+        "--no-freeze-action-layout",
+        action="store_true",
+        help="Recompute dynamic action layout on every reset instead of freezing it for this run",
+    )
+    parser.add_argument(
+        "--no-scripted-bot",
+        action="store_true",
+        help="Disable the scripted capital bot completely for faster training",
+    )
+    parser.add_argument(
+        "--no-empire-territory",
+        action="store_true",
+        help="Disable Empire territory expansion and its observation layer for faster training",
+    )
+    parser.add_argument(
+        "--ppo-n-steps",
+        type=int,
+        default=2048,
+        help="Rollout steps per environment before each PPO update",
+    )
+    parser.add_argument(
+        "--ppo-batch-size",
+        type=int,
+        default=512,
+        help="PPO minibatch size; larger values reduce optimizer minibatches",
+    )
+    parser.add_argument(
+        "--ppo-n-epochs",
+        type=int,
+        default=5,
+        help="PPO optimization epochs per rollout; lower values reduce update cost",
+    )
     parser.add_argument("--no-comet", action="store_true", help="Disable Comet logging")
     parser.add_argument(
         "--comet-project",
@@ -2179,18 +2000,46 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # Проверка среды
+    if args.ppo_n_steps < 1:
+        parser.error("--ppo-n-steps must be >= 1")
+    if args.ppo_batch_size < 2:
+        parser.error("--ppo-batch-size must be >= 2")
+    if args.ppo_n_epochs < 1:
+        parser.error("--ppo-n-epochs must be >= 1")
+
+    TORCH_NUM_THREADS = max(1, int(args.torch_num_threads))
+    for thread_env_name in (
+        "OMP_NUM_THREADS",
+        "MKL_NUM_THREADS",
+        "OPENBLAS_NUM_THREADS",
+        "NUMEXPR_NUM_THREADS",
+        "TORCH_NUM_THREADS",
+    ):
+        os.environ[thread_env_name] = str(TORCH_NUM_THREADS)
+    th.set_num_threads(TORCH_NUM_THREADS)
+    try:
+        th.set_num_interop_threads(max(1, min(TORCH_NUM_THREADS, 2)))
+    except RuntimeError:
+        pass
+
     print("Проверка среды CampaignEnv...")
+    FREEZE_DYNAMIC_ACTION_LAYOUT = not bool(args.no_freeze_action_layout)
+    SCRIPTED_CAPITAL_BOT_ENABLED = not bool(args.no_scripted_bot)
+    EMPIRE_TERRITORY_ENABLED = not bool(args.no_empire_territory)
+
     test_env = CampaignEnv(
         grid_size=DEFAULT_GRID_SIZE,
         log_enabled=False,
-        realcapital=2,
+        detailed_step_info=False,
+        freeze_dynamic_action_layout=FREEZE_DYNAMIC_ACTION_LAYOUT,
+        scripted_capital_bot_enabled=SCRIPTED_CAPITAL_BOT_ENABLED,
+        empire_territory_enabled=EMPIRE_TERRITORY_ENABLED,
+        Realcapital=2,
         **REWARD_CONFIG,
     )
     check_env(test_env, warn=True)
     print("Среда прошла проверку!")
 
-    # -------------------- Параметры --------------------
     TOTAL_STEPS = args.total_steps
     N_ENVS = args.n_envs
     VEC_ENV_MODE = args.vec_env
@@ -2198,11 +2047,19 @@ if __name__ == "__main__":
     CHECKPOINT_FREQ = args.checkpoint_freq
     EVAL_FREQ = args.eval_freq
     EVAL_EPISODES = 20
+    STOCHASTIC_EVAL_EPISODES = max(0, int(args.stochastic_eval_episodes))
+    USE_VEC_CHECK_NAN = not bool(args.no_vec_check_nan)
+    USE_DIAGNOSTICS = not bool(args.no_diagnostics)
+    PPO_N_STEPS = int(args.ppo_n_steps)
+    PPO_BATCH_SIZE = int(args.ppo_batch_size)
+    PPO_N_EPOCHS = int(args.ppo_n_epochs)
+    PPO_ROLLOUT_SIZE = PPO_N_STEPS * N_ENVS
+    PPO_MINIBATCHES_PER_EPOCH = (PPO_ROLLOUT_SIZE + PPO_BATCH_SIZE - 1) // PPO_BATCH_SIZE
+    PPO_GRADIENT_BATCHES_PER_ROLLOUT = PPO_N_EPOCHS * PPO_MINIBATCHES_PER_EPOCH
     VECNORM_NORM_OBS = False
     VECNORM_NORM_REWARD = True
     VECNORM_CLIP_REWARD = 10.0
 
-    # -------------------- Инициализация Comet --------------------
     COMET_AVAILABLE = Experiment is not None and OfflineExperiment is not None and not args.no_comet
     if COMET_AVAILABLE and not _comet_version_is_supported():
         detected = getattr(comet_ml, "__version__", "unknown")
@@ -2220,10 +2077,14 @@ if __name__ == "__main__":
             "vec_env": VEC_ENV_MODE,
             "vec_env_start_method": "spawn" if VEC_ENV_MODE == "subproc" else None,
             "seed": SEED,
-            "n_steps": 2048,
-            "batch_size": 256,
+            "n_steps": PPO_N_STEPS,
+            "batch_size": PPO_BATCH_SIZE,
             "gamma": 0.995,
             "gae_lambda": 0.95,
+            "n_epochs": PPO_N_EPOCHS,
+            "ppo_rollout_size": PPO_ROLLOUT_SIZE,
+            "ppo_minibatches_per_epoch": PPO_MINIBATCHES_PER_EPOCH,
+            "ppo_gradient_batches_per_rollout": PPO_GRADIENT_BATCHES_PER_ROLLOUT,
             "learning_rate": 3e-4,
             "clip_range": 0.2,
             "ent_coef": 0.01,
@@ -2231,9 +2092,16 @@ if __name__ == "__main__":
             "eval_freq": EVAL_FREQ,
             "comet_log_freq": args.comet_log_freq,
             "eval_episodes": EVAL_EPISODES,
+            "stochastic_eval_episodes": STOCHASTIC_EVAL_EPISODES,
             "max_eval_episode_steps": MAX_EVAL_EPISODE_STEPS,
             "comet_window_episodes": args.comet_window_episodes,
             "comet_offline": bool(args.comet_offline),
+            "vec_check_nan": bool(USE_VEC_CHECK_NAN),
+            "diagnostics": bool(USE_DIAGNOSTICS),
+            "freeze_dynamic_action_layout": bool(FREEZE_DYNAMIC_ACTION_LAYOUT),
+            "scripted_capital_bot_enabled": bool(SCRIPTED_CAPITAL_BOT_ENABLED),
+            "empire_territory_enabled": bool(EMPIRE_TERRITORY_ENABLED),
+            "torch_num_threads": TORCH_NUM_THREADS,
             "grid_size": DEFAULT_GRID_SIZE,
             "num_enemies": len(test_env.grid_env.enemy_positions),
             "persist_blue_hp": True,
@@ -2266,19 +2134,19 @@ if __name__ == "__main__":
         run_id = f"offline-{int(time.time())}"
         print("[INFO] Comet disabled, running without experiment tracking")
 
-    # Директории
     CHECKPOINT_DIR = str(BASE_DIR / "campaign_checkpoints" / run_id)
     MODEL_DIR = f"./campaign_models/{run_id}"
     EVAL_DIR = f"./campaign_eval/{run_id}"
     TB_LOG_DIR = f"./campaign_tb_logs/{run_id}"
-    DIAGNOSTICS_DIR = f"./campaign_diagnostics/{run_id}"
+    DIAGNOSTICS_DIR = f"./campaign_diagnostics/{run_id}" if USE_DIAGNOSTICS else None
     COMET_OFFLINE_DIR = args.comet_offline_dir
 
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     os.makedirs(MODEL_DIR, exist_ok=True)
     os.makedirs(EVAL_DIR, exist_ok=True)
     os.makedirs(TB_LOG_DIR, exist_ok=True)
-    os.makedirs(DIAGNOSTICS_DIR, exist_ok=True)
+    if DIAGNOSTICS_DIR is not None:
+        os.makedirs(DIAGNOSTICS_DIR, exist_ok=True)
     os.makedirs(COMET_OFFLINE_DIR, exist_ok=True)
 
     if COMET_AVAILABLE and comet_experiment is not None:
@@ -2289,23 +2157,27 @@ if __name__ == "__main__":
                 "model_dir": MODEL_DIR,
                 "eval_dir": EVAL_DIR,
                 "tb_log_dir": TB_LOG_DIR,
-                "diagnostics_dir": DIAGNOSTICS_DIR,
+                "diagnostics_dir": DIAGNOSTICS_DIR or "disabled",
                 "comet_offline_dir": COMET_OFFLINE_DIR,
             },
             prefix="paths",
         )
 
-    # -------------------- Создание сред --------------------
     vec_env_cls, vec_env_kwargs = resolve_training_vec_env_config(VEC_ENV_MODE)
+    env_factory = partial(
+        make_env,
+        freeze_dynamic_action_layout=FREEZE_DYNAMIC_ACTION_LAYOUT,
+        scripted_capital_bot_enabled=SCRIPTED_CAPITAL_BOT_ENABLED,
+        empire_territory_enabled=EMPIRE_TERRITORY_ENABLED,
+    )
     print(f"Создание {N_ENVS} параллельных сред ({VEC_ENV_MODE})...")
     vec_env = make_vec_env(
-        make_env,
+        env_factory,
         n_envs=N_ENVS,
         seed=SEED,
         vec_env_cls=vec_env_cls,
         vec_env_kwargs=vec_env_kwargs,
     )
-    # Normalize only rewards to stabilize PPO targets; observation normalization stays disabled.
     vec_env = VecNormalize(
         vec_env,
         training=True,
@@ -2314,23 +2186,25 @@ if __name__ == "__main__":
         clip_reward=VECNORM_CLIP_REWARD,
         gamma=0.995,
     )
-    vec_env = VecCheckNan(
-        vec_env,
-        raise_exception=True,
-        warn_once=False,
-        check_inf=True,
-    )
+    if USE_VEC_CHECK_NAN:
+        vec_env = VecCheckNan(
+            vec_env,
+            raise_exception=True,
+            warn_once=False,
+            check_inf=True,
+        )
 
-    # Оценочная среда
     eval_env = DummyVecEnv(
         [
             lambda: make_env(
                 log_enabled=False,
                 eval_max_episode_steps=MAX_EVAL_EPISODE_STEPS,
+                freeze_dynamic_action_layout=FREEZE_DYNAMIC_ACTION_LAYOUT,
+                scripted_capital_bot_enabled=SCRIPTED_CAPITAL_BOT_ENABLED,
+                empire_territory_enabled=EMPIRE_TERRITORY_ENABLED,
             )
         ]
     )
-    # Eval env receives running statistics from train env via EvalCallback sync.
     eval_env = VecNormalize(
         eval_env,
         training=False,
@@ -2339,25 +2213,25 @@ if __name__ == "__main__":
         clip_reward=VECNORM_CLIP_REWARD,
         gamma=0.995,
     )
-    eval_env = VecCheckNan(
-        eval_env,
-        raise_exception=True,
-        warn_once=False,
-        check_inf=True,
-    )
+    if USE_VEC_CHECK_NAN:
+        eval_env = VecCheckNan(
+            eval_env,
+            raise_exception=True,
+            warn_once=False,
+            check_inf=True,
+        )
 
-    # -------------------- Модель --------------------
     print("Инициализация MaskablePPO...")
     model = MaskablePPO(
         policy="MlpPolicy",
         env=vec_env,
         device="cpu",
         verbose=1,
-        n_steps=2048,
-        batch_size=256,
+        n_steps=PPO_N_STEPS,
+        batch_size=PPO_BATCH_SIZE,
         gae_lambda=0.95,
         gamma=0.995,
-        n_epochs=10,
+        n_epochs=PPO_N_EPOCHS,
         learning_rate=3e-4,
         clip_range=0.2,
         ent_coef=0.01,
@@ -2366,10 +2240,8 @@ if __name__ == "__main__":
         tensorboard_log=TB_LOG_DIR,
     )
 
-    # -------------------- Callbacks --------------------
     callbacks = []
 
-    # Чекпоинты
     checkpoint_cb = CampaignCheckpointCallback(
         save_dir=CHECKPOINT_DIR,
         milestone_steps=CHECKPOINT_FREQ,
@@ -2378,7 +2250,6 @@ if __name__ == "__main__":
     )
     callbacks.append(checkpoint_cb)
 
-    # Метрики кампании
     metrics_cb = CampaignMetricsCallback(
         log_freq=args.comet_log_freq,
         episode_window=args.comet_window_episodes,
@@ -2386,14 +2257,14 @@ if __name__ == "__main__":
         verbose=0,
     )
     callbacks.append(metrics_cb)
-    diagnostics_cb = CampaignNumericsDiagnosticsCallback(
-        report_dir=DIAGNOSTICS_DIR,
-        experiment=comet_experiment,
-        verbose=1,
-    )
-    callbacks.append(diagnostics_cb)
+    if USE_DIAGNOSTICS and DIAGNOSTICS_DIR is not None:
+        diagnostics_cb = CampaignNumericsDiagnosticsCallback(
+            report_dir=DIAGNOSTICS_DIR,
+            experiment=comet_experiment,
+            verbose=1,
+        )
+        callbacks.append(diagnostics_cb)
 
-    # Evaluation callback
     best_vecnorm_cb = SaveVecNormalizeOnBestCallback(
         save_path=f"{MODEL_DIR}/best",
         verbose=0,
@@ -2408,10 +2279,10 @@ if __name__ == "__main__":
         render=False,
         callback_on_new_best=best_vecnorm_cb,
         use_masking=_HAS_MASKABLE_EVAL,
+        stochastic_eval_episodes=STOCHASTIC_EVAL_EPISODES,
     )
     callbacks.append(eval_cb)
 
-    # -------------------- Обучение --------------------
     print(f"\n{'='*60}")
     print("Запуск обучения Campaign Agent")
     print(f"Всего шагов: {TOTAL_STEPS:,}")
@@ -2421,9 +2292,20 @@ if __name__ == "__main__":
         print(f"Seed: {SEED}")
     print(f"Checkpoint каждые: {CHECKPOINT_FREQ:,} шагов")
     print(f"Evaluation каждые: {EVAL_FREQ:,} шагов")
-    print(f"Eval эпизодов на режим: {EVAL_EPISODES}")
+    print(f"Eval deterministic эпизодов: {EVAL_EPISODES}")
+    print(f"Eval stochastic эпизодов: {STOCHASTIC_EVAL_EPISODES}")
     print(f"Eval лимит шагов на эпизод: {MAX_EVAL_EPISODE_STEPS}")
-    print(f"Diagnostics dir: {DIAGNOSTICS_DIR}")
+    print(f"PPO n_steps: {PPO_N_STEPS:,}")
+    print(f"PPO batch_size: {PPO_BATCH_SIZE:,}")
+    print(f"PPO n_epochs: {PPO_N_EPOCHS:,}")
+    print(f"PPO gradient batches per rollout: {PPO_GRADIENT_BATCHES_PER_ROLLOUT:,}")
+    print(f"VecCheckNan: {'enabled' if USE_VEC_CHECK_NAN else 'disabled'}")
+    print(f"Freeze action layout: {'enabled' if FREEZE_DYNAMIC_ACTION_LAYOUT else 'disabled'}")
+    print(f"Empire territory: {'enabled' if EMPIRE_TERRITORY_ENABLED else 'disabled'}")
+    print(f"Torch threads per process: {TORCH_NUM_THREADS}")
+    print(f"Diagnostics: {'enabled' if USE_DIAGNOSTICS else 'disabled'}")
+    if DIAGNOSTICS_DIR is not None:
+        print(f"Diagnostics dir: {DIAGNOSTICS_DIR}")
     print(f"Run ID: {run_id}")
     print(f"{'='*60}\n")
 
@@ -2433,19 +2315,19 @@ if __name__ == "__main__":
             callback=CallbackList(callbacks),
         )
     except Exception as exc:
-        crash_report_path = Path(DIAGNOSTICS_DIR) / f"learn_crash_step_{model.num_timesteps}.txt"
-        written_path = _write_training_diagnostics_report(
-            crash_report_path,
-            model=model,
-            exception=exc,
-            issues=_collect_policy_parameter_issues(model) + _collect_rollout_buffer_issues(model),
-        )
-        print(f"[DIAG] Training crash diagnostics written to {written_path}")
-        if COMET_AVAILABLE and comet_experiment is not None:
-            comet_experiment.log_other("diagnostics_last_crash_report", str(written_path))
+        if USE_DIAGNOSTICS and DIAGNOSTICS_DIR is not None:
+            crash_report_path = Path(DIAGNOSTICS_DIR) / f"learn_crash_step_{model.num_timesteps}.txt"
+            written_path = _write_training_diagnostics_report(
+                crash_report_path,
+                model=model,
+                exception=exc,
+                issues=_collect_policy_parameter_issues(model) + _collect_rollout_buffer_issues(model),
+            )
+            print(f"[DIAG] Training crash diagnostics written to {written_path}")
+            if COMET_AVAILABLE and comet_experiment is not None:
+                comet_experiment.log_other("diagnostics_last_crash_report", str(written_path))
         raise
 
-    # -------------------- Сохранение финальной модели --------------------
     final_model_path = f"{MODEL_DIR}/final_model"
     model.save(final_model_path)
     vec_norm = model.get_vec_normalize_env()
@@ -2455,13 +2337,13 @@ if __name__ == "__main__":
         print(f"VecNormalize stats saved: {vec_norm_path}")
     print(f"\nФинальная модель сохранена: {final_model_path}.zip")
 
-    # Итоговая статистика
     print(f"\n{'='*60}")
     print("ИТОГИ ОБУЧЕНИЯ:")
     print(f"  Побед: {metrics_cb.victories}")
     print(f"  Поражений: {metrics_cb.defeats}")
     print(f"  Таймаутов: {metrics_cb.timeouts}")
     print(f"  Побед бота столицы над врагами: {metrics_cb.total_scripted_bot_victories}")
+    print(f"  Перестановок юнитов: {metrics_cb.total_unit_swaps}")
     total = metrics_cb.victories + metrics_cb.defeats + metrics_cb.timeouts
     if total > 0:
         print(f"  Winrate: {100 * metrics_cb.victories / total:.1f}%")
@@ -2490,6 +2372,11 @@ if __name__ == "__main__":
     saved_hired_total_plot = metrics_cb.save_cumulative_hired_units_plot(hired_total_plot_path)
     if saved_hired_total_plot is not None:
         print(f"  График найма за всё обучение: {saved_hired_total_plot}")
+
+    unit_swap_plot_path = BASE_DIR / "outputs" / "campaign_unit_swaps_per_episode.png"
+    saved_unit_swap_plot = metrics_cb.save_unit_swaps_per_episode_plot(unit_swap_plot_path)
+    if saved_unit_swap_plot is not None:
+        print(f"  График перестановок юнитов за эпизод: {saved_unit_swap_plot}")
 
     battle_item_plot_path = BASE_DIR / "outputs" / "campaign_battle_item_activity.png"
     saved_battle_item_plot = metrics_cb.save_battle_item_activity_plot(battle_item_plot_path)
@@ -2545,6 +2432,14 @@ if __name__ == "__main__":
                 )
             except Exception as exc:
                 print(f"[WARN] Failed to upload cumulative-hire plot to Comet: {exc}")
+        if saved_unit_swap_plot is not None and hasattr(comet_experiment, "log_image"):
+            try:
+                comet_experiment.log_image(
+                    str(saved_unit_swap_plot),
+                    name="campaign_unit_swaps_per_episode",
+                )
+            except Exception as exc:
+                print(f"[WARN] Failed to upload unit-swap plot to Comet: {exc}")
         if saved_battle_item_plot is not None and hasattr(comet_experiment, "log_image"):
             try:
                 comet_experiment.log_image(

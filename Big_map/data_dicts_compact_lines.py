@@ -249,11 +249,6 @@
 
 
 
-import os
-import re
-from datetime import datetime
-from pprint import pformat
-
 # --------- ОЖДАЕМ, ЧТО ГДЕ-ТО ВЫШЕ/РЯДОМ ОПРЕДЕЛЁН DATA ---------
 # DATA = [...]  # список словарей с ключами: "кто","тип","здоровье","инит","броня","точн","точн2","урон","урон2",
 #                                        "иммунитет","защита","тип атаки1","тип атаки2","размер"
@@ -284,9 +279,11 @@ def _unit_type(u: dict) -> str:
     val = u.get("тип", "")
     return "" if val is None else str(val)
 
-def _stand(u: dict) -> str:
-    # ближник (weapon) или большой — впереди, иначе — позади
-    if (u.get("тип атаки1", "").lower() == "weapon") or bool(u.get("размер", 0)):
+def _stand(u: dict, position: int | None = None) -> str:
+    # Ряд боевого юнита определяется слотом. Weapon-стрелки тоже могут стоять сзади.
+    if position is not None:
+        return default_stand_for_position(position)
+    if bool(u.get("размер", 0)):
         return "ahead"
     return "behind"
 
@@ -381,30 +378,36 @@ def _normalize_level_value(raw_level: object, default: int = 0) -> int:
         return int(default)
 
 
-for _entry in DATA:
-    if isinstance(_entry, dict):
-        _entry["hero"] = _resolve_hero_flag(_entry)
-        capital_v = _resolve_capital_value(_entry)
-        level_v = _normalize_level_value(
-            _get(_entry, "уровень", "Level", "level", default=0),
-            default=0,
-        )
-        if capital_v == 0 and level_v < 1:
-            level_v = 1
-            _entry["уровень"] = level_v
-        _entry["Level"] = level_v
-        _entry["capital"] = capital_v
-        _entry["is_neutral_unit"] = capital_v == 0
+_BATTLE_TEMPLATE_BY_ENTRY_ID: dict[int, dict] = {}
+_BATTLE_TEMPLATE_LIST_FIELDS = ("immunity", "resistance", "basestats", "turns_into")
+_PLACEHOLDER_TEMPLATE_BY_KEY: dict[tuple[object, object], dict] = {}
 
-def map_unit_to_battle(u: dict, team: str, position: int) -> dict:
-    """Маппинг одного словаря из DATA -> объект боевого юнита с ключами целевого формата."""
+
+def _copy_unit_template(template: dict) -> dict:
+    unit = template.copy()
+    for key in _BATTLE_TEMPLATE_LIST_FIELDS:
+        if key in unit:
+            unit[key] = list(unit[key])
+    return unit
+
+
+def _build_battle_template(u: dict) -> dict:
     initv = int(_get(u, "инит", "инициатива", default=0))
     hp = int(_get(u, "здоровье", "hp", default=0))
-    level_raw = _get(u, "\u0443\u0440\u043e\u0432\u0435\u043d\u044c", "Level", "level", default=0)
-    capital_v = _resolve_capital_value(u)
+    if "capital" in u:
+        capital_v = _normalize_level_value(u.get("capital"), default=0)
+    else:
+        capital_v = _resolve_capital_value(u)
     is_neutral_unit = capital_v == 0
-    # Experience fields are used by BattleEnv to distribute post-battle XP.
-    # Keep numeric values where possible and preserve special string marker "max".
+
+    if "Level" in u:
+        level_raw = u.get("Level")
+    else:
+        level_raw = _get(u, "\u0443\u0440\u043e\u0432\u0435\u043d\u044c", "level", default=0)
+    level_v = _normalize_level_value(level_raw, default=0)
+    if is_neutral_unit and level_v < 1:
+        level_v = 1
+
     exp_kill_raw = _get(u, "\u043e\u043f\u044b\u0442 \u0443\u0431\u0438\u0439\u0441\u0442\u0432\u0430", "exp_kill", default=0)
     exp_req_raw = _get(u, "\u043d\u0443\u0436\u043d\u044b\u0439 \u043e\u043f\u044b\u0442", "exp_required", default=0)
     exp_cur_raw = _get(u, "\u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043e\u043f\u044b\u0442", "exp_current", default=0)
@@ -435,13 +438,6 @@ def map_unit_to_battle(u: dict, team: str, position: int) -> dict:
         next_level_exp_v = 0
 
     try:
-        level_v = int(round(float(level_raw)))
-    except Exception:
-        level_v = 0
-    if is_neutral_unit and level_v < 1:
-        level_v = 1
-
-    try:
         needaunit_v = 1 if int(round(float(_get(u, "needaunit", default=0)))) > 0 else 0
     except Exception:
         needaunit_v = 0
@@ -452,13 +448,11 @@ def map_unit_to_battle(u: dict, team: str, position: int) -> dict:
         turns_into_v = [turns_raw]
     else:
         turns_into_v = []
+
     return {
         "name": u.get("кто", ""),
         "initiative": initv,
         "initiative_base": initv,
-        "team": team,
-        "position": position,
-        "stand": _stand(u),
         "unit_type": _unit_type(u),
         "Level": level_v,
         "capital": capital_v,
@@ -484,7 +478,7 @@ def map_unit_to_battle(u: dict, team: str, position: int) -> dict:
         "long_paralyzed": 0,
         "running_away": 0,
         "transformed": 0,
-        "hero": _resolve_hero_flag(u),
+        "hero": _to_bool_flag(u.get("hero")) if "hero" in u else _resolve_hero_flag(u),
         "basestats": [],
         "exp_kill": exp_kill_v,
         "exp_required": exp_required_v,
@@ -494,8 +488,33 @@ def map_unit_to_battle(u: dict, team: str, position: int) -> dict:
         "turns_into": turns_into_v,
     }
 
-# =========================== ПЛЕЙСХОЛДЕРЫ ==========================
-NO_SELECTION = "— пусто —"
+
+for _entry in DATA:
+    if isinstance(_entry, dict):
+        _entry["hero"] = _resolve_hero_flag(_entry)
+        capital_v = _resolve_capital_value(_entry)
+        level_v = _normalize_level_value(
+            _get(_entry, "уровень", "Level", "level", default=0),
+            default=0,
+        )
+        if capital_v == 0 and level_v < 1:
+            level_v = 1
+            _entry["уровень"] = level_v
+        _entry["Level"] = level_v
+        _entry["capital"] = capital_v
+        _entry["is_neutral_unit"] = capital_v == 0
+        _BATTLE_TEMPLATE_BY_ENTRY_ID[id(_entry)] = _build_battle_template(_entry)
+
+def map_unit_to_battle(u: dict, team: str, position: int) -> dict:
+    """Маппинг одного словаря из DATA -> объект боевого юнита с ключами целевого формата."""
+    template = _BATTLE_TEMPLATE_BY_ENTRY_ID.get(id(u))
+    if template is None:
+        template = _build_battle_template(u)
+    unit = _copy_unit_template(template)
+    unit["team"] = team
+    unit["position"] = position
+    unit["stand"] = default_stand_for_position(position)
+    return unit
 
 def default_stand_for_position(position: int) -> str:
     # 1..3 и 7..9 — передняя линия, 4..6 и 10..12 — задняя
@@ -504,92 +523,40 @@ def default_stand_for_position(position: int) -> str:
     return "behind"
 
 def placeholder_unit(team: str, position: int) -> dict:
-    return {
-        "name": "пусто",
-        "initiative": 0,
-        "initiative_base": 0,
-        "team": team,
-        "position": position,
-        "stand": default_stand_for_position(position),
-        "unit_type": "Archer",
-        "damage": 0,
-        "damage_secondary": 0,
-        "health": 0,
-        "max_health": 0,
-        "armor": 0,
-        "accuracy": 0,
-        "accuracy_secondary": 0,
-        "immunity": [],
-        "resistance": [],
-        "attack_type_primary": "Weapon",
-        "attack_type_secondary": "",
-        "big": False,
-        "paralyzed": 0,
-        "long_paralyzed": 0,
-        "running_away": 0,
-        "transformed": 0,
-        "hero": False,
-        "basestats": [],
-        "Level": 0,
-        "needaunit": 0,
-    }
-
-# ========================= ВСПОМОГАТЕЛЬНОЕ =========================
-def build_name_index(data_list):
-    """Собираем индекс имя -> список юнитов (на случай совпадений имен)."""
-    idx = {}
-    for u in data_list:
-        name = u.get("кто", "")
-        idx.setdefault(name, []).append(u)
-    return idx
-
-def first_by_name(name, name_index):
-    lst = name_index.get(name, [])
-    return lst[0] if lst else None
-
-# --- запись в файл 1workingbattle.py ---
-BEGIN_MARK = "# === BEGIN CUSTOM UNITS (GUI) ==="
-END_MARK   = "# === END CUSTOM UNITS (GUI) ==="
-
-def _render_units_block(units_red, units_blue) -> str:
-    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    block = [
-        "",
-        BEGIN_MARK,
-        f"# Generated at {ts}",
-        f"UNITS_RED = {pformat(units_red, width=120, compact=False, sort_dicts=False)}",
-        "",
-        f"UNITS_BLUE = {pformat(units_blue, width=120, compact=False, sort_dicts=False)}",
-        END_MARK,
-        "",
-    ]
-    return "\n".join(block)
-
-def write_units_to_file(py_path: str, units_red, units_blue) -> None:
-    content = ""
-    if os.path.exists(py_path):
-        with open(py_path, "r", encoding="utf-8") as f:
-            content = f.read()
-
-    # вырежем предыдущий кастомный блок, если есть
-    if BEGIN_MARK in content and END_MARK in content:
-        content = re.sub(
-            re.escape(BEGIN_MARK) + r".*?" + re.escape(END_MARK),
-            BEGIN_MARK + "\n" + END_MARK,
-            content,
-            flags=re.DOTALL
-        )
-
-    new_block = _render_units_block(units_red, units_blue)
-    if content:
-        if not content.endswith("\n"):
-            content += "\n"
-        content += new_block
-    else:
-        content = new_block.lstrip("\n")
-
-    with open(py_path, "w", encoding="utf-8") as f:
-        f.write(content)
+    key = (team, position)
+    template = _PLACEHOLDER_TEMPLATE_BY_KEY.get(key)
+    if template is None:
+        template = {
+            "name": "пусто",
+            "initiative": 0,
+            "initiative_base": 0,
+            "team": team,
+            "position": position,
+            "stand": default_stand_for_position(position),
+            "unit_type": "Archer",
+            "damage": 0,
+            "damage_secondary": 0,
+            "health": 0,
+            "max_health": 0,
+            "armor": 0,
+            "accuracy": 0,
+            "accuracy_secondary": 0,
+            "immunity": [],
+            "resistance": [],
+            "attack_type_primary": "Weapon",
+            "attack_type_secondary": "",
+            "big": False,
+            "paralyzed": 0,
+            "long_paralyzed": 0,
+            "running_away": 0,
+            "transformed": 0,
+            "hero": False,
+            "basestats": [],
+            "Level": 0,
+            "needaunit": 0,
+        }
+        _PLACEHOLDER_TEMPLATE_BY_KEY[key] = template
+    return _copy_unit_template(template)
 
 
 if __name__ == "__main__":

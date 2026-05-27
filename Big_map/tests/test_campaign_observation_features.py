@@ -11,7 +11,7 @@ from enemy_configs import ENEMY_CONFIGS
 
 
 def test_campaign_grid_obs_includes_campaign_state_features():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     obs, _ = env.reset(seed=123)
 
     assert env.grid_campaign_obs_size > 0
@@ -51,7 +51,7 @@ def test_campaign_grid_obs_includes_campaign_state_features():
 
 
 def test_campaign_obs_includes_mercenary_site_positions_and_stock_state():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     site_obs = env._build_mercenary_site_grid_obs()
@@ -78,7 +78,7 @@ def test_campaign_obs_includes_mercenary_site_positions_and_stock_state():
 
 
 def test_campaign_obs_includes_current_mercenary_roster_and_hireability():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     env.grid_env.agent_pos = (18, 2)
 
@@ -118,7 +118,7 @@ def test_campaign_obs_includes_current_mercenary_roster_and_hireability():
 
 
 def test_campaign_obs_includes_merchant_site_positions_and_stock_state():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     site_obs = env._build_merchant_site_grid_obs()
@@ -155,7 +155,7 @@ def test_campaign_obs_includes_merchant_site_positions_and_stock_state():
 
 
 def test_campaign_obs_includes_current_merchant_stock_ratios():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     stocked_site_name = env.grid_merchant_site_names[0]
@@ -180,7 +180,7 @@ def test_campaign_obs_includes_current_merchant_stock_ratios():
 
 
 def test_campaign_obs_includes_compact_trainer_features():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     env.gold = 100.0
 
@@ -251,7 +251,7 @@ def test_campaign_obs_includes_compact_trainer_features():
 
 
 def test_campaign_enemy_grid_obs_uses_one_hot_type_encoding():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     enemy_obs = env._build_enemy_grid_obs()
@@ -282,7 +282,7 @@ def test_campaign_enemy_grid_obs_uses_one_hot_type_encoding():
 
 
 def test_campaign_economy_uses_higher_turn_income_and_scaled_building_costs():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     _, info = env.reset(seed=123)
 
     assert info["gold"] == pytest.approx(0.0)
@@ -299,12 +299,90 @@ def test_campaign_economy_uses_higher_turn_income_and_scaled_building_costs():
     assert env.grid_max_build_price == pytest.approx(4500.0)
 
 
-@pytest.mark.parametrize("realcapital", [1, 2, 3, 4, 5])
-def test_typeoflord_three_halves_building_costs_for_all_capitals(realcapital: int):
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=realcapital)
+def test_building_state_is_isolated_between_campaign_env_instances():
+    env1 = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=1)
+    env2 = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=1)
+    env1.reset(seed=123)
+    env2.reset(seed=456)
+
+    build_key = env1.building_keys[0]
+    original_cost = float(env1.active_buildings[build_key]["gold"])
+
+    assert env1.active_buildings is not env2.active_buildings
+    assert env1.active_buildings[build_key] is not env2.active_buildings[build_key]
+
+    build_action = env1.GRID_BUILD_ACTION_START + env1.building_keys.index(build_key)
+    env1.gold = env1._get_building_gold_cost(env1.active_buildings[build_key])
+    _, _, terminated, truncated, info = env1.step(build_action)
+
+    assert terminated is False
+    assert truncated is False
+    assert info["built"] is True
+    assert int(env1.active_buildings[build_key]["built"]) == 1
+    assert int(env2.active_buildings[build_key]["built"]) == 0
+
+    env2.reset(seed=789)
+    assert int(env1.active_buildings[build_key]["built"]) == 1
+    assert env1.active_buildings[build_key]["gold"] == pytest.approx(original_cost)
+
+    env1.reset(seed=321)
+    assert env1.active_buildings[build_key]["gold"] == pytest.approx(original_cost)
+
+
+def test_building_requires_block_mask_and_direct_step_until_prerequisite_is_built():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=1)
+    env.reset(seed=123)
+
+    dependent_key = next(
+        key
+        for key in env.building_keys
+        if env._building_requirement_names(env.active_buildings.get(key))
+    )
+    dependent_building = env.active_buildings[dependent_key]
+    prerequisite_name = env._building_requirement_names(dependent_building)[0]
+    prerequisite_key = next(
+        key
+        for key in env.building_keys
+        if str(env.active_buildings[key].get("name", "") or "").strip()
+        == prerequisite_name
+    )
+    dependent_action = env.GRID_BUILD_ACTION_START + env.building_keys.index(dependent_key)
+
+    env.gold = 100_000.0
+    gold_before = float(env.gold)
+    assert bool(env.compute_action_mask()[dependent_action]) is False
+
+    _, _, terminated, truncated, info = env.step(dependent_action)
+
+    assert terminated is False
+    assert truncated is False
+    assert info["build_key"] == dependent_key
+    assert info["built"] is False
+    assert info["build_requires"] == [prerequisite_name]
+    assert info["build_missing_requirements"] == [prerequisite_name]
+    assert info["build_requirements_met"] is False
+    assert env.gold == pytest.approx(gold_before)
+    assert int(dependent_building.get("built", 0) or 0) == 0
+
+    env.active_buildings[prerequisite_key]["built"] = 1
+    env.active_buildings["alredybuilt"] = 0
+    assert bool(env.compute_action_mask()[dependent_action]) is True
+
+    _, _, terminated, truncated, info = env.step(dependent_action)
+
+    assert terminated is False
+    assert truncated is False
+    assert info["built"] is True
+    assert info["build_missing_requirements"] == []
+    assert info["build_requirements_met"] is True
+    assert int(dependent_building.get("built", 0) or 0) == 1
+
+
+@pytest.mark.parametrize("Realcapital", [1, 2, 3, 4, 5])
+def test_typeoflord_three_halves_building_costs_for_all_capitals(Realcapital: int):
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=Realcapital)
     env.reset(seed=123)
     env.typeoflord = 3
-    env.Typeoflord = 3
 
     effective_costs = {}
     for build_key in env.building_keys:
@@ -341,7 +419,7 @@ def test_typeoflord_three_halves_building_costs_for_all_capitals(realcapital: in
 
 
 def test_legions_captured_gold_mines_add_bonus_gold_each_turn():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     _, info = env.reset(seed=123)
 
     assert info["legions_captured_gold_mine_count"] == 0
@@ -363,8 +441,22 @@ def test_legions_captured_gold_mines_add_bonus_gold_each_turn():
     assert env.gold == pytest.approx(600.0)
 
 
-def test_mana_pools_start_at_zero_and_infernal_income_starts_on_turn_one():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+@pytest.mark.parametrize(
+    ("Realcapital", "base_mana_kind", "base_attr"),
+    [
+        (1, "life", "life_mana"),
+        (2, "infernal", "infernal_mana"),
+        (3, "runes", "runes_mana"),
+        (4, "death", "death_mana"),
+        (5, "elves", "elven_mana"),
+    ],
+)
+def test_mana_pools_start_at_zero_and_base_income_matches_capital(
+    Realcapital: int,
+    base_mana_kind: str,
+    base_attr: str,
+):
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=Realcapital)
     _, info = env.reset(seed=123)
 
     assert env.infernal_mana == pytest.approx(0.0)
@@ -373,23 +465,20 @@ def test_mana_pools_start_at_zero_and_infernal_income_starts_on_turn_one():
     assert env.runes_mana == pytest.approx(0.0)
     assert env.elven_mana == pytest.approx(0.0)
     assert info["mana_totals"]["infernal"] == pytest.approx(0.0)
-    assert info["mana_income_per_turn"]["infernal"] == pytest.approx(25.0)
-    assert info["mana_income_per_turn"]["life"] == pytest.approx(0.0)
-    assert info["mana_income_per_turn"]["death"] == pytest.approx(0.0)
-    assert info["mana_income_per_turn"]["runes"] == pytest.approx(0.0)
-    assert info["mana_income_per_turn"]["elves"] == pytest.approx(0.0)
+    for mana_kind in env.MANA_KIND_ORDER:
+        expected_income = 25.0 if mana_kind == base_mana_kind else 0.0
+        assert info["mana_income_per_turn"][mana_kind] == pytest.approx(expected_income)
 
     env._advance_turns(1)
 
-    assert env.infernal_mana == pytest.approx(25.0)
-    assert env.life_mana == pytest.approx(0.0)
-    assert env.death_mana == pytest.approx(0.0)
-    assert env.runes_mana == pytest.approx(0.0)
-    assert env.elven_mana == pytest.approx(0.0)
+    for mana_kind in env.MANA_KIND_ORDER:
+        attr_name = env.MANA_ATTR_BY_KIND[mana_kind]
+        expected_total = 25.0 if attr_name == base_attr else 0.0
+        assert getattr(env, attr_name) == pytest.approx(expected_total)
 
 
 def test_captured_mana_sources_add_income_by_type_each_turn():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     captured_tiles = {
@@ -424,7 +513,7 @@ def test_captured_mana_sources_add_income_by_type_each_turn():
 
 
 def test_campaign_obs_includes_compact_mana_source_positions_types_and_totals():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     assert env.grid_mana_source_obs_size == len(env.mana_sources) * 3
@@ -459,7 +548,7 @@ def test_campaign_obs_includes_compact_mana_source_positions_types_and_totals():
 
 
 def test_campaign_obs_includes_spell_learning_features():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     assert env.grid_spell_obs_size == (
@@ -517,7 +606,7 @@ def test_campaign_obs_includes_spell_learning_features():
 
 
 def test_campaign_obs_includes_legion_spell_used_this_turn_and_nearest_enemy_debuff_flags():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     env.grid_env.agent_pos = (3, 3)
@@ -579,7 +668,7 @@ def test_campaign_obs_includes_legion_spell_used_this_turn_and_nearest_enemy_deb
 
 
 def test_spell_obs_uses_mask_nearest_enemy_candidate_without_bfs():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     env.enemy_team_states[20] = [
@@ -630,7 +719,7 @@ def test_spell_obs_uses_mask_nearest_enemy_candidate_without_bfs():
 
 
 def test_undead_spell_obs_includes_used_this_turn_and_nearest_enemy_debuff_flags():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=4)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=4)
     env.reset(seed=123)
 
     env.grid_env.agent_pos = (3, 3)
@@ -692,7 +781,7 @@ def test_undead_spell_obs_includes_used_this_turn_and_nearest_enemy_debuff_flags
 
 
 def test_merchant_sell_values_remain_unchanged():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     assert env._hero_item_gold_value_by_name("Ruby (Valuable)") == 1250
@@ -701,7 +790,7 @@ def test_merchant_sell_values_remain_unchanged():
 
 
 def test_legions_territory_expands_by_ten_tiles_per_turn():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     _, info = env.reset(seed=123)
 
     assert tuple(env.legions_territory_tiles) == (tuple(env.grid_env.start_position),)
@@ -719,7 +808,7 @@ def test_legions_territory_expands_by_ten_tiles_per_turn():
 
 
 def test_legions_settlement_territory_requires_full_city_clear_and_then_grows_from_source():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     assert env._activate_legions_settlement_territory_if_cleared(32) == []
@@ -739,7 +828,7 @@ def test_legions_settlement_territory_requires_full_city_clear_and_then_grows_fr
 
 
 def test_legions_settlement_territory_levels_map_to_expected_growth_rules():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     sources = env.legions_settlement_territory_source_by_name
@@ -757,7 +846,7 @@ def test_legions_settlement_territory_levels_map_to_expected_growth_rules():
 
 
 def test_legions_settlement_territories_use_configured_growth_rates():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     env.grid_env.mark_enemy_defeated(22)
@@ -778,7 +867,7 @@ def test_legions_settlement_territories_use_configured_growth_rates():
 
 
 def test_legions_territory_grid_obs_marks_claimed_tiles_and_updates_with_turns():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     territory_obs = env._build_legions_territory_grid_obs()
@@ -798,7 +887,7 @@ def test_legions_territory_grid_obs_marks_claimed_tiles_and_updates_with_turns()
 
 
 def test_empire_territory_expands_by_ten_tiles_per_turn_after_legions():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     _, info = env.reset(seed=123)
 
     assert tuple(env.empire_territory_tiles) == (tuple(env.empire_territory_source_tile),)
@@ -815,8 +904,32 @@ def test_empire_territory_expands_by_ten_tiles_per_turn_after_legions():
     assert env.empire_territory_tile_set.isdisjoint(env.empire_territory_forbidden_tile_set)
 
 
+def test_empire_territory_can_be_disabled_while_legions_still_expand():
+    env = CampaignEnv(
+        log_enabled=False,
+        persist_blue_hp=True,
+        Realcapital=2,
+        empire_territory_enabled=False,
+    )
+    _, info = env.reset(seed=123)
+
+    assert env.empire_territory_tiles == ()
+    assert env.empire_territory_tile_set == set()
+    assert env.empire_territory_order == ()
+    assert env.empire_territory_path_distances == {}
+    assert info["empire_territory_count"] == 0
+    assert tuple(env.empire_territory_source_tile) == (26, 10)
+
+    env._advance_turns(3)
+
+    assert env.empire_territory_tiles == ()
+    assert env.empire_territory_tile_set == set()
+    assert len(env.legions_territory_tiles) == 1 + 3 * env.LEGIONS_TERRITORY_EXPANSION_PER_TURN
+    assert float(env._build_empire_territory_grid_obs().sum()) == pytest.approx(0.0)
+
+
 def test_empire_territory_grid_obs_marks_claimed_tiles_and_updates_with_turns():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     territory_obs = env._build_empire_territory_grid_obs()
@@ -836,7 +949,7 @@ def test_empire_territory_grid_obs_marks_claimed_tiles_and_updates_with_turns():
 
 
 def test_empire_territory_is_excluded_from_campaign_grid_obs():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     baseline = env._build_campaign_grid_obs().copy()
@@ -850,7 +963,7 @@ def test_empire_territory_is_excluded_from_campaign_grid_obs():
 
 
 def test_legions_and_empire_territories_only_claim_reachable_regions():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     env._advance_turns(999)
@@ -865,7 +978,7 @@ def test_legions_and_empire_territories_only_claim_reachable_regions():
 
 
 def test_legions_territory_skips_capital_footprint_water_and_other_objects():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     # Nearest capital footprint tiles around the start stay excluded.
@@ -883,7 +996,7 @@ def test_legions_territory_skips_capital_footprint_water_and_other_objects():
 
 
 def test_legions_territory_keeps_enemy_cells_claimable():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     enemy_tiles = {tuple(pos) for pos in env.grid_env.enemy_positions.values()}
@@ -891,7 +1004,7 @@ def test_legions_territory_keeps_enemy_cells_claimable():
 
 
 def test_legions_territory_keeps_gold_mines_claimable():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     gold_mine_tiles = {(2, 31), (24, 4), (29, 46), (41, 46)}
@@ -907,7 +1020,7 @@ def test_legions_territory_keeps_gold_mines_claimable():
 
 
 def test_legions_territory_keeps_mana_crystals_claimable():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     mana_crystal_tiles = {
@@ -928,7 +1041,7 @@ def test_legions_territory_keeps_mana_crystals_claimable():
 
 
 def test_legions_territory_keeps_chest_tiles_claimable():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     chest_tiles = set(env.chests.keys())
@@ -944,7 +1057,7 @@ def test_legions_territory_keeps_chest_tiles_claimable():
 
 
 def test_legions_territory_keeps_landmarks_and_locations_claimable():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     passable_object_tiles = {
@@ -958,7 +1071,7 @@ def test_legions_territory_keeps_landmarks_and_locations_claimable():
 
 
 def test_territories_keep_road_tiles_claimable():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     road_tiles = {
@@ -979,7 +1092,7 @@ def test_territories_keep_road_tiles_claimable():
 
 
 def test_campaign_exposes_mana_sources_with_expected_positions_and_labels():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     expected = {
@@ -1005,21 +1118,20 @@ def test_campaign_exposes_mana_sources_with_expected_positions_and_labels():
         assert grid_meta["letter"] == letter
 
 
-def test_grid_render_marks_mana_sources_with_colored_letters():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+def test_grid_env_exposes_mana_source_labels_and_colors():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
-    render_output = env.grid_env.render(mode="ansi")
+    mana_letters = {meta["letter"] for meta in env.grid_env.mana_sources.values()}
+    mana_colors = {meta["ansi_color"] for meta in env.grid_env.mana_sources.values()}
+    mana_names = {meta["name"] for meta in env.grid_env.mana_sources.values()}
 
-    assert "\x1b[31mП\x1b[0m" in render_output
-    assert "\x1b[34mЖ\x1b[0m" in render_output
-    assert "\x1b[90mС\x1b[0m" in render_output
-    assert "\x1b[96mР\x1b[0m" in render_output
-    assert "Mana sources:" in render_output
-    assert "Мана преисподней" in render_output
-    assert "Мана жизни" in render_output
-    assert "Мана смерти" in render_output
-    assert "Мана рун" in render_output
+    assert {"П", "Ж", "С", "Р"}.issubset(mana_letters)
+    assert {"\x1b[31m", "\x1b[34m", "\x1b[90m", "\x1b[96m"}.issubset(mana_colors)
+    assert "Мана преисподней" in mana_names
+    assert "Мана жизни" in mana_names
+    assert "Мана смерти" in mana_names
+    assert "Мана рун" in mana_names
 
 
 def test_campaign_visualizer_draws_mana_source_letters():
@@ -1027,7 +1139,7 @@ def test_campaign_visualizer_draws_mana_source_letters():
 
     from visualize_campaign import CampaignVisualizer
 
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     viz = CampaignVisualizer(
