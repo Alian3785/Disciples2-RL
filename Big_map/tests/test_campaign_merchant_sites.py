@@ -12,7 +12,7 @@ from visualize_campaign import CampaignVisualizer
 
 
 def test_merchant_interaction_tiles_match_scenario_layout():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
 
     assert any(pos == (21, 34) for pos in env.merchant_site_anchors.values())
     assert any(pos == (36, 1) for pos in env.merchant_site_anchors.values())
@@ -42,7 +42,7 @@ def test_merchant_interaction_tiles_match_scenario_layout():
 
 
 def test_grid_info_reports_when_agent_stands_on_merchant_interaction_tile():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     env.grid_env.agent_pos = (39, 2)
@@ -58,25 +58,21 @@ def test_grid_info_reports_when_agent_stands_on_merchant_interaction_tile():
 
 
 def test_reset_syncs_merchant_tiles_into_grid_env():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     assert env.grid_env.merchant_positions == set(env.merchant_interaction_tiles)
 
 
-def test_grid_render_marks_merchant_tiles():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+def test_grid_env_tracks_merchant_tiles():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
-    rendered = env.grid_env.render(mode="ansi")
-
-    assert "Merchants:" in rendered
-    assert "(39, 2)" in rendered
-    assert "M " in rendered
+    assert (39, 2) in env.grid_env.merchant_positions
 
 
 def test_campaign_visualizer_marks_diagonal_opposite_merchant_tiles_with_t():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     viz = CampaignVisualizer(grid_size=env.grid_size)
 

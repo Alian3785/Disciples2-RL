@@ -33,7 +33,7 @@ def test_campaign_adjacent_battle_spends_half_full_move_cap():
     env = CampaignEnv(
         log_enabled=False,
         persist_blue_hp=True,
-        realcapital=2,
+        Realcapital=2,
         reward_engage_battle=0.0,
     )
     env.reset(seed=123)
@@ -71,7 +71,7 @@ def test_campaign_adjacent_battle_uses_full_move_cap_even_with_many_moves_left()
     env = CampaignEnv(
         log_enabled=False,
         persist_blue_hp=True,
-        realcapital=2,
+        Realcapital=2,
         reward_engage_battle=0.0,
     )
     env.reset(seed=123)
@@ -95,7 +95,7 @@ def test_campaign_adjacent_battle_uses_full_move_cap_even_with_many_moves_left()
 
 
 def test_campaign_grid_move_cost_is_two_points_without_battle():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     for eid in list(env.grid_env.enemies_alive.keys()):
@@ -115,7 +115,7 @@ def test_campaign_grid_move_cost_is_two_points_without_battle():
 
 
 def test_campaign_grid_move_with_less_than_tile_cost_spends_remaining_point():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     for eid in list(env.grid_env.enemies_alive.keys()):

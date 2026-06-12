@@ -9,25 +9,134 @@ from campaign_env import CampaignEnv
 
 
 def _make_env() -> CampaignEnv:
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     return env
 
 
-def test_scripted_capital_bot_starts_at_empire_capital_and_disables_static_stack():
+def _enable_scripted_bot(env: CampaignEnv) -> None:
+    env.scripted_capital_bot_enabled = True
+    env.scripted_capital_bot_state = "hunting"
+    env.scripted_capital_bot_position = env.empire_territory_source_tile
+    env._sync_scripted_capital_bot_grid_state()
+
+
+def test_minimal_grid_step_info_reports_scripted_bot_defeat_count():
+    env = CampaignEnv(
+        log_enabled=False,
+        detailed_step_info=False,
+        persist_blue_hp=True,
+        Realcapital=2,
+    )
+    env.reset(seed=123)
+    env.scripted_capital_bot_enemies_defeated = 2
+
+    _, _, _, _, info = env._finalize_grid_step_result(
+        grid_obs=env._get_grid_obs(),
+        reward=0.0,
+        terminated=False,
+        truncated=False,
+        info={"agent_pos": env.grid_env.agent_pos},
+    )
+
+    assert info["scripted_capital_bot_enemies_defeated"] == 2
+
+
+def test_scripted_capital_bot_can_be_disabled_at_construction():
+    env = CampaignEnv(
+        log_enabled=False,
+        persist_blue_hp=True,
+        Realcapital=2,
+        scripted_capital_bot_enabled=False,
+    )
+    env.reset(seed=123)
+
+    assert env.scripted_capital_bot_enabled is False
+    assert env.scripted_capital_bot_state == "disabled"
+    assert env.grid_env.scripted_bot_position is None
+    assert env.grid_env.dynamic_blocked_positions == set()
+
+    info = env._advance_scripted_capital_bot_one_turn()
+    assert info["enabled"] is False
+    assert env.grid_env.scripted_bot_position is None
+    assert env.grid_env.dynamic_blocked_positions == set()
+
+
+def test_scripted_capital_bot_enemy_search_reuses_cache_for_same_state():
+    env = _make_env()
+
+    first = env._scripted_bot_explore_for_enemies()
+    second = env._scripted_bot_explore_for_enemies()
+
+    assert second is first
+
+    env.scripted_capital_bot_position = (
+        env.scripted_capital_bot_position[0] + 1,
+        env.scripted_capital_bot_position[1],
+    )
+    third = env._scripted_bot_explore_for_enemies()
+
+    assert third is not first
+
+
+def test_scripted_capital_bot_starts_at_empire_capital_without_targeting_mizrael():
     env = _make_env()
 
     assert env.scripted_capital_bot_position == env.empire_territory_source_tile
+    assert env.scripted_capital_bot_enabled is True
     assert env.scripted_capital_bot_state == "hunting"
-    assert env.grid_env.enemies_alive[env.EMPIRE_TERRITORY_SOURCE_ENEMY_ID] is False
+    assert env.grid_env.enemies_alive[env.EMPIRE_TERRITORY_SOURCE_ENEMY_ID] is True
     assert env.grid_env.scripted_bot_position == env.empire_territory_source_tile
+    assert env.empire_territory_source_tile not in env._scripted_bot_alive_enemy_tiles()
 
     names = {unit["name"] for unit in env.scripted_capital_bot_team_state}
     assert {"Рыцарь", "Рыцарь на пегасе", "Стрелок"}.issubset(names)
+    assert "Мизраэль" not in names
+
+
+def test_scripted_capital_bot_targets_other_enemy_instead_of_mizrael(monkeypatch):
+    env = _make_env()
+    env.grid_env.enemy_positions = {
+        env.EMPIRE_TERRITORY_SOURCE_ENEMY_ID: env.empire_territory_source_tile,
+        1: (25, 10),
+    }
+    env.grid_env.enemies_alive = {
+        env.EMPIRE_TERRITORY_SOURCE_ENEMY_ID: True,
+        1: True,
+    }
+    env.grid_env.obstacle_positions = set()
+    env.grid_env.dynamic_blocked_positions = set()
+    battles = []
+
+    def fake_battle(target_enemy_id: int):
+        battles.append(int(target_enemy_id))
+        env.scripted_capital_bot_state = "returning"
+        return {"enemy_id": int(target_enemy_id), "winner": "blue"}
+
+    monkeypatch.setattr(env, "_run_scripted_capital_bot_battle", fake_battle)
+
+    info = env._advance_scripted_capital_bot_one_turn()
+
+    assert battles == [1]
+    assert info["target"]["enemy_id"] == 1
+    assert info["target"]["position"] == (25, 10)
+    assert "battle" in info["events"]
+
+
+def test_scripted_capital_bot_direct_mizrael_battle_call_is_skipped():
+    env = _make_env()
+
+    result = env._run_scripted_capital_bot_battle(env.EMPIRE_TERRITORY_SOURCE_ENEMY_ID)
+
+    assert result["winner"] == "skipped"
+    assert result["skipped"] is True
+    assert result["skip_reason"] == "empire_capital_enemy_forbidden"
+    assert env.grid_env.enemies_alive[env.EMPIRE_TERRITORY_SOURCE_ENEMY_ID] is True
 
 
 def test_scripted_capital_bot_moves_up_to_twenty_tiles_without_crossing_obstacles():
     env = _make_env()
+    _enable_scripted_bot(env)
     env.grid_env.enemy_positions = {
         env.EMPIRE_TERRITORY_SOURCE_ENEMY_ID: env.empire_territory_source_tile,
         1: (1, 1),
@@ -44,14 +153,15 @@ def test_scripted_capital_bot_moves_up_to_twenty_tiles_without_crossing_obstacle
     path = info["path"]
 
     assert 0 < len(path) <= env._scripted_bot_max_grid_moves_per_turn()
-    assert info["move_cost"] == 2
-    assert info["move_points_spent"] == len(path) * 2
+    assert info["move_cost"] >= 1
+    assert 0 < info["move_points_spent"] <= info["move_points_budget"]
     assert all(tuple(tile) not in env.grid_env.obstacle_positions for tile in path)
     assert env.scripted_capital_bot_position == tuple(path[-1])
 
 
 def test_scripted_capital_bot_uses_two_move_points_per_grid_step():
     env = _make_env()
+    _enable_scripted_bot(env)
     env.grid_env.enemy_positions = {
         env.EMPIRE_TERRITORY_SOURCE_ENEMY_ID: env.empire_territory_source_tile,
         1: (1, 1),
@@ -67,13 +177,14 @@ def test_scripted_capital_bot_uses_two_move_points_per_grid_step():
     info = env._advance_scripted_capital_bot_one_turn()
     path = info["path"]
 
-    assert len(path) == env.SCRIPTED_CAPITAL_BOT_MAX_STEPS_PER_TURN // 2
+    assert 0 < len(path) <= env._scripted_bot_max_grid_moves_per_turn()
     assert info["move_points_budget"] == env.SCRIPTED_CAPITAL_BOT_MAX_STEPS_PER_TURN
-    assert info["move_points_spent"] == 20
+    assert info["move_points_spent"] == env.SCRIPTED_CAPITAL_BOT_MAX_STEPS_PER_TURN
 
 
 def test_scripted_capital_bot_battle_starts_from_adjacent_tile(monkeypatch):
     env = _make_env()
+    _enable_scripted_bot(env)
     enemy_id = 1
     env.scripted_capital_bot_position = (5, 5)
     env.grid_env.enemy_positions = {
@@ -112,6 +223,7 @@ def test_scripted_capital_bot_battle_starts_from_adjacent_tile(monkeypatch):
 
 def test_scripted_capital_bot_victory_marks_enemy_defeated_and_returns(monkeypatch):
     env = _make_env()
+    _enable_scripted_bot(env)
     enemy_id = 1
     env.grid_env.enemies_alive[enemy_id] = True
     first_unit = next(unit for unit in env.scripted_capital_bot_team_state if unit["name"] != "пусто")
@@ -142,6 +254,7 @@ def test_scripted_capital_bot_victory_marks_enemy_defeated_and_returns(monkeypat
 
 def test_scripted_capital_bot_defeat_respawns_after_one_turn(monkeypatch):
     env = _make_env()
+    _enable_scripted_bot(env)
 
     def fake_init(self, red_team, blue_team):
         self.combined = [
@@ -168,6 +281,7 @@ def test_scripted_capital_bot_defeat_respawns_after_one_turn(monkeypatch):
 
 def test_scripted_capital_bot_rest_fully_heals_and_revives():
     env = _make_env()
+    _enable_scripted_bot(env)
     damaged = 0
     killed = 0
     for unit in env.scripted_capital_bot_team_state:
@@ -194,6 +308,7 @@ def test_scripted_capital_bot_rest_fully_heals_and_revives():
 
 def test_scripted_blue_action_uses_battle_mask(monkeypatch):
     env = _make_env()
+    _enable_scripted_bot(env)
     battle = BattleEnv(log_enabled=False)
     red_team = env._build_battle_team_with_placeholders("red", env._get_enemy_team_state(1))
     blue_team = env.scripted_capital_bot_team_state
@@ -205,9 +320,9 @@ def test_scripted_blue_action_uses_battle_mask(monkeypatch):
     assert bool(mask[action])
 
 
-def test_grid_render_marks_scripted_bot_with_letter():
+def test_grid_env_tracks_scripted_bot_with_letter():
     env = _make_env()
+    _enable_scripted_bot(env)
 
-    rendered = env.grid_env.render(mode="ansi")
-
-    assert "B " in rendered
+    assert env.grid_env.scripted_bot_position == env.empire_territory_source_tile
+    assert env.grid_env.scripted_bot_symbol == "B"

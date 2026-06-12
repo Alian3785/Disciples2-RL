@@ -15,6 +15,149 @@ class CampaignTerritoryMixin:
 
     TERRITORY_PATH_DISTANCE_CACHE_SIZE = 64
 
+    @classmethod
+    def _normalize_campaign_objective(cls, value: object) -> str:
+        if isinstance(value, bool):
+            return cls.CAMPAIGN_OBJECTIVE_DRAGON if value else cls.CAMPAIGN_OBJECTIVE_CITIES
+        raw = str(value or cls.CAMPAIGN_OBJECTIVE_CITIES).strip().lower()
+        raw = raw.replace("-", "_")
+        aliases = {
+            "city": cls.CAMPAIGN_OBJECTIVE_CITIES,
+            "cities": cls.CAMPAIGN_OBJECTIVE_CITIES,
+            "objective_city": cls.CAMPAIGN_OBJECTIVE_CITIES,
+            "objective_cities": cls.CAMPAIGN_OBJECTIVE_CITIES,
+            "dragon": cls.CAMPAIGN_OBJECTIVE_DRAGON,
+            "green_dragon": cls.CAMPAIGN_OBJECTIVE_DRAGON,
+        }
+        if raw in aliases:
+            return aliases[raw]
+        raise ValueError(
+            f"Unsupported campaign_objective={value!r}; expected 'cities' or 'dragon'"
+        )
+
+    def _campaign_objective_is_cities(self) -> bool:
+        return (
+            self._normalize_campaign_objective(getattr(self, "campaign_objective", "cities"))
+            == self.CAMPAIGN_OBJECTIVE_CITIES
+        )
+
+    def _campaign_objective_is_dragon(self) -> bool:
+        return (
+            self._normalize_campaign_objective(getattr(self, "campaign_objective", "cities"))
+            == self.CAMPAIGN_OBJECTIVE_DRAGON
+        )
+
+    def _is_green_dragon_objective_enemy(self, enemy_id: Optional[int]) -> bool:
+        if not self._campaign_objective_is_dragon():
+            return False
+        try:
+            return int(enemy_id) == int(self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID)
+        except (TypeError, ValueError):
+            return False
+
+    def _compute_green_dragon_objective_reward(self) -> float:
+        base_reward = self._compute_final_objective_reward(
+            len(self.FINAL_OBJECTIVE_CITIES),
+            captured_before=0,
+        )
+        return float(base_reward) * float(
+            getattr(self, "reward_green_dragon_objective_multiplier", 1.0)
+        )
+
+    def _apply_green_dragon_reached_reward_if_needed(
+        self,
+        enemy_id: Optional[int],
+        reward: float,
+        info: Dict[str, object],
+    ) -> float:
+        if not self._is_green_dragon_objective_enemy(enemy_id):
+            return float(reward)
+        try:
+            normalized_enemy_id = int(enemy_id)
+        except (TypeError, ValueError):
+            return float(reward)
+        grid_env = getattr(self, "grid_env", None)
+        enemies_alive = getattr(grid_env, "enemies_alive", {}) or {}
+        if not bool(enemies_alive.get(normalized_enemy_id, False)):
+            return float(reward)
+
+        info["green_dragon_reached"] = True
+        info["green_dragon_reached_enemy_id"] = int(self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID)
+        if bool(getattr(self, "green_dragon_reached_reward_granted", False)):
+            info["green_dragon_reached_reward"] = 0.0
+            info["green_dragon_reached_reward_repeat"] = True
+            return float(reward)
+
+        reached_reward = float(getattr(self, "reward_green_dragon_reached", 0.0) or 0.0)
+        self.green_dragon_reached_reward_granted = True
+        info["green_dragon_reached_reward"] = float(reached_reward)
+        info["green_dragon_reached_reward_repeat"] = False
+        info["campaign_objective"] = self.CAMPAIGN_OBJECTIVE_DRAGON
+        return float(reward) + float(reached_reward)
+
+    def _apply_green_dragon_objective_reward_if_needed(
+        self,
+        enemy_id: Optional[int],
+        reward: float,
+        info: Dict[str, object],
+    ) -> float:
+        if not self._is_green_dragon_objective_enemy(enemy_id):
+            return float(reward)
+        objective_reward = self._compute_green_dragon_objective_reward()
+        base_objective_reward = self._compute_final_objective_reward(
+            len(self.FINAL_OBJECTIVE_CITIES),
+            captured_before=0,
+        )
+        info["final_objective_reward"] = float(objective_reward)
+        info["green_dragon_objective_reward"] = float(objective_reward)
+        info["green_dragon_objective_base_reward"] = float(base_objective_reward)
+        info["green_dragon_objective_multiplier"] = float(
+            getattr(self, "reward_green_dragon_objective_multiplier", 1.0)
+        )
+        info["green_dragon_objective_enemy_id"] = int(self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID)
+        info["campaign_objective"] = self.CAMPAIGN_OBJECTIVE_DRAGON
+        return float(reward) + float(objective_reward)
+
+    def _compute_no_dragon_victory_late_step_penalty(self, info: Dict[str, object]) -> float:
+        if not self._campaign_objective_is_dragon():
+            return 0.0
+        if str(info.get("campaign_result", "") or "") == "victory":
+            return 0.0
+
+        base_penalty = float(
+            getattr(self, "reward_no_dragon_victory_late_step_penalty", 0.0) or 0.0
+        )
+        penalty_cap = float(
+            getattr(self, "reward_no_dragon_victory_late_step_penalty_cap", 0.0) or 0.0
+        )
+        if base_penalty <= 0.0 or penalty_cap <= 0.0:
+            return 0.0
+
+        campaign_steps = max(0, int(getattr(self, "campaign_steps", 0) or 0))
+        start_fraction = float(
+            getattr(self, "reward_no_dragon_victory_late_step_start_fraction", 0.35)
+            or 0.0
+        )
+        grace_steps = max(1, int(round(float(self.max_grid_steps) * start_fraction)))
+        if campaign_steps <= grace_steps:
+            return 0.0
+
+        late_span = max(1, int(self.max_grid_steps) - grace_steps)
+        late_progress = min(1.0, float(campaign_steps - grace_steps) / float(late_span))
+        effective_cap = max(base_penalty, penalty_cap)
+        penalty = base_penalty + (effective_cap - base_penalty) * late_progress
+        return -min(max(base_penalty, penalty), effective_cap)
+
+    def _campaign_objective_completion_reason(
+        self,
+        defeated_enemy_id: Optional[int] = None,
+    ) -> Optional[str]:
+        if self._is_green_dragon_objective_enemy(defeated_enemy_id):
+            return "green_dragon_defeated"
+        if self._campaign_objective_is_cities() and self._all_objective_cities_captured():
+            return "objective_cities_cleared"
+        return None
+
     def _ruin_progress_info(self) -> Dict[str, object]:
         """Собирает компактный progress-блок по руинам для info после reset/step."""
         last_reward = None
@@ -207,7 +350,10 @@ class CampaignTerritoryMixin:
         return [city_name]
     def _all_objective_cities_captured(self) -> bool:
         """True, когда игрок захватил все города из FINAL_OBJECTIVE_CITIES."""
-        return len(self.captured_objective_cities) == len(self.FINAL_OBJECTIVE_CITIES)
+        return (
+            self._campaign_objective_is_cities()
+            and len(self.captured_objective_cities) == len(self.FINAL_OBJECTIVE_CITIES)
+        )
     def _is_legions_settlement_territory_cleared(self, settlement_name: str) -> bool:
         """Проверяет, побеждены ли все required enemies, открывающие поселение Легионов."""
         source_data = self.legions_settlement_territory_source_by_name.get(str(settlement_name), {})

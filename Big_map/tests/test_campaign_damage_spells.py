@@ -10,8 +10,13 @@ from campaign_env import CampaignEnv
 from enemy_configs import ENEMY_CONFIGS
 
 
-def _make_legions_env() -> CampaignEnv:
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+def _make_legions_env(*, detailed_step_info: bool = True) -> CampaignEnv:
+    env = CampaignEnv(
+        log_enabled=False,
+        persist_blue_hp=True,
+        Realcapital=2,
+        detailed_step_info=detailed_step_info,
+    )
     env.reset(seed=123)
     env.grid_env.agent_pos = (3, 3)
     env.grid_env.enemy_positions = {
@@ -25,7 +30,7 @@ def _make_legions_env() -> CampaignEnv:
 
 
 def _make_undead_env() -> CampaignEnv:
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=4)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=4)
     env.reset(seed=123)
     env.grid_env.agent_pos = (3, 3)
     env.grid_env.enemy_positions = {
@@ -39,7 +44,7 @@ def _make_undead_env() -> CampaignEnv:
 
 
 def _make_empire_env() -> CampaignEnv:
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=1)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=1)
     env.reset(seed=123)
     env.grid_env.agent_pos = (3, 3)
     env.grid_env.enemy_positions = {
@@ -53,7 +58,7 @@ def _make_empire_env() -> CampaignEnv:
 
 
 def _make_mountain_env() -> CampaignEnv:
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=3)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=3)
     env.reset(seed=123)
     env.grid_env.agent_pos = (3, 3)
     env.grid_env.enemy_positions = {
@@ -67,7 +72,7 @@ def _make_mountain_env() -> CampaignEnv:
 
 
 def _make_elves_env() -> CampaignEnv:
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=5)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=5)
     env.reset(seed=123)
     env.grid_env.agent_pos = (3, 3)
     env.grid_env.enemy_positions = {
@@ -82,7 +87,6 @@ def _make_elves_env() -> CampaignEnv:
 
 def _enable_typeoflord_two(env: CampaignEnv) -> CampaignEnv:
     env.typeoflord = 2
-    env.Typeoflord = 2
     return env
 
 
@@ -105,6 +109,18 @@ def _scroll_spell_action_index(env: CampaignEnv, spell_key: str) -> int:
         if str(slot_entry.get("spell_id", "") or "") == str(spell_key):
             return env.grid_scroll_cast_action_start + idx
     raise AssertionError(f"scroll spell action not found: {spell_key}")
+
+
+def _reserve_scroll_action(env: CampaignEnv, item_name: str) -> None:
+    env._static_chests = dict(env._static_chests)
+    existing_items = tuple(env._static_chests.get((1, 1), ()) or ())
+    if item_name not in existing_items:
+        env._static_chests[(1, 1)] = (*existing_items, item_name)
+    env.chests = dict(env._static_chests)
+    env._refresh_dynamic_action_layout()
+    env.action_space = env.action_space.__class__(
+        env.GRID_SWAP_UNIT_ACTION_START + env.GRID_SWAP_UNIT_ACTION_COUNT
+    )
 
 
 def _battle_target_action(position: int) -> int:
@@ -201,7 +217,7 @@ def test_legion_damage_spell_actions_require_legions_learned_spell_and_mana():
     _set_spell_use_mana(env, spell_key)
     assert bool(env.compute_action_mask()[action]) is True
 
-    non_legions_env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=1)
+    non_legions_env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=1)
     non_legions_env.reset(seed=123)
     non_legions_env.grid_env.agent_pos = (3, 3)
     non_legions_env.grid_env.enemy_positions = {10: (4, 3)}
@@ -374,6 +390,61 @@ def test_legion_damage_spell_respects_immunity_and_resistance():
     assert env.enemy_team_states[10][0]["health"] == pytest.approx(100.0)
     assert env.enemy_team_states[10][1]["health"] == pytest.approx(100.0)
     assert env.enemy_team_states[10][2]["health"] == pytest.approx(70.0)
+
+
+def test_legion_damage_spell_ignores_battle_only_defence_flag():
+    env = _make_legions_env()
+    spell_key = "lod_d2_s008"
+    env.active_spells[spell_key]["learned"] = 1
+    _set_spell_use_mana(env, spell_key)
+    env.enemy_team_states[10] = [
+        _enemy_unit(
+            position=1,
+            hp=100.0,
+            max_hp=100.0,
+            name="Battle defence only",
+            extra_fields={"Firedefence": 1},
+        ),
+    ]
+
+    action = _spell_action_index(env, spell_key)
+    _, reward, terminated, truncated, info = env.step(action)
+
+    assert terminated is False
+    assert truncated is False
+    assert reward == pytest.approx(env.reward_spell_cast)
+    assert info["spell_damage_type"] == "Fire"
+    assert info["spell_damage_units_hit"] == 1
+    assert info["spell_damage_units_blocked"] == 0
+    assert info["spell_damage_total"] == pytest.approx(30.0)
+    assert env.enemy_team_states[10][0]["health"] == pytest.approx(70.0)
+    assert env.enemy_team_states[10][0]["Firedefence"] == 1
+
+
+def test_spell_cast_info_is_minimal_when_detailed_step_info_disabled():
+    env = _make_legions_env(detailed_step_info=False)
+    spell_key = "lod_d2_s008"
+    env.active_spells[spell_key]["learned"] = 1
+    _set_spell_use_mana(env, spell_key)
+    env.enemy_team_states[10] = [
+        _enemy_unit(position=1, hp=100.0, max_hp=100.0, name="Target"),
+    ]
+
+    action = _spell_action_index(env, spell_key)
+    _, reward, terminated, truncated, info = env.step(action)
+
+    assert terminated is False
+    assert truncated is False
+    assert reward == pytest.approx(env.reward_spell_cast)
+    assert info["spell_cast_action"] is True
+    assert info["spell_key"] == spell_key
+    assert info["spell_kind"] == "damage"
+    assert info["spell_cast_executed"] is True
+    assert info["spell_cast_applied"] is True
+    assert info["spell_has_map_offensive_actions"] is True
+    assert "spell_damage_total" not in info
+    assert "spell_effect_active_ids" not in info
+    assert "spell_use_costs" not in info
 
 
 def test_enemy_units_regenerate_five_percent_on_player_territory_and_fifteen_percent_elsewhere():
@@ -660,7 +731,7 @@ def test_legion_summon_spell_victory_defeats_enemy_without_blue_exp():
 
 
 def test_summon_victory_over_city_captures_city_immediately():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     city_enemy_id = 68
@@ -1451,10 +1522,35 @@ def test_support_heal_spell_at_full_hp_is_not_rewarded_or_charged():
     assert env._spell_cast_limit_reached_this_turn(spell_key) is False
 
 
+def test_scroll_actions_are_reserved_from_scenario_scrolls_before_pickup():
+    env = _make_empire_env()
+    spell_key = "g000ss0029"
+    item_name = str(env._scroll_spell_definition_by_id(spell_key)["item_name"])
+
+    _reserve_scroll_action(env, item_name)
+
+    action = _scroll_spell_action_index(env, spell_key)
+    slot_entry = env.scroll_cast_slot_entries()[action - env.grid_scroll_cast_action_start]
+
+    assert slot_entry["item_name"] == item_name
+    assert slot_entry["copies"] == 0
+    assert env.count_scroll_item(item_name) == 0
+    assert bool(env.compute_action_mask()[action]) is False
+
+    env.scroll_magic_unlocked = True
+    env.heroitems = [item_name]
+    env._invalidate_inventory_cache()
+
+    slot_entry = env.scroll_cast_slot_entries()[action - env.grid_scroll_cast_action_start]
+    assert slot_entry["copies"] == 1
+    assert env.count_scroll_item(item_name) == 1
+
+
 def test_heal_scroll_at_full_hp_is_not_rewarded_or_consumed_until_it_heals():
     env = _make_empire_env()
     spell_key = "g000ss0029"
     item_name = str(env._scroll_spell_definition_by_id(spell_key)["item_name"])
+    _reserve_scroll_action(env, item_name)
     env.scroll_magic_unlocked = True
     env.heroitems = [item_name]
     env._invalidate_inventory_cache()
@@ -1499,6 +1595,7 @@ def test_movement_scroll_at_move_cap_is_not_rewarded_or_consumed_until_it_restor
     env = _make_empire_env()
     spell_key = "g000ss0006"
     item_name = str(env._scroll_spell_definition_by_id(spell_key)["item_name"])
+    _reserve_scroll_action(env, item_name)
     env.scroll_magic_unlocked = True
     env.heroitems = [item_name]
     env.moves = env.moves_per_turn

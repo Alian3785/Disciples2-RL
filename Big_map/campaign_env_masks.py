@@ -8,11 +8,99 @@ from campaign_env_data import *
 
 class CampaignMaskMixin:
     def action_masks(self):
-        """SB3-contrib MaskablePPO hook for invalid action masking."""
+        """
+        Возвращает маску допустимых действий для MaskablePPO.
+
+        SB3-contrib вызывает этот hook перед выбором действия, чтобы агент
+        не выбирал заведомо недопустимые action-индексы. Вся фактическая
+        логика маскирования собрана в compute_action_mask(), а этот метод
+        оставлен тонкой совместимой оберткой под API библиотеки.
+        """
         return self.compute_action_mask()
+    def _grid_potion_action_mask_values(self) -> Tuple[bool, ...]:
+        """
+        Строит плоскую маску применения зелий по всем боевым позициям BLUE.
+
+        Возвращаемый tuple упорядочен блоками: сначала все целевые позиции
+        для первого зелья из scenario_potion_item_names, затем те же позиции
+        для следующего зелья и так далее. Для лечения требуется живой раненый
+        юнит, для воскрешения - мертвый юнит с положительным max HP, для
+        временных баффов - живой юнит без уже активного такого эффекта на
+        позиции. Такая предварительная агрегация не меняет состояние среды и
+        используется только при построении action mask.
+        """
+        positions = tuple(int(pos) for pos in self.GRID_POTION_USE_POSITIONS)
+        state = self._get_blue_state()
+        unit_by_pos: Dict[int, Dict[str, object]] = {}
+        for unit in state:
+            if not isinstance(unit, dict):
+                continue
+            try:
+                position = int(unit.get("position", -1) or -1)
+            except (TypeError, ValueError):
+                continue
+            if position in positions:
+                unit_by_pos[position] = unit
+
+        can_heal_by_pos: Dict[int, bool] = {}
+        can_revive_by_pos: Dict[int, bool] = {}
+        is_living_by_pos: Dict[int, bool] = {}
+        for position in positions:
+            unit = unit_by_pos.get(position)
+            if not isinstance(unit, dict):
+                can_heal_by_pos[position] = False
+                can_revive_by_pos[position] = False
+                is_living_by_pos[position] = False
+                continue
+            hp = float(unit.get("hp", 0) or unit.get("health", 0))
+            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or hp)
+            can_heal_by_pos[position] = max_hp > 0 and hp > 0 and hp < max_hp
+            can_revive_by_pos[position] = max_hp > 0 and hp <= 0
+            is_living_by_pos[position] = max_hp > 0 and hp > 0
+
+        definitions = self._potion_definitions_by_canonical()
+        values: List[bool] = []
+        for item_name in self.scenario_potion_item_names:
+            canonical_name = self._canonical_potion_item_name(item_name)
+            definition = definitions.get(canonical_name, {})
+            available = bool(definition) and self._potion_available_count(item_name) > 0
+            effect = definition.get("effect", {}) if isinstance(definition, dict) else {}
+            effect_kind = str((effect or {}).get("kind", "") or "")
+            duration = str(definition.get("duration", "") or "")
+            active_positions = (
+                self._active_potion_positions(definition.get("name", ""))
+                if available and duration == "temporary"
+                else set()
+            )
+            for position in positions:
+                allowed = False
+                if available:
+                    if effect_kind == "heal":
+                        allowed = bool(can_heal_by_pos.get(position, False))
+                    elif effect_kind == "revive":
+                        allowed = bool(can_revive_by_pos.get(position, False))
+                    elif bool(is_living_by_pos.get(position, False)):
+                        allowed = not (
+                            duration == "temporary" and int(position) in active_positions
+                        )
+                values.append(bool(allowed))
+        return tuple(values)
 
     def compute_action_mask(self) -> np.ndarray:
-        """Маска действий в зависимости от режима."""
+        """
+        Собирает полную маску допустимых действий для текущего режима среды.
+
+        В grid-режиме метод комбинирует маску передвижения GridWorldEnv с
+        кампаниями действиями: зельями, покупками, наймом, тренировкой,
+        постройками, изучением и кастом заклинаний, экипировкой, свитками и
+        перестановками отрядов. Каждый action-диапазон заполняется только
+        если выполнены игровые условия: хватает ресурсов, есть подходящая
+        цель, агент стоит у нужного сайта, предмет не использован повторно и
+        т.п.
+
+        В battle-режиме маска делегируется текущему BattleEnv, потому что
+        допустимость действий в бою определяется уже боевым окружением.
+        """
         mask = np.zeros(self.action_space.n, dtype=bool)
 
         if self.mode == self.MODE_GRID:
@@ -26,14 +114,18 @@ class CampaignMaskMixin:
             mask[8] = bool(grid_mask[8]) and (
                 self._has_wounded_blue() or self.moves <= 0 or not movement_available
             )
+            potion_mask_values = self._grid_potion_action_mask_values()
             for potion_idx, item_name in enumerate(self.scenario_potion_item_names):
                 action_start = self.GRID_POTION_USE_ACTION_START + potion_idx * len(
                     self.GRID_POTION_USE_POSITIONS
                 )
                 for target_idx, pos in enumerate(self.GRID_POTION_USE_POSITIONS):
-                    mask[action_start + target_idx] = self._can_use_potion_on_position(
-                        item_name,
-                        pos,
+                    mask_index = action_start + target_idx
+                    value_index = potion_idx * len(self.GRID_POTION_USE_POSITIONS) + target_idx
+                    mask[mask_index] = bool(
+                        potion_mask_values[value_index]
+                        if value_index < len(potion_mask_values)
+                        else False
                     )
             if self._merchant_sites_at_position(self.grid_env.agent_pos):
                 for idx, item_name in enumerate(self.scenario_merchant_potion_item_names):
@@ -70,38 +162,18 @@ class CampaignMaskMixin:
                         mask[self.GRID_CASTLE_HEAL_ACTION_START + idx] = self._can_heal_position(pos)
                     for idx, pos in enumerate(self.CASTLE_REVIVE_POSITIONS):
                         mask[self.GRID_CASTLE_REVIVE_ACTION_START + idx] = self._can_castle_revive_position(pos)
-            for idx in range(len(self.active_hire_options)):
-                mask[self.GRID_HIRE_ACTION_START + idx] = self._can_hire_faction_unit_option(
-                    self._hire_option(idx)
-                )
-            for idx in range(len(self.active_mercenary_hire_options)):
-                mask[self.GRID_MERCENARY_HIRE_ACTION_START + idx] = (
-                    self._can_hire_mercenary_unit_option(self._mercenary_option(idx))
-                )
+            for idx, can_hire in enumerate(self._faction_hire_action_mask_values()):
+                mask[self.GRID_HIRE_ACTION_START + idx] = bool(can_hire)
+            for idx, can_hire in enumerate(self._mercenary_hire_action_mask_values()):
+                mask[self.GRID_MERCENARY_HIRE_ACTION_START + idx] = bool(can_hire)
             if self._trainer_sites_at_position(self.grid_env.agent_pos):
                 for idx, pos in enumerate(self.TRAINER_POSITIONS):
                     mask[self.GRID_TRAINER_ACTION_START + idx] = self._can_train_unit_position(
                         pos
                     )
 
-            # Постройки: доступны при достаточном золоте и если не blocked/built
-            alredybuilt_flag = self.active_buildings.get("alredybuilt", 0)
-            try:
-                has_build_lock = int(alredybuilt_flag or 0) == 1
-            except (TypeError, ValueError):
-                has_build_lock = False
-            for idx, build_key in enumerate(self.building_keys):
-                building = self.active_buildings.get(build_key)
-                if not isinstance(building, dict):
-                    continue
-                price = self._get_building_gold_cost(building)
-                built_flag = building.get("Build", building.get("built", 0))
-                is_built = int(built_flag or 0) == 1
-                blocked_flag = building.get("blocked", 0)
-                is_blocked = int(blocked_flag or 0) == 1
-                mask[self.GRID_BUILD_ACTION_START + idx] = (
-                    not has_build_lock and not is_built and not is_blocked and self.gold >= price
-                )
+            for idx, can_build in enumerate(self._building_action_mask_values()):
+                mask[self.GRID_BUILD_ACTION_START + idx] = bool(can_build)
             if self._has_magic_tower_built() and not self.spell_learning_locked:
                 for idx, spell_key in enumerate(self.spell_keys):
                     spell = self.active_spells.get(spell_key)
@@ -127,10 +199,8 @@ class CampaignMaskMixin:
                 mask[self.grid_settlement_upgrade_action_start + idx] = self._can_upgrade_settlement(
                     settlement_name
                 )
-            for idx, item_name in enumerate(self.BATTLE_EQUIPPABLE_ITEM_NAMES):
-                mask[self.GRID_EQUIP_BATTLE_ITEM1_ACTION_START + idx] = self._can_equip_battle_item(
-                    item_name,
-                )
+            for idx, can_equip in enumerate(self._battle_equip_action_mask_values()):
+                mask[self.GRID_EQUIP_BATTLE_ITEM1_ACTION_START + idx] = bool(can_equip)
             for idx, item_name in enumerate(getattr(self, "scenario_book_item_names", ()) or ()):
                 mask[self.GRID_EQUIP_BOOK_ACTION_START + idx] = self._can_equip_book_item(
                     item_name,
@@ -195,19 +265,25 @@ class CampaignMaskMixin:
                 and float(self.gold or 0.0) >= float(self.SCROLL_MAGE_UNLOCK_GOLD_COST)
                 and self._has_scroll_or_staff_magic_unlock_source()
             )
-            current_scroll_specs = self._scroll_cast_slot_entries_cache
-            for idx in range(int(self.MAX_SCROLL_CAST_ACTIONS)):
+            current_scroll_specs = self.scroll_cast_slot_entries()
+            for idx in range(int(self.GRID_SCROLL_CAST_ACTION_COUNT)):
                 scroll_entry: Dict[str, object] = {}
                 if idx < len(current_scroll_specs):
-                    scroll_entry = dict(current_scroll_specs[idx])
-                mask[self.grid_scroll_cast_action_start + idx] = (
-                    bool(scroll_entry)
-                    and self._can_cast_scroll_spell(
-                        scroll_entry,
-                        nearest_targetable_enemy=nearest_targetable_enemy,
-                        nearest_any_enemy=nearest_any_enemy,
+                    scroll_entry = current_scroll_specs[idx]
+                action_index = self.grid_scroll_cast_action_start + idx
+                if action_index < len(mask):
+                    mask[action_index] = (
+                        bool(scroll_entry)
+                        and self._can_cast_scroll_spell(
+                            scroll_entry,
+                            nearest_targetable_enemy=nearest_targetable_enemy,
+                            nearest_any_enemy=nearest_any_enemy,
+                        )
                     )
-                )
+            for idx, can_swap in enumerate(self._blue_unit_swap_action_mask_values()):
+                action_index = int(self.GRID_SWAP_UNIT_ACTION_START) + int(idx)
+                if action_index < len(mask):
+                    mask[action_index] = bool(can_swap)
         else:
             # В battle режиме используем маску из BattleEnv
             if self.battle_env is not None:
@@ -219,7 +295,14 @@ class CampaignMaskMixin:
 
         return mask
     def _has_wounded_blue(self) -> bool:
-        """Проверяет, есть ли раненые юниты BLUE (hp < max_hp, но живы)."""
+        """
+        Проверяет, есть ли у игрока живые, но не полностью здоровые юниты.
+
+        Используется при построении маски отдыха и лечения: если у BLUE есть
+        хотя бы один юнит с hp > 0 и hp < max HP, соответствующие действия
+        могут быть разрешены. Метод читает текущее состояние отряда и не
+        изменяет здоровье или другие поля юнитов.
+        """
         state = self._get_blue_state()
         for unit in state:
             hp = float(unit.get("hp", 0) or unit.get("health", 0))
@@ -228,7 +311,14 @@ class CampaignMaskMixin:
                 return True
         return False
     def _can_revive_position(self, position: int) -> bool:
-        """Можно ли применить бутыль воскрешения к позиции (юнит мёртв: hp <= 0, есть max_hp)."""
+        """
+        Определяет, можно ли применить воскрешение к конкретной позиции.
+
+        Позиция считается подходящей, если на ней есть BLUE-юнит с
+        положительным max HP, но текущим hp <= 0. Это проверка только
+        пригодности цели; наличие самого предмета и его количество
+        проверяются вызывающим кодом.
+        """
         state = self._get_blue_state()
         for unit in state:
             if int(unit.get("position", -1)) != position:
@@ -237,17 +327,14 @@ class CampaignMaskMixin:
             max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
             return max_hp > 0 and hp <= 0
         return False
-    def _can_apply_invulnerability_potion_position(self, position: int) -> bool:
-        return self._can_use_potion_on_position(
-            self.RUIN_INVULNERABILITY_ELIXIR_ITEM_NAME,
-            position,
-        )
-    def _can_apply_strength_potion_position(self, position: int) -> bool:
-        return self._can_use_potion_on_position(
-            self.STRENGTH_POTION_ITEM_NAME,
-            position,
-        )
     def _is_living_blue_position(self, position: int) -> bool:
+        """
+        Проверяет, стоит ли на указанной позиции живой BLUE-юнит.
+
+        Возвращает True только когда найден юнит с max HP > 0 и текущим
+        hp > 0. Helper нужен для зелий-баффов и других действий, которые
+        можно применять только к живым союзным отрядам.
+        """
         state = self._get_blue_state()
         for unit in state:
             if int(unit.get("position", -1)) != int(position):
@@ -257,6 +344,16 @@ class CampaignMaskMixin:
             return max_hp > 0 and hp > 0
         return False
     def _can_use_potion_on_position(self, item_name: object, position: int) -> bool:
+        """
+        Проверяет применимость конкретного зелья к конкретной позиции.
+
+        Метод нормализует имя предмета, находит его описание, убеждается, что
+        зелье доступно в инвентаре, и затем выбирает правила по типу эффекта.
+        Лечение требует раненого живого юнита, воскрешение - мертвого юнита,
+        а баффы требуют живую цель. Для временных баффов дополнительно
+        запрещается повторное применение на позицию, где такой эффект уже
+        активен.
+        """
         canonical_name = self._canonical_potion_item_name(item_name)
         definition = self._potion_definitions_by_canonical().get(canonical_name, {})
         if not definition or self._potion_available_count(item_name) <= 0:
@@ -275,13 +372,24 @@ class CampaignMaskMixin:
                 return False
         return True
     def _can_castle_revive_position(self, position: int) -> bool:
-        """Можно ли воскресить юнита за золото на клетке лечения."""
+        """
+        Проверяет доступность платного воскрешения в замке для позиции.
+
+        Действие разрешено, если для юнита на позиции рассчитана
+        положительная стоимость воскрешения и у игрока хватает золота для
+        оплаты. Само списание золота и изменение hp выполняются не здесь, а в
+        обработчике действия.
+        """
         revive_cost = self._castle_revive_cost_at_position(position)
         return revive_cost > 0.0 and float(self.gold or 0.0) >= revive_cost
     def _revive_unit_at_position(self, position: int) -> Tuple[bool, Optional[str]]:
         """
-        Воскрешает юнита на позиции, устанавливая 1 HP, если он мёртв.
-        Возвращает флаг успеха и имя юнита.
+        Воскрешает мертвого BLUE-юнита на указанной позиции.
+
+        Если на позиции найден юнит с max HP > 0 и hp <= 0, метод выставляет
+        ему hp и health в 1.0, пишет событие в лог и возвращает флаг успеха
+        вместе с именем юнита. Если позиция пуста, юнит уже жив или не имеет
+        корректного max HP, возвращается (False, None).
         """
         state = self._get_blue_state()
         for unit in state:
@@ -302,7 +410,14 @@ class CampaignMaskMixin:
 
         return False, None
     def _can_heal_position(self, position: int) -> bool:
-        """Можно ли применить бутыль лечения к указанной позиции (юнит жив и не на фулл HP)."""
+        """
+        Проверяет, можно ли лечить BLUE-юнита на указанной позиции.
+
+        Лечение разрешено только для живого юнита с положительным max HP,
+        текущим hp > 0 и неполным здоровьем. Метод не учитывает наличие
+        конкретной бутылки лечения в инвентаре: он отвечает только за
+        пригодность цели.
+        """
         state = self._get_blue_state()
         for unit in state:
             if int(unit.get("position", -1)) != position:
@@ -319,15 +434,19 @@ class CampaignMaskMixin:
         spell_targetable_only: bool = False,
     ) -> Optional[Dict[str, object]]:
         """
-        Возвращает один ближайший вражеский отряд на карте.
+        Возвращает один ближайший вражеский отряд на карте кампании.
 
-        Правило выбора детерминированное:
-        1. минимальная длина пути по текущей карте с учётом препятствий;
-        2. при равенстве меньший enemy_id;
-        3. затем верхняя-левая координата (y, x).
+        Основной критерий - длина пути от from_pos или текущей позиции агента
+        до вражеской клетки с учетом препятствий на карте. При равенстве
+        кандидаты упорядочиваются детерминированно: сначала меньший enemy_id,
+        затем более верхняя и левая координата. Флаг only_alive отбрасывает
+        уничтоженные отряды, а spell_targetable_only оставляет только цели,
+        которые могут быть выбраны заклинаниями.
 
-        Если путь ни к одному врагу недоступен, используется fallback по
-        свободной от препятствий дистанции хода (Chebyshev) с тем же tie-break.
+        Если ни один враг недостижим по построенному BFS-пути, используется
+        fallback по Chebyshev-дистанции без учета препятствий. Возвращаемый
+        словарь содержит enemy_id, позицию, дистанцию, признак достижимости,
+        состояние жизни и человекочитаемое описание врага.
         """
         enemy_positions = getattr(self.grid_env, "enemy_positions", {}) or {}
         enemies_alive = getattr(self.grid_env, "enemies_alive", {}) or {}
@@ -354,6 +473,8 @@ class CampaignMaskMixin:
         for raw_enemy_id, raw_pos in enemy_positions.items():
             enemy_id = int(raw_enemy_id)
             if only_alive and not bool(enemies_alive.get(enemy_id, False)):
+                continue
+            if only_alive and not self._enemy_team_has_living_units(enemy_id):
                 continue
             if spell_targetable_only and not self._is_enemy_stack_spell_targetable(enemy_id):
                 continue
@@ -394,12 +515,17 @@ class CampaignMaskMixin:
         spell_targetable_only: bool = False,
     ) -> Optional[Dict[str, object]]:
         """
-        Дешёвый кандидат ближайшего врага для лёгких grid-проверок.
+        Быстро выбирает ближайшего врага для легких grid-проверок.
 
-        В отличие от get_nearest_enemy_stack() не строит BFS по карте, а использует
-        только геометрическую близость (Chebyshev) и состояние живых отрядов.
-        Этого достаточно для action mask и spell-observation: сама цель при реальном
-        касте всё равно выбирается точным методом в _step_cast_legion_damage_spell().
+        В отличие от get_nearest_enemy_stack(), этот helper не строит BFS и не
+        оценивает реальную проходимость карты. Он фильтрует врагов по alive,
+        spell_targetable_only и наличию живых юнитов в стеке, затем выбирает
+        минимальную Chebyshev-дистанцию от from_pos или текущей позиции агента
+        с тем же детерминированным tie-break по enemy_id и координатам.
+
+        Такой приближенный результат достаточно точен для action mask и
+        spell-observation, где важна быстрая проверка возможности действия.
+        При реальном касте цель дополнительно выбирается более точным методом.
         """
         enemy_positions = getattr(self.grid_env, "enemy_positions", {}) or {}
         enemies_alive = getattr(self.grid_env, "enemies_alive", {}) or {}

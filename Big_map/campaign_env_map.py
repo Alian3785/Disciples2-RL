@@ -9,6 +9,7 @@ from campaign_env_data import *
 class CampaignMapSitesMixin:
     @classmethod
     def _mercenary_stand_for_unit_data(cls, unit_data: Optional[Dict]) -> Optional[str]:
+        """Возвращает предпочтительную линию построения для наемника."""
         if not isinstance(unit_data, dict):
             return None
         if cls._unit_data_is_big(unit_data):
@@ -25,6 +26,7 @@ class CampaignMapSitesMixin:
         ).strip().lower()
         return "ahead" if attack_type == "weapon" else "behind"
     def _mercenary_option(self, action_idx: int) -> Optional[Dict[str, object]]:
+        """Возвращает вариант найма с актуальным запасом и данными ростера."""
         if not (0 <= int(action_idx) < len(self.active_mercenary_hire_options)):
             return None
 
@@ -46,6 +48,7 @@ class CampaignMapSitesMixin:
         *,
         base_moves: Optional[int] = None,
     ) -> int:
+        """Считает бонус к ходам от способности героя искать путь."""
         if not self._hero_has_pathfinding(units=units):
             return 0
         base = int(base_moves) if base_moves is not None else int(self._hero_base_moves(units=units))
@@ -54,6 +57,7 @@ class CampaignMapSitesMixin:
             int(round(float(base) * float(self.HERO_PATHFINDING_MOVE_BONUS_PCT))),
         )
     def _hero_level_move_bonus(self, units: Optional[List[Dict]] = None) -> int:
+        """Считает бонус к ходам, который дает уровень героя."""
         return max(0, self._hero_level(units=units) - 1)
     def _hero_move_bonus(
         self,
@@ -61,6 +65,7 @@ class CampaignMapSitesMixin:
         *,
         base_moves: Optional[int] = None,
     ) -> int:
+        """Возвращает общий бонус к ходам от уровня, поиска пути и сапог."""
         if units is not None and not units:
             return 0
         return (
@@ -69,6 +74,7 @@ class CampaignMapSitesMixin:
             + self._active_boot_move_bonus(units=units)
         )
     def _campaign_terrain_tile_set(self, terrain: str) -> set[Tuple[int, int]]:
+        """Возвращает кешированный набор клеток кампании для указанного типа местности."""
         attr_by_terrain = {
             self.GRID_TERRAIN_WATER: ("water_tile_set", "water_tiles"),
             self.GRID_TERRAIN_FOREST: ("forest_tile_set", "forest_tiles"),
@@ -90,7 +96,12 @@ class CampaignMapSitesMixin:
         setattr(self, set_attr_name, built_tiles)
         return built_tiles
     def _campaign_tile_terrain(self, tile: Tuple[int, int]) -> str:
+        """Определяет тип местности для клетки на карте кампании."""
         normalized_tile = (int(tile[0]), int(tile[1]))
+        terrain_by_tile = getattr(self, "campaign_terrain_by_tile", None)
+        if terrain_by_tile is not None:
+            return str(terrain_by_tile.get(normalized_tile, self.GRID_TERRAIN_PLAIN))
+
         if normalized_tile in self._campaign_terrain_tile_set(self.GRID_TERRAIN_ROAD):
             return str(self.GRID_TERRAIN_ROAD)
         if normalized_tile in self._campaign_terrain_tile_set(self.GRID_TERRAIN_WATER):
@@ -99,9 +110,11 @@ class CampaignMapSitesMixin:
             return str(self.GRID_TERRAIN_FOREST)
         return str(self.GRID_TERRAIN_PLAIN)
     def _travel_hero_ignores_terrain(self, units: Optional[List[Dict]] = None) -> bool:
+        """Проверяет, игнорирует ли активный походный герой стоимость местности."""
         hero = self._resolve_travel_hero(units=units, alive_only=True)
         return self._hero_has_flying(hero)
     def _travel_hero_is_dead(self, units: Optional[List[Dict]] = None) -> bool:
+        """Проверяет, найден ли походный герой и мертв ли он."""
         hero = self._resolve_travel_hero(units=units)
         return hero is not None and not self._is_travel_unit_alive(hero)
     def _campaign_tile_move_cost(
@@ -111,6 +124,7 @@ class CampaignMapSitesMixin:
         units: Optional[List[Dict]] = None,
         allow_boots: bool = True,
     ) -> int:
+        """Считает стоимость входа в клетку кампании."""
         if self._travel_hero_ignores_terrain(units=units):
             return max(1, int(self.GRID_MOVE_COST))
 
@@ -131,6 +145,7 @@ class CampaignMapSitesMixin:
             cost *= 2
         return max(1, int(cost))
     def _grid_move_target_for_action(self, action: int) -> Optional[Tuple[int, int]]:
+        """Преобразует действие движения в допустимую целевую клетку."""
         if not (0 <= int(action) <= 7):
             return None
         target = tuple(self.grid_env._target_pos_for_action(int(action)))
@@ -144,11 +159,13 @@ class CampaignMapSitesMixin:
             return None
         return (int(target[0]), int(target[1]))
     def _grid_move_cost_for_action(self, action: int) -> int:
+        """Возвращает стоимость движения к целевой клетке grid-действия."""
         target = self._grid_move_target_for_action(action)
         if target is None:
             return max(1, int(self.GRID_MOVE_COST))
         return self._campaign_tile_move_cost(target, units=self.blue_team_state)
     def _spend_grid_move_cost(self, move_cost: int) -> int:
+        """Тратит очки хода и возвращает фактически потраченное количество."""
         moves_before = max(0, int(self.moves))
         if moves_before <= 0:
             return 0
@@ -156,6 +173,7 @@ class CampaignMapSitesMixin:
         self._spend_moves(spent)
         return int(spent)
     def get_travel_hero_visual_info(self) -> Optional[Dict]:
+        """Собирает данные для отображения походного героя и его способностей."""
         hero = self._resolve_travel_hero()
         if hero is None:
             return None
@@ -204,28 +222,47 @@ class CampaignMapSitesMixin:
             "abilities": abilities,
         }
     def _sync_grid_chest_positions(self) -> None:
+        """Синхронизирует позиции сундуков кампании с grid-окружением."""
         self.grid_env.chest_positions = set(self.chests.keys())
     def _sync_grid_mana_sources(self) -> None:
+        """Синхронизирует источники маны кампании с grid-окружением."""
         self.grid_env.mana_sources = {
             tuple(pos): dict(meta)
             for pos, meta in getattr(self, "mana_sources", {}).items()
         }
     def _sync_grid_terrain_positions(self) -> None:
+        """Обновляет кеши местности и передает их в grid-окружение."""
         self.water_tile_set = set(getattr(self, "water_tiles", ()) or ())
         self.forest_tile_set = set(getattr(self, "forest_tiles", ()) or ())
         self.road_tile_set = set(getattr(self, "road_tiles", ()) or ())
+        terrain_by_tile: Dict[Tuple[int, int], str] = {}
+        for tile in self.forest_tile_set:
+            normalized_tile = (int(tile[0]), int(tile[1]))
+            terrain_by_tile[normalized_tile] = str(self.GRID_TERRAIN_FOREST)
+        for tile in self.water_tile_set:
+            normalized_tile = (int(tile[0]), int(tile[1]))
+            terrain_by_tile[normalized_tile] = str(self.GRID_TERRAIN_WATER)
+        for tile in self.road_tile_set:
+            normalized_tile = (int(tile[0]), int(tile[1]))
+            terrain_by_tile[normalized_tile] = str(self.GRID_TERRAIN_ROAD)
+        self.campaign_terrain_by_tile = terrain_by_tile
         self.grid_env.water_positions = self.water_tile_set
         self.grid_env.forest_positions = self.forest_tile_set
         self.grid_env.road_positions = self.road_tile_set
     def _sync_grid_merchant_positions(self) -> None:
+        """Синхронизирует клетки взаимодействия с торговцами с grid-окружением."""
         self.grid_env.merchant_positions = set(self.merchant_interaction_tiles)
     def _sync_grid_spell_shop_positions(self) -> None:
+        """Синхронизирует клетки лавок заклинаний с grid-окружением."""
         self.grid_env.spell_shop_positions = set(self.spell_shop_interaction_tiles)
     def _sync_grid_mercenary_positions(self) -> None:
+        """Синхронизирует клетки лагерей наемников с grid-окружением."""
         self.grid_env.mercenary_positions = set(self.mercenary_interaction_tiles)
     def _sync_grid_trainer_positions(self) -> None:
+        """Синхронизирует клетки тренеров с grid-окружением."""
         self.grid_env.trainer_positions = set(self.trainer_interaction_tiles)
     def _apply_chest_item_rewards(self, item_name: str) -> List[str]:
+        """Применяет автоиспользуемую награду сундука и возвращает выданные предметы."""
         granted_items: List[str] = []
         definition = self._potion_item_definition(item_name)
         grant_kind = str((definition or {}).get("merchant_grant", "") or "")
@@ -241,10 +278,12 @@ class CampaignMapSitesMixin:
         return granted_items
     @classmethod
     def _is_auto_consumed_chest_item(cls, item_name: str) -> bool:
+        """Проверяет, дает ли предмет из сундука мгновенный бонус зелья."""
         definition = cls._potion_item_definition(item_name)
         grant_kind = str((definition or {}).get("merchant_grant", "") or "")
         return grant_kind in {"small_heal_bonus", "large_heal_bonus", "revive_bonus"}
     def _collect_adjacent_chests(self) -> List[Dict]:
+        """Собирает ближайшие сундуки и добавляет награды в инвентарь героя."""
         if not self.chests:
             return []
 
@@ -284,10 +323,13 @@ class CampaignMapSitesMixin:
         self._sync_grid_chest_positions()
         return collected
     def _spell_shop_cast_limit_reached_this_turn(self, spell_key: str) -> bool:
+        """Проверяет, использовалось ли это заклинание лавки в текущем ходу."""
         return self._spell_cast_count_this_turn(spell_key) >= 1
     def _spell_shop_spell_has_regular_action(self, spell_key: str) -> bool:
+        """Проверяет, доступно ли заклинание как обычное действие карты."""
         return str(spell_key or "") in set(self._map_castable_spell_ids_for_capital(self.Realcapital))
     def _spell_shop_cast_spell_entries(self) -> Tuple[Dict[str, object], ...]:
+        """Собирает варианты заклинаний лавки, которым нужны отдельные действия каста."""
         entries: List[Dict[str, object]] = []
         seen_spell_ids: set[str] = set()
         for spell_data in self.SPELL_SHOP_BUY_SPELLS:
@@ -309,11 +351,13 @@ class CampaignMapSitesMixin:
                 break
         return tuple(entries)
     def _spell_shop_cast_spell_entry(self, idx: int) -> Dict[str, object]:
+        """Возвращает вариант каста из лавки по индексу или пустой словарь."""
         entries = self._spell_shop_cast_spell_entries()
         if 0 <= int(idx) < len(entries):
             return dict(entries[int(idx)])
         return {}
     def _grant_merchant_item(self, item_name: str) -> List[str]:
+        """Выдает результат покупки у торговца и возвращает полученные предметы."""
         granted_items: List[str] = []
         item_data = self._merchant_item_definition(item_name)
         grant_kind = str((item_data or {}).get("grant", "") or "")
@@ -334,6 +378,7 @@ class CampaignMapSitesMixin:
             self._add_hero_item(granted_item)
         return granted_items
     def _step_buy_merchant_item(self, action: int):
+        """Обрабатывает grid-шаг с попыткой купить предмет у торговца."""
         idx = action - self.GRID_MERCHANT_POTION_BUY_ACTION_START
         grid_obs = self._get_grid_obs()
         reward = 0.0
@@ -400,6 +445,7 @@ class CampaignMapSitesMixin:
             info=info,
         )
     def _step_buy_spell_shop_spell(self, action: int):
+        """Обрабатывает grid-шаг с попыткой купить заклинание в лавке."""
         idx = action - self.GRID_SPELL_SHOP_BUY_ACTION_START
         grid_obs = self._get_grid_obs()
         reward = 0.0
@@ -473,6 +519,7 @@ class CampaignMapSitesMixin:
             info=info,
         )
     def _step_hire_mercenary_unit(self, action: int):
+        """Обрабатывает grid-шаг с попыткой нанять отряд наемников."""
         idx = action - self.GRID_MERCENARY_HIRE_ACTION_START
         option = self._mercenary_option(idx)
 
@@ -561,6 +608,7 @@ class CampaignMapSitesMixin:
             info=info,
         )
     def _step_train_unit_at_trainer(self, action: int):
+        """Обрабатывает grid-шаг с тренировкой отряда у тренера."""
         idx = action - self.GRID_TRAINER_ACTION_START
         target_pos = (
             self.TRAINER_POSITIONS[idx] if 0 <= idx < len(self.TRAINER_POSITIONS) else None
@@ -601,7 +649,14 @@ class CampaignMapSitesMixin:
         unit_name = str(preview_before.get("unit_name") or "").strip() or None
         unit = preview_before.get("unit")
 
-        if target_pos is not None and bool(preview_before.get("trainable", False)) and isinstance(unit, dict):
+        can_train_here = (
+            bool(site_names)
+            and target_pos is not None
+            and bool(preview_before.get("trainable", False))
+            and isinstance(unit, dict)
+        )
+
+        if can_train_here:
             xp_gained = max(0, int(preview_before.get("affordable_xp", 0) or 0))
             gold_spent = max(0.0, float(preview_before.get("gold_spent", 0.0) or 0.0))
             exp_cap = preview_before.get("exp_cap")
@@ -633,7 +688,7 @@ class CampaignMapSitesMixin:
             "trainer_site": site_name,
             "trainer_position": target_pos,
             "trainer_unit_name": unit_name,
-            "trainer_trainable": bool(preview_before.get("trainable", False)),
+            "trainer_trainable": bool(can_train_here),
             "trainer_not_at_camp": not bool(site_names),
             "trainer_missing_unit": bool(preview_before.get("missing_unit", False)),
             "trainer_dead_or_empty": bool(preview_before.get("dead_or_empty", False)),
@@ -666,9 +721,11 @@ class CampaignMapSitesMixin:
             info=info,
         )
     def _init_merchant_site_metadata(self) -> None:
+        """Масштабирует и кеширует якоря торговцев и клетки взаимодействия."""
         obstacle_tiles = set(self._static_obstacle_tiles)
         self.merchant_site_anchors: Dict[str, Tuple[int, int]] = {}
         self.merchant_site_interaction_tiles: Dict[str, Tuple[Tuple[int, int], ...]] = {}
+        merchant_sites_by_tile: Dict[Tuple[int, int], List[str]] = {}
         all_tiles: List[Tuple[int, int]] = []
         seen_tiles: set[Tuple[int, int]] = set()
 
@@ -690,6 +747,7 @@ class CampaignMapSitesMixin:
                     continue
                 site_seen.add(normalized_tile)
                 site_tiles.append(normalized_tile)
+                merchant_sites_by_tile.setdefault(normalized_tile, []).append(str(site_name))
                 if normalized_tile not in seen_tiles:
                     seen_tiles.add(normalized_tile)
                     all_tiles.append(normalized_tile)
@@ -698,10 +756,16 @@ class CampaignMapSitesMixin:
             self.merchant_site_interaction_tiles[str(site_name)] = tuple(site_tiles)
 
         self.merchant_interaction_tiles = tuple(all_tiles)
+        self.merchant_sites_by_tile = {
+            tile: tuple(site_names)
+            for tile, site_names in merchant_sites_by_tile.items()
+        }
     def _init_spell_shop_site_metadata(self) -> None:
+        """Масштабирует и кеширует якоря лавок заклинаний и клетки взаимодействия."""
         obstacle_tiles = set(self._static_obstacle_tiles)
         self.spell_shop_site_anchors: Dict[str, Tuple[int, int]] = {}
         self.spell_shop_site_interaction_tiles: Dict[str, Tuple[Tuple[int, int], ...]] = {}
+        spell_shop_sites_by_tile: Dict[Tuple[int, int], List[str]] = {}
         all_tiles: List[Tuple[int, int]] = []
         seen_tiles: set[Tuple[int, int]] = set()
 
@@ -723,6 +787,7 @@ class CampaignMapSitesMixin:
                     continue
                 site_seen.add(normalized_tile)
                 site_tiles.append(normalized_tile)
+                spell_shop_sites_by_tile.setdefault(normalized_tile, []).append(str(site_name))
                 if normalized_tile not in seen_tiles:
                     seen_tiles.add(normalized_tile)
                     all_tiles.append(normalized_tile)
@@ -731,10 +796,16 @@ class CampaignMapSitesMixin:
             self.spell_shop_site_interaction_tiles[str(site_name)] = tuple(site_tiles)
 
         self.spell_shop_interaction_tiles = tuple(all_tiles)
+        self.spell_shop_sites_by_tile = {
+            tile: tuple(site_names)
+            for tile, site_names in spell_shop_sites_by_tile.items()
+        }
     def _init_mercenary_site_metadata(self) -> None:
+        """Масштабирует и кеширует якоря лагерей наемников и клетки взаимодействия."""
         obstacle_tiles = set(self._static_obstacle_tiles)
         self.mercenary_site_anchors: Dict[str, Tuple[int, int]] = {}
         self.mercenary_site_interaction_tiles: Dict[str, Tuple[Tuple[int, int], ...]] = {}
+        mercenary_sites_by_tile: Dict[Tuple[int, int], List[str]] = {}
         all_tiles: List[Tuple[int, int]] = []
         seen_tiles: set[Tuple[int, int]] = set()
 
@@ -756,6 +827,7 @@ class CampaignMapSitesMixin:
                     continue
                 site_seen.add(normalized_tile)
                 site_tiles.append(normalized_tile)
+                mercenary_sites_by_tile.setdefault(normalized_tile, []).append(str(site_name))
                 if normalized_tile not in seen_tiles:
                     seen_tiles.add(normalized_tile)
                     all_tiles.append(normalized_tile)
@@ -764,10 +836,16 @@ class CampaignMapSitesMixin:
             self.mercenary_site_interaction_tiles[str(site_name)] = tuple(site_tiles)
 
         self.mercenary_interaction_tiles = tuple(all_tiles)
+        self.mercenary_sites_by_tile = {
+            tile: tuple(site_names)
+            for tile, site_names in mercenary_sites_by_tile.items()
+        }
     def _init_trainer_site_metadata(self) -> None:
+        """Масштабирует и кеширует якоря тренеров и клетки взаимодействия."""
         obstacle_tiles = set(self._static_obstacle_tiles)
         self.trainer_site_anchors: Dict[str, Tuple[int, int]] = {}
         self.trainer_site_interaction_tiles: Dict[str, Tuple[Tuple[int, int], ...]] = {}
+        trainer_sites_by_tile: Dict[Tuple[int, int], List[str]] = {}
         all_tiles: List[Tuple[int, int]] = []
         seen_tiles: set[Tuple[int, int]] = set()
 
@@ -789,6 +867,7 @@ class CampaignMapSitesMixin:
                     continue
                 site_seen.add(normalized_tile)
                 site_tiles.append(normalized_tile)
+                trainer_sites_by_tile.setdefault(normalized_tile, []).append(str(site_name))
                 if normalized_tile not in seen_tiles:
                     seen_tiles.add(normalized_tile)
                     all_tiles.append(normalized_tile)
@@ -797,7 +876,12 @@ class CampaignMapSitesMixin:
             self.trainer_site_interaction_tiles[str(site_name)] = tuple(site_tiles)
 
         self.trainer_interaction_tiles = tuple(all_tiles)
+        self.trainer_sites_by_tile = {
+            tile: tuple(site_names)
+            for tile, site_names in trainer_sites_by_tile.items()
+        }
     def _create_initial_mercenary_site_rosters(self) -> Dict[str, List[Dict[str, object]]]:
+        """Создает начальные ростеры наемников с запасом и данными отрядов."""
         rosters: Dict[str, List[Dict[str, object]]] = {}
         for site_name, site_data in self.BASE_MERCENARY_SITE_DATA.items():
             site_roster: List[Dict[str, object]] = []
@@ -847,6 +931,7 @@ class CampaignMapSitesMixin:
             rosters[str(site_name)] = site_roster
         return rosters
     def _create_initial_merchant_stocks(self) -> Dict[str, Dict[str, int]]:
+        """Создает начальные счетчики запасов товаров по торговцам."""
         stocks: Dict[str, Dict[str, int]] = {
             str(site_name): {} for site_name in self.BASE_MERCHANT_SITE_DATA.keys()
         }
@@ -861,12 +946,14 @@ class CampaignMapSitesMixin:
         return stocks
     @classmethod
     def _merchant_item_definition(cls, item_name: str) -> Optional[Dict[str, object]]:
+        """Возвращает копию описания товара торговца по имени предмета."""
         normalized_name = str(item_name or "")
         for item_data in cls.MERCHANT_BUY_ITEMS:
             if str(item_data.get("name", "") or "") == normalized_name:
                 return dict(item_data)
         return None
     def _merchant_item_stock(self, site_name: str, item_name: str) -> int:
+        """Возвращает остаток товара у торговца на указанной точке."""
         site_stock = self.merchant_stocks.get(str(site_name), {})
         try:
             return max(0, int(site_stock.get(str(item_name), 0) or 0))
@@ -877,11 +964,13 @@ class CampaignMapSitesMixin:
         item_name: str,
         position: Optional[Tuple[int, int]] = None,
     ) -> Optional[str]:
+        """Возвращает доступного рядом торговца, который может продать предмет."""
         for site_name in self._merchant_sites_at_position(position):
             if self._merchant_item_stock(site_name, item_name) > 0:
                 return site_name
         return None
     def _merchant_stock_snapshot(self, site_name: str) -> Dict[str, int]:
+        """Собирает видимый снимок запасов для торговца."""
         snapshot: Dict[str, int] = {}
         for item_data in self.MERCHANT_BUY_ITEMS:
             item_name = str(item_data.get("name", "") or "")
@@ -895,9 +984,14 @@ class CampaignMapSitesMixin:
         self,
         position: Optional[Tuple[int, int]] = None,
     ) -> List[str]:
+        """Возвращает торговцев, чьи клетки взаимодействия включают позицию."""
         if position is None:
             position = tuple(self.grid_env.agent_pos)
         normalized_pos = (int(position[0]), int(position[1]))
+        sites_by_tile = getattr(self, "merchant_sites_by_tile", None)
+        if sites_by_tile is not None:
+            return list(sites_by_tile.get(normalized_pos, ()))
+
         return [
             site_name
             for site_name, tiles in self.merchant_site_interaction_tiles.items()
@@ -907,6 +1001,7 @@ class CampaignMapSitesMixin:
         self,
         position: Optional[Tuple[int, int]] = None,
     ) -> Dict[str, object]:
+        """Собирает контекст доступности торговцев и их запасов для позиции."""
         site_names = self._merchant_sites_at_position(position)
         merchant_stock = {
             site_name: self._merchant_stock_snapshot(site_name)
@@ -918,6 +1013,7 @@ class CampaignMapSitesMixin:
             "merchant_stock": merchant_stock,
         }
     def _create_initial_spell_shop_stocks(self) -> Dict[str, Dict[str, int]]:
+        """Создает начальные счетчики запасов заклинаний по лавкам."""
         stocks: Dict[str, Dict[str, int]] = {
             str(site_name): {} for site_name in self.BASE_SPELL_SHOP_SITE_DATA.keys()
         }
@@ -930,20 +1026,15 @@ class CampaignMapSitesMixin:
                 site_stock[spell_name] = max(0, int(spell_data.get("stock", 0) or 0))
             stocks[site_name] = site_stock
         return stocks
-    @classmethod
-    def _spell_shop_spell_definition(cls, spell_name: str) -> Optional[Dict[str, object]]:
-        normalized_name = str(spell_name or "")
-        for spell_data in cls.SPELL_SHOP_BUY_SPELLS:
-            if str(spell_data.get("name", "") or "") == normalized_name:
-                return dict(spell_data)
-        return None
     def _spell_shop_spell_stock(self, site_name: str, spell_name: str) -> int:
+        """Возвращает остаток заклинания в указанной лавке."""
         site_stock = self.spell_shop_stocks.get(str(site_name), {})
         try:
             return max(0, int(site_stock.get(str(spell_name), 0) or 0))
         except (TypeError, ValueError):
             return 0
     def _spell_shop_spell_owned(self, spell_id: str) -> bool:
+        """Проверяет, куплено или изучено ли заклинание."""
         normalized_spell_id = str(spell_id or "")
         if not normalized_spell_id:
             return False
@@ -955,11 +1046,13 @@ class CampaignMapSitesMixin:
         spell_name: str,
         position: Optional[Tuple[int, int]] = None,
     ) -> Optional[str]:
+        """Возвращает доступную рядом лавку, которая может продать заклинание."""
         for site_name in self._spell_shop_sites_at_position(position):
             if self._spell_shop_spell_stock(site_name, spell_name) > 0:
                 return site_name
         return None
     def _spell_shop_stock_snapshot(self, site_name: str) -> Dict[str, int]:
+        """Собирает видимый снимок запасов для лавки заклинаний."""
         snapshot: Dict[str, int] = {}
         for spell_data in self.SPELL_SHOP_BUY_SPELLS:
             spell_name = str(spell_data.get("name", "") or "")
@@ -973,9 +1066,14 @@ class CampaignMapSitesMixin:
         self,
         position: Optional[Tuple[int, int]] = None,
     ) -> List[str]:
+        """Возвращает лавки заклинаний, чьи клетки взаимодействия включают позицию."""
         if position is None:
             position = tuple(self.grid_env.agent_pos)
         normalized_pos = (int(position[0]), int(position[1]))
+        sites_by_tile = getattr(self, "spell_shop_sites_by_tile", None)
+        if sites_by_tile is not None:
+            return list(sites_by_tile.get(normalized_pos, ()))
+
         return [
             site_name
             for site_name, tiles in self.spell_shop_site_interaction_tiles.items()
@@ -985,6 +1083,7 @@ class CampaignMapSitesMixin:
         self,
         position: Optional[Tuple[int, int]] = None,
     ) -> Dict[str, object]:
+        """Собирает контекст доступности лавки, запасов и купленных заклинаний."""
         site_names = self._spell_shop_sites_at_position(position)
         spell_shop_stock = {
             site_name: self._spell_shop_stock_snapshot(site_name)
@@ -1006,6 +1105,7 @@ class CampaignMapSitesMixin:
         site_name: str,
         slot: int,
     ) -> Optional[Dict[str, object]]:
+        """Возвращает запись ростера наемников для лагеря и слота."""
         for entry in self.mercenary_site_rosters.get(str(site_name), []):
             raw_slot = entry.get("slot", -1)
             try:
@@ -1016,6 +1116,7 @@ class CampaignMapSitesMixin:
                 return entry
         return None
     def _mercenary_stock_snapshot(self, site_name: str) -> List[Dict[str, object]]:
+        """Собирает видимый снимок ростера и запасов для лагеря наемников."""
         snapshot: List[Dict[str, object]] = []
         for entry in self.mercenary_site_rosters.get(str(site_name), []):
             snapshot.append(
@@ -1035,9 +1136,14 @@ class CampaignMapSitesMixin:
         self,
         position: Optional[Tuple[int, int]] = None,
     ) -> List[str]:
+        """Возвращает лагеря наемников, чьи клетки взаимодействия включают позицию."""
         if position is None:
             position = tuple(self.grid_env.agent_pos)
         normalized_pos = (int(position[0]), int(position[1]))
+        sites_by_tile = getattr(self, "mercenary_sites_by_tile", None)
+        if sites_by_tile is not None:
+            return list(sites_by_tile.get(normalized_pos, ()))
+
         return [
             site_name
             for site_name, tiles in self.mercenary_site_interaction_tiles.items()
@@ -1047,6 +1153,7 @@ class CampaignMapSitesMixin:
         self,
         position: Optional[Tuple[int, int]] = None,
     ) -> Dict[str, object]:
+        """Собирает контекст доступности лагеря наемников и его ростера."""
         site_names = self._mercenary_sites_at_position(position)
         mercenary_stock = {
             site_name: self._mercenary_stock_snapshot(site_name)
@@ -1061,9 +1168,14 @@ class CampaignMapSitesMixin:
         self,
         position: Optional[Tuple[int, int]] = None,
     ) -> List[str]:
+        """Возвращает тренеров, чьи клетки взаимодействия включают позицию."""
         if position is None:
             position = tuple(self.grid_env.agent_pos)
         normalized_pos = (int(position[0]), int(position[1]))
+        sites_by_tile = getattr(self, "trainer_sites_by_tile", None)
+        if sites_by_tile is not None:
+            return list(sites_by_tile.get(normalized_pos, ()))
+
         return [
             site_name
             for site_name, tiles in self.trainer_site_interaction_tiles.items()
@@ -1073,12 +1185,14 @@ class CampaignMapSitesMixin:
         self,
         position: Optional[Tuple[int, int]] = None,
     ) -> Dict[str, object]:
+        """Собирает контекст доступности тренера для позиции."""
         site_names = self._trainer_sites_at_position(position)
         return {
             "is_at_trainer": bool(site_names),
             "trainer_sites_in_range": list(site_names),
         }
     def _trainer_preview_for_position(self, position: int) -> Dict[str, object]:
+        """Предварительно считает стоимость тренировки и прирост опыта для позиции отряда."""
         normalized_position = int(position)
         preview: Dict[str, object] = {
             "position": normalized_position,
@@ -1151,6 +1265,7 @@ class CampaignMapSitesMixin:
 
         return preview
     def _can_train_unit_position(self, position: int) -> bool:
+        """Проверяет, можно ли сейчас тренировать отряд на указанной позиции."""
         if not self._trainer_sites_at_position(self.grid_env.agent_pos):
             return False
         preview = self._trainer_preview_for_position(position)

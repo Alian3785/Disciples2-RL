@@ -78,6 +78,24 @@ def resolve_model_path(model_path: str | None, checkpoint: str) -> str:
     )
 
 
+def resolve_vecnormalize_path(model_path: str, explicit_path: str | None = None) -> str | None:
+    if explicit_path:
+        return explicit_path
+
+    model_path_abs = os.path.abspath(model_path)
+    model_dir = os.path.dirname(model_path_abs)
+    run_dir = os.path.dirname(model_dir) if os.path.basename(model_dir) == "best" else model_dir
+    candidates = [
+        os.path.join(model_dir, "best_vecnormalize.pkl"),
+        os.path.join(run_dir, "vecnormalize.pkl"),
+        os.path.join(run_dir, "best", "best_vecnormalize.pkl"),
+    ]
+    for path in candidates:
+        if os.path.isfile(path):
+            return path
+    return None
+
+
 def run_episode(
     model: MaskablePPO,
     env: Monitor,
@@ -134,6 +152,21 @@ def main():
         help="Использовать детерминированные действия (по умолчанию стохастические)",
     )
     parser.add_argument(
+        "--no-scripted-bot",
+        action="store_true",
+        help="Отключить scripted capital bot в визуализации",
+    )
+    parser.add_argument(
+        "--dragon",
+        action="store_true",
+        help="Использовать green-dragon objective, как в dragon training runs",
+    )
+    parser.add_argument(
+        "--vecnormalize-path",
+        default=None,
+        help="Путь к VecNormalize .pkl; если не задан, ищется рядом с моделью",
+    )
+    parser.add_argument(
         "--sleep",
         type=float,
         default=0.0,
@@ -161,6 +194,8 @@ def main():
     args = parser.parse_args()
 
     model_file = resolve_model_path(args.model_path, args.checkpoint)
+    vecnormalize_file = resolve_vecnormalize_path(model_file, args.vecnormalize_path)
+    campaign_objective = "dragon" if args.dragon else "cities"
 
     # Графическая визуализация (matplotlib)
     if args.viz:
@@ -172,12 +207,23 @@ def main():
             deterministic=args.deterministic,
             map_png_path=args.map_png,
             scenario_path=args.scenario_path,
+            scripted_capital_bot_enabled=not args.no_scripted_bot,
+            campaign_objective=campaign_objective,
+            vecnormalize_path=vecnormalize_file,
         )
         return
 
     log_ok = not args.quiet_eval
     env = Monitor(
-        ActionMasker(CampaignEnv(log_enabled=log_ok, realcapital=2), mask_fn),
+        ActionMasker(
+            CampaignEnv(
+                log_enabled=log_ok,
+                Realcapital=2,
+                scripted_capital_bot_enabled=not args.no_scripted_bot,
+                campaign_objective=campaign_objective,
+            ),
+            mask_fn,
+        ),
     )
     model = MaskablePPO.load(model_file, env=env)
 

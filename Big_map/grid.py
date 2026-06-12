@@ -18,9 +18,7 @@ from data_dicts_compact_lines import DATA, is_hero_name
 
 DEFAULT_GRID_SIZE = 48
 DEFAULT_HERO_GRID_POSITION: Tuple[int, int] = (5, 27)
-OBSTACLE_COVERAGE_RATIO = 0.0
-OBSTACLE_EDGE_MARGIN = 2
-BASE_OBSTACLE_RIDGE_POLYLINES: Tuple[Tuple[Tuple[int, int], ...], ...] = ()
+
 BASE_STATIC_OBSTACLE_BLOCKS: Tuple[Tuple[int, int, int, int], ...] = (
     # Mountains copied from the scenario occupancy map.
     (31, 0, 5, 5),
@@ -165,6 +163,7 @@ BASE_STATIC_EMPTY_TILES: Tuple[Tuple[int, int], ...] = (
     # Empire capital eastern inner tile mirrors the open Legions capital slot.
     (26, 10),
 )
+
 BASE_VILLAGE_HEAL_TILES: Tuple[Tuple[int, int], ...] = (
     (6, 4),
     (4, 40),
@@ -190,6 +189,7 @@ BASE_SETTLEMENT_LEVEL_BY_HEAL_TILE: Dict[Tuple[int, int], int] = {
     (28, 33): 2,
     (40, 25): 2,
 }
+
 LEGIONS_SETTLEMENT_TERRITORY_EXPANSION_BY_LEVEL: Dict[int, int] = {
     1: 15,
     2: 15,
@@ -224,6 +224,7 @@ BASE_LEGIONS_SETTLEMENT_TERRITORY_DATA: Tuple[Dict[str, object], ...] = (
         "required_enemy_ids": (35, 69),
     },
 )
+
 SETTLEMENT_ARMOR_BONUS_BY_LEVEL: Dict[int, int] = {
     1: 10,
     2: 15,
@@ -231,7 +232,9 @@ SETTLEMENT_ARMOR_BONUS_BY_LEVEL: Dict[int, int] = {
     4: 25,
     5: 30,
 }
-CAPITAL_HEAL_TILE_ARMOR_BONUS = 50
+CAPITAL_HEAL_TILE_ARMOR_BONUS = 40
+CAPITAL_HEAL_TILE_REST_BONUS = 50
+
 SETTLEMENT_DEFENDER_HEAL_TILE_BY_ENEMY_ID: Dict[int, Tuple[int, int]] = {
     22: (4, 40),
     32: (6, 4),
@@ -247,6 +250,7 @@ SETTLEMENT_DEFENDER_LEVEL_BY_ENEMY_ID: Dict[int, int] = {
     for enemy_id, heal_tile in SETTLEMENT_DEFENDER_HEAL_TILE_BY_ENEMY_ID.items()
 }
 HEAL_TILE_COUNT = len(BASE_STATIC_HEAL_TILES)
+
 BASE_STATIC_CHESTS: Tuple[Tuple[Tuple[int, int], Tuple[str, ...]], ...] = (
     ((28, 46), ("Banner of War",)),
     ((36, 38), ("Potion of Healing", "Life Potion")),
@@ -268,6 +272,7 @@ BASE_STATIC_CHESTS: Tuple[Tuple[Tuple[int, int], Tuple[str, ...]], ...] = (
     ((24, 30), ("Potion of Healing", "Bronze Ring (Valuable)")),
 )
 CHEST_COUNT = len(BASE_STATIC_CHESTS)
+
 BASE_STATIC_MANA_SOURCES: Tuple[Tuple[str, Tuple[int, int]], ...] = (
     ("infernal", (6, 16)),
     ("infernal", (44, 21)),
@@ -329,11 +334,18 @@ _UNIT_NAME_ALIASES: Dict[str, str] = {
 
 
 def _canonical_enemy_name(name: str) -> str:
+    """Возвращает нормализованное имя юнита для сравнений внутри grid-конфига."""
     raw = str(name or "").strip()
     return _UNIT_NAME_ALIASES.get(raw, raw)
 
 
 def _build_big_unit_names() -> frozenset[str]:
+    """Собирает имена больших юнитов из DATA.
+
+    В UNIT_DATA размер 1 означает large-unit: такой юнит занимает целую колонку
+    переднего и заднего ряда в тактической сетке. Этот список нужен при упаковке
+    enemy-team specs, чтобы случайно не поставить другого юнита в ту же колонку.
+    """
     names: set[str] = set()
     for entry in DATA:
         if not isinstance(entry, dict):
@@ -361,6 +373,7 @@ BIG_UNIT_NAMES = _build_big_unit_names()
 
 
 def _is_big_enemy_unit(name: str | None) -> bool:
+    """Проверяет, считается ли юнит большим для раскладки 3x2."""
     if not name:
         return False
     return _canonical_enemy_name(str(name)) in BIG_UNIT_NAMES
@@ -370,6 +383,13 @@ def _normalize_big_unit_rows(
     front: list[str | None],
     back: list[str | None],
 ) -> Tuple[list[str | None], list[str | None]]:
+    """Освобождает колонку большого юнита в enemy-team spec.
+
+    В бою большой юнит визуально занимает переднюю и заднюю ячейку одной колонки.
+    Если в исходном описании рядом с ним стоит обычный юнит, пытаемся аккуратно
+    перенести обычного юнита в ближайший свободный слот. Если места нет или
+    конфигурация неоднозначная, возвращаем исходную раскладку без изменений.
+    """
     if len(front) != 3 or len(back) != 3:
         return list(front), list(back)
 
@@ -412,6 +432,7 @@ def _normalize_big_unit_rows(
         displaced_units.append((row_name, col, name))
 
     def _candidate_slots(preferred_row: str, original_col: int) -> list[tuple[str, int]]:
+        """Возвращает свободные слоты от ближайшего к исходной колонке к дальнему."""
         row_order = [preferred_row, "back" if preferred_row == "front" else "front"]
         candidates: list[tuple[str, int]] = []
         for row_name in row_order:
@@ -440,6 +461,7 @@ def _normalize_big_unit_rows(
 
 
 def _normalize_enemy_team_spec(spec: dict[str, object]) -> dict[str, object]:
+    """Нормализует одну запись ENEMY_TEAM_SPECS перед передачей в CampaignEnv."""
     front, back = _normalize_big_unit_rows(
         list(spec["front"]),
         list(spec["back"]),
@@ -711,6 +733,12 @@ VILLAGE_LINKED_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
 
 
 def _pack_stack_units(units: Tuple[str, ...]) -> Tuple[list[str | None], list[str | None]]:
+    """Упаковывает список до 6 имен в front/back ряды формата BattleEnv.
+
+    Правила намеренно простые и детерминированные: одиночный юнит идет в центр,
+    два юнита - в центр переднего и заднего ряда, более крупные стеки занимают
+    слоты слева направо. Затем вызывающий код отдельно нормализует large-unit.
+    """
     unit_list = [str(name) for name in units if isinstance(name, str) and name][:6]
     slots: list[str | None] = [None, None, None, None, None, None]
     count = len(unit_list)
@@ -744,6 +772,7 @@ def _make_stack_override(
     *,
     label: Optional[str] = None,
 ) -> dict[str, object]:
+    """Создает override-запись для карты по краткому списку юнитов."""
     front, back = _pack_stack_units(units)
     front, back = _normalize_big_unit_rows(front, back)
     composition = ", ".join(units) if units else "(empty)"
@@ -784,9 +813,9 @@ CAPITAL_INTERNAL_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
     {
         "enemy_id": 75,
         "position": (26, 10),
-        "description": "Внутренний отряд Тимории: Рыцарь, Рыцарь на пегасе, 2 Стрелка",
-        "front": ["Рыцарь", None, "Рыцарь на пегасе"],
-        "back": ["Стрелок", None, "Стрелок"],
+        "description": "Страж столицы Империи: Мизраэль",
+        "front": [None, None, None],
+        "back": [None, "Мизраэль", None],
     },
 )
 
@@ -862,6 +891,7 @@ ADDITIONAL_MAP_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
     _make_stack_override(65, (30, 41), ("Кентавр копейщик", "Рейнджер")),
     _make_stack_override(66, (41, 44), ("Демон", "Привидение", "Привидение")),
 )
+
 ALL_MAP_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
     VILLAGE_LINKED_STACK_OVERRIDES
     + VILLAGE_INTERNAL_GARRISON_OVERRIDES
@@ -921,7 +951,12 @@ def scale_enemy_positions(
     base_grid_size: int = BASE_GRID_SIZE,
     base_enemy_positions: Optional[Dict[int, Tuple[int, int]]] = None,
 ) -> Dict[int, Tuple[int, int]]:
-    """Scale the base campaign enemy layout to an arbitrary grid size."""
+    """Scale the base campaign enemy layout to an arbitrary grid size.
+
+    Масштабирование сохраняет относительное положение enemy stacks на карте.
+    Для базового размера 48x48 координаты возвращаются как есть, чтобы не было
+    дрейфа из-за округления.
+    """
     if target_grid_size <= 1:
         raise ValueError("target_grid_size must be >= 2")
 
@@ -955,7 +990,12 @@ def scale_static_tiles(
     *,
     base_grid_size: int = BASE_GRID_SIZE,
 ) -> Tuple[Tuple[int, int], ...]:
-    """Scale a static set of map tiles to the current grid size."""
+    """Scale a static set of map tiles to the current grid size.
+
+    Используется для heal tiles, сундуков, маны, пустых клеток и obstacle-blocks.
+    Порядок входных координат сохраняется, потому что некоторые callers связывают
+    масштабированные клетки с исходными записями через zip().
+    """
     if target_grid_size <= 1:
         raise ValueError("target_grid_size must be >= 2")
 
@@ -983,7 +1023,11 @@ def scale_static_tiles(
 def _expand_static_blocks(
     blocks: Tuple[Tuple[int, int, int, int], ...],
 ) -> Tuple[Tuple[int, int], ...]:
-    """Expand ordered rectangle footprints into ordered individual tiles."""
+    """Expand ordered rectangle footprints into ordered individual tiles.
+
+    Прямоугольники могут пересекаться; seen_tiles убирает дубли, но сохраняет
+    первый порядок обхода, чтобы obstacle generation оставалась стабильной.
+    """
     expanded_tiles: list[Tuple[int, int]] = []
     seen_tiles: set[Tuple[int, int]] = set()
 
@@ -999,87 +1043,18 @@ def _expand_static_blocks(
     return tuple(expanded_tiles)
 
 
-def _bresenham_line(
-    start: Tuple[int, int],
-    end: Tuple[int, int],
-) -> Tuple[Tuple[int, int], ...]:
-    """Rasterize a straight segment between two grid points."""
-    x0, y0 = int(start[0]), int(start[1])
-    x1, y1 = int(end[0]), int(end[1])
-    dx = abs(x1 - x0)
-    sx = 1 if x0 < x1 else -1
-    dy = -abs(y1 - y0)
-    sy = 1 if y0 < y1 else -1
-    err = dx + dy
-    points: list[Tuple[int, int]] = []
-
-    while True:
-        points.append((x0, y0))
-        if x0 == x1 and y0 == y1:
-            break
-        e2 = 2 * err
-        if e2 >= dy:
-            err += dy
-            x0 += sx
-        if e2 <= dx:
-            err += dx
-            y0 += sy
-
-    return tuple(points)
-
-
-def _rasterize_polyline(
-    points: Tuple[Tuple[int, int], ...],
-) -> Tuple[Tuple[int, int], ...]:
-    if not points:
-        return ()
-    if len(points) == 1:
-        return points
-
-    rasterized: list[Tuple[int, int]] = []
-    for index in range(len(points) - 1):
-        segment = _bresenham_line(points[index], points[index + 1])
-        if index > 0:
-            segment = segment[1:]
-        rasterized.extend(segment)
-    return tuple(rasterized)
-
-
-def _tile_within_margin(
-    tile: Tuple[int, int],
-    grid_size: int,
-    margin: int,
-) -> bool:
-    if margin <= 0:
-        return True
-    x, y = int(tile[0]), int(tile[1])
-    return (
-        margin <= x < int(grid_size) - margin
-        and margin <= y < int(grid_size) - margin
-    )
-
-
-def _obstacle_ring_offsets(radius: int) -> Tuple[Tuple[int, int], ...]:
-    if radius <= 0:
-        return ((0, 0),)
-
-    offsets: list[Tuple[int, int, int, int]] = []
-    for dy in range(-radius, radius + 1):
-        for dx in range(-radius, radius + 1):
-            if max(abs(dx), abs(dy)) != radius:
-                continue
-            offsets.append((abs(dx) + abs(dy), abs(dy), dy, dx))
-    offsets.sort()
-    return tuple((dx, dy) for _, _, dy, dx in offsets)
-
-
 def are_targets_reachable(
     grid_size: int,
     start_position: Tuple[int, int],
     blocked_tiles: set[Tuple[int, int]],
     targets: set[Tuple[int, int]],
 ) -> bool:
-    """Check that the start can still reach every target tile."""
+    """Check that the start can still reach every target tile.
+
+    Обход 8-направленный, как и движение на campaign map. Функция используется
+    при генерации препятствий: новый obstacle принимается только если он не
+    отрезает старт, врагов, heal tiles и другие защищенные клетки.
+    """
     start_tile = clamp_grid_pos(start_position, grid_size)
     if start_tile in blocked_tiles:
         return False
@@ -1127,6 +1102,11 @@ def _nearest_free_tile(
     blocked_tiles: set[Tuple[int, int]],
     grid_size: int,
 ) -> Optional[Tuple[int, int]]:
+    """Находит ближайшую свободную клетку к anchor.
+
+    Tie-break идет по координате tile, чтобы при одинаковой дистанции результат
+    был стабильным между запусками.
+    """
     best_tile: Optional[Tuple[int, int]] = None
     best_distance: Optional[int] = None
     ax, ay = clamp_grid_pos(anchor, grid_size)
@@ -1153,6 +1133,11 @@ def _farthest_free_tile(
     reference_tiles: Tuple[Tuple[int, int], ...],
     grid_size: int,
 ) -> Optional[Tuple[int, int]]:
+    """Находит свободную клетку, максимально удаленную от reference_tiles.
+
+    Используется как fallback для дополнительных heal tiles: сначала максимизируем
+    минимальную дистанцию до уже выбранных точек, затем суммарную дистанцию.
+    """
     best_tile: Optional[Tuple[int, int]] = None
     best_score: Optional[Tuple[int, int, int, int]] = None
 
@@ -1188,7 +1173,12 @@ def resolve_heal_tiles(
     start_position: Tuple[int, int] = DEFAULT_HERO_GRID_POSITION,
     heal_tile_count: int = HEAL_TILE_COUNT,
 ) -> Tuple[Tuple[int, int], ...]:
-    """Use the fixed scenario heal tiles first, then fill extra slots deterministically."""
+    """Use the fixed scenario heal tiles first, then fill extra slots deterministically.
+
+    Порядок важен: первые клетки соответствуют старту героя и поселениям. Если
+    heal_tile_count больше статического списка, оставшиеся клетки добираются
+    около углов, а затем максимально далеко от уже выбранных heal tiles.
+    """
     desired_count = max(0, int(heal_tile_count))
     if desired_count == 0:
         return ()
@@ -1257,7 +1247,12 @@ def resolve_legions_settlement_territory_sources(
     ),
     base_grid_size: int = BASE_GRID_SIZE,
 ) -> Tuple[Dict[str, object], ...]:
-    """Resolve static settlement territory sources to the current grid size."""
+    """Resolve static settlement territory sources to the current grid size.
+
+    Источник территории поселения должен совпадать с живым защитным enemy stack,
+    если такой стек есть на карте. Если enemy_id отсутствует, используем
+    масштабированную статическую клетку поселения.
+    """
     resolved_sources: list[Dict[str, object]] = []
     for raw_entry in base_settlement_territory_data:
         entry = dict(raw_entry or {})
@@ -1315,7 +1310,12 @@ def resolve_chests(
     start_position: Tuple[int, int] = DEFAULT_HERO_GRID_POSITION,
     base_static_chests: Tuple[Tuple[Tuple[int, int], Tuple[str, ...]], ...] = BASE_STATIC_CHESTS,
 ) -> Dict[Tuple[int, int], Tuple[str, ...]]:
-    """Resolve deterministic treasure chest tiles and the items stored in each chest."""
+    """Resolve deterministic treasure chest tiles and the items stored in each chest.
+
+    Сундук не должен появиться на старте, враге, heal tile или obstacle. Если
+    статическая координата занята после масштабирования, переносим его на
+    ближайшую свободную клетку.
+    """
     if not base_static_chests:
         return {}
 
@@ -1351,10 +1351,21 @@ def resolve_chests(
 def resolve_mana_sources(
     grid_size: int,
     *,
+    reserved_tiles: (
+        Tuple[Tuple[int, int], ...]
+        | list[Tuple[int, int]]
+        | set[Tuple[int, int]]
+    ) = (),
     base_static_mana_sources: Tuple[Tuple[str, Tuple[int, int]], ...] = BASE_STATIC_MANA_SOURCES,
     base_grid_size: int = BASE_GRID_SIZE,
 ) -> Dict[Tuple[int, int], Dict[str, object]]:
-    """Scale the static mana-source layout to the current grid size."""
+    """Scale the static mana-source layout to the current grid size.
+
+    Возвращается уже UI-ready dict: CampaignEnv/renderer могут брать отсюда
+    русское имя, букву, цвета и ANSI-код без повторного lookup. Если источник
+    попадает на занятую клетку или поверх другого источника, переносим его на
+    ближайшую свободную клетку.
+    """
     if not base_static_mana_sources:
         return {}
 
@@ -1363,9 +1374,18 @@ def resolve_mana_sources(
         tuple(position for _, position in base_static_mana_sources),
         base_grid_size=base_grid_size,
     )
+    blocked_tiles = {clamp_grid_pos(tile, grid_size) for tile in reserved_tiles}
     resolved: Dict[Tuple[int, int], Dict[str, object]] = {}
     for (kind, _), scaled_tile in zip(base_static_mana_sources, scaled_tiles):
         tile = clamp_grid_pos(scaled_tile, grid_size)
+        if tile in blocked_tiles or tile in resolved:
+            tile = _nearest_free_tile(
+                tile,
+                blocked_tiles | set(resolved.keys()),
+                grid_size,
+            )
+            if tile is None:
+                continue
         display = dict(MANA_SOURCE_DISPLAY_SPECS.get(kind, {}))
         resolved[tile] = {
             "kind": str(kind),
@@ -1376,6 +1396,7 @@ def resolve_mana_sources(
             "text_color": tuple(display.get("text_color", (0.0, 0.0, 0.0, 1.0))),
             "ansi_color": str(display.get("ansi_color", "") or ""),
         }
+        blocked_tiles.add(tile)
     return resolved
 
 
@@ -1389,13 +1410,13 @@ def resolve_obstacle_tiles(
         BASE_STATIC_OBSTACLE_BLOCKS
     ),
     base_static_empty_tiles: Tuple[Tuple[int, int], ...] = BASE_STATIC_EMPTY_TILES,
-    obstacle_coverage_ratio: float = OBSTACLE_COVERAGE_RATIO,
-    obstacle_edge_margin: int = OBSTACLE_EDGE_MARGIN,
-    base_obstacle_ridge_polylines: Tuple[Tuple[Tuple[int, int], ...], ...] = (
-        BASE_OBSTACLE_RIDGE_POLYLINES
-    ),
 ) -> Tuple[Tuple[int, int], ...]:
-    """Build deterministic obstacle tiles for the campaign map."""
+    """Build deterministic obstacle tiles for the campaign map.
+
+    Obstacles строятся только из статических rectangle blocks сценария. Каждый
+    candidate проверяется на reachability, чтобы важные клетки не оказались
+    отрезаны от стартовой позиции.
+    """
     start_tile = clamp_grid_pos(start_position, grid_size)
     reserved_tiles = {tuple(pos) for pos in enemy_positions.values()}
     reserved_tiles.update(tuple(tile) for tile in heal_tiles)
@@ -1414,91 +1435,14 @@ def resolve_obstacle_tiles(
         _expand_static_blocks(base_static_obstacle_blocks),
         base_grid_size=BASE_GRID_SIZE,
     )
-    if static_obstacle_tiles:
-        obstacle_tiles: list[Tuple[int, int]] = []
-        obstacle_seen: set[Tuple[int, int]] = set()
-
-        for raw_tile in static_obstacle_tiles:
-            tile = clamp_grid_pos(raw_tile, grid_size)
-            if tile in reserved_tiles or tile in obstacle_seen:
-                continue
-
-            candidate_blocked_tiles = set(obstacle_seen)
-            candidate_blocked_tiles.add(tile)
-            if not are_targets_reachable(
-                grid_size,
-                start_tile,
-                candidate_blocked_tiles,
-                protected_targets,
-            ):
-                continue
-
-            obstacle_tiles.append(tile)
-            obstacle_seen.add(tile)
-
-        return tuple(obstacle_tiles)
-
-    effective_margin = min(
-        max(0, int(obstacle_edge_margin)),
-        max(0, (int(grid_size) - 1) // 4),
-    )
-    target_count = max(0, int(round(float(grid_size) * float(grid_size) * obstacle_coverage_ratio)))
-
-    free_capacity = 0
-    for y in range(int(grid_size)):
-        for x in range(int(grid_size)):
-            tile = (x, y)
-            if tile in reserved_tiles:
-                continue
-            if not _tile_within_margin(tile, grid_size, effective_margin):
-                continue
-            free_capacity += 1
-    target_count = min(target_count, free_capacity)
-
-    ridge_skeleton: list[Tuple[int, int]] = []
-    skeleton_seen: set[Tuple[int, int]] = set()
-    for ridge in base_obstacle_ridge_polylines:
-        scaled_points = scale_static_tiles(
-            grid_size,
-            ridge,
-            base_grid_size=BASE_GRID_SIZE,
-        )
-        for tile in _rasterize_polyline(scaled_points):
-            tile = clamp_grid_pos(tile, grid_size)
-            if tile in skeleton_seen:
-                continue
-            if not _tile_within_margin(tile, grid_size, effective_margin):
-                continue
-            skeleton_seen.add(tile)
-            ridge_skeleton.append(tile)
-
-    ordered_candidates: list[Tuple[int, int]] = []
-    candidate_seen: set[Tuple[int, int]] = set()
-    for tile in ridge_skeleton:
-        if tile in reserved_tiles or tile in candidate_seen:
-            continue
-        candidate_seen.add(tile)
-        ordered_candidates.append(tile)
-    for radius in range(1, int(grid_size)):
-        ring_offsets = _obstacle_ring_offsets(radius)
-        for center in ridge_skeleton:
-            cx, cy = center
-            for dx, dy in ring_offsets:
-                tile = (cx + dx, cy + dy)
-                if tile in reserved_tiles or tile in candidate_seen:
-                    continue
-                if not (0 <= tile[0] < int(grid_size) and 0 <= tile[1] < int(grid_size)):
-                    continue
-                if not _tile_within_margin(tile, grid_size, effective_margin):
-                    continue
-                candidate_seen.add(tile)
-                ordered_candidates.append(tile)
 
     obstacle_tiles: list[Tuple[int, int]] = []
     obstacle_seen: set[Tuple[int, int]] = set()
-    for tile in ordered_candidates:
-        if len(obstacle_tiles) >= target_count:
-            break
+    for raw_tile in static_obstacle_tiles:
+        tile = clamp_grid_pos(raw_tile, grid_size)
+        if tile in reserved_tiles or tile in obstacle_seen:
+            continue
+
         candidate_blocked_tiles = set(obstacle_seen)
         candidate_blocked_tiles.add(tile)
         if not are_targets_reachable(

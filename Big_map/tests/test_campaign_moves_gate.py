@@ -7,7 +7,7 @@ from campaign_env import CampaignEnv
 
 
 def test_grid_movement_is_blocked_after_all_starting_moves_until_rest():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     start_pos = tuple(env.grid_env.agent_pos)
     far_enemy_id = max(

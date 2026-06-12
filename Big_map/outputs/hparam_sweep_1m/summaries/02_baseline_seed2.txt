@@ -1,0 +1,90 @@
+# Sweep run 02: baseline_seed2
+
+Статус: завершено
+Решение: ОТБРОСИТЬ: побед на eval нет, сигнал прохождения кампании слабый
+ID запуска: offline-1780235732
+Длительность: 31 мин 20 с (1880.0 с)
+Завершено: 2026-05-31T17:41:26
+
+## Короткий вывод
+- На deterministic eval: 0/20 побед (0.0%), поражений 0, таймаутов 20, прочих исходов 0.
+- Eval-поведение: средний reward 22.028, среднее число побежденных врагов 36.25.
+- Внутренний winrate из train-лога: 0.8%. Эта цифра полезна как диагностический сигнал, но решение принимается по отдельному deterministic eval.
+- Последний rollout: ep_rew_mean=70.4977, ep_len_mean=2189.5. Высокий rollout reward без побед на eval означает, что агент может получать промежуточные награды, но не завершать кампанию.
+- Вывод для sweep: конфиг пока не выглядит перспективным; следующие runs должны искать более стабильное доведение кампании до победы.
+
+## Почему выбран этот конфиг
+Повтор опорного конфига с другим seed, чтобы измерить шум от случайности.
+
+## Что изменено относительно baseline
+- seed (seed): 1 -> 2
+
+## Полная конфигурация
+- checkpoint_freq: 1000000
+- clip_range (PPO clip range): 0.2
+- comet_log_freq: 10000
+- ent_coef (entropy bonus): 0.01
+- eval_freq: 1000000
+- gae_lambda (GAE lambda): 0.95
+- gamma (discount factor gamma): 0.995
+- learning_rate (learning rate): 0.0003
+- n_envs (число параллельных окружений): 12
+- no_comet: True
+- ppo_batch_size (размер minibatch PPO): 512
+- ppo_n_epochs (число PPO-эпох на rollout): 5
+- ppo_n_steps (длина rollout на окружение): 2048
+- seed (seed): 2
+- stochastic_eval_episodes: 0
+- target_kl (target KL): None
+- torch_num_threads: 1
+- total_steps: 1000000
+- vec_env: subproc
+
+## Команда обучения
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 12 --vec-env subproc --seed 2 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 2048 --ppo-batch-size 512 --ppo-n-epochs 5 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.995 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-02-baseline_seed2
+Код возврата обучения: 0
+Лог обучения: C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\logs\02_baseline_seed2_train.log
+
+## Метрики обучения
+- final_training_winrate_percent (winrate во время обучения, %): 0.8
+
+## Последние TensorBoard scalars
+- rollout/ep_len_mean (средняя длина эпизода в rollout): 2189.5
+- rollout/ep_rew_mean (средний reward в rollout): 70.4977
+- time/fps (скорость обучения, samples/sec): 551
+- train/approx_kl (примерный KL между старой и новой политикой): 0.00748367
+- train/clip_fraction (доля PPO-обновлений, попавших под clip): 0.0549886
+- train/entropy_loss (entropy loss): -2.14517
+- train/explained_variance (качество value-функции): 0.939315
+- train/loss (общий loss PPO): -0.0170973
+- train/policy_gradient_loss (policy gradient loss): -0.00507659
+- train/value_loss (value loss): 0.0369077
+
+## Команда eval
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u bestmodeltest.py --run-id offline-1780235732 --model-type final --episodes 20 --deterministic
+Код возврата eval: 0
+Лог eval: C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\logs\02_baseline_seed2_eval.log
+
+## Метрики eval
+- defeats (поражения): 0
+- mean_enemies_defeated (среднее число побежденных врагов): 36.25
+- mean_reward (средний reward): 22.028
+- other (прочие исходы): 0
+- timeouts (таймауты): 20
+- wins (победы): 0
+
+## Хвост raw eval-лога
+```
+$ C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u bestmodeltest.py --run-id offline-1780235732 --model-type final --episodes 20 --deterministic
+run_id: offline-1780235732
+model_type: final
+episodes: 20
+mean_reward: 22.028 +/- 5.931
+mean_enemies_defeated: 36.250 +/- 0.433
+wins: 0
+defeats: 0
+timeouts: 20
+other: 0
+episode_rewards: [22.763, 26.047, 22.422, 21.124, 20.016, 27.879, 22.125, 23.158, 2.286, 25.852, 18.849, 30.021, 15.52, 22.313, 24.996, 22.74, 31.548, 17.44, 23.224, 20.244]
+enemies_defeated_per_episode: [36, 36, 36, 36, 36, 37, 36, 36, 36, 37, 36, 37, 36, 36, 36, 37, 37, 36, 36, 36]
+```

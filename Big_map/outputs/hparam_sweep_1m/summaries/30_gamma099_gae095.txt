@@ -1,0 +1,89 @@
+# Sweep run 30: gamma099_gae095
+
+Статус: завершено
+Решение: ОТБРОСИТЬ: побед на eval нет, сигнал прохождения кампании слабый
+ID запуска: offline-1780330853
+Длительность: 29 мин 33 с (1772.6 с)
+Завершено: 2026-06-01T19:59:29
+
+## Короткий вывод
+- На deterministic eval: 0/20 побед (0.0%), поражений 2, таймаутов 18, прочих исходов 0.
+- Eval-поведение: средний reward 12.768, среднее число побежденных врагов 26.85.
+- Внутренний winrate из train-лога: 0.4%. Эта цифра полезна как диагностический сигнал, но решение принимается по отдельному deterministic eval.
+- Последний rollout: ep_rew_mean=58.5146, ep_len_mean=1059.6. Высокий rollout reward без побед на eval означает, что агент может получать промежуточные награды, но не завершать кампанию.
+- Вывод для sweep: конфиг пока не выглядит перспективным; следующие runs должны искать более стабильное доведение кампании до победы.
+
+## Почему выбран этот конфиг
+Ниже gamma: длинные эпизоды и swap-heavy поведение должны штрафоваться быстрее.
+
+## Что изменено относительно baseline
+- gamma (discount factor gamma): 0.995 -> 0.99
+
+## Полная конфигурация
+- checkpoint_freq: 1000000
+- clip_range (PPO clip range): 0.2
+- comet_log_freq: 10000
+- ent_coef (entropy bonus): 0.01
+- eval_freq: 1000000
+- gae_lambda (GAE lambda): 0.95
+- gamma (discount factor gamma): 0.99
+- learning_rate (learning rate): 0.0003
+- n_envs (число параллельных окружений): 12
+- no_comet: True
+- ppo_batch_size (размер minibatch PPO): 512
+- ppo_n_epochs (число PPO-эпох на rollout): 5
+- ppo_n_steps (длина rollout на окружение): 2048
+- seed (seed): 1
+- stochastic_eval_episodes: 0
+- target_kl (target KL): None
+- torch_num_threads: 1
+- total_steps: 1000000
+- vec_env: subproc
+
+## Команда обучения
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 12 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 2048 --ppo-batch-size 512 --ppo-n-epochs 5 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.99 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-30-gamma099_gae095
+Код возврата обучения: 0
+Лог обучения: C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\logs\30_gamma099_gae095_train.log
+
+## Метрики обучения
+- final_training_winrate_percent (winrate во время обучения, %): 0.4
+
+## Последние TensorBoard scalars
+- rollout/ep_len_mean (средняя длина эпизода в rollout): 1059.6
+- rollout/ep_rew_mean (средний reward в rollout): 58.5146
+- time/fps (скорость обучения, samples/sec): 584
+- train/approx_kl (примерный KL между старой и новой политикой): 0.0081548
+- train/clip_fraction (доля PPO-обновлений, попавших под clip): 0.0469076
+- train/entropy_loss (entropy loss): -2.01066
+- train/explained_variance (качество value-функции): 0.917013
+- train/loss (общий loss PPO): -0.0147386
+- train/policy_gradient_loss (policy gradient loss): -0.00411318
+- train/value_loss (value loss): 0.058565
+
+## Команда eval
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u bestmodeltest.py --run-id offline-1780330853 --model-type final --episodes 20 --deterministic
+Код возврата eval: 0
+Лог eval: C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\logs\30_gamma099_gae095_eval.log
+
+## Метрики eval
+- defeats (поражения): 2
+- mean_enemies_defeated (среднее число побежденных врагов): 26.85
+- mean_reward (средний reward): 12.768
+- other (прочие исходы): 0
+- timeouts (таймауты): 18
+- wins (победы): 0
+
+## Хвост raw eval-лога
+```
+run_id: offline-1780330853
+model_type: final
+episodes: 20
+mean_reward: 12.768 +/- 29.691
+mean_enemies_defeated: 26.850 +/- 8.673
+wins: 0
+defeats: 2
+timeouts: 18
+other: 0
+episode_rewards: [51.586, -7.47, -23.27, -13.074, -14.049, 41.87, -3.531, -19.349, -12.936, -12.846, 50.175, -3.449, 47.857, 49.925, 53.514, -5.402, -12.541, 43.81, -5.285, 49.834]
+enemies_defeated_per_episode: [37, 26, 26, 25, 25, 6, 26, 24, 24, 25, 36, 27, 37, 37, 37, 25, 25, 6, 26, 37]
+```

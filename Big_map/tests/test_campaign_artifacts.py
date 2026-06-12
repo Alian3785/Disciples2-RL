@@ -11,7 +11,6 @@ from campaign_env import CampaignEnv
 
 def _set_hero_level(env: CampaignEnv, level: int) -> dict:
     env.typeoflord = 2
-    env.Typeoflord = 2
     hero = env._resolve_travel_hero()
     assert hero is not None
     hero["Level"] = int(level)
@@ -54,7 +53,7 @@ def _battle_red_target(env: CampaignEnv) -> dict:
 
 
 def _prepare_artifact_attack(item_name: str):
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     _set_hero_level(env, 9)
     env._add_hero_item(item_name)
@@ -85,10 +84,9 @@ def _prepare_artifact_attack(item_name: str):
 
 
 def test_artifacts_without_artifact_knowledge_stay_in_inventory_without_effects():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     env.typeoflord = 2
-    env.Typeoflord = 2
     _set_hero_level(env, 8)
     hero_before = deepcopy(env._resolve_travel_hero())
 
@@ -106,7 +104,7 @@ def test_artifacts_without_artifact_knowledge_stay_in_inventory_without_effects(
 
 
 def test_warrior_lord_can_use_artifacts_from_level_one():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     hero_before = deepcopy(env._resolve_travel_hero())
 
@@ -124,7 +122,7 @@ def test_warrior_lord_can_use_artifacts_from_level_one():
 
 
 def test_artifact_knowledge_ability_token_unlocks_artifacts_below_level_nine():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     hero = _set_hero_level(env, 8)
     hero["hero_abilities"] = ["artifact_knowledge"]
@@ -137,7 +135,7 @@ def test_artifact_knowledge_ability_token_unlocks_artifacts_below_level_nine():
 
 
 def test_artifacts_auto_equip_best_two_by_gold_value():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     _set_hero_level(env, 9)
 
@@ -182,7 +180,7 @@ def test_artifacts_auto_equip_best_two_by_gold_value():
 
 
 def test_ring_of_ages_buffs_only_hero_and_persists_after_battle_save():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     _set_hero_level(env, 9)
 
@@ -298,7 +296,7 @@ def test_weapon_artifacts_buff_equipped_hero_in_campaign_and_battle(
     damage_multiplier: float,
     initiative_multiplier: float,
 ):
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     _set_hero_level(env, 9)
 
@@ -362,7 +360,7 @@ def test_armor_artifacts_buff_hero_armor_in_campaign_and_battle(
     item_name: str,
     armor_bonus: int,
 ):
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     _set_hero_level(env, 9)
 
@@ -408,7 +406,7 @@ def test_armor_artifacts_buff_hero_armor_in_campaign_and_battle(
 
 
 def test_render_and_state_summary_include_equipped_artifacts(capsys: pytest.CaptureFixture[str]):
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     _set_hero_level(env, 9)
 

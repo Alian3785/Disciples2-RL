@@ -9,6 +9,7 @@ from sb3_contrib.common.maskable.utils import get_action_masks
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 from train_campaign import is_better_campaign_eval
+from train_campaign import CampaignVictoryEvalCallback
 from train_campaign import EvalStepCapWrapper
 from train_campaign import make_env
 from train_campaign import resolve_training_vec_env_config
@@ -75,6 +76,14 @@ def test_make_env_exposes_native_action_masks_for_subproc():
         env.close()
 
 
+def test_make_env_accepts_dragon_campaign_objective():
+    env = make_env(campaign_objective="dragon")
+    try:
+        assert env.unwrapped.campaign_objective == "dragon"
+    finally:
+        env.close()
+
+
 def test_eval_wrapped_make_env_exposes_action_masks():
     env = DummyVecEnv([lambda: make_env(eval_max_episode_steps=3)])
     try:
@@ -129,3 +138,34 @@ def test_eval_step_cap_wrapper_truncates_long_episode():
     assert info["campaign_result"] == "eval_timeout"
     assert info["eval_step_cap_hit"] is True
     assert info["eval_step_cap"] == 3
+
+
+def test_campaign_victory_eval_defaults_to_no_stochastic_eval():
+    env = DummyVecEnv([lambda: DummyInfiniteEnv()])
+    try:
+        callback = CampaignVictoryEvalCallback(
+            env,
+            eval_freq=1,
+            n_eval_episodes=2,
+            use_masking=False,
+        )
+
+        assert callback.stochastic_eval_episodes == 0
+    finally:
+        env.close()
+
+
+def test_campaign_victory_eval_accepts_stochastic_episode_count():
+    env = DummyVecEnv([lambda: DummyInfiniteEnv()])
+    try:
+        callback = CampaignVictoryEvalCallback(
+            env,
+            eval_freq=1,
+            n_eval_episodes=2,
+            stochastic_eval_episodes=3,
+            use_masking=False,
+        )
+
+        assert callback.stochastic_eval_episodes == 3
+    finally:
+        env.close()

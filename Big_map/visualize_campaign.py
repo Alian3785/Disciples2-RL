@@ -27,9 +27,12 @@ except ImportError:
 
 from sb3_contrib.ppo_mask import MaskablePPO
 from sb3_contrib.common.wrappers import ActionMasker
+from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
 from campaign_env import CampaignEnv
 from grid import DEFAULT_GRID_SIZE, DEFAULT_HERO_GRID_POSITION
+from train_campaign import REWARD_CONFIG
 from enemy_configs import ENEMY_DESCRIPTIONS
 from battle_env import (
     TARGET_POSITIONS,
@@ -2151,6 +2154,9 @@ def run_campaign_visualization(
     deterministic: bool = False,
     map_png_path: str | None = None,
     scenario_path: str | None = None,
+    scripted_capital_bot_enabled: bool = True,
+    campaign_objective: str = "cities",
+    vecnormalize_path: str | None = None,
 ):
     """Запускает визуализацию кампании."""
 
@@ -2171,8 +2177,39 @@ def run_campaign_visualization(
         model = RandomModel()
 
     # Создание среды
-    env_base = CampaignEnv(log_enabled=True, realcapital=2)
+    def make_campaign_env(*, log_enabled: bool) -> CampaignEnv:
+        return CampaignEnv(
+            grid_size=DEFAULT_GRID_SIZE,
+            **REWARD_CONFIG,
+            persist_blue_hp=True,
+            log_enabled=log_enabled,
+            detailed_step_info=log_enabled,
+            freeze_dynamic_action_layout=True,
+            scripted_capital_bot_enabled=scripted_capital_bot_enabled,
+            empire_territory_enabled=True,
+            campaign_objective=campaign_objective,
+            max_grid_steps=1800,
+            Realcapital=2,
+        )
+
+    env_base = make_campaign_env(log_enabled=True)
     env = ActionMasker(env_base, mask_fn)
+    obs_normalizer = None
+    if vecnormalize_path:
+        if os.path.exists(vecnormalize_path):
+            norm_env = DummyVecEnv(
+                [
+                    lambda: Monitor(
+                        ActionMasker(make_campaign_env(log_enabled=False), mask_fn)
+                    )
+                ]
+            )
+            obs_normalizer = VecNormalize.load(vecnormalize_path, norm_env)
+            obs_normalizer.training = False
+            obs_normalizer.norm_reward = False
+            print(f"VecNormalize stats: {vecnormalize_path}")
+        else:
+            print(f"VecNormalize stats not found: {vecnormalize_path}")
 
     # Визуализаторы
     grid_viz = CampaignVisualizer(
@@ -2262,6 +2299,13 @@ def run_campaign_visualization(
 
         # Совместимость: если размер наблюдения среды отличается от ожидаемого моделью
         obs_for_model = obs
+        if obs_normalizer is not None:
+            obs_for_model = obs_normalizer.normalize_obs(
+                np.asarray(obs, dtype=np.float32).reshape(1, -1)
+            )
+            mask_for_model = np.asarray(mask, dtype=bool).reshape(1, -1)
+        else:
+            mask_for_model = mask
         try:
             target_shape = getattr(model, "observation_space", None)
             exp_len = None
@@ -2288,11 +2332,11 @@ def run_campaign_visualization(
         action, _ = model.predict(
             obs_for_model,
             deterministic=deterministic,
-            action_masks=mask,
+            action_masks=mask_for_model,
         )
+        action_idx = int(np.asarray(action).reshape(-1)[0])
 
         # Логируем действие агента в режиме боя
-        action_idx = int(action)
         if current_mode == "battle" and env_base.battle_env:
             if action_idx == DEFEND_ACTION_INDEX:
                 chosen_line = f"[STEP {step_count}] Агент выбирает action={action_idx} > защита (+{DEFEND_ARMOR_BONUS} брони)"
@@ -2365,7 +2409,7 @@ def run_campaign_visualization(
             battle_logs_buffer.append(chosen_line)
 
         # Выполняем шаг
-        obs, reward, terminated, truncated, info = env.step(action)
+        obs, reward, terminated, truncated, info = env.step(action_idx)
         total_reward += reward
         done = terminated or truncated
 

@@ -71,7 +71,7 @@ def _supreme_elixir_action_index(env: CampaignEnv, target_pos: int) -> int:
 
 
 def test_current_map_dynamic_potion_action_layout_counts_are_scenario_driven():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     assert len(env.scenario_potion_item_names) == 14
@@ -96,12 +96,12 @@ def test_dynamic_potion_layout_does_not_reserve_missing_potion_types():
         RUIN_REWARD_BY_ENEMY_ID = {}
         RUIN_REWARD_ITEM_NAMES = frozenset()
 
-    env = SparsePotionCampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = SparsePotionCampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     env._static_chests = {(1, 1): ("Potion of Strength",)}
     env._refresh_dynamic_action_layout()
     env.action_space = env.action_space.__class__(
-        env.grid_scroll_cast_action_start + int(env.MAX_SCROLL_CAST_ACTIONS)
+        env.GRID_SWAP_UNIT_ACTION_START + env.GRID_SWAP_UNIT_ACTION_COUNT
     )
 
     assert env.scenario_potion_item_names == (env.STRENGTH_POTION_ITEM_NAME,)
@@ -113,7 +113,7 @@ def test_dynamic_potion_layout_does_not_reserve_missing_potion_types():
 
 
 def test_collecting_combat_potions_adds_inventory_and_pickup_reward():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     start_x, start_y = env.grid_env.agent_pos
@@ -153,7 +153,7 @@ def test_collecting_combat_potions_adds_inventory_and_pickup_reward():
 
 
 def test_combat_potion_action_mask_requires_item_alive_target_and_no_duplicate_effect():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     target_pos = 7
@@ -193,7 +193,7 @@ def test_combat_potion_action_mask_requires_item_alive_target_and_no_duplicate_e
 
 
 def test_support_elixir_action_mask_requires_item_alive_target_and_blocks_same_effect_duplicates():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     target_pos = 7
@@ -241,7 +241,7 @@ def test_support_elixir_action_mask_requires_item_alive_target_and_blocks_same_e
 
 
 def test_permanent_elixir_action_mask_requires_item_and_living_target():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     target_pos = 7
@@ -273,7 +273,7 @@ def test_permanent_elixir_action_mask_requires_item_and_living_target():
 
 
 def test_invulnerability_potion_use_consumes_item_rewards_and_buffs_next_battle():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     target_pos = 7
@@ -302,7 +302,7 @@ def test_invulnerability_potion_use_consumes_item_rewards_and_buffs_next_battle(
 
 
 def test_strength_potion_use_consumes_item_rewards_and_buffs_next_battle():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     target_pos = 7
@@ -332,7 +332,7 @@ def test_strength_potion_use_consumes_item_rewards_and_buffs_next_battle():
 
 
 def test_energy_elixir_use_consumes_item_rewards_and_buffs_next_battle_damage():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     target_pos = 8
@@ -372,7 +372,7 @@ def test_energy_elixir_use_consumes_item_rewards_and_buffs_next_battle_damage():
 
 
 def test_titan_elixir_permanently_buffs_damage_through_turn_and_battle():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     target_pos = 7
@@ -418,7 +418,7 @@ def test_titan_elixir_permanently_buffs_damage_through_turn_and_battle():
 
 
 def test_supreme_elixir_permanently_buffs_health_through_turn_and_battle():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     target_pos = 8
@@ -469,7 +469,7 @@ def test_supreme_elixir_permanently_buffs_health_through_turn_and_battle():
 
 
 def test_persistent_elixir_bonuses_transfer_to_promoted_unit(monkeypatch):
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     target_pos = 7
@@ -556,7 +556,7 @@ def test_persistent_elixir_bonuses_transfer_to_promoted_unit(monkeypatch):
 
 
 def test_haste_elixir_buffs_next_battle_and_restore_after_save():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     target_pos = 8
@@ -588,7 +588,7 @@ def test_haste_elixir_buffs_next_battle_and_restore_after_save():
 
 
 def test_energy_elixir_and_haste_can_stack_on_same_unit_for_next_battle():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     target_pos = 7
@@ -627,7 +627,7 @@ def test_energy_elixir_and_haste_can_stack_on_same_unit_for_next_battle():
 
 
 def test_elemental_wards_apply_resistance_to_next_battle_and_expire():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     target_pos = 7
@@ -666,7 +666,7 @@ def test_elemental_wards_apply_resistance_to_next_battle_and_expire():
 
 
 def test_battle_save_strips_combat_potion_bonuses_from_persistent_blue_state():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     target_pos = 7
@@ -698,7 +698,7 @@ def test_battle_save_strips_combat_potion_bonuses_from_persistent_blue_state():
 
 
 def test_combat_potion_effects_expire_after_turn_advance():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     target_pos = 7
@@ -730,7 +730,7 @@ def test_first_battle_after_combat_potion_use_gets_small_participation_bonus():
     env = CampaignEnv(
         log_enabled=False,
         persist_blue_hp=True,
-        realcapital=2,
+        Realcapital=2,
         reward_engage_battle=0.0,
         reward_defeat_enemy=0.0,
         reward_combat_potion_battle_participation=0.07,
@@ -773,7 +773,7 @@ def test_combat_potion_battle_participation_bonus_expires_after_turn_end():
     env = CampaignEnv(
         log_enabled=False,
         persist_blue_hp=True,
-        realcapital=2,
+        Realcapital=2,
         reward_engage_battle=0.0,
         reward_defeat_enemy=0.0,
         reward_combat_potion_battle_participation=0.07,

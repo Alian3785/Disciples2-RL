@@ -51,6 +51,8 @@ ACTIVE_CAMPAIGN_METRICS = {
     "campaign/summon_episodes_rate",
     "campaign/summoned_units_per_episode_mean",
     "campaign/timeout_rate",
+    "campaign/unit_swap_episodes_rate",
+    "campaign/unit_swaps_per_episode_mean",
     "campaign/unit_upgrades_total",
     "campaign/victories_total",
     "campaign/victory_rate",
@@ -63,6 +65,7 @@ ACTIVE_CAMPAIGN_METRICS = {
     "campaign/window/scripted_bot_victories_mean",
     "campaign/window/spell_casts_mean",
     "campaign/window/timeout_rate",
+    "campaign/window/unit_swaps_mean",
     "campaign/window/victory_rate",
 }
 
@@ -109,6 +112,8 @@ def test_campaign_metrics_callback_logs_custom_metrics(monkeypatch):
                 "battle_hero_item_action": True,
                 "battle_hero_item_applied": True,
                 "battle_hero_item_consumed": True,
+                "unit_swap_action": True,
+                "unit_swap_applied": True,
                 "scripted_capital_bot_enemies_defeated": 2,
                 "episode": {"r": 12.0, "l": 123},
                 "turns": 12,
@@ -148,6 +153,8 @@ def test_campaign_metrics_callback_logs_custom_metrics(monkeypatch):
     assert payload["campaign/hire_episodes_rate"] == 1.0
     assert payload["campaign/battle_items_used_per_episode_mean"] == 1.0
     assert payload["campaign/battle_item_use_episodes_rate"] == 1.0
+    assert payload["campaign/unit_swaps_per_episode_mean"] == 1.0
+    assert payload["campaign/unit_swap_episodes_rate"] == 1.0
     assert payload["campaign/scripted_bot_victories_per_episode_mean"] == 2.0
     assert payload["campaign/scripted_bot_victory_episodes_rate"] == 1.0
     assert payload["campaign/window/episodes"] == 1.0
@@ -159,6 +166,7 @@ def test_campaign_metrics_callback_logs_custom_metrics(monkeypatch):
     assert payload["campaign/window/ruins_cleared_mean"] == 0.0
     assert payload["campaign/window/spell_casts_mean"] == 1.0
     assert payload["campaign/window/hired_units_mean"] == 1.0
+    assert payload["campaign/window/unit_swaps_mean"] == 1.0
     assert payload["campaign/window/scripted_bot_victories_mean"] == 2.0
     assert payload["campaign/best_recent_victory_rate"] == 1.0
     assert "campaign/window_enemy_encounters/enemy_31" not in payload
@@ -166,6 +174,30 @@ def test_campaign_metrics_callback_logs_custom_metrics(monkeypatch):
     assert "campaign/window_victory_reasons/objective_cities_cleared" not in payload
     assert dummy_experiment.metric_logged == []
     assert dummy_experiment.others["summary_campaign_victory_rate"] == 1.0
+
+
+def test_campaign_metrics_callback_consumes_minimal_training_info():
+    callback = CampaignMetricsCallback(log_freq=1000, episode_window=4, experiment=None)
+    callback.locals = {
+        "infos": [
+            {
+                "collected_chests_count": 2,
+                "scripted_capital_bot_enemies_defeated": 3,
+                "campaign_result": "victory",
+                "episode": {"r": 3.0, "l": 12},
+            }
+        ]
+    }
+    callback.num_timesteps = 1
+
+    assert callback._on_step()
+    payload = callback._build_log_payload()
+
+    assert callback.total_chests_collected == 2
+    assert callback.total_scripted_bot_victories == 3
+    assert payload["campaign/chests_collected_per_episode_mean"] == 2.0
+    assert payload["campaign/scripted_bot_victories_per_episode_mean"] == 3.0
+    assert payload["campaign/scripted_bot_victory_episodes_rate"] == 1.0
 
 
 def test_campaign_metrics_callback_flushes_partial_window_on_training_end():
@@ -230,6 +262,8 @@ def test_campaign_metrics_callback_flushes_partial_window_on_training_end():
     assert payload["campaign/hire_episodes_rate"] == 0.0
     assert payload["campaign/battle_items_used_per_episode_mean"] == 0.0
     assert payload["campaign/battle_item_use_episodes_rate"] == 0.0
+    assert payload["campaign/unit_swaps_per_episode_mean"] == 0.0
+    assert payload["campaign/unit_swap_episodes_rate"] == 0.0
     assert payload["campaign/scripted_bot_victories_per_episode_mean"] == 0.0
     assert payload["campaign/scripted_bot_victory_episodes_rate"] == 0.0
     assert payload["campaign/window/episodes"] == 1.0
@@ -240,6 +274,7 @@ def test_campaign_metrics_callback_flushes_partial_window_on_training_end():
     assert payload["campaign/window/ruins_cleared_mean"] == 0.0
     assert payload["campaign/window/spell_casts_mean"] == 0.0
     assert payload["campaign/window/hired_units_mean"] == 0.0
+    assert payload["campaign/window/unit_swaps_mean"] == 0.0
     assert payload["campaign/window/battle_win_rate"] == 0.0
     assert payload["campaign/window/scripted_bot_victories_mean"] == 0.0
     assert payload["campaign/best_recent_victory_rate"] == 0.0
@@ -247,30 +282,6 @@ def test_campaign_metrics_callback_flushes_partial_window_on_training_end():
     assert "campaign/window_enemy_defeats/enemy_7" not in payload
     assert dummy_experiment.metric_logged == []
     assert dummy_experiment.others["summary_campaign_battle_win_rate"] == 0.0
-
-
-def test_campaign_metrics_callback_saves_chests_plot(tmp_path):
-    callback = CampaignMetricsCallback(log_freq=1000, episode_window=4, experiment=None)
-    callback.episode_chests_collected = [0.0, 2.0, 1.0, 3.0]
-
-    output_path = tmp_path / "campaign_chests_per_episode.png"
-    saved_path = callback.save_chests_per_episode_plot(output_path)
-
-    assert saved_path == output_path
-    assert output_path.exists()
-    assert output_path.stat().st_size > 0
-
-
-def test_campaign_metrics_callback_saves_sold_items_plot(tmp_path):
-    callback = CampaignMetricsCallback(log_freq=1000, episode_window=4, experiment=None)
-    callback.episode_sold_items = [0.0, 1.0, 3.0, 2.0]
-
-    output_path = tmp_path / "campaign_sold_items_per_episode.png"
-    saved_path = callback.save_sold_items_per_episode_plot(output_path)
-
-    assert saved_path == output_path
-    assert output_path.exists()
-    assert output_path.stat().st_size > 0
 
 
 def test_campaign_metrics_callback_saves_hired_units_per_episode_plot(tmp_path):
@@ -291,6 +302,18 @@ def test_campaign_metrics_callback_saves_cumulative_hired_units_plot(tmp_path):
 
     output_path = tmp_path / "campaign_hired_units_cumulative.png"
     saved_path = callback.save_cumulative_hired_units_plot(output_path)
+
+    assert saved_path == output_path
+    assert output_path.exists()
+    assert output_path.stat().st_size > 0
+
+
+def test_campaign_metrics_callback_saves_unit_swaps_per_episode_plot(tmp_path):
+    callback = CampaignMetricsCallback(log_freq=1000, episode_window=4, experiment=None)
+    callback.episode_unit_swaps = [0.0, 2.0, 1.0, 3.0]
+
+    output_path = tmp_path / "campaign_unit_swaps_per_episode.png"
+    saved_path = callback.save_unit_swaps_per_episode_plot(output_path)
 
     assert saved_path == output_path
     assert output_path.exists()

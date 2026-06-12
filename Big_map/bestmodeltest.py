@@ -1,4 +1,4 @@
-﻿import argparse
+import argparse
 import os
 from collections import Counter
 
@@ -22,7 +22,7 @@ def mask_fn(env: CampaignEnv) -> np.ndarray:
     return env.compute_action_mask()
 
 
-def make_env() -> Monitor:
+def make_env(scripted_capital_bot_enabled: bool = True) -> Monitor:
     base = CampaignEnv(
         grid_size=DEFAULT_GRID_SIZE,
         reward_engage_battle=0.1,
@@ -37,12 +37,19 @@ def make_env() -> Monitor:
         persist_blue_hp=True,
         log_enabled=False,
         max_grid_steps=1800,
-        realcapital=2,
+        Realcapital=2,
+        scripted_capital_bot_enabled=scripted_capital_bot_enabled,
     )
     return Monitor(ActionMasker(base, mask_fn))
 
 
-def evaluate_model(run_id: str, episodes: int, deterministic: bool, model_type: str) -> int:
+def evaluate_model(
+    run_id: str,
+    episodes: int,
+    deterministic: bool,
+    model_type: str,
+    scripted_capital_bot_enabled: bool,
+) -> int:
     if model_type == "final":
         model_path = f"./campaign_models/{run_id}/final_model.zip"
         vec_paths = [
@@ -60,7 +67,13 @@ def evaluate_model(run_id: str, episodes: int, deterministic: bool, model_type: 
         print(f"[ERROR] Model not found: {model_path}")
         return 1
 
-    env = DummyVecEnv([make_env])
+    env = DummyVecEnv(
+        [
+            lambda: make_env(
+                scripted_capital_bot_enabled=scripted_capital_bot_enabled
+            )
+        ]
+    )
 
     vec_path = next((path for path in vec_paths if os.path.exists(path)), None)
     if vec_path is not None:
@@ -104,6 +117,7 @@ def evaluate_model(run_id: str, episodes: int, deterministic: bool, model_type: 
     print(f"run_id: {run_id}")
     print(f"model_type: {model_type}")
     print(f"episodes: {episodes}")
+    print(f"scripted_capital_bot_enabled: {scripted_capital_bot_enabled}")
     print(
         f"mean_reward: {np.mean(episode_rewards):.3f} +/- {np.std(episode_rewards):.3f}"
     )
@@ -133,6 +147,11 @@ def main() -> int:
         help="Which checkpoint to evaluate",
     )
     parser.add_argument("--deterministic", action="store_true")
+    parser.add_argument(
+        "--no-scripted-bot",
+        action="store_true",
+        help="Disable the scripted capital bot during evaluation.",
+    )
     args = parser.parse_args()
 
     return evaluate_model(
@@ -140,6 +159,7 @@ def main() -> int:
         episodes=args.episodes,
         deterministic=args.deterministic,
         model_type=args.model_type,
+        scripted_capital_bot_enabled=not args.no_scripted_bot,
     )
 
 

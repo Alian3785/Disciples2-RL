@@ -35,7 +35,7 @@ def _clear_slot(env: CampaignEnv, position: int) -> None:
 
 
 def test_trainer_interaction_tiles_match_scenario_layout():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
 
     assert env.trainer_site_anchors["Тренировочный лагерь"] == (38, 30)
     assert env.trainer_site_interaction_tiles["Тренировочный лагерь"] == (
@@ -48,7 +48,7 @@ def test_trainer_interaction_tiles_match_scenario_layout():
 
 
 def test_grid_info_and_sync_report_trainer_site():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     env.grid_env.agent_pos = (41, 31)
 
@@ -59,14 +59,11 @@ def test_grid_info_and_sync_report_trainer_site():
     assert env.grid_env.trainer_positions == set(env.trainer_interaction_tiles)
 
 
-def test_grid_render_and_visualizer_mark_trainer_tiles():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+def test_grid_env_and_visualizer_track_trainer_tiles():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
-    rendered = env.grid_env.render(mode="ansi")
 
-    assert "Trainers:" in rendered
-    assert "(41, 31)" in rendered
-    assert "R " in rendered
+    assert (41, 31) in env.grid_env.trainer_positions
 
     viz = CampaignVisualizer(grid_size=env.grid_size)
     try:
@@ -94,7 +91,7 @@ def test_grid_render_and_visualizer_mark_trainer_tiles():
 
 
 def test_trainer_action_count_matches_blue_positions():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     _enable_trainer(env)
 
     assert env.GRID_MERCHANT_BUY_ACTION_START - env.GRID_TRAINER_ACTION_START == len(
@@ -103,8 +100,37 @@ def test_trainer_action_count_matches_blue_positions():
     assert len(env.TRAINER_POSITIONS) == 6
 
 
+def test_trainer_action_outside_camp_does_not_train_or_spend_gold():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
+    env.reset(seed=123)
+    env.grid_env.agent_pos = (5, 27)
+    env.gold = 100.0
+
+    unit = _blue_unit(env, 7)
+    unit["hero"] = 0
+    unit["capital"] = env.Realcapital
+    unit["is_neutral_unit"] = False
+    unit["Level"] = 1
+    unit["exp_current"] = 10
+    unit["exp_required"] = 20
+    unit["next_level_exp"] = 0
+
+    _, reward, terminated, truncated, info = env.step(env.GRID_TRAINER_ACTION_START)
+
+    assert terminated is False
+    assert truncated is False
+    assert reward == pytest.approx(0.0)
+    assert int(unit["exp_current"]) == 10
+    assert env.gold == pytest.approx(100.0)
+    assert info["trainer_not_at_camp"] is True
+    assert info["trainer_trainable"] is False
+    assert info["trainer_trained"] is False
+    assert info["trainer_xp_gained"] == 0
+    assert info["trainer_gold_spent"] == pytest.approx(0.0)
+
+
 def test_trainer_trains_faction_unit_to_cap_and_spends_gold():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     _enable_trainer(env, gold=100.0)
 
     unit = _blue_unit(env, 7)
@@ -136,7 +162,7 @@ def test_trainer_trains_faction_unit_to_cap_and_spends_gold():
 
 
 def test_trainer_uses_partial_gold_when_not_enough_for_full_training():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     _enable_trainer(env, gold=10.0)
 
     unit = _blue_unit(env, 7)
@@ -158,7 +184,7 @@ def test_trainer_uses_partial_gold_when_not_enough_for_full_training():
 
 
 def test_trainer_uses_five_gold_per_xp_for_neutral_and_hero_units():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     _enable_trainer(env, gold=100.0)
 
     neutral_unit = _blue_unit(env, 9)
@@ -201,7 +227,7 @@ def test_trainer_uses_five_gold_per_xp_for_neutral_and_hero_units():
 
 
 def test_trainer_masks_empty_and_dead_positions():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     _enable_trainer(env, gold=999.0)
 
     dead_unit = _blue_unit(env, 11)

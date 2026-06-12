@@ -38,7 +38,7 @@ def _enable_mercenary_hire(env: CampaignEnv, position: tuple[int, int], gold: fl
 
 
 def test_mercenary_interaction_tiles_match_scenario_layout():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
 
     assert env.mercenary_site_anchors["Лагерь северных варваров"] == (9, 42)
     assert env.mercenary_site_anchors["Пустой лагерь наёмников"] == (15, 1)
@@ -59,7 +59,7 @@ def test_mercenary_interaction_tiles_match_scenario_layout():
 
 
 def test_grid_info_reports_when_agent_stands_on_mercenary_interaction_tile():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     env.grid_env.agent_pos = (12, 43)
@@ -72,25 +72,21 @@ def test_grid_info_reports_when_agent_stands_on_mercenary_interaction_tile():
 
 
 def test_reset_syncs_mercenary_tiles_into_grid_env():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     assert env.grid_env.mercenary_positions == set(env.mercenary_interaction_tiles)
 
 
-def test_grid_render_marks_mercenary_tiles():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+def test_grid_env_tracks_mercenary_tiles():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
-    rendered = env.grid_env.render(mode="ansi")
-
-    assert "Mercenary camps:" in rendered
-    assert "(12, 43)" in rendered
-    assert "H " in rendered
+    assert (12, 43) in env.grid_env.mercenary_positions
 
 
 def test_campaign_visualizer_marks_diagonal_opposite_mercenary_tiles_with_h():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     viz = CampaignVisualizer(grid_size=env.grid_size)
 
@@ -119,7 +115,7 @@ def test_campaign_visualizer_marks_diagonal_opposite_mercenary_tiles_with_h():
 
 
 def test_mercenary_hire_recruits_barbarian_on_frontline_and_spends_gold():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     hero = _enable_mercenary_hire(env, position=(12, 43), gold=850.0)
     _clear_slot(env, 7)
 
@@ -162,7 +158,7 @@ def test_mercenary_hire_recruits_barbarian_on_frontline_and_spends_gold():
 
 
 def test_second_mercenary_camp_offers_goblin_and_goblin_archer_with_front_and_back_rows():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     _enable_mercenary_hire(env, position=(18, 2), gold=999.0)
     _clear_slot(env, 7)
     _clear_slot(env, 10)

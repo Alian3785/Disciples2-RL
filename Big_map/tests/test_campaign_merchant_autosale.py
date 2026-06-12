@@ -6,6 +6,20 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from campaign_env import CampaignEnv
 
 
+VALUABLE_ITEM_GOLD_VALUES = {
+    "Bronze Ring (Valuable)": 250,
+    "Silver Ring (Valuable)": 500,
+    "Emerald (Valuable)": 750,
+    "Gold Ring (Valuable)": 1000,
+    "Ruby (Valuable)": 1250,
+    "Sapphire (Valuable)": 1500,
+    "Diamond (Valuable)": 1750,
+    "Ancient Relic (Valuable)": 2000,
+    "Royal Scepter (Valuable)": 2500,
+    "Imperial Crown (Valuable)": 5000,
+}
+
+
 def _merchant_buy_action(env: CampaignEnv, item_index: int) -> int:
     return env.GRID_MERCHANT_BUY_ACTION_START + int(item_index)
 
@@ -27,7 +41,7 @@ def _merchant_tile(env: CampaignEnv, site_index: int) -> tuple[int, int]:
 
 
 def test_merchant_auto_sale_sells_only_junk_items():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     merchant_tile = _merchant_tile(env, 0)
@@ -61,8 +75,34 @@ def test_merchant_auto_sale_sells_only_junk_items():
     ]
 
 
+def test_merchant_auto_sale_sells_all_game_valuables():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
+    env.reset(seed=123)
+
+    merchant_tile = _merchant_tile(env, 0)
+    env.grid_env.agent_pos = merchant_tile
+    env.moves = 0
+    env.gold = 0.0
+    env.heroitems = [env._make_hero_item_entry(name) for name in VALUABLE_ITEM_GOLD_VALUES]
+
+    _, reward, terminated, truncated, info = env.step(env.grid_env.ACTION_RIGHT)
+
+    assert not terminated
+    assert not truncated
+    assert info["merchant_auto_sale"] is True
+    assert info["merchant_sold_items_count"] == len(VALUABLE_ITEM_GOLD_VALUES)
+    assert info["merchant_sale_gold"] == float(sum(VALUABLE_ITEM_GOLD_VALUES.values()))
+    assert reward == len(VALUABLE_ITEM_GOLD_VALUES) * env.reward_sell_junk_item
+    assert env.gold == float(sum(VALUABLE_ITEM_GOLD_VALUES.values()))
+    remaining_item_names = [str(entry) for entry in env.heroitems]
+    assert not any(name in remaining_item_names for name in VALUABLE_ITEM_GOLD_VALUES)
+    assert [item["name"] for item in info["merchant_sold_items"]] == list(
+        VALUABLE_ITEM_GOLD_VALUES
+    )
+
+
 def test_merchant_buy_actions_require_tile_gold_and_stock():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     life_action = _merchant_buy_action(env, 0)
@@ -95,7 +135,7 @@ def test_merchant_buy_actions_require_tile_gold_and_stock():
 
 
 def test_merchant_buys_feed_existing_heal_and_revive_actions():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     alara_tile = _merchant_tile(env, 0)

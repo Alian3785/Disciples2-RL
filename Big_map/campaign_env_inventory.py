@@ -1,12 +1,113 @@
 # campaign_env_inventory.py
-"""CampaignInventoryMixin for CampaignEnv."""
+"""Inventory, consumable, and equipment helpers for CampaignEnv."""
 
 from __future__ import annotations
 
 from campaign_env_data import *
 
 
+class _TrackedInventoryList(list):
+    """Invalidates inventory caches on list mutation."""
+
+    def __init__(self, owner: object, iterable=()):
+        self._owner = owner
+        super().__init__(iterable or ())
+
+    def _changed(self) -> None:
+        owner = getattr(self, "_owner", None)
+        if owner is not None and hasattr(owner, "_mark_inventory_changed"):
+            owner._mark_inventory_changed()
+
+    def append(self, item) -> None:
+        super().append(item)
+        self._changed()
+
+    def extend(self, iterable) -> None:
+        super().extend(iterable)
+        self._changed()
+
+    def insert(self, index, item) -> None:
+        super().insert(index, item)
+        self._changed()
+
+    def clear(self) -> None:
+        super().clear()
+        self._changed()
+
+    def pop(self, index=-1):
+        item = super().pop(index)
+        self._changed()
+        return item
+
+    def remove(self, item) -> None:
+        super().remove(item)
+        self._changed()
+
+    def reverse(self) -> None:
+        super().reverse()
+        self._changed()
+
+    def sort(self, *args, **kwargs) -> None:
+        super().sort(*args, **kwargs)
+        self._changed()
+
+    def __setitem__(self, key, value) -> None:
+        super().__setitem__(key, value)
+        self._changed()
+
+    def __delitem__(self, key) -> None:
+        super().__delitem__(key)
+        self._changed()
+
+    def __iadd__(self, iterable):
+        result = super().__iadd__(iterable)
+        self._changed()
+        return result
+
+
 class CampaignInventoryMixin:
+    @property
+    def heroitems(self) -> List[object]:
+        return getattr(self, "_heroitems", _TrackedInventoryList(self))
+
+    @heroitems.setter
+    def heroitems(self, value) -> None:
+        if isinstance(value, _TrackedInventoryList) and getattr(value, "_owner", None) is self:
+            self._heroitems = value
+        else:
+            self._heroitems = _TrackedInventoryList(self, value or ())
+        self._mark_inventory_changed()
+
+    def _mark_inventory_changed(self) -> None:
+        self._inventory_version = int(getattr(self, "_inventory_version", 0) or 0) + 1
+        self.inventory_dirty = True
+        self._inventory_cache_valid = False
+        self._mark_battle_items_dirty()
+        self._mark_equipment_dirty()
+        self._merchant_autosale_checked_inventory_version = None
+        self._merchant_autosale_checked_position = None
+
+    def _mark_battle_items_dirty(self) -> None:
+        self.battle_items_dirty = True
+        self._battle_items_sync_signature = None
+        self._battle_equip_action_mask_signature = None
+        self._battle_equip_action_mask_cache = ()
+        self._equipped_hero_items_sync_signature = None
+
+    def _mark_equipment_dirty(self) -> None:
+        self.equipment_dirty = True
+        self._equipment_dirty = True
+        self._equipment_refresh_signature = None
+        self._equipped_hero_items_sync_signature = None
+        self._equipped_artifact_items_sync_signature = None
+        self._equipped_banner_items_sync_signature = None
+        self._equipped_book_items_sync_signature = None
+        self._mark_boots_dirty()
+
+    def _mark_boots_dirty(self) -> None:
+        self.boots_dirty = True
+        self._equipped_boot_items_sync_signature = None
+
     @classmethod
     def _is_battle_orb_item_name(cls, item_name: str) -> bool:
         normalized_name = str(item_name or "").strip()
@@ -243,15 +344,22 @@ class CampaignInventoryMixin:
         magic_item_names: List[str] = []
         seen_names: set[str] = set()
 
+        def add_if_battle_magic(raw_item_name: object) -> None:
+            normalized_name = str(raw_item_name or "").strip()
+            if not self._is_battle_magic_item_name(normalized_name):
+                return
+            if normalized_name in seen_names:
+                return
+            seen_names.add(normalized_name)
+            magic_item_names.append(normalized_name)
+
         for item_names in getattr(self, "_static_chests", {}).values():
             for item_name in tuple(item_names or ()):
-                normalized_name = str(item_name or "").strip()
-                if not self._is_battle_magic_item_name(normalized_name):
-                    continue
-                if normalized_name in seen_names:
-                    continue
-                seen_names.add(normalized_name)
-                magic_item_names.append(normalized_name)
+                add_if_battle_magic(item_name)
+
+        for reward_data in tuple(getattr(self, "RUIN_REWARD_BY_ENEMY_ID", {}).values()):
+            if isinstance(reward_data, dict):
+                add_if_battle_magic(reward_data.get("item", ""))
 
         for item_data in tuple(getattr(self, "MERCHANT_BUY_ITEMS", ()) or ()):
             if not isinstance(item_data, dict):
@@ -262,18 +370,10 @@ class CampaignInventoryMixin:
                 stock = 0
             if stock <= 0:
                 continue
-            normalized_name = str(item_data.get("name", "") or "").strip()
-            if not self._is_battle_magic_item_name(normalized_name):
-                continue
-            if normalized_name in seen_names:
-                continue
-            seen_names.add(normalized_name)
-            magic_item_names.append(normalized_name)
+            add_if_battle_magic(item_data.get("name", ""))
 
         return tuple(magic_item_names)
 
-    def _scenario_battle_orb_item_names(self) -> Tuple[str, ...]:
-        return self._scenario_battle_magic_item_names()
 
     @classmethod
     def _is_book_item_name(cls, item_name: str) -> bool:
@@ -686,6 +786,113 @@ class CampaignInventoryMixin:
             "uses_per_item": int(cls.TALISMAN_USES_PER_ITEM),
         }
         return effects
+    def _battle_items_counter_signature(self) -> Tuple[int, int, int, int, int, int]:
+        return (
+            int(getattr(self, "healing_bottles_used", 0) or 0),
+            int(getattr(self, "heal_bottles_used", 0) or 0),
+            int(getattr(self, "revive_bottles_used", 0) or 0),
+            int(getattr(self, "extra_healing_bottles", 0) or 0),
+            int(getattr(self, "extra_heal_bottles", 0) or 0),
+            int(getattr(self, "extra_revive_bottles", 0) or 0),
+        )
+    def _blue_roster_equipment_signature(
+        self,
+        units: Optional[List[Dict]] = None,
+    ) -> Tuple[Tuple[object, ...], ...]:
+        roster = units if units is not None else getattr(self, "blue_team_state", None)
+        signature: List[Tuple[object, ...]] = []
+        for unit in roster or []:
+            if not isinstance(unit, dict):
+                continue
+            try:
+                position = int(unit.get("position", -1) or -1)
+            except (TypeError, ValueError):
+                position = -1
+            try:
+                level = int(round(float(unit.get("Level", 0) or 0)))
+            except (TypeError, ValueError):
+                level = 0
+            signature.append(
+                (
+                    position,
+                    str(unit.get("name", unit.get("\u043a\u0442\u043e", "")) or ""),
+                    bool(self._is_hero_unit(unit)),
+                    bool(self._is_travel_unit_alive(unit)),
+                    level,
+                    tuple(sorted(self._hero_ability_tokens(unit))),
+                )
+            )
+        return tuple(signature)
+    def _equipment_state_signature(
+        self,
+        units: Optional[List[Dict]] = None,
+    ) -> Tuple[object, ...]:
+        return (
+            int(getattr(self, "_inventory_version", 0) or 0),
+            self._battle_items_counter_signature(),
+            int(getattr(self, "typeoflord", 0) or 0),
+            tuple(getattr(self, "equipped_artifact_items", ()) or ()),
+            tuple(getattr(self, "equipped_banner_items", ()) or ()),
+            tuple(getattr(self, "equipped_book_items", ()) or ()),
+            tuple(getattr(self, "equipped_boot_items", ()) or ()),
+            self._blue_roster_equipment_signature(units=units),
+        )
+    def _equipped_hero_items_state_signature(self) -> Tuple[object, ...]:
+        return (
+            int(getattr(self, "_inventory_version", 0) or 0),
+            self._battle_items_counter_signature(),
+            int(getattr(self, "typeoflord", 0) or 0),
+            tuple(getattr(self, "equipped_hero_items", ()) or ()),
+            tuple(getattr(self, "equipped_hero_item_uses_left", ()) or ()),
+            tuple(getattr(self, "equipped_hero_item_uses_left_item_names", ()) or ()),
+            tuple(getattr(self, "equipped_book_items", ()) or ()),
+            self._blue_roster_equipment_signature(),
+        )
+    def _equipped_book_items_state_signature(self) -> Tuple[object, ...]:
+        return (
+            int(getattr(self, "_inventory_version", 0) or 0),
+            tuple(getattr(self, "equipped_book_items", ()) or ()),
+            self._blue_roster_equipment_signature(),
+        )
+    def _equipped_artifact_items_state_signature(
+        self,
+        units: Optional[List[Dict]] = None,
+    ) -> Tuple[object, ...]:
+        return (
+            int(getattr(self, "_inventory_version", 0) or 0),
+            tuple(getattr(self, "equipped_artifact_items", ()) or ()),
+            self._blue_roster_equipment_signature(units=units),
+        )
+    def _equipped_banner_items_state_signature(
+        self,
+        units: Optional[List[Dict]] = None,
+    ) -> Tuple[object, ...]:
+        return (
+            int(getattr(self, "_inventory_version", 0) or 0),
+            tuple(getattr(self, "equipped_banner_items", ()) or ()),
+            self._blue_roster_equipment_signature(units=units),
+        )
+    def _equipped_boot_items_state_signature(
+        self,
+        units: Optional[List[Dict]] = None,
+    ) -> Tuple[object, ...]:
+        return (
+            int(getattr(self, "_inventory_version", 0) or 0),
+            tuple(getattr(self, "equipped_boot_items", ()) or ()),
+            self._blue_roster_equipment_signature(units=units),
+        )
+    def _battle_equip_action_mask_state_signature(self) -> Tuple[object, ...]:
+        return (
+            int(getattr(self, "_inventory_version", 0) or 0),
+            self._battle_items_counter_signature(),
+            int(getattr(self, "typeoflord", 0) or 0),
+            bool(getattr(self, "battle_item_equip_used_this_turn", False)),
+            tuple(getattr(self, "equipped_hero_items", ()) or ()),
+            tuple(getattr(self, "equipped_hero_item_uses_left", ()) or ()),
+            tuple(getattr(self, "equipped_hero_item_uses_left_item_names", ()) or ()),
+            tuple(getattr(self, "equipped_book_items", ()) or ()),
+            self._blue_roster_equipment_signature(),
+        )
     def _battle_equip_item_available_count(self, item_name: str) -> int:
         normalized_name = str(item_name or "")
         if normalized_name == self.BONUS_SMALL_HEAL_ITEM_NAME:
@@ -710,8 +917,6 @@ class CampaignInventoryMixin:
         if canonical_name == self.BONUS_REVIVE_ITEM_NAME:
             return int(self._revive_bottles_left())
         return int(self._count_hero_item(canonical_name))
-    def _potion_available(self, item_name: object) -> bool:
-        return self._potion_available_count(item_name) > 0
     @classmethod
     def _counter_backed_battle_item_names(cls) -> Tuple[str, str, str]:
         return (
@@ -726,6 +931,12 @@ class CampaignInventoryMixin:
             self.BONUS_REVIVE_ITEM_NAME: int(self._revive_bottles_left()),
         }
     def _sync_counter_backed_battle_items(self) -> None:
+        sync_signature = self._battle_items_counter_signature()
+        if (
+            not bool(getattr(self, "battle_items_dirty", True))
+            and getattr(self, "_battle_items_sync_signature", None) == sync_signature
+        ):
+            return
         target_counts = self._counter_backed_battle_item_counts()
         counter_item_names = set(target_counts)
         current_counts = {item_name: 0 for item_name in counter_item_names}
@@ -753,8 +964,8 @@ class CampaignInventoryMixin:
 
         if changed or len(synced_items) != len(getattr(self, "heroitems", []) or []):
             self.heroitems = synced_items
-            self._invalidate_inventory_cache()
-            self._sync_equipped_hero_items()
+        self.battle_items_dirty = False
+        self._battle_items_sync_signature = sync_signature
     def _count_equipped_battle_items(
         self,
         item_name: str,
@@ -770,6 +981,11 @@ class CampaignInventoryMixin:
                 count += 1
         return count
     def _sync_equipped_hero_items(self) -> None:
+        self._sync_equipped_book_items()
+        sync_signature = self._equipped_hero_items_state_signature()
+        if getattr(self, "_equipped_hero_items_sync_signature", None) == sync_signature:
+            return
+
         normalized_slots: List[Optional[str]] = [None] * int(self.BATTLE_EQUIP_SLOTS)
         normalized_uses_left: List[Optional[int]] = [None] * int(self.BATTLE_EQUIP_SLOTS)
         normalized_uses_left_item_names: List[Optional[str]] = [None] * int(
@@ -823,6 +1039,9 @@ class CampaignInventoryMixin:
         self.equipped_hero_items = normalized_slots
         self.equipped_hero_item_uses_left = normalized_uses_left
         self.equipped_hero_item_uses_left_item_names = normalized_uses_left_item_names
+        self._equipped_hero_items_sync_signature = (
+            self._equipped_hero_items_state_signature()
+        )
     def _battle_equip_slot_for_item(self, item_name: str) -> Optional[int]:
         normalized_name = str(item_name or "")
         if normalized_name not in self.BATTLE_EQUIPPABLE_ITEM_NAMES:
@@ -853,7 +1072,76 @@ class CampaignInventoryMixin:
         return str(maybe_item_name if maybe_item_name is not None else item_name or "")
     def _can_equip_battle_item(self, item_name: object, maybe_item_name: object = None) -> bool:
         normalized_name = self._normalize_battle_equip_item_arg(item_name, maybe_item_name)
-        return self._battle_equip_slot_for_item(normalized_name) is not None
+        for candidate_name, allowed in zip(
+            self.BATTLE_EQUIPPABLE_ITEM_NAMES,
+            self._battle_equip_action_mask_values(),
+        ):
+            if str(candidate_name or "") == normalized_name:
+                return bool(allowed)
+        return False
+    def _battle_equip_action_mask_values(self) -> Tuple[bool, ...]:
+        cached_signature = getattr(self, "_battle_equip_action_mask_signature", None)
+        current_signature = self._battle_equip_action_mask_state_signature()
+        cached_values = tuple(getattr(self, "_battle_equip_action_mask_cache", ()) or ())
+        if (
+            cached_signature == current_signature
+            and len(cached_values) == len(self.BATTLE_EQUIPPABLE_ITEM_NAMES)
+        ):
+            return cached_values
+
+        if bool(getattr(self, "battle_item_equip_used_this_turn", False)):
+            result = tuple(False for _ in self.BATTLE_EQUIPPABLE_ITEM_NAMES)
+            self._battle_equip_action_mask_signature = current_signature
+            self._battle_equip_action_mask_cache = result
+            return result
+
+        self._sync_counter_backed_battle_items()
+        self._sync_equipped_hero_items()
+
+        slot_available = any(
+            not str(
+                (
+                    self.equipped_hero_items[idx]
+                    if idx < len(getattr(self, "equipped_hero_items", []) or [])
+                    else ""
+                )
+                or ""
+            )
+            for idx in range(int(self.BATTLE_EQUIP_SLOTS))
+        )
+        if not slot_available:
+            result = tuple(False for _ in self.BATTLE_EQUIPPABLE_ITEM_NAMES)
+            self._battle_equip_action_mask_signature = (
+                self._battle_equip_action_mask_state_signature()
+            )
+            self._battle_equip_action_mask_cache = result
+            return result
+
+        reserved_counts: Dict[str, int] = {}
+        for equipped_name in tuple(getattr(self, "equipped_hero_items", ()) or ()):
+            normalized_equipped_name = str(equipped_name or "")
+            if not normalized_equipped_name:
+                continue
+            reserved_counts[normalized_equipped_name] = (
+                int(reserved_counts.get(normalized_equipped_name, 0) or 0) + 1
+            )
+
+        values: List[bool] = []
+        for item_name in self.BATTLE_EQUIPPABLE_ITEM_NAMES:
+            normalized_name = str(item_name or "")
+            if not self._battle_magic_item_access_allowed(normalized_name):
+                values.append(False)
+                continue
+            available_count = int(self._battle_equip_item_available_count(normalized_name))
+            reserved_count = int(reserved_counts.get(normalized_name, 0) or 0)
+            values.append(available_count > reserved_count)
+
+        result = tuple(bool(value) for value in values)
+        self._battle_equip_action_mask_signature = (
+            self._battle_equip_action_mask_state_signature()
+        )
+        self._battle_equip_action_mask_cache = result
+        return result
     def _equip_battle_item(self, item_name: object, maybe_item_name: object = None) -> Optional[int]:
         normalized_name = self._normalize_battle_equip_item_arg(item_name, maybe_item_name)
         slot_index = self._battle_equip_slot_for_item(normalized_name)
@@ -968,9 +1256,72 @@ class CampaignInventoryMixin:
         return str(
             cls._scroll_item_alias_to_canonical().get(str(item_name or ""), "") or ""
         )
+    def _scenario_scroll_item_names(self) -> Tuple[str, ...]:
+        present_names: set[str] = set()
+
+        def add_if_scroll(raw_item_name: object) -> None:
+            canonical_name = self._canonical_scroll_item_name(str(raw_item_name or ""))
+            if canonical_name:
+                present_names.add(canonical_name)
+
+        for item_names in getattr(self, "_static_chests", {}).values():
+            for item_name in tuple(item_names or ()):
+                add_if_scroll(item_name)
+
+        for reward_data in tuple(getattr(self, "RUIN_REWARD_BY_ENEMY_ID", {}).values()):
+            if isinstance(reward_data, dict):
+                add_if_scroll(reward_data.get("item", ""))
+
+        for item_data in tuple(getattr(self, "MERCHANT_BUY_ITEMS", ()) or ()):
+            if not isinstance(item_data, dict):
+                continue
+            try:
+                stock = int(item_data.get("stock", 0) or 0)
+            except (TypeError, ValueError):
+                stock = 0
+            if stock <= 0:
+                continue
+            add_if_scroll(item_data.get("name", ""))
+
+        ordered_names: List[str] = []
+        seen_names: set[str] = set()
+        for definition in SCROLL_ITEM_DEFINITIONS:
+            if not bool(definition.get("supported", False)):
+                continue
+            canonical_name = self._canonical_scroll_item_name(
+                str(definition.get("item_name", "") or "")
+            )
+            if not canonical_name or canonical_name not in present_names:
+                continue
+            if canonical_name in seen_names:
+                continue
+            seen_names.add(canonical_name)
+            ordered_names.append(canonical_name)
+        return tuple(ordered_names)
+    def _scenario_scroll_spell_entries(self) -> Tuple[Dict[str, object], ...]:
+        definition_by_name = self._scroll_item_definitions_by_name()
+        entries: List[Dict[str, object]] = []
+        for item_name in tuple(getattr(self, "scenario_scroll_item_names", ()) or ()):
+            canonical_name = self._canonical_scroll_item_name(str(item_name or ""))
+            definition = definition_by_name.get(canonical_name, {})
+            if not isinstance(definition, dict) or not bool(
+                definition.get("supported", False)
+            ):
+                continue
+            entries.append(dict(definition))
+        return tuple(entries)
+    def _refresh_scroll_item_names(self) -> Tuple[str, ...]:
+        self.scenario_scroll_item_names = self._scenario_scroll_item_names()
+        self.scenario_scroll_spell_entries = self._scenario_scroll_spell_entries()
+        self.GRID_SCROLL_CAST_ACTION_COUNT = len(self.scenario_scroll_spell_entries)
+        if hasattr(self, "_inventory_cache_valid"):
+            self._invalidate_inventory_cache()
+        return self.scenario_scroll_item_names
     def _invalidate_inventory_cache(self) -> None:
+        self._mark_inventory_changed()
         self._inventory_cache_valid = False
         self._inventory_cache_signature = ()
+        self._inventory_cache_version = -1
         self._hero_item_counts_cache = {}
         self._scroll_item_counts_cache = {}
         self._scroll_inventory_entries_cache = ()
@@ -978,9 +1329,13 @@ class CampaignInventoryMixin:
         self._scroll_cast_slot_entries_cache = ()
         self._total_scroll_count_cache = 0
     def _ensure_inventory_cache(self) -> None:
-        current_signature = tuple(self._hero_item_name(entry) for entry in self.heroitems)
-        if self._inventory_cache_valid and current_signature == self._inventory_cache_signature:
+        current_version = int(getattr(self, "_inventory_version", 0) or 0)
+        if (
+            self._inventory_cache_valid
+            and int(getattr(self, "_inventory_cache_version", -1) or -1) == current_version
+        ):
             return
+        current_signature = tuple(self._hero_item_name(entry) for entry in self.heroitems)
 
         hero_item_counts: Dict[str, int] = {}
         scroll_item_counts: Dict[str, int] = {}
@@ -1020,14 +1375,28 @@ class CampaignInventoryMixin:
         self._scroll_item_counts_cache = scroll_item_counts
         self._scroll_inventory_entries_cache = tuple(inventory_entries)
         self._available_scroll_spell_entries_cache = tuple(available_entries)
-        self._scroll_cast_slot_entries_cache = tuple(
-            available_entries[: int(self.MAX_SCROLL_CAST_ACTIONS)]
-        )
+        scenario_cast_entries: List[Dict[str, object]] = []
+        scenario_entries = tuple(getattr(self, "scenario_scroll_spell_entries", ()) or ())
+        if not scenario_entries:
+            scenario_entries = tuple(
+                entry
+                for entry in available_entries
+                if bool(entry.get("supported", False))
+            )
+        for definition in scenario_entries:
+            item_name = str(definition.get("item_name", "") or "")
+            canonical_name = self._canonical_scroll_item_name(item_name)
+            if not canonical_name:
+                continue
+            scroll_entry = dict(definition)
+            scroll_entry["copies"] = int(scroll_item_counts.get(canonical_name, 0) or 0)
+            scenario_cast_entries.append(scroll_entry)
+        self._scroll_cast_slot_entries_cache = tuple(scenario_cast_entries)
         self._total_scroll_count_cache = int(sum(scroll_item_counts.values()))
         self._inventory_cache_signature = current_signature
+        self._inventory_cache_version = current_version
         self._inventory_cache_valid = True
-    def is_scroll_item(self, item_name: str) -> bool:
-        return bool(self.scroll_item_definition(item_name))
+        self.inventory_dirty = False
     def scroll_item_definition(self, item_name: str) -> Dict[str, object]:
         canonical_name = self._canonical_scroll_item_name(item_name)
         if not canonical_name:
@@ -1042,14 +1411,6 @@ class CampaignInventoryMixin:
             return 0
         self._ensure_inventory_cache()
         return int(self._scroll_item_counts_cache.get(canonical_name, 0) or 0)
-    def count_scroll_spell(self, spell_id: str) -> int:
-        normalized_spell_id = str(spell_id or "")
-        if not normalized_spell_id:
-            return 0
-        for definition in SCROLL_ITEM_DEFINITIONS:
-            if str(definition.get("spell_id", "") or "") == normalized_spell_id:
-                return self.count_scroll_item(str(definition.get("item_name", "") or ""))
-        return 0
     def available_scroll_spell_entries(self) -> Tuple[Dict[str, object], ...]:
         self._ensure_inventory_cache()
         return self._available_scroll_spell_entries_cache
@@ -1110,9 +1471,18 @@ class CampaignInventoryMixin:
             return False
         return normalized_name in set(cls.BOOT_ITEM_NAMES)
     def _sync_equipped_banner_items(self, units: Optional[List[Dict]] = None) -> None:
+        sync_signature = self._equipped_banner_items_state_signature(units=units)
+        if (
+            getattr(self, "_equipped_banner_items_sync_signature", None)
+            == sync_signature
+        ):
+            return
         normalized_slots: List[Optional[str]] = [None] * int(self.BANNER_EQUIP_SLOTS)
         if not self._hero_has_banner_bearer(units=units):
             self.equipped_banner_items = normalized_slots
+            self._equipped_banner_items_sync_signature = (
+                self._equipped_banner_items_state_signature(units=units)
+            )
             return
 
         available_banner_names = {
@@ -1131,14 +1501,28 @@ class CampaignInventoryMixin:
         if selected_banner:
             normalized_slots[0] = str(selected_banner)
         self.equipped_banner_items = normalized_slots
+        self._equipped_banner_items_sync_signature = (
+            self._equipped_banner_items_state_signature(units=units)
+        )
     def _sync_equipped_boot_items(self, units: Optional[List[Dict]] = None) -> None:
+        sync_signature = self._equipped_boot_items_state_signature(units=units)
+        if getattr(self, "_equipped_boot_items_sync_signature", None) == sync_signature:
+            return
         normalized_slots: List[Optional[str]] = [None] * int(self.BOOTS_EQUIP_SLOTS)
         hero = self._resolve_travel_hero(units=units)
         if hero is None or not self._is_travel_unit_alive(hero):
             self.equipped_boot_items = normalized_slots
+            self.boots_dirty = False
+            self._equipped_boot_items_sync_signature = (
+                self._equipped_boot_items_state_signature(units=units)
+            )
             return
         if not self._hero_has_marching_lore(units=units):
             self.equipped_boot_items = normalized_slots
+            self.boots_dirty = False
+            self._equipped_boot_items_sync_signature = (
+                self._equipped_boot_items_state_signature(units=units)
+            )
             return
 
         ranked_boots: List[Tuple[int, int, int, str]] = []
@@ -1163,10 +1547,20 @@ class CampaignInventoryMixin:
             normalized_slots[slot_index] = item_name
 
         self.equipped_boot_items = normalized_slots
+        self.boots_dirty = False
+        self._equipped_boot_items_sync_signature = (
+            self._equipped_boot_items_state_signature(units=units)
+        )
     def _sync_equipped_book_items(self) -> None:
+        sync_signature = self._equipped_book_items_state_signature()
+        if getattr(self, "_equipped_book_items_sync_signature", None) == sync_signature:
+            return
         normalized_slots: List[Optional[str]] = [None] * int(self.BOOK_EQUIP_SLOTS)
         if not self._hero_has_book_lore():
             self.equipped_book_items = normalized_slots
+            self._equipped_book_items_sync_signature = (
+                self._equipped_book_items_state_signature()
+            )
             return
 
         current_slots = list(getattr(self, "equipped_book_items", []) or [])
@@ -1188,11 +1582,23 @@ class CampaignInventoryMixin:
             reserved[item_name] = already_reserved + 1
 
         self.equipped_book_items = normalized_slots
+        self._equipped_book_items_sync_signature = (
+            self._equipped_book_items_state_signature()
+        )
     def _sync_equipped_artifact_items(self, units: Optional[List[Dict]] = None) -> None:
+        sync_signature = self._equipped_artifact_items_state_signature(units=units)
+        if (
+            getattr(self, "_equipped_artifact_items_sync_signature", None)
+            == sync_signature
+        ):
+            return
         normalized_slots: List[Optional[str]] = [None] * int(self.ARTIFACT_EQUIP_SLOTS)
         if not self._hero_has_artifact_knowledge(units=units):
             self.equipped_artifact_items = normalized_slots
             self.artifact_auto_equip_next_slot = 0
+            self._equipped_artifact_items_sync_signature = (
+                self._equipped_artifact_items_state_signature(units=units)
+            )
             return
 
         ranked_artifacts: List[Tuple[int, int, str]] = []
@@ -1216,6 +1622,9 @@ class CampaignInventoryMixin:
 
         self.equipped_artifact_items = normalized_slots
         self.artifact_auto_equip_next_slot = 0
+        self._equipped_artifact_items_sync_signature = (
+            self._equipped_artifact_items_state_signature(units=units)
+        )
     def _auto_equip_artifact_item(self, item_name: str) -> Dict[str, object]:
         normalized_name = str(item_name or "")
         if not self._is_artifact_item_name(normalized_name):
@@ -1304,6 +1713,50 @@ class CampaignInventoryMixin:
         normalized_name = str(item_name or "")
         self.heroitems.append(self._make_hero_item_entry(normalized_name))
         self._invalidate_inventory_cache()
+    def _counter_backed_potion_reward_item_name(self, item_name: object) -> Optional[str]:
+        definition = self._potion_item_definition(item_name)
+        grant_kind = str((definition or {}).get("merchant_grant", "") or "")
+        if grant_kind == "small_heal_bonus":
+            return self.BONUS_SMALL_HEAL_ITEM_NAME
+        if grant_kind == "large_heal_bonus":
+            return self.BONUS_LARGE_HEAL_ITEM_NAME
+        if grant_kind == "revive_bonus":
+            return self.BONUS_REVIVE_ITEM_NAME
+        return None
+    def _grant_counter_backed_potion_reward(self, item_name: object) -> List[str]:
+        granted_item = self._counter_backed_potion_reward_item_name(item_name)
+        if not granted_item:
+            return []
+        if granted_item == self.BONUS_SMALL_HEAL_ITEM_NAME:
+            self.extra_healing_bottles = max(0, int(self.extra_healing_bottles or 0)) + 1
+        elif granted_item == self.BONUS_LARGE_HEAL_ITEM_NAME:
+            self.extra_heal_bottles = max(0, int(self.extra_heal_bottles or 0)) + 1
+        elif granted_item == self.BONUS_REVIVE_ITEM_NAME:
+            self.extra_revive_bottles = max(0, int(self.extra_revive_bottles or 0)) + 1
+        self._append_hero_item(granted_item)
+        self._sync_counter_backed_battle_items()
+        return [granted_item]
+    def _empty_hero_item_reward_info(self) -> Dict[str, object]:
+        return {
+            "artifact_auto_equipped": False,
+            "artifact_auto_equip_slot": None,
+            "artifact_auto_equip_previous": None,
+            "book_auto_equipped": False,
+            "book_auto_equip_slot": None,
+            "book_auto_equip_previous": None,
+            "boot_auto_equipped": False,
+            "boot_auto_equip_slot": None,
+            "boot_auto_equip_previous": None,
+            "active_boot_move_bonus": int(self._active_boot_move_bonus()),
+        }
+    def _grant_hero_item_reward(self, item_name: str) -> Dict[str, object]:
+        granted_items = self._grant_counter_backed_potion_reward(item_name)
+        if granted_items:
+            return {
+                **self._empty_hero_item_reward_info(),
+                "granted_items": list(granted_items),
+            }
+        return self._add_hero_item(item_name)
     def _add_hero_item(self, item_name: str) -> Dict[str, object]:
         normalized_name = str(item_name or "")
         previous_boot_slots = list(getattr(self, "equipped_boot_items", []) or [])
@@ -1519,6 +1972,7 @@ class CampaignInventoryMixin:
         except (TypeError, ValueError):
             return None
     @classmethod
+    @lru_cache(maxsize=None)
     def _hero_item_aliases(cls, item_name: str) -> Tuple[str, ...]:
         normalized_name = str(item_name or "")
         aliases = {normalized_name}
@@ -1540,20 +1994,22 @@ class CampaignInventoryMixin:
         elif normalized_name == cls.RING_OF_AGES_ENGLISH_ITEM_NAME:
             aliases.add(cls.RING_OF_AGES_ITEM_NAME)
         return tuple(aliases)
+    @classmethod
+    @lru_cache(maxsize=None)
+    def _hero_item_alias_set(cls, item_name: str) -> frozenset[str]:
+        return frozenset(cls._hero_item_aliases(item_name))
     def _count_hero_item(self, item_name: str) -> int:
         if not item_name:
             return 0
         self._ensure_inventory_cache()
-        normalized_names = set(self._hero_item_aliases(item_name))
+        normalized_names = self._hero_item_alias_set(item_name)
         return int(
             sum(int(self._hero_item_counts_cache.get(name, 0) or 0) for name in normalized_names)
         )
-    def _hero_item_available(self, item_name: str) -> bool:
-        return self._count_hero_item(item_name) > 0
     def _consume_hero_item(self, item_name: str) -> bool:
         if not item_name:
             return False
-        normalized_names = set(self._hero_item_aliases(item_name))
+        normalized_names = self._hero_item_alias_set(item_name)
         for idx, entry in enumerate(self.heroitems):
             if self._hero_item_name(entry) in normalized_names:
                 del self.heroitems[idx]
@@ -1583,6 +2039,8 @@ class CampaignInventoryMixin:
             return True
         if self._is_staff_spell_item_name(normalized_name):
             return True
+        if self._canonical_scroll_item_name(normalized_name):
+            return True
         if self._is_potion_item_name(normalized_name):
             return True
         if normalized_name in set(getattr(self, "scenario_battle_magic_item_names", ())):
@@ -1609,7 +2067,6 @@ class CampaignInventoryMixin:
         self,
         position: Optional[Tuple[int, int]] = None,
     ) -> Dict[str, object]:
-        site_names = self._merchant_sites_at_position(position)
         sale_info: Dict[str, object] = {
             "merchant_auto_sale": False,
             "merchant_sold_items": [],
@@ -1617,7 +2074,25 @@ class CampaignInventoryMixin:
             "merchant_sale_gold": 0.0,
             "merchant_sale_reward": 0.0,
         }
-        if not site_names or not self.heroitems:
+        if not self.heroitems:
+            return sale_info
+
+        normalized_position = (
+            (int(position[0]), int(position[1]))
+            if isinstance(position, (list, tuple)) and len(position) >= 2
+            else tuple(self.grid_env.agent_pos)
+        )
+        site_names = self._merchant_sites_at_position(normalized_position)
+        if not site_names:
+            return sale_info
+
+        current_version = int(getattr(self, "_inventory_version", 0) or 0)
+        if (
+            getattr(self, "_merchant_autosale_checked_inventory_version", None)
+            == current_version
+            and getattr(self, "_merchant_autosale_checked_position", None)
+            == normalized_position
+        ):
             return sale_info
 
         sold_items: List[Dict[str, object]] = []
@@ -1638,6 +2113,8 @@ class CampaignInventoryMixin:
             total_gold += int(gold_value)
 
         if not sold_items:
+            self._merchant_autosale_checked_inventory_version = current_version
+            self._merchant_autosale_checked_position = normalized_position
             return sale_info
 
         self.heroitems = kept_items
@@ -1665,6 +2142,10 @@ class CampaignInventoryMixin:
             f"Торговец {', '.join(site_names)}: продано {len(sold_items)} предметов "
             f"на {total_gold} gold ({sold_names})"
         )
+        self._merchant_autosale_checked_inventory_version = int(
+            getattr(self, "_inventory_version", 0) or 0
+        )
+        self._merchant_autosale_checked_position = normalized_position
         return sale_info
     def _combat_potion_reward_value(self) -> float:
         return float(self.reward_defeat_enemy)
@@ -1676,18 +2157,6 @@ class CampaignInventoryMixin:
                 if definition and str(definition.get("duration", "") or "") == "temporary":
                     count += 1
         return int(count)
-    def _active_invulnerability_bonus_for_position(self, position: int) -> int:
-        return (
-            int(self.INVULNERABILITY_POTION_ARMOR_BONUS)
-            if int(position) in self.active_invulnerability_potion_positions
-            else 0
-        )
-    def _active_strength_multiplier_for_position(self, position: int) -> float:
-        return (
-            float(self.STRENGTH_POTION_DAMAGE_MULTIPLIER)
-            if int(position) in self.active_strength_potion_positions
-            else 1.0
-        )
     def _clear_expired_combat_potion_effects(self) -> None:
         for item_name, positions in sorted(
             getattr(self, "active_potion_effect_positions", {}).items()
@@ -1919,134 +2388,6 @@ class CampaignInventoryMixin:
             "moves": self.moves,
         }
         info.update(self._merchant_context_info(self.grid_env.agent_pos))
-        return self._finalize_grid_step_result(
-            grid_obs=grid_obs,
-            reward=reward,
-            terminated=terminated,
-            truncated=truncated,
-            info=info,
-        )
-    def _step_heal_with_bottle(self, action: int):
-        """Применяет подходящую банку лечения к указанной позиции BLUE в режиме grid."""
-        idx = action - self.GRID_BOTTLE_ACTION_START
-        target_pos = self.GRID_BOTTLE_POSITIONS[idx] if 0 <= idx < len(self.GRID_BOTTLE_POSITIONS) else None
-
-        # Лечение не продвигает ход карты и не даёт штрафа/таймера.
-        grid_obs = self._get_grid_obs()
-        reward = 0.0
-        terminated = False
-        truncated = False
-
-        healed_amount, unit_name = (0.0, None)
-        selected_heal_amount = 0.0
-        selected_bottle_kind = None
-        if target_pos is not None:
-            selected_heal_amount, selected_bottle_kind = self._select_heal_bottle_for_position(
-                target_pos
-            )
-        if target_pos is not None and selected_bottle_kind is not None:
-            if selected_bottle_kind == "ointment":
-                if self._consume_battle_equipable_item(self.HEALING_OINTMENT_ITEM_NAME):
-                    healed_amount, unit_name = self._heal_unit_at_position(
-                        position=target_pos,
-                        heal_amount=selected_heal_amount,
-                        source_label=self.HEALING_OINTMENT_ITEM_NAME,
-                    )
-                    if healed_amount <= 0.0:
-                        self._append_hero_item(self.HEALING_OINTMENT_ITEM_NAME)
-                else:
-                    selected_bottle_kind = None
-                    selected_heal_amount = 0.0
-            else:
-                healed_amount, unit_name = self._heal_unit_at_position(
-                    position=target_pos,
-                    heal_amount=selected_heal_amount,
-                    source_label=(
-                        "Банка исцеления"
-                        if selected_bottle_kind == "small"
-                        else "Бутыль лечения"
-                    ),
-                )
-                if healed_amount > 0.0:
-                    self._consume_battle_equipable_item(
-                        self.BONUS_LARGE_HEAL_ITEM_NAME
-                        if selected_bottle_kind == "large"
-                        else self.BONUS_SMALL_HEAL_ITEM_NAME
-                    )
-
-        info = {
-            "mode": "grid",
-            "agent_pos": self.grid_env.agent_pos,
-            "enemies_alive": dict(self.grid_env.enemies_alive),
-            "battle_triggered": False,
-            "heal_action": True,
-            "heal_target_pos": target_pos,
-            "healed_amount": healed_amount,
-            "healed_unit_name": unit_name,
-            "selected_heal_bottle_kind": selected_bottle_kind,
-            "selected_heal_bottle_amount": selected_heal_amount,
-            "heal_bottles_used": self.heal_bottles_used,
-            "extra_heal_bottles": self.extra_heal_bottles,
-            "heal_bottles_left": self._heal_bottles_left(),
-            "max_heal_bottles": self._max_heal_bottles_available(),
-            "healing_bottles_used": self.healing_bottles_used,
-            "extra_healing_bottles": self.extra_healing_bottles,
-            "healing_bottles_left": max(
-                0, self._max_healing_bottles_available() - self.healing_bottles_used
-            ),
-            "max_healing_bottles": self._max_healing_bottles_available(),
-            "healing_ointment_left": self._count_hero_item(self.HEALING_OINTMENT_ITEM_NAME),
-            "turns": self.turns,
-            "gold": self.gold,
-            "moves": self.moves,
-        }
-
-        return self._finalize_grid_step_result(
-            grid_obs=grid_obs,
-            reward=reward,
-            terminated=terminated,
-            truncated=truncated,
-            info=info,
-        )
-    def _step_revive_with_bottle(self, action: int):
-        """Применяет бутыль воскрешения к указанной позиции BLUE в режиме grid."""
-        idx = action - self.GRID_REVIVE_ACTION_START
-        target_pos = (
-            self.REVIVE_BOTTLE_POSITIONS[idx]
-            if 0 <= idx < len(self.REVIVE_BOTTLE_POSITIONS)
-            else None
-        )
-
-        # Воскрешение не продвигает ход карты и не даёт штрафа/таймера.
-        grid_obs = self._get_grid_obs()
-        reward = 0.0
-        terminated = False
-        truncated = False
-
-        revived, unit_name = (False, None)
-        if target_pos is not None and self._consume_battle_equipable_item(
-            self.BONUS_REVIVE_ITEM_NAME
-        ):
-            revived, unit_name = self._revive_unit_at_position(position=target_pos)
-
-        info = {
-            "mode": "grid",
-            "agent_pos": self.grid_env.agent_pos,
-            "enemies_alive": dict(self.grid_env.enemies_alive),
-            "battle_triggered": False,
-            "revive_action": True,
-            "revive_target_pos": target_pos,
-            "revived": revived,
-            "revived_unit_name": unit_name,
-            "revive_bottles_used": self.revive_bottles_used,
-            "extra_revive_bottles": self.extra_revive_bottles,
-            "revive_bottles_left": self._revive_bottles_left(),
-            "max_revive_bottles": self._max_revive_bottles_available(),
-            "turns": self.turns,
-            "gold": self.gold,
-            "moves": self.moves,
-        }
-
         return self._finalize_grid_step_result(
             grid_obs=grid_obs,
             reward=reward,
@@ -2363,218 +2704,6 @@ class CampaignInventoryMixin:
             truncated=truncated,
             info=info,
         )
-    def _apply_invulnerability_potion_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
-        state = self._get_blue_state()
-        for unit in state:
-            if int(unit.get("position", -1)) != int(position):
-                continue
-            hp = float(unit.get("hp", 0) or unit.get("health", 0))
-            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
-            if max_hp <= 0 or hp <= 0:
-                return False, None
-            if int(position) in self.active_invulnerability_potion_positions:
-                return False, None
-            self.active_invulnerability_potion_positions.add(int(position))
-            name = str(unit.get("name", f"pos_{position}") or f"pos_{position}")
-            self._log(
-                f"Зелье неуязвимости: {name} (pos {position}) получает "
-                f"+{self.INVULNERABILITY_POTION_ARMOR_BONUS} брони до конца текущего хода"
-            )
-            return True, name
-        return False, None
-    def _apply_strength_potion_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
-        state = self._get_blue_state()
-        for unit in state:
-            if int(unit.get("position", -1)) != int(position):
-                continue
-            hp = float(unit.get("hp", 0) or unit.get("health", 0))
-            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
-            if max_hp <= 0 or hp <= 0:
-                return False, None
-            if int(position) in self.active_strength_potion_positions:
-                return False, None
-            self.active_strength_potion_positions.add(int(position))
-            name = str(unit.get("name", f"pos_{position}") or f"pos_{position}")
-            self._log(
-                f"Зелье силы: {name} (pos {position}) получает +30% урона "
-                "до конца текущего хода"
-            )
-            return True, name
-        return False, None
-    def _can_apply_single_turn_effect_position(
-        self,
-        position: int,
-        item_name: str,
-        active_positions: set[int],
-    ) -> bool:
-        if not self._hero_item_available(item_name):
-            return False
-        state = self._get_blue_state()
-        for unit in state:
-            if int(unit.get("position", -1)) != int(position):
-                continue
-            hp = float(unit.get("hp", 0) or unit.get("health", 0))
-            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
-            return max_hp > 0 and hp > 0 and int(position) not in active_positions
-        return False
-    def _can_apply_energy_elixir_position(self, position: int) -> bool:
-        return self._can_apply_single_turn_effect_position(
-            position,
-            self.ENERGY_ELIXIR_ITEM_NAME,
-            self.active_energy_elixir_positions,
-        )
-    def _can_apply_haste_elixir_position(self, position: int) -> bool:
-        return self._can_apply_single_turn_effect_position(
-            position,
-            self.HASTE_ELIXIR_ITEM_NAME,
-            self.active_haste_elixir_positions,
-        )
-    def _can_apply_fire_ward_position(self, position: int) -> bool:
-        return self._can_apply_single_turn_effect_position(
-            position,
-            self.FIRE_WARD_ITEM_NAME,
-            self.active_fire_ward_positions,
-        )
-    def _can_apply_earth_ward_position(self, position: int) -> bool:
-        return self._can_apply_single_turn_effect_position(
-            position,
-            self.EARTH_WARD_ITEM_NAME,
-            self.active_earth_ward_positions,
-        )
-    def _can_apply_water_ward_position(self, position: int) -> bool:
-        return self._can_apply_single_turn_effect_position(
-            position,
-            self.WATER_WARD_ITEM_NAME,
-            self.active_water_ward_positions,
-        )
-    def _can_apply_air_ward_position(self, position: int) -> bool:
-        return self._can_apply_single_turn_effect_position(
-            position,
-            self.AIR_WARD_ITEM_NAME,
-            self.active_air_ward_positions,
-        )
-    def _can_apply_permanent_elixir_position(self, position: int, item_name: str) -> bool:
-        if not self._hero_item_available(item_name):
-            return False
-        state = self._get_blue_state()
-        for unit in state:
-            if int(unit.get("position", -1)) != int(position):
-                continue
-            hp = float(unit.get("hp", 0) or unit.get("health", 0))
-            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
-            return max_hp > 0 and hp > 0
-        return False
-    def _can_apply_titan_elixir_position(self, position: int) -> bool:
-        return self._can_apply_permanent_elixir_position(
-            position,
-            self.TITAN_ELIXIR_ITEM_NAME,
-        )
-    def _can_apply_supreme_elixir_position(self, position: int) -> bool:
-        return self._can_apply_permanent_elixir_position(
-            position,
-            self.SUPREME_ELIXIR_ITEM_NAME,
-        )
-    def _apply_position_flag_effect(
-        self,
-        position: int,
-        active_positions: set[int],
-        log_message: str,
-    ) -> Tuple[bool, Optional[str]]:
-        state = self._get_blue_state()
-        for unit in state:
-            if int(unit.get("position", -1)) != int(position):
-                continue
-            hp = float(unit.get("hp", 0) or unit.get("health", 0))
-            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
-            if max_hp <= 0 or hp <= 0 or int(position) in active_positions:
-                return False, None
-            active_positions.add(int(position))
-            name = str(unit.get("name", f"pos_{position}") or f"pos_{position}")
-            self._log(log_message.format(name=name, position=int(position)))
-            return True, name
-        return False, None
-    def _apply_energy_elixir_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
-        return self._apply_position_flag_effect(
-            position,
-            self.active_energy_elixir_positions,
-            "Эликсир энергии: {name} (pos {position}) получает +50% урона до конца текущего хода",
-        )
-    def _apply_haste_elixir_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
-        return self._apply_position_flag_effect(
-            position,
-            self.active_haste_elixir_positions,
-            "Эликсир быстроты: {name} (pos {position}) получает +60% инициативы до конца текущего хода",
-        )
-    def _apply_fire_ward_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
-        return self._apply_position_flag_effect(
-            position,
-            self.active_fire_ward_positions,
-            "Защита от магии Огня: {name} (pos {position}) получает resistance Fire до конца текущего хода",
-        )
-    def _apply_earth_ward_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
-        return self._apply_position_flag_effect(
-            position,
-            self.active_earth_ward_positions,
-            "Защита от магии Земли: {name} (pos {position}) получает resistance Earth до конца текущего хода",
-        )
-    def _apply_water_ward_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
-        return self._apply_position_flag_effect(
-            position,
-            self.active_water_ward_positions,
-            "Защита от магии Воды: {name} (pos {position}) получает resistance Water до конца текущего хода",
-        )
-    def _apply_air_ward_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
-        return self._apply_position_flag_effect(
-            position,
-            self.active_air_ward_positions,
-            "Защита от магии Воздуха: {name} (pos {position}) получает resistance Air до конца текущего хода",
-        )
-    def _apply_titan_elixir_bonus_to_unit(
-        self,
-        unit: Dict,
-        *,
-        increment_uses: bool = True,
-    ) -> None:
-        base_damage = self._normalize_damage_value(unit.get("damage", 0))
-        base_damage_secondary = self._normalize_damage_value(unit.get("damage_secondary", 0))
-        unit["damage"] = self._normalize_damage_value(
-            float(base_damage) * float(self.TITAN_ELIXIR_DAMAGE_MULTIPLIER)
-        )
-        unit["damage_secondary"] = self._normalize_damage_value(
-            float(base_damage_secondary) * float(self.TITAN_ELIXIR_DAMAGE_MULTIPLIER)
-        )
-        unit["original_damage"] = int(unit["damage"])
-        if increment_uses:
-            unit["campaign_titan_elixir_uses"] = (
-                max(0, int(unit.get("campaign_titan_elixir_uses", 0) or 0)) + 1
-            )
-    def _apply_supreme_elixir_bonus_to_unit(
-        self,
-        unit: Dict,
-        *,
-        increment_uses: bool = True,
-    ) -> None:
-        hp = float(unit.get("hp", 0) or unit.get("health", 0) or 0)
-        max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
-        new_max_hp = self._normalize_health_value(
-            float(max_hp) * float(self.SUPREME_ELIXIR_HEALTH_MULTIPLIER)
-        )
-        if new_max_hp <= int(round(max_hp)):
-            new_max_hp = int(round(max_hp)) + 1
-        new_hp = min(
-            new_max_hp,
-            self._normalize_health_value(
-                float(hp) * float(self.SUPREME_ELIXIR_HEALTH_MULTIPLIER)
-            ),
-        )
-        unit["maxhp"] = int(new_max_hp)
-        unit["max_health"] = int(new_max_hp)
-        unit["hp"] = int(new_hp)
-        unit["health"] = int(new_hp)
-        if increment_uses:
-            unit["campaign_supreme_elixir_uses"] = (
-                max(0, int(unit.get("campaign_supreme_elixir_uses", 0) or 0)) + 1
-            )
     def _reapply_persistent_elixir_bonuses_to_promoted_unit(
         self,
         source_unit: Dict,
@@ -2596,364 +2725,6 @@ class CampaignInventoryMixin:
                     dict(definition),
                     increment_uses=True,
                 )
-    def _apply_titan_elixir_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
-        state = self._get_blue_state()
-        for unit in state:
-            if int(unit.get("position", -1)) != int(position):
-                continue
-            hp = float(unit.get("hp", 0) or unit.get("health", 0) or 0)
-            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
-            if max_hp <= 0 or hp <= 0:
-                return False, None
-
-            self._apply_titan_elixir_bonus_to_unit(unit, increment_uses=True)
-            name = str(unit.get("name", f"pos_{position}") or f"pos_{position}")
-            self._log(
-                f"Эликсир Силы титана: {name} (pos {position}) получает "
-                f"+10% к урону навсегда на эпизод"
-            )
-            return True, name
-        return False, None
-    def _apply_supreme_elixir_to_position(self, position: int) -> Tuple[bool, Optional[str]]:
-        state = self._get_blue_state()
-        for unit in state:
-            if int(unit.get("position", -1)) != int(position):
-                continue
-            hp = float(unit.get("hp", 0) or unit.get("health", 0) or 0)
-            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
-            if max_hp <= 0 or hp <= 0:
-                return False, None
-
-            self._apply_supreme_elixir_bonus_to_unit(unit, increment_uses=True)
-            name = str(unit.get("name", f"pos_{position}") or f"pos_{position}")
-            self._log(
-                f"Эликсир Всевышнего: {name} (pos {position}) получает "
-                f"+15% к max HP навсегда на эпизод"
-            )
-            return True, name
-        return False, None
-    def _step_apply_single_turn_position_item(
-        self,
-        *,
-        action: int,
-        action_start: int,
-        positions: List[int],
-        item_name: str,
-        can_apply_fn,
-        apply_fn,
-        info_key: str,
-    ):
-        idx = action - action_start
-        target_pos = positions[idx] if 0 <= idx < len(positions) else None
-        grid_obs = self._get_grid_obs()
-        reward = 0.0
-        terminated = False
-        truncated = False
-
-        applied = False
-        consumed = False
-        unit_name = None
-        if (
-            target_pos is not None
-            and can_apply_fn(target_pos)
-            and self._consume_hero_item(item_name)
-        ):
-            consumed = True
-            applied, unit_name = apply_fn(target_pos)
-            if not applied:
-                self._append_hero_item(item_name)
-                consumed = False
-            else:
-                reward = self._combat_potion_reward_value()
-                self.combat_potion_battle_bonus_pending = True
-
-        info = {
-            "mode": "grid",
-            "agent_pos": self.grid_env.agent_pos,
-            "enemies_alive": dict(self.grid_env.enemies_alive),
-            "battle_triggered": False,
-            info_key: True,
-            "combat_potion_action": True,
-            "combat_potion_item": item_name,
-            "combat_potion_target_pos": target_pos,
-            "combat_potion_applied": applied,
-            "combat_potion_consumed": consumed,
-            "combat_potion_unit_name": unit_name,
-            "combat_potion_reward": float(reward),
-            "turns": self.turns,
-            "gold": self.gold,
-            "moves": self.moves,
-            "heroitems": list(self.heroitems),
-        }
-        info.update(self._merchant_context_info(self.grid_env.agent_pos))
-
-        return self._finalize_grid_step_result(
-            grid_obs=grid_obs,
-            reward=reward,
-            terminated=terminated,
-            truncated=truncated,
-            info=info,
-        )
-    def _step_apply_invulnerability_potion(self, action: int):
-        idx = action - self.GRID_INVULNERABILITY_ACTION_START
-        target_pos = (
-            self.INVULNERABILITY_POTION_POSITIONS[idx]
-            if 0 <= idx < len(self.INVULNERABILITY_POTION_POSITIONS)
-            else None
-        )
-        grid_obs = self._get_grid_obs()
-        reward = 0.0
-        terminated = False
-        truncated = False
-
-        applied = False
-        consumed = False
-        unit_name = None
-        if (
-            target_pos is not None
-            and self._can_apply_invulnerability_potion_position(target_pos)
-            and self._consume_hero_item(self.INVULNERABILITY_POTION_ITEM_NAME)
-        ):
-            consumed = True
-            applied, unit_name = self._apply_invulnerability_potion_to_position(target_pos)
-            if not applied:
-                self._append_hero_item(self.INVULNERABILITY_POTION_ITEM_NAME)
-                consumed = False
-            else:
-                reward = self._combat_potion_reward_value()
-                self.combat_potion_battle_bonus_pending = True
-
-        info = {
-            "mode": "grid",
-            "agent_pos": self.grid_env.agent_pos,
-            "enemies_alive": dict(self.grid_env.enemies_alive),
-            "battle_triggered": False,
-            "invulnerability_potion_action": True,
-            "combat_potion_action": True,
-            "combat_potion_item": self.INVULNERABILITY_POTION_ITEM_NAME,
-            "combat_potion_target_pos": target_pos,
-            "combat_potion_applied": applied,
-            "combat_potion_consumed": consumed,
-            "combat_potion_unit_name": unit_name,
-            "combat_potion_reward": float(reward),
-            "invulnerability_potions_left": self._count_hero_item(self.INVULNERABILITY_POTION_ITEM_NAME),
-            "strength_potions_left": self._count_hero_item(self.STRENGTH_POTION_ITEM_NAME),
-            "active_invulnerability_positions": sorted(self.active_invulnerability_potion_positions),
-            "active_strength_positions": sorted(self.active_strength_potion_positions),
-            "combat_potion_battle_bonus_pending": bool(self.combat_potion_battle_bonus_pending),
-            "turns": self.turns,
-            "gold": self.gold,
-            "moves": self.moves,
-            "heroitems": list(self.heroitems),
-        }
-        info.update(self._merchant_context_info(self.grid_env.agent_pos))
-
-        return self._finalize_grid_step_result(
-            grid_obs=grid_obs,
-            reward=reward,
-            terminated=terminated,
-            truncated=truncated,
-            info=info,
-        )
-    def _step_apply_strength_potion(self, action: int):
-        idx = action - self.GRID_STRENGTH_ACTION_START
-        target_pos = (
-            self.STRENGTH_POTION_POSITIONS[idx]
-            if 0 <= idx < len(self.STRENGTH_POTION_POSITIONS)
-            else None
-        )
-        grid_obs = self._get_grid_obs()
-        reward = 0.0
-        terminated = False
-        truncated = False
-
-        applied = False
-        consumed = False
-        unit_name = None
-        if (
-            target_pos is not None
-            and self._can_apply_strength_potion_position(target_pos)
-            and self._consume_hero_item(self.STRENGTH_POTION_ITEM_NAME)
-        ):
-            consumed = True
-            applied, unit_name = self._apply_strength_potion_to_position(target_pos)
-            if not applied:
-                self._append_hero_item(self.STRENGTH_POTION_ITEM_NAME)
-                consumed = False
-            else:
-                reward = self._combat_potion_reward_value()
-                self.combat_potion_battle_bonus_pending = True
-
-        info = {
-            "mode": "grid",
-            "agent_pos": self.grid_env.agent_pos,
-            "enemies_alive": dict(self.grid_env.enemies_alive),
-            "battle_triggered": False,
-            "strength_potion_action": True,
-            "combat_potion_action": True,
-            "combat_potion_item": self.STRENGTH_POTION_ITEM_NAME,
-            "combat_potion_target_pos": target_pos,
-            "combat_potion_applied": applied,
-            "combat_potion_consumed": consumed,
-            "combat_potion_unit_name": unit_name,
-            "combat_potion_reward": float(reward),
-            "invulnerability_potions_left": self._count_hero_item(self.INVULNERABILITY_POTION_ITEM_NAME),
-            "strength_potions_left": self._count_hero_item(self.STRENGTH_POTION_ITEM_NAME),
-            "active_invulnerability_positions": sorted(self.active_invulnerability_potion_positions),
-            "active_strength_positions": sorted(self.active_strength_potion_positions),
-            "combat_potion_battle_bonus_pending": bool(self.combat_potion_battle_bonus_pending),
-            "turns": self.turns,
-            "gold": self.gold,
-            "moves": self.moves,
-            "heroitems": list(self.heroitems),
-        }
-        info.update(self._merchant_context_info(self.grid_env.agent_pos))
-
-        return self._finalize_grid_step_result(
-            grid_obs=grid_obs,
-            reward=reward,
-            terminated=terminated,
-            truncated=truncated,
-            info=info,
-        )
-    def _step_apply_energy_elixir(self, action: int):
-        return self._step_apply_single_turn_position_item(
-            action=action,
-            action_start=self.GRID_ENERGY_ACTION_START,
-            positions=self.ENERGY_ELIXIR_POSITIONS,
-            item_name=self.ENERGY_ELIXIR_ITEM_NAME,
-            can_apply_fn=self._can_apply_energy_elixir_position,
-            apply_fn=self._apply_energy_elixir_to_position,
-            info_key="energy_elixir_action",
-        )
-    def _step_apply_haste_elixir(self, action: int):
-        return self._step_apply_single_turn_position_item(
-            action=action,
-            action_start=self.GRID_HASTE_ACTION_START,
-            positions=self.HASTE_ELIXIR_POSITIONS,
-            item_name=self.HASTE_ELIXIR_ITEM_NAME,
-            can_apply_fn=self._can_apply_haste_elixir_position,
-            apply_fn=self._apply_haste_elixir_to_position,
-            info_key="haste_elixir_action",
-        )
-    def _step_apply_fire_ward(self, action: int):
-        return self._step_apply_single_turn_position_item(
-            action=action,
-            action_start=self.GRID_FIRE_WARD_ACTION_START,
-            positions=self.FIRE_WARD_POSITIONS,
-            item_name=self.FIRE_WARD_ITEM_NAME,
-            can_apply_fn=self._can_apply_fire_ward_position,
-            apply_fn=self._apply_fire_ward_to_position,
-            info_key="fire_ward_action",
-        )
-    def _step_apply_earth_ward(self, action: int):
-        return self._step_apply_single_turn_position_item(
-            action=action,
-            action_start=self.GRID_EARTH_WARD_ACTION_START,
-            positions=self.EARTH_WARD_POSITIONS,
-            item_name=self.EARTH_WARD_ITEM_NAME,
-            can_apply_fn=self._can_apply_earth_ward_position,
-            apply_fn=self._apply_earth_ward_to_position,
-            info_key="earth_ward_action",
-        )
-    def _step_apply_water_ward(self, action: int):
-        return self._step_apply_single_turn_position_item(
-            action=action,
-            action_start=self.GRID_WATER_WARD_ACTION_START,
-            positions=self.WATER_WARD_POSITIONS,
-            item_name=self.WATER_WARD_ITEM_NAME,
-            can_apply_fn=self._can_apply_water_ward_position,
-            apply_fn=self._apply_water_ward_to_position,
-            info_key="water_ward_action",
-        )
-    def _step_apply_air_ward(self, action: int):
-        return self._step_apply_single_turn_position_item(
-            action=action,
-            action_start=self.GRID_AIR_WARD_ACTION_START,
-            positions=self.AIR_WARD_POSITIONS,
-            item_name=self.AIR_WARD_ITEM_NAME,
-            can_apply_fn=self._can_apply_air_ward_position,
-            apply_fn=self._apply_air_ward_to_position,
-            info_key="air_ward_action",
-        )
-    def _step_apply_permanent_position_item(
-        self,
-        *,
-        action: int,
-        action_start: int,
-        positions: List[int],
-        item_name: str,
-        can_apply_fn,
-        apply_fn,
-        info_key: str,
-    ):
-        idx = action - action_start
-        target_pos = positions[idx] if 0 <= idx < len(positions) else None
-        grid_obs = self._get_grid_obs()
-        reward = 0.0
-        terminated = False
-        truncated = False
-
-        applied = False
-        consumed = False
-        unit_name = None
-        if (
-            target_pos is not None
-            and can_apply_fn(target_pos)
-            and self._consume_hero_item(item_name)
-        ):
-            consumed = True
-            applied, unit_name = apply_fn(target_pos)
-            if not applied:
-                self._append_hero_item(item_name)
-                consumed = False
-
-        info = {
-            "mode": "grid",
-            "agent_pos": self.grid_env.agent_pos,
-            "enemies_alive": dict(self.grid_env.enemies_alive),
-            "battle_triggered": False,
-            info_key: True,
-            "persistent_elixir_action": True,
-            "persistent_elixir_item": item_name,
-            "persistent_elixir_target_pos": target_pos,
-            "persistent_elixir_applied": applied,
-            "persistent_elixir_consumed": consumed,
-            "persistent_elixir_unit_name": unit_name,
-            "turns": self.turns,
-            "gold": self.gold,
-            "moves": self.moves,
-            "heroitems": list(self.heroitems),
-        }
-        info.update(self._merchant_context_info(self.grid_env.agent_pos))
-
-        return self._finalize_grid_step_result(
-            grid_obs=grid_obs,
-            reward=reward,
-            terminated=terminated,
-            truncated=truncated,
-            info=info,
-        )
-    def _step_apply_titan_elixir(self, action: int):
-        return self._step_apply_permanent_position_item(
-            action=action,
-            action_start=self.GRID_TITAN_ELIXIR_ACTION_START,
-            positions=self.TITAN_ELIXIR_POSITIONS,
-            item_name=self.TITAN_ELIXIR_ITEM_NAME,
-            can_apply_fn=self._can_apply_titan_elixir_position,
-            apply_fn=self._apply_titan_elixir_to_position,
-            info_key="titan_elixir_action",
-        )
-    def _step_apply_supreme_elixir(self, action: int):
-        return self._step_apply_permanent_position_item(
-            action=action,
-            action_start=self.GRID_SUPREME_ELIXIR_ACTION_START,
-            positions=self.SUPREME_ELIXIR_POSITIONS,
-            item_name=self.SUPREME_ELIXIR_ITEM_NAME,
-            can_apply_fn=self._can_apply_supreme_elixir_position,
-            apply_fn=self._apply_supreme_elixir_to_position,
-            info_key="supreme_elixir_action",
-        )
     def _apply_active_blue_potion_effects(self, blue_team: List[Dict]) -> None:
         if not blue_team:
             return
@@ -3220,9 +2991,20 @@ class CampaignInventoryMixin:
     def _refresh_campaign_equipment_effects(self, *, log: bool = False) -> None:
         if self.blue_team_state is None:
             return
+        refresh_signature = self._equipment_state_signature(units=self.blue_team_state)
+        if (
+            not bool(getattr(self, "equipment_dirty", True))
+            and getattr(self, "_equipment_refresh_signature", None) == refresh_signature
+        ):
+            return
         self._clear_equipped_banner_effects(self.blue_team_state)
         self._apply_equipped_artifact_effects(self.blue_team_state, log=log)
         self._apply_equipped_banner_effects(self.blue_team_state, log=log)
+        self._equipment_refresh_signature = self._equipment_state_signature(
+            units=self.blue_team_state
+        )
+        self.equipment_dirty = False
+        self._equipment_dirty = False
     def _clear_equipped_book_effects(self, blue_team: Optional[List[Dict]]) -> None:
         if not blue_team:
             return
@@ -3450,8 +3232,6 @@ class CampaignInventoryMixin:
             unit.pop("campaign_artifact_initiative_multiplier", None)
             unit.pop("campaign_artifact_armor_bonus", None)
             unit.pop("campaign_active_artifacts", None)
-    def _refresh_campaign_artifact_effects(self, *, log: bool = False) -> None:
-        self._refresh_campaign_equipment_effects(log=log)
     def _apply_equipped_artifact_effects(
         self,
         blue_team: List[Dict],
@@ -3524,48 +3304,8 @@ class CampaignInventoryMixin:
                 f"(урон x{damage_multiplier:.3g}, инициатива x{initiative_multiplier:.3g}, "
                 f"броня +{int(armor_bonus)})."
             )
-    def _has_any_heal_bottle_left(self) -> bool:
-        """True, если доступна хотя бы одна банка лечения любого типа."""
-        return (
-            self.heal_bottles_used < self._max_heal_bottles_available()
-            or self.healing_bottles_used < self._max_healing_bottles_available()
-            or self._hero_item_available(self.HEALING_OINTMENT_ITEM_NAME)
-        )
-    def _select_heal_bottle_for_position(self, position: int) -> Tuple[float, Optional[str]]:
-        """
-        Выбирает, какой тип лечения применить к юниту:
-        - предпочитает наименьшее достаточное лечение среди +50 / +100 / +200;
-        - если недостаёт более 200 HP и есть Целебная мазь, использует её;
-        - если +50/+100 закончились, но есть Целебная мазь, использует её как фолбэк;
-        - если лечить нельзя: возвращает (0.0, None).
-        """
-        missing_hp = self._missing_hp_at_position(position)
-        if missing_hp <= 0.0:
-            return 0.0, None
-
-        has_large = self.heal_bottles_used < self._max_heal_bottles_available()
-        has_small = self.healing_bottles_used < self._max_healing_bottles_available()
-        has_ointment = self._hero_item_available(self.HEALING_OINTMENT_ITEM_NAME)
-
-        if has_small and missing_hp <= self.HEALING_BOTTLE_AMOUNT:
-            return self.HEALING_BOTTLE_AMOUNT, "small"
-        if has_large and missing_hp <= self.HEAL_BOTTLE_AMOUNT:
-            return self.HEAL_BOTTLE_AMOUNT, "large"
-        if has_ointment and missing_hp > self.HEALING_OINTMENT_AMOUNT:
-            return self.HEALING_OINTMENT_AMOUNT, "ointment"
-        if has_ointment and not (has_small or has_large):
-            return self.HEALING_OINTMENT_AMOUNT, "ointment"
-        if has_ointment and not has_large and missing_hp > self.HEALING_BOTTLE_AMOUNT:
-            return self.HEALING_OINTMENT_AMOUNT, "ointment"
-        if has_large:
-            return self.HEAL_BOTTLE_AMOUNT, "large"
-        if has_small:
-            return self.HEALING_BOTTLE_AMOUNT, "small"
-        if has_ointment:
-            return self.HEALING_OINTMENT_AMOUNT, "ointment"
-        return 0.0, None
     def _compute_enemy_defeat_reward(self, enemy_id: Optional[int]) -> float:
-        """Фиксированная награда за победу над каждым вражеским отрядом."""
+        """Enemy defeat reward including ruin bonus."""
         reward = float(self.reward_defeat_enemy)
         try:
             normalized_enemy_id = int(enemy_id)

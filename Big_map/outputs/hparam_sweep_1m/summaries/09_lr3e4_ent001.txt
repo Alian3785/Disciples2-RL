@@ -1,0 +1,89 @@
+# Sweep run 09: lr3e4_ent001
+
+Статус: завершено
+Решение: ОТБРОСИТЬ: побед на eval нет, сигнал прохождения кампании слабый
+ID запуска: offline-1780252244
+Длительность: 31 мин 11 с (1871.2 с)
+Завершено: 2026-05-31T22:22:21
+
+## Короткий вывод
+- На deterministic eval: 0/20 побед (0.0%), поражений 6, таймаутов 14, прочих исходов 0.
+- Eval-поведение: средний reward -68.482, среднее число побежденных врагов 4.9.
+- Внутренний winrate из train-лога: 0%. Эта цифра полезна как диагностический сигнал, но решение принимается по отдельному deterministic eval.
+- Последний rollout: ep_rew_mean=33.6999, ep_len_mean=629.9. Высокий rollout reward без побед на eval означает, что агент может получать промежуточные награды, но не завершать кампанию.
+- Вывод для sweep: конфиг пока не выглядит перспективным; следующие runs должны искать более стабильное доведение кампании до победы.
+
+## Почему выбран этот конфиг
+Почти убираем entropy pressure при текущем learning rate, чтобы проверить, мешает ли exploration доводить кампанию до победы.
+
+## Что изменено относительно baseline
+- ent_coef (entropy bonus): 0.01 -> 0.001
+
+## Полная конфигурация
+- checkpoint_freq: 1000000
+- clip_range (PPO clip range): 0.2
+- comet_log_freq: 10000
+- ent_coef (entropy bonus): 0.001
+- eval_freq: 1000000
+- gae_lambda (GAE lambda): 0.95
+- gamma (discount factor gamma): 0.995
+- learning_rate (learning rate): 0.0003
+- n_envs (число параллельных окружений): 12
+- no_comet: True
+- ppo_batch_size (размер minibatch PPO): 512
+- ppo_n_epochs (число PPO-эпох на rollout): 5
+- ppo_n_steps (длина rollout на окружение): 2048
+- seed (seed): 1
+- stochastic_eval_episodes: 0
+- target_kl (target KL): None
+- torch_num_threads: 1
+- total_steps: 1000000
+- vec_env: subproc
+
+## Команда обучения
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 12 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 2048 --ppo-batch-size 512 --ppo-n-epochs 5 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.001 --gamma 0.995 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-09-lr3e4_ent001
+Код возврата обучения: 0
+Лог обучения: C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\logs\09_lr3e4_ent001_train.log
+
+## Метрики обучения
+- final_training_winrate_percent (winrate во время обучения, %): 0
+
+## Последние TensorBoard scalars
+- rollout/ep_len_mean (средняя длина эпизода в rollout): 629.9
+- rollout/ep_rew_mean (средний reward в rollout): 33.6999
+- time/fps (скорость обучения, samples/sec): 553
+- train/approx_kl (примерный KL между старой и новой политикой): 0.00808365
+- train/clip_fraction (доля PPO-обновлений, попавших под clip): 0.0769938
+- train/entropy_loss (entropy loss): -1.79552
+- train/explained_variance (качество value-функции): 0.959727
+- train/loss (общий loss PPO): -0.000949336
+- train/policy_gradient_loss (policy gradient loss): -0.00487991
+- train/value_loss (value loss): 0.028268
+
+## Команда eval
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u bestmodeltest.py --run-id offline-1780252244 --model-type final --episodes 20 --deterministic
+Код возврата eval: 0
+Лог eval: C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\logs\09_lr3e4_ent001_eval.log
+
+## Метрики eval
+- defeats (поражения): 6
+- mean_enemies_defeated (среднее число побежденных врагов): 4.9
+- mean_reward (средний reward): -68.482
+- other (прочие исходы): 0
+- timeouts (таймауты): 14
+- wins (победы): 0
+
+## Хвост raw eval-лога
+```
+run_id: offline-1780252244
+model_type: final
+episodes: 20
+mean_reward: -68.482 +/- 69.967
+mean_enemies_defeated: 4.900 +/- 0.539
+wins: 0
+defeats: 6
+timeouts: 14
+other: 0
+episode_rewards: [37.409, 34.603, 21.302, -103.882, -108.209, -92.218, -142.654, -103.45, -141.54, -105.572, -157.543, 29.316, 42.36, -91.142, -111.835, -99.897, -90.386, -93.987, 42.972, -135.277]
+enemies_defeated_per_episode: [5, 4, 5, 5, 5, 5, 5, 5, 5, 5, 4, 4, 6, 5, 4, 5, 5, 5, 6, 5]
+```

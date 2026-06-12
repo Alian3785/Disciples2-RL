@@ -1,10 +1,15 @@
 from copy import deepcopy
+import sys
+from pathlib import Path
 
 import pytest
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from battle_env import ARMOR_NORM_MAX, ATTACK_TYPES, FEATURES_PER_UNIT, TYPE_LIST, BattleEnv, UNITS_BLUE
 from campaign_env import CampaignEnv
 from enemy_configs import ENEMY_CONFIGS
+from grid import CAPITAL_HEAL_TILE_ARMOR_BONUS
 
 
 ARMOR_FEATURE_OFFSET = 8 + len(TYPE_LIST) + 5 * len(ATTACK_TYPES)
@@ -46,7 +51,7 @@ def _capture_settlement(env: CampaignEnv, source_data: dict) -> str:
 
 
 def test_city_linked_stack_gets_level_1_armor_bonus():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     env._init_battle(enemy_id=32)
@@ -65,7 +70,7 @@ def test_city_linked_stack_gets_level_1_armor_bonus():
 
 
 def test_city_internal_garrison_gets_level_2_armor_bonus():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     env._init_battle(enemy_id=68)
@@ -84,7 +89,7 @@ def test_city_internal_garrison_gets_level_2_armor_bonus():
 
 
 def test_enemy_on_capital_heal_tile_gets_capital_armor_bonus():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     env.grid_env.enemy_positions[1] = tuple(env.CASTLE_POS)
 
@@ -97,14 +102,14 @@ def test_enemy_on_capital_heal_tile_gets_capital_armor_bonus():
             assert int(battle_unit.get("armor", -1)) == base_armor
             continue
 
-        assert int(battle_unit.get("base_armor", -1)) == base_armor + 50
-        assert int(battle_unit.get("armor", -1)) >= base_armor + 50
-        assert int(battle_unit.get("settlement_armor_bonus", -1)) == 50
+        assert int(battle_unit.get("base_armor", -1)) == base_armor + CAPITAL_HEAL_TILE_ARMOR_BONUS
+        assert int(battle_unit.get("armor", -1)) >= base_armor + CAPITAL_HEAL_TILE_ARMOR_BONUS
+        assert int(battle_unit.get("settlement_armor_bonus", -1)) == CAPITAL_HEAL_TILE_ARMOR_BONUS
         assert battle_unit.get("settlement_level") == "capital"
 
 
 def test_hero_stack_from_captured_settlement_tile_gets_matching_armor_bonus_and_restore_after_save():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     source_data = next(
@@ -134,7 +139,7 @@ def test_hero_stack_from_captured_settlement_tile_gets_matching_armor_bonus_and_
 
 
 def test_hero_stack_from_uncaptured_settlement_tile_gets_no_city_bonus():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     source_data = next(
@@ -157,7 +162,7 @@ def test_hero_stack_from_uncaptured_settlement_tile_gets_no_city_bonus():
 
 
 def test_rest_on_settlement_tile_adds_percentage_bonus_regeneration():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     source_data = next(
@@ -190,7 +195,7 @@ def test_rest_on_settlement_tile_adds_percentage_bonus_regeneration():
 
 
 def test_rest_on_capital_tile_adds_capital_percentage_bonus_regeneration():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     env.grid_env.agent_pos = tuple(env.CASTLE_POS)
 
@@ -216,7 +221,7 @@ def test_rest_on_capital_tile_adds_capital_percentage_bonus_regeneration():
 
 
 def test_rest_on_player_controlled_territory_tile_uses_15_percent_base_regeneration():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     env._advance_turns(1)
 
@@ -247,10 +252,9 @@ def test_rest_on_player_controlled_territory_tile_uses_15_percent_base_regenerat
 
 
 def test_rest_typeoflord_bonus_is_not_applied_for_non_warrior_lords():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     env.typeoflord = 2
-    env.Typeoflord = 2
     env._advance_turns(1)
 
     territory_tile = next(
@@ -280,7 +284,7 @@ def test_rest_typeoflord_bonus_is_not_applied_for_non_warrior_lords():
 
 
 def test_settlement_upgrade_action_requires_capture_and_enough_gold():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     source_data = next(
@@ -311,7 +315,7 @@ def test_settlement_upgrade_action_requires_capture_and_enough_gold():
 
 
 def test_settlement_upgrade_action_advances_levels_costs_and_updates_city_bonuses():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     source_data = next(
@@ -365,7 +369,7 @@ def test_settlement_upgrade_action_advances_levels_costs_and_updates_city_bonuse
 
 
 def test_enemy_regeneration_on_city_and_enemy_capital_tiles_uses_percentage_bonus():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     env.enemy_team_states[10] = [
@@ -399,6 +403,7 @@ def test_enemy_regeneration_on_city_and_enemy_capital_tiles_uses_percentage_bonu
         20: tuple(env.empire_territory_source_tile),
     }
     env.grid_env.enemies_alive = {10: True, 20: True}
+    env.scripted_capital_bot_enabled = False
 
     env._advance_turns(1)
 

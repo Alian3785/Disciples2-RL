@@ -90,8 +90,8 @@ def run_episode(
     return max_steps, {"campaign_result": "step_limit_reached"}
 
 
-def build_env(realcapital: int) -> Monitor:
-    base = CampaignEnv(log_enabled=False, realcapital=realcapital)
+def build_env(Realcapital: int) -> Monitor:
+    base = CampaignEnv(log_enabled=False, Realcapital=Realcapital)
     return Monitor(ActionMasker(base, mask_fn))
 
 
@@ -118,7 +118,7 @@ def main() -> None:
         help="Optional pause between steps in seconds.",
     )
     parser.add_argument(
-        "--realcapital",
+        "--Realcapital",
         type=int,
         default=2,
         help="Faction id: 1=empire, 2=legions, 3=mountain_clans, 4=undead_hordes, 5=elves.",
@@ -135,11 +135,11 @@ def main() -> None:
     if not model_path.exists():
         raise FileNotFoundError(f"Model file not found: {model_path}")
 
-    env = build_env(realcapital=int(args.realcapital))
+    env = build_env(Realcapital=int(args.Realcapital))
     model = MaskablePPO.load(str(model_path), env=env)
 
     print(f"Model: {model_path}")
-    print(f"Realcapital: {int(args.realcapital)}")
+    print(f"Realcapital: {int(args.Realcapital)}")
     print(f"Deterministic: {bool(args.deterministic)}")
     print(f"Episodes: {int(args.episodes)}")
     print(f"Step limit: {int(args.steps)}")

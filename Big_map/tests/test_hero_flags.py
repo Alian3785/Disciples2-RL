@@ -45,7 +45,7 @@ def test_campaign_hero_detection_uses_explicit_hero_flag_before_exp_threshold():
 
 
 def test_resolve_travel_hero_uses_first_hero_in_roster_without_position_tiebreak():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     first_hero = {"name": "First hero", "hero": True, "position": 11}
     second_hero = {"name": "Second hero", "hero": True, "position": 8}
 

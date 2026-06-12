@@ -1,0 +1,61 @@
+Проверка среды CampaignEnv...
+Среда прошла проверку!
+[INFO] Comet disabled, running without experiment tracking
+Создание 1 параллельных сред (dummy)...
+Инициализация MaskablePPO...
+Using cpu device
+
+============================================================
+Запуск обучения Campaign Agent
+Всего шагов: 1
+Параллельных сред: 1
+VecEnv: dummy
+Seed: 123
+Checkpoint каждые: 1,000,000,000 шагов
+Evaluation каждые: 1,000,000,000 шагов
+Eval deterministic эпизодов: 20
+Eval stochastic эпизодов: 0
+Eval лимит шагов на эпизод: 4000
+PPO n_steps: 2,048
+PPO batch_size: 512
+PPO n_epochs: 5
+PPO gradient batches per rollout: 20
+VecCheckNan: disabled
+Freeze action layout: enabled
+Torch threads per process: 1
+Diagnostics: disabled
+Run ID: offline-1779869696
+============================================================
+
+Logging to ./campaign_tb_logs/offline-1779869696\MaskablePPO_1
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 228      |
+|    ep_rew_mean     | 2.33     |
+| time/              |          |
+|    fps             | 188      |
+|    iterations      | 1        |
+|    time_elapsed    | 10       |
+|    total_timesteps | 2048     |
+---------------------------------
+VecNormalize stats saved: ./campaign_models/offline-1779869696/vecnormalize.pkl
+
+Финальная модель сохранена: ./campaign_models/offline-1779869696/final_model.zip
+
+============================================================
+ИТОГИ ОБУЧЕНИЯ:
+  Побед: 0
+  Поражений: 6
+  Таймаутов: 0
+  Побед бота столицы над врагами: 0
+  Перестановок юнитов: 938
+  Winrate: 0.0%
+============================================================
+  График призывов за эпизод: C:\realnewdisciples\Big_map\outputs\campaign_summoned_units_per_episode.png
+  График призывов за всё обучение: C:\realnewdisciples\Big_map\outputs\campaign_summoned_units_cumulative.png
+  График найма за эпизод: C:\realnewdisciples\Big_map\outputs\campaign_hired_units_per_episode.png
+  График найма за всё обучение: C:\realnewdisciples\Big_map\outputs\campaign_hired_units_cumulative.png
+  График перестановок юнитов за эпизод: C:\realnewdisciples\Big_map\outputs\campaign_unit_swaps_per_episode.png
+  График боевых предметов: C:\realnewdisciples\Big_map\outputs\campaign_battle_item_activity.png
+  График побед бота столицы за эпизод: C:\realnewdisciples\Big_map\outputs\campaign_scripted_bot_victories_per_episode.png
+  График применения заклинаний: C:\realnewdisciples\Big_map\outputs\campaign_spell_cast_activity.png
