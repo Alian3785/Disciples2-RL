@@ -2729,7 +2729,11 @@ def run_campaign_visualization(
         battle_viz.close()
 
     print("\nНажмите Enter для закрытия...")
-    input()
+    try:
+        input()
+    except EOFError:
+        # stdin недоступен (фоновый запуск) — закрываемся без ожидания
+        pass
     grid_viz.close()
 
 
