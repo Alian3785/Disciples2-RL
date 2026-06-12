@@ -1,6 +1,0 @@
-"n_envs","requested_steps","actual_steps","seconds","fps","exit_code","run_id","log"
-"4","500000","507904","1820,849","278,938","0","offline-1779487715","C:\realnewdisciples\Big_map\outputs\train_bench_nenvs_20260523_010803\n_envs_4.log"
-"6","500000","503808","1506,081","334,516","0","offline-1779489600","C:\realnewdisciples\Big_map\outputs\train_bench_nenvs_20260523_010803\n_envs_6.log"
-"8","500000","507904","1448,534","350,633","0","offline-1779491124","C:\realnewdisciples\Big_map\outputs\train_bench_nenvs_20260523_010803\n_envs_8.log"
-"12","500000","516096","1367,143","377,5","0","offline-1779492591","C:\realnewdisciples\Big_map\outputs\train_bench_nenvs_20260523_010803\n_envs_12.log"
-"16","500000","524288","1401,25","374,157","0","offline-1779493978","C:\realnewdisciples\Big_map\outputs\train_bench_nenvs_20260523_010803\n_envs_16.log"
