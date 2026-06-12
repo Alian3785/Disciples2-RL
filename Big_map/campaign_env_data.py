@@ -456,6 +456,9 @@ class CampaignConstantsMixin:
         }
     )
     FINAL_OBJECTIVE_CITY_REWARD_MULTIPLIER = 5.0
+    CAMPAIGN_OBJECTIVE_CITIES = "cities"
+    CAMPAIGN_OBJECTIVE_DRAGON = "dragon"
+    GREEN_DRAGON_OBJECTIVE_ENEMY_ID = 31
     CHEST_PICKUP_RADIUS = 1
     BONUS_SMALL_HEAL_SOURCE_ITEM = "Potion of Healing"
     BONUS_SMALL_HEAL_ITEM_NAME = "Банка исцеления (+50 HP)"

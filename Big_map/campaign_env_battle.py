@@ -1,5 +1,10 @@
 # campaign_env_battle.py
-"""CampaignBattleMixin for CampaignEnv."""
+"""Battle-related campaign logic.
+
+Миксин связывает стратегическую карту CampaignEnv с тактическим BattleEnv:
+запускает бой, передает команды, синхронизирует расходники и экипировку,
+сохраняет урон между боями и возвращает управление обратно в grid-режим.
+"""
 
 from __future__ import annotations
 
@@ -7,10 +12,18 @@ from campaign_env_data import *
 
 
 class CampaignBattleMixin:
+    """Часть CampaignEnv, отвечающая за жизненный цикл боя и persistent-состояние отрядов."""
+
     def _step_battle(self, action: int):
-        """Шаг в режиме боя."""
+        """Выполняет один action в текущем BattleEnv и переводит результат в формат CampaignEnv.
+
+        Метод является главным мостом между двумя режимами игры. Пока бой идет,
+        он просто прокидывает действие в BattleEnv, масштабирует награду и собирает
+        диагностический info. Когда бой завершен, метод применяет кампанийные
+        последствия: победные награды, захват целей, сохранение HP, отступление,
+        провал кампании или возврат на карту.
+        """
         if self.battle_env is None:
-            # Защита от некорректного состояния
             self.mode = self.MODE_GRID
             self._clear_current_battle_context()
             grid_obs = self._get_grid_obs()
@@ -34,7 +47,6 @@ class CampaignBattleMixin:
             terminated = True
             truncated = False
         else:
-            # safety: action space CampaignEnv > BattleEnv, clamp to valid range
             action = int(action)
             if action < 0:
                 action = 0
@@ -217,7 +229,7 @@ class CampaignBattleMixin:
                             f"=== ЗЕМЛЯ ЛЕГИОНОВ НАЧИНАЕТ РАСПРОСТРАНЯТЬСЯ ИЗ ПОСЕЛЕНИЯ {settlement_name} ==="
                         )
 
-                if newly_captured_objective_cities:
+                if newly_captured_objective_cities and self._campaign_objective_is_cities():
                     final_objective_reward = self._compute_final_objective_reward(
                         len(newly_captured_objective_cities),
                         captured_before=objective_cities_captured_before,
@@ -228,11 +240,19 @@ class CampaignBattleMixin:
                     for city_name in newly_captured_objective_cities:
                         self._log(f"=== ЗАХВАЧЕН ГОРОД {city_name}: НАГРАДА {final_objective_reward:g} ===")
 
-                if self._all_objective_cities_captured():
+                reward = self._apply_green_dragon_objective_reward_if_needed(
+                    self.current_enemy_id,
+                    reward,
+                    info,
+                )
+                campaign_objective_reason = self._campaign_objective_completion_reason(
+                    self.current_enemy_id
+                )
+                if campaign_objective_reason is not None:
                     self._log("=== ЗАХВАЧЕНЫ ВСЕ ЦЕЛЕВЫЕ ГОРОДА: ПОБЕДА В КАМПАНИИ ===")
                     grid_obs = self._get_grid_obs()
                     info["campaign_result"] = "victory"
-                    info["campaign_victory_reason"] = "objective_cities_cleared"
+                    info["campaign_victory_reason"] = campaign_objective_reason
                     return self._finalize_grid_step_result(
                         grid_obs=grid_obs,
                         reward=reward,
@@ -265,7 +285,45 @@ class CampaignBattleMixin:
                 )
 
             else:
-                # Поражение: конец эпизода
+                escaped_blue_units = [
+                    unit
+                    for unit in getattr(self.battle_env, "escaped_units", []) or []
+                    if isinstance(unit, dict)
+                    and unit.get("team") == "blue"
+                    and not bool(unit.get("Summoned"))
+                    and self._unit_current_hp(unit) > 0.0
+                ]
+                if self.persist_blue_hp and escaped_blue_units:
+                    self._log(
+                        f"=== BLUE РћРўРЎРўРЈРџРђР•Рў РџРћРЎР›Р• РџРћР РђР–Р•РќРРЇ Р’ Р‘РћР® РџР РћРўРР’ Р’Р РђР“Рђ {self.current_enemy_id}: "
+                        f"РЎРџРђРЎР›РћРЎР¬ {len(escaped_blue_units)} Р®РќРРў. ==="
+                    )
+                    self._save_enemy_state_from_battle(self.current_enemy_id)
+                    self._save_blue_state()
+                    self._log("РЎРѕСЃС‚РѕСЏРЅРёРµ BLUE СЃРѕС…СЂР°РЅРµРЅРѕ РїРѕСЃР»Рµ РѕС‚СЃС‚СѓРїР»РµРЅРёСЏ")
+
+                    self.mode = self.MODE_GRID
+                    self.battle_env = None
+                    self._clear_current_battle_context()
+                    info["battle_result"] = "defeat"
+                    info["battle_retreat"] = True
+                    info["battle_defeat_with_escaped_units"] = True
+                    info["escaped_blue_units"] = int(len(escaped_blue_units))
+                    info["mode"] = "grid"
+                    info["agent_pos"] = self._restore_agent_to_battle_origin()
+                    info["enemies_alive"] = dict(self.grid_env.enemies_alive)
+                    info["enemy_state_saved"] = True
+                    info["blue_state_saved"] = True
+
+                    grid_obs = self._get_grid_obs()
+                    return self._finalize_grid_step_result(
+                        grid_obs=grid_obs,
+                        reward=reward,
+                        terminated=False,
+                        truncated=False,
+                        info=info,
+                    )
+
                 reward += self.reward_loss
                 self._clear_battle_origin()
                 self._clear_current_battle_context()
@@ -283,7 +341,12 @@ class CampaignBattleMixin:
         info["battle_ongoing"] = True
         return self._build_obs(battle_obs=obs), reward, terminated, truncated, info
     def _restore_agent_to_battle_origin(self) -> Tuple[int, int]:
-        """Возвращает агента на клетку, с которой был инициирован текущий бой."""
+        """Возвращает агента на клетку, с которой был инициирован текущий бой.
+
+        Во время столкновения агент может технически находиться на клетке врага.
+        После нефатального завершения боя нужно вернуть его на исходную клетку
+        и очистить одноразовый маркер battle_origin_pos.
+        """
         if self.battle_origin_pos is None:
             return tuple(self.grid_env.agent_pos)
         origin = (int(self.battle_origin_pos[0]), int(self.battle_origin_pos[1]))
@@ -291,17 +354,55 @@ class CampaignBattleMixin:
         self.battle_origin_pos = None
         return origin
     def _clear_battle_origin(self) -> None:
+        """Очищает сохраненную стартовую клетку боя без перемещения агента."""
         self.battle_origin_pos = None
     @staticmethod
     def _normalize_armor_value(value: object) -> int:
+        """Безопасно приводит значение брони к неотрицательному целому числу."""
         try:
             return max(0, int(round(float(value or 0))))
         except (TypeError, ValueError):
             return 0
+
+    @staticmethod
+    def _unit_current_hp(unit: Dict) -> float:
+        """Возвращает текущий HP: ``health`` основной, ``hp`` fallback для старых данных."""
+        if not isinstance(unit, dict):
+            return 0.0
+        if "health" in unit and unit.get("health") is not None:
+            raw_value = unit.get("health")
+        else:
+            raw_value = unit.get("hp", 0.0)
+        try:
+            return max(0.0, float(raw_value or 0.0))
+        except (TypeError, ValueError):
+            return 0.0
+
+    @staticmethod
+    def _unit_max_hp(unit: Dict, fallback: object = 0.0) -> float:
+        """Возвращает максимум HP: ``max_health`` основной, ``maxhp`` fallback для старых данных."""
+        if not isinstance(unit, dict):
+            return 0.0
+        if "max_health" in unit and unit.get("max_health") is not None:
+            raw_value = unit.get("max_health")
+        elif "maxhp" in unit and unit.get("maxhp") is not None:
+            raw_value = unit.get("maxhp")
+        else:
+            raw_value = fallback
+        try:
+            return max(0.0, float(raw_value or 0.0))
+        except (TypeError, ValueError):
+            return 0.0
     def _resolve_heal_tile_context(
         self,
         position: Optional[Tuple[int, int]],
     ) -> tuple[int, float, str, Optional[int]]:
+        """Определяет бонусы клетки лечения для BLUE-отряда перед боем.
+
+        Возвращает кортеж: бонус брони, бонус лечения от отдыха, имя поселения
+        и уровень поселения. Бонус действует только на территории поселения,
+        которое уже активировано фракцией Легионов.
+        """
         if position is None:
             return 0, 0.0, "", None
 
@@ -330,7 +431,11 @@ class CampaignBattleMixin:
         self,
         position: Optional[Tuple[int, int]],
     ) -> tuple[float, str, Optional[object]]:
-        """Возвращает процентный бонус лечения от отдыха на клетке города/столицы."""
+        """Возвращает процентный бонус лечения от отдыха на клетке города/столицы.
+
+        Второе и третье значения описывают источник бонуса: строковую метку
+        и уровень поселения либо специальный маркер ``capital``.
+        """
         if position is None:
             return 0.0, "", None
 
@@ -340,7 +445,7 @@ class CampaignBattleMixin:
             return 0.0, "", None
 
         if normalized_position == tuple(self.CASTLE_POS):
-            return float(CAPITAL_HEAL_TILE_ARMOR_BONUS) / 100.0, "capital", "capital"
+            return float(CAPITAL_HEAL_TILE_REST_BONUS) / 100.0, "capital", "capital"
 
         settlement_name = self.legions_settlement_source_name_by_tile.get(normalized_position)
         if not settlement_name:
@@ -358,7 +463,11 @@ class CampaignBattleMixin:
         self,
         position: Optional[Tuple[int, int]],
     ) -> float:
-        """Возвращает базовый процент лечения от отдыха на текущей клетке."""
+        """Возвращает базовый процент лечения от отдыха на текущей клетке.
+
+        Своя территория лечит сильнее обычной клетки. Дополнительные бонусы
+        поселений/лорда считаются отдельными helper-методами.
+        """
         if self._is_player_controlled_territory_tile(position):
             return float(self.PLAYER_TERRITORY_REST_HEAL_PERCENT)
         return float(self.DEFAULT_REST_HEAL_PERCENT)
@@ -371,7 +480,11 @@ class CampaignBattleMixin:
         self,
         position: Optional[Tuple[int, int]],
     ) -> float:
-        """Возвращает бонус регенерации врага на клетке города/столицы."""
+        """Возвращает бонус регенерации врага на клетке города/столицы.
+
+        Используется для RED-стеков, которые стоят на источнике территории:
+        столице Империи или поселении Легионов.
+        """
         if position is None:
             return 0.0
 
@@ -381,7 +494,7 @@ class CampaignBattleMixin:
             return 0.0
 
         if normalized_position == tuple(self.empire_territory_source_tile):
-            return float(CAPITAL_HEAL_TILE_ARMOR_BONUS) / 100.0
+            return float(CAPITAL_HEAL_TILE_REST_BONUS) / 100.0
 
         settlement_name = self.legions_settlement_source_name_by_tile.get(normalized_position)
         if not settlement_name:
@@ -397,6 +510,11 @@ class CampaignBattleMixin:
         self,
         enemy_id: Optional[int],
     ) -> tuple[int, str]:
+        """Возвращает бонус брони RED-защитника и строковую метку источника.
+
+        Бонус может приходить от уровня поселения или от столицы. Если враг
+        одновременно соответствует нескольким источникам, применяется больший.
+        """
         if enemy_id is None:
             return 0, ""
 
@@ -414,7 +532,11 @@ class CampaignBattleMixin:
             source = f"settlement_level_{int(settlement_level)}"
 
         enemy_pos = self.grid_env.enemy_positions.get(normalized_enemy_id)
-        if enemy_pos is not None and tuple(enemy_pos) == tuple(self.CASTLE_POS):
+        capital_tiles = {tuple(self.CASTLE_POS)}
+        empire_source_tile = tuple(getattr(self, "empire_territory_source_tile", ()))
+        if len(empire_source_tile) == 2:
+            capital_tiles.add(empire_source_tile)
+        if enemy_pos is not None and tuple(enemy_pos) in capital_tiles:
             capital_bonus = int(CAPITAL_HEAL_TILE_ARMOR_BONUS)
             if capital_bonus >= bonus:
                 bonus = capital_bonus
@@ -426,6 +548,7 @@ class CampaignBattleMixin:
         enemy_id: Optional[int],
         red_team: List[Dict],
     ) -> None:
+        """Добавляет RED-команде броню за оборону поселения или столицы."""
         bonus, source = self._resolve_settlement_defender_armor_bonus(enemy_id)
         if bonus <= 0:
             return
@@ -460,6 +583,7 @@ class CampaignBattleMixin:
                 f"({affected_units} юнитов, {source})."
             )
     def _apply_hero_heal_tile_armor_bonus(self, blue_team: List[Dict]) -> None:
+        """Добавляет BLUE-команде временную броню от клетки, где начался бой."""
         bonus, _rest_bonus, source, settlement_level = self._resolve_heal_tile_context(
             self.battle_origin_pos
         )
@@ -468,7 +592,7 @@ class CampaignBattleMixin:
 
         affected_units = 0
         for unit in blue_team:
-            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
+            max_hp = self._unit_max_hp(unit)
             if max_hp <= 0:
                 continue
 
@@ -495,7 +619,12 @@ class CampaignBattleMixin:
         *,
         blue_team: Optional[List[Dict]] = None,
     ):
-        """Инициализирует бой с конкретной RED командой."""
+        """Инициализирует BattleEnv с RED-командой врага и текущей BLUE-командой.
+
+        RED берется из сохраненного состояния enemy_team_states, если оно есть,
+        иначе из ENEMY_CONFIGS. BLUE может быть передан явно для специальных боев
+        (например, summon), либо собирается из persistent-состояния героя.
+        """
         red_team_state = self._get_enemy_team_state(enemy_id)
         if red_team_state:
             red_team = self._build_battle_team_with_placeholders("red", red_team_state)
@@ -506,7 +635,6 @@ class CampaignBattleMixin:
             )
         self._apply_settlement_defender_armor_bonus(enemy_id, red_team)
 
-        # Восстанавливаем состояние BLUE или берём дефолтное.
         if blue_team is not None:
             prepared_blue_team = self._build_battle_team_with_placeholders("blue", blue_team)
             self._apply_equipped_book_battle_effects(prepared_blue_team)
@@ -535,7 +663,10 @@ class CampaignBattleMixin:
             hero_item_effects = dict(self._battle_item_effect_definitions())
             self._log("Загружено сохранённое состояние BLUE команды")
         else:
-            prepared_blue_team = self._build_battle_team_with_placeholders("blue", UNITS_BLUE)
+            prepared_blue_team = self._build_battle_team_with_placeholders(
+                "blue",
+                self._create_starting_blue_team(),
+            )
             self._clear_equipped_banner_effects(prepared_blue_team)
             self._clear_equipped_artifact_effects(prepared_blue_team)
             self._apply_hero_heal_tile_armor_bonus(prepared_blue_team)
@@ -565,14 +696,17 @@ class CampaignBattleMixin:
         self.battle_env._init_with_custom_teams(red_team, prepared_blue_team)
     def _save_blue_state(self):
         """
-        Сохраняет состояние BLUE команды после победы.
-        HP НЕ восстанавливается, погибшие НЕ воскрешаются.
-        Только сбрасываются временные эффекты (armor boost, paralysis, poison и т.д.).
+        Сохраняет persistent-состояние базовой BLUE-команды после боя.
+
+        HP НЕ восстанавливается, погибшие НЕ воскрешаются. Метод переносит
+        только долгоживущие изменения: текущий HP, level-up/превращения юнитов
+        и прогресс героя. Временные боевые эффекты, бонусы картовых заклинаний,
+        зелий, баннеров, артефактов и клеток лечения очищаются, потому что они
+        должны применяться заново при следующем входе в BattleEnv.
         """
         if self.battle_env is None:
             return
 
-        # Сохраняем только базовые позиции BLUE (без призванных юнитов)
         ordered_base_positions = tuple(int(u["position"]) for u in UNITS_BLUE)
         base_positions = set(ordered_base_positions)
         original_blue_team = self._build_battle_team_with_placeholders(
@@ -588,6 +722,21 @@ class CampaignBattleMixin:
             for position, unit in original_by_position.items()
             if self._is_empty_blue_unit(unit)
         }
+        escaped_by_position: Dict[int, Dict] = {}
+        if getattr(self.battle_env, "winner", None) in ("blue", "red"):
+            for escaped_unit in getattr(self.battle_env, "escaped_units", []) or []:
+                if not isinstance(escaped_unit, dict):
+                    continue
+                if escaped_unit.get("team") != "blue" or bool(escaped_unit.get("Summoned")):
+                    continue
+                try:
+                    escaped_pos = int(escaped_unit.get("position", -1) or -1)
+                except (TypeError, ValueError):
+                    continue
+                if escaped_pos in base_positions and escaped_pos not in start_empty_positions:
+                    restored_escape = deepcopy(escaped_unit)
+                    restored_escape["running_away"] = 0
+                    escaped_by_position.setdefault(escaped_pos, restored_escape)
         saved_by_position: Dict[int, Dict] = {}
 
         for u in self.battle_env.combined:
@@ -604,6 +753,9 @@ class CampaignBattleMixin:
             if pos in start_empty_positions:
                 # Эта позиция была пустой в начале боя. Любой появившийся здесь юнит временный.
                 continue
+            escaped_unit = escaped_by_position.get(pos)
+            if escaped_unit is not None:
+                u = escaped_unit
             if bool(u.get("Summoned")):
                 original_unit = deepcopy(
                     original_by_position.get(pos, placeholder_unit("blue", pos))
@@ -622,12 +774,34 @@ class CampaignBattleMixin:
             )
             if callable(restore_transformed):
                 restore_transformed(restored_unit)
+            if escaped_unit is not None:
+                cleanse_negative_effects = getattr(
+                    self.battle_env,
+                    "_cleanse_negative_effects",
+                    None,
+                )
+                if callable(cleanse_negative_effects):
+                    cleanse_negative_effects(restored_unit)
+
+            original_unit_for_position = original_by_position.get(pos, {})
+            original_damage = int(
+                restored_unit.get(
+                    "original_damage",
+                    original_unit_for_position.get("damage", restored_unit.get("damage", 0)),
+                )
+                or 0
+            )
+            if (
+                int(restored_unit.get("powerup", 0) or 0) != 0
+                or int(restored_unit.get("teamated", 0) or 0) != 0
+            ) and original_damage > 0:
+                restored_unit["damage"] = original_damage
+            if int(restored_unit.get("hermited", 0) or 0) != 0:
+                base_ini = int(restored_unit.get("initiative_base", 0) or 0)
+                restored_unit["initiative_base"] = base_ini * 2 if base_ini > 0 else base_ini
             
             # СОХРАНЯЕМ ТЕКУЩЕЕ HP (не восстанавливаем!)
-            current_hp = max(
-                0.0,
-                float(restored_unit.get("health", 0) or restored_unit.get("hp", 0)),
-            )
+            current_hp = self._unit_current_hp(restored_unit)
             restored_unit["health"] = current_hp
             restored_unit["hp"] = current_hp
 
@@ -642,9 +816,14 @@ class CampaignBattleMixin:
             restored_unit["poison_damage_per_tick"] = 0
             restored_unit["burn_turns_left"] = 0
             restored_unit["burn_damage_per_tick"] = 0
+            restored_unit["burn_source_lord_pos"] = None
+            restored_unit["uran_turns_left"] = 0
+            restored_unit["uran_damage_per_tick"] = 0
             restored_unit["powerup"] = 0
             restored_unit["bonusturn"] = 0
-            restored_unit.pop("resilience_used_types", None)
+            restored_unit["resilience_used_types"] = []
+            restored_unit.pop("teamated", None)
+            restored_unit.pop("hermited", None)
             position = int(restored_unit.get("position", -1) or -1)
             if "campaign_banner_base_damage" in restored_unit:
                 restored_unit["damage"] = self._normalize_damage_value(
@@ -753,14 +932,14 @@ class CampaignBattleMixin:
                 base_max_health = float(
                     restored_unit.get(
                         "campaign_map_spell_base_max_health",
-                        restored_unit.get("max_health", restored_unit.get("maxhp", 0)),
+                        self._unit_max_hp(restored_unit),
                     )
                     or 0.0
                 )
                 health_bonus = float(
                     restored_unit.get("campaign_map_spell_health_bonus", 0) or 0.0
                 )
-                current_hp = max(0.0, float(restored_unit.get("health", 0) or restored_unit.get("hp", 0) or 0.0))
+                current_hp = self._unit_current_hp(restored_unit)
                 restored_health = max(0.0, min(base_max_health, current_hp - health_bonus))
                 restored_unit["max_health"] = float(base_max_health)
                 restored_unit["maxhp"] = float(base_max_health)
@@ -772,10 +951,11 @@ class CampaignBattleMixin:
                 if str(res)
             ]
             if added_spell_resistance:
+                added_spell_resistance_set = set(added_spell_resistance)
                 restored_unit["resistance"] = [
                     res
                     for res in (restored_unit.get("resistance") or [])
-                    if str(res) not in set(added_spell_resistance)
+                    if str(res) not in added_spell_resistance_set
                 ]
             added_book_resistance = [
                 str(res)
@@ -783,10 +963,11 @@ class CampaignBattleMixin:
                 if str(res)
             ]
             if added_book_resistance:
+                added_book_resistance_set = set(added_book_resistance)
                 restored_unit["resistance"] = [
                     res
                     for res in (restored_unit.get("resistance") or [])
-                    if str(res) not in set(added_book_resistance)
+                    if str(res) not in added_book_resistance_set
                 ]
             if "campaign_map_spell_base_armor" in restored_unit:
                 restored_unit["armor"] = self._normalize_armor_value(
@@ -892,10 +1073,11 @@ class CampaignBattleMixin:
                 if str(res)
             ]
             if added_resistance:
+                added_resistance_set = set(added_resistance)
                 restored_unit["resistance"] = [
                     res
                     for res in (restored_unit.get("resistance") or [])
-                    if str(res) not in set(added_resistance)
+                    if str(res) not in added_resistance_set
                 ]
             restored_unit.pop("campaign_potion_added_resistance", None)
             if position in self.active_invulnerability_potion_positions:
@@ -935,26 +1117,45 @@ class CampaignBattleMixin:
             saved_by_position.get(position, placeholder_unit("blue", position))
             for position in ordered_base_positions
         ]
+        self._mark_equipment_dirty()
         self._sync_hero_progression_flags(self.blue_team_state)
         self._sync_moves_per_turn_with_hero(units=self.blue_team_state, grant_delta=True)
         self._refresh_campaign_equipment_effects(log=False)
         self._log("Состояние BLUE команды сохранено (HP не восстановлено)")
     def _find_unit_data_by_name(self, name: str) -> Optional[Dict]:
+        """Ищет запись юнита в UNIT_DATA по отображаемому имени."""
+        if name is None:
+            return None
+        return self._unit_data_by_name().get(str(name))
+
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def _unit_data_by_name() -> Dict[str, Dict]:
+        """Строит быстрый индекс UNIT_DATA по имени юнита."""
+        result: Dict[str, Dict] = {}
         for entry in UNIT_DATA:
+            if not isinstance(entry, dict):
+                continue
             # Prefer canonical Russian key, keep mojibake fallback for legacy data dumps.
-            entry_name = entry.get("\u043a\u0442\u043e")
-            if entry_name is None:
-                entry_name = entry.get("\u0420\u0454\u0421\u201a\u0420\u0455")
-            if entry_name == name:
-                return entry
-        return None
+            for key in ("\u043a\u0442\u043e", "\u0420\u0454\u0421\u201a\u0420\u0455"):
+                entry_name = entry.get(key)
+                if entry_name is not None:
+                    result.setdefault(str(entry_name), entry)
+        return result
     def _clear_current_battle_context(self) -> None:
+        """Очищает metadata текущего боя после возврата на карту."""
         self.current_battle_context = {}
     def _build_battle_team_with_placeholders(
         self,
         team: str,
         units: Optional[List[Dict]],
     ) -> List[Dict]:
+        """Нормализует команду до шести позиций, добавляя placeholder-юнитов.
+
+        BattleEnv ожидает фиксированные слоты: RED занимает позиции 1-6,
+        BLUE занимает позиции 7-12. Метод отбрасывает некорректные/дублирующиеся
+        позиции и гарантирует, что результат всегда содержит полный набор слотов.
+        """
         normalized_team = "red" if str(team).lower() == "red" else "blue"
         positions = range(1, 7) if normalized_team == "red" else range(7, 13)
         units_by_position: Dict[int, Dict] = {}
@@ -981,6 +1182,11 @@ class CampaignBattleMixin:
         self,
         summon_unit_name: str,
     ) -> Optional[Tuple[List[Dict], Dict]]:
+        """Создает временную BLUE-команду из одного призванного юнита.
+
+        Используется для summon_spell-контекста. Команда не должна влиять на
+        persistent BLUE-состояние героя и его экипировку.
+        """
         unit_data = self._find_unit_data_by_name(str(summon_unit_name or "").strip())
         if not isinstance(unit_data, dict):
             return None
@@ -1002,6 +1208,11 @@ class CampaignBattleMixin:
         )
         return blue_team, summoned_unit
     def _save_enemy_state_from_battle(self, enemy_id: Optional[int]) -> None:
+        """Сохраняет persistent-состояние RED-команды после незавершенного боя.
+
+        Метод нужен для таймаутов и отступлений: враг должен остаться на карте
+        с текущим HP, опытом и level-up-прогрессом, но без временных статусов боя.
+        """
         if self.battle_env is None:
             return
 
@@ -1037,10 +1248,7 @@ class CampaignBattleMixin:
             original_unit = deepcopy(original_by_position.get(position, placeholder_unit("red", position)))
             battle_unit = battle_by_position.get(position)
             if battle_unit is not None and not self._is_empty_enemy_unit(original_unit):
-                current_hp = max(
-                    0.0,
-                    float(battle_unit.get("health", 0) or battle_unit.get("hp", 0) or 0.0),
-                )
+                current_hp = self._unit_current_hp(battle_unit)
                 original_unit["health"] = float(current_hp)
                 original_unit["hp"] = float(current_hp)
                 original_unit["Level"] = int(
@@ -1101,11 +1309,25 @@ class CampaignBattleMixin:
         if normalized_enemy_id in self.enemy_map_spell_effects:
             self._recompute_enemy_stack_spell_effects(normalized_enemy_id)
     def _build_unit_from_data(self, entry: Dict, team: str, position: int) -> Dict:
+        """Преобразует запись UNIT_DATA в словарь юнита для BattleEnv."""
         def _entry_get(*keys, default=0):
+            """Достает поле по одному из поддерживаемых ключей.
+
+            В данных встречаются нормальные русские ключи, legacy mojibake-ключи
+            и англоязычные fallback-и. Helper скрывает эту совместимость от
+            остального метода.
+            """
             for key in keys:
                 if key in entry:
                     return entry.get(key)
             return default
+
+        def _entry_number(*keys, default=0):
+            value = _entry_get(*keys, default=default)
+            try:
+                return int(round(float(value or 0)))
+            except (TypeError, ValueError):
+                return int(default or 0)
 
         new_unit = map_unit_to_battle(entry, team, position)
         new_unit["exp_kill"] = _entry_get(
@@ -1114,12 +1336,21 @@ class CampaignBattleMixin:
             "exp_kill",
             default=0,
         )
-        new_unit["exp_required"] = _entry_get(
+        exp_required_raw = _entry_get(
             "\u043d\u0443\u0436\u043d\u044b\u0439 \u043e\u043f\u044b\u0442",
             "\u0420\u0405\u0421\u0453\u0420\xb6\u0420\u0405\u0421\u2039\u0420\u2116 \u0420\u0455\u0420\u0457\u0421\u2039\u0421\u201a",
             "exp_required",
             default=0,
         )
+        if isinstance(exp_required_raw, str) and exp_required_raw.strip().lower() == "max":
+            new_unit["exp_required"] = 0
+        else:
+            new_unit["exp_required"] = _entry_number(
+                "\u043d\u0443\u0436\u043d\u044b\u0439 \u043e\u043f\u044b\u0442",
+                "\u0420\u0405\u0421\u0453\u0420\xb6\u0420\u0405\u0421\u2039\u0420\u2116 \u0420\u0455\u0420\u0457\u0421\u2039\u0421\u201a",
+                "exp_required",
+                default=0,
+            )
         new_unit["exp_current"] = _entry_get(
             "\u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043e\u043f\u044b\u0442",
             "\u0421\u201a\u0420\xb5\u0420\u0454\u0421\u0453\u0421\u2030\u0420\u0451\u0420\u2116 \u0420\u0455\u0420\u0457\u0421\u2039\u0421\u201a",
@@ -1157,6 +1388,7 @@ class CampaignBattleMixin:
         new_unit["maxhp"] = new_unit.get("max_health", 0)
         return new_unit
     def _replace_blue_unit(self, upgraded: Dict) -> None:
+        """Заменяет юнита в persistent BLUE-состоянии после апгрейда."""
         if self.blue_team_state is None:
             return
         pos = upgraded.get("position")
@@ -1165,11 +1397,17 @@ class CampaignBattleMixin:
         for idx, unit in enumerate(self.blue_team_state):
             if int(unit.get("position", -1)) == int(pos):
                 self.blue_team_state[idx] = deepcopy(upgraded)
+                self._mark_equipment_dirty()
                 self._sync_moves_per_turn_with_hero(units=self.blue_team_state)
                 self._refresh_campaign_equipment_effects(log=False)
                 return
     def _log_turns_into_levelups(self) -> int:
-        """Applies BLUE unit upgrades after level-up checks and returns applied count."""
+        """Применяет превращения BLUE-юнитов после level-up и возвращает их число.
+
+        BattleEnv только сообщает, какие имена получили уровень. CampaignEnv
+        дополнительно проверяет, построено ли здание, открывающее целевой юнит
+        из turns_into, и уже после этого заменяет боевую и persistent-запись.
+        """
         if self.battle_env is None:
             return 0
         levelup_names = getattr(self.battle_env, "last_levelups", []) or []
@@ -1240,7 +1478,7 @@ class CampaignBattleMixin:
         return int(upgraded_count)
     def _heal_blue_team(self, heal_percent: float = 0.05, bonus_percent: float = 0.0) -> int:
         """
-        Восстанавливает HP раненым юнитам BLUE команды.
+        Восстанавливает HP раненым живым юнитам BLUE-команды.
         
         Args:
             heal_percent: Доля от max_health для восстановления (0.05 = 5%)
@@ -1253,8 +1491,8 @@ class CampaignBattleMixin:
         
         healed_count = 0
         for unit in state:
-            hp = float(unit.get("hp", 0) or unit.get("health", 0))
-            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or hp)
+            hp = self._unit_current_hp(unit)
+            max_hp = self._unit_max_hp(unit, fallback=hp)
             
             # Юнит жив и ранен
             if hp > 0 and hp < max_hp:
@@ -1274,15 +1512,18 @@ class CampaignBattleMixin:
         source_label: str = "Бутыль лечения",
     ) -> Tuple[float, Optional[str]]:
         """
-        Лечит конкретную позицию BLUE команды, возвращает фактический объём лечения и имя юнита.
+        Лечит конкретную позицию BLUE-команды.
+
+        Возвращает фактический объем лечения и имя юнита. Если позиция пустая,
+        юнит мертв или уже имеет полный HP, возвращает ``(0.0, None)``.
         """
         state = self._get_blue_state()
         for unit in state:
             if int(unit.get("position", -1)) != position:
                 continue
 
-            hp = float(unit.get("hp", 0) or unit.get("health", 0))
-            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or hp)
+            hp = self._unit_current_hp(unit)
+            max_hp = self._unit_max_hp(unit, fallback=hp)
 
             if max_hp <= 0 or hp <= 0 or hp >= max_hp:
                 return 0.0, None
@@ -1299,34 +1540,23 @@ class CampaignBattleMixin:
             return healed, name
 
         return 0.0, None
-    def _missing_hp_at_position(self, position: int) -> float:
-        """Возвращает недостающее здоровье живого юнита BLUE на позиции или 0.0."""
-        state = self._get_blue_state()
-        for unit in state:
-            if int(unit.get("position", -1)) != position:
-                continue
-            hp = float(unit.get("hp", 0) or unit.get("health", 0))
-            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or hp)
-            if max_hp <= 0 or hp <= 0 or hp >= max_hp:
-                return 0.0
-            return max_hp - hp
-        return 0.0
     def _get_blue_state(self) -> List[Dict]:
-        """Возвращает (и при необходимости инициализирует) сохранённое состояние BLUE."""
+        """Возвращает и при необходимости инициализирует persistent BLUE-состояние."""
         if self.blue_team_state is None:
-            self.blue_team_state = deepcopy(UNITS_BLUE)
+            self.blue_team_state = self._create_starting_blue_team()
+            self._mark_equipment_dirty()
             self._sync_hero_progression_flags(self.blue_team_state)
             self._sync_moves_per_turn_with_hero(units=self.blue_team_state, refill=True)
         else:
             self._sync_hero_progression_flags(self.blue_team_state)
         return self.blue_team_state
     def _battle_grid_move_cost(self) -> int:
-        """Returns the combat entry cost based on the hero's full movement cap."""
+        """Возвращает стоимость входа в бой в очках перемещения по лимиту героя."""
         move_cap = max(0, int(self.moves_per_turn or 0))
         return max(0, (move_cap + 1) // 2)
 
     def _apply_battle_grid_steps(self, extra_steps: Optional[int] = None) -> int:
-        """Списывает дополнительные очки перемещения из-за входа в бой."""
+        """Списывает очки перемещения за вход в бой и возвращает фактически списанное."""
         spent_moves = self._battle_grid_move_cost() if extra_steps is None else int(extra_steps)
         if spent_moves <= 0:
             return 0

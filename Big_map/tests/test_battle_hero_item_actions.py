@@ -495,6 +495,25 @@ def test_typed_damage_blocked_by_immunity_or_protection_still_consumes_orb(
     assert env.equipped_hero_items == [None, None]
 
 
+def test_hero_item_ignores_defence_flag_after_resilience_was_spent():
+    env = BattleEnv(log_enabled=False)
+    env.reset(seed=123)
+    target = _red_unit(env, 1)
+    target["health"] = 100
+    target["resistance"] = ["Fire"]
+    target["resilience_used_types"] = ["Fire"]
+    target["Firedefence"] = 1
+
+    _, _, _, _, info = _use_first_item(env, "Orb of Fire", FIRST_HERO_ITEM_ENEMY_ACTION_START)
+
+    assert int(target["health"]) == 75
+    assert target["Firedefence"] == 1
+    assert info["battle_hero_item_effect_kind"] == "damage"
+    assert info["battle_hero_item_effect_value"] == pytest.approx(25.0)
+    assert info["battle_hero_item_applied"] is True
+    assert info["battle_hero_item_consumed"] is True
+
+
 def test_heal_orb_on_full_hp_ally_still_consumes_orb():
     env = BattleEnv(log_enabled=False)
     env.reset(seed=123)

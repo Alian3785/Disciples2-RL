@@ -1,0 +1,524 @@
+Output dir: C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m
+Selected runs: 18 / 33
+
+=== RUN 16/33 batch1024_epochs3 ===
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 12 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 2048 --ppo-batch-size 1024 --ppo-n-epochs 3 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.995 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-16-batch1024_epochs3
+Проверка среды CampaignEnv...
+Среда прошла проверку!
+[INFO] Comet disabled, running without experiment tracking
+Создание 12 параллельных сред (subproc)...
+Traceback (most recent call last):
+  File "C:\realnewdisciples\Big_map\train_campaign.py", line 2229, in <module>
+    vec_env = make_vec_env(
+        env_factory,
+    ...<3 lines>...
+        vec_env_kwargs=vec_env_kwargs,
+    )
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\env_util.py", line 126, in make_vec_env
+    vec_env = vec_env_cls([make_env(i + start_index) for i in range(n_envs)], **vec_env_kwargs)
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\vec_env\subproc_vec_env.py", line 116, in __init__
+    self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)], strict=True)
+                                            ~~~~~~~~^^
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\context.py", line 63, in Pipe
+    return Pipe(duplex)
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\connection.py", line 592, in Pipe
+    h2 = _winapi.CreateFile(
+        address, access, 0, _winapi.NULL, _winapi.OPEN_EXISTING,
+        _winapi.FILE_FLAG_OVERLAPPED, _winapi.NULL
+        )
+PermissionError: [WinError 5] Отказано в доступе
+[WARN] Skipping eval for batch1024_epochs3: train_rc=1, run_id=offline-1780298411
+[SUMMARY] C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\summaries\16_batch1024_epochs3.txt
+
+=== RUN 17/33 batch1024_epochs5 ===
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 12 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 2048 --ppo-batch-size 1024 --ppo-n-epochs 5 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.995 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-17-batch1024_epochs5
+Проверка среды CampaignEnv...
+Среда прошла проверку!
+[INFO] Comet disabled, running without experiment tracking
+Создание 12 параллельных сред (subproc)...
+Traceback (most recent call last):
+  File "C:\realnewdisciples\Big_map\train_campaign.py", line 2229, in <module>
+    vec_env = make_vec_env(
+        env_factory,
+    ...<3 lines>...
+        vec_env_kwargs=vec_env_kwargs,
+    )
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\env_util.py", line 126, in make_vec_env
+    vec_env = vec_env_cls([make_env(i + start_index) for i in range(n_envs)], **vec_env_kwargs)
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\vec_env\subproc_vec_env.py", line 116, in __init__
+    self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)], strict=True)
+                                            ~~~~~~~~^^
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\context.py", line 63, in Pipe
+    return Pipe(duplex)
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\connection.py", line 592, in Pipe
+    h2 = _winapi.CreateFile(
+        address, access, 0, _winapi.NULL, _winapi.OPEN_EXISTING,
+        _winapi.FILE_FLAG_OVERLAPPED, _winapi.NULL
+        )
+PermissionError: [WinError 5] Отказано в доступе
+[WARN] Skipping eval for batch1024_epochs5: train_rc=1, run_id=offline-1780298418
+[SUMMARY] C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\summaries\17_batch1024_epochs5.txt
+
+=== RUN 18/33 batch1024_epochs8 ===
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 12 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 2048 --ppo-batch-size 1024 --ppo-n-epochs 8 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.995 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-18-batch1024_epochs8
+Проверка среды CampaignEnv...
+Среда прошла проверку!
+[INFO] Comet disabled, running without experiment tracking
+Создание 12 параллельных сред (subproc)...
+Traceback (most recent call last):
+  File "C:\realnewdisciples\Big_map\train_campaign.py", line 2229, in <module>
+    vec_env = make_vec_env(
+        env_factory,
+    ...<3 lines>...
+        vec_env_kwargs=vec_env_kwargs,
+    )
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\env_util.py", line 126, in make_vec_env
+    vec_env = vec_env_cls([make_env(i + start_index) for i in range(n_envs)], **vec_env_kwargs)
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\vec_env\subproc_vec_env.py", line 116, in __init__
+    self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)], strict=True)
+                                            ~~~~~~~~^^
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\context.py", line 63, in Pipe
+    return Pipe(duplex)
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\connection.py", line 592, in Pipe
+    h2 = _winapi.CreateFile(
+        address, access, 0, _winapi.NULL, _winapi.OPEN_EXISTING,
+        _winapi.FILE_FLAG_OVERLAPPED, _winapi.NULL
+        )
+PermissionError: [WinError 5] Отказано в доступе
+[WARN] Skipping eval for batch1024_epochs8: train_rc=1, run_id=offline-1780298426
+[SUMMARY] C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\summaries\18_batch1024_epochs8.txt
+
+=== RUN 19/33 batch2048_epochs3 ===
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 12 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 2048 --ppo-batch-size 2048 --ppo-n-epochs 3 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.995 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-19-batch2048_epochs3
+Проверка среды CampaignEnv...
+Среда прошла проверку!
+[INFO] Comet disabled, running without experiment tracking
+Создание 12 параллельных сред (subproc)...
+Traceback (most recent call last):
+  File "C:\realnewdisciples\Big_map\train_campaign.py", line 2229, in <module>
+    vec_env = make_vec_env(
+        env_factory,
+    ...<3 lines>...
+        vec_env_kwargs=vec_env_kwargs,
+    )
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\env_util.py", line 126, in make_vec_env
+    vec_env = vec_env_cls([make_env(i + start_index) for i in range(n_envs)], **vec_env_kwargs)
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\vec_env\subproc_vec_env.py", line 116, in __init__
+    self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)], strict=True)
+                                            ~~~~~~~~^^
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\context.py", line 63, in Pipe
+    return Pipe(duplex)
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\connection.py", line 592, in Pipe
+    h2 = _winapi.CreateFile(
+        address, access, 0, _winapi.NULL, _winapi.OPEN_EXISTING,
+        _winapi.FILE_FLAG_OVERLAPPED, _winapi.NULL
+        )
+PermissionError: [WinError 5] Отказано в доступе
+[WARN] Skipping eval for batch2048_epochs3: train_rc=1, run_id=offline-1780298433
+[SUMMARY] C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\summaries\19_batch2048_epochs3.txt
+
+=== RUN 20/33 batch2048_epochs5 ===
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 12 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 2048 --ppo-batch-size 2048 --ppo-n-epochs 5 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.995 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-20-batch2048_epochs5
+Проверка среды CampaignEnv...
+Среда прошла проверку!
+[INFO] Comet disabled, running without experiment tracking
+Создание 12 параллельных сред (subproc)...
+Traceback (most recent call last):
+  File "C:\realnewdisciples\Big_map\train_campaign.py", line 2229, in <module>
+    vec_env = make_vec_env(
+        env_factory,
+    ...<3 lines>...
+        vec_env_kwargs=vec_env_kwargs,
+    )
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\env_util.py", line 126, in make_vec_env
+    vec_env = vec_env_cls([make_env(i + start_index) for i in range(n_envs)], **vec_env_kwargs)
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\vec_env\subproc_vec_env.py", line 116, in __init__
+    self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)], strict=True)
+                                            ~~~~~~~~^^
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\context.py", line 63, in Pipe
+    return Pipe(duplex)
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\connection.py", line 592, in Pipe
+    h2 = _winapi.CreateFile(
+        address, access, 0, _winapi.NULL, _winapi.OPEN_EXISTING,
+        _winapi.FILE_FLAG_OVERLAPPED, _winapi.NULL
+        )
+PermissionError: [WinError 5] Отказано в доступе
+[WARN] Skipping eval for batch2048_epochs5: train_rc=1, run_id=offline-1780298440
+[SUMMARY] C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\summaries\20_batch2048_epochs5.txt
+
+=== RUN 21/33 batch2048_epochs8 ===
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 12 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 2048 --ppo-batch-size 2048 --ppo-n-epochs 8 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.995 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-21-batch2048_epochs8
+Проверка среды CampaignEnv...
+Среда прошла проверку!
+[INFO] Comet disabled, running without experiment tracking
+Создание 12 параллельных сред (subproc)...
+Traceback (most recent call last):
+  File "C:\realnewdisciples\Big_map\train_campaign.py", line 2229, in <module>
+    vec_env = make_vec_env(
+        env_factory,
+    ...<3 lines>...
+        vec_env_kwargs=vec_env_kwargs,
+    )
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\env_util.py", line 126, in make_vec_env
+    vec_env = vec_env_cls([make_env(i + start_index) for i in range(n_envs)], **vec_env_kwargs)
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\vec_env\subproc_vec_env.py", line 116, in __init__
+    self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)], strict=True)
+                                            ~~~~~~~~^^
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\context.py", line 63, in Pipe
+    return Pipe(duplex)
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\connection.py", line 592, in Pipe
+    h2 = _winapi.CreateFile(
+        address, access, 0, _winapi.NULL, _winapi.OPEN_EXISTING,
+        _winapi.FILE_FLAG_OVERLAPPED, _winapi.NULL
+        )
+PermissionError: [WinError 5] Отказано в доступе
+[WARN] Skipping eval for batch2048_epochs8: train_rc=1, run_id=offline-1780298448
+[SUMMARY] C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\summaries\21_batch2048_epochs8.txt
+
+=== RUN 22/33 batch512_epochs3 ===
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 12 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 2048 --ppo-batch-size 512 --ppo-n-epochs 3 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.995 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-22-batch512_epochs3
+Проверка среды CampaignEnv...
+Среда прошла проверку!
+[INFO] Comet disabled, running without experiment tracking
+Создание 12 параллельных сред (subproc)...
+Traceback (most recent call last):
+  File "C:\realnewdisciples\Big_map\train_campaign.py", line 2229, in <module>
+    vec_env = make_vec_env(
+        env_factory,
+    ...<3 lines>...
+        vec_env_kwargs=vec_env_kwargs,
+    )
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\env_util.py", line 126, in make_vec_env
+    vec_env = vec_env_cls([make_env(i + start_index) for i in range(n_envs)], **vec_env_kwargs)
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\vec_env\subproc_vec_env.py", line 116, in __init__
+    self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)], strict=True)
+                                            ~~~~~~~~^^
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\context.py", line 63, in Pipe
+    return Pipe(duplex)
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\connection.py", line 592, in Pipe
+    h2 = _winapi.CreateFile(
+        address, access, 0, _winapi.NULL, _winapi.OPEN_EXISTING,
+        _winapi.FILE_FLAG_OVERLAPPED, _winapi.NULL
+        )
+PermissionError: [WinError 5] Отказано в доступе
+[WARN] Skipping eval for batch512_epochs3: train_rc=1, run_id=offline-1780298455
+[SUMMARY] C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\summaries\22_batch512_epochs3.txt
+
+=== RUN 23/33 batch512_epochs8 ===
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 12 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 2048 --ppo-batch-size 512 --ppo-n-epochs 8 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.995 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-23-batch512_epochs8
+Проверка среды CampaignEnv...
+Среда прошла проверку!
+[INFO] Comet disabled, running without experiment tracking
+Создание 12 параллельных сред (subproc)...
+Traceback (most recent call last):
+  File "C:\realnewdisciples\Big_map\train_campaign.py", line 2229, in <module>
+    vec_env = make_vec_env(
+        env_factory,
+    ...<3 lines>...
+        vec_env_kwargs=vec_env_kwargs,
+    )
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\env_util.py", line 126, in make_vec_env
+    vec_env = vec_env_cls([make_env(i + start_index) for i in range(n_envs)], **vec_env_kwargs)
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\vec_env\subproc_vec_env.py", line 116, in __init__
+    self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)], strict=True)
+                                            ~~~~~~~~^^
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\context.py", line 63, in Pipe
+    return Pipe(duplex)
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\connection.py", line 592, in Pipe
+    h2 = _winapi.CreateFile(
+        address, access, 0, _winapi.NULL, _winapi.OPEN_EXISTING,
+        _winapi.FILE_FLAG_OVERLAPPED, _winapi.NULL
+        )
+PermissionError: [WinError 5] Отказано в доступе
+[WARN] Skipping eval for batch512_epochs8: train_rc=1, run_id=offline-1780298462
+[SUMMARY] C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\summaries\23_batch512_epochs8.txt
+
+=== RUN 24/33 env8_steps2048 ===
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 8 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 2048 --ppo-batch-size 512 --ppo-n-epochs 5 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.995 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-24-env8_steps2048
+Проверка среды CampaignEnv...
+Среда прошла проверку!
+[INFO] Comet disabled, running without experiment tracking
+Создание 8 параллельных сред (subproc)...
+Traceback (most recent call last):
+  File "C:\realnewdisciples\Big_map\train_campaign.py", line 2229, in <module>
+    vec_env = make_vec_env(
+        env_factory,
+    ...<3 lines>...
+        vec_env_kwargs=vec_env_kwargs,
+    )
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\env_util.py", line 126, in make_vec_env
+    vec_env = vec_env_cls([make_env(i + start_index) for i in range(n_envs)], **vec_env_kwargs)
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\vec_env\subproc_vec_env.py", line 116, in __init__
+    self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)], strict=True)
+                                            ~~~~~~~~^^
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\context.py", line 63, in Pipe
+    return Pipe(duplex)
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\connection.py", line 592, in Pipe
+    h2 = _winapi.CreateFile(
+        address, access, 0, _winapi.NULL, _winapi.OPEN_EXISTING,
+        _winapi.FILE_FLAG_OVERLAPPED, _winapi.NULL
+        )
+PermissionError: [WinError 5] Отказано в доступе
+[WARN] Skipping eval for env8_steps2048: train_rc=1, run_id=offline-1780298470
+[SUMMARY] C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\summaries\24_env8_steps2048.txt
+
+=== RUN 25/33 env8_steps1024 ===
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 8 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 1024 --ppo-batch-size 512 --ppo-n-epochs 5 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.995 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-25-env8_steps1024
+Проверка среды CampaignEnv...
+Среда прошла проверку!
+[INFO] Comet disabled, running without experiment tracking
+Создание 8 параллельных сред (subproc)...
+Traceback (most recent call last):
+  File "C:\realnewdisciples\Big_map\train_campaign.py", line 2229, in <module>
+    vec_env = make_vec_env(
+        env_factory,
+    ...<3 lines>...
+        vec_env_kwargs=vec_env_kwargs,
+    )
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\env_util.py", line 126, in make_vec_env
+    vec_env = vec_env_cls([make_env(i + start_index) for i in range(n_envs)], **vec_env_kwargs)
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\vec_env\subproc_vec_env.py", line 116, in __init__
+    self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)], strict=True)
+                                            ~~~~~~~~^^
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\context.py", line 63, in Pipe
+    return Pipe(duplex)
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\connection.py", line 592, in Pipe
+    h2 = _winapi.CreateFile(
+        address, access, 0, _winapi.NULL, _winapi.OPEN_EXISTING,
+        _winapi.FILE_FLAG_OVERLAPPED, _winapi.NULL
+        )
+PermissionError: [WinError 5] Отказано в доступе
+[WARN] Skipping eval for env8_steps1024: train_rc=1, run_id=offline-1780298477
+[SUMMARY] C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\summaries\25_env8_steps1024.txt
+
+=== RUN 26/33 env16_steps2048 ===
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 16 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 2048 --ppo-batch-size 1024 --ppo-n-epochs 5 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.995 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-26-env16_steps2048
+Проверка среды CampaignEnv...
+Среда прошла проверку!
+[INFO] Comet disabled, running without experiment tracking
+Создание 16 параллельных сред (subproc)...
+Traceback (most recent call last):
+  File "C:\realnewdisciples\Big_map\train_campaign.py", line 2229, in <module>
+    vec_env = make_vec_env(
+        env_factory,
+    ...<3 lines>...
+        vec_env_kwargs=vec_env_kwargs,
+    )
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\env_util.py", line 126, in make_vec_env
+    vec_env = vec_env_cls([make_env(i + start_index) for i in range(n_envs)], **vec_env_kwargs)
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\vec_env\subproc_vec_env.py", line 116, in __init__
+    self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)], strict=True)
+                                            ~~~~~~~~^^
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\context.py", line 63, in Pipe
+    return Pipe(duplex)
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\connection.py", line 592, in Pipe
+    h2 = _winapi.CreateFile(
+        address, access, 0, _winapi.NULL, _winapi.OPEN_EXISTING,
+        _winapi.FILE_FLAG_OVERLAPPED, _winapi.NULL
+        )
+PermissionError: [WinError 5] Отказано в доступе
+[WARN] Skipping eval for env16_steps2048: train_rc=1, run_id=offline-1780298484
+[SUMMARY] C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\summaries\26_env16_steps2048.txt
+
+=== RUN 27/33 env16_steps1024 ===
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 16 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 1024 --ppo-batch-size 1024 --ppo-n-epochs 5 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.995 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-27-env16_steps1024
+Проверка среды CampaignEnv...
+Среда прошла проверку!
+[INFO] Comet disabled, running without experiment tracking
+Создание 16 параллельных сред (subproc)...
+Traceback (most recent call last):
+  File "C:\realnewdisciples\Big_map\train_campaign.py", line 2229, in <module>
+    vec_env = make_vec_env(
+        env_factory,
+    ...<3 lines>...
+        vec_env_kwargs=vec_env_kwargs,
+    )
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\env_util.py", line 126, in make_vec_env
+    vec_env = vec_env_cls([make_env(i + start_index) for i in range(n_envs)], **vec_env_kwargs)
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\vec_env\subproc_vec_env.py", line 116, in __init__
+    self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)], strict=True)
+                                            ~~~~~~~~^^
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\context.py", line 63, in Pipe
+    return Pipe(duplex)
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\connection.py", line 592, in Pipe
+    h2 = _winapi.CreateFile(
+        address, access, 0, _winapi.NULL, _winapi.OPEN_EXISTING,
+        _winapi.FILE_FLAG_OVERLAPPED, _winapi.NULL
+        )
+PermissionError: [WinError 5] Отказано в доступе
+[WARN] Skipping eval for env16_steps1024: train_rc=1, run_id=offline-1780298492
+[SUMMARY] C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\summaries\27_env16_steps1024.txt
+
+=== RUN 28/33 env12_steps4096 ===
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 12 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 4096 --ppo-batch-size 1024 --ppo-n-epochs 5 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.995 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-28-env12_steps4096
+Проверка среды CampaignEnv...
+Среда прошла проверку!
+[INFO] Comet disabled, running without experiment tracking
+Создание 12 параллельных сред (subproc)...
+Traceback (most recent call last):
+  File "C:\realnewdisciples\Big_map\train_campaign.py", line 2229, in <module>
+    vec_env = make_vec_env(
+        env_factory,
+    ...<3 lines>...
+        vec_env_kwargs=vec_env_kwargs,
+    )
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\env_util.py", line 126, in make_vec_env
+    vec_env = vec_env_cls([make_env(i + start_index) for i in range(n_envs)], **vec_env_kwargs)
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\vec_env\subproc_vec_env.py", line 116, in __init__
+    self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)], strict=True)
+                                            ~~~~~~~~^^
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\context.py", line 63, in Pipe
+    return Pipe(duplex)
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\connection.py", line 592, in Pipe
+    h2 = _winapi.CreateFile(
+        address, access, 0, _winapi.NULL, _winapi.OPEN_EXISTING,
+        _winapi.FILE_FLAG_OVERLAPPED, _winapi.NULL
+        )
+PermissionError: [WinError 5] Отказано в доступе
+[WARN] Skipping eval for env12_steps4096: train_rc=1, run_id=offline-1780298499
+[SUMMARY] C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\summaries\28_env12_steps4096.txt
+
+=== RUN 29/33 env8_steps4096 ===
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 8 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 4096 --ppo-batch-size 1024 --ppo-n-epochs 5 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.995 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-29-env8_steps4096
+Проверка среды CampaignEnv...
+Среда прошла проверку!
+[INFO] Comet disabled, running without experiment tracking
+Создание 8 параллельных сред (subproc)...
+Traceback (most recent call last):
+  File "C:\realnewdisciples\Big_map\train_campaign.py", line 2229, in <module>
+    vec_env = make_vec_env(
+        env_factory,
+    ...<3 lines>...
+        vec_env_kwargs=vec_env_kwargs,
+    )
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\env_util.py", line 126, in make_vec_env
+    vec_env = vec_env_cls([make_env(i + start_index) for i in range(n_envs)], **vec_env_kwargs)
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\vec_env\subproc_vec_env.py", line 116, in __init__
+    self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)], strict=True)
+                                            ~~~~~~~~^^
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\context.py", line 63, in Pipe
+    return Pipe(duplex)
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\connection.py", line 592, in Pipe
+    h2 = _winapi.CreateFile(
+        address, access, 0, _winapi.NULL, _winapi.OPEN_EXISTING,
+        _winapi.FILE_FLAG_OVERLAPPED, _winapi.NULL
+        )
+PermissionError: [WinError 5] Отказано в доступе
+[WARN] Skipping eval for env8_steps4096: train_rc=1, run_id=offline-1780298506
+[SUMMARY] C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\summaries\29_env8_steps4096.txt
+
+=== RUN 30/33 gamma099_gae095 ===
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 12 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 2048 --ppo-batch-size 512 --ppo-n-epochs 5 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.99 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-30-gamma099_gae095
+Проверка среды CampaignEnv...
+Среда прошла проверку!
+[INFO] Comet disabled, running without experiment tracking
+Создание 12 параллельных сред (subproc)...
+Traceback (most recent call last):
+  File "C:\realnewdisciples\Big_map\train_campaign.py", line 2229, in <module>
+    vec_env = make_vec_env(
+        env_factory,
+    ...<3 lines>...
+        vec_env_kwargs=vec_env_kwargs,
+    )
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\env_util.py", line 126, in make_vec_env
+    vec_env = vec_env_cls([make_env(i + start_index) for i in range(n_envs)], **vec_env_kwargs)
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\vec_env\subproc_vec_env.py", line 116, in __init__
+    self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)], strict=True)
+                                            ~~~~~~~~^^
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\context.py", line 63, in Pipe
+    return Pipe(duplex)
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\connection.py", line 592, in Pipe
+    h2 = _winapi.CreateFile(
+        address, access, 0, _winapi.NULL, _winapi.OPEN_EXISTING,
+        _winapi.FILE_FLAG_OVERLAPPED, _winapi.NULL
+        )
+PermissionError: [WinError 5] Отказано в доступе
+[WARN] Skipping eval for gamma099_gae095: train_rc=1, run_id=offline-1780298514
+[SUMMARY] C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\summaries\30_gamma099_gae095.txt
+
+=== RUN 31/33 gamma0992_gae092 ===
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 12 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 2048 --ppo-batch-size 512 --ppo-n-epochs 5 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.992 --gae-lambda 0.92 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-31-gamma0992_gae092
+Проверка среды CampaignEnv...
+Среда прошла проверку!
+[INFO] Comet disabled, running without experiment tracking
+Создание 12 параллельных сред (subproc)...
+Traceback (most recent call last):
+  File "C:\realnewdisciples\Big_map\train_campaign.py", line 2229, in <module>
+    vec_env = make_vec_env(
+        env_factory,
+    ...<3 lines>...
+        vec_env_kwargs=vec_env_kwargs,
+    )
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\env_util.py", line 126, in make_vec_env
+    vec_env = vec_env_cls([make_env(i + start_index) for i in range(n_envs)], **vec_env_kwargs)
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\vec_env\subproc_vec_env.py", line 116, in __init__
+    self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)], strict=True)
+                                            ~~~~~~~~^^
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\context.py", line 63, in Pipe
+    return Pipe(duplex)
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\connection.py", line 592, in Pipe
+    h2 = _winapi.CreateFile(
+        address, access, 0, _winapi.NULL, _winapi.OPEN_EXISTING,
+        _winapi.FILE_FLAG_OVERLAPPED, _winapi.NULL
+        )
+PermissionError: [WinError 5] Отказано в доступе
+[WARN] Skipping eval for gamma0992_gae092: train_rc=1, run_id=offline-1780298521
+[SUMMARY] C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\summaries\31_gamma0992_gae092.txt
+
+=== RUN 32/33 gamma0997_gae095 ===
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 12 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 2048 --ppo-batch-size 512 --ppo-n-epochs 5 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.997 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-32-gamma0997_gae095
+Проверка среды CampaignEnv...
+Среда прошла проверку!
+[INFO] Comet disabled, running without experiment tracking
+Создание 12 параллельных сред (subproc)...
+Traceback (most recent call last):
+  File "C:\realnewdisciples\Big_map\train_campaign.py", line 2229, in <module>
+    vec_env = make_vec_env(
+        env_factory,
+    ...<3 lines>...
+        vec_env_kwargs=vec_env_kwargs,
+    )
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\env_util.py", line 126, in make_vec_env
+    vec_env = vec_env_cls([make_env(i + start_index) for i in range(n_envs)], **vec_env_kwargs)
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\vec_env\subproc_vec_env.py", line 116, in __init__
+    self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)], strict=True)
+                                            ~~~~~~~~^^
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\context.py", line 63, in Pipe
+    return Pipe(duplex)
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\connection.py", line 592, in Pipe
+    h2 = _winapi.CreateFile(
+        address, access, 0, _winapi.NULL, _winapi.OPEN_EXISTING,
+        _winapi.FILE_FLAG_OVERLAPPED, _winapi.NULL
+        )
+PermissionError: [WinError 5] Отказано в доступе
+[WARN] Skipping eval for gamma0997_gae095: train_rc=1, run_id=offline-1780298528
+[SUMMARY] C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\summaries\32_gamma0997_gae095.txt
+
+=== RUN 33/33 gamma0995_gae090 ===
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 12 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 2048 --ppo-batch-size 512 --ppo-n-epochs 5 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.995 --gae-lambda 0.9 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-33-gamma0995_gae090
+Проверка среды CampaignEnv...
+Среда прошла проверку!
+[INFO] Comet disabled, running without experiment tracking
+Создание 12 параллельных сред (subproc)...
+Traceback (most recent call last):
+  File "C:\realnewdisciples\Big_map\train_campaign.py", line 2229, in <module>
+    vec_env = make_vec_env(
+        env_factory,
+    ...<3 lines>...
+        vec_env_kwargs=vec_env_kwargs,
+    )
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\env_util.py", line 126, in make_vec_env
+    vec_env = vec_env_cls([make_env(i + start_index) for i in range(n_envs)], **vec_env_kwargs)
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\vec_env\subproc_vec_env.py", line 116, in __init__
+    self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)], strict=True)
+                                            ~~~~~~~~^^
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\context.py", line 63, in Pipe
+    return Pipe(duplex)
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\connection.py", line 592, in Pipe
+    h2 = _winapi.CreateFile(
+        address, access, 0, _winapi.NULL, _winapi.OPEN_EXISTING,
+        _winapi.FILE_FLAG_OVERLAPPED, _winapi.NULL
+        )
+PermissionError: [WinError 5] Отказано в доступе
+[WARN] Skipping eval for gamma0995_gae090: train_rc=1, run_id=offline-1780298536
+[SUMMARY] C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\summaries\33_gamma0995_gae090.txt

@@ -1,4 +1,8 @@
-"""Scripted capital bot behavior for CampaignEnv."""
+"""Логика scripted-бота столицы для CampaignEnv.
+
+Модуль добавляет автономного бота, который живет на campaign-карте,
+ищет ближайших врагов, проводит авто-бои и возвращается домой для лечения.
+"""
 
 from __future__ import annotations
 
@@ -6,11 +10,19 @@ from campaign_env_data import *
 
 
 class CampaignScriptedBotMixin:
+    """Mixin с состоянием, навигацией и боями scripted-бота столицы."""
+
     SCRIPTED_CAPITAL_BOT_MAX_STEPS_PER_TURN = 20
     SCRIPTED_CAPITAL_BOT_GRID_MOVE_COST = 2
     SCRIPTED_CAPITAL_BOT_BATTLE_STEP_LIMIT = 300
+
     SCRIPTED_CAPITAL_BOT_SYMBOL = "B"
     SCRIPTED_CAPITAL_BOT_COLOR = (0.6, 0.15, 0.85, 0.95)
+
+    SCRIPTED_CAPITAL_BOT_INTERNAL_ENEMY_ID = -75
+
+    SCRIPTED_CAPITAL_BOT_TEAM_FRONT = ("Рыцарь", None, "Рыцарь на пегасе")
+    SCRIPTED_CAPITAL_BOT_TEAM_BACK = ("Стрелок", None, "Стрелок")
 
     _SCRIPTED_BOT_RED_TO_BLUE_POSITION = {
         1: 7,
@@ -22,22 +34,34 @@ class CampaignScriptedBotMixin:
     }
 
     def _init_scripted_capital_bot_state(self) -> None:
-        self.scripted_capital_bot_enabled = True
-        self.scripted_capital_bot_enemy_id = int(self.EMPIRE_TERRITORY_SOURCE_ENEMY_ID)
+        """Создает стартовое состояние бота при инициализации CampaignEnv."""
+        self.scripted_capital_bot_enabled = bool(
+            getattr(self, "scripted_capital_bot_config_enabled", True)
+        )
+        self.scripted_capital_bot_enemy_id = int(self.SCRIPTED_CAPITAL_BOT_INTERNAL_ENEMY_ID)
         self.scripted_capital_bot_home = tuple(
             int(coord) for coord in self.empire_territory_source_tile
         )
         self.scripted_capital_bot_position = tuple(self.scripted_capital_bot_home)
-        self.scripted_capital_bot_state = "hunting"
+        self.scripted_capital_bot_state = (
+            "hunting" if self.scripted_capital_bot_enabled else "disabled"
+        )
         self.scripted_capital_bot_respawn_turns_left = 0
         self.scripted_capital_bot_rest_turns_left = 0
-        self.scripted_capital_bot_team_state = self._create_scripted_capital_bot_team()
+        self.scripted_capital_bot_team_state = (
+            self._create_scripted_capital_bot_team()
+            if self.scripted_capital_bot_enabled
+            else []
+        )
         self.scripted_capital_bot_enemies_defeated = 0
         self._scripted_bot_last_move_points_spent = 0
         self._scripted_bot_last_move_costs = []
         self._scripted_bot_last_move_terrains = []
+        self._scripted_bot_enemy_search_cache_signature = None
+        self._scripted_bot_enemy_search_cache = None
+        self.scripted_capital_bot_turn_infos = []
         self.scripted_capital_bot_last_info: Dict[str, object] = {
-            "enabled": True,
+            "enabled": bool(self.scripted_capital_bot_enabled),
             "state": self.scripted_capital_bot_state,
             "position": self.scripted_capital_bot_position,
             "enemies_defeated": 0,
@@ -46,7 +70,31 @@ class CampaignScriptedBotMixin:
         self._sync_scripted_capital_bot_grid_state()
 
     def _reset_scripted_capital_bot_state(self) -> None:
-        if not getattr(self, "scripted_capital_bot_enabled", True):
+        """Сбрасывает бота в домашнюю позицию и пересоздает команду для нового episode."""
+        self.scripted_capital_bot_enabled = bool(
+            getattr(self, "scripted_capital_bot_config_enabled", True)
+        )
+        self._scripted_bot_enemy_search_cache_signature = None
+        self._scripted_bot_enemy_search_cache = None
+        self.scripted_capital_bot_turn_infos = []
+        if not self.scripted_capital_bot_enabled:
+            self.scripted_capital_bot_position = tuple(self.scripted_capital_bot_home)
+            self.scripted_capital_bot_state = "disabled"
+            self.scripted_capital_bot_respawn_turns_left = 0
+            self.scripted_capital_bot_rest_turns_left = 0
+            self.scripted_capital_bot_team_state = []
+            self.scripted_capital_bot_enemies_defeated = 0
+            self._scripted_bot_last_move_points_spent = 0
+            self._scripted_bot_last_move_costs = []
+            self._scripted_bot_last_move_terrains = []
+            self.scripted_capital_bot_last_info = {
+                "enabled": False,
+                "state": self.scripted_capital_bot_state,
+                "position": self.scripted_capital_bot_position,
+                "enemies_defeated": 0,
+                "events": ["disabled"],
+            }
+            self._sync_scripted_capital_bot_grid_state()
             return
         self.scripted_capital_bot_position = tuple(self.scripted_capital_bot_home)
         self.scripted_capital_bot_state = "hunting"
@@ -67,7 +115,18 @@ class CampaignScriptedBotMixin:
         self._sync_scripted_capital_bot_grid_state()
 
     def _create_scripted_capital_bot_team(self) -> List[Dict]:
-        source_team = ENEMY_CONFIGS.get(int(self.EMPIRE_TERRITORY_SOURCE_ENEMY_ID), [])
+        """Собирает боевую команду бота из имен юнитов и blue-позиций BattleEnv."""
+        source_team: List[Dict] = []
+        for source_position, unit_name in enumerate(
+            self.SCRIPTED_CAPITAL_BOT_TEAM_FRONT + self.SCRIPTED_CAPITAL_BOT_TEAM_BACK,
+            start=1,
+        ):
+            if not unit_name:
+                continue
+            unit_data = self._find_unit_data_by_name(str(unit_name))
+            if unit_data is None:
+                continue
+            source_team.append(self._build_unit_from_data(unit_data, "red", source_position))
         bot_units: List[Dict] = []
         for source_unit in source_team:
             if self._is_empty_enemy_unit(source_unit):
@@ -88,6 +147,7 @@ class CampaignScriptedBotMixin:
         return team
 
     def _scripted_capital_bot_info(self) -> Dict[str, object]:
+        """Возвращает компактный info-блок бота для step/reset diagnostics."""
         info = dict(getattr(self, "scripted_capital_bot_last_info", {}) or {})
         info.update(
             {
@@ -107,10 +167,12 @@ class CampaignScriptedBotMixin:
         }
 
     def _sync_scripted_capital_bot_grid_state(self) -> None:
+        """Синхронизирует позицию бота с GridWorld render и dynamic blockers."""
         if not hasattr(self, "grid_env"):
             return
+        bot_enabled = bool(getattr(self, "scripted_capital_bot_enabled", False))
         bot_enemy_id = int(getattr(self, "scripted_capital_bot_enemy_id", -1))
-        if bot_enemy_id in getattr(self.grid_env, "enemies_alive", {}):
+        if bot_enabled and bot_enemy_id in getattr(self.grid_env, "enemies_alive", {}):
             self.grid_env.enemies_alive[bot_enemy_id] = False
 
         dynamic_blocked = set(getattr(self.grid_env, "dynamic_blocked_positions", set()) or set())
@@ -119,11 +181,15 @@ class CampaignScriptedBotMixin:
             dynamic_blocked.discard(tuple(previous))
 
         if (
-            bool(getattr(self, "scripted_capital_bot_enabled", False))
+            bot_enabled
             and str(getattr(self, "scripted_capital_bot_state", "")) != "defeated"
         ):
             position = tuple(getattr(self, "scripted_capital_bot_position", ()))
-            if len(position) == 2 and position != tuple(getattr(self.grid_env, "agent_pos", ())):
+            if (
+                len(position) == 2
+                and position != tuple(getattr(self.grid_env, "agent_pos", ()))
+                and position != tuple(getattr(self, "scripted_capital_bot_home", ()))
+            ):
                 dynamic_blocked.add(position)
             self._scripted_capital_bot_previous_blocked_pos = position
             self.grid_env.scripted_bot_position = position
@@ -134,8 +200,12 @@ class CampaignScriptedBotMixin:
         self.grid_env.dynamic_blocked_positions = dynamic_blocked
 
     def _advance_scripted_capital_bot_one_turn(self) -> Dict[str, object]:
+        """Продвигает state machine бота на один campaign turn."""
         if not bool(getattr(self, "scripted_capital_bot_enabled", False)):
-            return {"enabled": False, "events": []}
+            info = {"enabled": False, "state": "disabled", "events": []}
+            self.scripted_capital_bot_last_info = dict(info)
+            self._sync_scripted_capital_bot_grid_state()
+            return info
 
         events: List[str] = []
         state = str(getattr(self, "scripted_capital_bot_state", "hunting"))
@@ -186,8 +256,8 @@ class CampaignScriptedBotMixin:
                 events.append("arrived_home")
                 self._log("Бот столицы людей вернулся в столицу и отдыхает 1 ход.")
         else:
-            came_from, enemy_distances = self._scripted_bot_explore_for_enemies()
-            target = self._pick_scripted_bot_nearest_enemy(enemy_distances)
+            came_from, enemy_distances, enemy_tiles = self._scripted_bot_explore_for_enemies()
+            target = self._pick_scripted_bot_nearest_enemy(enemy_distances, enemy_tiles)
             info["target"] = target
             if target is None:
                 events.append("no_target")
@@ -221,6 +291,7 @@ class CampaignScriptedBotMixin:
         *,
         target_tile: Optional[Tuple[int, int]] = None,
     ) -> set[Tuple[int, int]]:
+        """Собирает клетки, через которые бот не должен строить путь."""
         blocked = {
             (int(pos[0]), int(pos[1]))
             for pos in (getattr(self.grid_env, "obstacle_positions", set()) or set())
@@ -241,6 +312,7 @@ class CampaignScriptedBotMixin:
         return blocked
 
     def _scripted_bot_path_to(self, target_tile: Tuple[int, int]) -> List[Tuple[int, int]]:
+        """Строит BFS-путь от текущей позиции бота до target tile."""
         start = tuple(int(coord) for coord in self.scripted_capital_bot_position)
         target = tuple(int(coord) for coord in target_tile)
         if start == target:
@@ -292,6 +364,7 @@ class CampaignScriptedBotMixin:
         target: Tuple[int, int],
         blocked: set[Tuple[int, int]],
     ) -> List[Tuple[int, int]]:
+        """Fallback-путь к цели, если BFS не смог найти маршрут."""
         current = tuple(int(coord) for coord in self.scripted_capital_bot_position)
         path = [current]
         for _ in range(self._scripted_bot_max_grid_moves_per_turn()):
@@ -319,6 +392,7 @@ class CampaignScriptedBotMixin:
         return path
 
     def _move_scripted_bot_along_path(self, path: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
+        """Передвигает бота по пути с учетом movement budget и terrain cost."""
         if not path:
             self._scripted_bot_last_move_points_spent = 0
             self._scripted_bot_last_move_costs = []
@@ -328,6 +402,7 @@ class CampaignScriptedBotMixin:
         movement: List[Tuple[int, int]] = []
         move_costs: List[int] = []
         move_terrains: List[str] = []
+        legions_capital_tile = tuple(getattr(self, "legions_territory_source_tile", ()))
         for raw_tile in path[1:]:
             if remaining_points <= 0:
                 break
@@ -345,6 +420,8 @@ class CampaignScriptedBotMixin:
             move_costs.append(int(move_cost))
             move_terrains.append(str(terrain))
             remaining_points -= int(spent)
+            if len(legions_capital_tile) == 2 and tile == legions_capital_tile:
+                break
         self._scripted_bot_last_move_points_spent = (
             max(0, int(self.SCRIPTED_CAPITAL_BOT_MAX_STEPS_PER_TURN)) - remaining_points
         )
@@ -360,22 +437,26 @@ class CampaignScriptedBotMixin:
         return movement
 
     def _scripted_bot_grid_move_cost(self) -> int:
+        """Возвращает стоимость первого шага последнего движения для info/debug."""
         move_costs = list(getattr(self, "_scripted_bot_last_move_costs", []) or [])
         if move_costs:
             return max(1, int(move_costs[0]))
         return max(1, int(self.SCRIPTED_CAPITAL_BOT_GRID_MOVE_COST))
 
     def _scripted_bot_max_grid_moves_per_turn(self) -> int:
+        """Возвращает лимит movement points бота на один campaign turn."""
         movement_budget = max(0, int(self.SCRIPTED_CAPITAL_BOT_MAX_STEPS_PER_TURN))
         return movement_budget
 
     def _scripted_bot_move_points_spent(self, moved_path: List[Tuple[int, int]]) -> int:
+        """Считает потраченные movement points последнего перемещения."""
         spent = getattr(self, "_scripted_bot_last_move_points_spent", None)
         if spent is not None:
             return int(spent)
         return int(len(moved_path)) * self._scripted_bot_grid_move_cost()
 
     def _scripted_bot_movement_info(self, moved_path: List[Tuple[int, int]]) -> Dict[str, object]:
+        """Формирует диагностический блок о последнем перемещении бота."""
         return {
             "move_cost": int(self._scripted_bot_grid_move_cost()),
             "move_points_budget": int(self.SCRIPTED_CAPITAL_BOT_MAX_STEPS_PER_TURN),
@@ -389,6 +470,7 @@ class CampaignScriptedBotMixin:
         path: List[Tuple[int, int]],
         enemy_tile: Tuple[int, int],
     ) -> List[Tuple[int, int]]:
+        """Обрезает путь так, чтобы бот остановился рядом с enemy tile, а не на нем."""
         if not path:
             return []
         normalized_enemy_tile = (int(enemy_tile[0]), int(enemy_tile[1]))
@@ -401,36 +483,88 @@ class CampaignScriptedBotMixin:
         position: Tuple[int, int],
         enemy_tile: Tuple[int, int],
     ) -> bool:
+        """Проверяет, может ли бот начать бой с соседней клетки."""
         px, py = int(position[0]), int(position[1])
         ex, ey = int(enemy_tile[0]), int(enemy_tile[1])
         return max(abs(px - ex), abs(py - ey)) <= 1
 
     def _scripted_bot_alive_enemy_tiles(self) -> Dict[Tuple[int, int], int]:
         """Карта тайл -> enemy_id для всех живых врагов (кроме самого бота)."""
+        enemy_tiles, _signature = self._scripted_bot_alive_enemy_tiles_with_signature()
+        return enemy_tiles
+
+    def _scripted_bot_alive_enemy_tiles_with_signature(
+        self,
+    ) -> Tuple[Dict[Tuple[int, int], int], Tuple[Tuple[int, Tuple[int, int], bool, bool], ...]]:
+        """Собирает живые enemy tiles и компактную сигнатуру для кеша BFS."""
         bot_enemy_id = int(self.scripted_capital_bot_enemy_id)
+        forbidden_enemy_ids = {
+            bot_enemy_id,
+            int(self.EMPIRE_TERRITORY_SOURCE_ENEMY_ID),
+        }
         enemies_alive = getattr(self.grid_env, "enemies_alive", {}) or {}
         result: Dict[Tuple[int, int], int] = {}
-        for raw_enemy_id, raw_pos in (getattr(self.grid_env, "enemy_positions", {}) or {}).items():
+        signature_entries: List[Tuple[int, Tuple[int, int], bool, bool]] = []
+        for raw_enemy_id, raw_pos in sorted(
+            (getattr(self.grid_env, "enemy_positions", {}) or {}).items(),
+            key=lambda item: int(item[0]),
+        ):
             enemy_id = int(raw_enemy_id)
-            if enemy_id == bot_enemy_id:
-                continue
-            if not bool(enemies_alive.get(enemy_id, False)):
-                continue
-            if not self._enemy_team_has_living_units(enemy_id):
-                continue
             tile = (int(raw_pos[0]), int(raw_pos[1]))
+            is_alive = bool(enemies_alive.get(enemy_id, False))
+            if enemy_id in forbidden_enemy_ids:
+                signature_entries.append((enemy_id, tile, is_alive, False))
+                continue
+            if not is_alive:
+                signature_entries.append((enemy_id, tile, False, False))
+                continue
+            has_living_units = bool(self._enemy_team_has_living_units(enemy_id))
+            signature_entries.append((enemy_id, tile, True, has_living_units))
+            if not has_living_units:
+                continue
             result[tile] = enemy_id
-        return result
+        return result, tuple(signature_entries)
+
+    def _scripted_bot_enemy_search_signature(
+        self,
+        enemy_signature: Tuple[Tuple[int, Tuple[int, int], bool, bool], ...],
+    ) -> Tuple[object, ...]:
+        """Сигнатура состояния, при которой BFS-поиск целей можно переиспользовать."""
+        start = tuple(int(coord) for coord in self.scripted_capital_bot_position)
+        agent_pos = tuple(getattr(self.grid_env, "agent_pos", ()))
+        obstacles = tuple(
+            sorted(
+                (int(pos[0]), int(pos[1]))
+                for pos in (getattr(self.grid_env, "obstacle_positions", set()) or set())
+            )
+        )
+        return (
+            int(self.grid_size),
+            start,
+            agent_pos,
+            obstacles,
+            enemy_signature,
+        )
 
     def _scripted_bot_explore_for_enemies(
         self,
-    ) -> Tuple[Dict[Tuple[int, int], Optional[Tuple[int, int]]], Dict[Tuple[int, int], int]]:
+    ) -> Tuple[
+        Dict[Tuple[int, int], Optional[Tuple[int, int]]],
+        Dict[Tuple[int, int], int],
+        Dict[Tuple[int, int], int],
+    ]:
         """Один BFS из позиции бота. Враги — терминальные клетки (через них не идём).
 
-        Возвращает (came_from, distances_to_enemy_tiles).
+        Возвращает (came_from, distances_to_enemy_tiles, enemy_tiles).
         """
         start = tuple(int(coord) for coord in self.scripted_capital_bot_position)
-        enemy_tiles = self._scripted_bot_alive_enemy_tiles()
+        enemy_tiles, enemy_signature = self._scripted_bot_alive_enemy_tiles_with_signature()
+        search_signature = self._scripted_bot_enemy_search_signature(enemy_signature)
+        if search_signature == getattr(self, "_scripted_bot_enemy_search_cache_signature", None):
+            cached = getattr(self, "_scripted_bot_enemy_search_cache", None)
+            if cached is not None:
+                return cached
+
         blocked = {
             (int(pos[0]), int(pos[1]))
             for pos in (getattr(self.grid_env, "obstacle_positions", set()) or set())
@@ -475,13 +609,19 @@ class CampaignScriptedBotMixin:
                 else:
                     frontier.append(tile)
 
-        return came_from, enemy_distances
+        result = (came_from, enemy_distances, enemy_tiles)
+        self._scripted_bot_enemy_search_cache_signature = search_signature
+        self._scripted_bot_enemy_search_cache = result
+        return result
 
     def _pick_scripted_bot_nearest_enemy(
         self,
         enemy_distances: Dict[Tuple[int, int], int],
+        enemy_tiles: Optional[Dict[Tuple[int, int], int]] = None,
     ) -> Optional[Dict[str, object]]:
-        enemy_tiles = self._scripted_bot_alive_enemy_tiles()
+        """Выбирает ближайшего живого врага, используя BFS distance и стабильный tie-break."""
+        if enemy_tiles is None:
+            enemy_tiles = self._scripted_bot_alive_enemy_tiles()
         if not enemy_tiles:
             return None
 
@@ -509,6 +649,7 @@ class CampaignScriptedBotMixin:
         came_from: Dict[Tuple[int, int], Optional[Tuple[int, int]]],
         target: Tuple[int, int],
     ) -> List[Tuple[int, int]]:
+        """Восстанавливает путь из BFS came_from map до указанной цели."""
         if target not in came_from:
             return []
         path: List[Tuple[int, int]] = [target]
@@ -519,11 +660,20 @@ class CampaignScriptedBotMixin:
         path.reverse()
         return path
 
-    def _find_scripted_bot_nearest_enemy(self) -> Optional[Dict[str, object]]:
-        _came_from, enemy_distances = self._scripted_bot_explore_for_enemies()
-        return self._pick_scripted_bot_nearest_enemy(enemy_distances)
-
     def _run_scripted_capital_bot_battle(self, enemy_id: int) -> Dict[str, object]:
+        """Запускает авто-бой бота с enemy stack и сохраняет результат на campaign-карту."""
+        if int(enemy_id) == int(self.EMPIRE_TERRITORY_SOURCE_ENEMY_ID):
+            self._log("Бот столицы людей игнорирует Мизраэля и не атакует столицу Империи.")
+            return {
+                "enemy_id": int(enemy_id),
+                "winner": "skipped",
+                "steps": 0,
+                "exp": 0.0,
+                "levelups": [],
+                "enemies_defeated": int(self.scripted_capital_bot_enemies_defeated),
+                "skipped": True,
+                "skip_reason": "empire_capital_enemy_forbidden",
+            }
         self._log(f"Бот столицы людей вступает в бой с врагом {enemy_id}.")
         red_team_state = self._get_enemy_team_state(enemy_id)
         red_team = self._build_battle_team_with_placeholders(
@@ -581,6 +731,7 @@ class CampaignScriptedBotMixin:
         }
 
     def _save_enemy_state_from_battle_env(self, enemy_id: int, battle_env: BattleEnv) -> None:
+        """Переиспользует общую campaign-логику сохранения RED stack после боя."""
         previous_battle_env = getattr(self, "battle_env", None)
         try:
             self.battle_env = battle_env
@@ -589,6 +740,7 @@ class CampaignScriptedBotMixin:
             self.battle_env = previous_battle_env
 
     def _save_scripted_capital_bot_state_from_battle(self, battle_env: BattleEnv) -> None:
+        """Сохраняет живые/раненые BLUE-юниты бота после BattleEnv боя."""
         saved_team: List[Dict] = []
         for position in range(7, 13):
             battle_unit = next(
@@ -608,6 +760,7 @@ class CampaignScriptedBotMixin:
         )
 
     def _normalize_scripted_bot_saved_unit(self, unit: Dict) -> Dict:
+        """Очищает battle-only flags перед возвратом юнита бота на campaign-карту."""
         saved = deepcopy(unit)
         hp = max(0.0, float(saved.get("health", 0) or saved.get("hp", 0) or 0.0))
         saved["health"] = hp
@@ -636,6 +789,7 @@ class CampaignScriptedBotMixin:
         return saved
 
     def _apply_scripted_capital_bot_levelups(self, battle_env: BattleEnv) -> int:
+        """Применяет levelup-ы бота сразу после победы, без проверки построек."""
         levelup_names = list(getattr(battle_env, "last_levelups", []) or [])
         if not levelup_names:
             return 0
@@ -674,6 +828,7 @@ class CampaignScriptedBotMixin:
         return int(upgraded_count)
 
     def _fully_restore_scripted_capital_bot_team(self) -> Tuple[int, int]:
+        """Полностью лечит и воскрешает команду бота после отдыха в столице."""
         revived = 0
         healed = 0
         for unit in self.scripted_capital_bot_team_state:

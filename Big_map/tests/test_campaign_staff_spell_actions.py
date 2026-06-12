@@ -80,12 +80,12 @@ class StaffScenarioEnv(CampaignEnv):
         self.chests = dict(self._static_chests)
         self._refresh_dynamic_action_layout()
         self.action_space = spaces.Discrete(
-            self.grid_scroll_cast_action_start + int(self.MAX_SCROLL_CAST_ACTIONS)
+            self.GRID_SWAP_UNIT_ACTION_START + self.GRID_SWAP_UNIT_ACTION_COUNT
         )
 
 
 def _make_staff_env() -> StaffScenarioEnv:
-    env = StaffScenarioEnv(log_enabled=False, persist_blue_hp=True, realcapital=1)
+    env = StaffScenarioEnv(log_enabled=False, persist_blue_hp=True, Realcapital=1)
     env.reset(seed=123)
     env.grid_env.agent_pos = (3, 3)
     env.grid_env.enemy_positions = {10: (4, 3)}
@@ -111,7 +111,9 @@ def test_staff_spell_slots_are_reserved_from_chests_ruins_and_merchants():
         "emp_d2_s007",
     ]
     assert env.GRID_UNLOCK_SCROLL_MAGIC_ACTION == env.grid_staff_spell_action_start + 4
-    assert env.action_space.n == env.grid_scroll_cast_action_start + env.MAX_SCROLL_CAST_ACTIONS
+    assert env.action_space.n == (
+        env.GRID_SWAP_UNIT_ACTION_START + env.GRID_SWAP_UNIT_ACTION_COUNT
+    )
 
 
 def test_duplicate_staffs_reserve_duplicate_slots_and_require_matching_count():
@@ -123,10 +125,10 @@ def test_duplicate_staffs_reserve_duplicate_slots_and_require_matching_count():
             self.chests = dict(self._static_chests)
             self._refresh_dynamic_action_layout()
             self.action_space = spaces.Discrete(
-                self.grid_scroll_cast_action_start + int(self.MAX_SCROLL_CAST_ACTIONS)
+                self.GRID_SWAP_UNIT_ACTION_START + self.GRID_SWAP_UNIT_ACTION_COUNT
             )
 
-    env = DuplicateStaffEnv(log_enabled=False, persist_blue_hp=True, realcapital=1)
+    env = DuplicateStaffEnv(log_enabled=False, persist_blue_hp=True, Realcapital=1)
     env.reset(seed=123)
     env.grid_env.agent_pos = (3, 3)
     env.grid_env.enemy_positions = {10: (4, 3)}

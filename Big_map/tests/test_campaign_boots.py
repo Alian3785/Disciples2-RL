@@ -10,7 +10,7 @@ from campaign_env import CampaignEnv
 
 
 def _new_env() -> CampaignEnv:
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     return env
 
@@ -106,7 +106,6 @@ def test_marching_lore_ability_token_unlocks_boots_below_level_eight():
 def test_guild_lord_can_use_boots_from_level_one():
     env = _new_env()
     env.typeoflord = 3
-    env.Typeoflord = 3
 
     env._add_hero_item(env.BOOTS_OF_TRAVELING_ITEM_NAME)
 

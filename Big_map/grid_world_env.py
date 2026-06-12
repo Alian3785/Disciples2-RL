@@ -22,6 +22,55 @@ from grid import (
 )
 
 
+_MISSING = object()
+
+
+class _TrackedEnemyPositionDict(dict):
+    def __init__(self, *args, on_change=None, **kwargs):
+        self._on_change = on_change
+        super().__init__(*args, **kwargs)
+
+    def _changed(self) -> None:
+        if self._on_change is not None:
+            self._on_change()
+
+    def __setitem__(self, key, value) -> None:
+        super().__setitem__(key, value)
+        self._changed()
+
+    def __delitem__(self, key) -> None:
+        super().__delitem__(key)
+        self._changed()
+
+    def clear(self) -> None:
+        super().clear()
+        self._changed()
+
+    def pop(self, key, default=_MISSING):
+        if default is _MISSING:
+            value = super().pop(key)
+        else:
+            value = super().pop(key, default)
+        self._changed()
+        return value
+
+    def setdefault(self, key, default=None):
+        if key in self:
+            return self[key]
+        value = super().setdefault(key, default)
+        self._changed()
+        return value
+
+    def popitem(self):
+        item = super().popitem()
+        self._changed()
+        return item
+
+    def update(self, *args, **kwargs) -> None:
+        super().update(*args, **kwargs)
+        self._changed()
+
+
 class GridWorldEnv(gym.Env):
     """
     Grid movement layer used by CampaignEnv.
@@ -38,8 +87,6 @@ class GridWorldEnv(gym.Env):
         8: REST
     """
 
-    metadata = {"render_modes": ["human", "ansi"]}
-
     ACTION_UP = 0
     ACTION_DOWN = 1
     ACTION_LEFT = 2
@@ -49,6 +96,17 @@ class GridWorldEnv(gym.Env):
     ACTION_DOWN_LEFT = 6
     ACTION_DOWN_RIGHT = 7
     ACTION_REST = 8
+    ACTION_DELTAS: Tuple[Tuple[int, int], ...] = (
+        (0, -1),
+        (0, 1),
+        (-1, 0),
+        (1, 0),
+        (-1, -1),
+        (1, -1),
+        (-1, 1),
+        (1, 1),
+        (0, 0),
+    )
     OBSTACLE_BUMP_PENALTY = -0.25
 
     BASE_GRID_SIZE = BASE_GRID_SIZE
@@ -83,6 +141,7 @@ class GridWorldEnv(gym.Env):
         self.exploration_bonus = exploration_bonus
         self.obstacle_penalty = float(obstacle_penalty)
         self.max_steps = max_steps
+        self._enemy_cache_dirty = True
 
         if enemy_positions is None:
             self.enemy_positions = self._scaled_default_enemy_positions(self.grid_size)
@@ -93,6 +152,15 @@ class GridWorldEnv(gym.Env):
             }
         self.num_enemies = len(self.enemy_positions)
         self.obstacle_positions = self._resolve_obstacle_positions(obstacle_positions)
+        self._grid_span = max(1, self.grid_size - 1)
+        self._grid_span_inv = 1.0 / float(self._grid_span)
+        self._max_enemy_distance_inv = 1.0 / (np.sqrt(2.0) * float(self._grid_span))
+        self._total_cells_inv = 1.0 / float(self.grid_size**2)
+        self._enemy_cache_source_id: Optional[int] = None
+        self._enemy_cache_len = -1
+        self._enemy_ids: Tuple[int, ...] = ()
+        self._enemy_coords = np.zeros((0, 2), dtype=np.float32)
+        self._refresh_enemy_cache()
 
         self.action_space = spaces.Discrete(9)
         obs_len = 2 + self.num_enemies + self.num_enemies + 1
@@ -121,11 +189,20 @@ class GridWorldEnv(gym.Env):
         self.scripted_bot_symbol: str = "B"
         self.step_count = 0
 
-    @staticmethod
-    def _colorize_symbol(symbol: str, ansi_color: str) -> str:
-        if not ansi_color:
-            return symbol
-        return f"{ansi_color}{symbol}\x1b[0m"
+    @property
+    def enemy_positions(self) -> Dict[int, Tuple[int, int]]:
+        return self._enemy_positions
+
+    @enemy_positions.setter
+    def enemy_positions(self, positions: Dict[int, Tuple[int, int]]) -> None:
+        self._enemy_positions = _TrackedEnemyPositionDict(
+            positions,
+            on_change=self._invalidate_enemy_cache,
+        )
+        self._invalidate_enemy_cache()
+
+    def _invalidate_enemy_cache(self) -> None:
+        self._enemy_cache_dirty = True
 
     def _clamp_to_grid(self, pos: Tuple[int, int]) -> Tuple[int, int]:
         return clamp_grid_pos(pos, self.grid_size)
@@ -162,8 +239,28 @@ class GridWorldEnv(gym.Env):
             base_enemy_positions=cls.BASE_ENEMY_POSITIONS,
         )
 
+    def _refresh_enemy_cache(self) -> None:
+        enemy_ids = tuple(sorted(int(enemy_id) for enemy_id in self.enemy_positions.keys()))
+        self._enemy_ids = enemy_ids
+        self._enemy_coords = np.array(
+            [self.enemy_positions[enemy_id] for enemy_id in enemy_ids],
+            dtype=np.float32,
+        ).reshape((len(enemy_ids), 2))
+        self._enemy_cache_source_id = id(self.enemy_positions)
+        self._enemy_cache_len = len(self.enemy_positions)
+        self._enemy_cache_dirty = False
+
+    def _ensure_enemy_cache(self) -> None:
+        if (
+            self._enemy_cache_dirty
+            or self._enemy_cache_source_id != id(self.enemy_positions)
+            or self._enemy_cache_len != len(self.enemy_positions)
+        ):
+            self._refresh_enemy_cache()
+
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
         super().reset(seed=seed)
+        self._ensure_enemy_cache()
 
         self.agent_pos = self.start_position
         self.enemies_alive = {eid: True for eid in self.enemy_positions.keys()}
@@ -228,18 +325,10 @@ class GridWorldEnv(gym.Env):
         return self._get_obs(), reward, terminated, truncated, info
 
     def _action_to_delta(self, action: int) -> Tuple[int, int]:
-        deltas = {
-            self.ACTION_UP: (0, -1),
-            self.ACTION_DOWN: (0, 1),
-            self.ACTION_LEFT: (-1, 0),
-            self.ACTION_RIGHT: (1, 0),
-            self.ACTION_UP_LEFT: (-1, -1),
-            self.ACTION_UP_RIGHT: (1, -1),
-            self.ACTION_DOWN_LEFT: (-1, 1),
-            self.ACTION_DOWN_RIGHT: (1, 1),
-            self.ACTION_REST: (0, 0),
-        }
-        return deltas.get(action, (0, 0))
+        action = int(action)
+        if 0 <= action < len(self.ACTION_DELTAS):
+            return self.ACTION_DELTAS[action]
+        return (0, 0)
 
     def _target_pos_for_action(self, action: int) -> Tuple[int, int]:
         dx, dy = self._action_to_delta(action)
@@ -249,29 +338,32 @@ class GridWorldEnv(gym.Env):
         return 0 <= int(pos[0]) < self.grid_size and 0 <= int(pos[1]) < self.grid_size
 
     def _get_obs(self) -> np.ndarray:
-        x_norm = self.agent_pos[0] / max(1, self.grid_size - 1)
-        y_norm = self.agent_pos[1] / max(1, self.grid_size - 1)
+        self._ensure_enemy_cache()
 
-        enemy_ids = sorted(self.enemy_positions.keys())
-        enemies_flags = [1.0 if self.enemies_alive.get(i, False) else 0.0 for i in enemy_ids]
+        enemy_ids = self._enemy_ids
+        enemy_count = len(enemy_ids)
+        obs = np.empty(2 + enemy_count + enemy_count + 1, dtype=np.float32)
+        agent_x, agent_y = self.agent_pos
 
-        max_dist = np.sqrt(2) * (self.grid_size - 1)
-        distances = []
-        for enemy_id in enemy_ids:
-            if enemy_id in self.enemy_positions:
-                ex, ey = self.enemy_positions[enemy_id]
-                dist = np.sqrt((self.agent_pos[0] - ex) ** 2 + (self.agent_pos[1] - ey) ** 2)
-                distances.append(dist / max(1e-9, max_dist))
-            else:
-                distances.append(1.0)
+        obs[0] = float(agent_x) * self._grid_span_inv
+        obs[1] = float(agent_y) * self._grid_span_inv
 
-        total_cells = self.grid_size**2
-        visited_ratio = len(self.visited_cells) / total_cells
+        flags_start = 2
+        distances_start = flags_start + enemy_count
+        for index, enemy_id in enumerate(enemy_ids):
+            obs[flags_start + index] = (
+                1.0 if self.enemies_alive.get(enemy_id, False) else 0.0
+            )
 
-        return np.array(
-            [x_norm, y_norm] + enemies_flags + distances + [visited_ratio],
-            dtype=np.float32,
-        )
+        if enemy_count:
+            dx = self._enemy_coords[:, 0] - float(agent_x)
+            dy = self._enemy_coords[:, 1] - float(agent_y)
+            obs[distances_start : distances_start + enemy_count] = (
+                np.sqrt(dx * dx + dy * dy) * self._max_enemy_distance_inv
+            )
+
+        obs[-1] = float(len(self.visited_cells)) * self._total_cells_inv
+        return obs
 
     def mark_enemy_defeated(self, enemy_id: int) -> None:
         if enemy_id in self.enemies_alive:
@@ -302,127 +394,23 @@ class GridWorldEnv(gym.Env):
             return None
         return min(candidates)[0]
 
-    def render(self, mode: str = "ansi") -> Optional[str]:
-        if mode != "ansi":
-            return None
-
-        enemy_ids = sorted(self.enemy_positions.keys())
-        chest_positions = {
-            self._clamp_to_grid(pos)
-            for pos in getattr(self, "chest_positions", set()) or set()
-        }
-        merchant_positions = {
-            self._clamp_to_grid(pos)
-            for pos in getattr(self, "merchant_positions", set()) or set()
-        }
-        spell_shop_positions = {
-            self._clamp_to_grid(pos)
-            for pos in getattr(self, "spell_shop_positions", set()) or set()
-        }
-        mercenary_positions = {
-            self._clamp_to_grid(pos)
-            for pos in getattr(self, "mercenary_positions", set()) or set()
-        }
-        trainer_positions = {
-            self._clamp_to_grid(pos)
-            for pos in getattr(self, "trainer_positions", set()) or set()
-        }
-        scripted_bot_position = getattr(self, "scripted_bot_position", None)
-        if scripted_bot_position is not None:
-            scripted_bot_position = self._clamp_to_grid(scripted_bot_position)
-        scripted_bot_symbol = str(getattr(self, "scripted_bot_symbol", "B") or "B")[:1]
-        mana_sources = {
-            self._clamp_to_grid(pos): dict(meta or {})
-            for pos, meta in (getattr(self, "mana_sources", {}) or {}).items()
-        }
-        water_positions = {
-            self._clamp_to_grid(pos)
-            for pos in getattr(self, "water_positions", set()) or set()
-        }
-        forest_positions = {
-            self._clamp_to_grid(pos)
-            for pos in getattr(self, "forest_positions", set()) or set()
-        }
-        road_positions = {
-            self._clamp_to_grid(pos)
-            for pos in getattr(self, "road_positions", set()) or set()
-        }
-
-        lines = []
-        lines.append("+" + "-" * (self.grid_size * 2 + 1) + "+")
-        for y in range(self.grid_size):
-            row = "| "
-            for x in range(self.grid_size):
-                pos = (x, y)
-                if pos == self.agent_pos:
-                    row += "A "
-                elif scripted_bot_position is not None and pos == scripted_bot_position:
-                    row += f"{scripted_bot_symbol} "
-                elif pos in self.obstacle_positions:
-                    row += "# "
-                elif pos in merchant_positions:
-                    row += "M "
-                elif pos in spell_shop_positions:
-                    row += "S "
-                elif pos in mercenary_positions:
-                    row += "H "
-                elif pos in trainer_positions:
-                    row += "R "
-                elif pos in chest_positions:
-                    row += "T "
-                elif pos in mana_sources:
-                    mana_meta = mana_sources[pos]
-                    symbol = str(mana_meta.get("letter", "?") or "?")[:1]
-                    ansi_color = str(mana_meta.get("ansi_color", "") or "")
-                    row += f"{self._colorize_symbol(symbol, ansi_color)} "
-                elif pos in [self.enemy_positions.get(i) for i in enemy_ids]:
-                    enemy_id = self.get_enemy_at_position(pos)
-                    row += f"{enemy_id} " if enemy_id is not None else "x "
-                elif pos in road_positions:
-                    row += "= "
-                elif pos in water_positions:
-                    row += "~ "
-                elif pos in forest_positions:
-                    row += "* "
-                elif pos in self.visited_cells:
-                    row += ". "
-                else:
-                    row += "  "
-            row += "|"
-            lines.append(row)
-
-        lines.append("+" + "-" * (self.grid_size * 2 + 1) + "+")
-        lines.append(f"Agent: {self.agent_pos}")
-        lines.append(f"Enemies alive: {[k for k, v in self.enemies_alive.items() if v]}")
-        lines.append(f"Merchants: {sorted(merchant_positions)}")
-        lines.append(f"Spell shops: {sorted(spell_shop_positions)}")
-        lines.append(f"Mercenary camps: {sorted(mercenary_positions)}")
-        lines.append(f"Trainers: {sorted(trainer_positions)}")
-        lines.append(f"Chests: {sorted(chest_positions)}")
-        lines.append(
-            f"Terrain: water={len(water_positions)}, forest={len(forest_positions)}, roads={len(road_positions)}"
-        )
-        if mana_sources:
-            mana_summary = ", ".join(
-                f"{pos}:{meta.get('name', '')}"
-                for pos, meta in sorted(mana_sources.items(), key=lambda item: item[0])
-            )
-            lines.append(f"Mana sources: {mana_summary}")
-        lines.append(f"Visited: {len(self.visited_cells)}/{self.grid_size**2}")
-
-        result = "\n".join(lines)
-        print(result)
-        return result
-
     def compute_action_mask(self) -> np.ndarray:
         mask = np.zeros(self.action_space.n, dtype=bool)
         mask[self.ACTION_REST] = True
+        agent_x, agent_y = self.agent_pos
+        grid_size = self.grid_size
+        obstacle_positions = self.obstacle_positions
+        dynamic_blocked_positions = self.dynamic_blocked_positions
 
-        for action in range(self.ACTION_REST):
-            target_pos = self._target_pos_for_action(action)
-            mask[action] = self._is_within_grid(target_pos) and (
-                target_pos not in self.obstacle_positions
-                and target_pos not in self.dynamic_blocked_positions
+        for action, (dx, dy) in enumerate(self.ACTION_DELTAS[: self.ACTION_REST]):
+            target_x = agent_x + dx
+            target_y = agent_y + dy
+            target_pos = (target_x, target_y)
+            mask[action] = (
+                0 <= target_x < grid_size
+                and 0 <= target_y < grid_size
+                and target_pos not in obstacle_positions
+                and target_pos not in dynamic_blocked_positions
             )
 
         return mask

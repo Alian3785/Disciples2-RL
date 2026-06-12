@@ -38,7 +38,7 @@ def _summoned_blue_unit(position: int, summoner_position: int = 8) -> dict:
 
 
 def test_save_blue_state_restores_empty_start_slot_after_summon():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     position = 10
@@ -58,7 +58,7 @@ def test_save_blue_state_restores_empty_start_slot_after_summon():
 
 
 def test_save_blue_state_removes_summoned_unit_from_occupied_start_slot():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     position = 7

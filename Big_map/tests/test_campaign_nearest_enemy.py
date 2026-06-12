@@ -7,7 +7,7 @@ from campaign_env import CampaignEnv
 
 
 def _make_env() -> CampaignEnv:
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     return env
 
@@ -57,6 +57,28 @@ def test_get_nearest_enemy_stack_skips_defeated_enemy():
     }
     env.grid_env.enemies_alive = {10: False, 20: True}
     env.grid_env.obstacle_positions = set()
+
+    nearest = env.get_nearest_enemy_stack()
+
+    assert nearest is not None
+    assert nearest["enemy_id"] == 20
+    assert nearest["position"] == (6, 3)
+    assert nearest["path_distance"] == 3
+
+
+def test_get_nearest_enemy_stack_skips_enemy_without_living_units():
+    env = _make_env()
+    env.grid_env.agent_pos = (3, 3)
+    env.grid_env.enemy_positions = {
+        10: (4, 3),
+        20: (6, 3),
+    }
+    env.grid_env.enemies_alive = {10: True, 20: True}
+    env.grid_env.obstacle_positions = set()
+
+    for unit in env._get_enemy_team_state(10):
+        unit["hp"] = 0.0
+        unit["health"] = 0.0
 
     nearest = env.get_nearest_enemy_stack()
 

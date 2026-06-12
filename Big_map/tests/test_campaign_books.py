@@ -32,12 +32,12 @@ class BookScenarioEnv(CampaignEnv):
         self.chests = dict(self._static_chests)
         self._refresh_dynamic_action_layout()
         self.action_space = self.action_space.__class__(
-            self.grid_scroll_cast_action_start + int(self.MAX_SCROLL_CAST_ACTIONS)
+            self.GRID_SWAP_UNIT_ACTION_START + self.GRID_SWAP_UNIT_ACTION_COUNT
         )
 
 
 def _new_book_env() -> BookScenarioEnv:
-    env = BookScenarioEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = BookScenarioEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     return env
 
@@ -128,7 +128,7 @@ def test_book_slot_is_encoded_as_one_hot_resource_observation():
     book_features = env.grid_book_equipment_features_per_slot
 
     empty_obs = env._build_resource_grid_obs()
-    assert env.grid_book_equipment_item_names == env.scenario_book_item_names
+    assert env.grid_book_equipment_item_names == env.BOOK_ITEM_NAMES
     assert empty_obs[book_offset] == pytest.approx(1.0)
     assert sum(empty_obs[book_offset : book_offset + book_features]) == pytest.approx(1.0)
 
@@ -139,6 +139,19 @@ def test_book_slot_is_encoded_as_one_hot_resource_observation():
     assert war_obs[book_offset] == pytest.approx(0.0)
     assert war_obs[book_offset + 1 + war_index] == pytest.approx(1.0)
     assert sum(war_obs[book_offset : book_offset + book_features]) == pytest.approx(1.0)
+
+
+def test_book_observation_size_uses_fixed_book_vocabulary():
+    base_env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
+    base_env.reset(seed=123)
+    book_env = _new_book_env()
+
+    assert base_env.scenario_book_item_names != book_env.scenario_book_item_names
+    assert base_env.grid_book_equipment_item_names == base_env.BOOK_ITEM_NAMES
+    assert book_env.grid_book_equipment_item_names == book_env.BOOK_ITEM_NAMES
+    assert base_env.grid_book_equipment_obs_size == book_env.grid_book_equipment_obs_size
+    assert base_env.grid_resource_obs_size == book_env.grid_resource_obs_size
+    assert base_env.observation_space.shape == book_env.observation_space.shape
 
 
 def test_manual_book_replacement_has_own_turn_lock_and_does_not_block_battle_items():
@@ -178,7 +191,6 @@ def test_arcanum_and_sorcery_unlock_only_their_battle_item_type_without_sorcery_
     hero["hero_abilities"] = []
     _grant_book_lore_token(env)
     env.typeoflord = 1
-    env.Typeoflord = 1
     env._append_hero_item("Vampire Orb")
     env._append_hero_item("Zombie Talisman")
 

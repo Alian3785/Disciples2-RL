@@ -1,0 +1,20 @@
+Traceback (most recent call last):
+  File "C:\realnewdisciples\Big_map\train_campaign.py", line 2534, in <module>
+    vec_env = make_vec_env(
+        env_factory,
+    ...<3 lines>...
+        vec_env_kwargs=vec_env_kwargs,
+    )
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\env_util.py", line 126, in make_vec_env
+    vec_env = vec_env_cls([make_env(i + start_index) for i in range(n_envs)], **vec_env_kwargs)
+  File "C:\realnewdisciples\Big_map\.venv\Lib\site-packages\stable_baselines3\common\vec_env\subproc_vec_env.py", line 116, in __init__
+    self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)], strict=True)
+                                            ~~~~~~~~^^
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\context.py", line 63, in Pipe
+    return Pipe(duplex)
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\multiprocessing\connection.py", line 592, in Pipe
+    h2 = _winapi.CreateFile(
+        address, access, 0, _winapi.NULL, _winapi.OPEN_EXISTING,
+        _winapi.FILE_FLAG_OVERLAPPED, _winapi.NULL
+        )
+PermissionError: [WinError 5] Отказано в доступе

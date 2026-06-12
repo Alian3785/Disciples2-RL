@@ -50,7 +50,7 @@ def test_all_neutral_unit_entries_have_level_one_or_higher():
     ],
 )
 def test_neutral_unit_heal_cost_uses_max_health_buckets(unit_name, expected_cost_per_hp):
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     unit = map_unit_to_battle(_unit_entry(unit_name), team="blue", position=7)
 
     assert unit["is_neutral_unit"] is True
@@ -60,7 +60,7 @@ def test_neutral_unit_heal_cost_uses_max_health_buckets(unit_name, expected_cost
 
 
 def test_faction_unit_heal_cost_still_uses_level_and_not_hp_bucket():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     unit = map_unit_to_battle(_unit_entry("Скваер"), team="blue", position=7)
     unit["Level"] = 4
     unit["max_health"] = 90
@@ -83,7 +83,7 @@ def test_faction_unit_heal_cost_still_uses_level_and_not_hp_bucket():
     ],
 )
 def test_neutral_unit_revive_cost_uses_max_health_buckets(max_health, expected_revive_cost):
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     unit = {
         "is_neutral_unit": True,
         "capital": 0,
@@ -95,7 +95,7 @@ def test_neutral_unit_revive_cost_uses_max_health_buckets(max_health, expected_r
 
 
 def test_faction_unit_revive_cost_still_uses_level_and_not_hp_bucket():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     unit = map_unit_to_battle(_unit_entry("Скваер"), team="blue", position=7)
     unit["Level"] = 4
     unit["max_health"] = 90

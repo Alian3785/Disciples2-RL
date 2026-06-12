@@ -22,7 +22,6 @@ def _make_enemy(exp_kill: int) -> dict:
 
 def _set_lord_type(env: CampaignEnv, lord_type: int) -> None:
     env.typeoflord = int(lord_type)
-    env.Typeoflord = int(lord_type)
 
 
 def test_hero_levelup_raises_level_resets_exp_and_buffs_hero_stats():
@@ -116,7 +115,7 @@ def test_regular_unit_without_next_level_exp_keeps_transform_upgrade_flow():
 
 
 def test_campaign_save_preserves_hero_level_and_exp_threshold_after_battle():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     battle_units = deepcopy(UNITS_BLUE)
@@ -139,7 +138,7 @@ def test_campaign_save_preserves_hero_level_and_exp_threshold_after_battle():
 
 
 def test_campaign_moves_per_turn_scales_with_travel_hero_level():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     duke = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
@@ -167,7 +166,7 @@ def test_campaign_moves_per_turn_scales_with_travel_hero_level():
 
 
 def test_campaign_base_moves_per_turn_uses_alive_hero_type():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     hero = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
@@ -190,7 +189,7 @@ def test_campaign_base_moves_per_turn_uses_alive_hero_type():
 
 
 def test_campaign_travel_hero_visual_info_shows_leadership_on_level_three():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     duke = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
@@ -211,7 +210,7 @@ def test_campaign_travel_hero_visual_info_shows_leadership_on_level_three():
 
 
 def test_campaign_travel_hero_visual_info_shows_endurance_on_level_four():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     duke = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
@@ -248,7 +247,7 @@ def test_lord_types_grant_their_starting_hero_knowledge():
         ),
     ]
     for lord_type, expected_ability in cases:
-        env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+        env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
         env.reset(seed=123)
         _set_lord_type(env, lord_type)
 
@@ -259,7 +258,7 @@ def test_lord_types_grant_their_starting_hero_knowledge():
 
 
 def test_campaign_travel_hero_visual_info_shows_banner_bearer_on_level_seven():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     duke = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
@@ -283,7 +282,7 @@ def test_campaign_travel_hero_visual_info_shows_banner_bearer_on_level_seven():
 
 
 def test_campaign_travel_hero_visual_info_shows_marching_lore_on_level_eight():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     duke = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
@@ -308,7 +307,7 @@ def test_campaign_travel_hero_visual_info_shows_marching_lore_on_level_eight():
 
 
 def test_campaign_travel_hero_visual_info_shows_artifact_knowledge_on_level_nine():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     duke = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
@@ -330,7 +329,7 @@ def test_campaign_travel_hero_visual_info_shows_artifact_knowledge_on_level_nine
 
 
 def test_campaign_travel_hero_visual_info_shows_sorcery_lore_on_level_ten():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     duke = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
@@ -352,7 +351,7 @@ def test_campaign_travel_hero_visual_info_shows_sorcery_lore_on_level_ten():
 
 
 def test_campaign_travel_hero_visual_info_shows_book_lore_on_level_eleven():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     duke = next(u for u in env.blue_team_state if int(u.get("position", -1)) == 8)
@@ -380,7 +379,7 @@ def test_replacement_might_bonus_applies_once_and_only_to_primary_damage():
         (3, 8),
     ]
     for lord_type, replacement_level in cases:
-        env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+        env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
         env.reset(seed=123)
         _set_lord_type(env, lord_type)
 

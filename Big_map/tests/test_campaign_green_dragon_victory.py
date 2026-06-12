@@ -52,11 +52,12 @@ class _StepRewardBattleEnv:
         return self._obs(), self._reward, self._terminated, self._truncated, {}
 
 
-def _make_reward_isolated_env() -> CampaignEnv:
+def _make_reward_isolated_env(campaign_objective: str = "cities") -> CampaignEnv:
     return CampaignEnv(
         log_enabled=False,
         persist_blue_hp=False,
-        realcapital=2,
+        Realcapital=2,
+        campaign_objective=campaign_objective,
         reward_defeat_enemy=0.0,
         reward_exp_weight=0.0,
         reward_survival_alive_weight=0.0,
@@ -105,6 +106,121 @@ def test_green_dragon_has_no_special_final_reward():
     assert reward == 0.0
 
 
+def test_green_dragon_reached_reward_is_once_per_episode():
+    env = _make_reward_isolated_env(campaign_objective="dragon")
+    env.reward_green_dragon_reached = 6.0
+    env.reset(seed=123)
+    dragon_id = env.GREEN_DRAGON_OBJECTIVE_ENEMY_ID
+
+    first_info = {}
+    first_reward = env._apply_green_dragon_reached_reward_if_needed(
+        dragon_id,
+        1.0,
+        first_info,
+    )
+    second_info = {}
+    second_reward = env._apply_green_dragon_reached_reward_if_needed(
+        dragon_id,
+        1.0,
+        second_info,
+    )
+
+    assert first_reward == pytest.approx(7.0)
+    assert first_info.get("green_dragon_reached") is True
+    assert first_info.get("green_dragon_reached_reward") == pytest.approx(6.0)
+    assert first_info.get("green_dragon_reached_reward_repeat") is False
+    assert second_reward == pytest.approx(1.0)
+    assert second_info.get("green_dragon_reached") is True
+    assert second_info.get("green_dragon_reached_reward") == pytest.approx(0.0)
+    assert second_info.get("green_dragon_reached_reward_repeat") is True
+
+
+def test_no_dragon_victory_late_step_penalty_starts_after_grace_period():
+    env = CampaignEnv(
+        log_enabled=False,
+        persist_blue_hp=False,
+        Realcapital=2,
+        campaign_objective="dragon",
+        max_grid_steps=10,
+        reward_no_dragon_victory_late_step_penalty=0.1,
+        reward_no_dragon_victory_late_step_penalty_cap=0.3,
+        reward_no_dragon_victory_late_step_start_fraction=0.5,
+    )
+    env.reset(seed=123)
+
+    env.campaign_steps = 5
+    assert env._compute_no_dragon_victory_late_step_penalty({}) == pytest.approx(0.0)
+
+    env.campaign_steps = 6
+    assert env._compute_no_dragon_victory_late_step_penalty({}) == pytest.approx(-0.14)
+    assert env._compute_no_dragon_victory_late_step_penalty(
+        {"campaign_result": "victory"}
+    ) == pytest.approx(0.0)
+
+
+def test_green_dragon_restores_to_full_hp_each_campaign_turn_while_alive():
+    env = _make_reward_isolated_env()
+    env.reset(seed=123)
+    dragon_id = env.GREEN_DRAGON_OBJECTIVE_ENEMY_ID
+    dragon_unit = next(
+        unit
+        for unit in env.enemy_team_states[dragon_id]
+        if float(unit.get("max_health", 0) or unit.get("maxhp", 0) or 0) > 0.0
+    )
+    max_hp = float(dragon_unit.get("max_health", dragon_unit.get("maxhp", 0)) or 0.0)
+
+    dragon_unit["health"] = max_hp - 123.0
+    dragon_unit["hp"] = max_hp - 123.0
+    env._advance_turns(1)
+
+    assert dragon_unit["health"] == pytest.approx(max_hp)
+    assert dragon_unit["hp"] == pytest.approx(max_hp)
+
+    dragon_unit["health"] = max_hp - 77.0
+    dragon_unit["hp"] = max_hp - 77.0
+    env.grid_env.enemies_alive[dragon_id] = False
+    env._advance_turns(1)
+
+    assert dragon_unit["health"] == pytest.approx(max_hp - 77.0)
+    assert dragon_unit["hp"] == pytest.approx(max_hp - 77.0)
+
+    env.grid_env.enemies_alive[dragon_id] = True
+    dragon_unit["health"] = 0.0
+    dragon_unit["hp"] = 0.0
+    env._advance_turns(1)
+
+    assert dragon_unit["health"] == pytest.approx(0.0)
+    assert dragon_unit["hp"] == pytest.approx(0.0)
+
+
+def test_green_dragon_objective_ends_episode_with_two_city_reward():
+    env = _make_reward_isolated_env(campaign_objective="dragon")
+    env.reward_all_enemies = 9.0
+    env.reset(seed=123)
+    env.mode = env.MODE_BATTLE
+    env.current_enemy_id = env.GREEN_DRAGON_OBJECTIVE_ENEMY_ID
+    env.battle_env = _DummyBattleEnv()
+
+    _, reward, terminated, truncated, info = env.step(0)
+
+    expected_reward = (
+        9.0
+        * (1.0 + env.FINAL_OBJECTIVE_CITY_REWARD_MULTIPLIER)
+        * env.reward_green_dragon_objective_multiplier
+    )
+    assert terminated is True
+    assert truncated is False
+    assert info.get("campaign_result") == "victory"
+    assert info.get("campaign_victory_reason") == "green_dragon_defeated"
+    assert info.get("campaign_objective") == "dragon"
+    assert reward == expected_reward
+    assert info.get("final_objective_reward") == expected_reward
+    assert info.get("green_dragon_objective_reward") == expected_reward
+    assert info.get("green_dragon_objective_base_reward") == pytest.approx(
+        9.0 * (1.0 + env.FINAL_OBJECTIVE_CITY_REWARD_MULTIPLIER)
+    )
+
+
 def test_second_objective_city_capture_ends_episode_and_keeps_full_reward():
     env = _make_reward_isolated_env()
     env.reward_all_enemies = 8.0
@@ -129,11 +245,34 @@ def test_second_objective_city_capture_ends_episode_and_keeps_full_reward():
     assert info.get("final_objective_reward") == 40.0
 
 
+def test_second_objective_city_does_not_end_episode_in_dragon_mode():
+    env = _make_reward_isolated_env(campaign_objective="dragon")
+    env.reward_all_enemies = 8.0
+    env.reset(seed=123)
+    first_city, second_city = list(env.FINAL_OBJECTIVE_CITIES.keys())
+    env.captured_objective_cities = {first_city}
+    env.grid_env.enemies_alive[35] = False
+    env.grid_env.enemies_alive[69] = True
+
+    env.mode = env.MODE_BATTLE
+    env.current_enemy_id = 69
+    env.battle_env = _DummyBattleEnv()
+
+    _, reward, terminated, truncated, info = env.step(0)
+
+    assert terminated is False
+    assert truncated is False
+    assert "campaign_result" not in info
+    assert "final_objective_reward" not in info
+    assert reward == 0.0
+    assert env.captured_objective_cities == {first_city, second_city}
+
+
 def test_campaign_truncates_after_max_grid_steps():
     env = CampaignEnv(
         log_enabled=False,
         persist_blue_hp=False,
-        realcapital=2,
+        Realcapital=2,
         max_grid_steps=1,
         reward_timeout=-7.0,
     )
@@ -229,7 +368,7 @@ def test_init_battle_passes_campaign_battle_reward_settings_to_battle_env():
     env = CampaignEnv(
         log_enabled=False,
         persist_blue_hp=False,
-        realcapital=2,
+        Realcapital=2,
         battle_reward_win=3.5,
         battle_reward_loss=-2.25,
         battle_reward_step=0.125,

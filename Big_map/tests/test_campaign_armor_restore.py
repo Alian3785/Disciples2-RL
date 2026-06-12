@@ -2,7 +2,7 @@ from campaign_env import CampaignEnv
 
 
 def test_save_blue_state_restores_battle_start_armor():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     env._init_battle(enemy_id=1)
 

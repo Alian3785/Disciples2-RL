@@ -9,7 +9,7 @@ from campaign_env import CampaignEnv
 
 
 def _new_env() -> CampaignEnv:
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     for enemy_id in list(env.grid_env.enemies_alive.keys()):
         env.grid_env.enemies_alive[enemy_id] = False
@@ -120,13 +120,12 @@ def test_non_flying_hero_spends_terrain_move_cost(terrain: str, expected_cost: i
         ("road", 2),
     ],
 )
-def test_dead_hero_keeps_move_cap_but_doubles_step_costs(
+def test_dead_hero_falls_back_to_default_move_cap_and_doubles_step_costs(
     terrain: str,
     expected_cost: int,
 ):
     env = _new_env()
     hero = _set_travel_hero(env, "Герцог", flying=False)
-    alive_move_cap = int(env.moves_per_turn)
     hero["hp"] = 0
     hero["health"] = 0
     env._sync_moves_per_turn_with_hero(units=env.blue_team_state, refill=True)
@@ -137,7 +136,7 @@ def test_dead_hero_keeps_move_cap_but_doubles_step_costs(
 
     _, _, _, _, info = env.step(action)
 
-    assert env.moves_per_turn == alive_move_cap
+    assert env.moves_per_turn == env.MOVES_PER_TURN
     assert env.grid_env.agent_pos == target
     assert info["target_terrain"] == terrain
     assert info["move_cost"] == expected_cost

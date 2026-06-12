@@ -1,0 +1,80 @@
+timestamp=2026-05-27 17:39:13
+num_timesteps=110976
+n_updates=20
+policy_class=MaskableActorCriticPolicy
+training_env_chain=VecCheckNan -> VecNormalize -> SubprocVecEnv
+rollout_buffer=MaskableRolloutBuffer(used=1055, buffer_size=2048, full=False, pos=1055)
+exception_type=OSError
+exception_message=[Errno 22] Invalid argument
+traceback:
+Traceback (most recent call last):
+
+  File "C:\realnewdisciples\Big_map\train_campaign.py", line 2313, in <module>
+    model.learn(
+    ~~~~~~~~~~~^
+        total_timesteps=TOTAL_STEPS,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        callback=CallbackList(callbacks),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\site-packages\sb3_contrib\ppo_mask\ppo_mask.py", line 453, in learn
+    continue_training = self.collect_rollouts(self.env, callback, self.rollout_buffer, self.n_steps, use_masking)
+
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\site-packages\sb3_contrib\ppo_mask\ppo_mask.py", line 239, in collect_rollouts
+    if not callback.on_step():
+           ~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\site-packages\stable_baselines3\common\callbacks.py", line 115, in on_step
+    return self._on_step()
+           ~~~~~~~~~~~~~^^
+
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\site-packages\stable_baselines3\common\callbacks.py", line 224, in _on_step
+    continue_training = callback.on_step() and continue_training
+                        ~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\Aerocool\AppData\Local\Programs\Python\Python314\Lib\site-packages\stable_baselines3\common\callbacks.py", line 115, in on_step
+    return self._on_step()
+           ~~~~~~~~~~~~~^^
+
+  File "C:\realnewdisciples\Big_map\train_campaign.py", line 568, in _on_step
+    print(f"[Checkpoint] Saved at {self.next_milestone} steps > {path}")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+OSError: [Errno 22] Invalid argument
+
+policy_parameter_diagnostics:
+- all policy parameters are finite
+rollout_buffer_diagnostics:
+rollout_buffer.observations: shape=(1055, 12, 9864), dtype=float32, size=124878240
+rollout_buffer.observations: finite=124878240/124878240, nan=0, inf=0
+rollout_buffer.observations: min=0, max=1, mean=0.0708011
+rollout_buffer.actions: shape=(1055, 12, 1), dtype=int64, size=12660
+rollout_buffer.actions: finite=12660/12660, nan=0, inf=0
+rollout_buffer.actions: min=0, max=248, mean=145.372
+rollout_buffer.rewards: shape=(1055, 12), dtype=float32, size=12660
+rollout_buffer.rewards: finite=12660/12660, nan=0, inf=0
+rollout_buffer.rewards: min=-1.68004, max=1.36695, mean=0.00226389
+rollout_buffer.returns: shape=(1055, 12), dtype=float32, size=12660
+rollout_buffer.returns: finite=12660/12660, nan=0, inf=0
+rollout_buffer.returns: min=0, max=0, mean=0
+rollout_buffer.advantages: shape=(1055, 12), dtype=float32, size=12660
+rollout_buffer.advantages: finite=12660/12660, nan=0, inf=0
+rollout_buffer.advantages: min=0, max=0, mean=0
+rollout_buffer.values: shape=(1055, 12), dtype=float32, size=12660
+rollout_buffer.values: finite=12660/12660, nan=0, inf=0
+rollout_buffer.values: min=-1.52442, max=1.90087, mean=-0.060813
+rollout_buffer.log_probs: shape=(1055, 12), dtype=float32, size=12660
+rollout_buffer.log_probs: finite=12660/12660, nan=0, inf=0
+rollout_buffer.log_probs: min=-4.39799, max=0, mean=-2.3281
+rollout_buffer.action_masks: shape=(1055, 12, 249), dtype=float32, size=3152340
+rollout_buffer.action_masks: finite=3152340/3152340, nan=0, inf=0
+rollout_buffer.action_masks: min=0, max=1, mean=0.053926
+vec_check_nan_last_values:
+vec_check_nan.last_actions: shape=(12,), dtype=int64, size=12
+vec_check_nan.last_actions: finite=12/12, nan=0, inf=0
+vec_check_nan.last_actions: min=0, max=244, mean=123.167
+vec_check_nan.last_observations: shape=(12, 9864), dtype=float32, size=118368
+vec_check_nan.last_observations: finite=118368/118368, nan=0, inf=0
+vec_check_nan.last_observations: min=0, max=1, mean=0.0682673

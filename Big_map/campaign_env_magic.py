@@ -30,9 +30,23 @@ class CampaignMagicMixin:
             str(kind): float(getattr(self, self.MANA_ATTR_BY_KIND[str(kind)], 0.0) or 0.0)
             for kind in self.MANA_KIND_ORDER
         }
+    @classmethod
+    def _base_mana_kind_for_capital(cls, capital: Optional[int]) -> str:
+        try:
+            capital_value = int(capital)
+        except (TypeError, ValueError):
+            capital_value = 2
+        return {
+            1: "life",
+            2: "infernal",
+            3: "runes",
+            4: "death",
+            5: "elves",
+        }.get(capital_value, "infernal")
     def _compute_mana_income_per_turn(self) -> Dict[str, float]:
         mana_income = self._empty_mana_dict()
-        mana_income["infernal"] = float(self.BASE_INFERNAL_MANA_PER_TURN)
+        base_mana_kind = self._base_mana_kind_for_capital(getattr(self, "Realcapital", 2))
+        mana_income[str(base_mana_kind)] += float(self.BASE_INFERNAL_MANA_PER_TURN)
         for kind in self.MANA_KIND_ORDER:
             captured_count = int(
                 getattr(self, "legions_captured_mana_source_counts_by_kind", {}).get(str(kind), 0)
@@ -99,6 +113,30 @@ class CampaignMagicMixin:
                 value = 0.0
             costs[str(mana_kind)] = value
         return costs
+    @classmethod
+    @lru_cache(maxsize=256)
+    def _spell_use_cost_items_from_values(
+        cls,
+        raw_values: Tuple[object, ...],
+    ) -> Tuple[Tuple[str, float], ...]:
+        items: List[Tuple[str, float]] = []
+        for raw_value, mana_kind in zip(
+            raw_values,
+            cls.SPELL_COST_MANA_KIND_BY_SUFFIX.values(),
+        ):
+            try:
+                value = max(0.0, float(raw_value or 0.0))
+            except (TypeError, ValueError):
+                value = 0.0
+            items.append((str(mana_kind), value))
+        return tuple(items)
+    @staticmethod
+    def _spell_cost_cache_key_value(raw_value: object) -> object:
+        try:
+            hash(raw_value)
+        except TypeError:
+            return repr(raw_value)
+        return raw_value
     def _spell_learning_cost_multiplier(self) -> float:
         return (
             float(self.TYPEOFLORD_TWO_SPELL_LEARNING_COST_MULTIPLIER)
@@ -115,7 +153,13 @@ class CampaignMagicMixin:
             for mana_kind, required_amount in base_costs.items()
         }
     def _get_spell_use_costs(self, spell: Dict) -> Dict[str, float]:
-        return self._spell_costs_from_entry(spell, prefix="use")
+        if not isinstance(spell, dict):
+            return self._spell_costs_from_entry(spell, prefix="use")
+        raw_values = tuple(
+            self._spell_cost_cache_key_value(spell.get(f"use_{suffix}", 0.0))
+            for suffix in self.SPELL_COST_MANA_KIND_BY_SUFFIX.keys()
+        )
+        return dict(self._spell_use_cost_items_from_values(raw_values))
     def _same_spell_cast_limit_per_turn(self) -> int:
         if int(self.typeoflord) == 2:
             return int(self.TYPEOFLORD_TWO_SAME_SPELL_CASTS_PER_TURN)
@@ -140,13 +184,7 @@ class CampaignMagicMixin:
             self._spell_cast_count_this_turn(normalized_spell_key) + 1
         )
     @classmethod
-    def _legion_damage_spell_ids(cls) -> Tuple[str, ...]:
-        return tuple(
-            str(spec.get("id", "") or "")
-            for spec in cls.LEGION_DAMAGE_SPELL_ACTION_SPECS
-            if str(spec.get("id", "") or "")
-        )
-    @classmethod
+    @lru_cache(maxsize=8)
     def _map_offensive_spell_action_specs_for_capital(
         cls,
         capital: Optional[int],
@@ -158,6 +196,7 @@ class CampaignMagicMixin:
         specs = cls.MAP_OFFENSIVE_SPELL_ACTION_SPECS_BY_CAPITAL.get(capital_value, ())
         return tuple(specs)
     @classmethod
+    @lru_cache(maxsize=1)
     def _map_offensive_spell_action_max_count(cls) -> int:
         return max(
             [0]
@@ -169,6 +208,7 @@ class CampaignMagicMixin:
     def _current_map_offensive_spell_action_specs(self) -> Tuple[Dict[str, object], ...]:
         return self._map_offensive_spell_action_specs_for_capital(self.Realcapital)
     @classmethod
+    @lru_cache(maxsize=8)
     def _map_offensive_spell_ids_for_capital(cls, capital: Optional[int]) -> Tuple[str, ...]:
         return tuple(
             str(spec.get("id", "") or "")
@@ -176,6 +216,7 @@ class CampaignMagicMixin:
             if str(spec.get("id", "") or "")
         )
     @classmethod
+    @lru_cache(maxsize=1)
     def _map_offensive_spell_specs_by_id(cls) -> Dict[str, Dict[str, object]]:
         return {
             str(spec.get("id", "") or ""): dict(spec)
@@ -203,6 +244,7 @@ class CampaignMagicMixin:
             )
         return self.get_nearest_enemy_stack(spell_targetable_only=spell_targetable_only)
     @classmethod
+    @lru_cache(maxsize=8)
     def _map_support_spell_action_specs_for_capital(
         cls,
         capital: Optional[int],
@@ -214,6 +256,7 @@ class CampaignMagicMixin:
         specs = cls.MAP_SUPPORT_SPELL_ACTION_SPECS_BY_CAPITAL.get(capital_value, ())
         return tuple(specs)
     @classmethod
+    @lru_cache(maxsize=1)
     def _map_support_spell_action_max_count(cls) -> int:
         return max(
             [0]
@@ -225,6 +268,7 @@ class CampaignMagicMixin:
     def _current_map_support_spell_action_specs(self) -> Tuple[Dict[str, object], ...]:
         return self._map_support_spell_action_specs_for_capital(self.Realcapital)
     @classmethod
+    @lru_cache(maxsize=8)
     def _map_support_spell_ids_for_capital(cls, capital: Optional[int]) -> Tuple[str, ...]:
         return tuple(
             str(spec.get("id", "") or "")
@@ -232,6 +276,7 @@ class CampaignMagicMixin:
             if str(spec.get("id", "") or "")
         )
     @classmethod
+    @lru_cache(maxsize=1)
     def _map_support_spell_specs_by_id(cls) -> Dict[str, Dict[str, object]]:
         return {
             str(spec.get("id", "") or ""): dict(spec)
@@ -242,6 +287,7 @@ class CampaignMagicMixin:
     def _map_support_spell_spec(self, spell_key: str) -> Dict[str, object]:
         return dict(self._map_support_spell_specs_by_id().get(str(spell_key or ""), {}))
     @classmethod
+    @lru_cache(maxsize=8)
     def _map_castable_spell_ids_for_capital(cls, capital: Optional[int]) -> Tuple[str, ...]:
         return tuple(
             dict.fromkeys(
@@ -457,27 +503,6 @@ class CampaignMagicMixin:
         combined = dict(cls._map_support_spell_specs_by_id())
         combined.update(cls._scroll_support_spell_specs_by_id())
         return combined
-    @classmethod
-    def _legion_damage_spell_specs_by_id(cls) -> Dict[str, Dict[str, object]]:
-        return {
-            str(spec.get("id", "") or ""): dict(spec)
-            for spec in cls.LEGION_DAMAGE_SPELL_ACTION_SPECS
-            if str(spec.get("id", "") or "")
-        }
-    @classmethod
-    def _legion_damage_spell_damage_by_id(cls) -> Dict[str, float]:
-        return {
-            str(spec.get("id", "") or ""): float(spec.get("damage", 0.0) or 0.0)
-            for spec in cls.LEGION_DAMAGE_SPELL_ACTION_SPECS
-            if str(spec.get("kind", "") or "") == "damage"
-        }
-    @classmethod
-    def _legion_damage_spell_element_by_id(cls) -> Dict[str, str]:
-        return {
-            str(spec.get("id", "") or ""): str(spec.get("damage_type", "") or "")
-            for spec in cls.LEGION_DAMAGE_SPELL_ACTION_SPECS
-            if str(spec.get("kind", "") or "") == "damage"
-        }
     def _is_legions_capital(self) -> bool:
         return int(self.Realcapital) == 2
     def _is_empire_capital(self) -> bool:
@@ -592,9 +617,6 @@ class CampaignMagicMixin:
             ],
             "staff_spell_cast_slots_count": int(len(slot_entries)),
         }
-    def _total_scroll_count(self) -> int:
-        self._ensure_inventory_cache()
-        return int(self._total_scroll_count_cache)
     def _scroll_state_info(self) -> Dict[str, object]:
         self._ensure_inventory_cache()
         inventory_entries = self._scroll_inventory_entries_cache
@@ -1097,7 +1119,10 @@ class CampaignMagicMixin:
             result["newly_activated_settlement_territories"] = (
                 self._activate_legions_settlement_territory_if_cleared(target_enemy_id)
             )
-            if result["newly_captured_objective_cities"]:
+            if (
+                result["newly_captured_objective_cities"]
+                and self._campaign_objective_is_cities()
+            ):
                 result["final_objective_reward"] = self._compute_final_objective_reward(
                     len(result["newly_captured_objective_cities"]),
                     captured_before=objective_cities_captured_before,
@@ -1105,6 +1130,11 @@ class CampaignMagicMixin:
                 result["reward"] = float(result["reward"]) + float(
                     result["final_objective_reward"]
                 )
+            result["reward"] = self._apply_green_dragon_objective_reward_if_needed(
+                target_enemy_id,
+                float(result["reward"]),
+                result,
+            )
             if result["newly_activated_settlement_territories"]:
                 for settlement_name in result["newly_activated_settlement_territories"]:
                     self._log(
@@ -1113,6 +1143,177 @@ class CampaignMagicMixin:
 
         result["moves_after_cast"] = float(self.moves or 0.0)
         return result
+    def _build_spell_cast_info(
+        self,
+        *,
+        spell_key: Optional[str],
+        spell_description: Optional[str],
+        spell_level: Optional[int],
+        spell_kind: str,
+        spell_spec: Dict[str, object],
+        cast_result: Dict[str, object],
+        can_cast: bool,
+        mana_costs: Optional[Dict[str, float]] = None,
+        spell_cast_used_this_turn: bool = False,
+        spell_is_learned: bool = False,
+        blocked_by_typeoflord: bool = False,
+        target_enemy_id: object = None,
+        target_enemy_position: object = None,
+        target_enemy_reachable: bool = False,
+        target_enemy_description: object = None,
+        spell_effect_summary: Optional[Dict[str, object]] = None,
+        moves_before_cast: Optional[float] = None,
+        minimal_extra: Optional[Dict[str, object]] = None,
+        detailed_extra: Optional[Dict[str, object]] = None,
+    ) -> Dict[str, object]:
+        cast_result = cast_result or {}
+        mana_costs = mana_costs or {}
+        spell_key = str(spell_key or "")
+        spell_kind = str(spell_kind or "")
+
+        spell_cast_applied = bool(cast_result.get("spell_cast_applied", False))
+        spell_cast_executed = bool(cast_result.get("spell_cast_executed", False))
+        spell_cast_reward = float(cast_result.get("spell_cast_reward", 0.0) or 0.0)
+        spell_enemy_defeated = bool(cast_result.get("spell_enemy_defeated", False))
+        target_enemy_id = cast_result.get("target_enemy_id", target_enemy_id)
+        target_enemy_position = cast_result.get("target_enemy_position", target_enemy_position)
+        target_enemy_reachable = bool(
+            cast_result.get("target_enemy_reachable", target_enemy_reachable)
+        )
+        target_enemy_description = cast_result.get(
+            "target_enemy_description",
+            target_enemy_description,
+        )
+
+        insufficient_mana = bool(
+            not can_cast and mana_costs and not self._has_mana_for_costs(mana_costs)
+        )
+        info: Dict[str, object] = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": bool(cast_result.get("battle_triggered", False)),
+            "spell_cast_action": True,
+            "spell_key": spell_key,
+            "spell_kind": spell_kind,
+            "spell_cast_applied": spell_cast_applied,
+            "spell_cast_executed": spell_cast_executed,
+            "spell_cast_reward": spell_cast_reward,
+            "spell_enemy_defeated": spell_enemy_defeated,
+            "target_enemy_id": target_enemy_id,
+            "insufficient_mana": insufficient_mana,
+            "turns": self.turns,
+            "gold": self.gold,
+            "moves": self.moves,
+        }
+        if minimal_extra:
+            info.update(minimal_extra)
+        if not self._include_detailed_step_info():
+            return info
+
+        spell_spec = dict(spell_spec or {})
+        mana_costs = dict(mana_costs)
+        detailed_extra = detailed_extra or {}
+        raw_spell_effect_summary = (
+            spell_effect_summary
+            if spell_effect_summary is not None
+            else cast_result.get("spell_effect_summary", {})
+        )
+        spell_effect_summary = (
+            dict(raw_spell_effect_summary)
+            if isinstance(raw_spell_effect_summary, dict)
+            else {}
+        )
+        if not spell_effect_summary:
+            spell_effect_summary = (
+                self._blue_stack_spell_effect_summary()
+                if self._spell_kind_is_support(spell_kind)
+                else {
+                    "active_spell_ids": [],
+                    "debuff_types": [],
+                    "armor_delta": 0,
+                    "damage_multiplier": 1.0,
+                    "initiative_multiplier": 1.0,
+                    "accuracy_multiplier": 1.0,
+                }
+            )
+
+        def _result_float(key: str, default: float = 0.0) -> float:
+            return float(cast_result.get(key, default) or 0.0)
+
+        def _result_int(key: str, default: int = 0) -> int:
+            return int(cast_result.get(key, default) or 0)
+
+        enemy_defeat_reward = _result_float("enemy_defeat_reward")
+        ruin_clear_bonus_reward = _result_float("ruin_clear_bonus_reward")
+        moves_before_value = (
+            float(moves_before_cast)
+            if moves_before_cast is not None
+            else _result_float("moves_before_cast", float(self.moves or 0.0))
+        )
+        effect_type_key = (
+            "debuff_types" if self._spell_kind_is_offensive(spell_kind) else "buff_types"
+        )
+        info.update(
+            {
+                "spell_description": spell_description,
+                "spell_level": spell_level,
+                "spell_damage": float(spell_spec.get("damage", 0.0) or 0.0),
+                "spell_damage_type": str(spell_spec.get("damage_type", "") or "") or None,
+                "spell_debuff_type": str(spell_spec.get("debuff_type", "") or "") or None,
+                "spell_summon_unit_name": str(spell_spec.get("summon_unit_name", "") or "") or None,
+                "spell_buff_type": str(spell_spec.get("buff_type", "") or "") or None,
+                "spell_resistance_type": str(spell_spec.get("resistance_type", "") or "") or None,
+                "spell_heal_amount": float(spell_spec.get("heal_amount", 0.0) or 0.0),
+                "spell_health_delta": int(spell_spec.get("health_delta", 0) or 0),
+                "spell_moves_restore_fraction": float(
+                    spell_spec.get("moves_restore_fraction", 0.0) or 0.0
+                ),
+                "spell_heal_total": _result_float("spell_heal_total"),
+                "spell_moves_restored": _result_float("spell_moves_restored"),
+                "spell_cast_used_this_turn": bool(spell_cast_used_this_turn),
+                "spell_is_learned": bool(spell_is_learned),
+                "blocked_by_typeoflord": bool(blocked_by_typeoflord),
+                "spell_use_costs": dict(mana_costs),
+                "target_enemy_position": target_enemy_position,
+                "target_enemy_reachable": bool(target_enemy_reachable),
+                "target_enemy_description": target_enemy_description,
+                "spell_damage_total": _result_float("spell_damage_total"),
+                "spell_damage_units_hit": _result_int("spell_damage_units_hit"),
+                "spell_damage_units_defeated": _result_int("spell_damage_units_defeated"),
+                "spell_damage_units_blocked": _result_int("spell_damage_units_blocked"),
+                "spell_units_affected": _result_int("spell_units_affected"),
+                "spell_effect_active_ids": list(spell_effect_summary.get("active_spell_ids", [])),
+                "spell_effect_types": list(spell_effect_summary.get(effect_type_key, [])),
+                "spell_effect_resistance_types": list(
+                    spell_effect_summary.get("resistance_types", [])
+                ),
+                "spell_effect_armor_delta": int(spell_effect_summary.get("armor_delta", 0) or 0),
+                "spell_effect_damage_multiplier": float(
+                    spell_effect_summary.get("damage_multiplier", 1.0) or 1.0
+                ),
+                "spell_effect_initiative_multiplier": float(
+                    spell_effect_summary.get("initiative_multiplier", 1.0) or 1.0
+                ),
+                "spell_effect_accuracy_multiplier": float(
+                    spell_effect_summary.get("accuracy_multiplier", 1.0) or 1.0
+                ),
+                "spell_effect_health_delta": int(
+                    spell_effect_summary.get("health_delta", 0) or 0
+                ),
+                "enemy_defeat_reward": enemy_defeat_reward,
+                "enemy_defeat_reward_base": (
+                    float(self.reward_defeat_enemy) if spell_enemy_defeated else 0.0
+                ),
+                "blue_exp_reward": 0.0,
+                "blue_exp_raw": 0.0,
+                "ruin_clear_bonus_reward": ruin_clear_bonus_reward,
+                "moves_before_cast": moves_before_value,
+                "moves_after_cast": _result_float("moves_after_cast", float(self.moves or 0.0)),
+            }
+        )
+        info.update(detailed_extra)
+        return info
     def _finalize_map_spell_step(
         self,
         *,
@@ -1125,6 +1326,11 @@ class CampaignMagicMixin:
                 self.battle_env._obs()
                 if self.battle_env is not None
                 else np.zeros(0, dtype=np.float32)
+            )
+            reward = self._apply_green_dragon_reached_reward_if_needed(
+                self.current_enemy_id,
+                reward,
+                info,
             )
             info["battle_triggered"] = True
             info["mode"] = "battle"
@@ -1146,15 +1352,30 @@ class CampaignMagicMixin:
             )
             if newly_captured:
                 info["captured_objective_cities"] = newly_captured
-                info["final_objective_reward"] = float(
-                    cast_result.get("final_objective_reward", 0.0) or 0.0
-                )
+                if self._campaign_objective_is_cities():
+                    info["final_objective_reward"] = float(
+                        cast_result.get("final_objective_reward", 0.0) or 0.0
+                    )
 
-            if self._all_objective_cities_captured():
+            green_dragon_objective_reward = float(
+                cast_result.get("green_dragon_objective_reward", 0.0) or 0.0
+            )
+            if green_dragon_objective_reward:
+                info["final_objective_reward"] = green_dragon_objective_reward
+                info["green_dragon_objective_reward"] = green_dragon_objective_reward
+                info["green_dragon_objective_enemy_id"] = int(
+                    self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID
+                )
+                info["campaign_objective"] = self.CAMPAIGN_OBJECTIVE_DRAGON
+
+            campaign_objective_reason = self._campaign_objective_completion_reason(
+                target_enemy_id
+            )
+            if campaign_objective_reason is not None:
                 self._log("=== ЗАХВАЧЕНЫ ВСЕ ЦЕЛЕВЫЕ ГОРОДА: ПОБЕДА В КАМПАНИИ ===")
                 grid_obs = self._get_grid_obs()
                 info["campaign_result"] = "victory"
-                info["campaign_victory_reason"] = "objective_cities_cleared"
+                info["campaign_victory_reason"] = campaign_objective_reason
                 return self._finalize_grid_step_result(
                     grid_obs=grid_obs,
                     reward=reward,
@@ -1431,7 +1652,7 @@ class CampaignMagicMixin:
         if expired_stacks > 0:
             self._log(
                 f"Истекли временные дебаффы боевых заклинаний на {expired_stacks} вражеских отрядах."
-            )
+        )
         return int(expired_stacks)
     def _clear_enemy_map_spell_effects_for_enemy(self, enemy_id: Optional[int]) -> None:
         try:
@@ -1461,9 +1682,10 @@ class CampaignMagicMixin:
     def _grid_moves_restore_amount(self, restore_fraction: float) -> float:
         current_moves = max(0.0, float(self.moves or 0.0))
         move_cap = max(0.0, float(self.moves_per_turn or 0.0))
-        if move_cap <= 0.0 or float(restore_fraction or 0.0) <= 0.0:
+        restore_basis = max(0.0, float(self.MOVES_PER_TURN or 0.0))
+        if move_cap <= 0.0 or restore_basis <= 0.0 or float(restore_fraction or 0.0) <= 0.0:
             return 0.0
-        restore_amount = max(0.0, round(move_cap * float(restore_fraction)))
+        restore_amount = max(0.0, round(restore_basis * float(restore_fraction)))
         next_moves = min(move_cap, current_moves + restore_amount)
         return float(max(0.0, next_moves - current_moves))
     def _support_spell_spec_would_apply(
@@ -1558,9 +1780,10 @@ class CampaignMagicMixin:
     def _restore_grid_moves(self, restore_fraction: float) -> float:
         current_moves = max(0.0, float(self.moves or 0.0))
         move_cap = max(0.0, float(self.moves_per_turn or 0.0))
-        if move_cap <= 0.0 or restore_fraction <= 0.0:
+        restore_basis = max(0.0, float(self.MOVES_PER_TURN or 0.0))
+        if move_cap <= 0.0 or restore_basis <= 0.0 or restore_fraction <= 0.0:
             return 0.0
-        restore_amount = max(0.0, round(move_cap * float(restore_fraction)))
+        restore_amount = max(0.0, round(restore_basis * float(restore_fraction)))
         next_moves = min(move_cap, current_moves + restore_amount)
         restored = max(0.0, next_moves - current_moves)
         self.moves = int(round(next_moves))
@@ -1606,19 +1829,6 @@ class CampaignMagicMixin:
         }
         if normalized_type_lower in resistances_lower:
             return True
-
-        defence_flag_names = (
-            f"{normalized_type}defence",
-            f"{normalized_type}Defense",
-            f"{normalized_type.lower()}defence",
-            f"{normalized_type.lower()}_defence",
-        )
-        for flag_name in defence_flag_names:
-            try:
-                if int(unit.get(flag_name, 0) or 0) == 1:
-                    return True
-            except (TypeError, ValueError):
-                continue
         return False
     def _apply_damage_to_enemy_stack(
         self,
@@ -1661,9 +1871,11 @@ class CampaignMagicMixin:
         healed_units = 0
         healed_total = 0.0
 
+        green_dragon_enemy_id = int(self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID)
         for enemy_id, is_alive in self.grid_env.enemies_alive.items():
             if not bool(is_alive):
                 continue
+            is_green_dragon = int(enemy_id) == green_dragon_enemy_id
             enemy_position = self.grid_env.enemy_positions.get(int(enemy_id))
             on_player_territory = self._is_player_controlled_territory_tile(enemy_position)
             heal_fraction = 0.05 if on_player_territory else 0.15
@@ -1675,8 +1887,11 @@ class CampaignMagicMixin:
                 max_hp = float(unit.get("max_health", 0) or unit.get("maxhp", 0) or 0.0)
                 if max_hp <= 0.0 or current_hp <= 0.0 or current_hp >= max_hp:
                     continue
-                heal_amount = max(1.0, max_hp * float(heal_fraction))
-                new_hp = min(max_hp, current_hp + heal_amount)
+                if is_green_dragon:
+                    new_hp = max_hp
+                else:
+                    heal_amount = max(1.0, max_hp * float(heal_fraction))
+                    new_hp = min(max_hp, current_hp + heal_amount)
                 actual_heal = max(0.0, new_hp - current_hp)
                 if actual_heal <= 0.0:
                     continue
@@ -1782,31 +1997,14 @@ class CampaignMagicMixin:
         spell_key = None
         spell_description = None
         spell_level = None
-        spell_damage = 0.0
-        spell_damage_type = None
         spell = None
         spell_spec: Dict[str, object] = {}
         spell_kind = ""
-        spell_debuff_type = None
-        summon_unit_name = None
-        spell_effect_summary: Dict[str, object] = {
-            "active_spell_ids": [],
-            "debuff_types": [],
-            "armor_delta": 0,
-            "damage_multiplier": 1.0,
-            "initiative_multiplier": 1.0,
-            "accuracy_multiplier": 1.0,
-        }
-        spell_units_affected = 0
         if 0 <= idx < len(current_specs):
             spell_spec = dict(current_specs[idx])
             spell_key = str(spell_spec.get("id", "") or "")
             spell = self.active_spells.get(str(spell_key))
             spell_kind = str(spell_spec.get("kind", "") or "")
-            spell_damage = float(spell_spec.get("damage", 0.0) or 0.0)
-            spell_damage_type = str(spell_spec.get("damage_type", "") or "") or None
-            spell_debuff_type = str(spell_spec.get("debuff_type", "") or "") or None
-            summon_unit_name = str(spell_spec.get("summon_unit_name", "") or "") or None
 
         if isinstance(spell, dict):
             spell_description = str(spell.get("description", "") or "").strip()
@@ -1831,17 +2029,6 @@ class CampaignMagicMixin:
         target_position = None if nearest_enemy is None else tuple(nearest_enemy.get("position", ()))
         target_reachable = bool(nearest_enemy.get("reachable", False)) if nearest_enemy else False
         target_description = None if nearest_enemy is None else str(nearest_enemy.get("description", "") or "")
-
-        spell_cast_applied = False
-        spell_cast_executed = False
-        actual_damage = 0.0
-        units_hit = 0
-        defeated_units = 0
-        blocked_units = 0
-        spell_enemy_defeated = False
-        enemy_reward = 0.0
-        ruin_clear_bonus_reward = 0.0
-        spell_cast_reward = 0.0
 
         can_cast = (
             bool(spell_key)
@@ -1870,90 +2057,41 @@ class CampaignMagicMixin:
                 if self._map_offensive_spell_targets_untargetable_stacks(str(spell_key))
                 else None,
             )
-            spell_cast_applied = bool(cast_result.get("spell_cast_applied", False))
-            spell_cast_executed = bool(cast_result.get("spell_cast_executed", False))
-            spell_cast_reward = float(cast_result.get("spell_cast_reward", 0.0) or 0.0)
             reward += float(cast_result.get("reward", 0.0) or 0.0)
-            actual_damage = float(cast_result.get("spell_damage_total", 0.0) or 0.0)
-            units_hit = int(cast_result.get("spell_damage_units_hit", 0) or 0)
-            defeated_units = int(
-                cast_result.get("spell_damage_units_defeated", 0) or 0
-            )
-            blocked_units = int(cast_result.get("spell_damage_units_blocked", 0) or 0)
-            spell_units_affected = int(cast_result.get("spell_units_affected", 0) or 0)
-            spell_effect_summary = dict(cast_result.get("spell_effect_summary", {}))
-            target_enemy_id = cast_result.get("target_enemy_id")
-            target_position = cast_result.get("target_enemy_position")
-            target_reachable = bool(cast_result.get("target_enemy_reachable", False))
-            target_description = cast_result.get("target_enemy_description")
-            spell_enemy_defeated = bool(cast_result.get("spell_enemy_defeated", False))
-            enemy_reward = float(cast_result.get("enemy_defeat_reward", 0.0) or 0.0)
-            ruin_clear_bonus_reward = float(
-                cast_result.get("ruin_clear_bonus_reward", 0.0) or 0.0
-            )
         else:
             cast_result = {}
 
-        info = {
-            "mode": "grid",
-            "agent_pos": self.grid_env.agent_pos,
-            "enemies_alive": dict(self.grid_env.enemies_alive),
-            "battle_triggered": False,
-            "spell_cast_action": True,
-            "spell_key": spell_key,
-            "spell_description": spell_description,
-            "spell_level": spell_level,
-            "spell_kind": spell_kind,
-            "spell_damage": float(spell_damage),
-            "spell_damage_type": spell_damage_type,
-            "spell_debuff_type": spell_debuff_type,
-            "spell_summon_unit_name": summon_unit_name,
-            "spell_cast_applied": bool(spell_cast_applied),
-            "spell_cast_executed": bool(spell_cast_executed),
-            "spell_cast_reward": float(spell_cast_reward),
-            "spell_cast_used_this_turn": bool(spell_used_this_turn),
-            "summon_hero_battle_bonus_pending": bool(self.summon_hero_battle_bonus_pending),
-            "summon_hero_battle_bonus_enemy_ids": sorted(
-                int(enemy_id) for enemy_id in self.summon_hero_battle_bonus_enemy_ids_this_turn
-            ),
-            "spell_is_learned": bool(spell_known),
-            "blocked_by_typeoflord": bool(blocked_by_typeoflord),
-            "spell_is_legions_capital": bool(self._is_legions_capital()),
-            "spell_is_undead_hordes_capital": bool(self._is_undead_hordes_capital()),
-            "spell_has_map_offensive_actions": bool(has_map_offensive_spell_actions),
-            "spell_use_costs": dict(mana_costs),
-            "insufficient_mana": bool(not can_cast and mana_costs and not self._has_mana_for_costs(mana_costs)),
-            "target_enemy_id": target_enemy_id,
-            "target_enemy_position": target_position,
-            "target_enemy_reachable": bool(target_reachable),
-            "target_enemy_description": target_description,
-            "spell_damage_total": float(actual_damage),
-            "spell_damage_units_hit": int(units_hit),
-            "spell_damage_units_defeated": int(defeated_units),
-            "spell_damage_units_blocked": int(blocked_units),
-            "spell_units_affected": int(spell_units_affected),
-            "spell_effect_active_ids": list(spell_effect_summary.get("active_spell_ids", [])),
-            "spell_effect_types": list(spell_effect_summary.get("debuff_types", [])),
-            "spell_effect_armor_delta": int(spell_effect_summary.get("armor_delta", 0) or 0),
-            "spell_effect_damage_multiplier": float(
-                spell_effect_summary.get("damage_multiplier", 1.0) or 1.0
-            ),
-            "spell_effect_initiative_multiplier": float(
-                spell_effect_summary.get("initiative_multiplier", 1.0) or 1.0
-            ),
-            "spell_effect_accuracy_multiplier": float(
-                spell_effect_summary.get("accuracy_multiplier", 1.0) or 1.0
-            ),
-            "spell_enemy_defeated": bool(spell_enemy_defeated),
-            "enemy_defeat_reward": float(enemy_reward),
-            "enemy_defeat_reward_base": float(self.reward_defeat_enemy) if spell_enemy_defeated else 0.0,
-            "blue_exp_reward": 0.0,
-            "blue_exp_raw": 0.0,
-            "ruin_clear_bonus_reward": float(ruin_clear_bonus_reward),
-            "turns": self.turns,
-            "gold": self.gold,
-            "moves": self.moves,
-        }
+        info = self._build_spell_cast_info(
+            spell_key=spell_key,
+            spell_description=spell_description,
+            spell_level=spell_level,
+            spell_kind=spell_kind,
+            spell_spec=spell_spec,
+            cast_result=cast_result,
+            can_cast=can_cast,
+            mana_costs=mana_costs,
+            spell_cast_used_this_turn=spell_used_this_turn,
+            spell_is_learned=spell_known,
+            blocked_by_typeoflord=blocked_by_typeoflord,
+            target_enemy_id=target_enemy_id,
+            target_enemy_position=target_position,
+            target_enemy_reachable=target_reachable,
+            target_enemy_description=target_description,
+            minimal_extra={
+                "spell_has_map_offensive_actions": bool(has_map_offensive_spell_actions),
+            },
+            detailed_extra={
+                "summon_hero_battle_bonus_pending": bool(
+                    self.summon_hero_battle_bonus_pending
+                ),
+                "summon_hero_battle_bonus_enemy_ids": sorted(
+                    int(enemy_id)
+                    for enemy_id in self.summon_hero_battle_bonus_enemy_ids_this_turn
+                ),
+                "spell_is_legions_capital": bool(self._is_legions_capital()),
+                "spell_is_undead_hordes_capital": bool(self._is_undead_hordes_capital()),
+            },
+        )
 
         return self._finalize_map_spell_step(
             reward=reward,
@@ -1971,28 +2109,12 @@ class CampaignMagicMixin:
         spell = None
         spell_spec: Dict[str, object] = {}
         spell_kind = ""
-        spell_buff_type = None
-        spell_resistance_type = None
-        spell_heal_amount = 0.0
-        spell_health_delta = 0
-        spell_moves_restore_fraction = 0.0
-        spell_effect_summary: Dict[str, object] = self._blue_stack_spell_effect_summary()
-        spell_units_affected = 0
-        spell_heal_total = 0.0
-        spell_moves_restored = 0.0
 
         if 0 <= idx < len(current_specs):
             spell_spec = dict(current_specs[idx])
             spell_key = str(spell_spec.get("id", "") or "")
             spell = self.active_spells.get(str(spell_key))
             spell_kind = str(spell_spec.get("kind", "") or "")
-            spell_buff_type = str(spell_spec.get("buff_type", "") or "") or None
-            spell_resistance_type = str(spell_spec.get("resistance_type", "") or "") or None
-            spell_heal_amount = float(spell_spec.get("heal_amount", 0.0) or 0.0)
-            spell_health_delta = int(spell_spec.get("health_delta", 0) or 0)
-            spell_moves_restore_fraction = float(
-                spell_spec.get("moves_restore_fraction", 0.0) or 0.0
-            )
 
         if isinstance(spell, dict):
             spell_description = str(spell.get("description", "") or "").strip()
@@ -2019,9 +2141,6 @@ class CampaignMagicMixin:
             and self._has_mana_for_costs(mana_costs)
         )
 
-        spell_cast_applied = False
-        spell_cast_executed = False
-        spell_cast_reward = 0.0
         moves_before_cast = float(self.moves or 0.0)
 
         if can_cast:
@@ -2034,85 +2153,30 @@ class CampaignMagicMixin:
                 spend_mana=True,
                 enforce_turn_limit=True,
             )
-            spell_cast_applied = bool(cast_result.get("spell_cast_applied", False))
-            spell_cast_executed = bool(cast_result.get("spell_cast_executed", False))
-            spell_cast_reward = float(cast_result.get("spell_cast_reward", 0.0) or 0.0)
             reward += float(cast_result.get("reward", 0.0) or 0.0)
-            spell_units_affected = int(cast_result.get("spell_units_affected", 0) or 0)
-            spell_heal_total = float(cast_result.get("spell_heal_total", 0.0) or 0.0)
-            spell_moves_restored = float(
-                cast_result.get("spell_moves_restored", 0.0) or 0.0
-            )
-            spell_effect_summary = dict(cast_result.get("spell_effect_summary", {}))
         else:
             cast_result = {}
 
-        info = {
-            "mode": "grid",
-            "agent_pos": self.grid_env.agent_pos,
-            "enemies_alive": dict(self.grid_env.enemies_alive),
-            "battle_triggered": False,
-            "spell_cast_action": True,
-            "spell_key": spell_key,
-            "spell_description": spell_description,
-            "spell_level": spell_level,
-            "spell_kind": spell_kind,
-            "spell_buff_type": spell_buff_type,
-            "spell_resistance_type": spell_resistance_type,
-            "spell_heal_amount": float(spell_heal_amount),
-            "spell_health_delta": int(spell_health_delta),
-            "spell_moves_restore_fraction": float(spell_moves_restore_fraction),
-            "spell_heal_total": float(spell_heal_total),
-            "spell_moves_restored": float(spell_moves_restored),
-            "spell_cast_applied": bool(spell_cast_applied),
-            "spell_cast_executed": bool(spell_cast_executed),
-            "spell_cast_reward": float(spell_cast_reward),
-            "spell_cast_used_this_turn": bool(spell_used_this_turn),
-            "spell_is_learned": bool(spell_known),
-            "blocked_by_typeoflord": bool(blocked_by_typeoflord),
-            "spell_is_empire_capital": bool(self._is_empire_capital()),
-            "spell_has_map_support_actions": bool(has_map_support_spell_actions),
-            "spell_use_costs": dict(mana_costs),
-            "insufficient_mana": bool(
-                not can_cast and mana_costs and not self._has_mana_for_costs(mana_costs)
-            ),
-            "target_enemy_id": None,
-            "target_enemy_position": None,
-            "target_enemy_reachable": False,
-            "target_enemy_description": None,
-            "spell_damage_total": 0.0,
-            "spell_damage_units_hit": 0,
-            "spell_damage_units_defeated": 0,
-            "spell_damage_units_blocked": 0,
-            "spell_units_affected": int(spell_units_affected),
-            "spell_effect_active_ids": list(spell_effect_summary.get("active_spell_ids", [])),
-            "spell_effect_types": list(spell_effect_summary.get("buff_types", [])),
-            "spell_effect_resistance_types": list(
-                spell_effect_summary.get("resistance_types", [])
-            ),
-            "spell_effect_armor_delta": int(spell_effect_summary.get("armor_delta", 0) or 0),
-            "spell_effect_damage_multiplier": float(
-                spell_effect_summary.get("damage_multiplier", 1.0) or 1.0
-            ),
-            "spell_effect_initiative_multiplier": float(
-                spell_effect_summary.get("initiative_multiplier", 1.0) or 1.0
-            ),
-            "spell_effect_accuracy_multiplier": float(
-                spell_effect_summary.get("accuracy_multiplier", 1.0) or 1.0
-            ),
-            "spell_effect_health_delta": int(spell_effect_summary.get("health_delta", 0) or 0),
-            "spell_enemy_defeated": False,
-            "enemy_defeat_reward": 0.0,
-            "enemy_defeat_reward_base": 0.0,
-            "blue_exp_reward": 0.0,
-            "blue_exp_raw": 0.0,
-            "ruin_clear_bonus_reward": 0.0,
-            "turns": self.turns,
-            "gold": self.gold,
-            "moves": self.moves,
-            "moves_before_cast": float(moves_before_cast),
-            "moves_after_cast": float(self.moves or 0.0),
-        }
+        info = self._build_spell_cast_info(
+            spell_key=spell_key,
+            spell_description=spell_description,
+            spell_level=spell_level,
+            spell_kind=spell_kind,
+            spell_spec=spell_spec,
+            cast_result=cast_result,
+            can_cast=can_cast,
+            mana_costs=mana_costs,
+            spell_cast_used_this_turn=spell_used_this_turn,
+            spell_is_learned=spell_known,
+            blocked_by_typeoflord=blocked_by_typeoflord,
+            moves_before_cast=moves_before_cast,
+            minimal_extra={
+                "spell_has_map_support_actions": bool(has_map_support_spell_actions),
+            },
+            detailed_extra={
+                "spell_is_empire_capital": bool(self._is_empire_capital()),
+            },
+        )
 
         return self._finalize_map_spell_step(
             reward=reward,
@@ -2141,16 +2205,6 @@ class CampaignMagicMixin:
             except (TypeError, ValueError):
                 spell_level = 0
 
-        spell_damage = float(spell_spec.get("damage", 0.0) or 0.0)
-        spell_damage_type = str(spell_spec.get("damage_type", "") or "") or None
-        spell_debuff_type = str(spell_spec.get("debuff_type", "") or "") or None
-        summon_unit_name = str(spell_spec.get("summon_unit_name", "") or "") or None
-        spell_buff_type = str(spell_spec.get("buff_type", "") or "") or None
-        spell_resistance_type = str(spell_spec.get("resistance_type", "") or "") or None
-        spell_heal_amount = float(spell_spec.get("heal_amount", 0.0) or 0.0)
-        spell_health_delta = int(spell_spec.get("health_delta", 0) or 0)
-        spell_moves_restore_fraction = float(spell_spec.get("moves_restore_fraction", 0.0) or 0.0)
-
         mana_costs = self._get_spell_use_costs(spell) if isinstance(spell, dict) else {}
         spell_purchased = bool(spell_key) and self._spell_shop_spell_owned(spell_key)
         spell_regular_action = bool(spell_key) and self._spell_shop_spell_has_regular_action(spell_key)
@@ -2163,6 +2217,11 @@ class CampaignMagicMixin:
             if spell_key and offensive_spec
             else None
         )
+        targets_untargetable = bool(
+            spell_key
+            and offensive_spec
+            and self._map_offensive_spell_targets_untargetable_stacks(str(spell_key))
+        )
         target_enemy_id = None if nearest_enemy is None else int(nearest_enemy.get("enemy_id", -1))
         target_position = None if nearest_enemy is None else tuple(nearest_enemy.get("position", ()))
         target_reachable = bool(nearest_enemy.get("reachable", False)) if nearest_enemy else False
@@ -2173,35 +2232,14 @@ class CampaignMagicMixin:
             and spell_purchased
             and not spell_regular_action
             and not spell_used_this_turn
-            and self._can_cast_spell_shop_spell(str(spell_key))
+            and self._can_cast_spell_shop_spell(
+                str(spell_key),
+                nearest_targetable_enemy=None if targets_untargetable else nearest_enemy,
+                nearest_any_enemy=nearest_enemy if targets_untargetable else None,
+            )
         )
 
-        spell_cast_applied = False
-        spell_cast_executed = False
-        spell_cast_reward = 0.0
-        spell_units_affected = 0
-        spell_heal_total = 0.0
-        spell_moves_restored = 0.0
         moves_before_cast = float(self.moves or 0.0)
-        actual_damage = 0.0
-        units_hit = 0
-        defeated_units = 0
-        blocked_units = 0
-        spell_enemy_defeated = False
-        enemy_reward = 0.0
-        ruin_clear_bonus_reward = 0.0
-        spell_effect_summary: Dict[str, object]
-        if support_spec:
-            spell_effect_summary = self._blue_stack_spell_effect_summary()
-        else:
-            spell_effect_summary = {
-                "active_spell_ids": [],
-                "debuff_types": [],
-                "armor_delta": 0,
-                "damage_multiplier": 1.0,
-                "initiative_multiplier": 1.0,
-                "accuracy_multiplier": 1.0,
-            }
 
         if can_cast:
             cast_result = self._cast_from_spell_spec(
@@ -2212,113 +2250,40 @@ class CampaignMagicMixin:
                 mana_costs=mana_costs,
                 spend_mana=True,
                 enforce_turn_limit=True,
+                nearest_targetable_enemy=None if targets_untargetable else nearest_enemy,
+                nearest_any_enemy=nearest_enemy if targets_untargetable else None,
             )
-            spell_cast_applied = bool(cast_result.get("spell_cast_applied", False))
-            spell_cast_executed = bool(cast_result.get("spell_cast_executed", False))
-            spell_cast_reward = float(cast_result.get("spell_cast_reward", 0.0) or 0.0)
             reward += float(cast_result.get("reward", 0.0) or 0.0)
-            spell_units_affected = int(cast_result.get("spell_units_affected", 0) or 0)
-            spell_heal_total = float(cast_result.get("spell_heal_total", 0.0) or 0.0)
-            spell_moves_restored = float(
-                cast_result.get("spell_moves_restored", 0.0) or 0.0
-            )
-            actual_damage = float(cast_result.get("spell_damage_total", 0.0) or 0.0)
-            units_hit = int(cast_result.get("spell_damage_units_hit", 0) or 0)
-            defeated_units = int(
-                cast_result.get("spell_damage_units_defeated", 0) or 0
-            )
-            blocked_units = int(cast_result.get("spell_damage_units_blocked", 0) or 0)
-            spell_effect_summary = dict(cast_result.get("spell_effect_summary", {}))
-            target_enemy_id = cast_result.get("target_enemy_id")
-            target_position = cast_result.get("target_enemy_position")
-            target_reachable = bool(cast_result.get("target_enemy_reachable", False))
-            target_description = cast_result.get("target_enemy_description")
-            spell_enemy_defeated = bool(cast_result.get("spell_enemy_defeated", False))
-            enemy_reward = float(cast_result.get("enemy_defeat_reward", 0.0) or 0.0)
-            ruin_clear_bonus_reward = float(
-                cast_result.get("ruin_clear_bonus_reward", 0.0) or 0.0
-            )
         else:
             cast_result = {}
 
-        info = {
-            "mode": "grid",
-            "agent_pos": self.grid_env.agent_pos,
-            "enemies_alive": dict(self.grid_env.enemies_alive),
-            "battle_triggered": False,
-            "spell_cast_action": True,
-            "spell_shop_cast_action": True,
-            "spell_shop_cast_slot": int(idx),
-            "spell_key": spell_key,
-            "spell_description": spell_description,
-            "spell_level": spell_level,
-            "spell_kind": spell_kind,
-            "spell_damage": float(spell_damage),
-            "spell_damage_type": spell_damage_type,
-            "spell_debuff_type": spell_debuff_type,
-            "spell_summon_unit_name": summon_unit_name,
-            "spell_buff_type": spell_buff_type,
-            "spell_resistance_type": spell_resistance_type,
-            "spell_heal_amount": float(spell_heal_amount),
-            "spell_health_delta": int(spell_health_delta),
-            "spell_moves_restore_fraction": float(spell_moves_restore_fraction),
-            "spell_heal_total": float(spell_heal_total),
-            "spell_moves_restored": float(spell_moves_restored),
-            "spell_cast_applied": bool(spell_cast_applied),
-            "spell_cast_executed": bool(spell_cast_executed),
-            "spell_cast_reward": float(spell_cast_reward),
-            "spell_cast_used_this_turn": bool(spell_used_this_turn),
-            "spell_is_learned": bool(spell_purchased),
-            "spell_shop_spell_purchased": bool(spell_purchased),
-            "spell_shop_spell_has_regular_action": bool(spell_regular_action),
-            "spell_has_map_offensive_actions": bool(offensive_spec),
-            "spell_has_map_support_actions": bool(support_spec),
-            "spell_use_costs": dict(mana_costs),
-            "insufficient_mana": bool(
-                not can_cast and mana_costs and not self._has_mana_for_costs(mana_costs)
-            ),
-            "target_enemy_id": target_enemy_id,
-            "target_enemy_position": target_position,
-            "target_enemy_reachable": bool(target_reachable),
-            "target_enemy_description": target_description,
-            "spell_damage_total": float(actual_damage),
-            "spell_damage_units_hit": int(units_hit),
-            "spell_damage_units_defeated": int(defeated_units),
-            "spell_damage_units_blocked": int(blocked_units),
-            "spell_units_affected": int(spell_units_affected),
-            "spell_effect_active_ids": list(spell_effect_summary.get("active_spell_ids", [])),
-            "spell_effect_types": list(
-                spell_effect_summary.get(
-                    "debuff_types" if offensive_spec else "buff_types",
-                    [],
-                )
-            ),
-            "spell_effect_resistance_types": list(
-                spell_effect_summary.get("resistance_types", [])
-            ),
-            "spell_effect_armor_delta": int(spell_effect_summary.get("armor_delta", 0) or 0),
-            "spell_effect_damage_multiplier": float(
-                spell_effect_summary.get("damage_multiplier", 1.0) or 1.0
-            ),
-            "spell_effect_initiative_multiplier": float(
-                spell_effect_summary.get("initiative_multiplier", 1.0) or 1.0
-            ),
-            "spell_effect_accuracy_multiplier": float(
-                spell_effect_summary.get("accuracy_multiplier", 1.0) or 1.0
-            ),
-            "spell_effect_health_delta": int(spell_effect_summary.get("health_delta", 0) or 0),
-            "spell_enemy_defeated": bool(spell_enemy_defeated),
-            "enemy_defeat_reward": float(enemy_reward),
-            "enemy_defeat_reward_base": float(self.reward_defeat_enemy) if spell_enemy_defeated else 0.0,
-            "blue_exp_reward": 0.0,
-            "blue_exp_raw": 0.0,
-            "ruin_clear_bonus_reward": float(ruin_clear_bonus_reward),
-            "turns": self.turns,
-            "gold": self.gold,
-            "moves": self.moves,
-            "moves_before_cast": float(moves_before_cast),
-            "moves_after_cast": float(self.moves or 0.0),
-        }
+        info = self._build_spell_cast_info(
+            spell_key=spell_key,
+            spell_description=spell_description,
+            spell_level=spell_level,
+            spell_kind=spell_kind,
+            spell_spec=spell_spec,
+            cast_result=cast_result,
+            can_cast=can_cast,
+            mana_costs=mana_costs,
+            spell_cast_used_this_turn=spell_used_this_turn,
+            spell_is_learned=spell_purchased,
+            target_enemy_id=target_enemy_id,
+            target_enemy_position=target_position,
+            target_enemy_reachable=target_reachable,
+            target_enemy_description=target_description,
+            moves_before_cast=moves_before_cast,
+            minimal_extra={
+                "spell_shop_cast_action": True,
+                "spell_shop_cast_slot": int(idx),
+            },
+            detailed_extra={
+                "spell_shop_spell_purchased": bool(spell_purchased),
+                "spell_shop_spell_has_regular_action": bool(spell_regular_action),
+                "spell_has_map_offensive_actions": bool(offensive_spec),
+                "spell_has_map_support_actions": bool(support_spec),
+            },
+        )
 
         return self._finalize_map_spell_step(
             reward=reward,
@@ -2339,65 +2304,28 @@ class CampaignMagicMixin:
         ).strip()
         spell_level = int(spell_data.get("spell_level", 0) or 0) if spell_data else None
         spell_kind = str(spell_data.get("spell_kind", "") or "")
-        spell_damage = float(spell_data.get("damage", 0.0) or 0.0)
-        spell_damage_type = str(spell_data.get("damage_type", "") or "") or None
-        spell_debuff_type = str(spell_data.get("debuff_type", "") or "") or None
-        summon_unit_name = str(spell_data.get("summon_unit_name", "") or "") or None
-        spell_buff_type = str(spell_data.get("buff_type", "") or "") or None
-        spell_resistance_type = str(spell_data.get("resistance_type", "") or "") or None
-        spell_heal_amount = float(spell_data.get("heal_amount", 0.0) or 0.0)
-        spell_health_delta = int(spell_data.get("health_delta", 0) or 0)
-        spell_moves_restore_fraction = float(
-            spell_data.get("moves_restore_fraction", 0.0) or 0.0
-        )
         item_name = str(spell_data.get("item_name", "") or "")
         required_item_count = int(spell_data.get("required_item_count", 1) or 1)
         item_owned = bool(item_name) and self._count_hero_item(item_name) >= required_item_count
         has_sorcery_lore = self._hero_has_sorcery_lore()
         mana_costs = self._get_spell_use_costs(spell) if isinstance(spell, dict) else {}
         blocked_by_typeoflord = self._is_spell_blocked_by_typeoflord(spell)
-        nearest_targetable_enemy = self._get_nearest_enemy_stack_for_mask(
-            spell_targetable_only=True
-        )
-        nearest_any_enemy = self._get_nearest_enemy_stack_for_mask(
-            spell_targetable_only=False
-        )
+        nearest_targetable_enemy = None
+        nearest_any_enemy = None
+        if self._spell_kind_is_offensive(spell_kind):
+            nearest_targetable_enemy = self._get_nearest_enemy_stack_for_mask(
+                spell_targetable_only=True
+            )
+            nearest_any_enemy = self._get_nearest_enemy_stack_for_mask(
+                spell_targetable_only=False
+            )
         can_cast = bool(spell_key) and self._can_cast_staff_spell(
             spell_data,
             nearest_targetable_enemy=nearest_targetable_enemy,
             nearest_any_enemy=nearest_any_enemy,
         )
 
-        spell_cast_applied = False
-        spell_cast_executed = False
-        spell_cast_reward = 0.0
-        spell_units_affected = 0
-        spell_heal_total = 0.0
-        spell_moves_restored = 0.0
-        actual_damage = 0.0
-        units_hit = 0
-        defeated_units = 0
-        blocked_units = 0
-        spell_enemy_defeated = False
-        enemy_reward = 0.0
-        ruin_clear_bonus_reward = 0.0
         moves_before_cast = float(self.moves or 0.0)
-        spell_effect_summary: Dict[str, object] = (
-            self._blue_stack_spell_effect_summary()
-            if self._spell_kind_is_support(spell_kind)
-            else {
-                "active_spell_ids": [],
-                "debuff_types": [],
-                "armor_delta": 0,
-                "damage_multiplier": 1.0,
-                "initiative_multiplier": 1.0,
-                "accuracy_multiplier": 1.0,
-            }
-        )
-        target_enemy_id = None
-        target_position = None
-        target_reachable = False
-        target_description = None
 
         if can_cast:
             cast_result = self._cast_from_spell_spec(
@@ -2411,127 +2339,37 @@ class CampaignMagicMixin:
                 nearest_targetable_enemy=nearest_targetable_enemy,
                 nearest_any_enemy=nearest_any_enemy,
             )
-            spell_cast_applied = bool(cast_result.get("spell_cast_applied", False))
-            spell_cast_executed = bool(cast_result.get("spell_cast_executed", False))
-            spell_cast_reward = float(cast_result.get("spell_cast_reward", 0.0) or 0.0)
             reward += float(cast_result.get("reward", 0.0) or 0.0)
-            spell_units_affected = int(cast_result.get("spell_units_affected", 0) or 0)
-            spell_heal_total = float(cast_result.get("spell_heal_total", 0.0) or 0.0)
-            spell_moves_restored = float(
-                cast_result.get("spell_moves_restored", 0.0) or 0.0
-            )
-            actual_damage = float(cast_result.get("spell_damage_total", 0.0) or 0.0)
-            units_hit = int(cast_result.get("spell_damage_units_hit", 0) or 0)
-            defeated_units = int(
-                cast_result.get("spell_damage_units_defeated", 0) or 0
-            )
-            blocked_units = int(cast_result.get("spell_damage_units_blocked", 0) or 0)
-            spell_effect_summary = dict(cast_result.get("spell_effect_summary", {}))
-            target_enemy_id = cast_result.get("target_enemy_id")
-            target_position = cast_result.get("target_enemy_position")
-            target_reachable = bool(cast_result.get("target_enemy_reachable", False))
-            target_description = cast_result.get("target_enemy_description")
-            spell_enemy_defeated = bool(cast_result.get("spell_enemy_defeated", False))
-            enemy_reward = float(cast_result.get("enemy_defeat_reward", 0.0) or 0.0)
-            ruin_clear_bonus_reward = float(
-                cast_result.get("ruin_clear_bonus_reward", 0.0) or 0.0
-            )
         else:
             cast_result = {}
 
-        info = {
-            "mode": "grid",
-            "agent_pos": self.grid_env.agent_pos,
-            "enemies_alive": dict(self.grid_env.enemies_alive),
-            "battle_triggered": False,
-            "spell_cast_action": True,
-            "staff_spell_cast_action": True,
-            "staff_spell_cast_slot": int(idx),
-            "staff_item_name": item_name,
-            "staff_item_owned": bool(item_owned),
-            "staff_required_item_count": int(required_item_count),
-            "staff_magic_unlocked": bool(self.scroll_magic_unlocked),
-            "staff_requires_sorcery_lore": True,
-            "staff_has_sorcery_lore": bool(has_sorcery_lore),
-            "staff_spell_key": spell_key,
-            "staff_spell_kind": spell_kind,
-            "spell_key": spell_key,
-            "spell_description": spell_description,
-            "spell_level": spell_level,
-            "spell_kind": spell_kind,
-            "spell_damage": float(spell_damage),
-            "spell_damage_type": spell_damage_type,
-            "spell_debuff_type": spell_debuff_type,
-            "spell_summon_unit_name": summon_unit_name,
-            "spell_buff_type": spell_buff_type,
-            "spell_resistance_type": spell_resistance_type,
-            "spell_heal_amount": float(spell_heal_amount),
-            "spell_health_delta": int(spell_health_delta),
-            "spell_moves_restore_fraction": float(spell_moves_restore_fraction),
-            "spell_heal_total": float(spell_heal_total),
-            "spell_moves_restored": float(spell_moves_restored),
-            "spell_cast_applied": bool(spell_cast_applied),
-            "spell_cast_executed": bool(spell_cast_executed),
-            "spell_cast_reward": float(spell_cast_reward),
-            "spell_cast_used_this_turn": False,
-            "spell_is_learned": bool(spell_key and self._is_spell_learned(spell_key)),
-            "blocked_by_typeoflord": bool(blocked_by_typeoflord),
-            "spell_use_costs": dict(mana_costs),
-            "insufficient_mana": bool(
-                not can_cast and mana_costs and not self._has_mana_for_costs(mana_costs)
-            ),
-            "target_enemy_id": target_enemy_id,
-            "target_enemy_position": target_position,
-            "target_enemy_reachable": bool(target_reachable),
-            "target_enemy_description": target_description,
-            "spell_damage_total": float(actual_damage),
-            "spell_damage_units_hit": int(units_hit),
-            "spell_damage_units_defeated": int(defeated_units),
-            "spell_damage_units_blocked": int(blocked_units),
-            "spell_units_affected": int(spell_units_affected),
-            "spell_effect_active_ids": list(
-                spell_effect_summary.get("active_spell_ids", [])
-            ),
-            "spell_effect_types": list(
-                spell_effect_summary.get(
-                    "debuff_types"
-                    if self._spell_kind_is_offensive(spell_kind)
-                    else "buff_types",
-                    [],
-                )
-            ),
-            "spell_effect_resistance_types": list(
-                spell_effect_summary.get("resistance_types", [])
-            ),
-            "spell_effect_armor_delta": int(
-                spell_effect_summary.get("armor_delta", 0) or 0
-            ),
-            "spell_effect_damage_multiplier": float(
-                spell_effect_summary.get("damage_multiplier", 1.0) or 1.0
-            ),
-            "spell_effect_initiative_multiplier": float(
-                spell_effect_summary.get("initiative_multiplier", 1.0) or 1.0
-            ),
-            "spell_effect_accuracy_multiplier": float(
-                spell_effect_summary.get("accuracy_multiplier", 1.0) or 1.0
-            ),
-            "spell_effect_health_delta": int(
-                spell_effect_summary.get("health_delta", 0) or 0
-            ),
-            "spell_enemy_defeated": bool(spell_enemy_defeated),
-            "enemy_defeat_reward": float(enemy_reward),
-            "enemy_defeat_reward_base": float(self.reward_defeat_enemy)
-            if spell_enemy_defeated
-            else 0.0,
-            "blue_exp_reward": 0.0,
-            "blue_exp_raw": 0.0,
-            "ruin_clear_bonus_reward": float(ruin_clear_bonus_reward),
-            "turns": self.turns,
-            "gold": self.gold,
-            "moves": self.moves,
-            "moves_before_cast": float(moves_before_cast),
-            "moves_after_cast": float(self.moves or 0.0),
-        }
+        info = self._build_spell_cast_info(
+            spell_key=spell_key,
+            spell_description=spell_description,
+            spell_level=spell_level,
+            spell_kind=spell_kind,
+            spell_spec=spell_data,
+            cast_result=cast_result,
+            can_cast=can_cast,
+            mana_costs=mana_costs,
+            spell_is_learned=bool(spell_key and self._is_spell_learned(spell_key)),
+            blocked_by_typeoflord=blocked_by_typeoflord,
+            moves_before_cast=moves_before_cast,
+            minimal_extra={
+                "staff_spell_cast_action": True,
+                "staff_spell_cast_slot": int(idx),
+                "staff_item_name": item_name,
+            },
+            detailed_extra={
+                "staff_item_owned": bool(item_owned),
+                "staff_required_item_count": int(required_item_count),
+                "staff_magic_unlocked": bool(self.scroll_magic_unlocked),
+                "staff_requires_sorcery_lore": True,
+                "staff_has_sorcery_lore": bool(has_sorcery_lore),
+                "staff_spell_key": spell_key,
+                "staff_spell_kind": spell_kind,
+            },
+        )
         return self._finalize_map_spell_step(
             reward=reward,
             info=info,
@@ -2602,60 +2440,22 @@ class CampaignMagicMixin:
         ).strip()
         spell_level = int(spell_data.get("spell_level", 0) or 0) if spell_data else None
         spell_kind = str(spell_data.get("spell_kind", "") or "")
-        spell_damage = float(spell_data.get("damage", 0.0) or 0.0)
-        spell_damage_type = str(spell_data.get("damage_type", "") or "") or None
-        spell_debuff_type = str(spell_data.get("debuff_type", "") or "") or None
-        summon_unit_name = str(spell_data.get("summon_unit_name", "") or "") or None
-        spell_buff_type = str(spell_data.get("buff_type", "") or "") or None
-        spell_resistance_type = str(spell_data.get("resistance_type", "") or "") or None
-        spell_heal_amount = float(spell_data.get("heal_amount", 0.0) or 0.0)
-        spell_health_delta = int(spell_data.get("health_delta", 0) or 0)
-        spell_moves_restore_fraction = float(
-            spell_data.get("moves_restore_fraction", 0.0) or 0.0
-        )
         item_name = str(spell_data.get("item_name", "") or "")
         scroll_copies_before = int(self.count_scroll_item(item_name))
-        nearest_targetable_enemy = self._get_nearest_enemy_stack_for_mask(
-            spell_targetable_only=True
-        )
-        nearest_any_enemy = self._get_nearest_enemy_stack_for_mask(
-            spell_targetable_only=False
-        )
+        nearest_targetable_enemy = None
+        nearest_any_enemy = None
+        if self._spell_kind_is_offensive(spell_kind):
+            nearest_targetable_enemy = self._get_nearest_enemy_stack_for_mask(
+                spell_targetable_only=True
+            )
+            nearest_any_enemy = self._get_nearest_enemy_stack_for_mask(
+                spell_targetable_only=False
+            )
         can_cast = bool(spell_key) and self._can_cast_scroll_spell(
             spell_data,
             nearest_targetable_enemy=nearest_targetable_enemy,
             nearest_any_enemy=nearest_any_enemy,
         )
-
-        spell_cast_applied = False
-        spell_cast_executed = False
-        spell_cast_reward = 0.0
-        spell_units_affected = 0
-        spell_heal_total = 0.0
-        spell_moves_restored = 0.0
-        actual_damage = 0.0
-        units_hit = 0
-        defeated_units = 0
-        blocked_units = 0
-        spell_enemy_defeated = False
-        enemy_reward = 0.0
-        ruin_clear_bonus_reward = 0.0
-        spell_effect_summary: Dict[str, object] = (
-            self._blue_stack_spell_effect_summary()
-            if self._spell_kind_is_support(spell_kind)
-            else {
-                "active_spell_ids": [],
-                "debuff_types": [],
-                "armor_delta": 0,
-                "damage_multiplier": 1.0,
-                "initiative_multiplier": 1.0,
-                "accuracy_multiplier": 1.0,
-            }
-        )
-        target_enemy_id = None
-        target_position = None
-        target_reachable = False
-        target_description = None
 
         if can_cast:
             cast_result = self._cast_from_spell_spec(
@@ -2669,31 +2469,7 @@ class CampaignMagicMixin:
                 nearest_targetable_enemy=nearest_targetable_enemy,
                 nearest_any_enemy=nearest_any_enemy,
             )
-            spell_cast_applied = bool(cast_result.get("spell_cast_applied", False))
-            spell_cast_executed = bool(cast_result.get("spell_cast_executed", False))
-            spell_cast_reward = float(cast_result.get("spell_cast_reward", 0.0) or 0.0)
             reward += float(cast_result.get("reward", 0.0) or 0.0)
-            spell_units_affected = int(cast_result.get("spell_units_affected", 0) or 0)
-            spell_heal_total = float(cast_result.get("spell_heal_total", 0.0) or 0.0)
-            spell_moves_restored = float(
-                cast_result.get("spell_moves_restored", 0.0) or 0.0
-            )
-            actual_damage = float(cast_result.get("spell_damage_total", 0.0) or 0.0)
-            units_hit = int(cast_result.get("spell_damage_units_hit", 0) or 0)
-            defeated_units = int(
-                cast_result.get("spell_damage_units_defeated", 0) or 0
-            )
-            blocked_units = int(cast_result.get("spell_damage_units_blocked", 0) or 0)
-            spell_effect_summary = dict(cast_result.get("spell_effect_summary", {}))
-            target_enemy_id = cast_result.get("target_enemy_id")
-            target_position = cast_result.get("target_enemy_position")
-            target_reachable = bool(cast_result.get("target_enemy_reachable", False))
-            target_description = cast_result.get("target_enemy_description")
-            spell_enemy_defeated = bool(cast_result.get("spell_enemy_defeated", False))
-            enemy_reward = float(cast_result.get("enemy_defeat_reward", 0.0) or 0.0)
-            ruin_clear_bonus_reward = float(
-                cast_result.get("ruin_clear_bonus_reward", 0.0) or 0.0
-            )
             scroll_item_consumed = bool(cast_result.get("scroll_item_consumed", False))
             scroll_copies_after = int(cast_result.get("scroll_copies_after", 0) or 0)
         else:
@@ -2701,92 +2477,28 @@ class CampaignMagicMixin:
             scroll_item_consumed = False
             scroll_copies_after = scroll_copies_before
 
-        info = {
-            "mode": "grid",
-            "agent_pos": self.grid_env.agent_pos,
-            "enemies_alive": dict(self.grid_env.enemies_alive),
-            "battle_triggered": False,
-            "spell_cast_action": True,
-            "scroll_cast_action": True,
-            "scroll_cast_slot": int(idx),
-            "scroll_item_name": item_name,
-            "scroll_spell_key": spell_key,
-            "scroll_spell_kind": spell_kind,
-            "scroll_item_consumed": bool(scroll_item_consumed),
-            "scroll_copies_before": int(scroll_copies_before),
-            "scroll_copies_after": int(scroll_copies_after),
-            "spell_key": spell_key,
-            "spell_description": spell_description,
-            "spell_level": spell_level,
-            "spell_kind": spell_kind,
-            "spell_damage": float(spell_damage),
-            "spell_damage_type": spell_damage_type,
-            "spell_debuff_type": spell_debuff_type,
-            "spell_summon_unit_name": summon_unit_name,
-            "spell_buff_type": spell_buff_type,
-            "spell_resistance_type": spell_resistance_type,
-            "spell_heal_amount": float(spell_heal_amount),
-            "spell_health_delta": int(spell_health_delta),
-            "spell_moves_restore_fraction": float(spell_moves_restore_fraction),
-            "spell_heal_total": float(spell_heal_total),
-            "spell_moves_restored": float(spell_moves_restored),
-            "spell_cast_applied": bool(spell_cast_applied),
-            "spell_cast_executed": bool(spell_cast_executed),
-            "spell_cast_reward": float(spell_cast_reward),
-            "spell_cast_used_this_turn": False,
-            "spell_is_learned": False,
-            "spell_use_costs": {},
-            "insufficient_mana": False,
-            "target_enemy_id": target_enemy_id,
-            "target_enemy_position": target_position,
-            "target_enemy_reachable": bool(target_reachable),
-            "target_enemy_description": target_description,
-            "spell_damage_total": float(actual_damage),
-            "spell_damage_units_hit": int(units_hit),
-            "spell_damage_units_defeated": int(defeated_units),
-            "spell_damage_units_blocked": int(blocked_units),
-            "spell_units_affected": int(spell_units_affected),
-            "spell_effect_active_ids": list(
-                spell_effect_summary.get("active_spell_ids", [])
-            ),
-            "spell_effect_types": list(
-                spell_effect_summary.get(
-                    "debuff_types"
-                    if self._spell_kind_is_offensive(spell_kind)
-                    else "buff_types",
-                    [],
-                )
-            ),
-            "spell_effect_resistance_types": list(
-                spell_effect_summary.get("resistance_types", [])
-            ),
-            "spell_effect_armor_delta": int(
-                spell_effect_summary.get("armor_delta", 0) or 0
-            ),
-            "spell_effect_damage_multiplier": float(
-                spell_effect_summary.get("damage_multiplier", 1.0) or 1.0
-            ),
-            "spell_effect_initiative_multiplier": float(
-                spell_effect_summary.get("initiative_multiplier", 1.0) or 1.0
-            ),
-            "spell_effect_accuracy_multiplier": float(
-                spell_effect_summary.get("accuracy_multiplier", 1.0) or 1.0
-            ),
-            "spell_effect_health_delta": int(
-                spell_effect_summary.get("health_delta", 0) or 0
-            ),
-            "spell_enemy_defeated": bool(spell_enemy_defeated),
-            "enemy_defeat_reward": float(enemy_reward),
-            "enemy_defeat_reward_base": float(self.reward_defeat_enemy)
-            if spell_enemy_defeated
-            else 0.0,
-            "blue_exp_reward": 0.0,
-            "blue_exp_raw": 0.0,
-            "ruin_clear_bonus_reward": float(ruin_clear_bonus_reward),
-            "turns": self.turns,
-            "gold": self.gold,
-            "moves": self.moves,
-        }
+        info = self._build_spell_cast_info(
+            spell_key=spell_key,
+            spell_description=spell_description,
+            spell_level=spell_level,
+            spell_kind=spell_kind,
+            spell_spec=spell_data,
+            cast_result=cast_result,
+            can_cast=can_cast,
+            mana_costs={},
+            minimal_extra={
+                "scroll_cast_action": True,
+                "scroll_cast_slot": int(idx),
+                "scroll_item_name": item_name,
+            },
+            detailed_extra={
+                "scroll_spell_key": spell_key,
+                "scroll_spell_kind": spell_kind,
+                "scroll_item_consumed": bool(scroll_item_consumed),
+                "scroll_copies_before": int(scroll_copies_before),
+                "scroll_copies_after": int(scroll_copies_after),
+            },
+        )
         return self._finalize_map_spell_step(
             reward=reward,
             info=info,
@@ -2849,7 +2561,7 @@ class CampaignMagicMixin:
                         f"=== ЗЕМЛЯ ЛЕГИОНОВ НАЧИНАЕТ РАСПРОСТРАНЯТЬСЯ ИЗ ПОСЕЛЕНИЯ {settlement_name} ==="
                     )
 
-            if newly_captured_objective_cities:
+            if newly_captured_objective_cities and self._campaign_objective_is_cities():
                 final_objective_reward = self._compute_final_objective_reward(
                     len(newly_captured_objective_cities),
                     captured_before=objective_cities_captured_before,
@@ -2858,6 +2570,11 @@ class CampaignMagicMixin:
                 info["captured_objective_cities"] = list(newly_captured_objective_cities)
                 info["final_objective_reward"] = float(final_objective_reward)
 
+            reward = self._apply_green_dragon_objective_reward_if_needed(
+                enemy_id,
+                reward,
+                info,
+            )
             self.mode = self.MODE_GRID
             self.battle_env = None
             self._clear_current_battle_context()
@@ -2866,11 +2583,12 @@ class CampaignMagicMixin:
             info["agent_pos"] = self._restore_agent_to_battle_origin()
             info["enemies_alive"] = dict(self.grid_env.enemies_alive)
 
-            if self._all_objective_cities_captured():
+            campaign_objective_reason = self._campaign_objective_completion_reason(enemy_id)
+            if campaign_objective_reason is not None:
                 self._log("=== ЗАХВАЧЕНЫ ВСЕ ЦЕЛЕВЫЕ ГОРОДА: ПОБЕДА В КАМПАНИИ ===")
                 grid_obs = self._get_grid_obs()
                 info["campaign_result"] = "victory"
-                info["campaign_victory_reason"] = "objective_cities_cleared"
+                info["campaign_victory_reason"] = campaign_objective_reason
                 return self._finalize_grid_step_result(
                     grid_obs=grid_obs,
                     reward=reward,
@@ -2937,11 +2655,11 @@ class CampaignMagicMixin:
             capital_value = None
 
         if capital_value == 2:
-            return legions_spells_d2
+            return deepcopy(legions_spells_d2)
         if capital_value == 3:
-            return mountain_clans_spells_d2
+            return deepcopy(mountain_clans_spells_d2)
         if capital_value == 4:
-            return undead_hordes_spells_d2
+            return deepcopy(undead_hordes_spells_d2)
         if capital_value == 5:
-            return elves_spells_d2
-        return empire_spells_d2
+            return deepcopy(elves_spells_d2)
+        return deepcopy(empire_spells_d2)

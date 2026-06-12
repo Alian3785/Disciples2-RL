@@ -1,0 +1,90 @@
+# Sweep run 28: env12_steps4096
+
+Статус: завершено
+Решение: ОТБРОСИТЬ: побед на eval нет, сигнал прохождения кампании слабый
+ID запуска: offline-1780325711
+Длительность: 30 мин 19 с (1819.3 с)
+Завершено: 2026-06-01T18:37:04
+
+## Короткий вывод
+- На deterministic eval: 0/20 побед (0.0%), поражений 0, таймаутов 20, прочих исходов 0.
+- Eval-поведение: средний reward -60.215, среднее число побежденных врагов 17.85.
+- Внутренний winrate из train-лога: 0.5%. Эта цифра полезна как диагностический сигнал, но решение принимается по отдельному deterministic eval.
+- Последний rollout: ep_rew_mean=34.1545, ep_len_mean=1190.12. Высокий rollout reward без побед на eval означает, что агент может получать промежуточные награды, но не завершать кампанию.
+- Вывод для sweep: конфиг пока не выглядит перспективным; следующие runs должны искать более стабильное доведение кампании до победы.
+
+## Почему выбран этот конфиг
+Длиннее rollout: больше контекста для delayed campaign rewards и меньше дисперсия advantages.
+
+## Что изменено относительно baseline
+- ppo_n_steps (длина rollout на окружение): 2048 -> 4096
+- ppo_batch_size (размер minibatch PPO): 512 -> 1024
+
+## Полная конфигурация
+- checkpoint_freq: 1000000
+- clip_range (PPO clip range): 0.2
+- comet_log_freq: 10000
+- ent_coef (entropy bonus): 0.01
+- eval_freq: 1000000
+- gae_lambda (GAE lambda): 0.95
+- gamma (discount factor gamma): 0.995
+- learning_rate (learning rate): 0.0003
+- n_envs (число параллельных окружений): 12
+- no_comet: True
+- ppo_batch_size (размер minibatch PPO): 1024
+- ppo_n_epochs (число PPO-эпох на rollout): 5
+- ppo_n_steps (длина rollout на окружение): 4096
+- seed (seed): 1
+- stochastic_eval_episodes: 0
+- target_kl (target KL): None
+- torch_num_threads: 1
+- total_steps: 1000000
+- vec_env: subproc
+
+## Команда обучения
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 12 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 4096 --ppo-batch-size 1024 --ppo-n-epochs 5 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.995 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-28-env12_steps4096
+Код возврата обучения: 0
+Лог обучения: C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\logs\28_env12_steps4096_train.log
+
+## Метрики обучения
+- final_training_winrate_percent (winrate во время обучения, %): 0.5
+
+## Последние TensorBoard scalars
+- rollout/ep_len_mean (средняя длина эпизода в rollout): 1190.12
+- rollout/ep_rew_mean (средний reward в rollout): 34.1545
+- time/fps (скорость обучения, samples/sec): 587
+- train/approx_kl (примерный KL между старой и новой политикой): 0.00749173
+- train/clip_fraction (доля PPO-обновлений, попавших под clip): 0.0604899
+- train/entropy_loss (entropy loss): -2.16816
+- train/explained_variance (качество value-функции): 0.875762
+- train/loss (общий loss PPO): -0.00408847
+- train/policy_gradient_loss (policy gradient loss): -0.00431059
+- train/value_loss (value loss): 0.065412
+
+## Команда eval
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u bestmodeltest.py --run-id offline-1780325711 --model-type final --episodes 20 --deterministic
+Код возврата eval: 0
+Лог eval: C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\logs\28_env12_steps4096_eval.log
+
+## Метрики eval
+- defeats (поражения): 0
+- mean_enemies_defeated (среднее число побежденных врагов): 17.85
+- mean_reward (средний reward): -60.215
+- other (прочие исходы): 0
+- timeouts (таймауты): 20
+- wins (победы): 0
+
+## Хвост raw eval-лога
+```
+run_id: offline-1780325711
+model_type: final
+episodes: 20
+mean_reward: -60.215 +/- 36.729
+mean_enemies_defeated: 17.850 +/- 7.316
+wins: 0
+defeats: 0
+timeouts: 20
+other: 0
+episode_rewards: [-89.6, -69.223, -94.404, -74.429, -94.37, -64.763, -3.581, -69.451, -94.323, -74.26, -13.157, -69.493, 21.915, 10.452, -94.509, -99.029, -60.275, -36.346, -41.089, -94.369]
+enemies_defeated_per_episode: [12, 16, 11, 15, 11, 17, 29, 16, 11, 15, 27, 16, 34, 32, 11, 10, 18, 23, 22, 11]
+```

@@ -56,7 +56,7 @@ def _set_battle_hero_turn(env: CampaignEnv, position: int = 8) -> dict:
 
 
 def test_counter_backed_battle_items_are_synced_into_heroitems_on_reset():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     assert env._count_hero_item(env.BONUS_SMALL_HEAL_ITEM_NAME) == env._healing_bottles_left()
@@ -64,8 +64,27 @@ def test_counter_backed_battle_items_are_synced_into_heroitems_on_reset():
     assert env._count_hero_item(env.BONUS_REVIVE_ITEM_NAME) == env._revive_bottles_left()
 
 
+def test_ruin_life_elixir_grants_usable_counter_backed_revive_item():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
+    env.reset(seed=123)
+
+    env.revive_bottles_used = env._max_revive_bottles_available()
+    env._sync_counter_backed_battle_items()
+    assert env._revive_bottles_left() == 0
+    assert env._count_hero_item(env.BONUS_REVIVE_ITEM_NAME) == 0
+
+    info = env._grant_ruin_reward(72)
+
+    assert info["ruin_reward_item"] == env.RUIN_LIFE_ELIXIR_ITEM_NAME
+    assert info["granted_items"] == [env.BONUS_REVIVE_ITEM_NAME]
+    assert env.extra_revive_bottles == 1
+    assert env._revive_bottles_left() == 1
+    assert env._count_hero_item(env.BONUS_REVIVE_ITEM_NAME) == 1
+    assert env._potion_available_count(env.RUIN_LIFE_ELIXIR_ITEM_NAME) == 1
+
+
 def test_battle_equip_actions_include_magic_items_present_on_current_map():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     assert env.scenario_battle_magic_item_names == (
@@ -92,7 +111,7 @@ def test_battle_equip_actions_include_magic_items_present_on_current_map():
 
 
 def test_orb_equip_action_requires_owned_orb_and_sorcery_lore():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     item_name = "Vampire Orb"
@@ -125,7 +144,7 @@ def test_merchant_orbs_reserve_equip_actions_but_stay_masked_until_owned():
             {"name": "Angel Orb", "price": 800.0, "stock": 1, "grant": "inventory"},
         )
 
-    env = MerchantOrbCampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = MerchantOrbCampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     assert "Angel Orb" in env.scenario_battle_orb_item_names
@@ -145,8 +164,35 @@ def test_merchant_orbs_reserve_equip_actions_but_stay_masked_until_owned():
     assert bool(mask[action]) is True
 
 
+def test_ruin_orbs_reserve_equip_actions_and_can_be_equipped_after_reward():
+    class RuinOrbCampaignEnv(CampaignEnv):
+        RUIN_REWARD_BY_ENEMY_ID = dict(CampaignEnv.RUIN_REWARD_BY_ENEMY_ID)
+        RUIN_REWARD_BY_ENEMY_ID[999] = {
+            "title": "Orb Ruin",
+            "ruin_pos": (1, 1),
+            "marker_pos": (1, 2),
+            "item": "Angel Orb",
+            "gold": 0,
+        }
+
+    env = RuinOrbCampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
+    env.reset(seed=123)
+
+    assert "Angel Orb" in env.scenario_battle_orb_item_names
+    assert "Angel Orb" in env.BATTLE_EQUIPPABLE_ITEM_NAMES
+
+    action = _equip_action(env, "Angel Orb")
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is False
+
+    env._grant_ruin_reward(999)
+    _grant_sorcery_lore(env)
+    mask = env.compute_action_mask()
+    assert bool(mask[action]) is True
+
+
 def test_talisman_equip_action_requires_owned_item_and_sorcery_lore():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     item_name = "Zombie Talisman"
@@ -188,7 +234,7 @@ def test_equipped_healing_item_applies_in_battle_and_consumes_source(
     missing_hp: int,
     used_attr: str | None,
 ):
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     if item_name == env.HEALING_OINTMENT_ITEM_NAME:
@@ -243,7 +289,7 @@ def test_equipped_healing_item_applies_in_battle_and_consumes_source(
 
 
 def test_equipped_revive_item_applies_in_battle_and_consumes_source():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     item_name = env.BONUS_REVIVE_ITEM_NAME
@@ -290,7 +336,7 @@ def test_equipped_revive_item_applies_in_battle_and_consumes_source():
 
 
 def test_equipped_orb_of_life_revives_and_consumes_hero_item_source():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     item_name = "Orb of Life"
@@ -332,7 +378,7 @@ def test_equipped_orb_of_life_revives_and_consumes_hero_item_source():
 
 
 def test_equipped_vampire_orb_summons_and_consumes_hero_item_source():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     item_name = "Vampire Orb"
@@ -369,7 +415,7 @@ def test_equipped_vampire_orb_summons_and_consumes_hero_item_source():
 
 
 def test_equipped_talisman_spends_charge_without_consuming_source():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     item_name = "Zombie Talisman"
@@ -427,7 +473,7 @@ def test_equipped_talisman_spends_charge_without_consuming_source():
 
 
 def test_talisman_final_charge_consumes_source_and_clears_slot():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     item_name = "Zombie Talisman"
@@ -465,7 +511,7 @@ def test_talisman_final_charge_consumes_source_and_clears_slot():
 
 
 def test_re_equip_is_blocked_until_next_game_turn():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     _, _, _, _, first_info = env.step(_equip_action(env, env.BONUS_SMALL_HEAL_ITEM_NAME))
@@ -498,7 +544,7 @@ def test_re_equip_is_blocked_until_next_game_turn():
 
 
 def test_battle_item_equip_actions_are_masked_when_both_slots_are_full():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     env._append_hero_item(env.HEALING_OINTMENT_ITEM_NAME)

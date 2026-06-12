@@ -1,0 +1,85 @@
+# Sweep run 01: smoke_baseline_seed1
+
+Status: completed
+Decision: DROP: no eval wins and weak campaign completion signal
+Run ID: offline-1780233112
+Elapsed seconds: 16.9
+Finished at: 2026-05-31T16:12:11
+
+## Why this config
+Reference config after doubling unit-swap penalty.
+
+## Changed parameters
+- n_envs: 12 -> 1
+- ppo_n_steps: 2048 -> 64
+- ppo_batch_size: 512 -> 64
+- ppo_n_epochs: 5 -> 1
+
+## Full config
+- checkpoint_freq: 128
+- clip_range: 0.2
+- comet_log_freq: 10000
+- ent_coef: 0.01
+- eval_freq: 1000000
+- gae_lambda: 0.95
+- gamma: 0.995
+- learning_rate: 0.0003
+- n_envs: 1
+- no_comet: True
+- no_diagnostics: True
+- no_vec_check_nan: True
+- ppo_batch_size: 64
+- ppo_n_epochs: 1
+- ppo_n_steps: 64
+- seed: 1
+- stochastic_eval_episodes: 0
+- target_kl: None
+- torch_num_threads: 1
+- total_steps: 128
+- vec_env: dummy
+
+## Train command
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 128 --n-envs 1 --vec-env dummy --seed 1 --checkpoint-freq 128 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 64 --ppo-batch-size 64 --ppo-n-epochs 1 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.995 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --no-vec-check-nan --no-diagnostics --run-name hpsweep1m-01-smoke_baseline_seed1
+Train return code: 0
+Train log: C:\realnewdisciples\Big_map\outputs\hparam_sweep_smoke\logs\01_smoke_baseline_seed1_train.log
+
+## Training summary
+- No final training summary metrics parsed.
+
+## TensorBoard last scalars
+- time/fps: 195
+- train/approx_kl: 0
+- train/clip_fraction: 0
+- train/entropy_loss: -2.04884
+- train/explained_variance: 0.179639
+- train/loss: 0.647884
+- train/policy_gradient_loss: -7.45058e-09
+- train/value_loss: 1.33674
+
+## Eval command
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u bestmodeltest.py --run-id offline-1780233112 --model-type final --episodes 1 --deterministic
+Eval return code: 0
+Eval log: C:\realnewdisciples\Big_map\outputs\hparam_sweep_smoke\logs\01_smoke_baseline_seed1_eval.log
+
+## Eval metrics
+- defeats: 1
+- mean_enemies_defeated: 0.0
+- mean_reward: -2.773
+- other: 0
+- timeouts: 0
+- wins: 0
+
+## Raw eval tail
+```
+run_id: offline-1780233112
+model_type: final
+episodes: 1
+mean_reward: -2.773 +/- 0.000
+mean_enemies_defeated: 0.000 +/- 0.000
+wins: 0
+defeats: 1
+timeouts: 0
+other: 0
+episode_rewards: [-2.773]
+enemies_defeated_per_episode: [0]
+```

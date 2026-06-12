@@ -11,7 +11,9 @@ from grid import (
     BASE_VILLAGE_HEAL_TILES,
     BASE_VILLAGE_PREVIOUS_CORNER_TILES,
     DEFAULT_HERO_GRID_POSITION,
+    MANA_SOURCE_COUNT,
     are_targets_reachable,
+    resolve_mana_sources,
 )
 from grid_world_env import GridWorldEnv
 
@@ -89,7 +91,7 @@ VILLAGE_FOOTPRINTS = (
 
 
 def test_hero_starts_at_legions_capital_and_returns_there_on_reset():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     assert env.grid_env.agent_pos == DEFAULT_HERO_GRID_POSITION
 
     _, info = env.reset(seed=123)
@@ -98,7 +100,7 @@ def test_hero_starts_at_legions_capital_and_returns_there_on_reset():
 
 
 def test_capital_and_village_heal_tiles_match_expected_layout():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     heal_tiles = tuple(env.castle_heal_tiles)
@@ -111,7 +113,7 @@ def test_capital_and_village_heal_tiles_match_expected_layout():
 
 
 def test_village_only_configured_heal_tiles_stay_open():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     obstacle_tiles = set(env.grid_env.obstacle_positions)
@@ -134,7 +136,7 @@ def test_village_only_configured_heal_tiles_stay_open():
 
 
 def test_default_layout_uses_static_obstacles_and_keeps_targets_reachable():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     obstacle_tiles = set(env.grid_env.obstacle_positions)
@@ -155,7 +157,7 @@ def test_default_layout_uses_static_obstacles_and_keeps_targets_reachable():
 
 
 def test_hero_start_is_empty_and_inside_legions_capital_area():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     start_x, start_y = env.grid_env.start_position
@@ -171,7 +173,7 @@ def test_hero_start_is_empty_and_inside_legions_capital_area():
 
 
 def test_obstacle_blocks_movement_with_configured_penalty():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     origin_tile = env.grid_env.agent_pos
@@ -198,7 +200,7 @@ def test_obstacle_blocks_movement_with_configured_penalty():
     assert tuple(info["blocked_obstacle_pos"]) == obstacle_tile
 
 
-def test_grid_world_render_marks_obstacles():
+def test_grid_world_tracks_obstacles():
     env = GridWorldEnv(
         grid_size=5,
         enemy_positions={},
@@ -207,12 +209,10 @@ def test_grid_world_render_marks_obstacles():
     )
     env.reset(seed=123)
 
-    rendered = env.render(mode="ansi")
-    assert rendered is not None
-    assert "# " in rendered
+    assert (2, 2) in env.obstacle_positions
 
 
-def test_grid_world_render_marks_chests():
+def test_grid_world_tracks_chests():
     env = GridWorldEnv(
         grid_size=5,
         enemy_positions={},
@@ -222,18 +222,46 @@ def test_grid_world_render_marks_chests():
     env.chest_positions = {(3, 2)}
     env.reset(seed=123)
 
-    rendered = env.render(mode="ansi")
-    assert rendered is not None
-    assert "T " in rendered
+    assert (3, 2) in env.chest_positions
 
 
 def test_default_campaign_uses_all_real_map_chests():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     assert len(env.chests) == 18
     assert env.chests[(36, 38)] == ("Potion of Healing", "Life Potion")
     assert env.chests[(24, 30)] == ("Potion of Healing", "Bronze Ring (Valuable)")
+
+
+def test_default_campaign_mana_sources_do_not_overlap_map_objects():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
+    env.reset(seed=123)
+
+    mana_tiles = set(env.mana_sources)
+
+    assert len(mana_tiles) == MANA_SOURCE_COUNT
+    assert mana_tiles.isdisjoint(set(env.grid_env.obstacle_positions))
+    assert mana_tiles.isdisjoint(set(env.grid_env.enemy_positions.values()))
+    assert mana_tiles.isdisjoint(set(env.castle_heal_tiles))
+    assert mana_tiles.isdisjoint(set(env.chests))
+
+
+def test_resolve_mana_sources_relocates_reserved_and_duplicate_tiles():
+    resolved = resolve_mana_sources(
+        3,
+        reserved_tiles={(0, 0)},
+        base_static_mana_sources=(
+            ("infernal", (0, 0)),
+            ("life", (0, 0)),
+            ("death", (1, 0)),
+        ),
+        base_grid_size=3,
+    )
+
+    assert len(resolved) == 3
+    assert (0, 0) not in resolved
+    assert {meta["kind"] for meta in resolved.values()} == {"infernal", "life", "death"}
 
 
 def test_grid_world_action_mask_blocks_edges_and_obstacles():
@@ -251,7 +279,7 @@ def test_grid_world_action_mask_blocks_edges_and_obstacles():
 
 
 def test_campaign_grid_mask_respects_edges_and_obstacles():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     env.grid_env.agent_pos = (0, 0)
@@ -266,7 +294,7 @@ def test_campaign_grid_mask_respects_edges_and_obstacles():
 
 
 def test_castle_heal_actions_available_on_all_heal_tiles():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     _mark_temple_built(env)
     env.gold = 10.0
@@ -286,7 +314,7 @@ def test_castle_heal_actions_available_on_all_heal_tiles():
 
 
 def test_castle_heal_actions_require_temple_building():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     env.gold = 10.0
     env.grid_env.agent_pos = env.castle_heal_tiles[0]
@@ -317,7 +345,7 @@ def test_castle_heal_actions_require_temple_building():
 
 
 def test_castle_revive_actions_available_on_all_heal_tiles_when_gold_is_enough():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     _mark_temple_built(env)
     env.gold = 50.0
@@ -336,7 +364,7 @@ def test_castle_revive_actions_available_on_all_heal_tiles_when_gold_is_enough()
 
 
 def test_castle_revive_actions_require_temple_building():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     env.gold = 50.0
     env.grid_env.agent_pos = env.castle_heal_tiles[0]
@@ -366,7 +394,7 @@ def test_castle_revive_actions_require_temple_building():
 
 
 def _legacy_test_campaign_collects_chest_from_adjacent_tile_and_updates_heroitems():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     start_x, start_y = env.grid_env.agent_pos
@@ -424,7 +452,7 @@ def _legacy_test_campaign_collects_chest_from_adjacent_tile_and_updates_heroitem
 
 
 def test_campaign_collects_chest_from_adjacent_tile_and_hides_auto_consumed_loot_in_heroitems():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     start_x, start_y = env.grid_env.agent_pos
@@ -479,8 +507,32 @@ def test_campaign_collects_chest_from_adjacent_tile_and_hides_auto_consumed_loot
     assert "Сундуки: нет" in rendered
 
 
+def test_campaign_minimal_step_info_reports_collected_chest_count():
+    env = CampaignEnv(
+        log_enabled=False,
+        detailed_step_info=False,
+        persist_blue_hp=True,
+        Realcapital=2,
+    )
+    env.reset(seed=123)
+
+    start_x, start_y = env.grid_env.agent_pos
+    chest_tile = (start_x + 2, start_y)
+    move_target = (start_x + 1, start_y)
+    env.grid_env.obstacle_positions.discard(move_target)
+    env.grid_env.obstacle_positions.discard(chest_tile)
+    env.chests = {chest_tile: ("Potion of Healing",)}
+    env._sync_grid_chest_positions()
+
+    _, _, terminated, truncated, info = env.step(env.grid_env.ACTION_RIGHT)
+
+    assert terminated is False
+    assert truncated is False
+    assert info["collected_chests_count"] == 1
+
+
 def test_castle_heal_spends_only_required_gold_when_enough():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     _mark_temple_built(env)
 
@@ -507,7 +559,7 @@ def test_castle_heal_spends_only_required_gold_when_enough():
 
 
 def test_castle_heal_level_2_or_3_costs_two_gold_per_hp():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     _mark_temple_built(env)
 
@@ -534,7 +586,7 @@ def test_castle_heal_level_2_or_3_costs_two_gold_per_hp():
 
 
 def test_castle_heal_level_4_or_5_costs_three_gold_per_hp_and_can_be_partial():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     _mark_temple_built(env)
 
@@ -572,7 +624,7 @@ def test_castle_heal_level_4_or_5_costs_three_gold_per_hp_and_can_be_partial():
     ],
 )
 def test_castle_revive_spends_gold_by_unit_level(level, revive_cost):
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     _mark_temple_built(env)
 
@@ -599,7 +651,7 @@ def test_castle_revive_spends_gold_by_unit_level(level, revive_cost):
 
 
 def test_castle_revive_action_is_blocked_when_gold_is_below_required_cost():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     _mark_temple_built(env)
 
@@ -629,7 +681,7 @@ def test_castle_revive_action_is_blocked_when_gold_is_below_required_cost():
 
 
 def test_small_heal_potion_action_uses_50_hp_bottle():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     target_pos = 7
@@ -661,7 +713,7 @@ def test_small_heal_potion_action_uses_50_hp_bottle():
 
 
 def test_large_heal_potion_action_uses_100_hp_bottle():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     target_pos = 7
@@ -705,7 +757,7 @@ def test_exact_heal_potion_action_uses_requested_available_bottle(
     expected_kind,
     expected_healed,
 ):
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     target_pos = 7
@@ -732,7 +784,7 @@ def test_exact_heal_potion_action_uses_requested_available_bottle(
 
 
 def test_exact_heal_potion_masks_require_alive_wounded_unit_and_matching_stock():
-    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, realcapital=2)
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
     target_pos = 7

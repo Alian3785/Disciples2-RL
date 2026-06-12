@@ -58,6 +58,8 @@ class CampaignEnv(
         - Награда за первый захваченный целевой город: reward_all_enemies
         - Награда за второй захваченный целевой город: reward_all_enemies * 5
         - Победа в кампании после захвата Порта Полонис и Соругириллы
+        - В dragon-режиме: одноразовая награда за достижение зеленого дракона,
+          увеличенная награда за победу над ним и нарастающий штраф за затяжку без победы
         - Масштабированная награда из BattleEnv: battle_reward_scale * battle_reward
 - Награда за лечение на специальных клетках: reward_castle_heal_per_hp * restored_hp
 - Награда за успешное воскрешение на специальных клетках: reward_castle_revive
@@ -134,7 +136,7 @@ class CampaignEnv(
         reward_battle_item_use: float = 0.05,
         reward_combat_potion_battle_participation: float = 0.05,
         reward_sell_junk_item: float = 0.05,
-        reward_unit_swap_penalty: float = 0.001,
+        reward_unit_swap_penalty: float = 0.002,
         reward_spell_learn: float = 2.0,
         reward_spell_cast: float = 0.005,
         reward_summon_hero_battle_engage: float = 0.05,
@@ -149,6 +151,12 @@ class CampaignEnv(
         max_grid_steps: int = 1800,
         Realcapital: int = 1,
         typeoflord: int = 1,
+        campaign_objective: str = "cities",
+        reward_green_dragon_reached: float = 6.0,
+        reward_green_dragon_objective_multiplier: float = 2.0,
+        reward_no_dragon_victory_late_step_penalty: float = 0.01,
+        reward_no_dragon_victory_late_step_penalty_cap: float = 0.05,
+        reward_no_dragon_victory_late_step_start_fraction: float = 0.35,
     ):
         """Собрать конфигурацию кампании и базовое состояние среды.
 
@@ -207,6 +215,24 @@ class CampaignEnv(
         self.scripted_capital_bot_config_enabled = bool(scripted_capital_bot_enabled)
         self.empire_territory_enabled = bool(empire_territory_enabled)
         self.max_grid_steps = max(1, int(max_grid_steps))
+        self.campaign_objective = self._normalize_campaign_objective(campaign_objective)
+        self.reward_green_dragon_reached = max(0.0, float(reward_green_dragon_reached))
+        self.reward_green_dragon_objective_multiplier = max(
+            0.0,
+            float(reward_green_dragon_objective_multiplier),
+        )
+        self.reward_no_dragon_victory_late_step_penalty = max(
+            0.0,
+            float(reward_no_dragon_victory_late_step_penalty),
+        )
+        self.reward_no_dragon_victory_late_step_penalty_cap = max(
+            0.0,
+            float(reward_no_dragon_victory_late_step_penalty_cap),
+        )
+        self.reward_no_dragon_victory_late_step_start_fraction = min(
+            1.0,
+            max(0.0, float(reward_no_dragon_victory_late_step_start_fraction)),
+        )
         # Базовый лимит шагов внутри одного хода кампании.
         self.moves_per_turn = int(self.MOVES_PER_TURN)
         self.turn_norm_k = max(
@@ -414,6 +440,7 @@ class CampaignEnv(
         self.healing_bottles_used: int = 0
         self.revive_bottles_used: int = 0
         self.turns: int = 0
+        self.campaign_steps: int = 0
         self.gold: float = 0.0
         self.moves: int = self.moves_per_turn
         self.active_buildings = self._get_buildings_for_capital(self.Realcapital)
@@ -707,6 +734,10 @@ class CampaignEnv(
         else:
             self.Realcapital = requested_capital
             self.typeoflord = requested_typeoflord
+        if isinstance(options, dict) and "campaign_objective" in options:
+            self.campaign_objective = self._normalize_campaign_objective(
+                options.get("campaign_objective")
+            )
         if isinstance(options, dict) and "scripted_capital_bot_enabled" in options:
             self.scripted_capital_bot_config_enabled = bool(
                 options.get("scripted_capital_bot_enabled")
@@ -736,6 +767,7 @@ class CampaignEnv(
         self.healing_bottles_used = 0
         self.revive_bottles_used = 0
         self.turns = 0
+        self.campaign_steps = 0
         self.gold = 0.0
         self.spell_learning_locked = False
         self.battle_env = None
@@ -805,6 +837,7 @@ class CampaignEnv(
         self.battle_items_used_total = 0
         self.books_equipped_total = 0
         self.combat_potion_battle_bonus_pending = False
+        self.green_dragon_reached_reward_granted = False
         self.captured_objective_cities = set()
         self.cleared_ruin_enemy_ids = set()
         self.last_ruin_reward = None
@@ -916,6 +949,7 @@ class CampaignEnv(
         """
         # Приводим action к int (может прийти как numpy.ndarray)
         action = int(action)
+        self.campaign_steps = int(getattr(self, "campaign_steps", 0) or 0) + 1
 
         if self.mode == self.MODE_GRID:
             return self._step_grid(action)
@@ -1136,6 +1170,13 @@ class CampaignEnv(
             "collected_combat_potions": int(collected_combat_potions),
             "combat_potion_pickup_reward": float(combat_potion_pickup_reward),
         }
+        if grid_info.get("battle_triggered"):
+            reward = self._apply_green_dragon_reached_reward_if_needed(
+                grid_info.get("enemy_id"),
+                reward,
+                info,
+            )
+            info["grid_reward_scaled"] = float(reward)
         if include_detailed_info:
             info.update(
                 {
@@ -1330,6 +1371,11 @@ class CampaignEnv(
         sale_info = self._sell_sell_only_heroitems_at_merchant(position=position)
         finalized_reward = float(reward) + float(sale_info["merchant_sale_reward"])
         finalized_info.update(sale_info)
+        late_penalty = self._compute_no_dragon_victory_late_step_penalty(finalized_info)
+        finalized_reward += float(late_penalty)
+        finalized_info["campaign_steps"] = int(getattr(self, "campaign_steps", 0) or 0)
+        if late_penalty != 0.0:
+            finalized_info["no_dragon_victory_late_step_penalty"] = float(late_penalty)
         equipment_signature = self._equipment_state_signature(units=self.blue_team_state)
         if (
             bool(getattr(self, "battle_items_dirty", True))
@@ -1345,6 +1391,7 @@ class CampaignEnv(
                 finalized_info["grid_reward_scaled"] = (
                     float(finalized_info.get("grid_reward_scaled", 0.0))
                     + float(sale_info["merchant_sale_reward"])
+                    + float(late_penalty)
                 )
             except (TypeError, ValueError):
                 finalized_info["grid_reward_scaled"] = float(finalized_reward)

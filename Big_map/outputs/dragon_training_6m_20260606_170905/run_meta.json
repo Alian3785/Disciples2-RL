@@ -1,0 +1,9 @@
+﻿{
+    "pid":  7804,
+    "started_at":  "2026-06-06T17:09:06.0018746+03:00",
+    "run_dir":  "C:\\realnewdisciples\\Big_map\\outputs\\dragon_training_6m_20260606_170905",
+    "stdout":  "C:\\realnewdisciples\\Big_map\\outputs\\dragon_training_6m_20260606_170905\\train.stdout.log",
+    "stderr":  "C:\\realnewdisciples\\Big_map\\outputs\\dragon_training_6m_20260606_170905\\train.stderr.log",
+    "behavior_report":  "C:\\realnewdisciples\\Big_map\\outputs\\dragon_training_6m_20260606_170905\\behavior_report.jsonl",
+    "command":  "C:\\realnewdisciples\\Big_map\\.venv\\Scripts\\python.exe -u train_campaign.py --dragon --total-steps 6000000 --n-envs 8 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 300000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 4096 --ppo-batch-size 1024 --ppo-n-epochs 5 --learning-rate 0.0003 --clip-range 0.2 --ent-coef 0.01 --gamma 0.995 --gae-lambda 0.95 --comet-log-freq 300000 --no-comet --run-name dragon-6m-prevparams --behavior-report-path C:\\realnewdisciples\\Big_map\\outputs\\dragon_training_6m_20260606_170905\\behavior_report.jsonl"
+}

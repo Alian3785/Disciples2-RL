@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Tuple
 
 DEFAULT_SCENARIO_FILENAME = "A Return To Simpler Times.sg"
+
 LEGIONS_TERRITORY_PASSABLE_POSITIONED_CLASSES = frozenset(
     {
         ".?AVCMidLandmark@@",

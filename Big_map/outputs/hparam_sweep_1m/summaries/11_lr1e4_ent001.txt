@@ -1,0 +1,90 @@
+# Sweep run 11: lr1e4_ent001
+
+Статус: завершено
+Решение: ОТБРОСИТЬ: побед на eval нет, сигнал прохождения кампании слабый
+ID запуска: offline-1780257630
+Длительность: 30 мин 38 с (1838.2 с)
+Завершено: 2026-05-31T23:38:03
+
+## Короткий вывод
+- На deterministic eval: 0/20 побед (0.0%), поражений 8, таймаутов 12, прочих исходов 0.
+- Eval-поведение: средний reward 8.857, среднее число побежденных врагов 20.15.
+- Внутренний winrate из train-лога: 1.8%. Эта цифра полезна как диагностический сигнал, но решение принимается по отдельному deterministic eval.
+- Последний rollout: ep_rew_mean=46.2169, ep_len_mean=820.81. Высокий rollout reward без побед на eval означает, что агент может получать промежуточные награды, но не завершать кампанию.
+- Вывод для sweep: конфиг пока не выглядит перспективным; следующие runs должны искать более стабильное доведение кампании до победы.
+
+## Почему выбран этот конфиг
+Самая консервативная пара learning rate / entropy среди основных кандидатов.
+
+## Что изменено относительно baseline
+- learning_rate (learning rate): 0.0003 -> 0.0001
+- ent_coef (entropy bonus): 0.01 -> 0.001
+
+## Полная конфигурация
+- checkpoint_freq: 1000000
+- clip_range (PPO clip range): 0.2
+- comet_log_freq: 10000
+- ent_coef (entropy bonus): 0.001
+- eval_freq: 1000000
+- gae_lambda (GAE lambda): 0.95
+- gamma (discount factor gamma): 0.995
+- learning_rate (learning rate): 0.0001
+- n_envs (число параллельных окружений): 12
+- no_comet: True
+- ppo_batch_size (размер minibatch PPO): 512
+- ppo_n_epochs (число PPO-эпох на rollout): 5
+- ppo_n_steps (длина rollout на окружение): 2048
+- seed (seed): 1
+- stochastic_eval_episodes: 0
+- target_kl (target KL): None
+- torch_num_threads: 1
+- total_steps: 1000000
+- vec_env: subproc
+
+## Команда обучения
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u train_campaign.py --total-steps 1000000 --n-envs 12 --vec-env subproc --seed 1 --checkpoint-freq 1000000 --eval-freq 1000000 --stochastic-eval-episodes 0 --torch-num-threads 1 --ppo-n-steps 2048 --ppo-batch-size 512 --ppo-n-epochs 5 --learning-rate 0.0001 --clip-range 0.2 --ent-coef 0.001 --gamma 0.995 --gae-lambda 0.95 --comet-log-freq 10000 --no-comet --run-name hpsweep1m-11-lr1e4_ent001
+Код возврата обучения: 0
+Лог обучения: C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\logs\11_lr1e4_ent001_train.log
+
+## Метрики обучения
+- final_training_winrate_percent (winrate во время обучения, %): 1.8
+
+## Последние TensorBoard scalars
+- rollout/ep_len_mean (средняя длина эпизода в rollout): 820.81
+- rollout/ep_rew_mean (средний reward в rollout): 46.2169
+- time/fps (скорость обучения, samples/sec): 565
+- train/approx_kl (примерный KL между старой и новой политикой): 0.00491707
+- train/clip_fraction (доля PPO-обновлений, попавших под clip): 0.0112874
+- train/entropy_loss (entropy loss): -1.9994
+- train/explained_variance (качество value-функции): 0.868892
+- train/loss (общий loss PPO): 0.0138221
+- train/policy_gradient_loss (policy gradient loss): -0.00262184
+- train/value_loss (value loss): 0.0768981
+
+## Команда eval
+C:\realnewdisciples\Big_map\.venv\Scripts\python.exe -u bestmodeltest.py --run-id offline-1780257630 --model-type final --episodes 20 --deterministic
+Код возврата eval: 0
+Лог eval: C:\realnewdisciples\Big_map\outputs\hparam_sweep_1m\logs\11_lr1e4_ent001_eval.log
+
+## Метрики eval
+- defeats (поражения): 8
+- mean_enemies_defeated (среднее число побежденных врагов): 20.15
+- mean_reward (средний reward): 8.857
+- other (прочие исходы): 0
+- timeouts (таймауты): 12
+- wins (победы): 0
+
+## Хвост raw eval-лога
+```
+run_id: offline-1780257630
+model_type: final
+episodes: 20
+mean_reward: 8.857 +/- 36.270
+mean_enemies_defeated: 20.150 +/- 9.951
+wins: 0
+defeats: 8
+timeouts: 12
+other: 0
+episode_rewards: [54.652, 53.691, 2.004, -22.73, 57.229, 53.702, -26.512, -20.385, -19.54, -21.677, -21.011, -23.224, 46.229, -22.73, 56.727, -23.173, -22.566, -22.723, 45.905, 53.265]
+enemies_defeated_per_episode: [9, 8, 31, 28, 8, 8, 28, 28, 28, 28, 28, 28, 7, 28, 9, 28, 28, 28, 7, 8]
+```

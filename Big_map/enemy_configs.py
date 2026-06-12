@@ -43,6 +43,20 @@ def _canonical_name(name: str) -> str:
     return _NAME_ALIASES.get(raw, raw)
 
 
+def _safe_float(value: object, default: float = 0.0) -> float:
+    try:
+        return float(value or default)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def _safe_int(value: object, default: int = 0) -> int:
+    try:
+        return int(round(float(value or default)))
+    except (TypeError, ValueError):
+        return int(default)
+
+
 def _empty_red_slot(position: int) -> dict:
     return {
         "name": "пусто",
@@ -85,11 +99,12 @@ def _red_unit(name: str, position: int) -> dict:
     unit = map_unit_to_battle(src, "red", int(position))
     unit["position"] = int(position)
     unit["stand"] = _default_stand(int(position))
-    unit.setdefault("exp_kill", 0)
-    unit.setdefault("exp_required", 0)
-    unit.setdefault("exp_current", 0)
-    unit.setdefault("turns_into", [])
-    unit.setdefault("Level", 0)
+    unit["exp_kill"] = _safe_float(unit.get("exp_kill", 0))
+    unit["exp_required"] = _safe_float(unit.get("exp_required", 0))
+    unit["exp_current"] = _safe_float(unit.get("exp_current", 0))
+    unit["Level"] = _safe_int(unit.get("Level", 0))
+    turns_into = unit.get("turns_into", [])
+    unit["turns_into"] = turns_into if isinstance(turns_into, list) else []
     return unit
 
 
