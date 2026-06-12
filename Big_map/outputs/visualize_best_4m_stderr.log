@@ -1,7 +1,0 @@
-usage: visualize_final_model.py [-h] [--model-path MODEL_PATH]
-                                [--checkpoint {best,final}] [--steps STEPS]
-                                [--episodes EPISODES] [--quiet-eval]
-                                [--deterministic] [--no-scripted-bot]
-                                [--sleep SLEEP] [--viz] [--map-png MAP_PNG]
-                                [--scenario-path SCENARIO_PATH]
-visualize_final_model.py: error: unrecognized arguments: Return To Simpler Times.sg
