@@ -132,3 +132,19 @@ ENEMY_DESCRIPTIONS = {
     enemy_id: str(spec["description"])
     for enemy_id, spec in ENEMY_TEAM_SPECS.items()
 }
+
+
+def _swap_team_unit(team: list[dict], old_name: str, new_name: str) -> list[dict]:
+    return [
+        _red_unit(new_name, u["position"])
+        if str(u.get("name", "")).strip() == old_name
+        else u
+        for u in team
+    ]
+
+
+# Ростеры для режима "blue_dragon": всё как обычно, но Зелёный дракон -> Синий дракон.
+ENEMY_CONFIGS_BLUE_DRAGON = {
+    enemy_id: _swap_team_unit(team, "Зелёный дракон", "Синий дракон")
+    for enemy_id, team in ENEMY_CONFIGS.items()
+}

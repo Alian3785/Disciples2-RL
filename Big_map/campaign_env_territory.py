@@ -28,11 +28,13 @@ class CampaignTerritoryMixin:
             "objective_cities": cls.CAMPAIGN_OBJECTIVE_CITIES,
             "dragon": cls.CAMPAIGN_OBJECTIVE_DRAGON,
             "green_dragon": cls.CAMPAIGN_OBJECTIVE_DRAGON,
+            "blue_dragon": cls.CAMPAIGN_OBJECTIVE_BLUE_DRAGON,
+            "water_dragon": cls.CAMPAIGN_OBJECTIVE_BLUE_DRAGON,
         }
         if raw in aliases:
             return aliases[raw]
         raise ValueError(
-            f"Unsupported campaign_objective={value!r}; expected 'cities' or 'dragon'"
+            f"Unsupported campaign_objective={value!r}; expected 'cities', 'dragon' or 'blue_dragon'"
         )
 
     def _campaign_objective_is_cities(self) -> bool:
@@ -42,9 +44,15 @@ class CampaignTerritoryMixin:
         )
 
     def _campaign_objective_is_dragon(self) -> bool:
+        # Режим blue_dragon полностью повторяет логику dragon (та же цель — enemy_31).
+        return self._normalize_campaign_objective(
+            getattr(self, "campaign_objective", "cities")
+        ) in (self.CAMPAIGN_OBJECTIVE_DRAGON, self.CAMPAIGN_OBJECTIVE_BLUE_DRAGON)
+
+    def _campaign_objective_is_blue_dragon(self) -> bool:
         return (
             self._normalize_campaign_objective(getattr(self, "campaign_objective", "cities"))
-            == self.CAMPAIGN_OBJECTIVE_DRAGON
+            == self.CAMPAIGN_OBJECTIVE_BLUE_DRAGON
         )
 
     def _is_green_dragon_objective_enemy(self, enemy_id: Optional[int]) -> bool:
@@ -95,6 +103,51 @@ class CampaignTerritoryMixin:
         info["campaign_objective"] = self.CAMPAIGN_OBJECTIVE_DRAGON
         return float(reward) + float(reached_reward)
 
+    def _apply_objective_city_reached_reward_if_needed(
+        self,
+        enemy_id: Optional[int],
+        reward: float,
+        info: Dict[str, object],
+    ) -> float:
+        """Разовая награда за то, что агент добрался до целевого города и вступил
+        в бой с его защитниками. Начисляется один раз на каждый город при первой
+        схватке с любым из его ещё живых отрядов-защитников (аналог reach-награды
+        дракона). Активна только для цели «города»."""
+        if not self._campaign_objective_is_cities():
+            return float(reward)
+        city_name = self._objective_city_for_enemy(enemy_id)
+        if city_name is None:
+            return float(reward)
+        if city_name in self.captured_objective_cities:
+            return float(reward)
+        try:
+            normalized_enemy_id = int(enemy_id)
+        except (TypeError, ValueError):
+            return float(reward)
+        grid_env = getattr(self, "grid_env", None)
+        enemies_alive = getattr(grid_env, "enemies_alive", {}) or {}
+        if not bool(enemies_alive.get(normalized_enemy_id, False)):
+            return float(reward)
+
+        info["objective_city_reached"] = True
+        info["objective_city_reached_name"] = str(city_name)
+        info["objective_city_reached_enemy_id"] = int(normalized_enemy_id)
+        granted = getattr(self, "objective_city_reached_reward_granted", None)
+        if granted is None:
+            granted = set()
+            self.objective_city_reached_reward_granted = granted
+        if city_name in granted:
+            info["objective_city_reached_reward"] = 0.0
+            info["objective_city_reached_reward_repeat"] = True
+            return float(reward)
+
+        reached_reward = float(getattr(self, "reward_objective_city_reached", 0.0) or 0.0)
+        granted.add(city_name)
+        info["objective_city_reached_reward"] = float(reached_reward)
+        info["objective_city_reached_reward_repeat"] = False
+        info["campaign_objective"] = self.CAMPAIGN_OBJECTIVE_CITIES
+        return float(reward) + float(reached_reward)
+
     def _apply_green_dragon_objective_reward_if_needed(
         self,
         enemy_id: Optional[int],
@@ -117,6 +170,80 @@ class CampaignTerritoryMixin:
         info["green_dragon_objective_enemy_id"] = int(self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID)
         info["campaign_objective"] = self.CAMPAIGN_OBJECTIVE_DRAGON
         return float(reward) + float(objective_reward)
+
+    def _apply_objective_dragon_damage_reward(
+        self,
+        reward: float,
+        info: Dict[str, object],
+    ) -> float:
+        """Награда за РЕКОРД в бою с драконом-целью за эпизод (не за каждый удар).
+
+        Дракон полностью регенерирует HP между ходами, поэтому за повторные атаки
+        одинаковой глубины ничего не платим — иначе агент фармит частичный урон.
+        Платим только за прогресс относительно лучшего результата эпизода:
+        - новый минимум HP дракона (продавил глубже, чем когда-либо в этом эпизоде);
+        - новый рекорд числа раундов, что основной отряд продержался в бою с драконом.
+        Оба бонуса монотонны и за эпизод ограничены, поэтому фарм регенерации не работает."""
+        if not self._is_green_dragon_objective_enemy(self.current_enemy_id):
+            return float(reward)
+        max_hp = float(getattr(self, "_objective_dragon_max_hp", 0.0) or 0.0)
+        battle_env = getattr(self, "battle_env", None)
+        if max_hp <= 0.0 or battle_env is None:
+            return float(reward)
+        end_hp = float(
+            sum(
+                max(0.0, float(u.get("health", 0) or 0))
+                for u in getattr(battle_env, "combined", [])
+                if u.get("team") == "red"
+            )
+        )
+        total = float(reward)
+
+        # --- рекорд продавливания HP дракона за эпизод ---
+        prev_min = getattr(self, "_objective_dragon_min_hp_this_episode", None)
+        if prev_min is None:
+            prev_min = max_hp
+        if end_hp < float(prev_min):
+            gain = (float(prev_min) - end_hp) / max_hp
+            damage_reward = float(
+                getattr(self, "reward_dragon_damage_fraction", 0.0) or 0.0
+            ) * gain
+            self._objective_dragon_min_hp_this_episode = end_hp
+            info["dragon_hp_record_low"] = float(end_hp)
+            info["dragon_damage_record_reward"] = float(damage_reward)
+            total += damage_reward
+
+        # --- рекорд числа раундов, что основной отряд продержался против дракона ---
+        rounds = int(getattr(battle_env, "round_no", 0) or 0)
+        prev_best_rounds = int(getattr(self, "_objective_dragon_best_rounds_this_episode", 0) or 0)
+        if rounds > prev_best_rounds:
+            rounds_reward = float(
+                getattr(self, "reward_dragon_rounds_record", 0.0) or 0.0
+            ) * float(rounds - prev_best_rounds)
+            self._objective_dragon_best_rounds_this_episode = rounds
+            info["dragon_rounds_record"] = int(rounds)
+            info["dragon_rounds_record_reward"] = float(rounds_reward)
+            total += rounds_reward
+
+        return total
+
+    def _episode_enemies_defeated_bonus(self, info: Dict[str, object]) -> float:
+        """Терминальная награда за число побеждённых за эпизод врагов в нормализованном виде.
+
+        Нормировка — доля побеждённых от всех врагов на карте [0..1], умноженная на вес.
+        Вес подобран так, чтобы максимум был заметно ниже награды за убийство дракона."""
+        grid_env = getattr(self, "grid_env", None)
+        enemies_alive = getattr(grid_env, "enemies_alive", {}) or {}
+        total = len(enemies_alive)
+        if total <= 0:
+            return 0.0
+        defeated = sum(1 for alive in enemies_alive.values() if not bool(alive))
+        fraction = float(defeated) / float(total)
+        bonus = float(getattr(self, "reward_enemies_defeated_weight", 0.0) or 0.0) * fraction
+        info["enemies_defeated_count"] = int(defeated)
+        info["enemies_defeated_total"] = int(total)
+        info["enemies_defeated_bonus"] = float(bonus)
+        return float(bonus)
 
     def _compute_no_dragon_victory_late_step_penalty(self, info: Dict[str, object]) -> float:
         if not self._campaign_objective_is_dragon():

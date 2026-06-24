@@ -2157,6 +2157,8 @@ def run_campaign_visualization(
     scripted_capital_bot_enabled: bool = True,
     campaign_objective: str = "cities",
     vecnormalize_path: str | None = None,
+    seed: int | None = None,
+    max_grid_steps: int = 1800,
 ):
     """Запускает визуализацию кампании."""
 
@@ -2188,7 +2190,7 @@ def run_campaign_visualization(
             scripted_capital_bot_enabled=scripted_capital_bot_enabled,
             empire_territory_enabled=True,
             campaign_objective=campaign_objective,
-            max_grid_steps=1800,
+            max_grid_steps=max_grid_steps,
             Realcapital=2,
         )
 
@@ -2223,7 +2225,13 @@ def run_campaign_visualization(
     print("CAMPAIGN VISUALIZATION")
     print("=" * 60)
 
-    obs, info = env.reset()
+    if seed is not None:
+        import torch as _torch
+        np.random.seed(int(seed))
+        _torch.manual_seed(int(seed))
+        obs, info = env.reset(seed=int(seed))
+    else:
+        obs, info = env.reset()
     grid_viz.clear_path()
     grid_viz.add_to_path(env_base.grid_env.agent_pos)
 
