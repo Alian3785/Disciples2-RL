@@ -13,7 +13,7 @@ from copy import deepcopy
 from pathlib import Path
 
 from battle_env import BattleEnv, UNITS_BLUE, FEATURES_PER_UNIT
-from enemy_configs import ENEMY_CONFIGS, ENEMY_DESCRIPTIONS
+from enemy_configs import ENEMY_CONFIGS, ENEMY_CONFIGS_BLUE_DRAGON, ENEMY_DESCRIPTIONS
 from grid import (
     CAPITAL_HEAL_TILE_ARMOR_BONUS,
     CAPITAL_HEAL_TILE_REST_BONUS,
@@ -458,6 +458,7 @@ class CampaignConstantsMixin:
     FINAL_OBJECTIVE_CITY_REWARD_MULTIPLIER = 5.0
     CAMPAIGN_OBJECTIVE_CITIES = "cities"
     CAMPAIGN_OBJECTIVE_DRAGON = "dragon"
+    CAMPAIGN_OBJECTIVE_BLUE_DRAGON = "blue_dragon"
     GREEN_DRAGON_OBJECTIVE_ENEMY_ID = 31
     CHEST_PICKUP_RADIUS = 1
     BONUS_SMALL_HEAL_SOURCE_ITEM = "Potion of Healing"

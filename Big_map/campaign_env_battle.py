@@ -133,6 +133,9 @@ class CampaignBattleMixin:
                     winner=winner,
                 )
 
+            # Плотная награда за снятое HP дракона-цели (до разбора исхода боя).
+            reward = self._apply_objective_dragon_damage_reward(reward, info)
+
             if truncated and winner is None:
                 self._log(
                     f"=== БОЙ ПРОТИВ ВРАГА {self.current_enemy_id} ЗАВЕРШЁН ПО ЛИМИТУ БЕЗ ПОБЕДИТЕЛЯ ==="
@@ -197,9 +200,22 @@ class CampaignBattleMixin:
                     for name in getattr(self.battle_env, "last_levelups", []) or []:
                         self._log(f"Уровень юнита {name} повышен")
                     upgrade_count = self._log_turns_into_levelups()
-                upgrade_reward = float(upgrade_count) * self.reward_unit_upgrade
+                tier_sum = int(getattr(self, "_last_upgrade_tier_sum", 0) or 0)
+                upgrade_reward = float(getattr(self, "_last_upgrade_reward", 0.0) or 0.0)
                 reward += upgrade_reward
                 info["unit_upgrades"] = int(upgrade_count)
+                info["unit_upgrade_tier_sum"] = int(tier_sum)
+                info["unit_upgrade_max_tier"] = int(getattr(self, "_last_upgrade_max_tier", 0) or 0)
+                info["unit_upgrade_tier3_count"] = int(
+                    getattr(self, "_last_upgrade_tier3_count", 0) or 0
+                )
+                info["hero_levelups"] = int(getattr(self, "_last_hero_levelup_count", 0) or 0)
+                info["hero_levelup_max_level"] = int(
+                    getattr(self, "_last_hero_levelup_max_level", 0) or 0
+                )
+                info["hero_levelup_reward"] = float(
+                    getattr(self, "_last_hero_levelup_reward", 0.0) or 0.0
+                )
                 info["unit_upgrade_reward"] = float(upgrade_reward)
                 info.update(self._grant_ruin_reward(self.current_enemy_id))
 
@@ -335,7 +351,26 @@ class CampaignBattleMixin:
                     self._log(f"Опыт за бой: {self.battle_env.last_battle_exp:g}")
                     for name in getattr(self.battle_env, "last_levelups", []) or []:
                         self._log(f"Уровень юнита {name} повышен")
-                    self._log_turns_into_levelups()
+                    upgrade_count = self._log_turns_into_levelups()
+                    tier_sum = int(getattr(self, "_last_upgrade_tier_sum", 0) or 0)
+                    upgrade_reward = float(getattr(self, "_last_upgrade_reward", 0.0) or 0.0)
+                    reward += upgrade_reward
+                    info["unit_upgrades"] = int(upgrade_count)
+                    info["unit_upgrade_tier_sum"] = int(tier_sum)
+                    info["unit_upgrade_max_tier"] = int(getattr(self, "_last_upgrade_max_tier", 0) or 0)
+                    info["unit_upgrade_tier3_count"] = int(
+                        getattr(self, "_last_upgrade_tier3_count", 0) or 0
+                    )
+                    info["hero_levelups"] = int(getattr(self, "_last_hero_levelup_count", 0) or 0)
+                    info["hero_levelup_max_level"] = int(
+                        getattr(self, "_last_hero_levelup_max_level", 0) or 0
+                    )
+                    info["hero_levelup_reward"] = float(
+                        getattr(self, "_last_hero_levelup_reward", 0.0) or 0.0
+                    )
+                    info["unit_upgrade_reward"] = float(upgrade_reward)
+                # Поражение минует _finalize_grid_step_result — добавляем терминальный бонус здесь.
+                reward += self._episode_enemies_defeated_bonus(info)
                 return self._build_obs(battle_obs=obs), reward, True, False, info
 
         info["battle_ongoing"] = True
@@ -634,6 +669,13 @@ class CampaignBattleMixin:
                 ENEMY_CONFIGS.get(enemy_id, ENEMY_CONFIGS[1]),
             )
         self._apply_settlement_defender_armor_bonus(enemy_id, red_team)
+
+        # Для рекордной награды по дракону-цели: запоминаем суммарный max-HP RED.
+        self._objective_dragon_max_hp = 0.0
+        if self._is_green_dragon_objective_enemy(enemy_id):
+            self._objective_dragon_max_hp = float(
+                sum(float(u.get("max_health", 0) or 0) for u in red_team)
+            )
 
         if blue_team is not None:
             prepared_blue_team = self._build_battle_team_with_placeholders("blue", blue_team)
@@ -1401,6 +1443,41 @@ class CampaignBattleMixin:
                 self._sync_moves_per_turn_with_hero(units=self.blue_team_state)
                 self._refresh_campaign_equipment_effects(log=False)
                 return
+    def _reset_last_upgrade_reward_tracking(self) -> None:
+        self._last_upgrade_tier_sum = 0
+        self._last_upgrade_max_tier = 0
+        self._last_upgrade_tier3_count = 0
+        self._last_hero_levelup_count = 0
+        self._last_hero_levelup_max_level = 0
+        self._last_hero_levelup_reward = 0.0
+        self._last_upgrade_reward = 0.0
+
+    def _unit_upgrade_reward_for_tier(self, target_tier: int) -> float:
+        target_tier = max(0, int(target_tier))
+        reward = float(self.reward_unit_upgrade) + (
+            float(target_tier) * float(getattr(self, "reward_unit_tier_bonus", 0.0) or 0.0)
+        )
+        if target_tier == 3:
+            reward *= float(getattr(self, "reward_unit_tier3_multiplier", 1.0))
+        return float(reward)
+
+    def _record_hero_levelup_reward(self, unit: Dict) -> None:
+        if not self._is_hero_unit(unit):
+            return
+        try:
+            target_level = int(unit.get("Level", 0) or 0)
+        except (TypeError, ValueError):
+            return
+        if not (2 <= target_level <= 4):
+            return
+        reward = self._unit_upgrade_reward_for_tier(target_level)
+        self._last_hero_levelup_count += 1
+        self._last_hero_levelup_max_level = max(
+            self._last_hero_levelup_max_level, target_level
+        )
+        self._last_hero_levelup_reward += reward
+        self._last_upgrade_reward += reward
+
     def _log_turns_into_levelups(self) -> int:
         """Применяет превращения BLUE-юнитов после level-up и возвращает их число.
 
@@ -1408,6 +1485,7 @@ class CampaignBattleMixin:
         дополнительно проверяет, построено ли здание, открывающее целевой юнит
         из turns_into, и уже после этого заменяет боевую и persistent-запись.
         """
+        self._reset_last_upgrade_reward_tracking()
         if self.battle_env is None:
             return 0
         levelup_names = getattr(self.battle_env, "last_levelups", []) or []
@@ -1424,6 +1502,7 @@ class CampaignBattleMixin:
             name_to_units.setdefault(name, []).append(unit)
 
         upgraded_count = 0
+        # Сумма и максимум тиров (уровней) юнитов, достигнутых апгрейдом — для бонуса и отчёта.
         for name in levelup_names:
             unit_data = self._find_unit_data_by_name(name)
             capital_value = unit_data.get("\u0441\u0442\u043e\u043b\u0438\u0446\u0430") if unit_data else None
@@ -1438,6 +1517,7 @@ class CampaignBattleMixin:
                 unit_label = name
             else:
                 unit_label = f"{name} (pos {pos})"
+            self._record_hero_levelup_reward(unit)
             turns_into = unit.get("turns_into", [])
             if not isinstance(turns_into, list):
                 turns_into = [turns_into]
@@ -1473,6 +1553,22 @@ class CampaignBattleMixin:
                         unit.update(deepcopy(upgraded_unit))
                         self._replace_blue_unit(upgraded_unit)
                         upgraded_count += 1
+                        target_tier = int(
+                            float(
+                                unit_data.get("уровень", 0)
+                                or upgraded_unit.get("Level", 0)
+                                or 0
+                            )
+                        )
+                        self._last_upgrade_tier_sum += max(0, target_tier)
+                        self._last_upgrade_max_tier = max(
+                            self._last_upgrade_max_tier, target_tier
+                        )
+                        if target_tier == 3:
+                            self._last_upgrade_tier3_count += 1
+                        self._last_upgrade_reward += self._unit_upgrade_reward_for_tier(
+                            target_tier
+                        )
                     break
 
         return int(upgraded_count)

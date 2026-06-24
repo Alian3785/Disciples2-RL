@@ -98,11 +98,14 @@ REWARD_CONFIG = {
     "reward_engage_battle": 0.25,
     "reward_defeat_enemy": 4.0,
     "reward_all_enemies": 8.0,
+    "reward_objective_city_reached": 6.0,
     "reward_green_dragon_reached": 6.0,
     "reward_green_dragon_objective_multiplier": 2.0,
-    "reward_no_dragon_victory_late_step_penalty": 0.01,
-    "reward_no_dragon_victory_late_step_penalty_cap": 0.05,
-    "reward_no_dragon_victory_late_step_start_fraction": 0.35,
+    "reward_dragon_damage_fraction": 0.0,
+    "reward_dragon_rounds_record": 0.0,
+    "reward_no_dragon_victory_late_step_penalty": 0.004,
+    "reward_no_dragon_victory_late_step_penalty_cap": 0.02,
+    "reward_no_dragon_victory_late_step_start_fraction": 0.5,
     "reward_loss": -6.0,
     "reward_timeout": -8.0,
     "reward_turn_penalty": 0.01,
@@ -114,7 +117,9 @@ REWARD_CONFIG = {
     "reward_exp_weight": 0.2,
     "reward_survival_alive_weight": 0.4,
     "reward_survival_hp_weight": 0.4,
-    "reward_unit_upgrade": 0.25,
+    "reward_unit_upgrade": 3.0,
+    "reward_unit_tier_bonus": 0.5,
+    "reward_enemies_defeated_weight": 5.0,
     "battle_reward_scale": 0.25,
     "battle_reward_win": 2.0,
     "battle_reward_loss": -1.0,
@@ -128,7 +133,9 @@ REWARD_CONFIG = {
 }
 
 REQUIRED_COMET_VERSION = (3, 57, 0)
-MAX_EVAL_EPISODE_STEPS = 4000
+MAX_EVAL_EPISODE_STEPS = 5000
+# Жёсткий потолок полной длины эпизода (все env-шаги, карта + бои) в обучении.
+TRAIN_MAX_EPISODE_STEPS = 5000
 
 
 def _comet_version_tuple(raw_version: str) -> tuple[int, int, int] | None:
@@ -258,11 +265,14 @@ def make_env(
         scripted_capital_bot_enabled=scripted_capital_bot_enabled,
         empire_territory_enabled=empire_territory_enabled,
         campaign_objective=campaign_objective,
-        max_grid_steps=1800,
+        max_grid_steps=3000,
         Realcapital=2,
     )
-    if eval_max_episode_steps is not None:
-        env = EvalStepCapWrapper(env, max_steps=eval_max_episode_steps)
+    # Жёсткий потолок полной длины эпизода: в eval — eval_max_episode_steps,
+    # в обучении — TRAIN_MAX_EPISODE_STEPS (гарантирует завершение даже при
+    # действиях, не двигающих grid step_count: касты/стройка и т.п.).
+    step_cap = eval_max_episode_steps if eval_max_episode_steps is not None else TRAIN_MAX_EPISODE_STEPS
+    env = EvalStepCapWrapper(env, max_steps=step_cap)
     return Monitor(env)
 
 
@@ -587,6 +597,38 @@ class CampaignCheckpointCallback(BaseCallback):
         return True
 
 
+class WallClockStopCallback(BaseCallback):
+
+    def __init__(self, wall_time_seconds: float, verbose: int = 1):
+        super().__init__(verbose)
+        self.wall_time_seconds = float(wall_time_seconds)
+        self.started_at: float | None = None
+        self.elapsed_seconds = 0.0
+        self.stop_requested = False
+
+    def _on_training_start(self) -> None:
+        self.started_at = time.monotonic()
+
+    def _on_step(self) -> bool:
+        if self.started_at is None:
+            self.started_at = time.monotonic()
+        self.elapsed_seconds = time.monotonic() - self.started_at
+        if self.elapsed_seconds < self.wall_time_seconds:
+            return True
+        if not self.stop_requested and self.verbose:
+            print(
+                "[WallClock] Training limit reached after "
+                f"{self.elapsed_seconds:.1f}s at {self.num_timesteps:,} steps; "
+                "saving the final model."
+            )
+        self.stop_requested = True
+        return False
+
+    def _on_training_end(self) -> None:
+        if self.started_at is not None:
+            self.elapsed_seconds = time.monotonic() - self.started_at
+
+
 class SaveVecNormalizeOnBestCallback(BaseCallback):
 
     def __init__(self, save_path: str, verbose: int = 0):
@@ -875,6 +917,7 @@ class CampaignMetricsCallback(BaseCallback):
         self.recent_episode_lengths = deque(maxlen=self.episode_window)
         self.recent_blue_hp_ratios = deque(maxlen=self.episode_window)
         self.recent_unit_upgrades = deque(maxlen=self.episode_window)
+        self.recent_episode_max_tier = deque(maxlen=self.episode_window)
         self.recent_enemy_defeat_rewards = deque(maxlen=self.episode_window)
         self.recent_blue_exp_rewards = deque(maxlen=self.episode_window)
         self.recent_final_objective_rewards = deque(maxlen=self.episode_window)
@@ -937,6 +980,7 @@ class CampaignMetricsCallback(BaseCallback):
         self.defeats = 0
         self.timeouts = 0
         self.total_unit_upgrades = 0
+        self.max_unit_tier_reached = 0
         self.total_castle_heal_uses = 0
         self.total_castle_healed_hp = 0.0
         self.castle_heal_episodes = 0
@@ -982,6 +1026,8 @@ class CampaignMetricsCallback(BaseCallback):
         self._episode_battle_items_equipped: list[int] = []
         self._episode_battle_items_used: list[int] = []
         self._episode_unit_swaps: list[int] = []
+        self._episode_max_tier: list[int] = []
+        self._episode_unit_upgrades: list[int] = []
 
     def _ensure_env_trackers(self, env_count: int) -> None:
         if env_count <= len(self._episode_castle_heal_uses):
@@ -1002,6 +1048,8 @@ class CampaignMetricsCallback(BaseCallback):
         self._episode_battle_items_equipped.extend([0] * missing)
         self._episode_battle_items_used.extend([0] * missing)
         self._episode_unit_swaps.extend([0] * missing)
+        self._episode_max_tier.extend([0] * missing)
+        self._episode_unit_upgrades.extend([0] * missing)
 
     def _consume_castle_heal(self, info: dict[str, Any], env_index: int) -> None:
         if not info.get("castle_heal_action"):
@@ -1261,6 +1309,37 @@ class CampaignMetricsCallback(BaseCallback):
         self._episode_battle_items_equipped[env_index] = 0
         self._episode_battle_items_used[env_index] = 0
 
+    def _consume_unit_upgrades(self, info: dict[str, Any], env_index: int) -> None:
+        if info.get("battle_result") != "victory":
+            return
+        unit_upgrades = info.get("unit_upgrades")
+        if unit_upgrades is None:
+            return
+        try:
+            cnt = int(unit_upgrades)
+        except (TypeError, ValueError):
+            return
+        self.total_unit_upgrades += cnt
+        self._episode_unit_upgrades[env_index] += cnt
+
+    def _finalize_episode_unit_upgrades(self, env_index: int) -> None:
+        self.recent_unit_upgrades.append(float(self._episode_unit_upgrades[env_index]))
+        self._episode_unit_upgrades[env_index] = 0
+
+    def _consume_unit_tier(self, info: dict[str, Any], env_index: int) -> None:
+        max_tier = info.get("unit_upgrade_max_tier")
+        if max_tier is None:
+            return
+        try:
+            tier = int(max_tier)
+        except (TypeError, ValueError):
+            return
+        self._episode_max_tier[env_index] = max(self._episode_max_tier[env_index], tier)
+
+    def _finalize_episode_unit_tier(self, env_index: int) -> None:
+        self.recent_episode_max_tier.append(float(self._episode_max_tier[env_index]))
+        self._episode_max_tier[env_index] = 0
+
     def _consume_unit_swaps(self, info: dict[str, Any], env_index: int) -> None:
         if not (bool(info.get("unit_swap_action")) and bool(info.get("unit_swap_applied"))):
             return
@@ -1292,6 +1371,8 @@ class CampaignMetricsCallback(BaseCallback):
             self._consume_hires(info, env_index)
             self._consume_battle_item_activity(info, env_index)
             self._consume_unit_swaps(info, env_index)
+            self._consume_unit_upgrades(info, env_index)
+            self._consume_unit_tier(info, env_index)
 
         episode = info.get("episode")
         if isinstance(episode, dict):
@@ -1317,6 +1398,8 @@ class CampaignMetricsCallback(BaseCallback):
                 self._finalize_episode_hires(env_index)
                 self._finalize_episode_battle_item_activity(env_index)
                 self._finalize_episode_unit_swaps(env_index)
+                self._finalize_episode_unit_upgrades(env_index)
+                self._finalize_episode_unit_tier(env_index)
                 self._finalize_episode_scripted_bot(info)
 
         campaign_result = info.get("campaign_result")
@@ -1372,15 +1455,14 @@ class CampaignMetricsCallback(BaseCallback):
             except (TypeError, ValueError):
                 pass
 
-        if battle_result == "victory":
-            unit_upgrades = info.get("unit_upgrades")
-            if unit_upgrades is not None:
-                try:
-                    upgrade_count = int(unit_upgrades)
-                except (TypeError, ValueError):
-                    upgrade_count = 0
-                self.total_unit_upgrades += upgrade_count
-                self.recent_unit_upgrades.append(float(upgrade_count))
+        max_tier = info.get("unit_upgrade_max_tier")
+        if max_tier is not None:
+            try:
+                self.max_unit_tier_reached = max(
+                    int(self.max_unit_tier_reached), int(max_tier)
+                )
+            except (TypeError, ValueError):
+                pass
 
     def _finalize_episode_scripted_bot(self, info: dict[str, Any]) -> None:
         try:
@@ -1558,6 +1640,18 @@ class CampaignMetricsCallback(BaseCallback):
             "sold_items_mean": _safe_mean(self.recent_sold_items),
             "merchant_sale_gold_mean": _safe_mean(self.recent_sale_gold),
             "unit_upgrades_mean": _safe_mean(self.recent_unit_upgrades),
+            "max_unit_tier_reached": int(self.max_unit_tier_reached),
+            "episode_max_tier_mean": _safe_mean(self.recent_episode_max_tier),
+            "tier3_episode_fraction": (
+                _safe_mean([1.0 if t >= 3 else 0.0 for t in self.recent_episode_max_tier])
+                if self.recent_episode_max_tier
+                else 0.0
+            ),
+            "tier4_episode_fraction": (
+                _safe_mean([1.0 if t >= 4 else 0.0 for t in self.recent_episode_max_tier])
+                if self.recent_episode_max_tier
+                else 0.0
+            ),
         }
         uses = {
             "magic": recent_activity["magic_spell_casts_mean"] > 0.0,
@@ -1685,7 +1779,11 @@ class CampaignMetricsCallback(BaseCallback):
                     f"найм {float(activity.get('hires_mean', 0.0) or 0.0):.2f}, "
                     f"боевые предметы использованы {float(activity.get('battle_items_used_mean', 0.0) or 0.0):.2f}, "
                     f"лечение {float(activity.get('castle_heal_uses_mean', 0.0) or 0.0):.2f}, "
-                    f"апгрейды юнитов {float(activity.get('unit_upgrades_mean', 0.0) or 0.0):.2f}."
+                    f"апгрейды юнитов {float(activity.get('unit_upgrades_mean', 0.0) or 0.0):.2f}. "
+                    f"Макс. тир прокачки за прогон: {int(activity.get('max_unit_tier_reached', 0) or 0)}; "
+                    f"средний макс. тир за эпизод в окне: {float(activity.get('episode_max_tier_mean', 0.0) or 0.0):.2f}; "
+                    f"доля эпизодов с тиром >=3: {100.0 * float(activity.get('tier3_episode_fraction', 0.0) or 0.0):.1f}%; "
+                    f"с тиром >=4: {100.0 * float(activity.get('tier4_episode_fraction', 0.0) or 0.0):.1f}%."
                 ),
                 "",
                 (
@@ -2168,6 +2266,12 @@ if __name__ == "__main__":
         help="Vectorized rollout environment backend",
     )
     parser.add_argument("--seed", type=int, default=None, help="Optional random seed")
+    parser.add_argument(
+        "--wall-time-seconds",
+        type=float,
+        default=None,
+        help="Stop learning cleanly after this many real-time seconds and save the final model",
+    )
     parser.add_argument("--checkpoint-freq", type=int, default=500_000, help="Checkpoint frequency")
     parser.add_argument("--eval-freq", type=int, default=50_000, help="Evaluation frequency")
     parser.add_argument(
@@ -2211,6 +2315,11 @@ if __name__ == "__main__":
         "--dragon",
         action="store_true",
         help="Use the green dragon as the campaign objective instead of the two objective cities",
+    )
+    parser.add_argument(
+        "--blue-dragon",
+        action="store_true",
+        help="Same as --dragon, but the objective dragon is the blue (water) dragon instead of the green one",
     )
     parser.add_argument(
         "--ppo-n-steps",
@@ -2352,6 +2461,8 @@ if __name__ == "__main__":
         parser.error("--gae-lambda must be in (0, 1]")
     if args.target_kl is not None and args.target_kl <= 0:
         parser.error("--target-kl must be > 0 when provided")
+    if args.wall_time_seconds is not None and args.wall_time_seconds <= 0:
+        parser.error("--wall-time-seconds must be > 0 when provided")
     if args.resume_model is not None and not Path(args.resume_model).exists():
         parser.error(f"--resume-model does not exist: {args.resume_model}")
     if args.resume_vecnormalize is not None and not Path(args.resume_vecnormalize).exists():
@@ -2376,7 +2487,12 @@ if __name__ == "__main__":
     FREEZE_DYNAMIC_ACTION_LAYOUT = not bool(args.no_freeze_action_layout)
     SCRIPTED_CAPITAL_BOT_ENABLED = not bool(args.no_scripted_bot)
     EMPIRE_TERRITORY_ENABLED = not bool(args.no_empire_territory)
-    CAMPAIGN_OBJECTIVE = "dragon" if bool(args.dragon) else "cities"
+    if bool(args.blue_dragon):
+        CAMPAIGN_OBJECTIVE = "blue_dragon"
+    elif bool(args.dragon):
+        CAMPAIGN_OBJECTIVE = "dragon"
+    else:
+        CAMPAIGN_OBJECTIVE = "cities"
 
     test_env = CampaignEnv(
         grid_size=DEFAULT_GRID_SIZE,
@@ -2425,7 +2541,9 @@ if __name__ == "__main__":
         print(f"[WARN] comet_ml>={required} is required, found {detected}. Comet logging disabled.")
         COMET_AVAILABLE = False
 
-    run_name_suffix = "-dragon" if CAMPAIGN_OBJECTIVE == "dragon" else ""
+    run_name_suffix = {"dragon": "-dragon", "blue_dragon": "-bluedragon"}.get(
+        CAMPAIGN_OBJECTIVE, ""
+    )
     run_name = args.run_name or f"campaign-ppo-{TOTAL_STEPS // 1000}k{run_name_suffix}"
 
     comet_experiment = None
@@ -2657,6 +2775,13 @@ if __name__ == "__main__":
         verbose=0,
     )
     callbacks.append(metrics_cb)
+    wall_clock_cb = None
+    if args.wall_time_seconds is not None:
+        wall_clock_cb = WallClockStopCallback(
+            wall_time_seconds=args.wall_time_seconds,
+            verbose=1,
+        )
+        callbacks.append(wall_clock_cb)
     if USE_DIAGNOSTICS and DIAGNOSTICS_DIR is not None:
         diagnostics_cb = CampaignNumericsDiagnosticsCallback(
             report_dir=DIAGNOSTICS_DIR,
@@ -2711,6 +2836,11 @@ if __name__ == "__main__":
     print(f"Empire territory: {'enabled' if EMPIRE_TERRITORY_ENABLED else 'disabled'}")
     print(f"Torch threads per process: {TORCH_NUM_THREADS}")
     print(f"Diagnostics: {'enabled' if USE_DIAGNOSTICS else 'disabled'}")
+    print(
+        "Wall-clock training limit: "
+        f"{args.wall_time_seconds:g}s" if args.wall_time_seconds is not None else
+        "Wall-clock training limit: disabled"
+    )
     if DIAGNOSTICS_DIR is not None:
         print(f"Diagnostics dir: {DIAGNOSTICS_DIR}")
     if args.resume_model is not None:

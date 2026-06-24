@@ -510,9 +510,15 @@ class CampaignMagicMixin:
     def _is_undead_hordes_capital(self) -> bool:
         return int(self.Realcapital) == 4
     def _create_initial_enemy_team_states(self) -> Dict[int, List[Dict]]:
+        # В режиме blue_dragon объект-дракон (enemy_31) — синий вместо зелёного.
+        configs = (
+            ENEMY_CONFIGS_BLUE_DRAGON
+            if self._campaign_objective_is_blue_dragon()
+            else ENEMY_CONFIGS
+        )
         return {
             int(enemy_id): deepcopy(team)
-            for enemy_id, team in ENEMY_CONFIGS.items()
+            for enemy_id, team in configs.items()
         }
     def _get_enemy_team_state(self, enemy_id: Optional[int]) -> List[Dict]:
         try:
@@ -1328,6 +1334,11 @@ class CampaignMagicMixin:
                 else np.zeros(0, dtype=np.float32)
             )
             reward = self._apply_green_dragon_reached_reward_if_needed(
+                self.current_enemy_id,
+                reward,
+                info,
+            )
+            reward = self._apply_objective_city_reached_reward_if_needed(
                 self.current_enemy_id,
                 reward,
                 info,

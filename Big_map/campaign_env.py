@@ -128,6 +128,9 @@ class CampaignEnv(
         reward_survival_alive_weight: float = 0.5,  # Вес доли выживших BLUE
         reward_survival_hp_weight: float = 0.5,     # Вес средней доли HP BLUE
         reward_unit_upgrade: float = 1.0,
+        reward_unit_tier_bonus: float = 0.0,
+        reward_unit_tier3_multiplier: float = 1.0,
+        reward_enemies_defeated_weight: float = 0.0,
         battle_reward_scale: float = 0.25,
         battle_reward_win: float = 2.0,
         battle_reward_loss: float = -1.0,
@@ -152,8 +155,11 @@ class CampaignEnv(
         Realcapital: int = 1,
         typeoflord: int = 1,
         campaign_objective: str = "cities",
+        reward_objective_city_reached: float = 6.0,
         reward_green_dragon_reached: float = 6.0,
         reward_green_dragon_objective_multiplier: float = 2.0,
+        reward_dragon_damage_fraction: float = 0.0,
+        reward_dragon_rounds_record: float = 0.0,
         reward_no_dragon_victory_late_step_penalty: float = 0.01,
         reward_no_dragon_victory_late_step_penalty_cap: float = 0.05,
         reward_no_dragon_victory_late_step_start_fraction: float = 0.35,
@@ -188,6 +194,9 @@ class CampaignEnv(
         self.reward_survival_alive_weight = max(0.0, float(reward_survival_alive_weight))
         self.reward_survival_hp_weight = max(0.0, float(reward_survival_hp_weight))
         self.reward_unit_upgrade = max(0.0, float(reward_unit_upgrade))
+        self.reward_unit_tier_bonus = max(0.0, float(reward_unit_tier_bonus))
+        self.reward_unit_tier3_multiplier = max(0.0, float(reward_unit_tier3_multiplier))
+        self.reward_enemies_defeated_weight = max(0.0, float(reward_enemies_defeated_weight))
         self.battle_reward_scale = max(0.0, float(battle_reward_scale))
         self.battle_reward_win = float(battle_reward_win)
         self.battle_reward_loss = float(battle_reward_loss)
@@ -216,6 +225,9 @@ class CampaignEnv(
         self.empire_territory_enabled = bool(empire_territory_enabled)
         self.max_grid_steps = max(1, int(max_grid_steps))
         self.campaign_objective = self._normalize_campaign_objective(campaign_objective)
+        self.reward_objective_city_reached = max(0.0, float(reward_objective_city_reached))
+        self.reward_dragon_damage_fraction = max(0.0, float(reward_dragon_damage_fraction))
+        self.reward_dragon_rounds_record = max(0.0, float(reward_dragon_rounds_record))
         self.reward_green_dragon_reached = max(0.0, float(reward_green_dragon_reached))
         self.reward_green_dragon_objective_multiplier = max(
             0.0,
@@ -540,6 +552,9 @@ class CampaignEnv(
         self.grid_unit_swap_actions_used_this_turn: set[int] = set()
         self.grid_unit_swaps_total: int = 0
         self.captured_objective_cities: set[str] = set()
+        self.objective_city_reached_reward_granted: set[str] = set()
+        self._objective_dragon_min_hp_this_episode: float | None = None
+        self._objective_dragon_best_rounds_this_episode: int = 0
         self.cleared_ruin_enemy_ids: set[int] = set()
         self.last_ruin_reward: Optional[Dict[str, object]] = None
         self._init_scripted_capital_bot_state()
@@ -839,6 +854,9 @@ class CampaignEnv(
         self.combat_potion_battle_bonus_pending = False
         self.green_dragon_reached_reward_granted = False
         self.captured_objective_cities = set()
+        self.objective_city_reached_reward_granted = set()
+        self._objective_dragon_min_hp_this_episode = None
+        self._objective_dragon_best_rounds_this_episode = 0
         self.cleared_ruin_enemy_ids = set()
         self.last_ruin_reward = None
         self.chests = dict(self._static_chests)
@@ -1176,6 +1194,11 @@ class CampaignEnv(
                 reward,
                 info,
             )
+            reward = self._apply_objective_city_reached_reward_if_needed(
+                grid_info.get("enemy_id"),
+                reward,
+                info,
+            )
             info["grid_reward_scaled"] = float(reward)
         if include_detailed_info:
             info.update(
@@ -1376,6 +1399,8 @@ class CampaignEnv(
         finalized_info["campaign_steps"] = int(getattr(self, "campaign_steps", 0) or 0)
         if late_penalty != 0.0:
             finalized_info["no_dragon_victory_late_step_penalty"] = float(late_penalty)
+        if terminated or truncated:
+            finalized_reward += self._episode_enemies_defeated_bonus(finalized_info)
         equipment_signature = self._equipment_state_signature(units=self.blue_team_state)
         if (
             bool(getattr(self, "battle_items_dirty", True))
