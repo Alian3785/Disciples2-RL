@@ -677,7 +677,24 @@ class CampaignEconomyMixin:
 
     def _reset_blue_unit_swap_counters(self) -> None:
         self.grid_unit_swap_actions_used_this_turn: set[int] = set()
+        self.grid_unit_swaps_this_turn = 0
         self.grid_unit_swaps_total = 0
+
+    def _max_grid_unit_swaps_per_turn(self) -> int:
+        return max(0, int(getattr(self, "MAX_GRID_UNIT_SWAPS_PER_TURN", 3) or 0))
+
+    def _grid_unit_swap_turn_limit_reached(self) -> bool:
+        return (
+            int(getattr(self, "grid_unit_swaps_this_turn", 0) or 0)
+            >= self._max_grid_unit_swaps_per_turn()
+        )
+
+    def _record_blue_unit_swap(self, action_offset: int) -> None:
+        self.grid_unit_swap_actions_used_this_turn.add(int(action_offset))
+        self.grid_unit_swaps_this_turn = (
+            int(getattr(self, "grid_unit_swaps_this_turn", 0) or 0) + 1
+        )
+        self.grid_unit_swaps_total += 1
 
     def _blue_occupancy_snapshot(
         self,
@@ -910,6 +927,8 @@ class CampaignEconomyMixin:
         обычных слотов. Для big-юнитов разрешён перенос между разными колонками.
         """
         action_offset = int(action_offset)
+        if self._grid_unit_swap_turn_limit_reached():
+            return False
         if action_offset in getattr(self, "grid_unit_swap_actions_used_this_turn", set()):
             return False
         pairs = tuple(getattr(self, "GRID_SWAP_UNIT_PAIRS", ()) or ())
@@ -938,6 +957,9 @@ class CampaignEconomyMixin:
         pairs = tuple(getattr(self, "GRID_SWAP_UNIT_PAIRS", ()) or ())
         if not pairs:
             return ()
+
+        if self._grid_unit_swap_turn_limit_reached():
+            return tuple(False for _ in pairs)
 
         used_actions = getattr(self, "grid_unit_swap_actions_used_this_turn", set())
         (
@@ -1227,8 +1249,7 @@ class CampaignEconomyMixin:
         self._remap_blue_unit_position_effects(position_map)
         self._sync_hero_progression_flags(self.blue_team_state)
         self._sync_moves_per_turn_with_hero(units=self.blue_team_state)
-        self.grid_unit_swap_actions_used_this_turn.add(int(action_offset))
-        self.grid_unit_swaps_total += 1
+        self._record_blue_unit_swap(action_offset)
 
         move_text = ", ".join(
             f"{move_info['name']} pos{move_info['from']}->pos{move_info['to']}"
@@ -1400,8 +1421,7 @@ class CampaignEconomyMixin:
         self.blue_team_state.sort(key=lambda unit: int(unit.get("position", 999) or 999))
         self._sync_hero_progression_flags(self.blue_team_state)
         self._sync_moves_per_turn_with_hero(units=self.blue_team_state)
-        self.grid_unit_swap_actions_used_this_turn.add(int(action_offset))
-        self.grid_unit_swaps_total += 1
+        self._record_blue_unit_swap(action_offset)
 
         self._log(log_message)
         grid_obs = self._get_grid_obs()
