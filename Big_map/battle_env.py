@@ -833,6 +833,8 @@ class BattleEnv(gym.Env):
         self._dregazul_applied_poison: Dict[int, bool] = {}
         self._ismir_applied_uran: Dict[int, bool] = {}
         self.escaped_units: List[Dict] = []
+        # Опыт трупов, затёртых призывом в их клетку, — учитывается при подсчёте опыта за бой.
+        self.overwritten_exp_kill: Dict[str, float] = {"red": 0.0, "blue": 0.0}
         self.step_count: int = 0
         self.equipped_hero_items: List[Optional[str]] = [None, None]
         self.equipped_hero_item_uses_left: List[Optional[int]] = [None, None]
@@ -1476,6 +1478,7 @@ class BattleEnv(gym.Env):
         if int(target_pos) in (RED_BACK_POSITIONS + BLUE_BACK_POSITIONS) and self._is_position_behind_big(target_pos):
             return 0.0
 
+        self._accumulate_overwritten_exp(target_unit)
         target_unit.clear()
         target_unit.update(summon_unit)
         return 1.0
@@ -1855,7 +1858,7 @@ class BattleEnv(gym.Env):
 
             return mask
 
-        if attacker.get("team") == "blue" and atype == "summoner":
+        if attacker.get("team") == "blue" and self._is_summoner_type(atype):
             # посчитаем занятые синие позиции живыми союзниками (big учитывает пару)
             occupied: set[int] = set()
             for u in self.combined:
@@ -1877,6 +1880,9 @@ class BattleEnv(gym.Env):
             for i, red_pos in enumerate(TARGET_POSITIONS):
                 opp_blue = self._opposite_position(red_pos, "blue")
                 mask_targets[i] = opp_blue in empty_blue
+
+            # Ранний выход: ниже общая ветка «любые живые цели» затёрла бы клетки призыва.
+            return mask
 
         # Ближники: только досягаемые цели
         if atype in MELEE_TYPES:
@@ -1941,6 +1947,20 @@ class BattleEnv(gym.Env):
 
     def _alive(self, u) -> bool:
         return u["health"] > 0
+
+    @staticmethod
+    def _is_summoner_type(unit_type: object) -> bool:
+        # Тип в данных пишется как "Summoner" — сравниваем без учёта регистра.
+        return str(unit_type or "").strip().lower() == "summoner"
+
+    def _accumulate_overwritten_exp(self, unit) -> None:
+        """Копит exp_kill трупов, затёртых призывом, чтобы победитель не терял опыт."""
+        if not isinstance(unit, dict) or self._alive(unit):
+            return
+        team = str(unit.get("team", "") or "")
+        bank = getattr(self, "overwritten_exp_kill", None)
+        if isinstance(bank, dict) and team in bank:
+            bank[team] += float(unit.get("exp_kill", 0) or 0)
 
     def _team_alive(self, team: str) -> bool:
         return any(self._alive(u) and u["team"] == team for u in self.combined)
@@ -3263,6 +3283,7 @@ class BattleEnv(gym.Env):
         self._dregazul_applied_poison = {}
         self._ismir_applied_uran = {}
         self.escaped_units = []
+        self.overwritten_exp_kill = {"red": 0.0, "blue": 0.0}
         self.step_count = 0
         self.hero_item_slots_used_this_battle = [False] * len(self.equipped_hero_items)
         if len(getattr(self, "equipped_hero_item_uses_left", []) or []) < len(
@@ -4864,7 +4885,7 @@ class BattleEnv(gym.Env):
             return spawned, reason
 
         # --- Призыватель: призывает юнита на свободную союзную клетку ---
-        elif unit_type == "summoner":
+        elif self._is_summoner_type(unit_type):
             if target_pos is None:
                 self._log(
                     f"Призыв не сработал: {atk_team.upper()} {attacker['name']}#{attacker['position']} — не указана цель."
@@ -4998,6 +5019,8 @@ class BattleEnv(gym.Env):
             _apply_transformations_to_unit(spawn)
 
             # Инициализация полей как в _reset_state()
+            # Призванные не дают опыта за убийство — иначе их можно фармить бесконечно.
+            spawn.setdefault("exp_kill", 0)
             spawn.setdefault("defense", 0)
             spawn.setdefault("poison_damage_per_tick", 0)
             spawn.setdefault("burn_turns_left", 0)
@@ -5012,6 +5035,7 @@ class BattleEnv(gym.Env):
             if slot is None:
                 self.combined.append(spawn)
             else:
+                self._accumulate_overwritten_exp(slot)
                 slot.clear()
                 slot.update(spawn)
 
@@ -5048,6 +5072,10 @@ class BattleEnv(gym.Env):
             if int(u.get("running_away", 0)) == 1 and self._alive(u):
                 continue
             total_exp += float(u.get("exp_kill", 0) or 0)
+
+        bank = getattr(self, "overwritten_exp_kill", None)
+        if isinstance(bank, dict):
+            total_exp += float(bank.get(losing_team, 0.0) or 0.0)
 
         winning_team = "red" if losing_team == "blue" else "blue"
 
@@ -5378,7 +5406,7 @@ class BattleEnv(gym.Env):
                     self._log(action_log)
                     break
                 else:
-                    if nxt_type == "summoner":
+                    if self._is_summoner_type(nxt_type):
                         target_pos = self._summoner_auto_target(nxt)
                         if target_pos is None:
                             self._log(
@@ -6176,6 +6204,7 @@ class BattleEnv(gym.Env):
         self._dregazul_applied_poison = {}
         self._ismir_applied_uran = {}
         self.escaped_units = []
+        self.overwritten_exp_kill = {"red": 0.0, "blue": 0.0}
         self.step_count = 0
         self.hero_item_slots_used_this_battle = [False] * len(self.equipped_hero_items)
         if len(getattr(self, "equipped_hero_item_uses_left", []) or []) < len(

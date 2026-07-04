@@ -44,6 +44,8 @@ class CampaignEnv(
     CampaignTerritoryMixin,
     gym.Env,
 ):
+    MAX_GRID_UNIT_SWAPS_PER_TURN = 3
+
     """
     Двухуровневая среда: Grid World + Battle.
 
@@ -139,7 +141,7 @@ class CampaignEnv(
         reward_battle_item_use: float = 0.05,
         reward_combat_potion_battle_participation: float = 0.05,
         reward_sell_junk_item: float = 0.05,
-        reward_unit_swap_penalty: float = 0.002,
+        reward_unit_swap_penalty: float = 0.004,
         reward_spell_learn: float = 2.0,
         reward_spell_cast: float = 0.005,
         reward_summon_hero_battle_engage: float = 0.05,
@@ -550,6 +552,7 @@ class CampaignEnv(
         self.battle_items_used_total: int = 0
         self.books_equipped_total: int = 0
         self.grid_unit_swap_actions_used_this_turn: set[int] = set()
+        self.grid_unit_swaps_this_turn: int = 0
         self.grid_unit_swaps_total: int = 0
         self.captured_objective_cities: set[str] = set()
         self.objective_city_reached_reward_granted: set[str] = set()

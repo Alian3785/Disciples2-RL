@@ -127,7 +127,7 @@ REWARD_CONFIG = {
     "reward_battle_item_equip": 0.02,
     "reward_battle_item_use": 0.05,
     "reward_sell_junk_item": 0.05,
-    "reward_unit_swap_penalty": 0.002,
+    "reward_unit_swap_penalty": 0.004,
     "reward_spell_learn": 2.0,
     "reward_spell_cast": 0.005,
 }
