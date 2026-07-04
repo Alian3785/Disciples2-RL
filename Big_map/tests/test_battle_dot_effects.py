@@ -56,6 +56,8 @@ def test_lord_burn_uses_shared_dot_cache_without_source_field():
     victim["initiative"] = 20
     victim["burn_turns_left"] = 1
     victim["burn_damage_per_tick"] = 0
+    # Имитация новой активации в следующем раунде (флаг сбрасывает _end_round_restore).
+    victim["round_effects_done"] = 0
 
     assert env._apply_start_of_turn_effects(victim) is True
     assert victim["burn_turns_left"] == 0
