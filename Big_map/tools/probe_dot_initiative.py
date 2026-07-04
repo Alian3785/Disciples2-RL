@@ -54,6 +54,8 @@ def main() -> None:
     for initiative in (11, 10):
         patriarch["health"] = patriarch["max_health"]
         patriarch["initiative"] = initiative
+        # Каждый замер — как первая активация нового раунда.
+        patriarch["round_effects_done"] = 0
         hp_before = patriarch["health"]
         env._apply_start_of_turn_effects(patriarch)
         hp_after = patriarch["health"]

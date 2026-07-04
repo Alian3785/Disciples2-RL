@@ -118,6 +118,8 @@ def test_wight_level_down_has_one_percent_start_turn_recovery():
     assert victim["wight_form_name"] == "Имперский рыцарь"
 
     env.rng = SimpleNamespace(random=lambda: 0.005)
+    # Имитация новой активации в следующем раунде (флаг сбрасывает _end_round_restore).
+    victim["round_effects_done"] = 0
     env._apply_start_of_turn_effects(victim)
     assert victim["transformed"] == 0
     assert victim.get("wight_form_name") is None

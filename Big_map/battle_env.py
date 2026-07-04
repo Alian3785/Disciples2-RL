@@ -171,6 +171,19 @@ MELEE_TYPES = frozenset(
 SMART_MELEE_TARGET_TYPES = frozenset({"Betrezen", "Uter"})
 LONG_PARALYSIS_TYPES = frozenset({"Betrezen", "Uter", "Abyss Devil"})
 
+# Кого Двойнику нельзя копировать (стражи столиц и сюжетные боссы).
+DOPPELGANGER_FORBIDDEN_COPY_NAMES = frozenset(
+    {
+        "Ашган",
+        "Ашкаэль",
+        "Видар",
+        "Мизраэль",
+        "Иллюмиэлль",
+        "Драллиаан",
+        "Лаклаан",
+    }
+)
+
 AOE_TYPES = frozenset(
     {
         "Mage",
@@ -1826,15 +1839,7 @@ class BattleEnv(gym.Env):
         atype = attacker.get("unit_type")
 
         if atype == "Doppelganger":
-            forbidden_names = {
-                "Ашган",
-                "Ашкаэль",
-                "Видар",
-                "Мизраэль",
-                "Иллюмиэлль",
-                "Драллиаан",
-                "Лаклаан",
-            }
+            forbidden_names = DOPPELGANGER_FORBIDDEN_COPY_NAMES
             attacker_pos = attacker.get("position")
             for i, pos in enumerate(TARGET_POSITIONS):
                 if pos == attacker_pos:
@@ -2003,9 +2008,10 @@ class BattleEnv(gym.Env):
         }
 
         for unit in self.combined:
-            if not self._alive(unit):
-                continue
             if unit.get("name") != "Двойник":
+                continue
+            unit["doppel_copied"] = 0
+            if not self._alive(unit):
                 continue
 
             prev_max = float(unit.get("max_health", 0) or 0)
@@ -2018,6 +2024,54 @@ class BattleEnv(gym.Env):
                 unit[key] = list(value) if isinstance(value, list) else value
 
             unit["health"] = int(round(defaults["max_health"] * ratio))
+
+    def _apply_doppelganger_copy(
+        self, attacker: Dict, target_unit: Optional[Dict]
+    ) -> bool:
+        """Двойник становится копией цели; текущее HP переносится долей."""
+        if target_unit is None or not self._alive(target_unit):
+            return False
+
+        current_health = float(attacker.get("health", 0) or 0)
+        current_max_health = float(attacker.get("max_health", 1) or 1)
+        attacker_ratio = (
+            0.0 if current_max_health <= 0 else current_health / current_max_health
+        )
+
+        attacker["unit_type"] = target_unit.get("unit_type", attacker["unit_type"])
+        attacker["initiative"] = target_unit.get("initiative", attacker["initiative"])
+        attacker["initiative_base"] = target_unit.get(
+            "initiative_base", attacker["initiative_base"]
+        )
+        attacker["damage"] = target_unit.get("damage", attacker["damage"])
+        attacker["damage_secondary"] = target_unit.get(
+            "damage_secondary", attacker.get("damage_secondary")
+        )
+        attacker["max_health"] = target_unit.get("max_health", attacker["max_health"])
+        attacker["armor"] = target_unit.get("armor", attacker["armor"])
+        attacker["accuracy"] = target_unit.get("accuracy", attacker["accuracy"])
+        attacker["accuracy_secondary"] = target_unit.get(
+            "accuracy_secondary", attacker.get("accuracy_secondary")
+        )
+        attacker["immunity"] = list(target_unit.get("immunity", []))
+        attacker["resistance"] = list(target_unit.get("resistance", []))
+        attacker["attack_type_primary"] = target_unit.get(
+            "attack_type_primary", attacker.get("attack_type_primary")
+        )
+        attacker["attack_type_secondary"] = target_unit.get(
+            "attack_type_secondary", attacker.get("attack_type_secondary")
+        )
+
+        target_health = float(target_unit.get("health", 0) or 0)
+        attacker["health"] = int(
+            round(target_health * max(0.0, min(1.0, attacker_ratio)))
+        )
+        attacker["doppel_copied"] = 1
+        self._log(
+            f"Doppelganger выбор: pos{target_unit['position']} → "
+            f"{target_unit['team'].upper()} {target_unit['name']}#{target_unit['position']}"
+        )
+        return True
 
     def _unit_by_position(self, pos: int):
         return next((u for u in self.combined if u["position"] == pos), None)
@@ -2486,6 +2540,8 @@ class BattleEnv(gym.Env):
             if bool(unit.get("big", False)):
                 continue
             if exclude_unit is not None and unit is exclude_unit:
+                continue
+            if unit.get("name") in DOPPELGANGER_FORBIDDEN_COPY_NAMES:
                 continue
             candidates.append((int(unit.get("health", 0) or 0), unit["position"]))
         if not candidates:
@@ -2958,6 +3014,13 @@ class BattleEnv(gym.Env):
 
     # ----------- эффекты начала хода (яд/поджог) -----------
     def _apply_start_of_turn_effects(self, unit: Dict) -> bool:
+        # DOT-тики и откаты эффектов применяются один раз за раунд: после «ждать»
+        # юнит активируется повторно. Раньше от двойного тика защищала проверка
+        # initiative > 10 — она молча пропускала тик юнитам с инициативой <= 10
+        # (Патриарх и жрецы при броске +0, замедленные Отшельником и т.п.).
+        first_activation = not unit.get("round_effects_done", 0)
+        unit["round_effects_done"] = 1
+
         # DEFEND: временная броня спадает только в начале следующего хода этого юнита.
         if unit.get("defense", 0) == 1:
             current_armor = int(unit.get("armor", 0) or 0)
@@ -2968,7 +3031,13 @@ class BattleEnv(gym.Env):
                 f"DEFENCE EXPIRE: {unit['team'].upper()} {unit['name']}#{unit['position']} теряет бонус брони "
                 f"-{DEFEND_ARMOR_BONUS} ({current_armor}->{unit['armor']})."
             )
-        if unit.get("name") == "Двойник" and self._alive(unit):
+        # Переключатель «нет целей — бей как Warrior» касается только
+        # НЕскопировавшегося Двойника: копия воина не должна терять свой тип.
+        if (
+            unit.get("name") == "Двойник"
+            and self._alive(unit)
+            and not unit.get("doppel_copied", 0)
+        ):
             has_targets = self._has_transform_targets()
             if unit.get("unit_type") == "Doppelganger" and not has_targets:
                 unit["unit_type"] = "Warrior"
@@ -3063,7 +3132,7 @@ class BattleEnv(gym.Env):
         if (
             unit.get("hermited", 0) == 1
             and self._alive(unit)
-            and unit.get("initiative") > 10
+            and first_activation
         ):
             if self.rng.random() < 0.5:
                 old_base = int(unit.get("initiative_base", 0) or 0)
@@ -3081,7 +3150,7 @@ class BattleEnv(gym.Env):
         if (
             unit.get("poison_turns_left", 0) > 0
             and self._alive(unit)
-            and unit.get("initiative") > 10
+            and first_activation
         ):
             immunities_lower = [str(i).lower() for i in (unit.get("immunity") or [])]
             if "poison" in immunities_lower:
@@ -3121,7 +3190,7 @@ class BattleEnv(gym.Env):
         if (
             unit.get("burn_turns_left", 0) > 0
             and self._alive(unit)
-            and unit.get("initiative") > 10
+            and first_activation
         ):
             # зеркальная проверка иммунитета к Fire (как для яда)
             immunities_lower = [str(i).lower() for i in (unit.get("immunity") or [])]
@@ -3161,7 +3230,7 @@ class BattleEnv(gym.Env):
         if (
             unit.get("uran_turns_left", 0) > 0
             and self._alive(unit)
-            and unit.get("initiative") > 10
+            and first_activation
         ):
             immunities_lower = [str(i).lower() for i in (unit.get("immunity") or [])]
             if "water" in immunities_lower:
@@ -3220,7 +3289,7 @@ class BattleEnv(gym.Env):
             elif isinstance(basestats, list):
                 snapshots = basestats
 
-            if snapshots and unit.get("initiative") > 10:
+            if snapshots and first_activation:
                 chance = unit.get("transform_recover_chance")
                 if chance is None:
                     chance = DEFAULT_TRANSFORM_RECOVERY_CHANCE
@@ -3269,6 +3338,8 @@ class BattleEnv(gym.Env):
             u["uran_turns_left"] = 0
             u["uran_damage_per_tick"] = 0
             u["resilience_used_types"] = []
+            u["round_effects_done"] = 0
+            u["doppel_copied"] = 0
             u["transformed"] = 0
             u["basestats"] = {}
             u.pop("wight_form_name", None)
@@ -3352,6 +3423,7 @@ class BattleEnv(gym.Env):
             else:
                 u["initiative"] = 0
             u["waited"] = 0
+            u["round_effects_done"] = 0
         self._log("Восстановление инициативы. Новый раунд.")
 
     # --- иммунитеты/броня/точность/стойкость ---
@@ -3504,6 +3576,9 @@ class BattleEnv(gym.Env):
             "attack_type_primary": victim["attack_type_primary"],
             "attack_type_secondary": victim["attack_type_secondary"],
             "initiative": victim["initiative_base"],
+            # Без initiative_base откат оставлял бы юнита медленным (30/50) навсегда,
+            # и порча утекала бы в persistent-состояние отряда кампании.
+            "initiative_base": victim["initiative_base"],
             "unit_type": victim["unit_type"],
             "resistance": list(victim["resistance"]),
             "resilience_used_types": list(victim["resilience_used_types"]),
@@ -5428,8 +5503,30 @@ class BattleEnv(gym.Env):
                             )
                             log_target = "цель с Weapon-иммунитетом или макс. HP"
                         elif nxt_type == "Doppelganger":
+                            # Двойник копирует цель, а не атакует её (общая ветка
+                            # _attack ниже била бы выбранного юнита — в т.ч. своего).
                             target_pos = self._pick_highest_hp_non_big(exclude_unit=nxt)
-                            log_target = "цель с макс. HP (non-big)"
+                            target_unit = (
+                                self._unit_by_position(target_pos)
+                                if target_pos is not None
+                                else None
+                            )
+                            self._log(
+                                f"RED ход: {nxt['name']}#{nxt['position']} (Doppelganger) "
+                                f"> копирование цели с макс. HP (non-big) pos{target_pos}."
+                            )
+                            if not self._apply_doppelganger_copy(nxt, target_unit):
+                                self._log(
+                                    f"RED ход: {nxt['name']}#{nxt['position']} (Doppelganger) "
+                                    f"не находит целей для копирования и встаёт в защиту."
+                                )
+                                armor_before = int(nxt.get("armor", 0) or 0)
+                                nxt["armor"] = armor_before + DEFEND_ARMOR_BONUS
+                                nxt["defense"] = 1
+                                self._log(
+                                    f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает броню +{DEFEND_ARMOR_BONUS} ({armor_before}->{nxt['armor']})."
+                                )
+                            break
                         elif nxt_type == "Baroness":
                             target_pos = (
                                 self._pick_highest_hp(live_blue_positions)
@@ -5997,68 +6094,7 @@ class BattleEnv(gym.Env):
 
                     elif attacker.get("unit_type") == "Doppelganger":
                         target_unit = units_by_pos.get(target_pos)
-                        if target_unit is not None and self._alive(target_unit):
-                            current_health = float(attacker.get("health", 0) or 0)
-                            current_max_health = float(
-                                attacker.get("max_health", 1) or 1
-                            )
-                            attacker_ratio = (
-                                0.0
-                                if current_max_health <= 0
-                                else current_health / current_max_health
-                            )
-
-                            attacker["unit_type"] = target_unit.get(
-                                "unit_type", attacker["unit_type"]
-                            )
-                            attacker["initiative"] = target_unit.get(
-                                "initiative", attacker["initiative"]
-                            )
-                            attacker["initiative_base"] = target_unit.get(
-                                "initiative_base", attacker["initiative_base"]
-                            )
-                            attacker["damage"] = target_unit.get(
-                                "damage", attacker["damage"]
-                            )
-                            attacker["damage_secondary"] = target_unit.get(
-                                "damage_secondary", attacker.get("damage_secondary")
-                            )
-                            attacker["max_health"] = target_unit.get(
-                                "max_health", attacker["max_health"]
-                            )
-                            attacker["armor"] = target_unit.get(
-                                "armor", attacker["armor"]
-                            )
-                            attacker["accuracy"] = target_unit.get(
-                                "accuracy", attacker["accuracy"]
-                            )
-                            attacker["accuracy_secondary"] = target_unit.get(
-                                "accuracy_secondary", attacker.get("accuracy_secondary")
-                            )
-                            attacker["immunity"] = list(target_unit.get("immunity", []))
-                            attacker["resistance"] = list(
-                                target_unit.get("resistance", [])
-                            )
-                            attacker["attack_type_primary"] = target_unit.get(
-                                "attack_type_primary",
-                                attacker.get("attack_type_primary"),
-                            )
-                            attacker["attack_type_secondary"] = target_unit.get(
-                                "attack_type_secondary",
-                                attacker.get("attack_type_secondary"),
-                            )
-
-                            target_health = float(target_unit.get("health", 0) or 0)
-                            attacker["health"] = int(
-                                round(
-                                    target_health * max(0.0, min(1.0, attacker_ratio))
-                                )
-                            )
-                            self._log(
-                                f"Doppelganger выбор: pos{target_pos} → "
-                                f"{target_unit['team'].upper()} {target_unit['name']}#{target_unit['position']}"
-                            )
-                        else:
+                        if not self._apply_doppelganger_copy(attacker, target_unit):
                             self._log(f"Doppelganger выбор: pos{target_pos} → пусто")
                         self._check_victory_after_hit()
 
@@ -6188,6 +6224,8 @@ class BattleEnv(gym.Env):
             u["uran_turns_left"] = 0
             u["uran_damage_per_tick"] = 0
             u["resilience_used_types"] = []
+            u["round_effects_done"] = 0
+            u["doppel_copied"] = 0
             u["transformed"] = 0
             u["basestats"] = {}
             u.pop("wight_form_name", None)
