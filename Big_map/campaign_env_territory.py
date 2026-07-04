@@ -651,6 +651,7 @@ class CampaignTerritoryMixin:
         self.book_equip_used_this_turn = False
         self.spell_cast_counts_by_id_this_turn = {}
         self.grid_unit_swap_actions_used_this_turn = set()
+        self.grid_unit_swaps_this_turn = 0
         self.summon_hero_battle_bonus_pending = False
         self.summon_hero_battle_bonus_enemy_ids_this_turn = set()
         return -float(delta_turns) * self.reward_turn_penalty - float(pending_hire_penalty)

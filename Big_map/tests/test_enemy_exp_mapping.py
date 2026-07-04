@@ -3,7 +3,8 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from data_dicts_compact_lines import DATA
+from battle_env import BattleEnv
+from data_dicts_compact_lines import DATA, map_unit_to_battle
 from enemy_configs import ENEMY_CONFIGS
 
 
@@ -52,4 +53,25 @@ def test_enemy_configs_have_positive_total_exp_reward_pool():
 
     # Regression guard: all-zero exp pools means no post-battle progression.
     assert any(total > 0.0 for total in totals)
+
+
+def test_dracolich_kill_exp_is_1215_in_data_and_battle_template():
+    name_index = _build_name_index()
+    dracolich = name_index["Драколич"]
+
+    assert int(round(float(dracolich.get("опыт убийства", 0) or 0))) == 1215
+
+    battle_unit = map_unit_to_battle(dracolich, "red", 1)
+    assert int(round(float(battle_unit.get("exp_kill", 0) or 0))) == 1215
+
+
+def test_killing_dracolich_awards_1215_raw_battle_exp():
+    dracolich = _build_name_index()["Драколич"]
+    battle_unit = map_unit_to_battle(dracolich, "red", 1)
+
+    env = BattleEnv(log_enabled=False)
+    env.combined = [battle_unit]
+    env._apply_battle_exp("red")
+
+    assert int(round(float(env.last_battle_exp))) == 1215
 

@@ -83,11 +83,16 @@ def _handle_row_summon_action(
         summoned.setdefault("resilience_used_types", [])
         summoned.setdefault("bonusturn", 0)
         summoned.setdefault("original_damage", summoned.get("damage", 0))
+        # Призванные не дают опыта за убийство — иначе их можно фармить бесконечно.
+        summoned.setdefault("exp_kill", 0)
 
         slot = battle._unit_by_position(position)
         if slot is None:
             battle.combined.append(summoned)
         else:
+            accumulate = getattr(battle, "_accumulate_overwritten_exp", None)
+            if callable(accumulate):
+                accumulate(slot)
             slot.clear()
             slot.update(summoned)
 

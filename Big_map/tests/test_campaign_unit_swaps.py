@@ -154,6 +154,7 @@ def test_grid_unit_swap_moves_dead_units_and_is_once_per_turn():
     assert info["unit_swap_positions"] == (pos_a, pos_b)
     assert env.moves == moves_before
     assert env.turns == turns_before
+    assert env.grid_unit_swaps_this_turn == 1
     assert env.grid_unit_swaps_total == 1
 
     new_a = _unit_by_position(env, pos_a)
@@ -173,7 +174,54 @@ def test_grid_unit_swap_moves_dead_units_and_is_once_per_turn():
     assert bool(env.compute_action_mask()[action]) is False
 
     env._advance_turns(1)
+    assert env.grid_unit_swaps_this_turn == 0
     assert bool(env.compute_action_mask()[action]) is True
+
+
+def test_grid_unit_swap_actions_mask_after_three_swaps_per_turn():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
+    env.reset(seed=123)
+
+    swap_start = env.GRID_SWAP_UNIT_ACTION_START
+    swap_stop = swap_start + env.GRID_SWAP_UNIT_ACTION_COUNT
+
+    for expected_count in range(1, 4):
+        mask = env.compute_action_mask()
+        available_offsets = [
+            offset
+            for offset, available in enumerate(mask[swap_start:swap_stop])
+            if bool(available)
+        ]
+        assert available_offsets
+
+        action = swap_start + available_offsets[0]
+        _obs, reward, terminated, truncated, info = env.step(action)
+
+        assert terminated is False
+        assert truncated is False
+        assert info["unit_swap_action"] is True
+        assert info["unit_swap_applied"] is True
+        _assert_unit_swap_penalty(env, reward, info)
+        assert env.grid_unit_swaps_this_turn == expected_count
+        assert env.grid_unit_swaps_total == expected_count
+
+    mask = env.compute_action_mask()
+    assert not any(bool(value) for value in mask[swap_start:swap_stop])
+
+    _obs, reward, terminated, truncated, info = env.step(swap_start)
+    assert terminated is False
+    assert truncated is False
+    assert reward == pytest.approx(0.0)
+    assert info["unit_swap_action"] is True
+    assert info["unit_swap_applied"] is False
+    assert info["unit_swap_invalid_reason"] == "masked_or_missing_unit"
+    assert env.grid_unit_swaps_this_turn == 3
+    assert env.grid_unit_swaps_total == 3
+
+    env._advance_turns(1)
+    assert env.grid_unit_swaps_this_turn == 0
+    mask = env.compute_action_mask()
+    assert any(bool(value) for value in mask[swap_start:swap_stop])
 
 
 def test_grid_unit_swap_moves_normal_unit_to_empty_position_10():
