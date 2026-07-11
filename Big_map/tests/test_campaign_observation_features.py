@@ -10,6 +10,12 @@ from campaign_env import CampaignEnv
 from enemy_configs import ENEMY_CONFIGS
 
 
+def _refresh_territories_at_turn(env: CampaignEnv, turns: int) -> None:
+    """Jump to a turn and refresh only the territory state under test."""
+    env.turns = int(turns)
+    env._refresh_faction_territories()
+
+
 def test_campaign_grid_obs_includes_campaign_state_features():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     obs, _ = env.reset(seed=123)
@@ -966,7 +972,7 @@ def test_legions_and_empire_territories_only_claim_reachable_regions():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
-    env._advance_turns(999)
+    _refresh_territories_at_turn(env, 999)
 
     assert tuple(env.grid_env.start_position) in env.legions_territory_tile_set
     assert tuple(env.empire_territory_source_tile) in env.empire_territory_tile_set
@@ -1010,7 +1016,7 @@ def test_legions_territory_keeps_gold_mines_claimable():
     gold_mine_tiles = {(2, 31), (24, 4), (29, 46), (41, 46)}
     assert env.legions_territory_forbidden_tile_set.isdisjoint(gold_mine_tiles)
 
-    env._advance_turns(999)
+    _refresh_territories_at_turn(env, 999)
     reachable_gold_mines = {
         tile for tile in gold_mine_tiles if tile in env.legions_territory_path_distances
     }
@@ -1031,7 +1037,7 @@ def test_legions_territory_keeps_mana_crystals_claimable():
     }
     assert env.legions_territory_forbidden_tile_set.isdisjoint(mana_crystal_tiles)
 
-    env._advance_turns(999)
+    _refresh_territories_at_turn(env, 999)
     reachable_mana_crystals = {
         tile for tile in mana_crystal_tiles if tile in env.legions_territory_path_distances
     }
@@ -1047,7 +1053,7 @@ def test_legions_territory_keeps_chest_tiles_claimable():
     chest_tiles = set(env.chests.keys())
     assert env.legions_territory_forbidden_tile_set.isdisjoint(chest_tiles)
 
-    env._advance_turns(999)
+    _refresh_territories_at_turn(env, 999)
     reachable_chests = {
         tile for tile in chest_tiles if tile in env.legions_territory_path_distances
     }
@@ -1086,7 +1092,7 @@ def test_territories_keep_road_tiles_claimable():
     assert env.legions_territory_forbidden_tile_set.isdisjoint(road_tiles)
     assert env.empire_territory_forbidden_tile_set.isdisjoint(road_tiles)
 
-    env._advance_turns(999)
+    _refresh_territories_at_turn(env, 999)
 
     assert road_tiles.issubset(env.empire_territory_tile_set)
 
