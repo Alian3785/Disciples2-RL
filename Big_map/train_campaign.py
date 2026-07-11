@@ -276,12 +276,46 @@ def make_env(
     return Monitor(env)
 
 
-def resolve_training_vec_env_config(vec_env_mode: str):
+def resolve_training_vec_env_config(
+    vec_env_mode: str,
+    start_method: str = "spawn",
+):
     if vec_env_mode == "subproc":
-        return SubprocVecEnv, {"start_method": "spawn"}
+        return SubprocVecEnv, {"start_method": start_method}
     if vec_env_mode == "dummy":
         return DummyVecEnv, {}
     raise ValueError(f"Unsupported vec env mode: {vec_env_mode!r}")
+
+
+def resolve_training_output_dirs(
+    *,
+    run_id: str,
+    output_root: str | os.PathLike[str] | None,
+    diagnostics_enabled: bool,
+) -> dict[str, str | None]:
+    if output_root is None:
+        return {
+            "checkpoint": str(BASE_DIR / "campaign_checkpoints" / run_id),
+            "model": str(BASE_DIR / "campaign_models" / run_id),
+            "eval": str(BASE_DIR / "campaign_eval" / run_id),
+            "tensorboard": str(BASE_DIR / "campaign_tb_logs" / run_id),
+            "diagnostics": (
+                str(BASE_DIR / "campaign_diagnostics" / run_id)
+                if diagnostics_enabled
+                else None
+            ),
+            "plots": str(BASE_DIR / "outputs"),
+        }
+
+    root = Path(output_root).expanduser().resolve()
+    return {
+        "checkpoint": str(root / "checkpoints"),
+        "model": str(root / "models"),
+        "eval": str(root / "eval"),
+        "tensorboard": str(root / "tensorboard"),
+        "diagnostics": str(root / "diagnostics") if diagnostics_enabled else None,
+        "plots": str(root / "plots"),
+    }
 
 
 def _to_numpy_array(value: Any) -> np.ndarray | None:
@@ -2265,7 +2299,25 @@ if __name__ == "__main__":
         default="subproc",
         help="Vectorized rollout environment backend",
     )
+    parser.add_argument(
+        "--vec-start-method",
+        choices=("spawn", "forkserver", "fork"),
+        default="spawn",
+        help="Multiprocessing start method used by SubprocVecEnv",
+    )
     parser.add_argument("--seed", type=int, default=None, help="Optional random seed")
+    parser.add_argument(
+        "--run-id",
+        type=str,
+        default=None,
+        help="Stable run identifier; generated automatically when omitted",
+    )
+    parser.add_argument(
+        "--output-root",
+        type=str,
+        default=None,
+        help="Write all artifacts for this run below this directory",
+    )
     parser.add_argument(
         "--wall-time-seconds",
         type=float,
@@ -2511,6 +2563,7 @@ if __name__ == "__main__":
     TOTAL_STEPS = args.total_steps
     N_ENVS = args.n_envs
     VEC_ENV_MODE = args.vec_env
+    VEC_ENV_START_METHOD = args.vec_start_method
     SEED = args.seed
     CHECKPOINT_FREQ = args.checkpoint_freq
     EVAL_FREQ = args.eval_freq
@@ -2552,7 +2605,9 @@ if __name__ == "__main__":
             "total_timesteps": TOTAL_STEPS,
             "n_envs": N_ENVS,
             "vec_env": VEC_ENV_MODE,
-            "vec_env_start_method": "spawn" if VEC_ENV_MODE == "subproc" else None,
+            "vec_env_start_method": (
+                VEC_ENV_START_METHOD if VEC_ENV_MODE == "subproc" else None
+            ),
             "seed": SEED,
             "n_steps": PPO_N_STEPS,
             "batch_size": PPO_BATCH_SIZE,
@@ -2603,30 +2658,37 @@ if __name__ == "__main__":
                 offline=args.comet_offline,
                 offline_directory=args.comet_offline_dir,
             )
-            run_id = comet_experiment.get_key()
+            run_id = args.run_id or comet_experiment.get_key()
             mode = "offline" if args.comet_offline else "online"
             print(f"[INFO] Comet enabled (comet_ml={comet_ml.__version__}, mode={mode})")
             if getattr(comet_experiment, "url", None):
                 print(f"[INFO] Comet run: {comet_experiment.url}")
         except Exception as exc:
             COMET_AVAILABLE = False
-            run_id = f"offline-{int(time.time())}"
+            run_id = args.run_id or f"offline-{int(time.time())}"
             print(f"[WARN] Comet init failed, training will continue without Comet: {exc}")
     else:
-        run_id = f"offline-{int(time.time())}"
+        run_id = args.run_id or f"offline-{int(time.time())}"
         print("[INFO] Comet disabled, running without experiment tracking")
 
-    CHECKPOINT_DIR = str(BASE_DIR / "campaign_checkpoints" / run_id)
-    MODEL_DIR = f"./campaign_models/{run_id}"
-    EVAL_DIR = f"./campaign_eval/{run_id}"
-    TB_LOG_DIR = f"./campaign_tb_logs/{run_id}"
-    DIAGNOSTICS_DIR = f"./campaign_diagnostics/{run_id}" if USE_DIAGNOSTICS else None
+    output_dirs = resolve_training_output_dirs(
+        run_id=run_id,
+        output_root=args.output_root,
+        diagnostics_enabled=USE_DIAGNOSTICS,
+    )
+    CHECKPOINT_DIR = str(output_dirs["checkpoint"])
+    MODEL_DIR = str(output_dirs["model"])
+    EVAL_DIR = str(output_dirs["eval"])
+    TB_LOG_DIR = str(output_dirs["tensorboard"])
+    DIAGNOSTICS_DIR = output_dirs["diagnostics"]
+    PLOTS_DIR = Path(str(output_dirs["plots"]))
     COMET_OFFLINE_DIR = args.comet_offline_dir
 
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     os.makedirs(MODEL_DIR, exist_ok=True)
     os.makedirs(EVAL_DIR, exist_ok=True)
     os.makedirs(TB_LOG_DIR, exist_ok=True)
+    PLOTS_DIR.mkdir(parents=True, exist_ok=True)
     if DIAGNOSTICS_DIR is not None:
         os.makedirs(DIAGNOSTICS_DIR, exist_ok=True)
     os.makedirs(COMET_OFFLINE_DIR, exist_ok=True)
@@ -2645,7 +2707,10 @@ if __name__ == "__main__":
             prefix="paths",
         )
 
-    vec_env_cls, vec_env_kwargs = resolve_training_vec_env_config(VEC_ENV_MODE)
+    vec_env_cls, vec_env_kwargs = resolve_training_vec_env_config(
+        VEC_ENV_MODE,
+        VEC_ENV_START_METHOD,
+    )
     env_factory = partial(
         make_env,
         freeze_dynamic_action_layout=FREEZE_DYNAMIC_ACTION_LAYOUT,
@@ -2813,6 +2878,8 @@ if __name__ == "__main__":
     print(f"Всего шагов: {TOTAL_STEPS:,}")
     print(f"Параллельных сред: {N_ENVS}")
     print(f"VecEnv: {VEC_ENV_MODE}")
+    if VEC_ENV_MODE == "subproc":
+        print(f"VecEnv start method: {VEC_ENV_START_METHOD}")
     if SEED is not None:
         print(f"Seed: {SEED}")
     print(f"Checkpoint каждые: {CHECKPOINT_FREQ:,} шагов")
@@ -2899,48 +2966,48 @@ if __name__ == "__main__":
         print(f"  Winrate: {100 * metrics_cb.victories / total:.1f}%")
     print(f"{'='*60}")
 
-    summoned_episode_plot_path = BASE_DIR / "outputs" / "campaign_summoned_units_per_episode.png"
+    summoned_episode_plot_path = PLOTS_DIR / "campaign_summoned_units_per_episode.png"
     saved_summoned_episode_plot = metrics_cb.save_summoned_units_per_episode_plot(
         summoned_episode_plot_path
     )
     if saved_summoned_episode_plot is not None:
         print(f"  График призывов за эпизод: {saved_summoned_episode_plot}")
 
-    summoned_total_plot_path = BASE_DIR / "outputs" / "campaign_summoned_units_cumulative.png"
+    summoned_total_plot_path = PLOTS_DIR / "campaign_summoned_units_cumulative.png"
     saved_summoned_total_plot = metrics_cb.save_cumulative_summoned_units_plot(
         summoned_total_plot_path
     )
     if saved_summoned_total_plot is not None:
         print(f"  График призывов за всё обучение: {saved_summoned_total_plot}")
 
-    hired_episode_plot_path = BASE_DIR / "outputs" / "campaign_hired_units_per_episode.png"
+    hired_episode_plot_path = PLOTS_DIR / "campaign_hired_units_per_episode.png"
     saved_hired_episode_plot = metrics_cb.save_hired_units_per_episode_plot(hired_episode_plot_path)
     if saved_hired_episode_plot is not None:
         print(f"  График найма за эпизод: {saved_hired_episode_plot}")
 
-    hired_total_plot_path = BASE_DIR / "outputs" / "campaign_hired_units_cumulative.png"
+    hired_total_plot_path = PLOTS_DIR / "campaign_hired_units_cumulative.png"
     saved_hired_total_plot = metrics_cb.save_cumulative_hired_units_plot(hired_total_plot_path)
     if saved_hired_total_plot is not None:
         print(f"  График найма за всё обучение: {saved_hired_total_plot}")
 
-    unit_swap_plot_path = BASE_DIR / "outputs" / "campaign_unit_swaps_per_episode.png"
+    unit_swap_plot_path = PLOTS_DIR / "campaign_unit_swaps_per_episode.png"
     saved_unit_swap_plot = metrics_cb.save_unit_swaps_per_episode_plot(unit_swap_plot_path)
     if saved_unit_swap_plot is not None:
         print(f"  График перестановок юнитов за эпизод: {saved_unit_swap_plot}")
 
-    battle_item_plot_path = BASE_DIR / "outputs" / "campaign_battle_item_activity.png"
+    battle_item_plot_path = PLOTS_DIR / "campaign_battle_item_activity.png"
     saved_battle_item_plot = metrics_cb.save_battle_item_activity_plot(battle_item_plot_path)
     if saved_battle_item_plot is not None:
         print(f"  График боевых предметов: {saved_battle_item_plot}")
 
-    scripted_bot_plot_path = BASE_DIR / "outputs" / "campaign_scripted_bot_victories_per_episode.png"
+    scripted_bot_plot_path = PLOTS_DIR / "campaign_scripted_bot_victories_per_episode.png"
     saved_scripted_bot_plot = metrics_cb.save_scripted_bot_victories_per_episode_plot(
         scripted_bot_plot_path
     )
     if saved_scripted_bot_plot is not None:
         print(f"  График побед бота столицы за эпизод: {saved_scripted_bot_plot}")
 
-    spell_cast_plot_path = BASE_DIR / "outputs" / "campaign_spell_cast_activity.png"
+    spell_cast_plot_path = PLOTS_DIR / "campaign_spell_cast_activity.png"
     saved_spell_cast_plot = metrics_cb.save_spell_cast_activity_plot(spell_cast_plot_path)
     if saved_spell_cast_plot is not None:
         print(f"  График применения заклинаний: {saved_spell_cast_plot}")
