@@ -1,0 +1,228 @@
+name: RL training rotation
+
+on:
+  schedule:
+    - cron: "17 23 * * *"
+      timezone: "Europe/Moscow"
+    - cron: "17 2,5,8,11,14,17,20 * * *"
+      timezone: "Europe/Moscow"
+  workflow_dispatch:
+    inputs:
+      objective:
+        description: Scenario used by the 24,576-step smoke run
+        required: true
+        default: cities
+        type: choice
+        options:
+          - cities
+          - green_dragon
+          - blue_dragon
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rl-training-rotation-main
+  cancel-in-progress: false
+
+jobs:
+  train:
+    name: ${{ github.event_name == 'workflow_dispatch' && 'RL smoke test' || 'Scheduled RL training' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.RL_RESULTS_TOKEN }}
+
+      - name: Select result storage branch
+        id: storage
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RESULTS_BRANCH: github-experiments
+        run: |
+          set -euo pipefail
+          target_branch=main
+          if [[ "$EVENT_NAME" == "schedule" ]] && \
+             git ls-remote --exit-code --heads origin "$RESULTS_BRANCH" >/dev/null 2>&1; then
+            git fetch origin "$RESULTS_BRANCH"
+            git switch -C "$RESULTS_BRANCH" "origin/$RESULTS_BRANCH"
+            git merge --no-edit origin/main
+            target_branch="$RESULTS_BRANCH"
+          fi
+          echo "target_branch=$target_branch" >> "$GITHUB_OUTPUT"
+
+      - name: Select run
+        id: prepare
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          MANUAL_OBJECTIVE: ${{ inputs.objective || 'cities' }}
+        run: |
+          set -euo pipefail
+          activation_args=()
+          if [[ "$EVENT_NAME" == "schedule" && "$SCHEDULE" == "17 23 * * *" ]]; then
+            activation_args+=(--activation-slot)
+          fi
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            output_base="$RUNNER_TEMP/rl-smoke"
+          else
+            output_base="$GITHUB_WORKSPACE/github_experiments"
+          fi
+
+          python Big_map/tools/rl_training_rotation.py prepare \
+            --state-file github_experiments/state.json \
+            --output-base "$output_base" \
+            --event-name "$EVENT_NAME" \
+            --manual-objective "$MANUAL_OBJECTIVE" \
+            --run-token "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
+            "${activation_args[@]}"
+
+      - name: Set up Python 3.14
+        if: steps.prepare.outputs.should_run == 'true'
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: Big_map/requirements.txt
+
+      - name: Install CPU training dependencies
+        if: steps.prepare.outputs.should_run == 'true'
+        shell: bash
+        working-directory: Big_map
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install \
+            --index-url https://download.pytorch.org/whl/cpu \
+            "torch==2.12.1"
+          grep -vE '^torch([<>=!~]|$)' requirements.txt > "$RUNNER_TEMP/requirements-ci.txt"
+          python -m pip install -r "$RUNNER_TEMP/requirements-ci.txt"
+
+      - name: Train agent
+        if: steps.prepare.outputs.should_run == 'true'
+        id: train
+        shell: bash
+        working-directory: Big_map
+        env:
+          RUN_DIR: ${{ steps.prepare.outputs.run_dir }}
+          RUN_ID: ${{ steps.prepare.outputs.run_id }}
+          SEED: ${{ steps.prepare.outputs.seed }}
+          TOTAL_STEPS: ${{ steps.prepare.outputs.total_steps }}
+          CHECKPOINT_FREQ: ${{ steps.prepare.outputs.checkpoint_freq }}
+          EVAL_FREQ: ${{ steps.prepare.outputs.eval_freq }}
+          OBJECTIVE_FLAG: ${{ steps.prepare.outputs.objective_flag }}
+          PYTHONUNBUFFERED: "1"
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUN_DIR/logs"
+          command=(
+            python train_campaign.py
+            --total-steps "$TOTAL_STEPS"
+            --n-envs 12
+            --vec-env subproc
+            --vec-start-method forkserver
+            --seed "$SEED"
+            --run-id "$RUN_ID"
+            --output-root "$RUN_DIR"
+            --torch-num-threads 4
+            --checkpoint-freq "$CHECKPOINT_FREQ"
+            --eval-freq "$EVAL_FREQ"
+            --no-scripted-bot
+            --no-comet
+            --no-vec-check-nan
+            --no-diagnostics
+            --behavior-report-path "$RUN_DIR/logs/behavior.jsonl"
+            --behavior-story-path "$RUN_DIR/logs/behavior.md"
+          )
+          if [[ -n "$OBJECTIVE_FLAG" ]]; then
+            command+=("$OBJECTIVE_FLAG")
+          fi
+          "${command[@]}" \
+            > >(tee "$RUN_DIR/logs/stdout.log") \
+            2> >(tee "$RUN_DIR/logs/stderr.log" >&2)
+
+      - name: Finalize scheduled result and advance rotation
+        if: success() && steps.prepare.outputs.advance_state == 'true'
+        shell: bash
+        env:
+          RUN_DIR: ${{ steps.prepare.outputs.run_dir }}
+          RUN_ID: ${{ steps.prepare.outputs.run_id }}
+          SEED: ${{ steps.prepare.outputs.seed }}
+          OBJECTIVE: ${{ steps.prepare.outputs.objective }}
+        run: |
+          set -euo pipefail
+          python Big_map/tools/rl_training_rotation.py complete \
+            --state-file github_experiments/state.json \
+            --run-dir "$RUN_DIR" \
+            --seed "$SEED" \
+            --objective "$OBJECTIVE" \
+            --run-id "$RUN_ID" \
+            --commit-sha "$GITHUB_SHA"
+
+      - name: Upload scheduled checkpoints
+        if: success() && steps.prepare.outputs.advance_state == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkpoints-${{ steps.prepare.outputs.run_id }}
+          path: ${{ steps.prepare.outputs.run_dir }}/checkpoints/
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload smoke result
+        if: always() && steps.prepare.outputs.is_manual == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-${{ steps.prepare.outputs.run_id }}
+          path: ${{ steps.prepare.outputs.run_dir }}/
+          if-no-files-found: warn
+          retention-days: 1
+
+      - name: Upload failure diagnostics
+        if: failure() && steps.prepare.outputs.advance_state == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-${{ steps.prepare.outputs.run_id }}
+          path: |
+            ${{ steps.prepare.outputs.run_dir }}/logs/
+            ${{ steps.prepare.outputs.run_dir }}/eval/evaluations.npz
+            ${{ steps.prepare.outputs.run_dir }}/diagnostics/
+          if-no-files-found: warn
+          retention-days: 1
+
+      - name: Commit successful scheduled result
+        if: success() && steps.prepare.outputs.advance_state == 'true'
+        shell: bash
+        env:
+          RUN_DIR: ${{ steps.prepare.outputs.run_dir }}
+          RUN_ID: ${{ steps.prepare.outputs.run_id }}
+          TARGET_BRANCH: ${{ steps.storage.outputs.target_branch }}
+          FALLBACK_BRANCH: github-experiments
+        run: |
+          set -euo pipefail
+          rm -rf "$RUN_DIR/checkpoints" "$RUN_DIR/models" "$RUN_DIR/diagnostics"
+          run_relative="${RUN_DIR#"$GITHUB_WORKSPACE/"}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f -- github_experiments/state.json "$run_relative"
+          git commit -m "Store RL experiment $RUN_ID"
+
+          if [[ "$TARGET_BRANCH" == "main" ]]; then
+            git fetch origin main
+            git rebase origin/main
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "Push to main was rejected; storing this and future results in $FALLBACK_BRANCH."
+            git push origin "HEAD:$FALLBACK_BRANCH"
+          else
+            git push origin "HEAD:$TARGET_BRANCH"
+          fi
