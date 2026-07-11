@@ -8,6 +8,11 @@ on:
       timezone: "Europe/Moscow"
   workflow_dispatch:
     inputs:
+      full_training:
+        description: Run the full 1,000,000-step rotation task and advance state
+        required: true
+        default: false
+        type: boolean
       objective:
         description: Scenario used by the 24,576-step smoke run
         required: true
@@ -27,7 +32,7 @@ concurrency:
 
 jobs:
   train:
-    name: ${{ github.event_name == 'workflow_dispatch' && 'RL smoke test' || 'Scheduled RL training' }}
+    name: ${{ github.event_name == 'workflow_dispatch' && inputs.full_training != true && 'RL smoke test' || 'Scheduled RL training' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 350
 
@@ -64,14 +69,21 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           SCHEDULE: ${{ github.event.schedule }}
           MANUAL_OBJECTIVE: ${{ inputs.objective || 'cities' }}
+          FULL_TRAINING: ${{ inputs.full_training || false }}
         run: |
           set -euo pipefail
           activation_args=()
+          rotation_event="$EVENT_NAME"
           if [[ "$EVENT_NAME" == "schedule" && "$SCHEDULE" == "17 23 * * *" ]]; then
             activation_args+=(--activation-slot)
           fi
 
-          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+          if [[ "$EVENT_NAME" == "workflow_dispatch" && "$FULL_TRAINING" == "true" ]]; then
+            rotation_event=schedule
+            activation_args+=(--activation-slot)
+          fi
+
+          if [[ "$rotation_event" == "workflow_dispatch" ]]; then
             output_base="$RUNNER_TEMP/rl-smoke"
           else
             output_base="$GITHUB_WORKSPACE/github_experiments"
@@ -80,7 +92,7 @@ jobs:
           python Big_map/tools/rl_training_rotation.py prepare \
             --state-file github_experiments/state.json \
             --output-base "$output_base" \
-            --event-name "$EVENT_NAME" \
+            --event-name "$rotation_event" \
             --manual-objective "$MANUAL_OBJECTIVE" \
             --run-token "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
             "${activation_args[@]}"
