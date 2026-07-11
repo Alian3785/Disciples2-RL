@@ -14,6 +14,7 @@ from grid import (
     MANA_SOURCE_COUNT,
     are_targets_reachable,
     resolve_mana_sources,
+    resolve_obstacle_tiles,
 )
 from grid_world_env import GridWorldEnv
 
@@ -154,6 +155,38 @@ def test_default_layout_uses_static_obstacles_and_keeps_targets_reachable():
         obstacle_tiles,
         reachable_targets,
     )
+
+
+def test_resolve_obstacle_tiles_reuses_equivalent_immutable_inputs():
+    kwargs = {
+        "grid_size": 8,
+        "heal_tiles": [(0, 0)],
+        "start_position": (0, 0),
+        "base_static_obstacle_blocks": ((18, 18, 6, 6),),
+        "base_static_empty_tiles": (),
+    }
+
+    first = resolve_obstacle_tiles(
+        enemy_positions={1: (1, 1), 2: (6, 6)},
+        **kwargs,
+    )
+    first_cache_info = resolve_obstacle_tiles.cache_info()
+    second = resolve_obstacle_tiles(
+        enemy_positions={2: (6, 6), 1: (1, 1)},
+        **kwargs,
+    )
+    second_cache_info = resolve_obstacle_tiles.cache_info()
+
+    assert second is first
+    assert second_cache_info.hits == first_cache_info.hits + 1
+    assert second_cache_info.misses == first_cache_info.misses
+
+    resolve_obstacle_tiles(
+        enemy_positions={1: (1, 1), 2: (6, 5)},
+        **kwargs,
+    )
+    changed_cache_info = resolve_obstacle_tiles.cache_info()
+    assert changed_cache_info.misses == second_cache_info.misses + 1
 
 
 def test_hero_start_is_empty_and_inside_legions_capital_area():
