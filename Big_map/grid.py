@@ -13,6 +13,7 @@ This module is the single source of truth for:
 from __future__ import annotations
 
 from collections import deque
+from functools import lru_cache
 from typing import Dict, Optional, Tuple
 from data_dicts_compact_lines import DATA, is_hero_name
 
@@ -1400,26 +1401,19 @@ def resolve_mana_sources(
     return resolved
 
 
-def resolve_obstacle_tiles(
+@lru_cache(maxsize=64)
+def _resolve_obstacle_tiles_cached(
     grid_size: int,
-    enemy_positions: Dict[int, Tuple[int, int]],
-    *,
-    heal_tiles: Tuple[Tuple[int, int], ...] | list[Tuple[int, int]] = (),
-    start_position: Tuple[int, int] = DEFAULT_HERO_GRID_POSITION,
-    base_static_obstacle_blocks: Tuple[Tuple[int, int, int, int], ...] = (
-        BASE_STATIC_OBSTACLE_BLOCKS
-    ),
-    base_static_empty_tiles: Tuple[Tuple[int, int], ...] = BASE_STATIC_EMPTY_TILES,
+    enemy_tiles: Tuple[Tuple[int, int], ...],
+    heal_tiles: Tuple[Tuple[int, int], ...],
+    start_position: Tuple[int, int],
+    base_static_obstacle_blocks: Tuple[Tuple[int, int, int, int], ...],
+    base_static_empty_tiles: Tuple[Tuple[int, int], ...],
 ) -> Tuple[Tuple[int, int], ...]:
-    """Build deterministic obstacle tiles for the campaign map.
-
-    Obstacles строятся только из статических rectangle blocks сценария. Каждый
-    candidate проверяется на reachability, чтобы важные клетки не оказались
-    отрезаны от стартовой позиции.
-    """
+    """Cached implementation for immutable obstacle-layout inputs."""
     start_tile = clamp_grid_pos(start_position, grid_size)
-    reserved_tiles = {tuple(pos) for pos in enemy_positions.values()}
-    reserved_tiles.update(tuple(tile) for tile in heal_tiles)
+    reserved_tiles = set(enemy_tiles)
+    reserved_tiles.update(heal_tiles)
     reserved_tiles.add(start_tile)
     reserved_tiles.update(
         scale_static_tiles(
@@ -1456,3 +1450,63 @@ def resolve_obstacle_tiles(
         obstacle_seen.add(tile)
 
     return tuple(obstacle_tiles)
+
+
+def resolve_obstacle_tiles(
+    grid_size: int,
+    enemy_positions: Dict[int, Tuple[int, int]],
+    *,
+    heal_tiles: Tuple[Tuple[int, int], ...] | list[Tuple[int, int]] = (),
+    start_position: Tuple[int, int] = DEFAULT_HERO_GRID_POSITION,
+    base_static_obstacle_blocks: Tuple[Tuple[int, int, int, int], ...] = (
+        BASE_STATIC_OBSTACLE_BLOCKS
+    ),
+    base_static_empty_tiles: Tuple[Tuple[int, int], ...] = BASE_STATIC_EMPTY_TILES,
+) -> Tuple[Tuple[int, int], ...]:
+    """Build deterministic obstacle tiles for the campaign map.
+
+    Obstacles строятся только из статических rectangle blocks сценария. Каждый
+    candidate проверяется на reachability, чтобы важные клетки не оказались
+    отрезаны от стартовой позиции. Поскольку раскладка детерминирована,
+    одинаковые immutable-входы между экземплярами CampaignEnv используют общий
+    LRU-кэш.
+    """
+    normalized_enemy_tiles = tuple(
+        sorted(
+            {
+                (int(pos[0]), int(pos[1]))
+                for pos in enemy_positions.values()
+            }
+        )
+    )
+    normalized_heal_tiles = tuple(
+        sorted(
+            {
+                (int(tile[0]), int(tile[1]))
+                for tile in heal_tiles
+            }
+        )
+    )
+    normalized_start_position = (int(start_position[0]), int(start_position[1]))
+    normalized_obstacle_blocks = tuple(
+        (int(x), int(y), int(width), int(height))
+        for x, y, width, height in base_static_obstacle_blocks
+    )
+    normalized_empty_tiles = tuple(
+        (int(tile[0]), int(tile[1]))
+        for tile in base_static_empty_tiles
+    )
+    return _resolve_obstacle_tiles_cached(
+        int(grid_size),
+        normalized_enemy_tiles,
+        normalized_heal_tiles,
+        normalized_start_position,
+        normalized_obstacle_blocks,
+        normalized_empty_tiles,
+    )
+
+
+# Preserve the familiar functools cache controls on the public wrapper. They are
+# useful for deterministic tests and diagnostics without exposing the private helper.
+resolve_obstacle_tiles.cache_info = _resolve_obstacle_tiles_cached.cache_info
+resolve_obstacle_tiles.cache_clear = _resolve_obstacle_tiles_cached.cache_clear
