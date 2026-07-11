@@ -13,6 +13,7 @@ from train_campaign import CampaignVictoryEvalCallback
 from train_campaign import EvalStepCapWrapper
 from train_campaign import make_env
 from train_campaign import resolve_training_vec_env_config
+from train_campaign import resolve_training_output_dirs
 
 
 def test_victory_rate_beats_higher_reward():
@@ -55,11 +56,33 @@ def test_resolve_training_vec_env_config_uses_subproc_spawn():
     assert vec_env_kwargs == {"start_method": "spawn"}
 
 
+def test_resolve_training_vec_env_config_accepts_forkserver():
+    vec_env_cls, vec_env_kwargs = resolve_training_vec_env_config("subproc", "forkserver")
+
+    assert vec_env_cls is SubprocVecEnv
+    assert vec_env_kwargs == {"start_method": "forkserver"}
+
+
 def test_resolve_training_vec_env_config_keeps_dummy_fallback():
     vec_env_cls, vec_env_kwargs = resolve_training_vec_env_config("dummy")
 
     assert vec_env_cls is DummyVecEnv
     assert vec_env_kwargs == {}
+
+
+def test_resolve_training_output_dirs_uses_explicit_run_root(tmp_path):
+    paths = resolve_training_output_dirs(
+        run_id="ignored-for-explicit-root",
+        output_root=tmp_path,
+        diagnostics_enabled=False,
+    )
+
+    assert paths["checkpoint"] == str(tmp_path / "checkpoints")
+    assert paths["model"] == str(tmp_path / "models")
+    assert paths["eval"] == str(tmp_path / "eval")
+    assert paths["tensorboard"] == str(tmp_path / "tensorboard")
+    assert paths["plots"] == str(tmp_path / "plots")
+    assert paths["diagnostics"] is None
 
 
 def test_make_env_exposes_native_action_masks_for_subproc():
