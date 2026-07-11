@@ -1,0 +1,29 @@
+name: Restrict pull requests to main
+
+on:
+  pull_request_target:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - ready_for_review
+      - edited
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  close-unauthorized:
+    if: github.actor != 'Alian3785'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close unauthorized pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr comment "$PR_NUMBER" --body "Pull requests to main are restricted to @Alian3785. Please target another branch."
+          gh pr close "$PR_NUMBER"
