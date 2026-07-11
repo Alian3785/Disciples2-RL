@@ -1,5 +1,9 @@
 import os
+import platform
 import re
+import shutil
+import subprocess
+import sys
 import time
 import traceback
 import json
@@ -316,6 +320,110 @@ def resolve_training_output_dirs(
         "diagnostics": str(root / "diagnostics") if diagnostics_enabled else None,
         "plots": str(root / "plots"),
     }
+
+
+def _format_binary_size(size_bytes: int) -> str:
+    return f"{int(size_bytes) / (1024 ** 3):.2f} GiB"
+
+
+def _read_linux_meminfo(path: Path = Path("/proc/meminfo")) -> dict[str, int]:
+    values: dict[str, int] = {}
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            name, separator, raw_value = line.partition(":")
+            if not separator:
+                continue
+            parts = raw_value.strip().split()
+            if not parts:
+                continue
+            multiplier = 1024 if len(parts) > 1 and parts[1].lower() == "kb" else 1
+            values[name] = int(parts[0]) * multiplier
+    except (OSError, ValueError):
+        return {}
+    return values
+
+
+def _collect_lscpu_fields() -> dict[str, str]:
+    try:
+        completed = subprocess.run(
+            ["lscpu", "--json"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            env={**os.environ, "LC_ALL": "C"},
+        )
+        payload = json.loads(completed.stdout)
+    except (FileNotFoundError, OSError, subprocess.SubprocessError, json.JSONDecodeError):
+        return {}
+
+    fields: dict[str, str] = {}
+    for item in payload.get("lscpu", []):
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("field", "")).rstrip(":")
+        value = str(item.get("data", "")).strip()
+        if name and value:
+            fields[name] = value
+    return fields
+
+
+def collect_system_resource_info(storage_path: str | os.PathLike[str]) -> list[tuple[str, str]]:
+    cpu = _collect_lscpu_fields()
+    meminfo = _read_linux_meminfo()
+    disk = shutil.disk_usage(Path(storage_path).resolve())
+    try:
+        affinity_count = len(os.sched_getaffinity(0))
+    except AttributeError:
+        affinity_count = os.cpu_count() or 0
+
+    details: list[tuple[str, str]] = [
+        ("Platform", f"{platform.system()} {platform.release()} ({platform.machine()})"),
+        ("Python", sys.version.split()[0]),
+        ("PyTorch", str(th.__version__)),
+        ("Training device", "cuda" if th.cuda.is_available() else "cpu"),
+        ("CPU model", cpu.get("Model name", platform.processor() or "unknown")),
+        ("CPU vendor", cpu.get("Vendor ID", "unknown")),
+        ("Logical CPUs visible", cpu.get("CPU(s)", str(os.cpu_count() or "unknown"))),
+        ("Process CPU affinity", str(affinity_count)),
+        ("Sockets", cpu.get("Socket(s)", "unknown")),
+        ("Cores per socket", cpu.get("Core(s) per socket", "unknown")),
+        ("Threads per core", cpu.get("Thread(s) per core", "unknown")),
+        ("CPU max MHz", cpu.get("CPU max MHz", "unknown")),
+        ("CPU min MHz", cpu.get("CPU min MHz", "unknown")),
+        ("L1d cache", cpu.get("L1d cache", "unknown")),
+        ("L1i cache", cpu.get("L1i cache", "unknown")),
+        ("L2 cache", cpu.get("L2 cache", "unknown")),
+        ("L3 cache", cpu.get("L3 cache", "unknown")),
+        ("Virtualization", cpu.get("Virtualization", "unknown")),
+        ("Hypervisor", cpu.get("Hypervisor vendor", "unknown")),
+        (
+            "RAM total",
+            _format_binary_size(meminfo["MemTotal"]) if "MemTotal" in meminfo else "unknown",
+        ),
+        (
+            "RAM available at start",
+            _format_binary_size(meminfo["MemAvailable"])
+            if "MemAvailable" in meminfo
+            else "unknown",
+        ),
+        ("Disk total", _format_binary_size(disk.total)),
+        ("Disk free at start", _format_binary_size(disk.free)),
+        ("Torch intra-op threads", str(th.get_num_threads())),
+        ("Torch inter-op threads", str(th.get_num_interop_threads())),
+        ("OMP_NUM_THREADS", os.getenv("OMP_NUM_THREADS", "unset")),
+        ("MKL_NUM_THREADS", os.getenv("MKL_NUM_THREADS", "unset")),
+        ("OPENBLAS_NUM_THREADS", os.getenv("OPENBLAS_NUM_THREADS", "unset")),
+    ]
+    if os.getenv("GITHUB_ACTIONS") == "true":
+        details.extend(
+            [
+                ("GitHub runner OS", os.getenv("RUNNER_OS", "unknown")),
+                ("GitHub runner architecture", os.getenv("RUNNER_ARCH", "unknown")),
+                ("GitHub runner environment", os.getenv("RUNNER_ENVIRONMENT", "unknown")),
+            ]
+        )
+    return details
 
 
 def _to_numpy_array(value: Any) -> np.ndarray | None:
@@ -2888,6 +2996,9 @@ if __name__ == "__main__":
     print(f"Eval stochastic эпизодов: {STOCHASTIC_EVAL_EPISODES}")
     print(f"Eval лимит шагов на эпизод: {MAX_EVAL_EPISODE_STEPS}")
     print(f"Campaign objective: {CAMPAIGN_OBJECTIVE}")
+    print("System resources at training start:")
+    for resource_name, resource_value in collect_system_resource_info(PLOTS_DIR):
+        print(f"  {resource_name}: {resource_value}")
     print(f"PPO n_steps: {PPO_N_STEPS:,}")
     print(f"PPO batch_size: {PPO_BATCH_SIZE:,}")
     print(f"PPO n_epochs: {PPO_N_EPOCHS:,}")
