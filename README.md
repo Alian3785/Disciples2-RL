@@ -11,7 +11,7 @@ So, this is the project to train a Superhuman bot for Disciples 2, popular turn-
    Finally, an AlphaZero-like agent is trained through self-play, with the goal of competing against the best *Disciples II* players and eventually beating the champion—whoever that may be.
    [Why not just use AlphaZero?](https://github.com/Alian3785/Disciples2-RL/blob/main/Why%20not%20just%20use%20AlphaZero.md)
 
-All features of the original game have been implemented in Python, except for rod planters, the recruitment of new heroes, the hiring of thieves, non-interactive map objects, and the original visuals.
+All features of the original game have been implemented in Python, except for rod planters, the recruitment of new heroes, the hiring of thieves, non-interactive map objects, сastle guard and the original visuals.
 
 You can run agent training for a real Disciples 2 scenario "A Return To Simpler Times" (with the exceptions above) with the following command. By default, a slightly modified Maskable PPO algorithm from [Stable Baselines 3 Contrib](https://github.com/Stable-Baselines-Team/stable-baselines3-contrib) is used.
 
