@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   close-unauthorized:
-    if: github.actor != 'Alian3785'
+    if: github.actor != 'Alian3785' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Close unauthorized pull request
