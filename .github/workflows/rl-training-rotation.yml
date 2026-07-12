@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: "17 23 * * *"
       timezone: "Europe/Moscow"
-    - cron: "17 2,5,8,11,14,17,20 * * *"
+    - cron: "17 3,7,11,15,19 * * *"
       timezone: "Europe/Moscow"
   workflow_dispatch:
     inputs:
@@ -44,23 +44,39 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.RL_RESULTS_TOKEN }}
 
-      - name: Select result storage branch
+      - name: Select cycle workspace branch
         id: storage
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
+          FULL_TRAINING: ${{ inputs.full_training || false }}
           RESULTS_BRANCH: github-experiments
+          CYCLE_BRANCH: rl-training-cycle
         run: |
           set -euo pipefail
+          rotation_run=false
+          if [[ "$EVENT_NAME" == "schedule" || "$FULL_TRAINING" == "true" ]]; then
+            rotation_run=true
+          fi
+
           target_branch=main
-          if [[ "$EVENT_NAME" == "schedule" ]] && \
-             git ls-remote --exit-code --heads origin "$RESULTS_BRANCH" >/dev/null 2>&1; then
-            git fetch origin "$RESULTS_BRANCH"
-            git switch -C "$RESULTS_BRANCH" "origin/$RESULTS_BRANCH"
-            git merge --no-edit origin/main
+          if git ls-remote --exit-code --heads origin "$RESULTS_BRANCH" >/dev/null 2>&1; then
             target_branch="$RESULTS_BRANCH"
           fi
+
+          if [[ "$rotation_run" == "true" ]]; then
+            if git ls-remote --exit-code --heads origin "$CYCLE_BRANCH" >/dev/null 2>&1; then
+              git fetch origin "$CYCLE_BRANCH"
+              git switch -C "$CYCLE_BRANCH" "origin/$CYCLE_BRANCH"
+            elif [[ "$target_branch" != "main" ]]; then
+              git fetch origin "$target_branch"
+              git switch -C "$target_branch" "origin/$target_branch"
+              git merge --no-edit origin/main
+            fi
+          fi
+
           echo "target_branch=$target_branch" >> "$GITHUB_OUTPUT"
+          echo "cycle_branch=$CYCLE_BRANCH" >> "$GITHUB_OUTPUT"
 
       - name: Select run
         id: prepare
@@ -209,13 +225,16 @@ jobs:
           if-no-files-found: warn
           retention-days: 1
 
-      - name: Commit successful scheduled result
+      - name: Save cycle progress and publish completed cycle
         if: success() && steps.prepare.outputs.advance_state == 'true'
         shell: bash
         env:
           RUN_DIR: ${{ steps.prepare.outputs.run_dir }}
           RUN_ID: ${{ steps.prepare.outputs.run_id }}
+          SEED: ${{ steps.prepare.outputs.seed }}
+          OBJECTIVE: ${{ steps.prepare.outputs.objective }}
           TARGET_BRANCH: ${{ steps.storage.outputs.target_branch }}
+          CYCLE_BRANCH: ${{ steps.storage.outputs.cycle_branch }}
           FALLBACK_BRANCH: github-experiments
         run: |
           set -euo pipefail
@@ -225,16 +244,34 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f -- github_experiments/state.json "$run_relative"
-          git commit -m "Store RL experiment $RUN_ID"
+          git commit -m "Stage RL experiment $RUN_ID"
+          git push origin "HEAD:$CYCLE_BRANCH"
+
+          if [[ "$OBJECTIVE" != "blue_dragon" ]]; then
+            echo "Cycle is still in progress; main history is unchanged."
+            exit 0
+          fi
+
+          cycle_sha="$(git rev-parse HEAD)"
+          publish_branch="$TARGET_BRANCH"
+          git fetch origin "$publish_branch"
+          git switch -C cycle-publish "origin/$publish_branch"
+          git checkout "$cycle_sha" -- github_experiments
+          git add -f -- github_experiments
+          git commit -m "Store RL experiment cycle seed$SEED"
 
           if [[ "$TARGET_BRANCH" == "main" ]]; then
-            git fetch origin main
-            git rebase origin/main
             if git push origin HEAD:main; then
-              exit 0
+              publish_branch=main
+            else
+              echo "Push to main was rejected; storing this and future results in $FALLBACK_BRANCH."
+              git push origin "HEAD:$FALLBACK_BRANCH"
+              publish_branch="$FALLBACK_BRANCH"
             fi
-            echo "Push to main was rejected; storing this and future results in $FALLBACK_BRANCH."
-            git push origin "HEAD:$FALLBACK_BRANCH"
           else
             git push origin "HEAD:$TARGET_BRANCH"
           fi
+
+          echo "Published the completed seed $SEED cycle to $publish_branch."
+          git push origin --delete "$CYCLE_BRANCH" || \
+            echo "Warning: could not delete completed cycle branch $CYCLE_BRANCH."
