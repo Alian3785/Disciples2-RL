@@ -29,4 +29,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR_URL: ${{ github.event.pull_request.html_url }}
-        run: gh pr merge --squash --admin "$PR_URL"
+        run: gh pr merge --squash "$PR_URL"
