@@ -4,7 +4,7 @@ So, this is the project to train a Superhuman bot for Disciples 2, popular turn-
    First, an agent is trained to complete individual single-player scenarios. Autoresearch is used to test multiple configurations.
    [Preliminary roadmap](https://github.com/users/Alian3785/projects/2)
 
-2. **Random and unseen maps**
+2. **Randomly generated and unseen maps**
    Next, a more general agent is trained to play previously unseen maps, face randomly generated enemies, and handle a wider variety of situations.
 
 3. **Self-play training**
