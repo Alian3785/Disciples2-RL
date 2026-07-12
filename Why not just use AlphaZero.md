@@ -6,7 +6,7 @@ Vanilla AlphaZero is not designed to handle games with fog of war, which Discipl
 
 Units in Disciples II can miss, and they may act in a different order depending on randomness. Nothing similar happens in chess, where the same move in the same position always produces the same result. **Stochasticity.**
 
-Also, Disciples II players may choose different setups at the beginning of the game, control different factions and encounter different opponents. This does not happen in simple board games. **Asymmetry.**
+Disciples II players may choose different setups at the beginning of the game, control different factions and encounter different opponents. This does not happen in simple board games. **Asymmetry.**
 
 The number of available actions grows rapidly over the course of a game, from giving different elixirs to different units to hiring city guards, constructing buildings in the capital, equipping items, and much more. **Combinatorial explosion.**
 
