@@ -1,7 +1,7 @@
 So, this is the project to train a Superhuman bot for Disciples 2, popular turn-based strategy game. There are 3 stages:
 
 1. **Single-player scenarios**
-   First, an agent is trained to complete individual single-player scenarios.
+   First, an agent is trained to complete individual single-player scenarios. Autoresearch is used to test multiple configurations.
    [Preliminary roadmap](https://github.com/users/Alian3785/projects/2)
 
 2. **Random and unseen maps**
