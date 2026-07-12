@@ -12,4 +12,4 @@ And these are not the only differences. The number of available actions grows ra
 
 All of this makes vanilla AlphaZero unsuitable for Disciples II.
 
-Almost all of these features, from partial observability to asymmetry, were addressed by a later algorithm, AlphaStar. However, its foundation includes imitation learning from game replays. I do not have any Disciples II replays. In fact, no such replay dataset exists. Nor do I have the tens of millions of dollars that were spent on the computing resources required to train AlphaStar.
+Almost all of these features, from partial observability to asymmetry, were addressed by a later algorithm, AlphaStar. However, its foundation includes imitation learning from game replays. Whose I do not have. Nor do I have the tens of millions of dollars to spent on the computing resources required to train AlphaStar-like agent.
