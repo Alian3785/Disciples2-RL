@@ -1,0 +1,20 @@
+{
+  "number": 17,
+  "title": "Три источника периодического урона",
+  "folder": "17_три_источника_периодического_урона",
+  "battles": 100,
+  "wins": {
+    "red": 50,
+    "blue": 50
+  },
+  "stalls": 0,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "event_counts": {
+    "отравления": 17,
+    "поджоги": 38
+  },
+  "mean_steps": 3.96,
+  "mean_rounds": 2
+}

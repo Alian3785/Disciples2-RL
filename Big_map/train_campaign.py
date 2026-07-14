@@ -59,6 +59,7 @@ except ImportError:
 
 from campaign_env import CampaignEnv
 from grid import DEFAULT_GRID_SIZE
+from maps import available_maps, get_map
 
 
 def _patch_maskable_categorical_cached_probs_validation() -> None:
@@ -257,10 +258,11 @@ def make_env(
     freeze_dynamic_action_layout: bool = True,
     scripted_capital_bot_enabled: bool = True,
     empire_territory_enabled: bool = True,
-    campaign_objective: str = "cities",
+    campaign_objective: str | None = None,
+    map_name: str = "default",
 ):
     env = CampaignEnv(
-        grid_size=DEFAULT_GRID_SIZE,
+        # grid_size не передаем: берется игровой размер выбранной карты.
         **REWARD_CONFIG,
         persist_blue_hp=True,
         log_enabled=log_enabled,
@@ -268,6 +270,7 @@ def make_env(
         freeze_dynamic_action_layout=freeze_dynamic_action_layout,
         scripted_capital_bot_enabled=scripted_capital_bot_enabled,
         empire_territory_enabled=empire_territory_enabled,
+        map_name=map_name,
         campaign_objective=campaign_objective,
         max_grid_steps=3000,
         Realcapital=2,
@@ -2482,6 +2485,17 @@ if __name__ == "__main__":
         help="Same as --dragon, but the objective dragon is the blue (water) dragon instead of the green one",
     )
     parser.add_argument(
+        "--map",
+        dest="map_name",
+        choices=available_maps(),
+        default="default",
+        help=(
+            "Campaign map from the maps/ package. Maps define their own objective "
+            "and enemy layout; observation/action shapes differ between maps, so "
+            "models and VecNormalize stats are NOT transferable across maps"
+        ),
+    )
+    parser.add_argument(
         "--ppo-n-steps",
         type=int,
         default=2048,
@@ -2647,24 +2661,36 @@ if __name__ == "__main__":
     FREEZE_DYNAMIC_ACTION_LAYOUT = not bool(args.no_freeze_action_layout)
     SCRIPTED_CAPITAL_BOT_ENABLED = not bool(args.no_scripted_bot)
     EMPIRE_TERRITORY_ENABLED = not bool(args.no_empire_territory)
+    MAP_NAME = str(args.map_name or "default")
     if bool(args.blue_dragon):
         CAMPAIGN_OBJECTIVE = "blue_dragon"
     elif bool(args.dragon):
         CAMPAIGN_OBJECTIVE = "dragon"
     else:
-        CAMPAIGN_OBJECTIVE = "cities"
+        # None -> цель по умолчанию для выбранной карты
+        # (default -> "cities", orc_duel -> "orc").
+        CAMPAIGN_OBJECTIVE = None
+    if CAMPAIGN_OBJECTIVE in ("dragon", "blue_dragon") and 31 not in get_map(
+        MAP_NAME
+    ).enemy_positions():
+        parser.error(
+            f"--dragon/--blue-dragon require the dragon (enemy 31) on the map; "
+            f"map '{MAP_NAME}' does not have it"
+        )
 
     test_env = CampaignEnv(
-        grid_size=DEFAULT_GRID_SIZE,
         log_enabled=False,
         detailed_step_info=False,
         freeze_dynamic_action_layout=FREEZE_DYNAMIC_ACTION_LAYOUT,
         scripted_capital_bot_enabled=SCRIPTED_CAPITAL_BOT_ENABLED,
         empire_territory_enabled=EMPIRE_TERRITORY_ENABLED,
+        map_name=MAP_NAME,
         campaign_objective=CAMPAIGN_OBJECTIVE,
         Realcapital=2,
         **REWARD_CONFIG,
     )
+    # Фактическая цель после применения map-default (для run-name и метрик).
+    CAMPAIGN_OBJECTIVE_EFFECTIVE = str(test_env.campaign_objective)
     check_env(test_env, warn=True)
     print("Среда прошла проверку!")
 
@@ -2702,9 +2728,11 @@ if __name__ == "__main__":
         print(f"[WARN] comet_ml>={required} is required, found {detected}. Comet logging disabled.")
         COMET_AVAILABLE = False
 
-    run_name_suffix = {"dragon": "-dragon", "blue_dragon": "-bluedragon"}.get(
-        CAMPAIGN_OBJECTIVE, ""
+    run_name_suffix = {"dragon": "-dragon", "blue_dragon": "-bluedragon", "orc": "-orc"}.get(
+        CAMPAIGN_OBJECTIVE_EFFECTIVE, ""
     )
+    if MAP_NAME != "default":
+        run_name_suffix = f"-{MAP_NAME}{run_name_suffix}"
     run_name = args.run_name or f"campaign-ppo-{TOTAL_STEPS // 1000}k{run_name_suffix}"
 
     comet_experiment = None
@@ -2735,7 +2763,8 @@ if __name__ == "__main__":
             "eval_episodes": EVAL_EPISODES,
             "stochastic_eval_episodes": STOCHASTIC_EVAL_EPISODES,
             "max_eval_episode_steps": MAX_EVAL_EPISODE_STEPS,
-            "campaign_objective": CAMPAIGN_OBJECTIVE,
+            "map_name": MAP_NAME,
+            "campaign_objective": CAMPAIGN_OBJECTIVE_EFFECTIVE,
             "dragon_objective": bool(args.dragon),
             "behavior_report_path": args.behavior_report_path,
             "behavior_story_path": args.behavior_story_path,
@@ -2825,6 +2854,7 @@ if __name__ == "__main__":
         scripted_capital_bot_enabled=SCRIPTED_CAPITAL_BOT_ENABLED,
         empire_territory_enabled=EMPIRE_TERRITORY_ENABLED,
         campaign_objective=CAMPAIGN_OBJECTIVE,
+        map_name=MAP_NAME,
     )
     print(f"Создание {N_ENVS} параллельных сред ({VEC_ENV_MODE})...")
     vec_env = make_vec_env(
@@ -2865,6 +2895,7 @@ if __name__ == "__main__":
                 scripted_capital_bot_enabled=SCRIPTED_CAPITAL_BOT_ENABLED,
                 empire_territory_enabled=EMPIRE_TERRITORY_ENABLED,
                 campaign_objective=CAMPAIGN_OBJECTIVE,
+                map_name=MAP_NAME,
             )
         ]
     )
@@ -2995,7 +3026,8 @@ if __name__ == "__main__":
     print(f"Eval deterministic эпизодов: {EVAL_EPISODES}")
     print(f"Eval stochastic эпизодов: {STOCHASTIC_EVAL_EPISODES}")
     print(f"Eval лимит шагов на эпизод: {MAX_EVAL_EPISODE_STEPS}")
-    print(f"Campaign objective: {CAMPAIGN_OBJECTIVE}")
+    print(f"Campaign map: {MAP_NAME}")
+    print(f"Campaign objective: {CAMPAIGN_OBJECTIVE_EFFECTIVE}")
     print("System resources at training start:")
     for resource_name, resource_value in collect_system_resource_info(PLOTS_DIR):
         print(f"  {resource_name}: {resource_value}")

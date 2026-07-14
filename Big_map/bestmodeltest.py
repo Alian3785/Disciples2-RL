@@ -16,15 +16,21 @@ from sb3_contrib.ppo_mask import MaskablePPO
 
 from campaign_env import CampaignEnv
 from grid import DEFAULT_GRID_SIZE
+from maps import available_maps
 
 
 def mask_fn(env: CampaignEnv) -> np.ndarray:
     return env.compute_action_mask()
 
 
-def make_env(scripted_capital_bot_enabled: bool = True) -> Monitor:
+def make_env(
+    scripted_capital_bot_enabled: bool = True,
+    map_name: str = "default",
+    campaign_objective: str | None = None,
+) -> Monitor:
     base = CampaignEnv(
-        grid_size=DEFAULT_GRID_SIZE,
+        # grid_size не передаем: берется игровой размер выбранной карты.
+        campaign_objective=campaign_objective,
         reward_engage_battle=0.1,
         reward_defeat_enemy=4.0,
         reward_all_enemies=4.0,
@@ -39,6 +45,7 @@ def make_env(scripted_capital_bot_enabled: bool = True) -> Monitor:
         max_grid_steps=1800,
         Realcapital=2,
         scripted_capital_bot_enabled=scripted_capital_bot_enabled,
+        map_name=map_name,
     )
     return Monitor(ActionMasker(base, mask_fn))
 
@@ -49,6 +56,8 @@ def evaluate_model(
     deterministic: bool,
     model_type: str,
     scripted_capital_bot_enabled: bool,
+    map_name: str = "default",
+    campaign_objective: str | None = None,
 ) -> int:
     if model_type == "final":
         model_path = f"./campaign_models/{run_id}/final_model.zip"
@@ -70,7 +79,9 @@ def evaluate_model(
     env = DummyVecEnv(
         [
             lambda: make_env(
-                scripted_capital_bot_enabled=scripted_capital_bot_enabled
+                scripted_capital_bot_enabled=scripted_capital_bot_enabled,
+                map_name=map_name,
+                campaign_objective=campaign_objective,
             )
         ]
     )
@@ -152,6 +163,20 @@ def main() -> int:
         action="store_true",
         help="Disable the scripted capital bot during evaluation.",
     )
+    parser.add_argument(
+        "--map",
+        dest="map_name",
+        choices=available_maps(),
+        default="default",
+        help="Campaign map; must match the map the checkpoint was trained on.",
+    )
+    parser.add_argument(
+        "--objective",
+        type=str,
+        choices=["cities", "dragon", "blue_dragon", "orc"],
+        default=None,
+        help="Campaign objective; should match training. Defaults to the map's objective.",
+    )
     args = parser.parse_args()
 
     return evaluate_model(
@@ -160,6 +185,8 @@ def main() -> int:
         deterministic=args.deterministic,
         model_type=args.model_type,
         scripted_capital_bot_enabled=not args.no_scripted_bot,
+        map_name=args.map_name,
+        campaign_objective=args.objective,
     )
 
 

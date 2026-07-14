@@ -505,7 +505,7 @@ class CampaignMaskMixin:
             "fallback_distance": None if is_reachable else int(best_distance),
             "reachable": is_reachable,
             "is_alive": bool(enemies_alive.get(int(best_enemy_id), False)),
-            "description": ENEMY_DESCRIPTIONS.get(int(best_enemy_id), "Неизвестный враг"),
+            "description": self._enemy_descriptions.get(int(best_enemy_id), "Неизвестный враг"),
         }
     def _get_nearest_enemy_stack_for_mask(
         self,
@@ -563,5 +563,5 @@ class CampaignMaskMixin:
             "fallback_distance": int(best_distance),
             "reachable": False,
             "is_alive": bool(enemies_alive.get(int(best_enemy_id), False)),
-            "description": ENEMY_DESCRIPTIONS.get(int(best_enemy_id), "Неизвестный враг"),
+            "description": self._enemy_descriptions.get(int(best_enemy_id), "Неизвестный враг"),
         }

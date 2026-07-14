@@ -30,11 +30,14 @@ class CampaignTerritoryMixin:
             "green_dragon": cls.CAMPAIGN_OBJECTIVE_DRAGON,
             "blue_dragon": cls.CAMPAIGN_OBJECTIVE_BLUE_DRAGON,
             "water_dragon": cls.CAMPAIGN_OBJECTIVE_BLUE_DRAGON,
+            "orc": cls.CAMPAIGN_OBJECTIVE_ORC,
+            "orc_duel": cls.CAMPAIGN_OBJECTIVE_ORC,
         }
         if raw in aliases:
             return aliases[raw]
         raise ValueError(
-            f"Unsupported campaign_objective={value!r}; expected 'cities', 'dragon' or 'blue_dragon'"
+            f"Unsupported campaign_objective={value!r}; "
+            "expected 'cities', 'dragon', 'blue_dragon' or 'orc'"
         )
 
     def _campaign_objective_is_cities(self) -> bool:
@@ -44,10 +47,15 @@ class CampaignTerritoryMixin:
         )
 
     def _campaign_objective_is_dragon(self) -> bool:
-        # Режим blue_dragon полностью повторяет логику dragon (та же цель — enemy_31).
+        # «Охотничьи» цели: blue_dragon и orc полностью повторяют логику dragon,
+        # меняется только целевой враг (self.OBJECTIVE_ENEMY_ID из конфига карты).
         return self._normalize_campaign_objective(
             getattr(self, "campaign_objective", "cities")
-        ) in (self.CAMPAIGN_OBJECTIVE_DRAGON, self.CAMPAIGN_OBJECTIVE_BLUE_DRAGON)
+        ) in (
+            self.CAMPAIGN_OBJECTIVE_DRAGON,
+            self.CAMPAIGN_OBJECTIVE_BLUE_DRAGON,
+            self.CAMPAIGN_OBJECTIVE_ORC,
+        )
 
     def _campaign_objective_is_blue_dragon(self) -> bool:
         return (
@@ -55,17 +63,60 @@ class CampaignTerritoryMixin:
             == self.CAMPAIGN_OBJECTIVE_BLUE_DRAGON
         )
 
+    def _campaign_objective_is_orc(self) -> bool:
+        return (
+            self._normalize_campaign_objective(getattr(self, "campaign_objective", "cities"))
+            == self.CAMPAIGN_OBJECTIVE_ORC
+        )
+
     def _is_green_dragon_objective_enemy(self, enemy_id: Optional[int]) -> bool:
         if not self._campaign_objective_is_dragon():
             return False
         try:
-            return int(enemy_id) == int(self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID)
+            return int(enemy_id) == int(
+                getattr(self, "OBJECTIVE_ENEMY_ID", self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID)
+            )
         except (TypeError, ValueError):
             return False
 
+    def _validate_objective_for_map(self) -> None:
+        """Проверяет, что выбранная цель кампании осуществима на выбранной карте."""
+        map_config = getattr(self, "_map", None)
+        map_enemy_ids = set(map_config.enemy_positions().keys()) if map_config else set()
+        map_label = getattr(map_config, "name", "default")
+        objective = self.campaign_objective
+        if objective == self.CAMPAIGN_OBJECTIVE_CITIES:
+            if not self.FINAL_OBJECTIVE_CITIES:
+                raise ValueError(
+                    f"campaign_objective='cities' is not supported on map '{map_label}': "
+                    "the map has no objective cities"
+                )
+        elif objective in (self.CAMPAIGN_OBJECTIVE_DRAGON, self.CAMPAIGN_OBJECTIVE_BLUE_DRAGON):
+            if int(self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID) not in map_enemy_ids:
+                raise ValueError(
+                    f"campaign_objective={objective!r} is not supported on map '{map_label}': "
+                    f"enemy {self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID} (dragon) is not on the map"
+                )
+        elif objective == self.CAMPAIGN_OBJECTIVE_ORC:
+            objective_enemy_id = getattr(map_config, "objective_enemy_id", None)
+            if (
+                map_config is None
+                or map_config.default_objective != self.CAMPAIGN_OBJECTIVE_ORC
+                or objective_enemy_id is None
+                or int(objective_enemy_id) not in map_enemy_ids
+            ):
+                raise ValueError(
+                    f"campaign_objective='orc' is not supported on map '{map_label}'"
+                )
+
     def _compute_green_dragon_objective_reward(self) -> float:
+        # На картах без городов формула сохраняет «двухгородский» эквивалент,
+        # чтобы награда за целевого врага совпадала с драконьей.
+        city_count = len(self.FINAL_OBJECTIVE_CITIES) or int(
+            getattr(self, "OBJECTIVE_ENEMY_REWARD_CITY_EQUIVALENT", 2)
+        )
         base_reward = self._compute_final_objective_reward(
-            len(self.FINAL_OBJECTIVE_CITIES),
+            city_count,
             captured_before=0,
         )
         return float(base_reward) * float(
@@ -90,7 +141,9 @@ class CampaignTerritoryMixin:
             return float(reward)
 
         info["green_dragon_reached"] = True
-        info["green_dragon_reached_enemy_id"] = int(self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID)
+        info["green_dragon_reached_enemy_id"] = int(
+            getattr(self, "OBJECTIVE_ENEMY_ID", self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID)
+        )
         if bool(getattr(self, "green_dragon_reached_reward_granted", False)):
             info["green_dragon_reached_reward"] = 0.0
             info["green_dragon_reached_reward_repeat"] = True
@@ -100,7 +153,7 @@ class CampaignTerritoryMixin:
         self.green_dragon_reached_reward_granted = True
         info["green_dragon_reached_reward"] = float(reached_reward)
         info["green_dragon_reached_reward_repeat"] = False
-        info["campaign_objective"] = self.CAMPAIGN_OBJECTIVE_DRAGON
+        info["campaign_objective"] = self.campaign_objective
         return float(reward) + float(reached_reward)
 
     def _apply_objective_city_reached_reward_if_needed(
@@ -157,8 +210,11 @@ class CampaignTerritoryMixin:
         if not self._is_green_dragon_objective_enemy(enemy_id):
             return float(reward)
         objective_reward = self._compute_green_dragon_objective_reward()
+        city_count = len(self.FINAL_OBJECTIVE_CITIES) or int(
+            getattr(self, "OBJECTIVE_ENEMY_REWARD_CITY_EQUIVALENT", 2)
+        )
         base_objective_reward = self._compute_final_objective_reward(
-            len(self.FINAL_OBJECTIVE_CITIES),
+            city_count,
             captured_before=0,
         )
         info["final_objective_reward"] = float(objective_reward)
@@ -167,8 +223,10 @@ class CampaignTerritoryMixin:
         info["green_dragon_objective_multiplier"] = float(
             getattr(self, "reward_green_dragon_objective_multiplier", 1.0)
         )
-        info["green_dragon_objective_enemy_id"] = int(self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID)
-        info["campaign_objective"] = self.CAMPAIGN_OBJECTIVE_DRAGON
+        info["green_dragon_objective_enemy_id"] = int(
+            getattr(self, "OBJECTIVE_ENEMY_ID", self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID)
+        )
+        info["campaign_objective"] = self.campaign_objective
         return float(reward) + float(objective_reward)
 
     def _apply_objective_dragon_damage_reward(
@@ -280,7 +338,11 @@ class CampaignTerritoryMixin:
         defeated_enemy_id: Optional[int] = None,
     ) -> Optional[str]:
         if self._is_green_dragon_objective_enemy(defeated_enemy_id):
-            return "green_dragon_defeated"
+            return (
+                "orc_defeated"
+                if self._campaign_objective_is_orc()
+                else "green_dragon_defeated"
+            )
         if self._campaign_objective_is_cities() and self._all_objective_cities_captured():
             return "objective_cities_cleared"
         return None
@@ -479,6 +541,7 @@ class CampaignTerritoryMixin:
         """True, когда игрок захватил все города из FINAL_OBJECTIVE_CITIES."""
         return (
             self._campaign_objective_is_cities()
+            and bool(self.FINAL_OBJECTIVE_CITIES)
             and len(self.captured_objective_cities) == len(self.FINAL_OBJECTIVE_CITIES)
         )
     def _is_legions_settlement_territory_cleared(self, settlement_name: str) -> bool:
@@ -691,7 +754,7 @@ class CampaignTerritoryMixin:
         """
         forbidden_tiles = set(tuple(tile) for tile in self._static_obstacle_tiles)
 
-        base_forbidden_tiles = _load_legions_territory_base_forbidden_tiles()
+        base_forbidden_tiles = self._map.territory_forbidden_tiles_provider()
         if base_forbidden_tiles:
             forbidden_tiles.update(
                 tuple(tile)
@@ -742,7 +805,7 @@ class CampaignTerritoryMixin:
         не дают frontier перескочить через карту, но source tile всегда остается стартом.
         """
         blocked_tiles = set(tuple(tile) for tile in self._static_obstacle_tiles)
-        base_water_tiles = _load_legions_territory_base_water_tiles()
+        base_water_tiles = self._map.water_tiles_provider()
         if base_water_tiles:
             blocked_tiles.update(
                 tuple(tile)

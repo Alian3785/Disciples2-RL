@@ -1,0 +1,15 @@
+{
+  "number": 9,
+  "title": "Вход на клетку врага запускает ровно один бой",
+  "folder": "09_вход_на_клетку_врага_запускает_ровно_один_бой",
+  "runs": 100,
+  "failed_runs": 0,
+  "unsupported_runs": 0,
+  "successful_checks": 200,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "unsupported_types": {},
+  "notes": [],
+  "seed_base": 73000
+}
