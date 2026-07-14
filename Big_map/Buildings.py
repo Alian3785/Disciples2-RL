@@ -36,7 +36,7 @@ empire_buildings_d2 = {
 # Горные Кланы (DII)
 mountain_clans_buildings_d2 = {
     "alredybuilt": 0,
-    "mcl_d2_b001": {"id": "mcl_d2_b001", "name": "Пивоварня",          "gold": 2,    "requires": [],                    "blocks": [],                      "built": 0, "unit": "Воин", "blocked": 0},
+    "mcl_d2_b001": {"id": "mcl_d2_b001", "name": "Пивоварня",          "gold": 2,    "requires": [],                    "blocks": [],                      "built": 0, "unit": "Гном воин", "blocked": 0},
     "mcl_d2_b002": {"id": "mcl_d2_b002", "name": "Арсенал",            "gold": 5,    "requires": ["Пивоварня"],         "blocks": ["Форпост"],             "built": 0, "unit": "Ветеран", "blocked": 0},
     "mcl_d2_b003": {"id": "mcl_d2_b003", "name": "Форпост",            "gold": 5,    "requires": ["Пивоварня"],         "blocks": ["Арсенал"],             "built": 0, "unit": "Горец", "blocked": 0},
     "mcl_d2_b004": {"id": "mcl_d2_b004", "name": "Святыня Предков",    "gold": 15,   "requires": ["Арсенал"],           "blocks": [],                      "built": 0, "unit": "Старый ветеран", "blocked": 0},
@@ -108,7 +108,7 @@ legions_buildings_d2 = {
     "lod_d2_b001": {"id": "lod_d2_b001", "name": "Нечестивый портал",     "gold": 2,    "requires": [],                     "blocks": [],                     "built": 0, "unit": "Берсерк", "blocked": 0},
     "lod_d2_b002": {"id": "lod_d2_b002", "name": "Храм Скорби",          "gold": 7.5,  "requires": ["Нечестивый портал"],   "blocks": [],                     "built": 0, "unit": "Сатир", "blocked": 0},
     "lod_d2_b003": {"id": "lod_d2_b003", "name": "Башня душ",            "gold": 5,    "requires": ["Нечестивый портал"],   "blocks": [],                     "built": 0, "unit": "Темный паладин", "blocked": 0},
-    "lod_d2_b004": {"id": "lod_d2_b004", "name": "Идол Бетрезена",       "gold": 15,   "requires": ["Нечестивый портал"],   "blocks": [],                     "built": 0, "unit": "Адский рыцарь", "blocked": 0},
+    "lod_d2_b004": {"id": "lod_d2_b004", "name": "Идол Бетрезена",       "gold": 15,   "requires": ["Башня душ"],           "blocks": [],                     "built": 0, "unit": "Адский рыцарь", "blocked": 0},
 
     "lod_d2_b005": {"id": "lod_d2_b005", "name": "Аббатство оккультизма","gold": 2,    "requires": [],                     "blocks": ["Дворец Порока"],      "built": 0, "unit": "Колдун", "blocked": 0},
     "lod_d2_b006": {"id": "lod_d2_b006", "name": "Дворец Порока",        "gold": 2,    "requires": [],                     "blocks": ["Аббатство оккультизма"],"built": 0,"unit": "Ведьма", "blocked": 0},
@@ -154,8 +154,8 @@ elves_buildings_d2 = {
     "elf_d2_b010": {"id": "elf_d2_b010", "name": "Дозорная башня",     "gold": 2,    "requires": [],                   "blocks": ["Хижина скорняка"],    "built": 0, "unit": "Дозорный", "blocked": 0},
     "elf_d2_b011": {"id": "elf_d2_b011", "name": "Лачуга",             "gold": 5,    "requires": ["Хижина скорняка"],  "blocks": ["Хибара"],             "built": 0, "unit": "Бандит", "blocked": 0},
     "elf_d2_b012": {"id": "elf_d2_b012", "name": "Хибара",             "gold": 5,    "requires": ["Хижина скорняка"],  "blocks": ["Лачуга"],             "built": 0, "unit": "Стингер", "blocked": 0},
-    "elf_d2_b013": {"id": "elf_d2_b013", "name": "Пиромантиум",        "gold": 5,    "requires": ["Хижина скорняка"],  "blocks": ["Гидромантиум"],       "built": 0, "unit": "Смотритель", "blocked": 0},
-    "elf_d2_b014": {"id": "elf_d2_b014", "name": "Гидромантиум",       "gold": 5,    "requires": ["Хижина скорняка"],  "blocks": ["Пиромантиум"],        "built": 0, "unit": "Часовой", "blocked": 0},
+    "elf_d2_b013": {"id": "elf_d2_b013", "name": "Пиромантиум",        "gold": 5,    "requires": ["Дозорная башня"],   "blocks": ["Гидромантиум"],       "built": 0, "unit": "Смотритель", "blocked": 0},
+    "elf_d2_b014": {"id": "elf_d2_b014", "name": "Гидромантиум",       "gold": 5,    "requires": ["Дозорная башня"],   "blocks": ["Пиромантиум"],        "built": 0, "unit": "Часовой", "blocked": 0},
     "elf_d2_b015": {"id": "elf_d2_b015", "name": "Укрытие",            "gold": 15,   "requires": ["Лачуга"],           "blocks": [],                     "built": 0, "unit": "Разбойник эльф", "blocked": 0},
     "elf_d2_b016": {"id": "elf_d2_b016", "name": "Пристанище",         "gold": 30,   "requires": ["Укрытие"],          "blocks": [],                     "built": 0, "unit": "Мародёр", "blocked": 0},
 

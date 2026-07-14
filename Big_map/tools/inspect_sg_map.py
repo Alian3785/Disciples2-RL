@@ -194,6 +194,18 @@ DATA_NAME_ALIASES = {
     "Скелет-рыцарь": "Скелет рыцарь",
 }
 
+# Localized names are not unique in Gunits.dbf: the neutral and Elven Alliance
+# variants of these units share English display names. Prefer the stable type ID
+# when a scenario is matched against DATA.
+DATA_TYPE_ID_ALIASES = {
+    "g000uu5008": "Нейтральный лорд эльфов",
+    "g000uu5009": "Нейтральный эльф-рейнджер",
+    "g000uu5004": "Нейтральный грифон",
+    "g000uu5010": "Нейтральный повелитель небес",
+    "g000uu5006": "Нейтральный эльфийский оракул",
+    "g000uu5011": "Нейтральный кентавр-копейщик",
+}
+
 CAMPAIGN_STACK_NAME_ALIAS_PAIRS = (
     ("Гоблин-лучник", "Гоблин лучник"),
     ("Зеленый дракон", "Зелёный дракон"),
@@ -582,7 +594,10 @@ def build_data_name_comparison(
                 continue
             seen_type_ids.add(type_id)
             canonical_name = global_units.get(type_id, {}).get("name", unit.get("name", ""))
-            mapped_name = DATA_NAME_ALIASES.get(canonical_name, canonical_name)
+            mapped_name = DATA_TYPE_ID_ALIASES.get(
+                type_id,
+                DATA_NAME_ALIASES.get(canonical_name, canonical_name),
+            )
             exact_match = data_norm.get(normalize_name(mapped_name))
             results.append(
                 {

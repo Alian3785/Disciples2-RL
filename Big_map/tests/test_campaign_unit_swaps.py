@@ -6,7 +6,13 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from campaign_env import CampaignEnv
+from campaign_env import CampaignEnv as _CampaignEnv
+
+
+class CampaignEnv(_CampaignEnv):
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("use_boss_starting_roster", False)
+        super().__init__(*args, **kwargs)
 
 
 def _unit_by_position(env: CampaignEnv, position: int) -> dict:
