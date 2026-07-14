@@ -27,7 +27,9 @@ from inspect_sg_map import parse_dbf_rows
 
 setup_utf8_console()
 
-DEFAULT_GLOBALS = Path(r"D:\Disciples II Восстание Эльфов\Globals")
+DEFAULT_GLOBALS = Path(
+    r"C:\Program Files (x86)\Steam\steamapps\common\Disciples II Rise of the Elves\Globals"
+)
 NO_ID = "g000000000"
 
 # LattS: источники атак → имена типов, как в DATA
@@ -190,6 +192,12 @@ def main() -> None:
     args = parser.parse_args()
 
     by_name = load_dbf_units(Path(args.globals))
+    by_id = {
+        str(candidate.get("unit_id", "") or "").lower(): candidate
+        for candidates in by_name.values()
+        for candidate in candidates
+        if candidate.get("unit_id")
+    }
 
     matched_ok: List[str] = []
     with_diffs: List[Tuple[str, str, List[str]]] = []
@@ -199,7 +207,9 @@ def main() -> None:
         if not isinstance(du, dict):
             continue
         name = str(du.get("кто", "")).strip()
-        candidates = by_name.get(norm_name(name), [])
+        unit_id = str(du.get("unit_id", "") or "").strip().lower()
+        id_candidate = by_id.get(unit_id)
+        candidates = [id_candidate] if id_candidate is not None else by_name.get(norm_name(name), [])
         if not candidates:
             not_found.append(name)
             continue
