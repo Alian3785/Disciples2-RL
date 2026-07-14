@@ -69,3 +69,22 @@ def test_initiative_base_restored_at_battle_end():
     assert env.winner == "blue"
     assert marauder["initiative_base"] == 60
     assert marauder["transformed"] == 0
+
+
+def test_recovery_does_not_log_raw_basestats_dictionary():
+    env = _make_env({5: "Суккуб"}, {10: "Мародёр"})
+    succub = next(u for u in env.combined if u.get("name") == "Суккуб")
+    marauder = next(u for u in env.combined if u.get("name") == "Мародёр")
+
+    env._apply_witch_effect(succub, marauder)
+    marauder["transform_recover_chance"] = 1.0
+    marauder["round_effects_done"] = 0
+    env.pop_pretty_events()
+
+    env._apply_start_of_turn_effects(marauder)
+
+    assert marauder["transformed"] == 0
+    assert all(
+        not event.strip().startswith("{")
+        for event in env.pop_pretty_events()
+    )

@@ -14,39 +14,11 @@ def _handle_row_summon_action(
     blue_back_positions: Sequence[int],
     *,
     log_prefix: str,
-    row_check_prefix: str,
     full_row_template: TemplateFactory,
     filler_template: TemplateFactory,
 ) -> Tuple[bool, str]:
     occult_team = attacker.get("team")
-    occult_positions: List[int] = []
     spawned_any = False
-
-    for unit in battle.combined:
-        if unit.get("team") != occult_team:
-            continue
-
-        name_empty = not (unit.get("name") or "").strip()
-
-        health_value = unit.get("health")
-        try:
-            health_zero = int(health_value) <= 0
-        except (TypeError, ValueError):
-            health_zero = False
-
-        if not (name_empty or health_zero):
-            continue
-
-        pos_value = unit.get("position")
-        try:
-            pos_int = int(pos_value)
-        except (TypeError, ValueError):
-            continue
-
-        occult_positions.append(pos_int)
-
-    occult_positions.sort()
-    battle._log(" ".join(str(pos) for pos in occult_positions))
 
     if occult_team == "red":
         row_pairs = list(zip(red_front_positions, red_back_positions))
@@ -100,22 +72,12 @@ def _handle_row_summon_action(
         spawned_any = True
 
     for ahead_pos, behind_pos in row_pairs:
-        pair_label = f"pos{ahead_pos}/pos{behind_pos}"
         ahead_empty = _row_slot_is_empty_or_dead(ahead_pos)
         behind_empty = _row_slot_is_empty_or_dead(behind_pos)
 
-        battle._log(
-            f"{row_check_prefix} ROW CHECK {pair_label}: "
-            f"ahead_empty={ahead_empty}, behind_empty={behind_empty}, "
-            f"ahead_unit={battle._unit_by_position(ahead_pos)}, "
-            f"behind_unit={battle._unit_by_position(behind_pos)}"
-        )
-
         if ahead_empty and behind_empty:
-            battle._log(f"Пустой ряд {pair_label}")
             _spawn_occultmaster_unit(full_row_template(), ahead_pos, "ahead")
         else:
-            battle._log(f"Не пустой ряд {pair_label}")
             row_contains_big = False
             for pos in (ahead_pos, behind_pos):
                 unit = battle._unit_by_position(pos)
@@ -248,7 +210,6 @@ def handle_lyf_action(
         blue_front_positions,
         blue_back_positions,
         log_prefix="LYF",
-        row_check_prefix="OCCULTMASTER",
         full_row_template=lambda: spider_template,
         filler_template=lambda: random.choice(filler_variants),
     )
@@ -318,7 +279,6 @@ def handle_laclaan_action(
         blue_front_positions,
         blue_back_positions,
         log_prefix="LACLAAN",
-        row_check_prefix="LACLAAN",
         full_row_template=lambda: black_dragon_template,
         filler_template=lambda: high_vampire_template,
     )
@@ -490,7 +450,6 @@ def handle_occultmaster_action(
         blue_front_positions,
         blue_back_positions,
         log_prefix="OCCULTMASTER",
-        row_check_prefix="OCCULTMASTER",
         full_row_template=lambda: dragon_template if random.random() < 0.5 else dracolich_template,
         filler_template=lambda: random.choice(filler_variants),
     )

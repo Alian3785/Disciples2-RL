@@ -21,6 +21,14 @@ BUILDING_TABLES = {
     "elves": elves_buildings_d2,
 }
 
+BUILDING_TABLES_BY_CAPITAL = {
+    1: empire_buildings_d2,
+    2: legions_buildings_d2,
+    3: mountain_clans_buildings_d2,
+    4: undead_hordes_buildings_d2,
+    5: elves_buildings_d2,
+}
+
 
 def _building_entries(table: dict):
     return {
@@ -73,3 +81,64 @@ def test_legions_high_temple_requires_sorceress_building():
     assert legions_buildings_d2["lod_d2_b012"]["name"] == "Высокий храм"
     assert legions_buildings_d2["lod_d2_b012"]["unit"] == "Суккуб"
     assert legions_buildings_d2["lod_d2_b012"]["requires"] == ("Дворец Греха",)
+
+
+def test_progression_targets_follow_their_faction_building_tree():
+    for source in DATA:
+        capital = int(source.get("столица", 0) or 0)
+        table = BUILDING_TABLES_BY_CAPITAL.get(capital)
+        if table is None:
+            continue
+
+        entries_by_unit = {
+            str(entry.get("unit", "") or "").strip(): entry
+            for entry in _building_entries(table).values()
+            if str(entry.get("unit", "") or "").strip()
+        }
+        source_name = str(source.get("кто", "") or "").strip()
+        source_building = entries_by_unit.get(source_name)
+
+        for target_name in source.get("превращается в", ()) or ():
+            target_building = entries_by_unit.get(target_name)
+            assert target_building is not None, (
+                source_name,
+                target_name,
+                "missing target building",
+            )
+            if source_building is None:
+                continue
+            assert source_building["name"] in target_building.get("requires", ()), (
+                source_name,
+                target_name,
+                source_building["name"],
+                target_building.get("requires", ()),
+            )
+
+
+def test_alternative_progression_buildings_block_each_other_symmetrically():
+    for source in DATA:
+        targets = tuple(source.get("превращается в", ()) or ())
+        if len(targets) < 2:
+            continue
+
+        capital = int(source.get("столица", 0) or 0)
+        table = BUILDING_TABLES_BY_CAPITAL[capital]
+        entries_by_unit = {
+            str(entry.get("unit", "") or "").strip(): entry
+            for entry in _building_entries(table).values()
+            if str(entry.get("unit", "") or "").strip()
+        }
+
+        for target_name in targets:
+            target_building = entries_by_unit[target_name]
+            alternative_names = {
+                entries_by_unit[alternative]["name"]
+                for alternative in targets
+                if alternative != target_name
+            }
+            assert alternative_names <= set(target_building.get("blocks", ())), (
+                source.get("кто"),
+                target_name,
+                alternative_names,
+                target_building.get("blocks", ()),
+            )

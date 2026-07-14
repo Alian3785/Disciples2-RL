@@ -49,3 +49,4 @@ def test_occultmaster_summoned_wight_uses_battle_unit_type(monkeypatch):
     assert reason == "ok"
     assert summoned["name"] == "Сущий"
     assert summoned["unit_type"] == "Wight"
+    assert battle.logs == ["OCCULTMASTER: призван Сущий на pos4 (behind)."]

@@ -47,6 +47,7 @@ class CampaignEnv(
     MAX_GRID_UNIT_SWAPS_PER_TURN = 3
 
     """
+
     Двухуровневая среда: Grid World + Battle.
 
     Режимы:
@@ -110,6 +111,13 @@ class CampaignEnv(
         Action masking применяется для блокировки недопустимых действий.
     """
 
+    BOSS_STARTING_BLUE_ROSTER: Dict[int, str] = {
+        7: "Дьявол Бездны",
+        8: "Утер демон",
+        9: "Астерот",
+    }
+    BOSS_STARTING_BLUE_HERO_NAME = "Утер демон"
+
     def __init__(
         self,
         grid_size: int = DEFAULT_GRID_SIZE,
@@ -156,6 +164,7 @@ class CampaignEnv(
         max_grid_steps: int = 1800,
         Realcapital: int = 1,
         typeoflord: int = 1,
+        use_boss_starting_roster: bool = True,
         campaign_objective: str = "cities",
         reward_objective_city_reached: float = 6.0,
         reward_green_dragon_reached: float = 6.0,
@@ -177,6 +186,7 @@ class CampaignEnv(
         super().__init__()
 
         self.grid_size = grid_size
+        self.use_boss_starting_roster = bool(use_boss_starting_roster)
         self.reward_engage_battle = reward_engage_battle  # Награда за участие в битве
         self.reward_defeat_enemy = reward_defeat_enemy    # Награда за победу в битве
         if reward_ruin_clear_bonus is None:
@@ -606,6 +616,12 @@ class CampaignEnv(
         """
         lord_type = self._normalize_typeoflord(getattr(self, "typeoflord", 1))
         Realcapital = self._normalize_capital_id(getattr(self, "Realcapital", 1))
+        if (
+            self.use_boss_starting_roster
+            and Realcapital == 2
+            and lord_type == 1
+        ):
+            return dict(self.BOSS_STARTING_BLUE_ROSTER)
         roster_specs: Dict[Tuple[int, int], Dict[int, str]] = {
             (1, 1): {
                 7: "\u0421\u043a\u0432\u0430\u0435\u0440",
@@ -706,6 +722,11 @@ class CampaignEnv(
         if spec is None:
             return deepcopy(UNITS_BLUE)
 
+        boss_roster_active = (
+            self.use_boss_starting_roster
+            and self._normalize_capital_id(getattr(self, "Realcapital", 1)) == 2
+            and self._normalize_typeoflord(getattr(self, "typeoflord", 1)) == 1
+        )
         team: List[Dict] = []
         for position in self.GRID_BOTTLE_POSITIONS:
             unit_name = spec.get(int(position))
@@ -715,7 +736,10 @@ class CampaignEnv(
             unit_data = self._find_unit_data_by_name(unit_name)
             if unit_data is None:
                 raise ValueError(f"Unknown starting unit {unit_name!r}")
-            team.append(self._build_unit_from_data(unit_data, "blue", int(position)))
+            unit = self._build_unit_from_data(unit_data, "blue", int(position))
+            if boss_roster_active and unit_name == self.BOSS_STARTING_BLUE_HERO_NAME:
+                unit["hero"] = True
+            team.append(unit)
         return team
 
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
