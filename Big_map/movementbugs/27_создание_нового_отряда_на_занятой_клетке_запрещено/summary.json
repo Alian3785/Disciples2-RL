@@ -1,0 +1,17 @@
+{
+  "number": 27,
+  "title": "Создание нового отряда на занятой клетке запрещено",
+  "folder": "27_создание_нового_отряда_на_занятой_клетке_запрещено",
+  "runs": 100,
+  "failed_runs": 0,
+  "unsupported_runs": 100,
+  "successful_checks": 0,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "unsupported_types": {
+    "В CampaignEnv нет операции создания нового мобильного стратегического отряда; представлены только player stack и заранее созданный scripted capital bot.": 100
+  },
+  "notes": [],
+  "seed_base": 73000
+}

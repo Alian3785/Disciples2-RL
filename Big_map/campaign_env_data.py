@@ -13,7 +13,13 @@ from copy import deepcopy
 from pathlib import Path
 
 from battle_env import BattleEnv, UNITS_BLUE, FEATURES_PER_UNIT
-from enemy_configs import ENEMY_CONFIGS, ENEMY_CONFIGS_BLUE_DRAGON, ENEMY_DESCRIPTIONS
+from enemy_configs import (
+    ENEMY_CONFIGS,
+    ENEMY_CONFIGS_BLUE_DRAGON,
+    ENEMY_DESCRIPTIONS,
+    get_enemy_configs_bundle,
+)
+from maps import get_map
 from grid import (
     CAPITAL_HEAL_TILE_ARMOR_BONUS,
     CAPITAL_HEAL_TILE_REST_BONUS,
@@ -62,6 +68,10 @@ from hire import (
 from scroll_spell_data import SCROLL_ITEM_ALIASES, SCROLL_ITEM_DEFINITIONS
 
 from campaign_env_scenario import *
+
+# Конфиг карты по умолчанию: классовые константы ниже берут значения из него,
+# per-map экземпляры CampaignEnv затеняют их instance-атрибутами.
+_DEFAULT_MAP = get_map("default")
 
 BUILDINGS_D2 = {
     "empire": empire_buildings_d2,
@@ -310,107 +320,13 @@ class CampaignConstantsMixin:
     GRID_SUPREME_ELIXIR_ACTION_START = (
         GRID_TITAN_ELIXIR_ACTION_START + len(TITAN_ELIXIR_POSITIONS)
     )
-    FINAL_OBJECTIVE_CITIES = {
-        "Порт Полонис": (34, 68),
-        "Соругирилла": (35, 69),
-    }
-    BASE_MERCHANT_SITE_DATA = {
-        "Лавка Алара": {
-            "anchor": (21, 34),
-            "interaction_tiles": (
-                (24, 35),
-                (24, 36),
-                (22, 37),
-                (23, 37),
-                (24, 37),
-            ),
-        },
-        "Лавка Тралара": {
-            "anchor": (36, 1),
-            "interaction_tiles": (
-                (39, 2),
-                (39, 3),
-                (37, 4),
-                (38, 4),
-                (39, 4),
-            ),
-        },
-    }
-    BASE_SPELL_SHOP_SITE_DATA = {
-        "Лавка заклинаний Маллавиена": {
-            "site_id": "S001SI0009",
-            "anchor": (42, 2),
-            "interaction_tiles": (
-                (45, 3),
-                (45, 4),
-                (43, 5),
-                (44, 5),
-                (45, 5),
-            ),
-        },
-    }
-    BASE_MERCENARY_SITE_DATA = {
-        "Лагерь северных варваров": {
-            "site_id": "S001SI0002",
-            "anchor": (9, 42),
-            "interaction_tiles": (
-                (12, 43),
-                (12, 44),
-                (10, 45),
-                (11, 45),
-                (12, 45),
-            ),
-            "roster": (
-                {
-                    "slot": 0,
-                    "unit_id": "g000uu5040",
-                    "unit_name": "Варвар",
-                    "gold": 850.0,
-                    "stock": 1,
-                },
-            ),
-        },
-        "Пустой лагерь наёмников": {
-            "site_id": "S001SI0007",
-            "anchor": (15, 1),
-            "interaction_tiles": (
-                (18, 2),
-                (18, 3),
-                (16, 4),
-                (17, 4),
-                (18, 4),
-            ),
-            "roster": (
-                {
-                    "slot": 0,
-                    "unit_id": "g000uu5017",
-                    "unit_name": "Гоблин",
-                    "gold": 50.0,
-                    "stock": 1,
-                },
-                {
-                    "slot": 1,
-                    "unit_id": "g000uu5018",
-                    "unit_name": "Гоблин лучник",
-                    "gold": 50.0,
-                    "stock": 1,
-                },
-            ),
-        },
-    }
-    BASE_TRAINER_SITE_DATA = {
-        "Тренировочный лагерь": {
-            "site_id": "S001SI0006",
-            "anchor": (38, 30),
-            "interaction_tiles": (
-                (41, 31),
-                (41, 32),
-                (39, 33),
-                (40, 33),
-                (41, 33),
-            ),
-        },
-    }
+    # Данные точек интереса живут в maps/default.py; здесь только классовые
+    # дефолты для карты по умолчанию.
+    FINAL_OBJECTIVE_CITIES = dict(_DEFAULT_MAP.final_objective_cities)
+    BASE_MERCHANT_SITE_DATA = dict(_DEFAULT_MAP.merchant_sites)
+    BASE_SPELL_SHOP_SITE_DATA = dict(_DEFAULT_MAP.spell_shop_sites)
+    BASE_MERCENARY_SITE_DATA = dict(_DEFAULT_MAP.mercenary_sites)
+    BASE_TRAINER_SITE_DATA = dict(_DEFAULT_MAP.trainer_sites)
     MERCENARY_FRONTLINE_UNIT_TYPES = frozenset(
         {
             "Warrior",
@@ -459,7 +375,14 @@ class CampaignConstantsMixin:
     CAMPAIGN_OBJECTIVE_CITIES = "cities"
     CAMPAIGN_OBJECTIVE_DRAGON = "dragon"
     CAMPAIGN_OBJECTIVE_BLUE_DRAGON = "blue_dragon"
+    CAMPAIGN_OBJECTIVE_ORC = "orc"
     GREEN_DRAGON_OBJECTIVE_ENEMY_ID = 31
+    # Целевой враг «охотничьих» целей кампании (dragon/blue_dragon/orc).
+    # Классовый дефолт — дракон; карта затеняет instance-атрибутом.
+    OBJECTIVE_ENEMY_ID = GREEN_DRAGON_OBJECTIVE_ENEMY_ID
+    # Эквивалент числа городов в формуле финальной награды за целевого врага
+    # на картах без городов (len(FINAL_OBJECTIVE_CITIES) == 0).
+    OBJECTIVE_ENEMY_REWARD_CITY_EQUIVALENT = 2
     CHEST_PICKUP_RADIUS = 1
     BONUS_SMALL_HEAL_SOURCE_ITEM = "Potion of Healing"
     BONUS_SMALL_HEAL_ITEM_NAME = "Банка исцеления (+50 HP)"
@@ -1360,42 +1283,11 @@ class CampaignConstantsMixin:
         BONUS_REVIVE_SOURCE_ITEM,
     )
     ENEMY_REWARD_MULTIPLIERS = {}
+    # Данные наград руин живут в maps/default.py (совпадение имён предметов
+    # с константами выше проверяется тестом).
     RUIN_REWARD_BY_ENEMY_ID: Dict[int, Dict[str, object]] = {
-        70: {
-            "title": "Замок орка",
-            "ruin_pos": (15, 9),
-            "marker_pos": (17, 11),
-            "item": TITAN_ELIXIR_ITEM_NAME,
-            "gold": 200,
-        },
-        71: {
-            "title": "Храм Мараши",
-            "ruin_pos": (3, 20),
-            "marker_pos": (5, 22),
-            "item": RUIN_INVULNERABILITY_ELIXIR_ITEM_NAME,
-            "gold": 300,
-        },
-        72: {
-            "title": "Руины (30, 22)",
-            "ruin_pos": (30, 22),
-            "marker_pos": (32, 24),
-            "item": RUIN_LIFE_ELIXIR_ITEM_NAME,
-            "gold": 300,
-        },
-        73: {
-            "title": "Руины Бритона",
-            "ruin_pos": (19, 29),
-            "marker_pos": (21, 31),
-            "item": SUPREME_ELIXIR_ITEM_NAME,
-            "gold": 150,
-        },
-        74: {
-            "title": "Замок Ху'Ларша",
-            "ruin_pos": (43, 34),
-            "marker_pos": (45, 36),
-            "item": RING_OF_AGES_ITEM_NAME,
-            "gold": 400,
-        },
+        int(enemy_id): dict(reward_data)
+        for enemy_id, reward_data in _DEFAULT_MAP.ruin_rewards.items()
     }
     RUIN_REWARD_ITEM_NAMES = frozenset(
         {

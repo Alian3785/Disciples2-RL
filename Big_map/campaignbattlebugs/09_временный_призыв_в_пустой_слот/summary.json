@@ -1,0 +1,12 @@
+{
+  "number": 9,
+  "title": "Временный призыв в пустой слот",
+  "folder": "09_временный_призыв_в_пустой_слот",
+  "runs": 100,
+  "failed_runs": 0,
+  "successful_checks": 15900,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "seed_base": 42000
+}

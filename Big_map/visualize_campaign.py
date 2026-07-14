@@ -32,6 +32,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
 from campaign_env import CampaignEnv
 from grid import DEFAULT_GRID_SIZE, DEFAULT_HERO_GRID_POSITION
+from maps import available_maps
 from train_campaign import REWARD_CONFIG
 from enemy_configs import ENEMY_DESCRIPTIONS
 from battle_env import (
@@ -2155,10 +2156,11 @@ def run_campaign_visualization(
     map_png_path: str | None = None,
     scenario_path: str | None = None,
     scripted_capital_bot_enabled: bool = True,
-    campaign_objective: str = "cities",
+    campaign_objective: str | None = None,
     vecnormalize_path: str | None = None,
     seed: int | None = None,
     max_grid_steps: int = 1800,
+    map_name: str = "default",
 ):
     """Запускает визуализацию кампании."""
 
@@ -2181,7 +2183,7 @@ def run_campaign_visualization(
     # Создание среды
     def make_campaign_env(*, log_enabled: bool) -> CampaignEnv:
         return CampaignEnv(
-            grid_size=DEFAULT_GRID_SIZE,
+            # grid_size не передаем: берется игровой размер выбранной карты.
             **REWARD_CONFIG,
             persist_blue_hp=True,
             log_enabled=log_enabled,
@@ -2189,6 +2191,7 @@ def run_campaign_visualization(
             freeze_dynamic_action_layout=True,
             scripted_capital_bot_enabled=scripted_capital_bot_enabled,
             empire_territory_enabled=True,
+            map_name=map_name,
             campaign_objective=campaign_objective,
             max_grid_steps=max_grid_steps,
             Realcapital=2,
@@ -2213,11 +2216,18 @@ def run_campaign_visualization(
         else:
             print(f"VecNormalize stats not found: {vecnormalize_path}")
 
-    # Визуализаторы
+    # Визуализаторы. Фоновая PNG и .sg-сценарий относятся к карте по умолчанию:
+    # на других картах без явных путей рисуем чистую сетку из состояния среды.
+    if map_name == "default":
+        default_map_png = _existing_path_or_none(DEFAULT_MAP_PNG_PATH)
+        default_scenario = _existing_path_or_none(DEFAULT_SCENARIO_PATH)
+    else:
+        default_map_png = None
+        default_scenario = None
     grid_viz = CampaignVisualizer(
         grid_size=env_base.grid_size,
-        background_map_path=map_png_path or _existing_path_or_none(DEFAULT_MAP_PNG_PATH),
-        scenario_path=scenario_path or _existing_path_or_none(DEFAULT_SCENARIO_PATH),
+        background_map_path=map_png_path or default_map_png,
+        scenario_path=scenario_path or default_scenario,
     )
     battle_viz = None  # Создаётся при входе в бой
 
@@ -2511,7 +2521,8 @@ def run_campaign_visualization(
                 # Начало боя — показываем на карте
                 enemy_id = info.get("enemy_id")
                 print(f"\n⚔️ Начало боя с врагом {enemy_id}!")
-                print(f"   {ENEMY_DESCRIPTIONS.get(enemy_id, 'Unknown')}")
+                enemy_descriptions = getattr(env_base, "_enemy_descriptions", ENEMY_DESCRIPTIONS)
+                print(f"   {enemy_descriptions.get(enemy_id, 'Unknown')}")
                 (
                     heal_left,
                     max_heal,
@@ -2795,14 +2806,43 @@ if __name__ == "__main__":
     parser.add_argument(
         "--map-png",
         type=str,
-        default=_existing_path_or_none(DEFAULT_MAP_PNG_PATH),
-        help="Path to campaign background PNG. Defaults to outputs/a_return_to_simpler_times_entries.png if present.",
+        default=None,
+        help=(
+            "Path to campaign background PNG. On the default map falls back to "
+            "outputs/a_return_to_simpler_times_entries.png if present; other maps "
+            "render a plain grid unless a PNG is given explicitly."
+        ),
     )
     parser.add_argument(
         "--scenario-path",
         type=str,
-        default=_existing_path_or_none(DEFAULT_SCENARIO_PATH),
-        help="Path to scenario .sg used to highlight capitals and villages.",
+        default=None,
+        help=(
+            "Path to scenario .sg used to highlight capitals and villages. "
+            "Defaults to the bundled scenario on the default map only."
+        ),
+    )
+    parser.add_argument(
+        "--map",
+        dest="map_name",
+        choices=available_maps(),
+        default="default",
+        help=(
+            "Campaign map from the maps/ package. Models are per-map: a checkpoint "
+            "trained on one map cannot run on another"
+        ),
+    )
+    parser.add_argument(
+        "--objective",
+        type=str,
+        choices=["cities", "dragon", "blue_dragon", "orc"],
+        default=None,
+        help="Campaign objective override; defaults to the selected map's objective",
+    )
+    parser.add_argument(
+        "--no-scripted-bot",
+        action="store_true",
+        help="Disable the scripted Empire capital bot",
     )
     args = parser.parse_args()
 
@@ -2820,4 +2860,7 @@ if __name__ == "__main__":
         deterministic=args.deterministic,
         map_png_path=args.map_png,
         scenario_path=args.scenario_path,
+        map_name=args.map_name,
+        campaign_objective=args.objective,
+        scripted_capital_bot_enabled=not args.no_scripted_bot,
     )

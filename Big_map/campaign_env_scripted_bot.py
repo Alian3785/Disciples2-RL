@@ -641,7 +641,7 @@ class CampaignScriptedBotMixin:
             "position": tuple(position),
             "path_distance": int(distance) if distance < 10000 else None,
             "fallback_distance": None if distance < 10000 else int(distance - 10000),
-            "description": ENEMY_DESCRIPTIONS.get(int(enemy_id), "Неизвестный враг"),
+            "description": self._enemy_descriptions.get(int(enemy_id), "Неизвестный враг"),
         }
 
     def _scripted_bot_path_from_came_from(
@@ -678,7 +678,9 @@ class CampaignScriptedBotMixin:
         red_team_state = self._get_enemy_team_state(enemy_id)
         red_team = self._build_battle_team_with_placeholders(
             "red",
-            red_team_state or ENEMY_CONFIGS.get(enemy_id, ENEMY_CONFIGS[1]),
+            red_team_state
+            or self._enemy_configs.get(enemy_id)
+            or next(iter(self._enemy_configs.values())),
         )
         self._apply_settlement_defender_armor_bonus(enemy_id, red_team)
         blue_team = self._build_battle_team_with_placeholders(

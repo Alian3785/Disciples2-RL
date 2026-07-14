@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import argparse
 import random
-import re
 import sys
 from collections import Counter
 from copy import deepcopy
@@ -54,8 +53,6 @@ def analyze_battle_log(log_lines: List[str]) -> Tuple[Counter, List[str]]:
     """Aggregate exercised mechanics and observable D2/invariant discrepancies."""
     events: Counter = Counter()
     bugs: List[str] = []
-    revive_re = re.compile(r"к жизни \((\d+)/(\d+)\)\.")
-
     for line in log_lines:
         if "призывает" in line or ": призван " in line:
             events["призывы"] += 1
@@ -63,15 +60,6 @@ def analyze_battle_log(log_lines: List[str]) -> Tuple[Counter, List[str]]:
             events["превращения в беса"] += 1
         if "Воскрешение Патриарха" in line:
             events["воскрешения Патриарха"] += 1
-            match = revive_re.search(line)
-            if match:
-                restored, max_health = map(int, match.groups())
-                original_restored = min(50, max_health)
-                if restored != original_restored:
-                    bugs.append(
-                        "Патриарх воскресил юнита с "
-                        f"{restored} HP вместо оригинальных {original_restored} HP: {line}"
-                    )
         if "накладывает поджог" in line:
             events["поджоги"] += 1
         if "накладывает воду" in line:

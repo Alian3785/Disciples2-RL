@@ -57,7 +57,7 @@ class CampaignObservationMixin:
             return []
         if hasattr(self, "enemy_team_states"):
             return self._get_enemy_team_state(normalized_enemy_id)
-        return ENEMY_CONFIGS.get(normalized_enemy_id, [])
+        return self._enemy_configs.get(normalized_enemy_id, [])
 
     def _build_enemy_obs_team_signature(self, enemy_ids: Tuple[object, ...]) -> Tuple[Tuple[int, int, int], ...]:
         signature: List[Tuple[int, int, int]] = []
@@ -183,15 +183,15 @@ class CampaignObservationMixin:
         """
         Готовит layout для блока врагов в grid-наблюдении.
 
-        Метод проходит по статическим ENEMY_CONFIGS, собирает полный набор
-        типов юнитов и максимальное число слотов в enemy stack. Эти значения
-        задают ширину one-hot кодирования типа юнита и количество повторяемых
-        unit-slot признаков на каждого врага. Само состояние врагов здесь не
-        кодируется; метод только фиксирует размеры и индексы будущего блока.
+        Метод проходит по статическим enemy configs выбранной карты, собирает
+        полный набор типов юнитов и максимальное число слотов в enemy stack.
+        Эти значения задают ширину one-hot кодирования типа юнита и количество
+        повторяемых unit-slot признаков на каждого врага. Само состояние врагов
+        здесь не кодируется; метод только фиксирует размеры и индексы будущего блока.
         """
         unit_types = set()
         max_units = 0
-        for team in ENEMY_CONFIGS.values():
+        for team in self._enemy_configs.values():
             if not team:
                 continue
             max_units = max(max_units, len(team))

@@ -120,7 +120,7 @@ class CampaignEnv(
 
     def __init__(
         self,
-        grid_size: int = DEFAULT_GRID_SIZE,
+        grid_size: Optional[int] = None,
         reward_engage_battle: float = 0.2,  # Бонус за вход в бой с живым врагом.
         reward_defeat_enemy: float = 1.0,   # Награда за победу в бою против каждого отряда
         reward_ruin_clear_bonus: Optional[float] = None,  # Небольшой бонус сверху за зачистку руин
@@ -164,8 +164,9 @@ class CampaignEnv(
         max_grid_steps: int = 1800,
         Realcapital: int = 1,
         typeoflord: int = 1,
-        use_boss_starting_roster: bool = True,
-        campaign_objective: str = "cities",
+        use_boss_starting_roster: Optional[bool] = None,
+        map_name: str = "default",
+        campaign_objective: Optional[str] = None,
         reward_objective_city_reached: float = 6.0,
         reward_green_dragon_reached: float = 6.0,
         reward_green_dragon_objective_multiplier: float = 2.0,
@@ -185,8 +186,72 @@ class CampaignEnv(
         """
         super().__init__()
 
-        self.grid_size = grid_size
-        self.use_boss_starting_roster = bool(use_boss_starting_roster)
+        # --- Выбор карты: данные забираются из пакета maps/. ---
+        self.map_name = str(map_name or "default").strip().lower()
+        self._map = get_map(self.map_name)
+        (
+            self._enemy_configs,
+            self._enemy_descriptions,
+            self._enemy_configs_blue_dragon,
+        ) = get_enemy_configs_bundle(self.map_name)
+        # Игровой размер сетки: явный аргумент > play_grid_size карты > база карты.
+        if grid_size is not None:
+            self.grid_size = int(grid_size)
+        else:
+            self.grid_size = int(self._map.play_grid_size or self._map.grid_size)
+        if self.map_name != "default":
+            # Не-дефолтные карты затеняют классовые константы instance-атрибутами.
+            # Для карты по умолчанию затенение пропускается: классовые атрибуты
+            # уже совпадают с map-конфигом, а тестовые подклассы CampaignEnv
+            # переопределяют именно классовые атрибуты — их override должен
+            # оставаться видимым.
+            # Старт героя приводится к игровой сетке (данные карты — в base-координатах).
+            self.CASTLE_POS = scale_static_tiles(
+                self.grid_size,
+                ((int(self._map.hero_start[0]), int(self._map.hero_start[1])),),
+                base_grid_size=int(self._map.grid_size),
+            )[0]
+            self.CASTLE_HEAL_TILE_COUNT = int(self._map.heal_tile_count)
+            self.FINAL_OBJECTIVE_CITIES = {
+                str(city_name): tuple(int(enemy_id) for enemy_id in enemy_ids)
+                for city_name, enemy_ids in self._map.final_objective_cities.items()
+            }
+            self.BASE_MERCHANT_SITE_DATA = dict(self._map.merchant_sites)
+            self.BASE_SPELL_SHOP_SITE_DATA = dict(self._map.spell_shop_sites)
+            self.BASE_MERCENARY_SITE_DATA = dict(self._map.mercenary_sites)
+            self.BASE_TRAINER_SITE_DATA = dict(self._map.trainer_sites)
+            self.RUIN_REWARD_BY_ENEMY_ID = {
+                int(enemy_id): dict(reward_data)
+                for enemy_id, reward_data in self._map.ruin_rewards.items()
+            }
+            self.RUIN_REWARD_ITEM_NAMES = frozenset(
+                {
+                    str(reward_data.get("item", "") or "")
+                    for reward_data in self.RUIN_REWARD_BY_ENEMY_ID.values()
+                    if str(reward_data.get("item", "") or "")
+                }
+            )
+            if self._map.objective_enemy_id is not None:
+                self.OBJECTIVE_ENEMY_ID = int(self._map.objective_enemy_id)
+        if self._map.empire_territory_source_enemy_id is not None:
+            self.EMPIRE_TERRITORY_SOURCE_ENEMY_ID = int(
+                self._map.empire_territory_source_enemy_id
+            )
+            self.EMPIRE_TERRITORY_SOURCE_TILE = tuple(
+                int(coord) for coord in self._map.empire_territory_source_tile
+            )
+        else:
+            # На карте нет вражеской столицы — территория Империи невозможна.
+            empire_territory_enabled = False
+        if not self._map.scripted_capital_bot_supported:
+            scripted_capital_bot_enabled = False
+
+        # Стартовый ростер: явный аргумент > дефолт карты.
+        self.use_boss_starting_roster = bool(
+            use_boss_starting_roster
+            if use_boss_starting_roster is not None
+            else self._map.boss_starting_roster_default
+        )
         self.reward_engage_battle = reward_engage_battle  # Награда за участие в битве
         self.reward_defeat_enemy = reward_defeat_enemy    # Награда за победу в битве
         if reward_ruin_clear_bonus is None:
@@ -236,7 +301,13 @@ class CampaignEnv(
         self.scripted_capital_bot_config_enabled = bool(scripted_capital_bot_enabled)
         self.empire_territory_enabled = bool(empire_territory_enabled)
         self.max_grid_steps = max(1, int(max_grid_steps))
-        self.campaign_objective = self._normalize_campaign_objective(campaign_objective)
+        requested_objective = (
+            campaign_objective
+            if campaign_objective is not None
+            else self._map.default_objective
+        )
+        self.campaign_objective = self._normalize_campaign_objective(requested_objective)
+        self._validate_objective_for_map()
         self.reward_objective_city_reached = max(0.0, float(reward_objective_city_reached))
         self.reward_dragon_damage_fraction = max(0.0, float(reward_dragon_damage_fraction))
         self.reward_dragon_rounds_record = max(0.0, float(reward_dragon_rounds_record))
@@ -275,18 +346,24 @@ class CampaignEnv(
         self._reset_buildings_state()
         self._reset_spells_state()
 
-        enemy_positions = scale_enemy_positions(self.grid_size)
+        enemy_positions = scale_enemy_positions(
+            self.grid_size,
+            base_enemy_positions=self._map.enemy_positions(),
+        )
         self.castle_heal_tiles: Tuple[Tuple[int, int], ...] = resolve_heal_tiles(
             self.grid_size,
             enemy_positions,
             start_position=self.CASTLE_POS,
             heal_tile_count=self.CASTLE_HEAL_TILE_COUNT,
+            base_static_heal_tiles=self._map.static_heal_tiles,
         )
         obstacle_tiles = resolve_obstacle_tiles(
             self.grid_size,
             enemy_positions,
             heal_tiles=self.castle_heal_tiles,
             start_position=self.CASTLE_POS,
+            base_static_obstacle_blocks=self._map.obstacle_blocks,
+            base_static_empty_tiles=self._map.empty_tiles,
         )
         chest_contents = resolve_chests(
             self.grid_size,
@@ -294,6 +371,7 @@ class CampaignEnv(
             heal_tiles=self.castle_heal_tiles,
             obstacle_tiles=obstacle_tiles,
             start_position=self.CASTLE_POS,
+            base_static_chests=self._map.chests,
         )
         mana_reserved_tiles = set(enemy_positions.values())
         mana_reserved_tiles.update(self.castle_heal_tiles)
@@ -303,6 +381,7 @@ class CampaignEnv(
         mana_sources = resolve_mana_sources(
             self.grid_size,
             reserved_tiles=mana_reserved_tiles,
+            base_static_mana_sources=self._map.mana_sources,
         )
         self._static_enemy_positions = dict(enemy_positions)
         self._static_castle_heal_tiles: Tuple[Tuple[int, int], ...] = tuple(self.castle_heal_tiles)
@@ -316,6 +395,8 @@ class CampaignEnv(
             resolve_legions_settlement_territory_sources(
                 self.grid_size,
                 enemy_positions,
+                base_settlement_territory_data=self._map.legions_settlement_territory_data,
+                base_settlement_level_by_heal_tile=self._map.settlement_level_by_heal_tile,
             )
         )
         self.legions_settlement_territory_source_by_name: Dict[str, Dict[str, object]] = {
@@ -343,27 +424,27 @@ class CampaignEnv(
 
         # Подсреда grid: враги и препятствия автоматически масштабируются под размер карты.
         self.grid_env = GridWorldEnv(
-            grid_size=grid_size,
+            grid_size=self.grid_size,
             enemy_positions=self._static_enemy_positions,
             obstacle_positions=self._static_obstacle_tiles,
             start_position=self.CASTLE_POS,
             max_steps=max_grid_steps,
         )
-        base_water_tiles = _load_campaign_base_water_tiles()
+        base_water_tiles = self._map.water_tiles_provider()
         self.water_tiles: Tuple[Tuple[int, int], ...] = tuple(
             sorted(
                 tuple(tile)
                 for tile in scale_static_tiles(self.grid_size, base_water_tiles)
             )
         ) if base_water_tiles else ()
-        base_forest_tiles = _load_campaign_base_forest_tiles()
+        base_forest_tiles = self._map.forest_tiles_provider()
         self.forest_tiles: Tuple[Tuple[int, int], ...] = tuple(
             sorted(
                 tuple(tile)
                 for tile in scale_static_tiles(self.grid_size, base_forest_tiles)
             )
         ) if base_forest_tiles else ()
-        base_road_tiles = _load_campaign_base_road_tiles()
+        base_road_tiles = self._map.road_tiles_provider()
         self.road_tiles: Tuple[Tuple[int, int], ...] = tuple(
             sorted(
                 tuple(tile)
@@ -374,17 +455,22 @@ class CampaignEnv(
         self.legions_territory_source_tile: Tuple[int, int] = tuple(
             int(coord) for coord in self.grid_env.start_position
         )
-        base_gold_mine_tiles = _load_legions_territory_base_gold_mine_tiles()
+        base_gold_mine_tiles = self._map.gold_mine_tiles_provider()
         self.gold_mine_tiles: Tuple[Tuple[int, int], ...] = tuple(
             sorted(
                 tuple(tile)
                 for tile in scale_static_tiles(self.grid_size, base_gold_mine_tiles)
             )
         ) if base_gold_mine_tiles else ()
-        empire_source_tile = self._static_enemy_positions.get(
-            int(self.EMPIRE_TERRITORY_SOURCE_ENEMY_ID),
-            scale_static_tiles(self.grid_size, (tuple(self.EMPIRE_TERRITORY_SOURCE_TILE),))[0],
-        )
+        if self._map.empire_territory_source_enemy_id is not None:
+            empire_source_tile = self._static_enemy_positions.get(
+                int(self.EMPIRE_TERRITORY_SOURCE_ENEMY_ID),
+                scale_static_tiles(self.grid_size, (tuple(self.EMPIRE_TERRITORY_SOURCE_TILE),))[0],
+            )
+        else:
+            # Карта без вражеской столицы: territory-логика все равно читает эту
+            # клетку (forbidden/claimable), поэтому подставляем старт героя.
+            empire_source_tile = self.grid_env.start_position
         self.empire_territory_source_tile: Tuple[int, int] = tuple(
             int(coord) for coord in empire_source_tile
         )
@@ -1334,7 +1420,7 @@ class CampaignEnv(
             self.mode = self.MODE_BATTLE
 
             self._log(f"!!! СТОЛКНОВЕНИЕ С ВРАГОМ {enemy_id} !!!")
-            self._log(f"Описание: {ENEMY_DESCRIPTIONS.get(enemy_id, 'Неизвестный враг')}")
+            self._log(f"Описание: {self._enemy_descriptions.get(enemy_id, 'Неизвестный враг')}")
 
             # Создаём BattleEnv с нужной RED командой
             self._init_battle(enemy_id)
@@ -1605,7 +1691,7 @@ class CampaignEnv(
             lines.append(f"Ход: {self.turns} | Золото: {self.gold:g} | Шаги: {self.moves}")
         else:
             lines.append(f"В бою с врагом {self.current_enemy_id}")
-            lines.append(f"Описание: {ENEMY_DESCRIPTIONS.get(self.current_enemy_id, '?')}")
+            lines.append(f"Описание: {self._enemy_descriptions.get(self.current_enemy_id, '?')}")
             lines.append(f"Ход: {self.turns} | Золото: {self.gold:g} | Шаги: {self.moves}")
         mana_totals = self._current_mana_totals()
         mana_income = self._compute_mana_income_per_turn()
