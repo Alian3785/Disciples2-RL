@@ -1926,6 +1926,9 @@ class BattleEnv(gym.Env):
                             and recipient.get("team") == attacker.get("team")
                             and recipient.get("name") != "пусто"
                             and not bool(recipient.get("Summoned"))
+                            and not self._is_position_behind_big(
+                                int(recipient.get("position", 0) or 0)
+                            )
                         )
                     else:
                         mask_targets[i] = (
@@ -2440,6 +2443,9 @@ class BattleEnv(gym.Env):
             if unit.get("team") == team
             and unit.get("name") != "пусто"
             and not bool(unit.get("Summoned"))
+            and not self._is_position_behind_big(
+                int(unit.get("position", 0) or 0)
+            )
         ]
 
     def _patriach_auto_target(self, healer: Dict) -> Optional[int]:
@@ -2672,6 +2678,10 @@ class BattleEnv(gym.Env):
         if recipient.get("name") == "пусто":
             return "invalid"
         if bool(recipient.get("Summoned")):
+            return "invalid"
+        if self._is_position_behind_big(
+            int(recipient.get("position", 0) or 0)
+        ):
             return "invalid"
 
         if self._alive(recipient):
@@ -3162,10 +3172,8 @@ class BattleEnv(gym.Env):
             else:
                 tick = int(unit.get("poison_damage_per_tick", 0) or 0)
                 if tick > 0:
-                    before = unit["health"]
-                    unit["health"] -= tick
+                    before, after = self._subtract_health(unit, tick)
                     unit["poison_turns_left"] -= 1
-                    after = unit["health"]
                     self._log(
                         f"? Яд поражает {unit['team'].upper()} {unit['name']}#{unit['position']}: "
                         f"{tick} ({before}>{max(0, after)}); осталось ходов: {unit['poison_turns_left']}"
@@ -3203,10 +3211,8 @@ class BattleEnv(gym.Env):
             else:
                 tick = int(unit.get("burn_damage_per_tick", 0) or BURN_DAMAGE)
                 if tick > 0:
-                    before = unit["health"]
-                    unit["health"] -= tick
+                    before, after = self._subtract_health(unit, tick)
                     unit["burn_turns_left"] -= 1
-                    after = unit["health"]
                     self._log(
                         f"Поджог поражает {unit['team'].upper()} {unit['name']}#{unit['position']}: "
                         f"{tick} ({before}>{max(0, after)}); осталось ходов: {unit['burn_turns_left']}"
@@ -3242,10 +3248,8 @@ class BattleEnv(gym.Env):
             else:
                 tick = int(unit.get("uran_damage_per_tick", 0) or URAN_DAMAGE)
                 if tick > 0:
-                    before = unit["health"]
-                    unit["health"] -= tick
+                    before, after = self._subtract_health(unit, tick)
                     unit["uran_turns_left"] -= 1
-                    after = unit["health"]
                     self._log(
                         f"? Вода поражает {unit['team'].upper()} {unit['name']}#{unit['position']}: "
                         f"{tick} ({before}>{max(0, after)}); осталось ходов: {unit['uran_turns_left']}"
@@ -3299,7 +3303,6 @@ class BattleEnv(gym.Env):
                     recover_chance = DEFAULT_TRANSFORM_RECOVERY_CHANCE
                 if self.rng.random() < recover_chance:
                     self._restore_transformed_unit(unit)
-                    self._log(f"{unit['basestats']}")
 
         return True
 
@@ -3500,6 +3503,16 @@ class BattleEnv(gym.Env):
         eff *= max(0.0, incoming_multiplier)
         return int(round(eff))
 
+    @staticmethod
+    def _subtract_health(unit: Dict, damage: float) -> Tuple[float, float]:
+        """Apply damage without ever leaving a unit with negative health."""
+        before = unit.get("health", 0) or 0
+        after = max(0, before - damage)
+        unit["health"] = after
+        if "hp" in unit:
+            unit["hp"] = after
+        return before, after
+
     def _roll_hit(self, attacker: Dict) -> bool:
         acc = float(attacker.get("accuracy", 100) or 0)
         return self.rng.random() < (acc / 100.0)
@@ -3568,51 +3581,41 @@ class BattleEnv(gym.Env):
         return True
 
     def _apply_witch_effect(self, attacker: Dict, victim: Dict) -> None:
-        updated_entry = {
-            "accuracy": victim["accuracy"],
-            "accuracy_secondary": victim["accuracy_secondary"],
-            "damage": victim["damage"],
-            "damage_secondary": victim["damage_secondary"],
-            "attack_type_primary": victim["attack_type_primary"],
-            "attack_type_secondary": victim["attack_type_secondary"],
-            "initiative": victim["initiative_base"],
-            # Без initiative_base откат оставлял бы юнита медленным (30/50) навсегда,
-            # и порча утекала бы в persistent-состояние отряда кампании.
-            "initiative_base": victim["initiative_base"],
-            "unit_type": victim["unit_type"],
-            "resistance": list(victim["resistance"]),
-            "resilience_used_types": list(victim["resilience_used_types"]),
-            "transformed": victim["transformed"],
-        }
-        pos_key = victim.get("position")
-        basestats = victim.get("basestats")
-        if not isinstance(basestats, dict):
-            basestats = {}
-            victim["basestats"] = basestats
-        if pos_key not in basestats:
-            basestats[pos_key] = [updated_entry]
+        was_transformed = bool(victim.get("transformed", 0))
+        snapshot = self._ensure_transform_snapshot(victim)
+        if not was_transformed:
+            # Restore normal turn priority even if the unit had already acted and
+            # therefore had initiative=0 at the moment of transformation.
+            snapshot["initiative"] = deepcopy(
+                victim.get("initiative_base", victim.get("initiative", 0))
+            )
         is_big = bool(victim.get("big", False))
         old_initiative = victim.get("initiative", 0)
-        new_initiative = 50 if is_big else 30
+        form_name = "Толстый бес" if is_big else "Бес"
+        form_template = BATTLE_TEMPLATE_BY_NAME[form_name]
+        new_initiative = int(form_template["initiative_base"])
 
-        victim["accuracy"] = 80
-        victim["accuracy_secondary"] = 0
-        victim["damage"] = 30 if is_big else 20
-        victim["damage_secondary"] = 0
-        victim["attack_type_primary"] = "Weapon"
-        victim["attack_type_secondary"] = ""
+        victim["accuracy"] = int(form_template["accuracy"])
+        victim["accuracy_secondary"] = int(form_template["accuracy_secondary"])
+        victim["damage"] = int(form_template["damage"])
+        victim["damage_secondary"] = int(form_template["damage_secondary"])
+        victim["attack_type_primary"] = str(form_template["attack_type_primary"])
+        victim["attack_type_secondary"] = str(form_template["attack_type_secondary"])
         victim["initiative_base"] = new_initiative
         if old_initiative == 0:
             victim["initiative"] = old_initiative
         else:
             victim["initiative"] = new_initiative
-        victim["unit_type"] = "Warrior"
-        victim["resistance"] = []
+        victim["unit_type"] = str(form_template["unit_type"])
+        victim["armor"] = int(form_template["armor"])
+        victim["immunity"] = list(form_template["immunity"])
+        victim["resistance"] = list(form_template["resistance"])
         victim["resilience_used_types"] = []
         victim["transformed"] = 1
         self._log(
             f"Ведьма меняет характеристики {victim['team'].upper()} {victim['name']}#{victim['position']}: "
-            f"accuracy=80, damage={victim['damage']}, initiative={victim['initiative']}"
+            f"form={form_name}, accuracy={victim['accuracy']}, damage={victim['damage']}, "
+            f"initiative={victim['initiative']}, armor={victim['armor']}"
         )
 
     def _apply_wight_decay_effect(self, attacker: Dict, victim: Dict) -> bool:
@@ -4146,10 +4149,8 @@ class BattleEnv(gym.Env):
                 if self._resilience_blocks(attacker, victim):
                     continue
 
-                before = victim["health"]
                 dmg = self._apply_damage_with_armor(attacker, attacker["damage"], victim)
-                victim["health"] -= dmg
-                after = victim["health"]
+                before, after = self._subtract_health(victim, dmg)
                 self._log(
                     f"{atk_team.upper()} {attacker['name']}#{attacker['position']} > "
                     f"{victim['team'].upper()} {victim['name']}#{victim['position']}: {dmg} "
@@ -4360,10 +4361,8 @@ class BattleEnv(gym.Env):
             if self._resilience_blocks(attacker, victim):
                 return True, "resilience_block"
 
-            before = victim["health"]
             dmg = self._apply_damage_with_armor(attacker, attacker["damage"], victim)
-            victim["health"] -= dmg
-            after = victim["health"]
+            before, after = self._subtract_health(victim, dmg)
             self._log(
                 f"{atk_team.upper()} {attacker['name']}#{attacker['position']} > "
                 f"{victim['team'].upper()} {victim['name']}#{victim['position']}: {dmg} "
@@ -4667,9 +4666,7 @@ class BattleEnv(gym.Env):
                         extra_damage = float(attacker.get("damage", 0) or 0) * 0.05
                         extra_damage = round(extra_damage, 2)
                         if extra_damage > 0 and victim.get("health", 0) > 0:
-                            before = victim["health"]
-                            victim["health"] -= extra_damage
-                            after = victim["health"]
+                            before, after = self._subtract_health(victim, extra_damage)
                             self._log(
                                 f"? {atk_team.upper()} {attacker['name']}#{attacker['position']} Критический удар "
                                 f"({extra_damage:g}) to {victim['team'].upper()} {victim['name']}#{victim['position']} "
@@ -5688,7 +5685,10 @@ class BattleEnv(gym.Env):
             burn_dmg_v = _norm_positive(u.get("burn_damage_per_tick", 0) or 0, DMG2_NORM_MAX)
             uran_dmg_v = _norm_positive(u.get("uran_damage_per_tick", 0) or 0, DMG2_NORM_MAX)
             exp_kill_v = _norm_positive(u.get("exp_kill", 0) or 0, EXP_KILL_NORM_MAX)
-            exp_required_raw = max(0.0, float(u.get("exp_required", 0) or 0))
+            exp_required_raw = max(
+                0.0,
+                float(_to_int_or_default(u.get("exp_required", 0), default=0)),
+            )
             exp_required_v = _norm_positive(exp_required_raw, EXP_REQ_NORM_MAX)
             exp_current_v = _norm_positive(
                 u.get("exp_current", 0) or 0,

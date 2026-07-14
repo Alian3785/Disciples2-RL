@@ -621,6 +621,9 @@ def test_status_transform_weakening_and_rage_orbs_apply():
     )
     assert target["transformed"] == 1
     assert target["unit_type"] == "Warrior"
+    assert target["accuracy"] == 80
+    assert target["armor"] == 0
+    assert target["immunity"] == []
     assert witch_info["battle_hero_item_effect_kind"] == "transform"
 
     env.reset(seed=123)
@@ -708,3 +711,37 @@ def test_talisman_of_nightmare_mind_resistance_blocks_fear_but_spends_charge():
     assert info["battle_hero_item_charge_spent"] is True
     assert info["battle_hero_item_uses_left"] == 4
     assert env.equipped_hero_items == ["Talisman of Nightmare", None]
+
+
+@pytest.mark.parametrize(
+    ("item_name", "is_big", "expected_accuracy"),
+    [
+        ("Orb of Witches", False, 80),
+        ("Talisman of Witches", True, 70),
+    ],
+)
+def test_witch_transform_items_apply_imp_armor_immunity_and_accuracy(
+    item_name: str,
+    is_big: bool,
+    expected_accuracy: int,
+):
+    env = BattleEnv(log_enabled=False)
+    env.reset(seed=123)
+    target = _red_unit(env, 1)
+    target["big"] = is_big
+    target["armor"] = 35
+    target["base_armor"] = 35
+    target["immunity"] = ["Fire", "Death"]
+
+    _, _, _, _, info = _use_first_item(
+        env,
+        item_name,
+        FIRST_HERO_ITEM_ENEMY_ACTION_START,
+    )
+
+    assert target["transformed"] == 1
+    assert target["unit_type"] == "Warrior"
+    assert target["accuracy"] == expected_accuracy
+    assert target["armor"] == 0
+    assert target["immunity"] == []
+    assert info["battle_hero_item_effect_kind"] == "transform"

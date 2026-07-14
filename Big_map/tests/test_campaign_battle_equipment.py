@@ -9,7 +9,13 @@ from battle_env import (
     FIRST_HERO_ITEM_ACTION_START,
     HERO_ITEM_TARGET_SLOTS,
 )
-from campaign_env import CampaignEnv
+from campaign_env import CampaignEnv as _CampaignEnv
+
+
+class CampaignEnv(_CampaignEnv):
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("use_boss_starting_roster", False)
+        super().__init__(*args, **kwargs)
 
 
 def _blue_state_unit(env: CampaignEnv, position: int) -> dict:

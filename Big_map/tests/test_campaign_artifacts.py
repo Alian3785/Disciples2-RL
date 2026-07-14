@@ -6,7 +6,13 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from campaign_env import CampaignEnv
+from campaign_env import CampaignEnv as _CampaignEnv
+
+
+class CampaignEnv(_CampaignEnv):
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("use_boss_starting_roster", False)
+        super().__init__(*args, **kwargs)
 
 
 def _set_hero_level(env: CampaignEnv, level: int) -> dict:
@@ -501,9 +507,16 @@ def test_hags_ring_transforms_with_mind_chance():
     )
     target["unit_type"] = "Mage"
     target["transformed"] = 0
+    target["big"] = True
+    target["armor"] = 35
+    target["base_armor"] = 35
+    target["immunity"] = ["Fire", "Death"]
 
     env.battle_env._attack(hero, target["position"])
 
     assert status_chances == [70]
     assert target["transformed"] == 1
     assert target["unit_type"] == "Warrior"
+    assert target["accuracy"] == 70
+    assert target["armor"] == 0
+    assert target["immunity"] == []
