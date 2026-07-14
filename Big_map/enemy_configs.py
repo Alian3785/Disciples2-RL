@@ -7,6 +7,8 @@ payloads share the same source of truth.
 
 from __future__ import annotations
 
+from functools import lru_cache
+
 from data_dicts_compact_lines import DATA, map_unit_to_battle
 from grid import ENEMY_TEAM_SPECS
 
@@ -120,18 +122,28 @@ def _build_team(front: list[str | None], back: list[str | None]) -> list[dict]:
     return units
 
 
-ENEMY_CONFIGS = {
-    enemy_id: _build_team(
-        front=list(spec["front"]),  # type: ignore[arg-type]
-        back=list(spec["back"]),  # type: ignore[arg-type]
-    )
-    for enemy_id, spec in ENEMY_TEAM_SPECS.items()
-}
+def build_enemy_configs(team_specs: dict[int, dict[str, object]]) -> dict[int, list[dict]]:
+    """Строит боевые RED-команды по enemy-team specs выбранной карты."""
+    return {
+        int(enemy_id): _build_team(
+            front=list(spec["front"]),  # type: ignore[arg-type]
+            back=list(spec["back"]),  # type: ignore[arg-type]
+        )
+        for enemy_id, spec in team_specs.items()
+    }
 
-ENEMY_DESCRIPTIONS = {
-    enemy_id: str(spec["description"])
-    for enemy_id, spec in ENEMY_TEAM_SPECS.items()
-}
+
+def build_enemy_descriptions(team_specs: dict[int, dict[str, object]]) -> dict[int, str]:
+    """Собирает описания отрядов по enemy-team specs выбранной карты."""
+    return {
+        int(enemy_id): str(spec["description"])
+        for enemy_id, spec in team_specs.items()
+    }
+
+
+ENEMY_CONFIGS = build_enemy_configs(ENEMY_TEAM_SPECS)
+
+ENEMY_DESCRIPTIONS = build_enemy_descriptions(ENEMY_TEAM_SPECS)
 
 
 def _swap_team_unit(team: list[dict], old_name: str, new_name: str) -> list[dict]:
@@ -143,8 +155,44 @@ def _swap_team_unit(team: list[dict], old_name: str, new_name: str) -> list[dict
     ]
 
 
-# Ростеры для режима "blue_dragon": всё как обычно, но Зелёный дракон -> Синий дракон.
-ENEMY_CONFIGS_BLUE_DRAGON = {
-    enemy_id: _swap_team_unit(team, "Зелёный дракон", "Синий дракон")
-    for enemy_id, team in ENEMY_CONFIGS.items()
-}
+def build_blue_dragon_enemy_configs(
+    enemy_configs: dict[int, list[dict]],
+) -> dict[int, list[dict]]:
+    """Ростеры для режима "blue_dragon": всё как обычно, но Зелёный дракон -> Синий дракон."""
+    return {
+        enemy_id: _swap_team_unit(team, "Зелёный дракон", "Синий дракон")
+        for enemy_id, team in enemy_configs.items()
+    }
+
+
+ENEMY_CONFIGS_BLUE_DRAGON = build_blue_dragon_enemy_configs(ENEMY_CONFIGS)
+
+
+def get_enemy_configs_bundle(
+    map_name: str = "default",
+) -> tuple[dict[int, list[dict]], dict[int, str], dict[int, list[dict]]]:
+    """Возвращает (configs, descriptions, blue_dragon_configs) для карты.
+
+    Для карты по умолчанию отдаются те же объекты-глобалы: наблюдение кеширует
+    сигнатуры отрядов по id(team), а тесты monkeypatch'ат модульные словари, —
+    identity должен сохраняться. Для остальных карт результат кешируется.
+    """
+    normalized = str(map_name or "default").strip().lower()
+    if normalized == "default":
+        return ENEMY_CONFIGS, ENEMY_DESCRIPTIONS, ENEMY_CONFIGS_BLUE_DRAGON
+    return _build_enemy_configs_bundle_cached(normalized)
+
+
+@lru_cache(maxsize=8)
+def _build_enemy_configs_bundle_cached(
+    map_name: str,
+) -> tuple[dict[int, list[dict]], dict[int, str], dict[int, list[dict]]]:
+    from maps import get_map
+
+    team_specs = get_map(map_name).enemy_team_specs()
+    configs = build_enemy_configs(team_specs)
+    return (
+        configs,
+        build_enemy_descriptions(team_specs),
+        build_blue_dragon_enemy_configs(configs),
+    )

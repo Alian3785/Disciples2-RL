@@ -1,0 +1,30 @@
+{
+  "config": 10,
+  "seed": 73902,
+  "bugs": [
+    "Scripted-отряд последовательно занял уже занятую игроком клетку"
+  ],
+  "unsupported": [],
+  "checks": [],
+  "notes": [],
+  "state": {
+    "agent_pos": [
+      3,
+      2
+    ],
+    "obstacles": [],
+    "dynamic_blocked": [
+      [
+        4,
+        2
+      ]
+    ],
+    "moves": 18,
+    "mode": 0,
+    "bot_pos": [
+      3,
+      2
+    ]
+  },
+  "exception": null
+}

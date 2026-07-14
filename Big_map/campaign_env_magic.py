@@ -512,9 +512,9 @@ class CampaignMagicMixin:
     def _create_initial_enemy_team_states(self) -> Dict[int, List[Dict]]:
         # В режиме blue_dragon объект-дракон (enemy_31) — синий вместо зелёного.
         configs = (
-            ENEMY_CONFIGS_BLUE_DRAGON
+            self._enemy_configs_blue_dragon
             if self._campaign_objective_is_blue_dragon()
-            else ENEMY_CONFIGS
+            else self._enemy_configs
         )
         return {
             int(enemy_id): deepcopy(team)
@@ -527,7 +527,7 @@ class CampaignMagicMixin:
             return []
         team = self.enemy_team_states.get(normalized_enemy_id)
         if team is None:
-            team = deepcopy(ENEMY_CONFIGS.get(normalized_enemy_id, []))
+            team = deepcopy(self._enemy_configs.get(normalized_enemy_id, []))
             self.enemy_team_states[normalized_enemy_id] = team
         return team
     def _has_named_building_built(self, building_name: str) -> bool:
@@ -1375,9 +1375,9 @@ class CampaignMagicMixin:
                 info["final_objective_reward"] = green_dragon_objective_reward
                 info["green_dragon_objective_reward"] = green_dragon_objective_reward
                 info["green_dragon_objective_enemy_id"] = int(
-                    self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID
+                    getattr(self, "OBJECTIVE_ENEMY_ID", self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID)
                 )
-                info["campaign_objective"] = self.CAMPAIGN_OBJECTIVE_DRAGON
+                info["campaign_objective"] = self.campaign_objective
 
             campaign_objective_reason = self._campaign_objective_completion_reason(
                 target_enemy_id
@@ -1882,6 +1882,8 @@ class CampaignMagicMixin:
         healed_units = 0
         healed_total = 0.0
 
+        # Полная регенерация — свойство именно Зелёного дракона (id 31), а не
+        # целевого врага кампании: орк из orc_duel лечится обычной долей.
         green_dragon_enemy_id = int(self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID)
         for enemy_id, is_alive in self.grid_env.enemies_alive.items():
             if not bool(is_alive):

@@ -657,8 +657,8 @@ class CampaignBattleMixin:
         """Инициализирует BattleEnv с RED-командой врага и текущей BLUE-командой.
 
         RED берется из сохраненного состояния enemy_team_states, если оно есть,
-        иначе из ENEMY_CONFIGS. BLUE может быть передан явно для специальных боев
-        (например, summon), либо собирается из persistent-состояния героя.
+        иначе из enemy configs выбранной карты. BLUE может быть передан явно для
+        специальных боев (например, summon), либо собирается из persistent-состояния героя.
         """
         red_team_state = self._get_enemy_team_state(enemy_id)
         if red_team_state:
@@ -666,7 +666,8 @@ class CampaignBattleMixin:
         else:
             red_team = self._build_battle_team_with_placeholders(
                 "red",
-                ENEMY_CONFIGS.get(enemy_id, ENEMY_CONFIGS[1]),
+                self._enemy_configs.get(enemy_id)
+                or next(iter(self._enemy_configs.values())),
             )
         self._apply_settlement_defender_armor_bonus(enemy_id, red_team)
 

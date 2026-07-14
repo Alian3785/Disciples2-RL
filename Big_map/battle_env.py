@@ -1929,6 +1929,10 @@ class BattleEnv(gym.Env):
                             and not self._is_position_behind_big(
                                 int(recipient.get("position", 0) or 0)
                             )
+                            and (
+                                self._alive(recipient)
+                                or not self._patriach_already_revived(recipient)
+                            )
                         )
                     else:
                         mask_targets[i] = (
@@ -2446,7 +2450,22 @@ class BattleEnv(gym.Env):
             and not self._is_position_behind_big(
                 int(unit.get("position", 0) or 0)
             )
+            and (
+                self._alive(unit)
+                or not self._patriach_already_revived(unit)
+            )
         ]
+
+    @staticmethod
+    def _patriach_recipient_key(recipient: Dict) -> Tuple[str, int]:
+        return (
+            str(recipient.get("team", "") or ""),
+            int(recipient.get("position", 0) or 0),
+        )
+
+    def _patriach_already_revived(self, recipient: Dict) -> bool:
+        revived_recipients = getattr(self, "_patriach_revived_recipients", set())
+        return self._patriach_recipient_key(recipient) in revived_recipients
 
     def _patriach_auto_target(self, healer: Dict) -> Optional[int]:
         allies = self._patriach_targetable_allies(healer)
@@ -2688,6 +2707,9 @@ class BattleEnv(gym.Env):
             healed = self._apply_cliric_heal(healer, recipient)
             return "heal_success" if healed else "heal_no_effect"
 
+        if self._patriach_already_revived(recipient):
+            return "invalid"
+
         health = float(recipient.get("health", 0) or 0)
         initiative = int(recipient.get("initiative", 0) or 0)
         if health > 0 or initiative > 0:
@@ -2698,6 +2720,9 @@ class BattleEnv(gym.Env):
             return "revive_failed"
 
         restored = max(1, int(round(max_hp * 0.5)))
+        self._patriach_revived_recipients.add(
+            self._patriach_recipient_key(recipient)
+        )
         recipient["health"] = restored
         recipient["initiative"] = 0
         recipient["paralyzed"] = 0
@@ -3309,6 +3334,7 @@ class BattleEnv(gym.Env):
     # ------------------ Боевая логика ------------------
 
     def _reset_state(self):
+        self._patriach_revived_recipients: set[Tuple[str, int]] = set()
         self.combined = deepcopy(UNITS_RED + UNITS_BLUE)
         _apply_transformations_to_units(self.combined)
         for u in self.combined:
@@ -6185,6 +6211,7 @@ class BattleEnv(gym.Env):
             red_team: Список словарей с юнитами RED команды
             blue_team: Список словарей с юнитами BLUE команды
         """
+        self._patriach_revived_recipients: set[Tuple[str, int]] = set()
         self.combined = deepcopy(red_team + blue_team)
         _apply_transformations_to_units(self.combined)
 
