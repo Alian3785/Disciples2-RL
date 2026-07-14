@@ -1,0 +1,17 @@
+{
+  "number": 19,
+  "title": "Движение в тумане войны к неизвестной клетке",
+  "folder": "19_движение_в_тумане_войны_к_неизвестной_клетке",
+  "runs": 100,
+  "failed_runs": 0,
+  "unsupported_runs": 100,
+  "successful_checks": 0,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "unsupported_types": {
+    "В CampaignEnv нет карты видимости/неизвестных клеток и fog action mask; visited_cells учитывает только бонус исследования и не скрывает содержимое.": 100
+  },
+  "notes": [],
+  "seed_base": 73000
+}

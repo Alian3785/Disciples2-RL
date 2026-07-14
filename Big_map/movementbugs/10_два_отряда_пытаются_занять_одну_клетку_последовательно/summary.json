@@ -1,0 +1,17 @@
+{
+  "number": 10,
+  "title": "Два отряда пытаются занять одну клетку последовательно",
+  "folder": "10_два_отряда_пытаются_занять_одну_клетку_последовательно",
+  "runs": 100,
+  "failed_runs": 100,
+  "unsupported_runs": 0,
+  "successful_checks": 0,
+  "bug_occurrences": 100,
+  "unique_bug_types": 1,
+  "bug_types": {
+    "Scripted-отряд последовательно занял уже занятую игроком клетку": 100
+  },
+  "unsupported_types": {},
+  "notes": [],
+  "seed_base": 73000
+}

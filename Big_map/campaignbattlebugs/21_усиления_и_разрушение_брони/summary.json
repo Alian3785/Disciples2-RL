@@ -1,0 +1,12 @@
+{
+  "number": 21,
+  "title": "Усиления и разрушение брони",
+  "folder": "21_усиления_и_разрушение_брони",
+  "runs": 100,
+  "failed_runs": 0,
+  "successful_checks": 16100,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "seed_base": 42000
+}

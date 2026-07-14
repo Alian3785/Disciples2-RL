@@ -1,0 +1,20 @@
+{
+  "number": 28,
+  "title": "Три больших против трёх больших",
+  "folder": "28_три_больших_против_трёх_больших",
+  "battles": 100,
+  "wins": {
+    "red": 76,
+    "blue": 24
+  },
+  "stalls": 0,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "event_counts": {
+    "поджоги": 55,
+    "эффекты воды": 47
+  },
+  "mean_steps": 6.71,
+  "mean_rounds": 3.82
+}

@@ -1,0 +1,17 @@
+{
+  "number": 15,
+  "title": "Наземный отряд пытается войти в воду",
+  "folder": "15_наземный_отряд_пытается_войти_в_воду",
+  "runs": 100,
+  "failed_runs": 0,
+  "unsupported_runs": 0,
+  "successful_checks": 200,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "unsupported_types": {},
+  "notes": [
+    "Текущая модель проекта разрешает наземному отряду воду с повышенной стоимостью 6; это закреплено существующими terrain-тестами."
+  ],
+  "seed_base": 73000
+}

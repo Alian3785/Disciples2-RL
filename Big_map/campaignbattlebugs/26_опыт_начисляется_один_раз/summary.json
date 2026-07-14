@@ -1,0 +1,12 @@
+{
+  "number": 26,
+  "title": "Опыт начисляется один раз",
+  "folder": "26_опыт_начисляется_один_раз",
+  "runs": 100,
+  "failed_runs": 0,
+  "successful_checks": 15900,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "seed_base": 42000
+}

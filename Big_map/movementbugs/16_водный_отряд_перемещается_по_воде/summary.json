@@ -1,0 +1,17 @@
+{
+  "number": 16,
+  "title": "Водный отряд перемещается по воде",
+  "folder": "16_водный_отряд_перемещается_по_воде",
+  "runs": 100,
+  "failed_runs": 0,
+  "unsupported_runs": 100,
+  "successful_checks": 0,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "unsupported_types": {
+    "В данных отряда нет movement-категории 'water/naval/aquatic'; вода определяется только как terrain с ценой входа, поэтому отдельный водный отряд проверить невозможно.": 100
+  },
+  "notes": [],
+  "seed_base": 73000
+}

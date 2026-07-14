@@ -1,0 +1,17 @@
+{
+  "number": 18,
+  "title": "Горы и непроходимые клетки не попадают в построенный путь",
+  "folder": "18_горы_и_непроходимые_клетки_не_попадают_в_построенный_путь",
+  "runs": 100,
+  "failed_runs": 0,
+  "unsupported_runs": 0,
+  "successful_checks": 200,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "unsupported_types": {},
+  "notes": [
+    "В CampaignEnv клетки гор из SG-карты представлены в obstacle_positions; отдельного terrain='mountain' нет."
+  ],
+  "seed_base": 73000
+}
