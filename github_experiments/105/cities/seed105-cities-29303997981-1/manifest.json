@@ -1,0 +1,32 @@
+{
+  "status": "success",
+  "run_id": "seed105-cities-29303997981-1",
+  "seed": 105,
+  "objective": "cities",
+  "commit_sha": "d35720b186681c633e101f9036bbd2e162a49724",
+  "completed_at": "2026-07-14T04:24:26.746144+00:00",
+  "parameters": {
+    "total_steps": 1000000,
+    "n_envs": 12,
+    "vec_env": "subproc",
+    "vec_start_method": "forkserver",
+    "torch_num_threads": 4,
+    "checkpoint_freq": 500000,
+    "eval_freq": 83334,
+    "scripted_bot": false,
+    "comet": false,
+    "vec_check_nan": false,
+    "diagnostics": false
+  },
+  "artifacts": {
+    "persistent": [
+      "eval/evaluations.npz",
+      "eval/best_model.zip",
+      "eval/best_vecnormalize.pkl",
+      "logs/",
+      "tensorboard/",
+      "plots/"
+    ],
+    "checkpoint_artifact_retention_days": 1
+  }
+}
