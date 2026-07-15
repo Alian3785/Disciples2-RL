@@ -8,6 +8,20 @@ from tools.rl_training_rotation import finalize_success
 from tools.rl_training_rotation import prepare_run
 
 
+def test_workflow_trains_on_small_map():
+    workflow_path = (
+        Path(__file__).resolve().parents[2]
+        / ".github"
+        / "workflows"
+        / "rl-training-rotation.yml"
+    )
+    workflow = workflow_path.read_text(encoding="utf-8")
+
+    assert "CAMPAIGN_MAP: small" in workflow
+    assert '--map "$CAMPAIGN_MAP"' in workflow
+    assert "CYCLE_BRANCH: rl-training-small-map-cycle" in workflow
+
+
 def _write_state(path: Path, state: dict | None = None) -> None:
     path.write_text(json.dumps(state or DEFAULT_STATE), encoding="utf-8")
 
