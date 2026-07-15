@@ -1,13 +1,13 @@
 {
   "active": true,
-  "seed": 107,
+  "seed": 108,
   "next_objective": "cities",
-  "completed_runs": 18,
+  "completed_runs": 21,
   "last_success": {
-    "run_id": "seed106-blue_dragon-29368776769-1",
-    "seed": 106,
+    "run_id": "seed107-blue_dragon-29437469808-1",
+    "seed": 107,
     "objective": "blue_dragon",
-    "completed_at": "2026-07-14T22:02:59.708931+00:00",
-    "commit_sha": "0077fb35ab7446502da17046267b57d581672d1d"
+    "completed_at": "2026-07-15T18:21:49.114181+00:00",
+    "commit_sha": "1b4d2f0b631a001c92e9be6fd2b0945f83823509"
   }
 }
