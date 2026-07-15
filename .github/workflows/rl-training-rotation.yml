@@ -51,7 +51,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           FULL_TRAINING: ${{ inputs.full_training || false }}
           RESULTS_BRANCH: github-experiments
-          CYCLE_BRANCH: rl-training-cycle
+          CYCLE_BRANCH: rl-training-small-map-cycle
         run: |
           set -euo pipefail
           rotation_run=false
@@ -148,6 +148,7 @@ jobs:
           CHECKPOINT_FREQ: ${{ steps.prepare.outputs.checkpoint_freq }}
           EVAL_FREQ: ${{ steps.prepare.outputs.eval_freq }}
           OBJECTIVE_FLAG: ${{ steps.prepare.outputs.objective_flag }}
+          CAMPAIGN_MAP: small
           PYTHONUNBUFFERED: "1"
         run: |
           set -euo pipefail
@@ -155,6 +156,7 @@ jobs:
           command=(
             python train_campaign.py
             --total-steps "$TOTAL_STEPS"
+            --map "$CAMPAIGN_MAP"
             --n-envs 12
             --vec-env subproc
             --vec-start-method forkserver
