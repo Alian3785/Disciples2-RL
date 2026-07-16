@@ -181,6 +181,7 @@ def main() -> int:
             "build_all",
             "all_enemies",
             "target_enemy",
+            "waves",
         ],
         default=None,
         help="Campaign objective; should match training. Defaults to the map's objective.",

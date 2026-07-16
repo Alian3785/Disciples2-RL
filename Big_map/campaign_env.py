@@ -190,6 +190,14 @@ class CampaignEnv(
         # --- Выбор карты: данные забираются из пакета maps/. ---
         self.map_name = str(map_name or "default").strip().lower()
         self._map = get_map(self.map_name)
+        map_merchant_buy_items = getattr(self._map, "merchant_buy_items", None)
+        self._uses_map_merchant_buy_items = map_merchant_buy_items is not None
+        if map_merchant_buy_items is not None:
+            self.MERCHANT_BUY_ITEMS = tuple(
+                dict(item_data)
+                for item_data in tuple(map_merchant_buy_items)
+                if isinstance(item_data, dict)
+            )
         (
             self._enemy_configs,
             self._enemy_descriptions,
@@ -217,6 +225,15 @@ class CampaignEnv(
                 str(city_name): tuple(int(enemy_id) for enemy_id in enemy_ids)
                 for city_name, enemy_ids in self._map.final_objective_cities.items()
             }
+            self.SETTLEMENT_DEFENDER_LEVEL_BY_ENEMY_ID = {
+                int(enemy_id): int(
+                    self._map.settlement_level_by_heal_tile[tuple(heal_tile)]
+                )
+                for enemy_id, heal_tile in (
+                    self._map.settlement_defender_heal_tile_by_enemy_id.items()
+                )
+                if tuple(heal_tile) in self._map.settlement_level_by_heal_tile
+            }
             self.BASE_MERCHANT_SITE_DATA = dict(self._map.merchant_sites)
             self.BASE_SPELL_SHOP_SITE_DATA = dict(self._map.spell_shop_sites)
             self.BASE_MERCENARY_SITE_DATA = dict(self._map.mercenary_sites)
@@ -227,9 +244,13 @@ class CampaignEnv(
             }
             self.RUIN_REWARD_ITEM_NAMES = frozenset(
                 {
-                    str(reward_data.get("item", "") or "")
+                    str(item_name)
                     for reward_data in self.RUIN_REWARD_BY_ENEMY_ID.values()
-                    if str(reward_data.get("item", "") or "")
+                    for item_name in (
+                        tuple(reward_data.get("items", ()) or ())
+                        or (str(reward_data.get("item", "") or ""),)
+                    )
+                    if str(item_name)
                 }
             )
             if self._map.objective_enemy_id is not None:
@@ -870,6 +891,12 @@ class CampaignEnv(
             if unit_data is None:
                 raise ValueError(f"Unknown starting unit {unit_name!r}")
             unit = self._build_unit_from_data(unit_data, "blue", int(position))
+            position_overrides = (
+                getattr(self._map, "starting_unit_overrides", None) or {}
+            ).get(int(position), {})
+            if isinstance(position_overrides, dict):
+                for key, value in position_overrides.items():
+                    unit[str(key)] = deepcopy(value)
             if boss_roster_active and unit_name == self.BOSS_STARTING_BLUE_HERO_NAME:
                 unit["hero"] = True
             team.append(unit)
@@ -1201,6 +1228,34 @@ class CampaignEnv(
         #   после построек — изучение заклинаний активной фракции.
         #   после заклинаний — улучшение захваченных городов.
         include_detailed_info = self._include_detailed_step_info()
+        pending_scheduled_enemy_id = self._pop_scheduled_enemy_pending_encounter()
+        if pending_scheduled_enemy_id is not None:
+            enemy_id = int(pending_scheduled_enemy_id)
+            self.current_enemy_id = enemy_id
+            self.battle_origin_pos = tuple(self.grid_env.agent_pos)
+            self.current_battle_context = {"kind": "hero", "scheduled_wave": True}
+            self.mode = self.MODE_BATTLE
+            self._init_battle(enemy_id)
+            info = {
+                "mode": "battle",
+                "agent_pos": tuple(self.grid_env.agent_pos),
+                "enemy_id": enemy_id,
+                "battle_triggered": True,
+                "battle_triggered_by": "scheduled_wave_queue",
+                "battle_engage_bonus": float(self.reward_engage_battle),
+                "turns": self.turns,
+                "gold": self.gold,
+                "moves": self.moves,
+                "enemies_alive": dict(self.grid_env.enemies_alive),
+            }
+            info.update(self._scheduled_enemy_state_info())
+            return (
+                self._build_obs(battle_obs=self.battle_env._obs()),
+                float(self.reward_engage_battle),
+                False,
+                False,
+                info,
+            )
         if action >= self.GRID_SWAP_UNIT_ACTION_START:
             return self._step_swap_blue_unit_positions(action)
         if action >= self.grid_scroll_cast_action_start:
@@ -1499,11 +1554,7 @@ class CampaignEnv(
             if scheduled_enemy_turn_infos:
                 info["scheduled_enemy_turn_infos"] = scheduled_enemy_turn_infos
                 info.update(self._scheduled_enemy_state_info())
-            scheduled_enemy_id = getattr(
-                self,
-                "scheduled_enemy_pending_encounter_id",
-                None,
-            )
+            scheduled_enemy_id = self._pop_scheduled_enemy_pending_encounter()
             if (
                 scheduled_enemy_id is not None
                 and self.grid_env.enemies_alive.get(int(scheduled_enemy_id), False)
@@ -1518,7 +1569,6 @@ class CampaignEnv(
                 reward += battle_engage_bonus
                 info["battle_triggered"] = True
                 info["battle_engage_bonus"] = float(battle_engage_bonus)
-                self.scheduled_enemy_pending_encounter_id = None
             info["enemies_alive"] = dict(self.grid_env.enemies_alive)
             grid_obs = self._get_grid_obs()
             info["turns"] = self.turns
@@ -1568,6 +1618,7 @@ class CampaignEnv(
             self.grid_env.all_enemies_defeated()
             and not self._campaign_objective_is_build_all()
             and not self._campaign_objective_is_target_enemy()
+            and not self._campaign_objective_is_waves()
         ):
             reward = self._apply_all_enemies_objective_reward_if_needed(reward, info)
             self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")
