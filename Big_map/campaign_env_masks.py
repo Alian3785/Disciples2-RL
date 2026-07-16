@@ -128,7 +128,7 @@ class CampaignMaskMixin:
                         else False
                     )
             if self._merchant_sites_at_position(self.grid_env.agent_pos):
-                for idx, item_name in enumerate(self.scenario_merchant_potion_item_names):
+                for idx, item_name in enumerate(self.scenario_merchant_item_names):
                     item_data = self._merchant_item_definition(item_name) or {}
                     item_price = float(item_data.get("price", 0.0) or 0.0)
                     mask[self.GRID_MERCHANT_POTION_BUY_ACTION_START + idx] = (

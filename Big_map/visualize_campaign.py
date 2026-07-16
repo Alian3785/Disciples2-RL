@@ -2843,6 +2843,7 @@ if __name__ == "__main__":
             "build_all",
             "all_enemies",
             "target_enemy",
+            "waves",
         ],
         default=None,
         help="Campaign objective override; defaults to the selected map's objective",

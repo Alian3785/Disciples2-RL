@@ -515,16 +515,28 @@ def _resolve_unit_needaunit(unit: Dict) -> int:
     return 1 if _to_int_or_default(unit.get("needaunit", 0), default=0) > 0 else 0
 
 
-def _apply_hero_levelup_bonuses(unit: Dict) -> None:
-    base_damage = float(unit.get("original_damage", unit.get("damage", 0)) or 0)
-    new_damage = max(0, _to_int_or_default(base_damage * 1.1, default=0))
+def _levelup_stat_with_ten_percent(value: object) -> int:
+    """Increase a non-negative integer stat by 10%, rounding the gain upward."""
+    current = max(0, _to_int_or_default(value, default=0))
+    if current <= 0:
+        return 0
+    increase = max(1, int(math.ceil(float(current) * 0.10 - 1e-9)))
+    return int(current + increase)
+
+
+def _apply_ten_percent_levelup_stats(unit: Dict) -> None:
+    """Apply the shared endless-level growth for dynamic units and heroes."""
+    base_damage = unit.get("original_damage")
+    if base_damage is None:
+        base_damage = unit.get("damage", 0)
+    new_damage = _levelup_stat_with_ten_percent(base_damage)
     unit["damage"] = new_damage
     unit["original_damage"] = new_damage
 
-    current_health = float(unit.get("health", unit.get("hp", 0)) or 0)
-    max_health = float(unit.get("max_health", unit.get("maxhp", 0)) or 0)
-    unit["health"] = max(0, _to_int_or_default(current_health * 1.1, default=0))
-    unit["max_health"] = max(0, _to_int_or_default(max_health * 1.1, default=0))
+    current_health = unit.get("health", unit.get("hp", 0))
+    max_health = unit.get("max_health", unit.get("maxhp", 0))
+    unit["health"] = _levelup_stat_with_ten_percent(current_health)
+    unit["max_health"] = _levelup_stat_with_ten_percent(max_health)
     if "hp" in unit:
         unit["hp"] = unit["health"]
     if "maxhp" in unit:
@@ -533,8 +545,9 @@ def _apply_hero_levelup_bonuses(unit: Dict) -> None:
     current_accuracy = _to_int_or_default(unit.get("accuracy", 0), default=0)
     unit["accuracy"] = max(0, min(100, current_accuracy + 1))
 
-    current_exp_kill = float(unit.get("exp_kill", 0) or 0)
-    unit["exp_kill"] = max(0, _to_int_or_default(current_exp_kill * 1.1, default=0))
+
+def _apply_hero_level_milestone_bonuses(unit: Dict) -> None:
+    """Apply leadership/endurance/strength bonuses tied to the new hero level."""
     unit["needaunit"] = _resolve_unit_needaunit(unit)
     if _is_travel_hero_unit(unit) and _resolve_unit_level(unit) in (
         HERO_LEADERSHIP_LEVEL,
@@ -570,6 +583,50 @@ def _apply_hero_levelup_bonuses(unit: Dict) -> None:
         )
         unit["damage"] = strength_damage
         unit["original_damage"] = strength_damage
+
+
+def _apply_hero_levelup_bonuses(unit: Dict) -> None:
+    _apply_ten_percent_levelup_stats(unit)
+    current_exp_kill = float(unit.get("exp_kill", 0) or 0)
+    unit["exp_kill"] = max(0, _to_int_or_default(current_exp_kill * 1.1, default=0))
+    _apply_hero_level_milestone_bonuses(unit)
+
+
+def _unit_has_available_evolution(unit: Dict) -> bool:
+    turns_into = unit.get("turns_into", unit.get("\u043f\u0440\u0435\u0432\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044f \u0432", ()))
+    if isinstance(turns_into, str):
+        return bool(turns_into.strip())
+    if isinstance(turns_into, (list, tuple, set, frozenset)):
+        return any(str(target or "").strip() for target in turns_into)
+    return bool(turns_into)
+
+
+def _uses_dynamic_unit_levelup(unit: Dict) -> bool:
+    """Return whether a unit gains stats instead of evolving into another form."""
+    if _is_neutral_battle_unit(unit):
+        return True
+    if _to_bool_flag(unit.get("boss", unit.get("is_boss", False))):
+        return True
+    if _resolve_unit_hero_flag(unit):
+        return False
+    return not _unit_has_available_evolution(unit)
+
+
+def _apply_dynamic_unit_levelup(unit: Dict, exp_required: int) -> None:
+    """Level a dynamic unit, optionally applying a scenario-specific XP curve."""
+    unit["Level"] = _to_int_or_default(unit.get("Level", 0), default=0) + 1
+    exp_increment = max(
+        0,
+        _to_int_or_default(
+            unit.get("dynamic_level_exp_increment", 0),
+            default=0,
+        ),
+    )
+    unit["exp_required"] = max(0, int(exp_required) + int(exp_increment))
+    unit["exp_current"] = 0
+    _apply_ten_percent_levelup_stats(unit)
+    if _resolve_unit_hero_flag(unit):
+        _apply_hero_level_milestone_bonuses(unit)
 
 DEFAULT_RED_ROSTER: Tuple[Tuple[str, int], ...] = (
     ("Скелет рыцарь", 1),
@@ -5220,7 +5277,12 @@ class BattleEnv(gym.Env):
             if new_value >= req_value:
                 unit_name = u.get("name", "unknown")
                 next_level_exp = _resolve_unit_next_level_exp(u)
-                if _resolve_unit_hero_flag(u) and next_level_exp > 0:
+                if _uses_dynamic_unit_levelup(u):
+                    _apply_dynamic_unit_levelup(
+                        u,
+                        exp_required=_to_int_or_default(req_value, default=0),
+                    )
+                elif _resolve_unit_hero_flag(u) and next_level_exp > 0:
                     u["Level"] = _to_int_or_default(u.get("Level", 0), default=0) + 1
                     u["exp_required"] = _to_int_or_default(req_value, default=0) + next_level_exp
                     u["exp_current"] = 0

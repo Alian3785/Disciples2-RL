@@ -141,6 +141,7 @@ class CampaignObservationMixin:
             ("current_spell_shop_stock", self.grid_current_spell_shop_stock_obs_size),
             ("mercenary_site", self.grid_mercenary_site_obs_size),
             ("current_mercenary_roster", self.grid_mercenary_roster_obs_size),
+            ("waves", self.grid_wave_obs_size),
             ("trainer", self.grid_trainer_obs_size),
         )
         offset = 0
@@ -450,6 +451,8 @@ class CampaignObservationMixin:
         self.grid_trainer_features_per_entry = 5
         self.grid_trainer_obs_size = self.grid_trainer_features_per_entry
         self.grid_trainer_total_affordable_xp_half_point = 20.0
+        self.grid_wave_configs = tuple(self._scheduled_enemy_wave_configs())
+        self.grid_wave_obs_size = 5 if self.grid_wave_configs else 0
         self.grid_merchant_initial_total_stock_by_site_name: Dict[str, int] = {}
         self.grid_merchant_initial_stock_by_site_item: Dict[Tuple[str, str], int] = {}
         self.grid_spell_shop_initial_total_stock_by_site_name: Dict[str, int] = {}
@@ -1431,6 +1434,81 @@ class CampaignObservationMixin:
             )
 
         return np.array(roster_obs, dtype=np.float32)
+    def _build_wave_grid_obs(self) -> np.ndarray:
+        configs = tuple(getattr(self, "grid_wave_configs", ()) or ())
+        if not configs:
+            return np.zeros(0, dtype=np.float32)
+
+        wave_groups = tuple(self._scheduled_enemy_wave_groups())
+        total = max(1, len(wave_groups))
+        spawned_ids = set(
+            getattr(self, "scheduled_enemy_spawned_ids", set()) or set()
+        )
+        defeated_ids = set(
+            getattr(self, "scheduled_enemy_defeated_ids", set()) or set()
+        )
+        active_ids = [
+            int(config["enemy_id"])
+            for config in configs
+            if int(config["enemy_id"]) in spawned_ids
+            and self.grid_env.enemies_alive.get(int(config["enemy_id"]), False)
+        ]
+        spawned_wave_count = 0
+        active_wave_count = 0
+        defeated_wave_count = 0
+        future_spawn_turns = [
+            int(config["spawn_turn"])
+            for config in configs
+            if int(config["enemy_id"]) not in spawned_ids
+        ]
+        for group in wave_groups:
+            enemy_ids = {
+                int(enemy_id)
+                for enemy_id in tuple(group["enemy_ids"])
+            }
+            if enemy_ids.issubset(spawned_ids):
+                spawned_wave_count += 1
+            if enemy_ids.issubset(defeated_ids):
+                defeated_wave_count += 1
+            if any(
+                enemy_id in spawned_ids
+                and self.grid_env.enemies_alive.get(enemy_id, False)
+                for enemy_id in enemy_ids
+            ):
+                active_wave_count += 1
+        current_turn = max(0, int(getattr(self, "turns", 0) or 0))
+        max_spawn_turn = max(
+            1,
+            max(int(config["spawn_turn"]) for config in configs),
+        )
+        turns_until_next = (
+            max(0, min(future_spawn_turns) - current_turn)
+            if future_spawn_turns
+            else 0
+        )
+
+        nearest_distance = 0.0
+        if active_ids:
+            agent_x, agent_y = tuple(self.grid_env.agent_pos)
+            nearest_distance = min(
+                max(
+                    abs(int(self.grid_env.enemy_positions[enemy_id][0]) - int(agent_x)),
+                    abs(int(self.grid_env.enemy_positions[enemy_id][1]) - int(agent_y)),
+                )
+                for enemy_id in active_ids
+            )
+        grid_scale = float(max(1, int(self.grid_size) - 1))
+        return np.array(
+            [
+                float(np.clip(float(turns_until_next) / float(max_spawn_turn), 0.0, 1.0)),
+                float(spawned_wave_count) / float(total),
+                float(active_wave_count) / float(total),
+                float(defeated_wave_count) / float(total),
+                float(np.clip(float(nearest_distance) / grid_scale, 0.0, 1.0)),
+            ],
+            dtype=np.float32,
+        )
+
     def _build_trainer_grid_obs(self) -> np.ndarray:
         """
         Строит компактный блок доступности тренера.
@@ -1512,6 +1590,7 @@ class CampaignObservationMixin:
             ("current_spell_shop_stock", self._build_current_spell_shop_stock_grid_obs),
             ("mercenary_site", self._build_mercenary_site_grid_obs),
             ("current_mercenary_roster", self._build_current_mercenary_roster_grid_obs),
+            ("waves", self._build_wave_grid_obs),
             ("trainer", self._build_trainer_grid_obs),
         )
         for block_name, builder in builders:

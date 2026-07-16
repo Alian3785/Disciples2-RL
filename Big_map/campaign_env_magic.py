@@ -1377,6 +1377,11 @@ class CampaignMagicMixin:
 
         if bool(cast_result.get("spell_enemy_defeated", False)):
             target_enemy_id = cast_result.get("target_enemy_id")
+            reward = self._apply_wave_defeat_reward_if_needed(
+                target_enemy_id,
+                reward,
+                info,
+            )
             info.update(self._grant_ruin_reward(target_enemy_id))
             info["objective_cities_captured_total"] = sorted(self.captured_objective_cities)
             newly_activated = list(
@@ -1421,7 +1426,10 @@ class CampaignMagicMixin:
                     info=info,
                 )
 
-            if self.grid_env.all_enemies_defeated():
+            if (
+                self.grid_env.all_enemies_defeated()
+                and not self._campaign_objective_is_waves()
+            ):
                 self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")
                 grid_obs = self._get_grid_obs()
                 info["campaign_result"] = "victory"
@@ -2585,6 +2593,11 @@ class CampaignMagicMixin:
             )
             self.grid_env.mark_enemy_defeated(enemy_id)
             self._clear_enemy_map_spell_effects_for_enemy(enemy_id)
+            reward = self._apply_wave_defeat_reward_if_needed(
+                enemy_id,
+                reward,
+                info,
+            )
 
             objective_cities_captured_before = len(self.captured_objective_cities)
             newly_captured_objective_cities = self._capture_objective_city_if_cleared(enemy_id)
@@ -2638,7 +2651,10 @@ class CampaignMagicMixin:
                     info=info,
                 )
 
-            if self.grid_env.all_enemies_defeated():
+            if (
+                self.grid_env.all_enemies_defeated()
+                and not self._campaign_objective_is_waves()
+            ):
                 self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")
                 grid_obs = self._get_grid_obs()
                 info["campaign_result"] = "victory"

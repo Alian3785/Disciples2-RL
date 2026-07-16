@@ -221,6 +221,23 @@ class CampaignInventoryMixin:
             for item_data in self._scenario_merchant_potion_item_entries()
         )
 
+    def _scenario_merchant_item_names(self) -> Tuple[str, ...]:
+        item_names: List[str] = []
+        seen_names: set[str] = set()
+        for item_data in tuple(getattr(self, "MERCHANT_BUY_ITEMS", ()) or ()):
+            if not isinstance(item_data, dict):
+                continue
+            item_name = str(item_data.get("name", "") or "").strip()
+            try:
+                stock = int(item_data.get("stock", 0) or 0)
+            except (TypeError, ValueError):
+                stock = 0
+            if not item_name or stock <= 0 or item_name in seen_names:
+                continue
+            seen_names.add(item_name)
+            item_names.append(item_name)
+        return tuple(item_names)
+
     def _scenario_potion_item_names(self) -> Tuple[str, ...]:
         present_names: set[str] = set()
 
@@ -237,8 +254,8 @@ class CampaignInventoryMixin:
             add_if_potion(item_name)
 
         for reward_data in tuple(getattr(self, "RUIN_REWARD_BY_ENEMY_ID", {}).values()):
-            if isinstance(reward_data, dict):
-                add_if_potion(reward_data.get("item", ""))
+            for item_name in self._ruin_reward_item_names(reward_data):
+                add_if_potion(item_name)
 
         for item_data in self._scenario_merchant_potion_item_entries():
             add_if_potion(item_data.get("name", ""))
@@ -274,13 +291,13 @@ class CampaignInventoryMixin:
     def _refresh_potion_item_names(self) -> Tuple[str, ...]:
         self.scenario_potion_item_names = self._scenario_potion_item_names()
         self.scenario_merchant_potion_item_names = self._scenario_merchant_potion_item_names()
+        self.scenario_merchant_item_names = self._scenario_merchant_item_names()
         self.scenario_battle_potion_equip_names = self._scenario_battle_potion_equip_names()
         self.GRID_POTION_USE_ACTION_COUNT = (
             len(self.scenario_potion_item_names) * len(self.GRID_POTION_USE_POSITIONS)
         )
-        self.GRID_MERCHANT_POTION_BUY_ACTION_COUNT = len(
-            self.scenario_merchant_potion_item_names
-        )
+        self.GRID_MERCHANT_BUY_ACTION_COUNT = len(self.scenario_merchant_item_names)
+        self.GRID_MERCHANT_POTION_BUY_ACTION_COUNT = self.GRID_MERCHANT_BUY_ACTION_COUNT
         self.GRID_EQUIP_BATTLE_POTION_ACTION_COUNT = len(
             self.scenario_battle_potion_equip_names
         )
@@ -317,9 +334,8 @@ class CampaignInventoryMixin:
                 add_if_staff(item_name)
 
         for reward_data in tuple(getattr(self, "RUIN_REWARD_BY_ENEMY_ID", {}).values()):
-            if not isinstance(reward_data, dict):
-                continue
-            add_if_staff(reward_data.get("item", ""))
+            for item_name in self._ruin_reward_item_names(reward_data):
+                add_if_staff(item_name)
 
         for item_data in tuple(getattr(self, "MERCHANT_BUY_ITEMS", ()) or ()):
             if not isinstance(item_data, dict):
@@ -361,8 +377,8 @@ class CampaignInventoryMixin:
                 add_if_battle_magic(item_name)
 
         for reward_data in tuple(getattr(self, "RUIN_REWARD_BY_ENEMY_ID", {}).values()):
-            if isinstance(reward_data, dict):
-                add_if_battle_magic(reward_data.get("item", ""))
+            for item_name in self._ruin_reward_item_names(reward_data):
+                add_if_battle_magic(item_name)
 
         for item_data in tuple(getattr(self, "MERCHANT_BUY_ITEMS", ()) or ()):
             if not isinstance(item_data, dict):
@@ -401,8 +417,8 @@ class CampaignInventoryMixin:
                 add_if_book(item_name)
 
         for reward_data in tuple(getattr(self, "RUIN_REWARD_BY_ENEMY_ID", {}).values()):
-            if isinstance(reward_data, dict):
-                add_if_book(reward_data.get("item", ""))
+            for item_name in self._ruin_reward_item_names(reward_data):
+                add_if_book(item_name)
 
         for item_data in tuple(getattr(self, "MERCHANT_BUY_ITEMS", ()) or ()):
             if not isinstance(item_data, dict):
@@ -1254,6 +1270,21 @@ class CampaignInventoryMixin:
         for alias_name, canonical_name in SCROLL_ITEM_ALIASES.items():
             alias_map[str(alias_name or "")] = str(canonical_name or "")
         return alias_map
+
+    @staticmethod
+    def _ruin_reward_item_names(reward_data: object) -> Tuple[str, ...]:
+        if not isinstance(reward_data, dict):
+            return ()
+        raw_item_names = tuple(reward_data.get("items", ()) or ())
+        if raw_item_names:
+            return tuple(
+                str(item_name)
+                for item_name in raw_item_names
+                if str(item_name or "").strip()
+            )
+        legacy_item_name = str(reward_data.get("item", "") or "").strip()
+        return (legacy_item_name,) if legacy_item_name else ()
+
     @classmethod
     def _canonical_scroll_item_name(cls, item_name: str) -> str:
         return str(
@@ -1275,8 +1306,8 @@ class CampaignInventoryMixin:
             add_if_scroll(item_name)
 
         for reward_data in tuple(getattr(self, "RUIN_REWARD_BY_ENEMY_ID", {}).values()):
-            if isinstance(reward_data, dict):
-                add_if_scroll(reward_data.get("item", ""))
+            for item_name in self._ruin_reward_item_names(reward_data):
+                add_if_scroll(item_name)
 
         for item_data in tuple(getattr(self, "MERCHANT_BUY_ITEMS", ()) or ()):
             if not isinstance(item_data, dict):

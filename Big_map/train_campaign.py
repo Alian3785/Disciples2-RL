@@ -1120,6 +1120,9 @@ class CampaignMetricsCallback(BaseCallback):
         self.enemy_victory_counter: Counter[str] = Counter()
         self.window_enemy_encounter_counter: Counter[str] = Counter()
         self.window_enemy_victory_counter: Counter[str] = Counter()
+        self.terminal_defeat_enemy_counter: Counter[str] = Counter()
+        self.window_terminal_defeat_enemy_counter: Counter[str] = Counter()
+        self.terminal_defeat_enemy_details: dict[str, dict[str, Any]] = {}
 
         self.victories = 0
         self.defeats = 0
@@ -1556,6 +1559,43 @@ class CampaignMetricsCallback(BaseCallback):
                 self.victories += 1
             elif result_key == "defeat":
                 self.defeats += 1
+                raw_terminal_enemy_id = info.get("terminal_defeat_enemy_id")
+                if (
+                    raw_terminal_enemy_id is None
+                    and info.get("battle_result") == "defeat"
+                ):
+                    raw_terminal_enemy_id = info.get("enemy_id")
+                try:
+                    terminal_enemy_id = int(raw_terminal_enemy_id)
+                    terminal_enemy_key = f"enemy_{terminal_enemy_id}"
+                except (TypeError, ValueError):
+                    terminal_enemy_id = None
+                    terminal_enemy_key = ""
+                if terminal_enemy_key:
+                    self.terminal_defeat_enemy_counter[terminal_enemy_key] += 1
+                    self.window_terminal_defeat_enemy_counter[terminal_enemy_key] += 1
+                    units = info.get("terminal_defeat_enemy_units", [])
+                    survivors = info.get("terminal_defeat_enemy_survivors", [])
+                    self.terminal_defeat_enemy_details[terminal_enemy_key] = {
+                        "enemy_id": terminal_enemy_id,
+                        "description": str(
+                            info.get("terminal_defeat_enemy_description", "") or ""
+                        ),
+                        "units": [
+                            str(name)
+                            for name in units
+                            if str(name or "").strip()
+                        ]
+                        if isinstance(units, (list, tuple))
+                        else [],
+                        "last_survivors": [
+                            str(name)
+                            for name in survivors
+                            if str(name or "").strip()
+                        ]
+                        if isinstance(survivors, (list, tuple))
+                        else [],
+                    }
             elif result_key == "timeout":
                 self.timeouts += 1
 
@@ -1770,6 +1810,19 @@ class CampaignMetricsCallback(BaseCallback):
         total_episodes = int(sum(self.result_counter.values()))
         window_episodes = int(sum(self.window_result_counter.values()))
         dragon_key = "enemy_31"
+        terminal_defeats_total_top = self._counter_top(
+            self.terminal_defeat_enemy_counter
+        )
+        terminal_defeats_window_top = self._counter_top(
+            self.window_terminal_defeat_enemy_counter
+        )
+        terminal_defeat_detail_keys = (
+            set(terminal_defeats_total_top) | set(terminal_defeats_window_top)
+        )
+        terminal_defeat_details = {
+            enemy_key: dict(self.terminal_defeat_enemy_details.get(enemy_key, {}))
+            for enemy_key in sorted(terminal_defeat_detail_keys)
+        }
         recent_activity = {
             "magic_spell_casts_mean": float(payload.get("campaign/window/spell_casts_mean", 0.0)),
             "summons_mean": _safe_mean(self.recent_summoned_units),
@@ -1835,6 +1888,9 @@ class CampaignMetricsCallback(BaseCallback):
             "enemy_victories_total_top": self._counter_top(self.enemy_victory_counter),
             "enemy_encounters_window_top": self._counter_top(self.window_enemy_encounter_counter),
             "enemy_victories_window_top": self._counter_top(self.window_enemy_victory_counter),
+            "terminal_defeat_enemies_total_top": terminal_defeats_total_top,
+            "terminal_defeat_enemies_window_top": terminal_defeats_window_top,
+            "terminal_defeat_enemy_details": terminal_defeat_details,
             "dragon_progress": {
                 "encounters_total": int(self.enemy_encounter_counter.get(dragon_key, 0)),
                 "victories_total": int(self.enemy_victory_counter.get(dragon_key, 0)),
@@ -1876,6 +1932,9 @@ class CampaignMetricsCallback(BaseCallback):
         uses = dict(report.get("uses", {}) or {})
         activity = dict(report.get("recent_activity", {}) or {})
         dragon = dict(report.get("dragon_progress", {}) or {})
+        terminal_defeats = dict(
+            report.get("terminal_defeat_enemies_window_top", {}) or {}
+        )
         step = int(report.get("step", 0) or 0)
         episodes_window = int(report.get("episodes_window", 0) or 0)
         reward_mean = float(report.get("reward_mean_window", 0.0) or 0.0)
@@ -1943,6 +2002,10 @@ class CampaignMetricsCallback(BaseCallback):
                     f"побед над ним всего {int(dragon.get('victories_total', 0) or 0)}, "
                     f"в текущем окне {int(dragon.get('victories_window', 0) or 0)}. {dragon_story}"
                 ),
+                (
+                    "Терминальные поражения в текущем окне: "
+                    f"{self._format_counter(terminal_defeats)}."
+                ),
                 "",
                 (
                     "Итог по ощущению траектории: "
@@ -1959,6 +2022,7 @@ class CampaignMetricsCallback(BaseCallback):
         self.window_victory_reason_counter.clear()
         self.window_enemy_encounter_counter.clear()
         self.window_enemy_victory_counter.clear()
+        self.window_terminal_defeat_enemy_counter.clear()
 
     def _log_to_experiment(self, *, force: bool = False) -> None:
         if not force and self.num_timesteps - self._last_logged_step < self.log_freq:
@@ -2734,6 +2798,7 @@ if __name__ == "__main__":
         "orc": "-orc",
         "build_all": "-buildall",
         "target_enemy": "-target",
+        "waves": "-waves",
     }.get(CAMPAIGN_OBJECTIVE_EFFECTIVE, "")
     if MAP_NAME != "default":
         run_name_suffix = f"-{MAP_NAME}{run_name_suffix}"
@@ -3108,6 +3173,13 @@ if __name__ == "__main__":
     print(f"  Таймаутов: {metrics_cb.timeouts}")
     print(f"  Побед бота столицы над врагами: {metrics_cb.total_scripted_bot_victories}")
     print(f"  Перестановок юнитов: {metrics_cb.total_unit_swaps}")
+    if metrics_cb.terminal_defeat_enemy_counter:
+        print("  Терминальные поражения по противникам:")
+        for enemy_key, count in metrics_cb.terminal_defeat_enemy_counter.most_common():
+            details = metrics_cb.terminal_defeat_enemy_details.get(enemy_key, {})
+            description = str(details.get("description", "") or "").strip()
+            suffix = f" — {description}" if description else ""
+            print(f"    {enemy_key}: {count}{suffix}")
     total = metrics_cb.victories + metrics_cb.defeats + metrics_cb.timeouts
     if total > 0:
         print(f"  Winrate: {100 * metrics_cb.victories / total:.1f}%")

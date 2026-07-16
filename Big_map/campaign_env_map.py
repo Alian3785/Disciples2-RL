@@ -386,8 +386,8 @@ class CampaignMapSitesMixin:
         truncated = False
 
         item_name = (
-            self.scenario_merchant_potion_item_names[idx]
-            if 0 <= idx < len(self.scenario_merchant_potion_item_names)
+            self.scenario_merchant_item_names[idx]
+            if 0 <= idx < len(self.scenario_merchant_item_names)
             else ""
         )
         item_data = self._merchant_item_definition(item_name) or {}
@@ -941,14 +941,18 @@ class CampaignMapSitesMixin:
             if not item_name:
                 continue
             alara_stock[item_name] = max(0, int(item_data.get("stock", 0) or 0))
+        if bool(getattr(self, "_uses_map_merchant_buy_items", False)):
+            return {
+                str(site_name): dict(alara_stock)
+                for site_name in self.BASE_MERCHANT_SITE_DATA.keys()
+            }
         stocks["Лавка Алара"] = alara_stock
         stocks.setdefault("Лавка Тралара", {})
         return stocks
-    @classmethod
-    def _merchant_item_definition(cls, item_name: str) -> Optional[Dict[str, object]]:
+    def _merchant_item_definition(self, item_name: str) -> Optional[Dict[str, object]]:
         """Возвращает копию описания товара торговца по имени предмета."""
         normalized_name = str(item_name or "")
-        for item_data in cls.MERCHANT_BUY_ITEMS:
+        for item_data in self.MERCHANT_BUY_ITEMS:
             if str(item_data.get("name", "") or "") == normalized_name:
                 return dict(item_data)
         return None
