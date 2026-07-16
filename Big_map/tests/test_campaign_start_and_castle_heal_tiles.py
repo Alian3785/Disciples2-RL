@@ -368,6 +368,8 @@ def test_castle_heal_actions_require_temple_building():
     assert terminated is False
     assert truncated is False
     assert reward == pytest.approx(0.0)
+    assert info["leadership_points"] == 0
+    assert info["leadership_step_penalty"] == pytest.approx(0.0)
     assert float(unit.get("hp", 0) or 0.0) == pytest.approx(hp_before)
     assert env.gold == pytest.approx(10.0)
     assert info.get("castle_heal_action") is True
@@ -416,7 +418,11 @@ def test_castle_revive_actions_require_temple_building():
 
     assert terminated is False
     assert truncated is False
-    assert reward == pytest.approx(0.0)
+    assert reward == pytest.approx(-float(env.reward_needaunit_turn_penalty))
+    assert info["leadership_points"] == 1
+    assert info["leadership_step_penalty"] == pytest.approx(
+        float(env.reward_needaunit_turn_penalty)
+    )
     assert float(unit.get("hp", 0) or 0.0) == pytest.approx(0.0)
     assert env.gold == pytest.approx(50.0)
     assert info.get("castle_revive_action") is True
@@ -709,7 +715,11 @@ def test_castle_revive_action_is_blocked_when_gold_is_below_required_cost():
     assert info.get("revived") is False
     assert float(info.get("revive_cost", 0.0)) == pytest.approx(600.0)
     assert float(info.get("gold_spent", 0.0)) == pytest.approx(0.0)
-    assert reward == pytest.approx(0.0)
+    assert reward == pytest.approx(-float(env.reward_needaunit_turn_penalty))
+    assert info["leadership_points"] == 1
+    assert info["leadership_step_penalty"] == pytest.approx(
+        float(env.reward_needaunit_turn_penalty)
+    )
     assert float(info.get("castle_revive_reward", -1.0)) == pytest.approx(0.0)
 
 

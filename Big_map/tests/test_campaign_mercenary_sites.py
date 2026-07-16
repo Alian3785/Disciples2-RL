@@ -32,7 +32,6 @@ def _enable_mercenary_hire(env: CampaignEnv, position: tuple[int, int], gold: fl
     env.reset(seed=123)
     env.grid_env.agent_pos = position
     hero = _blue_unit(env, 8)
-    hero["Level"] = 3
     env.gold = float(gold)
     return hero
 

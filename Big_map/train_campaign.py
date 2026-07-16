@@ -2728,9 +2728,13 @@ if __name__ == "__main__":
         print(f"[WARN] comet_ml>={required} is required, found {detected}. Comet logging disabled.")
         COMET_AVAILABLE = False
 
-    run_name_suffix = {"dragon": "-dragon", "blue_dragon": "-bluedragon", "orc": "-orc"}.get(
-        CAMPAIGN_OBJECTIVE_EFFECTIVE, ""
-    )
+    run_name_suffix = {
+        "dragon": "-dragon",
+        "blue_dragon": "-bluedragon",
+        "orc": "-orc",
+        "build_all": "-buildall",
+        "target_enemy": "-target",
+    }.get(CAMPAIGN_OBJECTIVE_EFFECTIVE, "")
     if MAP_NAME != "default":
         run_name_suffix = f"-{MAP_NAME}{run_name_suffix}"
     run_name = args.run_name or f"campaign-ppo-{TOTAL_STEPS // 1000}k{run_name_suffix}"
