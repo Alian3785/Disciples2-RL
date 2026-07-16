@@ -41,13 +41,17 @@ class CampaignTerritoryMixin:
             "target_enemy": cls.CAMPAIGN_OBJECTIVE_TARGET_ENEMY,
             "siege": cls.CAMPAIGN_OBJECTIVE_TARGET_ENEMY,
             "siege_army": cls.CAMPAIGN_OBJECTIVE_TARGET_ENEMY,
+            "waves": cls.CAMPAIGN_OBJECTIVE_WAVES,
+            "wave": cls.CAMPAIGN_OBJECTIVE_WAVES,
+            "last_stand": cls.CAMPAIGN_OBJECTIVE_WAVES,
+            "survival_waves": cls.CAMPAIGN_OBJECTIVE_WAVES,
         }
         if raw in aliases:
             return aliases[raw]
         raise ValueError(
             f"Unsupported campaign_objective={value!r}; "
             "expected 'cities', 'dragon', 'blue_dragon', 'orc', 'build_all', "
-            "'all_enemies' or 'target_enemy'"
+            "'all_enemies', 'target_enemy' or 'waves'"
         )
 
     def _campaign_objective_is_cities(self) -> bool:
@@ -95,6 +99,12 @@ class CampaignTerritoryMixin:
         return (
             self._normalize_campaign_objective(getattr(self, "campaign_objective", "cities"))
             == self.CAMPAIGN_OBJECTIVE_TARGET_ENEMY
+        )
+
+    def _campaign_objective_is_waves(self) -> bool:
+        return (
+            self._normalize_campaign_objective(getattr(self, "campaign_objective", "cities"))
+            == self.CAMPAIGN_OBJECTIVE_WAVES
         )
 
     def _is_green_dragon_objective_enemy(self, enemy_id: Optional[int]) -> bool:
@@ -173,6 +183,21 @@ class CampaignTerritoryMixin:
             ):
                 raise ValueError(
                     f"campaign_objective='target_enemy' is not supported on map '{map_label}'"
+                )
+        elif objective == self.CAMPAIGN_OBJECTIVE_WAVES:
+            wave_configs = self._scheduled_enemy_wave_configs()
+            wave_enemy_ids = {
+                int(config["enemy_id"])
+                for config in wave_configs
+            }
+            if (
+                map_config is None
+                or map_config.default_objective != self.CAMPAIGN_OBJECTIVE_WAVES
+                or not wave_configs
+                or not wave_enemy_ids.issubset(map_enemy_ids)
+            ):
+                raise ValueError(
+                    f"campaign_objective='waves' is not supported on map '{map_label}'"
                 )
 
     def _compute_green_dragon_objective_reward(self) -> float:
@@ -418,6 +443,11 @@ class CampaignTerritoryMixin:
             and self.grid_env.all_enemies_defeated()
         ):
             return "all_enemies_defeated"
+        if (
+            self._campaign_objective_is_waves()
+            and self._all_scheduled_enemy_waves_defeated()
+        ):
+            return "all_waves_defeated"
         return None
 
     def _apply_target_enemy_objective_reward_if_needed(
@@ -453,6 +483,90 @@ class CampaignTerritoryMixin:
         info["all_enemies_reward"] = float(final_reward)
         info["all_enemies_reward_granted"] = True
         return float(reward) + float(final_reward)
+
+    def _apply_wave_defeat_reward_if_needed(
+        self,
+        enemy_id: Optional[int],
+        reward: float,
+        info: Dict[str, object],
+    ) -> float:
+        """Record a scheduled-wave victory and add its escalating one-time reward."""
+        config = self._scheduled_enemy_wave_config_by_id(enemy_id)
+        if config is None:
+            return float(reward)
+        normalized_enemy_id = int(config["enemy_id"])
+        self.scheduled_enemy_defeated_ids.add(normalized_enemy_id)
+        self._remove_scheduled_enemy_from_pending_encounters(normalized_enemy_id)
+
+        wave_index = int(config["wave_index"])
+        wave_configs = tuple(
+            wave_config
+            for wave_config in self._scheduled_enemy_wave_configs()
+            if int(wave_config["wave_index"]) == wave_index
+        )
+        wave_enemy_ids = {
+            int(wave_config["enemy_id"])
+            for wave_config in wave_configs
+        }
+        defeated_ids = set(self.scheduled_enemy_defeated_ids)
+        wave_completed = wave_enemy_ids.issubset(defeated_ids)
+        wave_groups = self._scheduled_enemy_wave_groups()
+        completed_wave_count = sum(
+            1
+            for wave_group in wave_groups
+            if set(wave_group["enemy_ids"]).issubset(defeated_ids)
+        )
+
+        info["wave_enemy_id"] = normalized_enemy_id
+        info["wave_index"] = wave_index
+        info["wave_enemy_ids"] = sorted(wave_enemy_ids)
+        info["wave_completed"] = bool(wave_completed)
+        info["wave_remaining_enemy_ids"] = sorted(wave_enemy_ids - defeated_ids)
+        info["wave_stacks_defeated_count"] = int(len(defeated_ids))
+        info["wave_stacks_total"] = int(len(self._scheduled_enemy_wave_configs()))
+        info["waves_defeated_count"] = int(completed_wave_count)
+        info["waves_total"] = int(len(wave_groups))
+
+        if not self._campaign_objective_is_waves():
+            return float(reward)
+
+        if not wave_completed:
+            info["wave_defeat_bonus"] = 0.0
+            info["wave_defeat_reward_repeat"] = False
+            return float(reward)
+
+        if wave_index in self.wave_reward_granted_indices:
+            info["wave_defeat_bonus"] = 0.0
+            info["wave_defeat_reward_repeat"] = True
+            return float(reward)
+
+        self.wave_reward_granted_indices.add(wave_index)
+        self.wave_reward_granted_enemy_ids.update(wave_enemy_ids)
+        reward_scale = max(
+            0.0,
+            float(getattr(self._map, "wave_reward_scale", 1.0) or 0.0),
+        )
+        wave_bonus = (
+            float(self.reward_defeat_enemy)
+            * reward_scale
+            * float(max(1, wave_index))
+        )
+        total_reward = float(reward) + float(wave_bonus)
+        info["wave_defeat_bonus"] = float(wave_bonus)
+        info["wave_defeat_reward_repeat"] = False
+
+        if (
+            self._campaign_objective_is_waves()
+            and self._all_scheduled_enemy_waves_defeated()
+            and not bool(getattr(self, "waves_final_reward_granted", False))
+        ):
+            final_reward = max(0.0, float(self.reward_all_enemies))
+            self.waves_final_reward_granted = True
+            total_reward += final_reward
+            info["waves_final_objective_reward"] = float(final_reward)
+            info["waves_final_reward_granted"] = True
+
+        return float(total_reward)
 
     def _ruin_progress_info(self) -> Dict[str, object]:
         """Собирает компактный progress-блок по руинам для info после reset/step."""
@@ -517,7 +631,17 @@ class CampaignTerritoryMixin:
 
         ruin_enemy_id = int(enemy_id or -1)
         ruin_title = str(reward_data.get("title", "") or "")
-        item_name = str(reward_data.get("item", "") or "")
+        raw_item_names = tuple(reward_data.get("items", ()) or ())
+        if raw_item_names:
+            item_names = tuple(
+                str(item_name)
+                for item_name in raw_item_names
+                if str(item_name)
+            )
+        else:
+            legacy_item_name = str(reward_data.get("item", "") or "")
+            item_names = (legacy_item_name,) if legacy_item_name else ()
+        item_name = item_names[0] if item_names else ""
         gold_reward = max(0.0, float(reward_data.get("gold", 0.0) or 0.0))
         ruin_pos = tuple(int(v) for v in tuple(reward_data.get("ruin_pos", ())))
         marker_pos = tuple(int(v) for v in tuple(reward_data.get("marker_pos", ())))
@@ -535,14 +659,18 @@ class CampaignTerritoryMixin:
         self.cleared_ruin_enemy_ids.add(ruin_enemy_id)
         self.gold = max(0.0, float(self.gold or 0.0)) + gold_reward
         artifact_grant_info: Dict[str, object] = {}
-        if item_name:
+        item_grant_infos: List[Dict[str, object]] = []
+        for reward_item_name in item_names:
             # Предметы выдаются через общий inventory helper, чтобы не обходить его побочные эффекты.
-            artifact_grant_info = self._grant_hero_item_reward(item_name)
+            grant_info = self._grant_hero_item_reward(reward_item_name)
+            item_grant_infos.append(dict(grant_info))
+            artifact_grant_info.update(grant_info)
 
         self.last_ruin_reward = {
             "enemy_id": ruin_enemy_id,
             "title": ruin_title,
             "item": item_name,
+            "items": list(item_names),
             "gold": gold_reward,
             "ruin_position": ruin_pos,
             "marker_position": marker_pos,
@@ -550,8 +678,7 @@ class CampaignTerritoryMixin:
 
         ruin_label = ruin_title or f"Руины {ruin_pos}"
         reward_parts = [f"+{gold_reward:g} gold"]
-        if item_name:
-            reward_parts.append(item_name)
+        reward_parts.extend(item_names)
         self._log(f"{ruin_label}: получено {', '.join(reward_parts)}")
 
         return {
@@ -560,6 +687,8 @@ class CampaignTerritoryMixin:
             "ruin_reward_enemy_id": ruin_enemy_id,
             "ruin_reward_title": ruin_title,
             "ruin_reward_item": item_name,
+            "ruin_reward_items": list(item_names),
+            "ruin_reward_item_grants": item_grant_infos,
             "ruin_reward_gold": gold_reward,
             "ruin_reward_ruin_pos": ruin_pos,
             "ruin_reward_marker_pos": marker_pos,
@@ -782,51 +911,281 @@ class CampaignTerritoryMixin:
             self.LEGIONS_GOLD_MINE_GOLD_PER_TURN
         )
 
+    def _scheduled_enemy_wave_configs(self) -> Tuple[Dict[str, int], ...]:
+        raw_waves = tuple(getattr(self._map, "scheduled_enemy_waves", ()) or ())
+        normalized: List[Dict[str, int]] = []
+        for index, raw_wave in enumerate(raw_waves):
+            if not isinstance(raw_wave, dict):
+                continue
+            raw_enemy_ids = raw_wave.get("enemy_ids")
+            if raw_enemy_ids is None:
+                raw_enemy_id = raw_wave.get("enemy_id")
+                enemy_ids = () if raw_enemy_id is None else (raw_enemy_id,)
+            elif isinstance(raw_enemy_ids, (list, tuple, set, frozenset)):
+                enemy_ids = tuple(raw_enemy_ids)
+            else:
+                enemy_ids = (raw_enemy_ids,)
+            member_count = len(enemy_ids)
+            base_spawn_turn = max(
+                1,
+                int(raw_wave.get("spawn_turn", 5 * (index + 1)) or 1),
+            )
+            spawn_interval = max(
+                0,
+                int(raw_wave.get("spawn_interval", 0) or 0),
+            )
+            for member_index, raw_enemy_id in enumerate(enemy_ids):
+                if raw_enemy_id is None:
+                    continue
+                normalized.append(
+                    {
+                        "enemy_id": int(raw_enemy_id),
+                        "spawn_turn": int(
+                            base_spawn_turn + member_index * spawn_interval
+                        ),
+                        "moves_per_turn": max(
+                            0,
+                            int(raw_wave.get("moves_per_turn", 0) or 0),
+                        ),
+                        "wave_index": max(
+                            1,
+                            int(raw_wave.get("wave_index", index + 1) or index + 1),
+                        ),
+                        "wave_member_index": int(member_index + 1),
+                        "wave_member_count": int(member_count),
+                    }
+                )
+        if normalized:
+            return tuple(normalized)
+
+        legacy_enemy_id = getattr(self._map, "scheduled_enemy_id", None)
+        legacy_spawn_turn = getattr(self._map, "scheduled_enemy_spawn_turn", None)
+        if legacy_enemy_id is None or legacy_spawn_turn is None:
+            return ()
+        return (
+            {
+                "enemy_id": int(legacy_enemy_id),
+                "spawn_turn": max(1, int(legacy_spawn_turn)),
+                "moves_per_turn": max(
+                    0,
+                    int(getattr(self._map, "scheduled_enemy_moves_per_turn", 0) or 0),
+                ),
+                "wave_index": 1,
+                "wave_member_index": 1,
+                "wave_member_count": 1,
+            },
+        )
+
+    def _scheduled_enemy_wave_groups(self) -> Tuple[Dict[str, object], ...]:
+        grouped: Dict[int, Dict[str, object]] = {}
+        for config in self._scheduled_enemy_wave_configs():
+            wave_index = int(config["wave_index"])
+            group = grouped.setdefault(
+                wave_index,
+                {
+                    "wave_index": wave_index,
+                    "spawn_turn": int(config["spawn_turn"]),
+                    "moves_per_turn": int(config["moves_per_turn"]),
+                    "enemy_ids": [],
+                    "last_spawn_turn": int(config["spawn_turn"]),
+                },
+            )
+            group["enemy_ids"].append(int(config["enemy_id"]))
+            group["spawn_turn"] = min(
+                int(group["spawn_turn"]),
+                int(config["spawn_turn"]),
+            )
+            group["last_spawn_turn"] = max(
+                int(group["last_spawn_turn"]),
+                int(config["spawn_turn"]),
+            )
+        return tuple(
+            {
+                **group,
+                "enemy_ids": tuple(int(enemy_id) for enemy_id in group["enemy_ids"]),
+            }
+            for group in grouped.values()
+        )
+
+    def _scheduled_enemy_wave_config_by_id(
+        self,
+        enemy_id: Optional[int],
+    ) -> Optional[Dict[str, int]]:
+        try:
+            normalized_enemy_id = int(enemy_id)
+        except (TypeError, ValueError):
+            return None
+        for config in self._scheduled_enemy_wave_configs():
+            if int(config["enemy_id"]) == normalized_enemy_id:
+                return config
+        return None
+
+    def _all_scheduled_enemy_waves_defeated(self) -> bool:
+        configs = self._scheduled_enemy_wave_configs()
+        if not configs:
+            return False
+        required_ids = {int(config["enemy_id"]) for config in configs}
+        return required_ids.issubset(
+            set(getattr(self, "scheduled_enemy_defeated_ids", set()) or set())
+        )
+
+    def _queue_scheduled_enemy_encounter(self, enemy_id: int) -> None:
+        normalized_enemy_id = int(enemy_id)
+        pending = self.scheduled_enemy_pending_encounter_ids
+        if normalized_enemy_id not in pending:
+            pending.append(normalized_enemy_id)
+        self.scheduled_enemy_pending_encounter_id = (
+            int(pending[0]) if pending else None
+        )
+
+    def _remove_scheduled_enemy_from_pending_encounters(self, enemy_id: int) -> None:
+        normalized_enemy_id = int(enemy_id)
+        self.scheduled_enemy_pending_encounter_ids = [
+            int(pending_id)
+            for pending_id in self.scheduled_enemy_pending_encounter_ids
+            if int(pending_id) != normalized_enemy_id
+        ]
+        self.scheduled_enemy_pending_encounter_id = (
+            int(self.scheduled_enemy_pending_encounter_ids[0])
+            if self.scheduled_enemy_pending_encounter_ids
+            else None
+        )
+
+    def _pop_scheduled_enemy_pending_encounter(self) -> Optional[int]:
+        while self.scheduled_enemy_pending_encounter_ids:
+            enemy_id = int(self.scheduled_enemy_pending_encounter_ids.pop(0))
+            if self.grid_env.enemies_alive.get(enemy_id, False):
+                self.scheduled_enemy_pending_encounter_id = (
+                    int(self.scheduled_enemy_pending_encounter_ids[0])
+                    if self.scheduled_enemy_pending_encounter_ids
+                    else None
+                )
+                return enemy_id
+        self.scheduled_enemy_pending_encounter_id = None
+        return None
+
     def _scheduled_enemy_state_info(self) -> Dict[str, object]:
-        enemy_id = getattr(self._map, "scheduled_enemy_id", None)
-        if enemy_id is None:
+        configs = self._scheduled_enemy_wave_configs()
+        if not configs:
             return {
                 "scheduled_enemy_id": None,
                 "scheduled_enemy_spawned": False,
                 "scheduled_enemy_active": False,
+                "scheduled_enemy_wave_count": 0,
+                "scheduled_enemy_waves_spawned": 0,
+                "scheduled_enemy_waves_defeated": 0,
+                "scheduled_enemy_waves_active": 0,
+                "scheduled_enemy_stack_count": 0,
+                "scheduled_enemy_stacks_spawned": 0,
+                "scheduled_enemy_stacks_defeated": 0,
+                "scheduled_enemy_stacks_active": 0,
+                "scheduled_enemy_waves": [],
+                "scheduled_enemy_wave_groups": [],
             }
-        normalized_enemy_id = int(enemy_id)
+
+        wave_groups = self._scheduled_enemy_wave_groups()
+        spawned_ids = set(
+            getattr(self, "scheduled_enemy_spawned_ids", set()) or set()
+        )
+        defeated_ids = set(
+            getattr(self, "scheduled_enemy_defeated_ids", set()) or set()
+        )
+        wave_states: List[Dict[str, object]] = []
+        for config in configs:
+            enemy_id = int(config["enemy_id"])
+            spawned = enemy_id in spawned_ids
+            alive = bool(self.grid_env.enemies_alive.get(enemy_id, False))
+            wave_states.append(
+                {
+                    **dict(config),
+                    "spawned": bool(spawned),
+                    "defeated": bool(enemy_id in defeated_ids),
+                    "active": bool(spawned and alive),
+                    "position": tuple(
+                        self.grid_env.enemy_positions.get(
+                            enemy_id,
+                            self._static_enemy_positions.get(enemy_id, self.CASTLE_POS),
+                        )
+                    ),
+                }
+            )
+
+        group_states: List[Dict[str, object]] = []
+        for group in wave_groups:
+            enemy_ids = {
+                int(enemy_id)
+                for enemy_id in tuple(group["enemy_ids"])
+            }
+            group_spawned = enemy_ids.issubset(spawned_ids)
+            group_defeated = enemy_ids.issubset(defeated_ids)
+            group_active = any(
+                enemy_id in spawned_ids
+                and self.grid_env.enemies_alive.get(enemy_id, False)
+                for enemy_id in enemy_ids
+            )
+            group_states.append(
+                {
+                    **dict(group),
+                    "spawned": bool(group_spawned),
+                    "defeated": bool(group_defeated),
+                    "active": bool(group_active),
+                }
+            )
+
+        first = configs[0]
+        first_enemy_id = int(first["enemy_id"])
+        active_stack_count = sum(1 for state in wave_states if bool(state["active"]))
+        spawned_group_count = sum(1 for state in group_states if bool(state["spawned"]))
+        defeated_group_count = sum(1 for state in group_states if bool(state["defeated"]))
+        active_group_count = sum(1 for state in group_states if bool(state["active"]))
         return {
-            "scheduled_enemy_id": normalized_enemy_id,
-            "scheduled_enemy_spawn_turn": int(
-                getattr(self._map, "scheduled_enemy_spawn_turn", 0) or 0
-            ),
-            "scheduled_enemy_moves_per_turn": int(
-                getattr(self._map, "scheduled_enemy_moves_per_turn", 0) or 0
-            ),
-            "scheduled_enemy_spawned": bool(
-                getattr(self, "scheduled_enemy_spawned", False)
-            ),
+            "scheduled_enemy_id": first_enemy_id,
+            "scheduled_enemy_spawn_turn": int(first["spawn_turn"]),
+            "scheduled_enemy_moves_per_turn": int(first["moves_per_turn"]),
+            "scheduled_enemy_spawned": bool(first_enemy_id in spawned_ids),
             "scheduled_enemy_active": bool(
-                self.grid_env.enemies_alive.get(normalized_enemy_id, False)
+                first_enemy_id in spawned_ids
+                and self.grid_env.enemies_alive.get(first_enemy_id, False)
             ),
             "scheduled_enemy_position": tuple(
                 self.grid_env.enemy_positions.get(
-                    normalized_enemy_id,
-                    self._static_enemy_positions.get(normalized_enemy_id, self.CASTLE_POS),
+                    first_enemy_id,
+                    self._static_enemy_positions.get(first_enemy_id, self.CASTLE_POS),
                 )
             ),
+            "scheduled_enemy_wave_count": int(len(wave_groups)),
+            "scheduled_enemy_waves_spawned": int(spawned_group_count),
+            "scheduled_enemy_waves_defeated": int(defeated_group_count),
+            "scheduled_enemy_waves_active": int(active_group_count),
+            "scheduled_enemy_stack_count": int(len(configs)),
+            "scheduled_enemy_stacks_spawned": int(len(spawned_ids)),
+            "scheduled_enemy_stacks_defeated": int(len(defeated_ids)),
+            "scheduled_enemy_stacks_active": int(active_stack_count),
+            "scheduled_enemy_pending_encounter_ids": list(
+                getattr(self, "scheduled_enemy_pending_encounter_ids", ()) or ()
+            ),
+            "scheduled_enemy_waves": wave_states,
+            "scheduled_enemy_wave_groups": group_states,
         }
 
     def _reset_scheduled_enemy_state(self) -> None:
         self.scheduled_enemy_spawned = False
+        self.scheduled_enemy_spawned_ids: set[int] = set()
+        self.scheduled_enemy_defeated_ids: set[int] = set()
+        self.wave_reward_granted_enemy_ids: set[int] = set()
+        self.wave_reward_granted_indices: set[int] = set()
+        self.waves_final_reward_granted = False
+        self.scheduled_enemy_pending_encounter_ids: List[int] = []
         self.scheduled_enemy_pending_encounter_id = None
         self.scheduled_enemy_turn_infos: List[Dict[str, object]] = []
-        enemy_id = getattr(self._map, "scheduled_enemy_id", None)
-        if enemy_id is None:
-            return
-        normalized_enemy_id = int(enemy_id)
-        if normalized_enemy_id in self._static_enemy_positions:
-            self.grid_env.enemy_positions[normalized_enemy_id] = tuple(
-                self._static_enemy_positions[normalized_enemy_id]
-            )
-        if normalized_enemy_id in self.grid_env.enemies_alive:
-            self.grid_env.enemies_alive[normalized_enemy_id] = False
+        for config in self._scheduled_enemy_wave_configs():
+            normalized_enemy_id = int(config["enemy_id"])
+            if normalized_enemy_id in self._static_enemy_positions:
+                self.grid_env.enemy_positions[normalized_enemy_id] = tuple(
+                    self._static_enemy_positions[normalized_enemy_id]
+                )
+            if normalized_enemy_id in self.grid_env.enemies_alive:
+                self.grid_env.enemies_alive[normalized_enemy_id] = False
 
     def _scheduled_enemy_next_step(
         self,
@@ -860,19 +1219,16 @@ class CampaignTerritoryMixin:
                 return candidate
         return origin_x, origin_y
 
-    def _advance_scheduled_enemy_one_turn(self) -> Dict[str, object]:
-        enemy_id = getattr(self._map, "scheduled_enemy_id", None)
-        spawn_turn = getattr(self._map, "scheduled_enemy_spawn_turn", None)
-        if enemy_id is None or spawn_turn is None:
-            return {}
-        normalized_enemy_id = int(enemy_id)
-        normalized_spawn_turn = max(1, int(spawn_turn))
-        moves_per_turn = max(
-            0,
-            int(getattr(self._map, "scheduled_enemy_moves_per_turn", 0) or 0),
-        )
+    def _advance_scheduled_enemy_wave_one_turn(
+        self,
+        config: Dict[str, int],
+    ) -> Dict[str, object]:
+        normalized_enemy_id = int(config["enemy_id"])
+        normalized_spawn_turn = max(1, int(config["spawn_turn"]))
+        moves_per_turn = max(0, int(config["moves_per_turn"]))
         info: Dict[str, object] = {
             "enemy_id": normalized_enemy_id,
+            "wave_index": int(config["wave_index"]),
             "turn": int(self.turns),
             "spawned_this_turn": False,
             "moved_path": [],
@@ -881,7 +1237,8 @@ class CampaignTerritoryMixin:
         if int(self.turns) < normalized_spawn_turn:
             info["state"] = "dormant"
             return info
-        if not bool(getattr(self, "scheduled_enemy_spawned", False)):
+        if normalized_enemy_id not in self.scheduled_enemy_spawned_ids:
+            self.scheduled_enemy_spawned_ids.add(normalized_enemy_id)
             self.scheduled_enemy_spawned = True
             self.grid_env.enemies_alive[normalized_enemy_id] = True
             self.grid_env.enemy_positions[normalized_enemy_id] = tuple(
@@ -906,7 +1263,7 @@ class CampaignTerritoryMixin:
         self.grid_env.enemy_positions[normalized_enemy_id] = position
         contact = position == target
         if contact:
-            self.scheduled_enemy_pending_encounter_id = normalized_enemy_id
+            self._queue_scheduled_enemy_encounter(normalized_enemy_id)
         info.update(
             {
                 "state": "engaging" if contact else "pursuing",
@@ -918,6 +1275,19 @@ class CampaignTerritoryMixin:
             }
         )
         return info
+
+    def _advance_scheduled_enemy_one_turn(self) -> Dict[str, object]:
+        """Backward-compatible single-pursuer wrapper used by older callers."""
+        configs = self._scheduled_enemy_wave_configs()
+        if not configs:
+            return {}
+        return self._advance_scheduled_enemy_wave_one_turn(configs[0])
+
+    def _advance_scheduled_enemies_one_turn(self) -> List[Dict[str, object]]:
+        return [
+            self._advance_scheduled_enemy_wave_one_turn(config)
+            for config in self._scheduled_enemy_wave_configs()
+        ]
 
     def _advance_turns(self, delta_turns: int) -> float:
         """Продвигает campaign time и выполняет все эффекты начала нового turn.
@@ -939,9 +1309,9 @@ class CampaignTerritoryMixin:
             total_gold_income += self._legions_gold_income_per_turn()
             self._apply_mana_income_for_turn()
             self._heal_wounded_enemy_teams_for_turn()
-            scheduled_enemy_info = self._advance_scheduled_enemy_one_turn()
-            if scheduled_enemy_info:
-                scheduled_enemy_turn_infos.append(scheduled_enemy_info)
+            scheduled_enemy_turn_infos.extend(
+                self._advance_scheduled_enemies_one_turn()
+            )
             advance_bot = getattr(self, "_advance_scripted_capital_bot_one_turn", None)
             if callable(advance_bot) and bool(getattr(self, "scripted_capital_bot_enabled", False)):
                 scripted_bot_turn_infos.append(advance_bot())

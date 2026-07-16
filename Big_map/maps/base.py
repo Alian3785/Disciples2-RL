@@ -269,8 +269,16 @@ class MapConfig:
     # Optional fixed map roster: battle position 7-12 -> unit name.
     # When set, it overrides the usual faction/lord and boss rosters.
     starting_roster: Optional[Mapping[int, str]] = None
+    # Optional per-position changes applied after the roster unit is built.
+    # Useful for scenario aliases and explicit hero/type flags without
+    # duplicating the canonical unit database entry.
+    starting_unit_overrides: Optional[Mapping[int, Mapping[str, object]]] = None
+    # Optional display-name aliases resolved back to canonical UNIT_DATA names.
+    unit_name_aliases: Optional[Mapping[str, str]] = None
     # Gold restored at the beginning of every episode on this map.
     starting_gold: float = 0.0
+    # Optional map-specific replacement for the global merchant assortment.
+    merchant_buy_items: Optional[Tuple[Dict[str, object], ...]] = None
     # Arbitrary items placed directly into the hero inventory at episode start.
     starting_hero_items: Tuple[str, ...] = ()
     # Scrolls placed directly into the hero inventory at episode start.
@@ -298,6 +306,14 @@ class MapConfig:
     scheduled_enemy_id: Optional[int] = None
     scheduled_enemy_spawn_turn: Optional[int] = None
     scheduled_enemy_moves_per_turn: int = 0
+    # Optional ordered list of pursuing waves. Each entry references either one
+    # enemy_id or a simultaneous enemy_ids group from enemy_stacks and may define
+    # spawn_turn, optional spawn_interval between group members, moves_per_turn
+    # and wave_index. Legacy single-pursuer fields above remain supported.
+    scheduled_enemy_waves: Tuple[Dict[str, object], ...] = ()
+    # Extra reward for completing wave N is
+    # reward_defeat_enemy * wave_reward_scale * N.
+    wave_reward_scale: float = 1.0
     # Keep enemy tiles path-reachable unless a scenario intentionally requires magic.
     enforce_enemy_reachability: bool = True
     # Местность: ленивые провайдеры (например, парсинг .sg-файла).
