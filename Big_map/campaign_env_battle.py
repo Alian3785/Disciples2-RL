@@ -14,6 +14,71 @@ from campaign_env_data import *
 class CampaignBattleMixin:
     """Часть CampaignEnv, отвечающая за жизненный цикл боя и persistent-состояние отрядов."""
 
+    @staticmethod
+    def _terminal_defeat_unit_names(
+        units: object,
+        *,
+        living_only: bool = False,
+    ) -> list[str]:
+        names: list[str] = []
+        if not isinstance(units, (list, tuple)):
+            return names
+        for unit in units:
+            if not isinstance(unit, dict):
+                continue
+            name = str(unit.get("name", "") or "").strip()
+            if not name:
+                continue
+            try:
+                max_health = float(unit.get("max_health", 0.0) or 0.0)
+                current_health = float(
+                    unit.get("health", unit.get("hp", 0.0)) or 0.0
+                )
+            except (TypeError, ValueError):
+                max_health = 0.0
+                current_health = 0.0
+            if max_health <= 0.0:
+                continue
+            if living_only and current_health <= 0.0:
+                continue
+            names.append(name)
+        return names
+
+    def _terminal_defeat_opponent_info(
+        self,
+        enemy_id: object,
+    ) -> dict[str, object]:
+        try:
+            normalized_enemy_id = int(enemy_id)
+        except (TypeError, ValueError):
+            return {}
+
+        configured_team = self._enemy_configs.get(normalized_enemy_id, [])
+        battle_units = getattr(self.battle_env, "combined", []) if self.battle_env else []
+        surviving_red_units = [
+            unit
+            for unit in battle_units
+            if isinstance(unit, dict)
+            and str(unit.get("team", "") or "").strip().lower() == "red"
+        ]
+        return {
+            "terminal_defeat_enemy_id": normalized_enemy_id,
+            "terminal_defeat_enemy_key": f"enemy_{normalized_enemy_id}",
+            "terminal_defeat_enemy_description": str(
+                self._enemy_descriptions.get(
+                    normalized_enemy_id,
+                    "Unknown enemy",
+                )
+            ),
+            "terminal_defeat_enemy_units": self._terminal_defeat_unit_names(
+                configured_team
+            ),
+            "terminal_defeat_enemy_survivors": self._terminal_defeat_unit_names(
+                surviving_red_units,
+                living_only=True,
+            ),
+        }
+
     def _step_battle(self, action: int):
         """Выполняет один action в текущем BattleEnv и переводит результат в формат CampaignEnv.
 
@@ -358,6 +423,9 @@ class CampaignBattleMixin:
                     )
 
                 reward += self.reward_loss
+                info.update(
+                    self._terminal_defeat_opponent_info(self.current_enemy_id)
+                )
                 self._clear_battle_origin()
                 self._clear_current_battle_context()
                 self._log(f"=== ПОРАЖЕНИЕ В БОЮ ПРОТИВ ВРАГА {self.current_enemy_id}! ===")

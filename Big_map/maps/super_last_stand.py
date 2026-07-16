@@ -17,6 +17,7 @@ ORC_ENEMY_ID = 1
 OCCULT_MASTER_ENEMY_ID = 2
 LAKE_ENEMY_ID = 3
 RUIN_ENEMY_ID = 70
+ELVEN_RUIN_ENEMY_ID = 71
 
 WAVE_ENEMY_ID_BASE = 100
 WAVE_RACE_NAMES = ("Люди", "Эльфы", "Гномы")
@@ -47,6 +48,11 @@ LAKE_CHEST_TILE = (36, 7)
 LAKE_ENEMY_TILE = (36, 10)
 RUIN_TILE = (15, 14)
 RUIN_MARKER_TILE = (17, 16)
+ELVEN_RUIN_TILE = (29, 14)
+ELVEN_RUIN_MARKER_TILE = (30, 16)
+ELVEN_RUIN_GOLD = 600
+ELVEN_RUIN_BANNER_ITEM = "Banner of War"
+ELVEN_RUIN_ORB_ITEM = "Orb of Witches"
 
 
 def _rectangle_border(
@@ -506,6 +512,24 @@ STATIC_ENEMY_STACKS = (
         "front": ["Тролль", None, "Людоед"],
         "back": [None, "Гоблин старейшина", None],
     },
+    {
+        "enemy_id": ELVEN_RUIN_ENEMY_ID,
+        "position": ELVEN_RUIN_MARKER_TILE,
+        "description": (
+            "Забытые эльфийские руины: нейтральный грифон, "
+            "эльфийский оракул, лорд эльфов и эльф-рейнджер"
+        ),
+        "front": [
+            "Нейтральный грифон",
+            None,
+            "Нейтральный лорд эльфов",
+        ],
+        "back": [
+            None,
+            "Нейтральный эльфийский оракул",
+            "Нейтральный эльф-рейнджер",
+        ],
+    },
 )
 
 ENEMY_STACKS = STATIC_ENEMY_STACKS + WAVE_ENEMY_STACKS
@@ -564,6 +588,16 @@ MAP = MapConfig(
                 "Unholy Chalice (Artifact)",
             ),
             "gold": 900,
+        },
+        ELVEN_RUIN_ENEMY_ID: {
+            "title": "Забытые эльфийские руины",
+            "ruin_pos": ELVEN_RUIN_TILE,
+            "marker_pos": ELVEN_RUIN_MARKER_TILE,
+            "items": (
+                ELVEN_RUIN_BANNER_ITEM,
+                ELVEN_RUIN_ORB_ITEM,
+            ),
+            "gold": ELVEN_RUIN_GOLD,
         },
     },
     default_objective="waves",

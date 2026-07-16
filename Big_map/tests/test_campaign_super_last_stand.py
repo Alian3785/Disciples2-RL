@@ -16,6 +16,12 @@ from maps.super_last_stand import (
     CAPITAL_INFERNAL_MANA_TILE,
     CENTER_INVULNERABILITY_CHEST,
     DWARF_WAVE_ENEMY_ID,
+    ELVEN_RUIN_BANNER_ITEM,
+    ELVEN_RUIN_ENEMY_ID,
+    ELVEN_RUIN_GOLD,
+    ELVEN_RUIN_MARKER_TILE,
+    ELVEN_RUIN_ORB_ITEM,
+    ELVEN_RUIN_TILE,
     ELF_WAVE_ENEMY_ID,
     GOLD_MINE_TILES,
     HERO_START,
@@ -225,7 +231,9 @@ def test_super_last_stand_shops_chests_and_inventory_are_available():
     assert 'Свиток "Призывание II: Белиарх"' in env.scenario_scroll_item_names
     assert "Angel Orb" in env.scenario_battle_orb_item_names
     assert "Zombie Orb" in env.scenario_battle_orb_item_names
+    assert ELVEN_RUIN_ORB_ITEM in env.scenario_battle_orb_item_names
     assert "Elder Vampire Talisman" in env.scenario_battle_magic_item_names
+    assert ELVEN_RUIN_BANNER_ITEM in env.BANNER_ITEM_NAMES
 
     assert env.spell_shop_stocks[SPELL_SHOP_NAME] == {
         "Армагеддон": 1,
@@ -262,6 +270,14 @@ def test_static_garrisons_lake_ruins_and_single_stacks_match_the_scenario():
     assert _enemy_names(env, RUIN_ENEMY_ID) == Counter(
         {"Тролль": 1, "Людоед": 1, "Гоблин старейшина": 1}
     )
+    assert _enemy_names(env, ELVEN_RUIN_ENEMY_ID) == Counter(
+        {
+            "Нейтральный грифон": 1,
+            "Нейтральный эльфийский оракул": 1,
+            "Нейтральный лорд эльфов": 1,
+            "Нейтральный эльф-рейнджер": 1,
+        }
+    )
     assert env.SETTLEMENT_DEFENDER_LEVEL_BY_ENEMY_ID[LEFT_CITY_ENEMY_ID] == 2
     assert env.SETTLEMENT_DEFENDER_LEVEL_BY_ENEMY_ID[RIGHT_CITY_ENEMY_ID] == 3
 
@@ -293,6 +309,46 @@ def test_ruin_grants_two_artifacts_and_900_gold_once():
     repeat = env._grant_ruin_reward(RUIN_ENEMY_ID)
     assert repeat["ruin_reward_applied"] is False
     assert env.gold == pytest.approx(STARTING_GOLD + 900.0)
+
+
+def test_elven_ruin_grants_banner_witch_orb_and_gold_once():
+    env = _make_env()
+    env.reset(seed=123)
+
+    assert env.RUIN_REWARD_BY_ENEMY_ID[ELVEN_RUIN_ENEMY_ID] == {
+        "title": "Забытые эльфийские руины",
+        "ruin_pos": ELVEN_RUIN_TILE,
+        "marker_pos": ELVEN_RUIN_MARKER_TILE,
+        "items": (
+            ELVEN_RUIN_BANNER_ITEM,
+            ELVEN_RUIN_ORB_ITEM,
+        ),
+        "gold": ELVEN_RUIN_GOLD,
+    }
+
+    info = env._grant_ruin_reward(ELVEN_RUIN_ENEMY_ID)
+
+    assert info["ruin_reward_applied"] is True
+    assert info["ruin_reward_gold"] == pytest.approx(ELVEN_RUIN_GOLD)
+    assert info["ruin_reward_items"] == [
+        ELVEN_RUIN_BANNER_ITEM,
+        ELVEN_RUIN_ORB_ITEM,
+    ]
+    assert env.gold == pytest.approx(STARTING_GOLD + ELVEN_RUIN_GOLD)
+    owned_names = {
+        env._hero_item_name(item)
+        for item in env.heroitems
+    } | {
+        str(item_name)
+        for item_name in env.equipped_banner_items
+        if item_name is not None
+    }
+    assert ELVEN_RUIN_BANNER_ITEM in owned_names
+    assert ELVEN_RUIN_ORB_ITEM in owned_names
+
+    repeat = env._grant_ruin_reward(ELVEN_RUIN_ENEMY_ID)
+    assert repeat["ruin_reward_applied"] is False
+    assert env.gold == pytest.approx(STARTING_GOLD + ELVEN_RUIN_GOLD)
 
 
 def test_wave_formations_and_schedule_are_exact():
@@ -467,5 +523,6 @@ def test_wave_rewards_escalate_after_each_three_army_wave_and_finish_after_wave_
             LEFT_CITY_ENEMY_ID,
             RIGHT_CITY_ENEMY_ID,
             RUIN_ENEMY_ID,
+            ELVEN_RUIN_ENEMY_ID,
         )
     )

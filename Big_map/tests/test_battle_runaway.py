@@ -327,6 +327,11 @@ def test_campaign_defeat_with_escaped_units_ends_when_hp_persistence_disabled():
     assert truncated is False
     assert info["battle_result"] == "defeat"
     assert info["campaign_result"] == "defeat"
+    assert info["terminal_defeat_enemy_id"] == 1
+    assert info["terminal_defeat_enemy_key"] == "enemy_1"
+    assert info["terminal_defeat_enemy_description"] == env._enemy_descriptions[1]
+    assert info["terminal_defeat_enemy_units"]
+    assert info["terminal_defeat_enemy_survivors"] == [red["name"]]
     assert not info.get("battle_retreat", False)
     assert "battle_defeat_with_escaped_units" not in info
 
@@ -358,4 +363,9 @@ def test_campaign_defeat_without_escaped_units_still_ends_episode():
     assert truncated is False
     assert info["battle_result"] == "defeat"
     assert info["campaign_result"] == "defeat"
+    assert info["terminal_defeat_enemy_id"] == 1
+    assert info["terminal_defeat_enemy_key"] == "enemy_1"
+    assert info["terminal_defeat_enemy_description"] == env._enemy_descriptions[1]
+    assert info["terminal_defeat_enemy_units"]
+    assert info["terminal_defeat_enemy_survivors"] == [red["name"]]
     assert not info.get("battle_retreat", False)

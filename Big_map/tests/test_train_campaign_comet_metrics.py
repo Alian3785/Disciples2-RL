@@ -203,6 +203,49 @@ def test_campaign_metrics_callback_consumes_minimal_training_info():
     assert payload["campaign/scripted_bot_victory_episodes_rate"] == 1.0
 
 
+def test_campaign_metrics_callback_tracks_terminal_defeat_opponents():
+    callback = CampaignMetricsCallback(log_freq=1000, episode_window=4, experiment=None)
+    callback.locals = {
+        "infos": [
+            {
+                "enemy_id": 112,
+                "battle_result": "defeat",
+                "campaign_result": "defeat",
+                "terminal_defeat_enemy_id": 112,
+                "terminal_defeat_enemy_description": "Dwarf fourth-wave army",
+                "terminal_defeat_enemy_units": [
+                    "Hill Giant",
+                    "Veteran",
+                    "Crossbowman",
+                ],
+                "terminal_defeat_enemy_survivors": [
+                    "Hill Giant",
+                    "Crossbowman",
+                ],
+                "episode": {"r": -5.0, "l": 321},
+            }
+        ]
+    }
+    callback.num_timesteps = 1
+
+    assert callback._on_step()
+    report = callback._build_behavior_report(callback._build_log_payload())
+
+    assert report["terminal_defeat_enemies_total_top"] == {"enemy_112": 1}
+    assert report["terminal_defeat_enemies_window_top"] == {"enemy_112": 1}
+    assert report["terminal_defeat_enemy_details"]["enemy_112"] == {
+        "enemy_id": 112,
+        "description": "Dwarf fourth-wave army",
+        "units": ["Hill Giant", "Veteran", "Crossbowman"],
+        "last_survivors": ["Hill Giant", "Crossbowman"],
+    }
+
+    callback._reset_log_window()
+    report = callback._build_behavior_report(callback._build_log_payload())
+    assert report["terminal_defeat_enemies_total_top"] == {"enemy_112": 1}
+    assert report["terminal_defeat_enemies_window_top"] == {}
+
+
 def test_campaign_metrics_callback_flushes_partial_window_on_training_end():
     dummy_experiment = DummyCometExperiment()
     callback = CampaignMetricsCallback(
