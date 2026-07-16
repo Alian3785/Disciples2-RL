@@ -266,6 +266,40 @@ class MapConfig:
     # False = базовый шаблон (Одержимые, Герцог, Сектант). Параметр
     # use_boss_starting_roster у CampaignEnv переопределяет это значение.
     boss_starting_roster_default: bool = True
+    # Optional fixed map roster: battle position 7-12 -> unit name.
+    # When set, it overrides the usual faction/lord and boss rosters.
+    starting_roster: Optional[Mapping[int, str]] = None
+    # Gold restored at the beginning of every episode on this map.
+    starting_gold: float = 0.0
+    # Arbitrary items placed directly into the hero inventory at episode start.
+    starting_hero_items: Tuple[str, ...] = ()
+    # Scrolls placed directly into the hero inventory at episode start.
+    starting_scroll_items: Tuple[str, ...] = ()
+    starting_scroll_magic_unlocked: bool = False
+    # Optional map-specific training rewards for items collected from chests.
+    item_pickup_rewards: Optional[Mapping[str, float]] = None
+    # Optional overrides for the generic battle-item shaping rewards.
+    battle_item_equip_reward: Optional[float] = None
+    battle_item_use_reward: Optional[float] = None
+    # Abilities granted to the map's travel hero after normal level-1 progression sync.
+    starting_hero_abilities: Tuple[str, ...] = ()
+    # Optional fixed faction/lord identity for scenario-specific starting parties.
+    starting_capital_id: Optional[int] = None
+    starting_lord_type: Optional[int] = None
+    # Optional per-free-leadership-point step penalty override for focused maps.
+    leadership_step_penalty: Optional[float] = None
+    # Optional override for the REST/end-turn campaign penalty.
+    turn_penalty: Optional[float] = None
+    # Some focused training maps intentionally disable all passive turn mana income.
+    passive_mana_income_enabled: bool = True
+    # Optional per-enemy unit level overrides: enemy id -> unit name -> level.
+    enemy_unit_level_overrides: Optional[Mapping[int, Mapping[str, int]]] = None
+    # Optional dormant pursuer that spawns on a campaign turn and moves toward the hero.
+    scheduled_enemy_id: Optional[int] = None
+    scheduled_enemy_spawn_turn: Optional[int] = None
+    scheduled_enemy_moves_per_turn: int = 0
+    # Keep enemy tiles path-reachable unless a scenario intentionally requires magic.
+    enforce_enemy_reachability: bool = True
     # Местность: ленивые провайдеры (например, парсинг .sg-файла).
     water_tiles_provider: Callable[[], Tuple[Tuple[int, int], ...]] = _no_tiles
     forest_tiles_provider: Callable[[], Tuple[Tuple[int, int], ...]] = _no_tiles

@@ -173,7 +173,15 @@ def main() -> int:
     parser.add_argument(
         "--objective",
         type=str,
-        choices=["cities", "dragon", "blue_dragon", "orc"],
+        choices=[
+            "cities",
+            "dragon",
+            "blue_dragon",
+            "orc",
+            "build_all",
+            "all_enemies",
+            "target_enemy",
+        ],
         default=None,
         help="Campaign objective; should match training. Defaults to the map's objective.",
     )

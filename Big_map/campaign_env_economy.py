@@ -284,6 +284,7 @@ class CampaignEconomyMixin:
             unit["hero"] = self._is_hero_unit(unit)
             unit["needaunit"] = self._resolve_hero_needaunit(unit)
             self._ensure_hero_flying_ability_token(unit)
+        self._sync_hero_needaunit_from_party(roster)
     @staticmethod
     def _is_travel_unit_alive(unit: Dict) -> bool:
         """Проверить, считается ли юнит живым для логики путешествия.
@@ -350,6 +351,17 @@ class CampaignEconomyMixin:
 
         hero_name = str(hero.get("name", hero.get("кто", "")) or "").strip()
         return int(self.HERO_BASE_MOVES_BY_NAME.get(hero_name, self.MOVES_PER_TURN))
+
+    def _travel_hero_is_mage(self, units: Optional[List[Dict]] = None) -> bool:
+        hero = self._resolve_travel_hero(units=units)
+        if hero is None:
+            return False
+        unit_type = str(
+            hero.get("unit_type", hero.get("тип", ""))
+            or ""
+        ).strip().lower()
+        return unit_type == "mage"
+
     def _hero_level(self, units: Optional[List[Dict]] = None) -> int:
         """Безопасно получить уровень героя, влияющий на campaign-способности.
 
@@ -392,32 +404,31 @@ class CampaignEconomyMixin:
             for token in token_values
             if str(token or "").strip()
         }
-    def _hero_needs_faction_hire(self, units: Optional[List[Dict]] = None) -> bool:
-        """Проверить, висит ли на герое обязательство нанять фракционный юнит.
-
-        Пока `needaunit` активен, среда может начислять штрафы за лишние ходы.
-        После успешного подходящего найма флаг очищается отдельной функцией.
-        """
-        hero = self._resolve_travel_hero(units=units)
-        if hero is None:
-            return False
-        return self._resolve_hero_needaunit(hero) > 0
-    def _pending_hire_turn_penalty(
+    def _leadership_step_penalty(
         self,
-        delta_turns: int,
         units: Optional[List[Dict]] = None,
     ) -> float:
-        """Посчитать штраф за прошедшие ходы при незакрытом `needaunit`.
-
-        Штраф применяется только если ход действительно продвинулся и герой всё
-        ещё требует найма. Это shaping-сигнал: он подталкивает агента закрывать
-        стартовую экономическую задачу, не меняя саму механику найма.
-        """
-        if delta_turns <= 0:
-            return 0.0
-        if not self._hero_needs_faction_hire(units=units):
-            return 0.0
-        return float(delta_turns) * float(self.reward_needaunit_turn_penalty)
+        """Посчитать штраф текущего шага за свободные пункты лидерства."""
+        leadership_points = self._sync_hero_needaunit_from_party(units)
+        return float(self.reward_needaunit_turn_penalty) * float(leadership_points)
+    def _apply_leadership_step_penalty(self, step_result):
+        """Применить leadership-штраф ровно один раз к результату campaign step."""
+        obs, reward, terminated, truncated, raw_info = step_result
+        penalty = self._leadership_step_penalty(units=self.blue_team_state)
+        composition = self._party_hire_composition(units=self.blue_team_state)
+        finalized_reward = float(reward) - float(penalty)
+        info = dict(raw_info or {})
+        info["leadership_capacity"] = int(composition["leadership_capacity"])
+        info["leadership_occupied"] = int(composition["occupied_capacity"])
+        info["leadership_points"] = int(composition["leadership_points"])
+        info["leadership_step_penalty"] = float(penalty)
+        info["reward"] = float(finalized_reward)
+        if "grid_reward_scaled" in info:
+            try:
+                info["grid_reward_scaled"] = float(info["grid_reward_scaled"]) - float(penalty)
+            except (TypeError, ValueError):
+                info["grid_reward_scaled"] = float(finalized_reward)
+        return obs, finalized_reward, terminated, truncated, info
     def _hero_has_pathfinding(self, units: Optional[List[Dict]] = None) -> bool:
         """Проверить открытие pathfinding по уровню героя."""
         return self._hero_level(units=units) >= int(self.HERO_PATHFINDING_LEVEL)
@@ -1572,72 +1583,92 @@ class CampaignEconomyMixin:
             ):
                 return int(column_positions[0])
         return None
-    def _blue_real_unit_count(self, units: Optional[List[Dict]] = None) -> int:
-        """Посчитать реальные юниты BLUE, игнорируя placeholder'ы.
+    def _party_hire_composition(
+        self,
+        units: Optional[List[Dict]] = None,
+    ) -> Dict[str, int]:
+        """Посчитать занятые и свободные пункты лидерства героя.
 
-        Big-юнит учитывается один раз даже если в roster есть дополнительная
-        placeholder-запись партнёрской клетки. Это число используется в логике
-        leadership hire и проверке, нанимал ли герой уже дополнительного юнита.
+        Герой начинает с тремя пунктами вместимости и получает ещё по одному
+        на 3-м и 6-м уровнях. Малый юнит занимает один пункт, большой — два.
+        Мёртвые юниты и placeholder-записи не занимают вместимость.
         """
-        roster = units if units is not None else self._get_blue_state()
-        count = 0
+        roster = units if units is not None else (getattr(self, "blue_team_state", None) or [])
+        small_units = 0
+        big_units = 0
         seen_big_units: set[int] = set()
-        for unit in roster or []:
-            if self._is_empty_blue_unit(unit):
+        for unit in roster:
+            if not isinstance(unit, dict):
+                continue
+            if self._is_empty_blue_unit(unit) or not self._is_travel_unit_alive(unit):
+                continue
+            if self._is_hero_unit(unit):
                 continue
             if self._is_big_blue_unit(unit):
                 unit_id = id(unit)
                 if unit_id in seen_big_units:
                     continue
                 seen_big_units.add(unit_id)
-            count += 1
-        return int(count)
-    def _starting_blue_real_unit_count(self) -> int:
-        """Вернуть число реальных юнитов в стартовом составе BLUE."""
-        return int(len(self._occupied_initial_blue_positions(self._create_starting_blue_team())))
-    def _hero_has_completed_leadership_hire(self, hero: Optional[Dict]) -> bool:
-        """Проверить, закрыл ли герой первый leadership-найм.
+                big_units += 1
+            else:
+                small_units += 1
 
-        Современный путь читает явный флаг `campaign_hired_after_first_leadership`.
-        Fallback сравнивает текущий размер отряда со стартовым, чтобы старые
-        сохранения и тестовые состояния оставались совместимыми.
-        """
-        if not isinstance(hero, dict):
-            return False
-        if "campaign_hired_after_first_leadership" in hero:
-            return self._truthy_unit_flag(hero, "campaign_hired_after_first_leadership")
-        return self._blue_real_unit_count() > self._starting_blue_real_unit_count()
+        hero = self._resolve_travel_hero(units=roster)
+        hero_level = self._hero_level(units=[hero]) if hero is not None else 0
+        leadership_capacity = 0
+        if hero is not None:
+            leadership_capacity = int(self.HIRE_BASE_LEADERSHIP_CAPACITY)
+            if hero_level >= int(self.HERO_LEADERSHIP_LEVEL):
+                leadership_capacity += 1
+            if hero_level >= int(self.HERO_SECOND_LEADERSHIP_LEVEL):
+                leadership_capacity += 1
+
+        occupied_capacity = (
+            small_units * int(self.HIRE_SMALL_UNIT_CAPACITY)
+            + big_units * int(self.HIRE_BIG_UNIT_CAPACITY)
+        )
+        leadership_points = max(0, leadership_capacity - occupied_capacity)
+        return {
+            "small_units": int(small_units),
+            "big_units": int(big_units),
+            "leadership_capacity": int(leadership_capacity),
+            "occupied_capacity": int(occupied_capacity),
+            "leadership_points": int(leadership_points),
+        }
+    def _available_leadership_points(self, units: Optional[List[Dict]] = None) -> int:
+        """Вернуть число свободных пунктов лидерства героя."""
+        return int(self._party_hire_composition(units=units)["leadership_points"])
+    def _sync_hero_needaunit_from_party(self, units: Optional[List[Dict]] = None) -> int:
+        """Синхронизировать `needaunit` и пункты лидерства с составом отряда."""
+        roster = units if units is not None else (getattr(self, "blue_team_state", None) or [])
+        hero = self._resolve_travel_hero(units=roster)
+        if hero is None:
+            return 0
+        composition = self._party_hire_composition(units=roster)
+        leadership_points = int(composition["leadership_points"])
+        hero["leadership_capacity"] = int(composition["leadership_capacity"])
+        hero["leadership_points"] = leadership_points
+        hero["needaunit"] = int(leadership_points > 0)
+        return leadership_points
     def _hero_can_use_big_leadership_hire(self, hero: Optional[Dict]) -> bool:
         """Проверить, может ли герой нанять фракционного big-юнита.
 
-        Требуется второй leadership-порог, активный `needaunit` и отсутствие уже
-        выполненного первого leadership-найма. Так big-unit найм не становится
-        бесплатным расширением сверх сценарного лимита.
+        Уровень героя не ограничивает найм: достаточно двух свободных пунктов лидерства.
         """
         if not isinstance(hero, dict):
             return False
-        if not self._hero_has_second_leadership(units=[hero]):
-            return False
-        if self._resolve_hero_needaunit(hero) <= 0:
-            return False
-        return not self._hero_has_completed_leadership_hire(hero)
+        return self._available_leadership_points() >= int(self.HIRE_BIG_UNIT_CAPACITY)
     def _clear_hero_needaunit_after_hire(self, units: List[Dict]) -> None:
-        """Снять `needaunit` с героя после успешного найма.
+        """Пересчитать `needaunit` героя после успешного найма.
 
-        Если герой уже имеет leadership, дополнительно ставится флаг, что первый
-        leadership-найм был закрыт. Это влияет на доступность big-unit найма.
+        Флаг остаётся активным, пока остаются свободные пункты лидерства.
         """
-        hero = self._resolve_travel_hero(units=units)
-        if hero is None:
-            return
-        hero["needaunit"] = 0
-        if self._hero_has_leadership(units=[hero]):
-            hero["campaign_hired_after_first_leadership"] = 1
+        self._sync_hero_needaunit_from_party(units)
     def _can_hire_faction_unit_option(self, option: Optional[Dict[str, object]]) -> bool:
         """Проверить доступность обычного фракционного найма из столицы.
 
         Проверяются: корректность option, нахождение в замке, наличие героя,
-        leadership, активный `needaunit`, золото, существование unit data и
+        свободный пункт лидерства, золото, существование unit data и
         свободная позиция подходящего ряда.
         """
         if not isinstance(option, dict):
@@ -1650,9 +1681,7 @@ class CampaignEconomyMixin:
         hero = self._resolve_travel_hero()
         if hero is None:
             return False
-        if not self._hero_has_leadership(units=[hero]):
-            return False
-        if self._resolve_hero_needaunit(hero) <= 0:
+        if self._sync_hero_needaunit_from_party() <= 0:
             return False
 
         try:
@@ -1711,8 +1740,7 @@ class CampaignEconomyMixin:
 
         occupancy = self._blue_occupancy_snapshot()
         gold_available = float(self.gold or 0.0)
-        has_leadership = self._hero_has_leadership(units=[hero])
-        needs_hire = self._resolve_hero_needaunit(hero) > 0
+        needs_hire = self._sync_hero_needaunit_from_party() > 0
         can_use_big_hire = self._hero_can_use_big_leadership_hire(hero)
         first_empty_by_positions: Dict[Tuple[int, ...], Optional[int]] = {}
         first_empty_big_column = self._find_first_empty_blue_column_front_position(
@@ -1747,7 +1775,7 @@ class CampaignEconomyMixin:
                 )
                 continue
 
-            if not has_leadership or not needs_hire:
+            if not needs_hire:
                 values.append(False)
                 continue
             unit_name = str(option.get("name", "") or "").strip()
@@ -1910,7 +1938,7 @@ class CampaignEconomyMixin:
         hero = self._resolve_travel_hero()
         if hero is None:
             return False
-        if not self._hero_has_leadership(units=[hero]):
+        if self._sync_hero_needaunit_from_party() <= 0:
             return False
 
         unit_name = str(option.get("unit_name", option.get("name", "")) or "").strip()
@@ -1945,7 +1973,9 @@ class CampaignEconomyMixin:
             return tuple(False for _ in options)
 
         hero = self._resolve_travel_hero()
-        if hero is None or not self._hero_has_leadership(units=[hero]):
+        if hero is None:
+            return tuple(False for _ in options)
+        if self._sync_hero_needaunit_from_party() <= 0:
             return tuple(False for _ in options)
 
         roster_by_site_slot: Dict[Tuple[str, int], Dict[str, object]] = {}
@@ -2238,8 +2268,9 @@ class CampaignEconomyMixin:
                 f"Chest tiles overlap obstacle tiles: {sorted(chest_obstacle_overlap)}"
             )
 
-        reachable_targets = set(enemy_tiles)
-        reachable_targets.update(heal_tiles)
+        reachable_targets = set(heal_tiles)
+        if bool(getattr(self._map, "enforce_enemy_reachability", True)):
+            reachable_targets.update(enemy_tiles)
         reachable_targets.update(chest_tiles)
         if not are_targets_reachable(
             self.grid_size,
@@ -2247,7 +2278,9 @@ class CampaignEconomyMixin:
             obstacle_tiles,
             reachable_targets,
         ):
-            raise ValueError("Obstacle tiles block path to at least one enemy or heal tile")
+            raise ValueError(
+                "Obstacle tiles block path to at least one required map target"
+            )
     def _castle_revive_cost_at_position(self, position: int) -> float:
         """Возвращает стоимость воскрешения мёртвого юнита на позиции или 0.0."""
         state = self._get_blue_state()
@@ -2813,6 +2846,39 @@ class CampaignEconomyMixin:
                 and gold_available >= self._get_building_gold_cost(building)
             )
         return tuple(values)
+    def _immediately_buildable_building_keys(self) -> Tuple[str, ...]:
+        """Ключи зданий, доступных к постройке без учёта золота и turn-lock.
+
+        Золото накапливается с ходами, а lock 'alredybuilt' снимается в начале
+        следующего turn, поэтому они игнорируются: важна только достижимость.
+        Состояния built/blocked меняются только новыми постройками, значит пустой
+        результат означает, что построить больше ничего нельзя никогда.
+        """
+        built_keys = self._built_building_keys_set()
+        buildable: List[str] = []
+        for build_key in self.building_keys:
+            building = self.active_buildings.get(build_key)
+            if not isinstance(building, dict):
+                continue
+            try:
+                is_built = int(building.get("Build", building.get("built", 0)) or 0) == 1
+            except (TypeError, ValueError):
+                is_built = False
+            if is_built:
+                continue
+            try:
+                is_blocked = int(building.get("blocked", 0) or 0) == 1
+            except (TypeError, ValueError):
+                is_blocked = False
+            if is_blocked:
+                continue
+            if self._missing_building_requirement_keys(building, built_keys=built_keys):
+                continue
+            buildable.append(str(build_key))
+        return tuple(buildable)
+    def _build_all_objective_completed(self) -> bool:
+        """True, когда для цели build_all не осталось ни одного доступного здания."""
+        return not self._immediately_buildable_building_keys()
     def _step_building(self, action: int):
         """Выбирает здание активной фракции и отмечает его как построенное."""
         idx = action - self.GRID_BUILD_ACTION_START
@@ -2897,6 +2963,25 @@ class CampaignEconomyMixin:
                         if blocked_names:
                             self._log(f'Заблокированы здания: {", ".join(blocked_names)}')
 
+        # Строительная цель кампании: промежуточная награда за каждое здание,
+        # финальная (как за дракона) — когда строить больше нечего.
+        build_all_objective = self._campaign_objective_is_build_all()
+        building_built_reward = 0.0
+        build_all_completed = False
+        build_all_final_reward = 0.0
+        buildable_remaining = None
+        if build_all_objective and built:
+            building_built_reward = float(getattr(self, "reward_building_built", 0.0) or 0.0)
+            reward += building_built_reward
+            remaining_keys = self._immediately_buildable_building_keys()
+            buildable_remaining = len(remaining_keys)
+            build_all_completed = not remaining_keys
+            if build_all_completed:
+                build_all_final_reward = self._compute_green_dragon_objective_reward()
+                reward += build_all_final_reward
+                terminated = True
+                self._log("=== ВСЕ ДОСТУПНЫЕ ЗДАНИЯ ПОСТРОЕНЫ: ПОБЕДА В КАМПАНИИ ===")
+
         info = {
             "mode": "grid",
             "agent_pos": self.grid_env.agent_pos,
@@ -2919,6 +3004,15 @@ class CampaignEconomyMixin:
             "gold": self.gold,
             "moves": self.moves,
         }
+        if build_all_objective and built:
+            info["building_built_reward"] = float(building_built_reward)
+            info["buildable_buildings_remaining"] = int(buildable_remaining or 0)
+            info["campaign_objective"] = self.campaign_objective
+            if build_all_completed:
+                info["campaign_result"] = "victory"
+                info["campaign_victory_reason"] = "all_buildings_built"
+                info["final_objective_reward"] = float(build_all_final_reward)
+                info["build_all_objective_reward"] = float(build_all_final_reward)
 
         return self._finalize_grid_step_result(
             grid_obs=grid_obs,
