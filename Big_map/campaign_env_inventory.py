@@ -221,6 +221,23 @@ class CampaignInventoryMixin:
             for item_data in self._scenario_merchant_potion_item_entries()
         )
 
+    def _scenario_merchant_item_names(self) -> Tuple[str, ...]:
+        item_names: List[str] = []
+        seen_names: set[str] = set()
+        for item_data in tuple(getattr(self, "MERCHANT_BUY_ITEMS", ()) or ()):
+            if not isinstance(item_data, dict):
+                continue
+            item_name = str(item_data.get("name", "") or "").strip()
+            try:
+                stock = int(item_data.get("stock", 0) or 0)
+            except (TypeError, ValueError):
+                stock = 0
+            if not item_name or stock <= 0 or item_name in seen_names:
+                continue
+            seen_names.add(item_name)
+            item_names.append(item_name)
+        return tuple(item_names)
+
     def _scenario_potion_item_names(self) -> Tuple[str, ...]:
         present_names: set[str] = set()
 
@@ -274,13 +291,13 @@ class CampaignInventoryMixin:
     def _refresh_potion_item_names(self) -> Tuple[str, ...]:
         self.scenario_potion_item_names = self._scenario_potion_item_names()
         self.scenario_merchant_potion_item_names = self._scenario_merchant_potion_item_names()
+        self.scenario_merchant_item_names = self._scenario_merchant_item_names()
         self.scenario_battle_potion_equip_names = self._scenario_battle_potion_equip_names()
         self.GRID_POTION_USE_ACTION_COUNT = (
             len(self.scenario_potion_item_names) * len(self.GRID_POTION_USE_POSITIONS)
         )
-        self.GRID_MERCHANT_POTION_BUY_ACTION_COUNT = len(
-            self.scenario_merchant_potion_item_names
-        )
+        self.GRID_MERCHANT_BUY_ACTION_COUNT = len(self.scenario_merchant_item_names)
+        self.GRID_MERCHANT_POTION_BUY_ACTION_COUNT = self.GRID_MERCHANT_BUY_ACTION_COUNT
         self.GRID_EQUIP_BATTLE_POTION_ACTION_COUNT = len(
             self.scenario_battle_potion_equip_names
         )

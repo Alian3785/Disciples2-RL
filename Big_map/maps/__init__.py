@@ -23,6 +23,8 @@ _REGISTRY = {
     "scroll_train": "maps.scroll_train",
     "siege_train": "maps.siege_train",
     "small": "maps.small",
+    "super_last_stand": "maps.super_last_stand",
+    "trade_train": "maps.trade_train",
 }
 
 

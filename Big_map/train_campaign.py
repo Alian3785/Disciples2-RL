@@ -2734,6 +2734,7 @@ if __name__ == "__main__":
         "orc": "-orc",
         "build_all": "-buildall",
         "target_enemy": "-target",
+        "waves": "-waves",
     }.get(CAMPAIGN_OBJECTIVE_EFFECTIVE, "")
     if MAP_NAME != "default":
         run_name_suffix = f"-{MAP_NAME}{run_name_suffix}"

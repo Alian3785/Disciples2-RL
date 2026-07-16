@@ -240,6 +240,7 @@ class CampaignConstantsMixin:
     GRID_POTION_USE_ACTION_COUNT = 0
     GRID_MERCHANT_POTION_BUY_ACTION_START = GRID_BOTTLE_ACTION_START
     GRID_MERCHANT_POTION_BUY_ACTION_COUNT = 0
+    GRID_MERCHANT_BUY_ACTION_COUNT = GRID_MERCHANT_POTION_BUY_ACTION_COUNT
     GRID_EQUIP_BATTLE_POTION_ACTION_START = GRID_BOTTLE_ACTION_START
     GRID_EQUIP_BATTLE_POTION_ACTION_COUNT = 0
     HEAL_BOTTLE_AMOUNT = 100.0
@@ -382,6 +383,7 @@ class CampaignConstantsMixin:
     CAMPAIGN_OBJECTIVE_BUILD_ALL = "build_all"
     CAMPAIGN_OBJECTIVE_ALL_ENEMIES = "all_enemies"
     CAMPAIGN_OBJECTIVE_TARGET_ENEMY = "target_enemy"
+    CAMPAIGN_OBJECTIVE_WAVES = "waves"
     GREEN_DRAGON_OBJECTIVE_ENEMY_ID = 31
     # Целевой враг «охотничьих» целей кампании (dragon/blue_dragon/orc).
     # Классовый дефолт — дракон; карта затеняет instance-атрибутом.
@@ -1297,9 +1299,13 @@ class CampaignConstantsMixin:
     }
     RUIN_REWARD_ITEM_NAMES = frozenset(
         {
-            str(reward_data.get("item", "") or "")
+            str(item_name)
             for reward_data in RUIN_REWARD_BY_ENEMY_ID.values()
-            if str(reward_data.get("item", "") or "")
+            for item_name in (
+                tuple(reward_data.get("items", ()) or ())
+                or (str(reward_data.get("item", "") or ""),)
+            )
+            if str(item_name)
         }
     )
 

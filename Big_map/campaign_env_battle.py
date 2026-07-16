@@ -188,6 +188,11 @@ class CampaignBattleMixin:
                 self._log(f"=== ПОБЕДА В БОЮ ПРОТИВ ВРАГА {self.current_enemy_id}! ===")
                 self.grid_env.mark_enemy_defeated(self.current_enemy_id)
                 self._clear_enemy_map_spell_effects_for_enemy(self.current_enemy_id)
+                reward = self._apply_wave_defeat_reward_if_needed(
+                    self.current_enemy_id,
+                    reward,
+                    info,
+                )
 
                 # Восстанавливаем и воскрешаем всех юнитов BLUE после победы
                 if self.persist_blue_hp:
@@ -289,6 +294,7 @@ class CampaignBattleMixin:
                     self.grid_env.all_enemies_defeated()
                     and not self._campaign_objective_is_build_all()
                     and not self._campaign_objective_is_target_enemy()
+                    and not self._campaign_objective_is_waves()
                 ):
                     self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")
                     grid_obs = self._get_grid_obs()
@@ -572,7 +578,11 @@ class CampaignBattleMixin:
         bonus = 0
         source = ""
 
-        settlement_level = SETTLEMENT_DEFENDER_LEVEL_BY_ENEMY_ID.get(normalized_enemy_id)
+        settlement_level = getattr(
+            self,
+            "SETTLEMENT_DEFENDER_LEVEL_BY_ENEMY_ID",
+            SETTLEMENT_DEFENDER_LEVEL_BY_ENEMY_ID,
+        ).get(normalized_enemy_id)
         if settlement_level is not None:
             bonus = int(SETTLEMENT_ARMOR_BONUS_BY_LEVEL.get(int(settlement_level), 0))
             source = f"settlement_level_{int(settlement_level)}"
@@ -1180,7 +1190,15 @@ class CampaignBattleMixin:
         """Ищет запись юнита в UNIT_DATA по отображаемому имени."""
         if name is None:
             return None
-        return self._unit_data_by_name().get(str(name))
+        normalized_name = str(name)
+        result = self._unit_data_by_name().get(normalized_name)
+        if result is not None:
+            return result
+        aliases = getattr(getattr(self, "_map", None), "unit_name_aliases", None) or {}
+        canonical_name = aliases.get(normalized_name)
+        if canonical_name is None:
+            return None
+        return self._unit_data_by_name().get(str(canonical_name))
 
     @staticmethod
     @lru_cache(maxsize=1)
