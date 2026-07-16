@@ -128,7 +128,7 @@ class CampaignEnv(
         reward_loss: float = -5.0,          # Штраф за поражение кампании
         reward_timeout: float = -3.0,       # Штраф за таймаут (лимит шагов)
         reward_turn_penalty: float = 0.02,  # Штраф за завершение хода (REST)
-        reward_needaunit_turn_penalty: float = 0.05,  # Штраф за ход, пока герою нужен найм.
+        reward_needaunit_turn_penalty: float = 0.05,  # Штраф за шаг и свободный пункт лидерства.
         reward_repeat_position_penalty: float = 0.015,  # Штраф за повторное посещение клетки.
         reward_repeat_position_penalty_cap: float = 0.08,  # Кеп на повторный штраф за 1 шаг.
         reward_backtrack_penalty: float = 0.03,  # Штраф за микро-цикл A->B->A.
@@ -175,6 +175,7 @@ class CampaignEnv(
         reward_no_dragon_victory_late_step_penalty: float = 0.01,
         reward_no_dragon_victory_late_step_penalty_cap: float = 0.05,
         reward_no_dragon_victory_late_step_start_fraction: float = 0.35,
+        reward_building_built: float = 1.0,  # Промежуточная награда за здание (цель build_all).
     ):
         """Собрать конфигурацию кампании и базовое состояние среды.
 
@@ -260,8 +261,24 @@ class CampaignEnv(
         self.reward_all_enemies = reward_all_enemies      # База награды за захват целевого города
         self.reward_loss = reward_loss
         self.reward_timeout = reward_timeout
-        self.reward_turn_penalty = reward_turn_penalty
-        self.reward_needaunit_turn_penalty = max(0.0, float(reward_needaunit_turn_penalty))
+        map_turn_penalty = getattr(self._map, "turn_penalty", None)
+        self.reward_turn_penalty = max(
+            0.0,
+            float(reward_turn_penalty if map_turn_penalty is None else map_turn_penalty),
+        )
+        map_leadership_step_penalty = getattr(
+            self._map,
+            "leadership_step_penalty",
+            None,
+        )
+        self.reward_needaunit_turn_penalty = max(
+            0.0,
+            float(
+                reward_needaunit_turn_penalty
+                if map_leadership_step_penalty is None
+                else map_leadership_step_penalty
+            ),
+        )
         self.reward_repeat_position_penalty = max(0.0, float(reward_repeat_position_penalty))
         self.reward_repeat_position_penalty_cap = max(0.0, float(reward_repeat_position_penalty_cap))
         self.reward_backtrack_penalty = max(0.0, float(reward_backtrack_penalty))
@@ -278,8 +295,20 @@ class CampaignEnv(
         self.battle_reward_win = float(battle_reward_win)
         self.battle_reward_loss = float(battle_reward_loss)
         self.battle_reward_step = float(battle_reward_step)
-        self.reward_battle_item_equip = max(0.0, float(reward_battle_item_equip))
-        self.reward_battle_item_use = max(0.0, float(reward_battle_item_use))
+        map_equip_reward = getattr(self._map, "battle_item_equip_reward", None)
+        map_use_reward = getattr(self._map, "battle_item_use_reward", None)
+        self.reward_battle_item_equip = max(
+            0.0,
+            float(
+                reward_battle_item_equip
+                if map_equip_reward is None
+                else map_equip_reward
+            ),
+        )
+        self.reward_battle_item_use = max(
+            0.0,
+            float(reward_battle_item_use if map_use_reward is None else map_use_reward),
+        )
         self.reward_combat_potion_battle_participation = max(
             0.0,
             float(reward_combat_potion_battle_participation),
@@ -328,6 +357,7 @@ class CampaignEnv(
             1.0,
             max(0.0, float(reward_no_dragon_victory_late_step_start_fraction)),
         )
+        self.reward_building_built = max(0.0, float(reward_building_built))
         # Базовый лимит шагов внутри одного хода кампании.
         self.moves_per_turn = int(self.MOVES_PER_TURN)
         self.turn_norm_k = max(
@@ -336,13 +366,19 @@ class CampaignEnv(
         )
         self.gold_norm_k = max(1.0, self.turn_norm_k * float(self.GOLD_PER_TURN))
         # Realcapital: 1 = empire, 2 = legions, 3 = mountain_clans, 4 = undead_hordes, 5 = elves
-        self.Realcapital = self._normalize_capital_id(Realcapital)
+        map_capital_id = getattr(self._map, "starting_capital_id", None)
+        self.Realcapital = self._normalize_capital_id(
+            Realcapital if map_capital_id is None else map_capital_id
+        )
         # typeoflord: 1 = warrior, 2 = mage, 3 = archer/thief.
         # Значения typeoflord для всех фракций трактуются так:
         #   1 = повелитель воинов
         #   2 = повелитель магов
         #   3 = повелитель воров
-        self.typeoflord = self._normalize_typeoflord(typeoflord)
+        map_lord_type = getattr(self._map, "starting_lord_type", None)
+        self.typeoflord = self._normalize_typeoflord(
+            typeoflord if map_lord_type is None else map_lord_type
+        )
         self._reset_buildings_state()
         self._reset_spells_state()
 
@@ -364,6 +400,9 @@ class CampaignEnv(
             start_position=self.CASTLE_POS,
             base_static_obstacle_blocks=self._map.obstacle_blocks,
             base_static_empty_tiles=self._map.empty_tiles,
+            enforce_enemy_reachability=bool(
+                getattr(self._map, "enforce_enemy_reachability", True)
+            ),
         )
         chest_contents = resolve_chests(
             self.grid_size,
@@ -551,7 +590,7 @@ class CampaignEnv(
         self.revive_bottles_used: int = 0
         self.turns: int = 0
         self.campaign_steps: int = 0
-        self.gold: float = 0.0
+        self.gold: float = max(0.0, float(getattr(self._map, "starting_gold", 0.0) or 0.0))
         self.moves: int = self.moves_per_turn
         self.active_buildings = self._get_buildings_for_capital(self.Realcapital)
         self.building_keys = self._get_building_keys(self.active_buildings)
@@ -700,6 +739,14 @@ class CampaignEnv(
         таблиц данных. Если для пары Realcapital/typeoflord нет отдельной
         раскладки, вызывающий код откатывается к базовому UNITS_BLUE.
         """
+        map_roster = getattr(self._map, "starting_roster", None)
+        if map_roster is not None:
+            return {
+                int(position): str(unit_name)
+                for position, unit_name in map_roster.items()
+                if str(unit_name or "").strip()
+            }
+
         lord_type = self._normalize_typeoflord(getattr(self, "typeoflord", 1))
         Realcapital = self._normalize_capital_id(getattr(self, "Realcapital", 1))
         if (
@@ -828,6 +875,22 @@ class CampaignEnv(
             team.append(unit)
         return team
 
+    def _grant_map_starting_hero_abilities(self) -> None:
+        ability_keys = tuple(
+            str(key).strip()
+            for key in getattr(self._map, "starting_hero_abilities", ())
+            if str(key).strip()
+        )
+        if not ability_keys:
+            return
+        hero = self._resolve_travel_hero(units=self.blue_team_state)
+        if hero is None:
+            raise ValueError(
+                f"Map {self.map_name!r} grants hero abilities but its starting roster has no hero"
+            )
+        current = [str(key) for key in hero.get("hero_abilities", ()) if str(key)]
+        hero["hero_abilities"] = list(dict.fromkeys((*current, *ability_keys)))
+
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
         """Начать новый эпизод кампании и вернуть первое наблюдение.
 
@@ -838,15 +901,25 @@ class CampaignEnv(
         сундуками/источниками/сайтами и формирует стартовый info для отладки.
         """
         super().reset(seed=seed)
-        requested_capital = (
-            self._normalize_capital_id(options.get("Realcapital"))
-            if isinstance(options, dict) and "Realcapital" in options
-            else self._normalize_capital_id(getattr(self, "Realcapital", 1))
+        map_capital_id = getattr(self._map, "starting_capital_id", None)
+        requested_capital = self._normalize_capital_id(
+            map_capital_id
+            if map_capital_id is not None
+            else (
+                options.get("Realcapital")
+                if isinstance(options, dict) and "Realcapital" in options
+                else getattr(self, "Realcapital", 1)
+            )
         )
-        requested_typeoflord = (
-            self._normalize_typeoflord(options.get("typeoflord"))
-            if isinstance(options, dict) and "typeoflord" in options
-            else self._normalize_typeoflord(getattr(self, "typeoflord", 1))
+        map_lord_type = getattr(self._map, "starting_lord_type", None)
+        requested_typeoflord = self._normalize_typeoflord(
+            map_lord_type
+            if map_lord_type is not None
+            else (
+                options.get("typeoflord")
+                if isinstance(options, dict) and "typeoflord" in options
+                else getattr(self, "typeoflord", 1)
+            )
         )
         if bool(getattr(self, "freeze_dynamic_action_layout", False)):
             layout_capital = int(getattr(self, "_dynamic_action_layout_capital", requested_capital))
@@ -891,12 +964,13 @@ class CampaignEnv(
         # вне боя можно было применять лечение до первого боя.
         self.blue_team_state = self._create_starting_blue_team()
         self._sync_hero_progression_flags(self.blue_team_state)
+        self._grant_map_starting_hero_abilities()
         self.heal_bottles_used = 0
         self.healing_bottles_used = 0
         self.revive_bottles_used = 0
         self.turns = 0
         self.campaign_steps = 0
-        self.gold = 0.0
+        self.gold = max(0.0, float(getattr(self._map, "starting_gold", 0.0) or 0.0))
         self.spell_learning_locked = False
         self.battle_env = None
         self._campaign_logs = []
@@ -918,7 +992,15 @@ class CampaignEnv(
         self._battle_equip_action_mask_cache = ()
         self._merchant_autosale_checked_inventory_version = None
         self._merchant_autosale_checked_position = None
-        self.heroitems = []
+        starting_hero_items = (
+            *tuple(getattr(self._map, "starting_hero_items", ()) or ()),
+            *tuple(getattr(self._map, "starting_scroll_items", ()) or ()),
+        )
+        self.heroitems = [
+            self._make_hero_item_entry(item_name)
+            for item_name in starting_hero_items
+            if str(item_name or "").strip()
+        ]
         self._invalidate_inventory_cache()
         self.equipped_hero_items = [None] * int(self.BATTLE_EQUIP_SLOTS)
         self.equipped_hero_item_uses_left = [None] * int(self.BATTLE_EQUIP_SLOTS)
@@ -950,7 +1032,10 @@ class CampaignEnv(
         self.merchant_stocks = self._create_initial_merchant_stocks()
         self.spell_shop_stocks = self._create_initial_spell_shop_stocks()
         self.spell_shop_purchased_spell_ids = set()
-        self.scroll_magic_unlocked = False
+        self.scroll_magic_unlocked = bool(
+            getattr(self._map, "starting_scroll_magic_unlocked", False)
+            or self._travel_hero_is_mage(units=self.blue_team_state)
+        )
         self.mercenary_site_rosters = self._create_initial_mercenary_site_rosters()
         self.active_invulnerability_potion_positions = set()
         self.active_strength_potion_positions = set()
@@ -966,6 +1051,8 @@ class CampaignEnv(
         self.books_equipped_total = 0
         self.combat_potion_battle_bonus_pending = False
         self.green_dragon_reached_reward_granted = False
+        self.all_enemies_reward_granted = False
+        self.target_enemy_reward_granted = False
         self.captured_objective_cities = set()
         self.objective_city_reached_reward_granted = set()
         self._objective_dragon_min_hp_this_episode = None
@@ -998,6 +1085,7 @@ class CampaignEnv(
             self.action_space = spaces.Discrete(total_actions)
 
         grid_obs, grid_info = self.grid_env.reset(seed=seed)
+        self._reset_scheduled_enemy_state()
         self._reset_scripted_capital_bot_state()
         grid_obs = self.grid_env._get_obs()
         grid_obs = self._augment_grid_obs(grid_obs)
@@ -1064,6 +1152,7 @@ class CampaignEnv(
         info.update(self._book_state_info())
         info.update(self._boot_state_info())
         info.update(self._scripted_capital_bot_info())
+        info.update(self._scheduled_enemy_state_info())
         info.update(self._merchant_context_info(self.grid_env.agent_pos))
         info.update(self._spell_shop_context_info(self.grid_env.agent_pos))
         info.update(self._mercenary_context_info(self.grid_env.agent_pos))
@@ -1083,9 +1172,10 @@ class CampaignEnv(
         self.campaign_steps = int(getattr(self, "campaign_steps", 0) or 0) + 1
 
         if self.mode == self.MODE_GRID:
-            return self._step_grid(action)
+            step_result = self._step_grid(action)
         else:
-            return self._step_battle(action)
+            step_result = self._step_battle(action)
+        return self._apply_leadership_step_penalty(step_result)
     def _step_grid(self, action: int):
         """Обработать действие агента на глобальной карте.
 
@@ -1266,7 +1356,22 @@ class CampaignEnv(
         combat_potion_pickup_reward = (
             float(collected_combat_potions) * self._combat_potion_reward_value()
         )
-        reward += combat_potion_pickup_reward
+        item_pickup_reward = 0.0
+        rewarded_item_pickups: Dict[str, int] = {}
+        map_pickup_rewards = getattr(self._map, "item_pickup_rewards", None) or {}
+        for chest_data in collected_chests:
+            for item_name in chest_data.get("items", ()):
+                item_reward = max(
+                    0.0,
+                    float(map_pickup_rewards.get(str(item_name), 0.0) or 0.0),
+                )
+                if item_reward <= 0.0:
+                    continue
+                item_pickup_reward += item_reward
+                rewarded_item_pickups[str(item_name)] = (
+                    int(rewarded_item_pickups.get(str(item_name), 0)) + 1
+                )
+        reward += combat_potion_pickup_reward + item_pickup_reward
 
         info = {
             "mode": "grid",
@@ -1300,6 +1405,8 @@ class CampaignEnv(
             "collected_chests_count": int(len(collected_chests)),
             "collected_combat_potions": int(collected_combat_potions),
             "combat_potion_pickup_reward": float(combat_potion_pickup_reward),
+            "item_pickup_reward": float(item_pickup_reward),
+            "rewarded_item_pickups": dict(rewarded_item_pickups),
         }
         if grid_info.get("battle_triggered"):
             reward = self._apply_green_dragon_reached_reward_if_needed(
@@ -1340,10 +1447,6 @@ class CampaignEnv(
 
         # Обработка действия REST — восстановление базового процента HP и бонусного лечения на своей столице/городе.
         if grid_info.get("rest_action"):
-            pending_hire_turn_penalty = self._pending_hire_turn_penalty(
-                1,
-                units=self.blue_team_state,
-            )
             rest_heal_percent = self._resolve_rest_heal_percent(self.grid_env.agent_pos)
             rest_heal_typeoflord_bonus_percent = self._resolve_typeoflord_rest_heal_bonus_percent()
             (
@@ -1390,11 +1493,38 @@ class CampaignEnv(
                 self._log("Отдых: все юниты на полном здоровье")
             # Отдых завершает ход
             reward += self._advance_turns(1)
+            scheduled_enemy_turn_infos = list(
+                getattr(self, "scheduled_enemy_turn_infos", ()) or ()
+            )
+            if scheduled_enemy_turn_infos:
+                info["scheduled_enemy_turn_infos"] = scheduled_enemy_turn_infos
+                info.update(self._scheduled_enemy_state_info())
+            scheduled_enemy_id = getattr(
+                self,
+                "scheduled_enemy_pending_encounter_id",
+                None,
+            )
+            if (
+                scheduled_enemy_id is not None
+                and self.grid_env.enemies_alive.get(int(scheduled_enemy_id), False)
+            ):
+                grid_info["battle_triggered"] = True
+                grid_info["enemy_id"] = int(scheduled_enemy_id)
+                grid_info["enemy_pos"] = tuple(
+                    self.grid_env.enemy_positions[int(scheduled_enemy_id)]
+                )
+                grid_info["battle_triggered_by"] = "same_tile"
+                battle_engage_bonus = float(self.reward_engage_battle)
+                reward += battle_engage_bonus
+                info["battle_triggered"] = True
+                info["battle_engage_bonus"] = float(battle_engage_bonus)
+                self.scheduled_enemy_pending_encounter_id = None
+            info["enemies_alive"] = dict(self.grid_env.enemies_alive)
+            grid_obs = self._get_grid_obs()
             info["turns"] = self.turns
             info["gold"] = self.gold
             info["moves"] = self.moves
             info["healed_units"] = healed
-            info["pending_hire_turn_penalty"] = float(pending_hire_turn_penalty)
             info["rest_heal_percent"] = float(rest_heal_percent)
             info["rest_heal_typeoflord_bonus_percent"] = float(
                 rest_heal_typeoflord_bonus_percent
@@ -1432,8 +1562,14 @@ class CampaignEnv(
 
             return self._build_obs(battle_obs=battle_obs), reward, False, False, info
 
-        # Проверяем победу (все враги побеждены)
-        if self.grid_env.all_enemies_defeated():
+        # Проверяем победу (все враги побеждены). При цели build_all враги —
+        # статисты: кампания выигрывается только строительством.
+        if (
+            self.grid_env.all_enemies_defeated()
+            and not self._campaign_objective_is_build_all()
+            and not self._campaign_objective_is_target_enemy()
+        ):
+            reward = self._apply_all_enemies_objective_reward_if_needed(reward, info)
             self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")
             info["campaign_result"] = "victory"
             info["campaign_victory_reason"] = "all_enemies_defeated"
@@ -1539,6 +1675,7 @@ class CampaignEnv(
         finalized_info["gold"] = self.gold
         finalized_info["moves"] = self.moves
         finalized_info["typeoflord"] = int(self.typeoflord)
+        finalized_info["campaign_objective"] = str(self.campaign_objective)
         finalized_info["reward"] = float(finalized_reward)
         finalized_info["battle_items_equipped_total"] = int(self.battle_items_equipped_total)
         finalized_info["battle_items_used_total"] = int(self.battle_items_used_total)

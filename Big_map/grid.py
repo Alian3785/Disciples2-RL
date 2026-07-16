@@ -779,6 +779,7 @@ def _resolve_obstacle_tiles_cached(
     start_position: Tuple[int, int],
     base_static_obstacle_blocks: Tuple[Tuple[int, int, int, int], ...],
     base_static_empty_tiles: Tuple[Tuple[int, int], ...],
+    enforce_enemy_reachability: bool,
 ) -> Tuple[Tuple[int, int], ...]:
     """Cached implementation for immutable obstacle-layout inputs."""
     start_tile = clamp_grid_pos(start_position, grid_size)
@@ -792,7 +793,17 @@ def _resolve_obstacle_tiles_cached(
             base_grid_size=BASE_GRID_SIZE,
         )
     )
-    protected_targets = set(reserved_tiles)
+    protected_targets = set(heal_tiles)
+    protected_targets.add(start_tile)
+    protected_targets.update(
+        scale_static_tiles(
+            grid_size,
+            base_static_empty_tiles,
+            base_grid_size=BASE_GRID_SIZE,
+        )
+    )
+    if bool(enforce_enemy_reachability):
+        protected_targets.update(enemy_tiles)
 
     static_obstacle_tiles = scale_static_tiles(
         grid_size,
@@ -832,6 +843,7 @@ def resolve_obstacle_tiles(
         BASE_STATIC_OBSTACLE_BLOCKS
     ),
     base_static_empty_tiles: Tuple[Tuple[int, int], ...] = BASE_STATIC_EMPTY_TILES,
+    enforce_enemy_reachability: bool = True,
 ) -> Tuple[Tuple[int, int], ...]:
     """Build deterministic obstacle tiles for the campaign map.
 
@@ -873,6 +885,7 @@ def resolve_obstacle_tiles(
         normalized_start_position,
         normalized_obstacle_blocks,
         normalized_empty_tiles,
+        bool(enforce_enemy_reachability),
     )
 
 

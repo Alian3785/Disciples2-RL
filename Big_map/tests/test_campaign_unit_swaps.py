@@ -23,10 +23,11 @@ def _unit_by_position(env: CampaignEnv, position: int) -> dict:
 
 
 def _assert_unit_swap_penalty(env: CampaignEnv, reward: float, info: dict) -> None:
-    expected_reward = -float(env.reward_unit_swap_penalty)
+    swap_reward = -float(env.reward_unit_swap_penalty)
+    expected_reward = swap_reward - float(info.get("leadership_step_penalty", 0.0))
     assert reward == pytest.approx(expected_reward)
     assert info["unit_swap_penalty"] == pytest.approx(float(env.reward_unit_swap_penalty))
-    assert info["unit_swap_reward"] == pytest.approx(expected_reward)
+    assert info["unit_swap_reward"] == pytest.approx(swap_reward)
 
 
 def _put_real_unit_at_position(env: CampaignEnv, position: int, source_position: int = 7) -> dict:

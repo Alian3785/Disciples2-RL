@@ -32,12 +32,22 @@ class CampaignTerritoryMixin:
             "water_dragon": cls.CAMPAIGN_OBJECTIVE_BLUE_DRAGON,
             "orc": cls.CAMPAIGN_OBJECTIVE_ORC,
             "orc_duel": cls.CAMPAIGN_OBJECTIVE_ORC,
+            "build_all": cls.CAMPAIGN_OBJECTIVE_BUILD_ALL,
+            "builder": cls.CAMPAIGN_OBJECTIVE_BUILD_ALL,
+            "buildings": cls.CAMPAIGN_OBJECTIVE_BUILD_ALL,
+            "all_enemies": cls.CAMPAIGN_OBJECTIVE_ALL_ENEMIES,
+            "enemies": cls.CAMPAIGN_OBJECTIVE_ALL_ENEMIES,
+            "clear_map": cls.CAMPAIGN_OBJECTIVE_ALL_ENEMIES,
+            "target_enemy": cls.CAMPAIGN_OBJECTIVE_TARGET_ENEMY,
+            "siege": cls.CAMPAIGN_OBJECTIVE_TARGET_ENEMY,
+            "siege_army": cls.CAMPAIGN_OBJECTIVE_TARGET_ENEMY,
         }
         if raw in aliases:
             return aliases[raw]
         raise ValueError(
             f"Unsupported campaign_objective={value!r}; "
-            "expected 'cities', 'dragon', 'blue_dragon' or 'orc'"
+            "expected 'cities', 'dragon', 'blue_dragon', 'orc', 'build_all', "
+            "'all_enemies' or 'target_enemy'"
         )
 
     def _campaign_objective_is_cities(self) -> bool:
@@ -69,6 +79,24 @@ class CampaignTerritoryMixin:
             == self.CAMPAIGN_OBJECTIVE_ORC
         )
 
+    def _campaign_objective_is_build_all(self) -> bool:
+        return (
+            self._normalize_campaign_objective(getattr(self, "campaign_objective", "cities"))
+            == self.CAMPAIGN_OBJECTIVE_BUILD_ALL
+        )
+
+    def _campaign_objective_is_all_enemies(self) -> bool:
+        return (
+            self._normalize_campaign_objective(getattr(self, "campaign_objective", "cities"))
+            == self.CAMPAIGN_OBJECTIVE_ALL_ENEMIES
+        )
+
+    def _campaign_objective_is_target_enemy(self) -> bool:
+        return (
+            self._normalize_campaign_objective(getattr(self, "campaign_objective", "cities"))
+            == self.CAMPAIGN_OBJECTIVE_TARGET_ENEMY
+        )
+
     def _is_green_dragon_objective_enemy(self, enemy_id: Optional[int]) -> bool:
         if not self._campaign_objective_is_dragon():
             return False
@@ -76,6 +104,14 @@ class CampaignTerritoryMixin:
             return int(enemy_id) == int(
                 getattr(self, "OBJECTIVE_ENEMY_ID", self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID)
             )
+        except (TypeError, ValueError):
+            return False
+
+    def _is_target_objective_enemy(self, enemy_id: Optional[int]) -> bool:
+        if not self._campaign_objective_is_target_enemy():
+            return False
+        try:
+            return int(enemy_id) == int(getattr(self, "OBJECTIVE_ENEMY_ID"))
         except (TypeError, ValueError):
             return False
 
@@ -107,6 +143,36 @@ class CampaignTerritoryMixin:
             ):
                 raise ValueError(
                     f"campaign_objective='orc' is not supported on map '{map_label}'"
+                )
+        elif objective == self.CAMPAIGN_OBJECTIVE_BUILD_ALL:
+            # Строительная цель не зависит от врагов, но включается только на
+            # картах, которые явно объявили её целью по умолчанию.
+            if (
+                map_config is None
+                or map_config.default_objective != self.CAMPAIGN_OBJECTIVE_BUILD_ALL
+            ):
+                raise ValueError(
+                    f"campaign_objective='build_all' is not supported on map '{map_label}'"
+                )
+        elif objective == self.CAMPAIGN_OBJECTIVE_ALL_ENEMIES:
+            if (
+                map_config is None
+                or map_config.default_objective != self.CAMPAIGN_OBJECTIVE_ALL_ENEMIES
+                or not map_enemy_ids
+            ):
+                raise ValueError(
+                    f"campaign_objective='all_enemies' is not supported on map '{map_label}'"
+                )
+        elif objective == self.CAMPAIGN_OBJECTIVE_TARGET_ENEMY:
+            objective_enemy_id = getattr(map_config, "objective_enemy_id", None)
+            if (
+                map_config is None
+                or map_config.default_objective != self.CAMPAIGN_OBJECTIVE_TARGET_ENEMY
+                or objective_enemy_id is None
+                or int(objective_enemy_id) not in map_enemy_ids
+            ):
+                raise ValueError(
+                    f"campaign_objective='target_enemy' is not supported on map '{map_label}'"
                 )
 
     def _compute_green_dragon_objective_reward(self) -> float:
@@ -343,9 +409,50 @@ class CampaignTerritoryMixin:
                 if self._campaign_objective_is_orc()
                 else "green_dragon_defeated"
             )
+        if self._is_target_objective_enemy(defeated_enemy_id):
+            return "target_enemy_defeated"
         if self._campaign_objective_is_cities() and self._all_objective_cities_captured():
             return "objective_cities_cleared"
+        if (
+            self._campaign_objective_is_all_enemies()
+            and self.grid_env.all_enemies_defeated()
+        ):
+            return "all_enemies_defeated"
         return None
+
+    def _apply_target_enemy_objective_reward_if_needed(
+        self,
+        enemy_id: Optional[int],
+        reward: float,
+        info: Dict[str, object],
+    ) -> float:
+        if (
+            not self._is_target_objective_enemy(enemy_id)
+            or bool(getattr(self, "target_enemy_reward_granted", False))
+        ):
+            return float(reward)
+        final_reward = max(0.0, float(self.reward_all_enemies))
+        self.target_enemy_reward_granted = True
+        info["target_enemy_objective_reward"] = float(final_reward)
+        info["target_enemy_reward_granted"] = True
+        return float(reward) + float(final_reward)
+
+    def _apply_all_enemies_objective_reward_if_needed(
+        self,
+        reward: float,
+        info: Dict[str, object],
+    ) -> float:
+        if (
+            not self._campaign_objective_is_all_enemies()
+            or bool(getattr(self, "all_enemies_reward_granted", False))
+            or not self.grid_env.all_enemies_defeated()
+        ):
+            return float(reward)
+        final_reward = max(0.0, float(self.reward_all_enemies))
+        self.all_enemies_reward_granted = True
+        info["all_enemies_reward"] = float(final_reward)
+        info["all_enemies_reward_granted"] = True
+        return float(reward) + float(final_reward)
 
     def _ruin_progress_info(self) -> Dict[str, object]:
         """Собирает компактный progress-блок по руинам для info после reset/step."""
@@ -674,6 +781,144 @@ class CampaignTerritoryMixin:
         return float(self.GOLD_PER_TURN) + float(self.legions_captured_gold_mine_count) * float(
             self.LEGIONS_GOLD_MINE_GOLD_PER_TURN
         )
+
+    def _scheduled_enemy_state_info(self) -> Dict[str, object]:
+        enemy_id = getattr(self._map, "scheduled_enemy_id", None)
+        if enemy_id is None:
+            return {
+                "scheduled_enemy_id": None,
+                "scheduled_enemy_spawned": False,
+                "scheduled_enemy_active": False,
+            }
+        normalized_enemy_id = int(enemy_id)
+        return {
+            "scheduled_enemy_id": normalized_enemy_id,
+            "scheduled_enemy_spawn_turn": int(
+                getattr(self._map, "scheduled_enemy_spawn_turn", 0) or 0
+            ),
+            "scheduled_enemy_moves_per_turn": int(
+                getattr(self._map, "scheduled_enemy_moves_per_turn", 0) or 0
+            ),
+            "scheduled_enemy_spawned": bool(
+                getattr(self, "scheduled_enemy_spawned", False)
+            ),
+            "scheduled_enemy_active": bool(
+                self.grid_env.enemies_alive.get(normalized_enemy_id, False)
+            ),
+            "scheduled_enemy_position": tuple(
+                self.grid_env.enemy_positions.get(
+                    normalized_enemy_id,
+                    self._static_enemy_positions.get(normalized_enemy_id, self.CASTLE_POS),
+                )
+            ),
+        }
+
+    def _reset_scheduled_enemy_state(self) -> None:
+        self.scheduled_enemy_spawned = False
+        self.scheduled_enemy_pending_encounter_id = None
+        self.scheduled_enemy_turn_infos: List[Dict[str, object]] = []
+        enemy_id = getattr(self._map, "scheduled_enemy_id", None)
+        if enemy_id is None:
+            return
+        normalized_enemy_id = int(enemy_id)
+        if normalized_enemy_id in self._static_enemy_positions:
+            self.grid_env.enemy_positions[normalized_enemy_id] = tuple(
+                self._static_enemy_positions[normalized_enemy_id]
+            )
+        if normalized_enemy_id in self.grid_env.enemies_alive:
+            self.grid_env.enemies_alive[normalized_enemy_id] = False
+
+    def _scheduled_enemy_next_step(
+        self,
+        origin: Tuple[int, int],
+        target: Tuple[int, int],
+    ) -> Tuple[int, int]:
+        origin_x, origin_y = int(origin[0]), int(origin[1])
+        target_x, target_y = int(target[0]), int(target[1])
+        step_x = 0 if target_x == origin_x else (1 if target_x > origin_x else -1)
+        step_y = 0 if target_y == origin_y else (1 if target_y > origin_y else -1)
+        candidates = [
+            (origin_x + step_x, origin_y + step_y),
+            (origin_x + step_x, origin_y),
+            (origin_x, origin_y + step_y),
+        ]
+        current_distance = max(abs(target_x - origin_x), abs(target_y - origin_y))
+        seen: set[Tuple[int, int]] = set()
+        for candidate in candidates:
+            if candidate in seen or candidate == (origin_x, origin_y):
+                continue
+            seen.add(candidate)
+            if not (0 <= candidate[0] < self.grid_size and 0 <= candidate[1] < self.grid_size):
+                continue
+            if candidate in self.grid_env.obstacle_positions:
+                continue
+            candidate_distance = max(
+                abs(target_x - candidate[0]),
+                abs(target_y - candidate[1]),
+            )
+            if candidate_distance < current_distance:
+                return candidate
+        return origin_x, origin_y
+
+    def _advance_scheduled_enemy_one_turn(self) -> Dict[str, object]:
+        enemy_id = getattr(self._map, "scheduled_enemy_id", None)
+        spawn_turn = getattr(self._map, "scheduled_enemy_spawn_turn", None)
+        if enemy_id is None or spawn_turn is None:
+            return {}
+        normalized_enemy_id = int(enemy_id)
+        normalized_spawn_turn = max(1, int(spawn_turn))
+        moves_per_turn = max(
+            0,
+            int(getattr(self._map, "scheduled_enemy_moves_per_turn", 0) or 0),
+        )
+        info: Dict[str, object] = {
+            "enemy_id": normalized_enemy_id,
+            "turn": int(self.turns),
+            "spawned_this_turn": False,
+            "moved_path": [],
+            "contact_with_agent": False,
+        }
+        if int(self.turns) < normalized_spawn_turn:
+            info["state"] = "dormant"
+            return info
+        if not bool(getattr(self, "scheduled_enemy_spawned", False)):
+            self.scheduled_enemy_spawned = True
+            self.grid_env.enemies_alive[normalized_enemy_id] = True
+            self.grid_env.enemy_positions[normalized_enemy_id] = tuple(
+                self._static_enemy_positions[normalized_enemy_id]
+            )
+            info["spawned_this_turn"] = True
+        if not self.grid_env.enemies_alive.get(normalized_enemy_id, False):
+            info["state"] = "defeated"
+            return info
+
+        position = tuple(self.grid_env.enemy_positions[normalized_enemy_id])
+        target = tuple(self.grid_env.agent_pos)
+        moved_path: List[Tuple[int, int]] = []
+        for _ in range(moves_per_turn):
+            if position == target:
+                break
+            next_position = self._scheduled_enemy_next_step(position, target)
+            if next_position == position:
+                break
+            position = tuple(next_position)
+            moved_path.append(position)
+        self.grid_env.enemy_positions[normalized_enemy_id] = position
+        contact = position == target
+        if contact:
+            self.scheduled_enemy_pending_encounter_id = normalized_enemy_id
+        info.update(
+            {
+                "state": "engaging" if contact else "pursuing",
+                "position": position,
+                "target": target,
+                "moved_path": list(moved_path),
+                "steps_moved": int(len(moved_path)),
+                "contact_with_agent": bool(contact),
+            }
+        )
+        return info
+
     def _advance_turns(self, delta_turns: int) -> float:
         """Продвигает campaign time и выполняет все эффекты начала нового turn.
 
@@ -682,13 +927,9 @@ class CampaignTerritoryMixin:
         """
         if delta_turns <= 0:
             return 0.0
-        # Штраф за незанятые hire slots считается до изменения turn, пока текущая команда актуальна.
-        pending_hire_penalty = self._pending_hire_turn_penalty(
-            delta_turns,
-            units=self.blue_team_state,
-        )
         total_gold_income = 0.0
         scripted_bot_turn_infos = []
+        scheduled_enemy_turn_infos = []
         for _ in range(int(delta_turns)):
             self.turns += 1
             # Территории растут в начале каждого turn, поэтому доход ниже уже учитывает новые шахты.
@@ -698,6 +939,9 @@ class CampaignTerritoryMixin:
             total_gold_income += self._legions_gold_income_per_turn()
             self._apply_mana_income_for_turn()
             self._heal_wounded_enemy_teams_for_turn()
+            scheduled_enemy_info = self._advance_scheduled_enemy_one_turn()
+            if scheduled_enemy_info:
+                scheduled_enemy_turn_infos.append(scheduled_enemy_info)
             advance_bot = getattr(self, "_advance_scripted_capital_bot_one_turn", None)
             if callable(advance_bot) and bool(getattr(self, "scripted_capital_bot_enabled", False)):
                 scripted_bot_turn_infos.append(advance_bot())
@@ -706,6 +950,7 @@ class CampaignTerritoryMixin:
         self.combat_potion_battle_bonus_pending = False
         self.gold += float(total_gold_income)
         self.scripted_capital_bot_turn_infos = scripted_bot_turn_infos
+        self.scheduled_enemy_turn_infos = scheduled_enemy_turn_infos
         self._sync_moves_per_turn_with_hero(units=self.blue_team_state)
         self.moves = self.moves_per_turn
         self.active_buildings["alredybuilt"] = 0
@@ -717,7 +962,7 @@ class CampaignTerritoryMixin:
         self.grid_unit_swaps_this_turn = 0
         self.summon_hero_battle_bonus_pending = False
         self.summon_hero_battle_bonus_enemy_ids_this_turn = set()
-        return -float(delta_turns) * self.reward_turn_penalty - float(pending_hire_penalty)
+        return -float(delta_turns) * self.reward_turn_penalty
     @staticmethod
     def _territory_sort_key(
         origin_tile: Tuple[int, int],

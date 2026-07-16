@@ -45,6 +45,11 @@ class CampaignMagicMixin:
         }.get(capital_value, "infernal")
     def _compute_mana_income_per_turn(self) -> Dict[str, float]:
         mana_income = self._empty_mana_dict()
+        map_config = getattr(self, "_map", None)
+        if map_config is not None and not bool(
+            getattr(map_config, "passive_mana_income_enabled", True)
+        ):
+            return mana_income
         base_mana_kind = self._base_mana_kind_for_capital(getattr(self, "Realcapital", 2))
         mana_income[str(base_mana_kind)] += float(self.BASE_INFERNAL_MANA_PER_TURN)
         for kind in self.MANA_KIND_ORDER:
@@ -438,7 +443,10 @@ class CampaignMagicMixin:
             required_item_count = 1
         if self._count_hero_item(item_name) < required_item_count:
             return False
-        if not self._hero_has_sorcery_lore():
+        if not (
+            self._travel_hero_is_mage()
+            or self._hero_has_sorcery_lore()
+        ):
             return False
 
         spell = self._spell_entry_by_id(spell_key)
@@ -516,10 +524,28 @@ class CampaignMagicMixin:
             if self._campaign_objective_is_blue_dragon()
             else self._enemy_configs
         )
-        return {
+        states = {
             int(enemy_id): deepcopy(team)
             for enemy_id, team in configs.items()
         }
+        level_overrides = getattr(self._map, "enemy_unit_level_overrides", None) or {}
+        for raw_enemy_id, unit_levels in level_overrides.items():
+            try:
+                enemy_id = int(raw_enemy_id)
+            except (TypeError, ValueError):
+                continue
+            if not isinstance(unit_levels, dict):
+                continue
+            normalized_levels = {
+                str(unit_name): max(1, int(level))
+                for unit_name, level in unit_levels.items()
+                if str(unit_name or "").strip()
+            }
+            for unit in states.get(enemy_id, ()):
+                unit_name = str(unit.get("name", "") or "")
+                if unit_name in normalized_levels:
+                    unit["Level"] = int(normalized_levels[unit_name])
+        return states
     def _get_enemy_team_state(self, enemy_id: Optional[int]) -> List[Dict]:
         try:
             normalized_enemy_id = int(enemy_id)
@@ -2320,6 +2346,7 @@ class CampaignMagicMixin:
         item_name = str(spell_data.get("item_name", "") or "")
         required_item_count = int(spell_data.get("required_item_count", 1) or 1)
         item_owned = bool(item_name) and self._count_hero_item(item_name) >= required_item_count
+        hero_is_mage = self._travel_hero_is_mage()
         has_sorcery_lore = self._hero_has_sorcery_lore()
         mana_costs = self._get_spell_use_costs(spell) if isinstance(spell, dict) else {}
         blocked_by_typeoflord = self._is_spell_blocked_by_typeoflord(spell)
@@ -2377,7 +2404,8 @@ class CampaignMagicMixin:
                 "staff_item_owned": bool(item_owned),
                 "staff_required_item_count": int(required_item_count),
                 "staff_magic_unlocked": bool(self.scroll_magic_unlocked),
-                "staff_requires_sorcery_lore": True,
+                "staff_requires_sorcery_lore": not bool(hero_is_mage),
+                "staff_hero_is_mage": bool(hero_is_mage),
                 "staff_has_sorcery_lore": bool(has_sorcery_lore),
                 "staff_spell_key": spell_key,
                 "staff_spell_kind": spell_kind,

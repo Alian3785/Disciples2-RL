@@ -233,6 +233,9 @@ class CampaignInventoryMixin:
             for item_name in tuple(item_names or ()):
                 add_if_potion(item_name)
 
+        for item_name in tuple(getattr(self._map, "starting_hero_items", ()) or ()):
+            add_if_potion(item_name)
+
         for reward_data in tuple(getattr(self, "RUIN_REWARD_BY_ENEMY_ID", {}).values()):
             if isinstance(reward_data, dict):
                 add_if_potion(reward_data.get("item", ""))
@@ -1267,6 +1270,9 @@ class CampaignInventoryMixin:
         for item_names in getattr(self, "_static_chests", {}).values():
             for item_name in tuple(item_names or ()):
                 add_if_scroll(item_name)
+
+        for item_name in tuple(getattr(self._map, "starting_scroll_items", ()) or ()):
+            add_if_scroll(item_name)
 
         for reward_data in tuple(getattr(self, "RUIN_REWARD_BY_ENEMY_ID", {}).values()):
             if isinstance(reward_data, dict):

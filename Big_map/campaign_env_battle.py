@@ -261,6 +261,12 @@ class CampaignBattleMixin:
                     reward,
                     info,
                 )
+                reward = self._apply_all_enemies_objective_reward_if_needed(reward, info)
+                reward = self._apply_target_enemy_objective_reward_if_needed(
+                    self.current_enemy_id,
+                    reward,
+                    info,
+                )
                 campaign_objective_reason = self._campaign_objective_completion_reason(
                     self.current_enemy_id
                 )
@@ -277,8 +283,13 @@ class CampaignBattleMixin:
                         info=info,
                     )
 
-                # Проверяем полную победу
-                if self.grid_env.all_enemies_defeated():
+                # Проверяем полную победу. При цели build_all зачистка врагов
+                # не завершает кампанию — победа только строительством.
+                if (
+                    self.grid_env.all_enemies_defeated()
+                    and not self._campaign_objective_is_build_all()
+                    and not self._campaign_objective_is_target_enemy()
+                ):
                     self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")
                     grid_obs = self._get_grid_obs()
                     info["campaign_result"] = "victory"
