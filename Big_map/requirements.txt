@@ -9,4 +9,4 @@ matplotlib==3.11.0
 pytest==9.1.1
 ruff==0.15.22
 tensorboard==2.21.0
-comet_ml==3.58.3
+comet_ml==3.58.4
