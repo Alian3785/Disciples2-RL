@@ -476,6 +476,26 @@ def _to_bool_flag(value: object) -> bool:
     return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
+THIEF_UNIT_NAMES = frozenset(
+    {
+        "Вор империи",
+        "Вор легионов",
+        "Вор гномов",
+        "Вор нежити",
+        "Вор эльфов",
+    }
+)
+
+
+def _is_thief_battle_unit(unit: Dict) -> bool:
+    """Recognize faction thieves independently from hero/evolution metadata."""
+    if not isinstance(unit, dict):
+        return False
+    if _to_bool_flag(unit.get("thief", unit.get("is_thief", False))):
+        return True
+    return str(unit.get("name", "") or "").strip() in THIEF_UNIT_NAMES
+
+
 def _is_neutral_battle_unit(unit: Dict) -> bool:
     if not isinstance(unit, dict):
         return False
@@ -593,7 +613,10 @@ def _apply_hero_levelup_bonuses(unit: Dict) -> None:
 
 
 def _unit_has_available_evolution(unit: Dict) -> bool:
-    turns_into = unit.get("turns_into", unit.get("\u043f\u0440\u0435\u0432\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044f \u0432", ()))
+    turns_into = unit.get(
+        "turns_into",
+        unit.get("\u043f\u0440\u0435\u0432\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044f \u0432", ()),
+    )
     if isinstance(turns_into, str):
         return bool(turns_into.strip())
     if isinstance(turns_into, (list, tuple, set, frozenset)):
@@ -603,6 +626,10 @@ def _unit_has_available_evolution(unit: Dict) -> bool:
 
 def _uses_dynamic_unit_levelup(unit: Dict) -> bool:
     """Return whether a unit gains stats instead of evolving into another form."""
+    # Faction thieves do not gain experience or levels in the original game.
+    # Keep this guard even though battle XP distribution normally excludes them.
+    if _is_thief_battle_unit(unit):
+        return False
     if _is_neutral_battle_unit(unit):
         return True
     if _to_bool_flag(unit.get("boss", unit.get("is_boss", False))):
@@ -627,6 +654,7 @@ def _apply_dynamic_unit_levelup(unit: Dict, exp_required: int) -> None:
     _apply_ten_percent_levelup_stats(unit)
     if _resolve_unit_hero_flag(unit):
         _apply_hero_level_milestone_bonuses(unit)
+
 
 DEFAULT_RED_ROSTER: Tuple[Tuple[str, int], ...] = (
     ("Скелет рыцарь", 1),
@@ -905,6 +933,10 @@ class BattleEnv(gym.Env):
         self.escaped_units: List[Dict] = []
         # Опыт трупов, затёртых призывом в их клетку, — учитывается при подсчёте опыта за бой.
         self.overwritten_exp_kill: Dict[str, float] = {"red": 0.0, "blue": 0.0}
+        # XP is accumulated at each death because escaped and revived units are
+        # entitled only to kills that happened while they were on the field.
+        self._battle_exp_event_count: int = 0
+        self._battle_defeated_exp: Dict[str, float] = {"red": 0.0, "blue": 0.0}
         self.step_count: int = 0
         self.equipped_hero_items: List[Optional[str]] = [None, None]
         self.equipped_hero_item_uses_left: List[Optional[int]] = [None, None]
@@ -1241,6 +1273,7 @@ class BattleEnv(gym.Env):
         if "hp" in target_unit:
             target_unit["hp"] = int(round(new_health))
         if new_health <= 0:
+            self._record_unit_defeat_for_exp(target_unit)
             target_unit["initiative"] = 0
             self._kill_linked_summons(target_unit)
         return damage
@@ -2030,6 +2063,48 @@ class BattleEnv(gym.Env):
         bank = getattr(self, "overwritten_exp_kill", None)
         if isinstance(bank, dict) and team in bank:
             bank[team] += float(unit.get("exp_kill", 0) or 0)
+
+    def _record_unit_defeat_for_exp(self, victim: Dict) -> None:
+        """Record one death and award its raw XP to units present at that moment."""
+        if not isinstance(victim, dict):
+            return
+        victim_team = str(victim.get("team", "") or "").lower()
+        if victim_team not in {"red", "blue"}:
+            return
+
+        # A dead unit loses everything earned earlier in this battle.  If it is
+        # revived, subsequent kills start filling this counter again from zero.
+        victim["_battle_exp_earned"] = 0.0
+
+        defeated_exp = max(0.0, float(victim.get("exp_kill", 0) or 0))
+        defeated_by_team = getattr(self, "_battle_defeated_exp", None)
+        if not isinstance(defeated_by_team, dict):
+            defeated_by_team = {"red": 0.0, "blue": 0.0}
+            self._battle_defeated_exp = defeated_by_team
+        defeated_by_team[victim_team] = (
+            float(defeated_by_team.get(victim_team, 0.0) or 0.0) + defeated_exp
+        )
+        self._battle_exp_event_count = int(
+            getattr(self, "_battle_exp_event_count", 0) or 0
+        ) + 1
+
+        receiving_team = "red" if victim_team == "blue" else "blue"
+        recipients = [
+            unit
+            for unit in self.combined
+            if str(unit.get("team", "") or "").lower() == receiving_team
+            and self._alive(unit)
+            and not _is_thief_battle_unit(unit)
+        ]
+        if not recipients or defeated_exp <= 0.0:
+            return
+
+        share = defeated_exp / len(recipients)
+        for unit in recipients:
+            unit["_battle_exp_earned"] = max(
+                0.0,
+                float(unit.get("_battle_exp_earned", 0.0) or 0.0),
+            ) + share
 
     def _team_alive(self, team: str) -> bool:
         return any(self._alive(u) and u["team"] == team for u in self.combined)
@@ -2895,6 +2970,9 @@ class BattleEnv(gym.Env):
 
             before_hp = int(unit.get("health", 0) or 0)
             unit["health"] = 0
+            if "hp" in unit:
+                unit["hp"] = 0
+            self._record_unit_defeat_for_exp(unit)
             unit["initiative"] = 0
             unit_team = (unit.get("team") or "").upper()
             unit_name = unit.get("name") or unit.get("unit_type") or "unit"
@@ -3431,6 +3509,7 @@ class BattleEnv(gym.Env):
             u.pop("wight_form_name", None)
             u.pop("transform_effect", None)
             u.pop("transform_recover_chance", None)
+            u["_battle_exp_earned"] = 0.0
         self.round_no = 1
         self.winner = None
         self.current_blue_attacker_pos = None
@@ -3441,6 +3520,8 @@ class BattleEnv(gym.Env):
         self._ismir_applied_uran = {}
         self.escaped_units = []
         self.overwritten_exp_kill = {"red": 0.0, "blue": 0.0}
+        self._battle_exp_event_count = 0
+        self._battle_defeated_exp = {"red": 0.0, "blue": 0.0}
         self.step_count = 0
         self.hero_item_slots_used_this_battle = [False] * len(self.equipped_hero_items)
         if len(getattr(self, "equipped_hero_item_uses_left", []) or []) < len(
@@ -3485,6 +3566,7 @@ class BattleEnv(gym.Env):
                 "turns_into": [],
                 "capital": 0,
                 "is_neutral_unit": False,
+                "_battle_exp_earned": 0.0,
             }
         )
         return slot
@@ -3586,14 +3668,15 @@ class BattleEnv(gym.Env):
         eff *= max(0.0, incoming_multiplier)
         return int(round(eff))
 
-    @staticmethod
-    def _subtract_health(unit: Dict, damage: float) -> Tuple[float, float]:
+    def _subtract_health(self, unit: Dict, damage: float) -> Tuple[float, float]:
         """Apply damage without ever leaving a unit with negative health."""
         before = unit.get("health", 0) or 0
         after = max(0, before - damage)
         unit["health"] = after
         if "hp" in unit:
             unit["hp"] = after
+        if before > 0 and after <= 0:
+            self._record_unit_defeat_for_exp(unit)
         return before, after
 
     def _roll_hit(self, attacker: Dict) -> bool:
@@ -5208,89 +5291,152 @@ class BattleEnv(gym.Env):
         else:
             return _single_target()
 
-    def _apply_battle_exp(self, losing_team: str) -> None:
-        """Начисляет опыт победившей команде и пишет лог."""
-        escaped_keys = {
-            (
-                str(unit.get("team", "")),
-                int(unit.get("position", 0) or 0),
-            )
-            for unit in getattr(self, "escaped_units", []) or []
-            if isinstance(unit, dict)
-        }
-        total_exp = 0.0
-        for u in self.combined:
-            if u.get("team") != losing_team:
-                continue
-            if (str(u.get("team", "")), int(u.get("position", 0) or 0)) in escaped_keys:
-                continue
-            if int(u.get("running_away", 0)) == 1 and self._alive(u):
-                continue
-            total_exp += float(u.get("exp_kill", 0) or 0)
-
-        bank = getattr(self, "overwritten_exp_kill", None)
-        if isinstance(bank, dict):
-            total_exp += float(bank.get(losing_team, 0.0) or 0.0)
-
-        winning_team = "red" if losing_team == "blue" else "blue"
-
-        try:
-            exp_multiplier = max(0.0, float(getattr(self, "exp_multiplier", 1.0) or 1.0))
-        except (TypeError, ValueError):
-            exp_multiplier = 1.0
-        if winning_team == "blue" and abs(exp_multiplier - 1.0) > 1e-9:
-            total_exp *= exp_multiplier
-
-        self.last_battle_exp = total_exp
-        self._log(f"Опыт за бой: {total_exp:g}")
-
-        winners = [
-            u
-            for u in self.combined
-            if u.get("team") == winning_team
-            and self._alive(u)
-            and int(u.get("running_away", 0)) == 0
-            and (str(u.get("team", "")), int(u.get("position", 0) or 0)) not in escaped_keys
-        ]
-        if not winners:
+    def _apply_exp_award_to_unit(self, unit: Dict, awarded_exp: int) -> None:
+        if awarded_exp <= 0 or _is_thief_battle_unit(unit):
             return
 
-        share = total_exp / len(winners)
-        share_rounded = int(math.floor(share + 0.5))
+        current = float(unit.get("exp_current", 0) or 0)
+        new_value = current + int(awarded_exp)
+        req_raw = unit.get("exp_required", 0)
+        unit["exp_current"] = new_value
 
+        if isinstance(req_raw, str) and req_raw.lower() == "max":
+            return
+        try:
+            req_value = float(req_raw)
+        except (TypeError, ValueError):
+            return
+        if req_value <= 0 or new_value < req_value:
+            return
+
+        unit_name = unit.get("name", "unknown")
+        next_level_exp = _resolve_unit_next_level_exp(unit)
+        if _uses_dynamic_unit_levelup(unit):
+            _apply_dynamic_unit_levelup(
+                unit,
+                exp_required=_to_int_or_default(req_value, default=0),
+            )
+        elif _resolve_unit_hero_flag(unit) and next_level_exp > 0:
+            unit["Level"] = _to_int_or_default(unit.get("Level", 0), default=0) + 1
+            unit["exp_required"] = (
+                _to_int_or_default(req_value, default=0) + next_level_exp
+            )
+            unit["exp_current"] = 0
+            _apply_hero_levelup_bonuses(unit)
+        else:
+            unit["exp_current"] = max(0.0, req_value - 1)
+        self._log(f"Уровень юнита {unit_name} повышен")
+        self.last_levelups.append(unit_name)
+
+    def _apply_battle_exp(self, losing_team: str) -> None:
+        """Award XP with original-game timing for deaths, revivals and escapes."""
+        escaped_units = [
+            unit
+            for unit in (getattr(self, "escaped_units", []) or [])
+            if isinstance(unit, dict)
+        ]
+        escaped_keys = {
+            (str(unit.get("team", "")), int(unit.get("position", 0) or 0))
+            for unit in escaped_units
+        }
+        event_based = int(getattr(self, "_battle_exp_event_count", 0) or 0) > 0
+
+        if event_based:
+            defeated_exp = getattr(self, "_battle_defeated_exp", {})
+            total_exp = float(defeated_exp.get(losing_team, 0.0) or 0.0)
+        else:
+            # Compatibility path for direct callers/tests that provide an
+            # already-finished battle without running combat damage events.
+            total_exp = 0.0
+            for unit in self.combined:
+                if unit.get("team") != losing_team:
+                    continue
+                unit_key = (
+                    str(unit.get("team", "")),
+                    int(unit.get("position", 0) or 0),
+                )
+                if unit_key in escaped_keys:
+                    continue
+                if int(unit.get("running_away", 0)) == 1 and self._alive(unit):
+                    continue
+                total_exp += float(unit.get("exp_kill", 0) or 0)
+
+            bank = getattr(self, "overwritten_exp_kill", None)
+            if isinstance(bank, dict):
+                total_exp += float(bank.get(losing_team, 0.0) or 0.0)
+
+        winning_team = "red" if losing_team == "blue" else "blue"
+        try:
+            exp_multiplier = max(
+                0.0,
+                float(getattr(self, "exp_multiplier", 1.0) or 1.0),
+            )
+        except (TypeError, ValueError):
+            exp_multiplier = 1.0
+        winner_multiplier = exp_multiplier if winning_team == "blue" else 1.0
+        total_exp *= winner_multiplier
+
+        self.last_battle_exp = total_exp
         self.last_levelups = []
-        for u in winners:
-            current = float(u.get("exp_current", 0) or 0)
-            new_value = current + share_rounded
-            req_raw = u.get("exp_required", 0)
+        self._log(f"Опыт за бой: {total_exp:g}")
 
-            u["exp_current"] = new_value
+        current_winners = [
+            unit
+            for unit in self.combined
+            if unit.get("team") == winning_team
+            and self._alive(unit)
+            and not _is_thief_battle_unit(unit)
+        ]
 
-            if isinstance(req_raw, str) and req_raw.lower() == "max":
-                continue
-            try:
-                req_value = float(req_raw)
-            except (TypeError, ValueError):
-                continue
-            if req_value <= 0:
-                continue
-            if new_value >= req_value:
-                unit_name = u.get("name", "unknown")
-                next_level_exp = _resolve_unit_next_level_exp(u)
-                if _uses_dynamic_unit_levelup(u):
-                    _apply_dynamic_unit_levelup(
-                        u,
-                        exp_required=_to_int_or_default(req_value, default=0),
-                    )
-                elif _resolve_unit_hero_flag(u) and next_level_exp > 0:
-                    u["Level"] = _to_int_or_default(u.get("Level", 0), default=0) + 1
-                    u["exp_required"] = _to_int_or_default(req_value, default=0) + next_level_exp
-                    u["exp_current"] = 0
-                    _apply_hero_levelup_bonuses(u)
-                else:
-                    u["exp_current"] = max(0.0, req_value - 1)
-                self._log(f"Уровень юнита {unit_name} повышен")
-                self.last_levelups.append(unit_name)
+        if event_based:
+            # Escaped winners retain only XP earned before they actually left.
+            recipients = [
+                *current_winners,
+                *[
+                    unit
+                    for unit in escaped_units
+                    if unit.get("team") == winning_team
+                    and not _is_thief_battle_unit(unit)
+                ],
+            ]
+            awards = [
+                (
+                    unit,
+                    int(
+                        math.floor(
+                            max(
+                                0.0,
+                                float(unit.get("_battle_exp_earned", 0.0) or 0.0),
+                            )
+                            * winner_multiplier
+                            + 0.5
+                        )
+                    ),
+                )
+                for unit in recipients
+            ]
+        else:
+            # Legacy/direct-state battles have no timing information available.
+            recipients = [
+                unit
+                for unit in current_winners
+                if int(unit.get("running_away", 0)) == 0
+                and (
+                    str(unit.get("team", "")),
+                    int(unit.get("position", 0) or 0),
+                )
+                not in escaped_keys
+            ]
+            share = total_exp / len(recipients) if recipients else 0.0
+            rounded_share = int(math.floor(share + 0.5))
+            awards = [(unit, rounded_share) for unit in recipients]
+
+        for unit, awarded_exp in awards:
+            self._apply_exp_award_to_unit(unit, awarded_exp)
+
+        # This field is battle-local and must never leak into campaign state.
+        for unit in [*self.combined, *escaped_units]:
+            unit.pop("_battle_exp_earned", None)
 
     def _clear_dead_running_away_flags(self) -> None:
         for unit in self.combined:
@@ -6320,6 +6466,7 @@ class BattleEnv(gym.Env):
             u.pop("wight_form_name", None)
             u.pop("transform_effect", None)
             u.pop("transform_recover_chance", None)
+            u["_battle_exp_earned"] = 0.0
 
         # Сбрасываем глобальное состояние боя
         self.round_no = 1
@@ -6332,6 +6479,8 @@ class BattleEnv(gym.Env):
         self._ismir_applied_uran = {}
         self.escaped_units = []
         self.overwritten_exp_kill = {"red": 0.0, "blue": 0.0}
+        self._battle_exp_event_count = 0
+        self._battle_defeated_exp = {"red": 0.0, "blue": 0.0}
         self.step_count = 0
         self.hero_item_slots_used_this_battle = [False] * len(self.equipped_hero_items)
         if len(getattr(self, "equipped_hero_item_uses_left", []) or []) < len(
