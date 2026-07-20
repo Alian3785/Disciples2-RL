@@ -5,7 +5,7 @@ sb3-contrib==2.9.0
 torch==2.13.0
 numpy==2.5.1
 pandas==3.0.3
-matplotlib==3.11.0
+matplotlib==3.11.1
 pytest==9.1.1
 ruff==0.15.22
 tensorboard==2.21.0
