@@ -19,11 +19,42 @@ def _hire_action_index(env: CampaignEnv, idx: int) -> int:
     return env.GRID_HIRE_ACTION_START + idx
 
 
-def _big_hire_action_and_option(env: CampaignEnv) -> tuple[int, dict]:
+def _big_hire_action_and_option(
+    env: CampaignEnv,
+    unit_name: str | None = None,
+) -> tuple[int, dict]:
     for idx, option in enumerate(env.active_hire_options):
-        if env._is_big_hire_option(option):
-            return _hire_action_index(env, idx), option
+        if not env._is_big_hire_option(option):
+            continue
+        if unit_name is not None and str(option.get("name", "")) != unit_name:
+            continue
+        return _hire_action_index(env, idx), option
     raise AssertionError("No faction big hire option found")
+
+
+EXPECTED_FACTION_HIRE_NAMES = {
+    1: ("Скваер", "Ученик", "Лучник", "Служка", "Титан"),
+    2: ("Одержимый", "Сектант", "Гаргулья", "Сатир", "Чёрт"),
+    3: ("Гном", "Травница", "Метатель топоров", "Йети", "Холмовой гигант"),
+    4: ("Воин", "Адепт", "Привидение", "Оборотень", "Виверна"),
+    5: ("Кентавр копейщик", "Адепт эльфов", "Рейнджер", "Медиум", "Грифон"),
+}
+
+EXPECTED_FACTION_HIRE_COSTS = {
+    1: (50, 60, 40, 50, 300),
+    2: (50, 60, 80, 300, 100),
+    3: (50, 60, 40, 400, 100),
+    4: (50, 60, 50, 1000, 100),
+    5: (50, 60, 40, 50, 300),
+}
+
+EXPECTED_REQUIRED_HIRE_BUILDINGS = {
+    "Титан": "Разрушенный храм",
+    "Сатир": "Храм Скорби",
+    "Йети": "Горное логово",
+    "Оборотень": "Логово оборотней",
+    "Грифон": "Птичник",
+}
 
 
 def _blue_unit(env: CampaignEnv, position: int) -> dict:
@@ -62,6 +93,18 @@ def _clear_all_companions(env: CampaignEnv) -> None:
     env._sync_hero_progression_flags(env.blue_team_state)
 
 
+def _mark_building_built(env: CampaignEnv, building_name: str) -> None:
+    for building in env.active_buildings.values():
+        if not isinstance(building, dict):
+            continue
+        if str(building.get("name", "")) != building_name:
+            continue
+        building["built"] = 1
+        building["Build"] = 1
+        return
+    raise AssertionError(f"Unknown required hire building: {building_name}")
+
+
 def _swap_slot_positions(env: CampaignEnv, position_a: int, position_b: int) -> None:
     unit_a = _blue_unit(env, position_a)
     unit_b = _blue_unit(env, position_b)
@@ -90,6 +133,65 @@ def test_legions_hire_action_count_matches_hire_py():
     assert env.GRID_MERCHANT_BUY_ACTION_START - env.GRID_TRAINER_ACTION_START == len(
         env.TRAINER_POSITIONS
     )
+
+
+@pytest.mark.parametrize(
+    ("capital", "expected_names"),
+    EXPECTED_FACTION_HIRE_NAMES.items(),
+)
+def test_every_base_faction_unit_is_present_and_hireable(capital, expected_names):
+    roster_env = CampaignEnv(
+        log_enabled=False,
+        persist_blue_hp=True,
+        Realcapital=capital,
+    )
+    actual_names = tuple(
+        str(option.get("name", "")) for option in roster_env.active_hire_options
+    )
+    assert actual_names == expected_names
+    assert tuple(
+        float(option.get("gold", 0.0) or 0.0)
+        for option in roster_env.active_hire_options
+    ) == pytest.approx(EXPECTED_FACTION_HIRE_COSTS[capital])
+
+    for expected_name in expected_names:
+        env = CampaignEnv(
+            log_enabled=False,
+            persist_blue_hp=True,
+            Realcapital=capital,
+        )
+        env.reset(seed=123)
+        env.grid_env.agent_pos = env.castle_heal_tiles[0]
+        _clear_all_companions(env)
+        env.gold = 10_000.0
+
+        option_idx, option = next(
+            (idx, candidate)
+            for idx, candidate in enumerate(env.active_hire_options)
+            if str(candidate.get("name", "")) == expected_name
+        )
+        action = _hire_action_index(env, option_idx)
+
+        assert env._find_unit_data_by_name(expected_name) is not None
+        required_building = str(option.get("required_building", "") or "")
+        assert required_building == EXPECTED_REQUIRED_HIRE_BUILDINGS.get(
+            expected_name,
+            "",
+        )
+        if required_building:
+            assert bool(env.compute_action_mask()[action]) is False
+            _mark_building_built(env, required_building)
+        assert bool(env.compute_action_mask()[action]) is True
+
+        _, _, terminated, truncated, info = env.step(action)
+
+        assert terminated is False
+        assert truncated is False
+        assert info.get("hired") is True
+        assert info.get("hired_unit_name") == expected_name
+        assert float(info.get("gold_spent", 0.0)) == pytest.approx(
+            float(option["gold"])
+        )
 
 
 def test_legions_mage_hire_uses_name_from_hire_py_and_places_unit_on_backline():
@@ -332,7 +434,7 @@ def test_three_small_hires_consume_base_points_one_by_one():
 def test_big_hire_option_unlocks_on_second_leadership_if_first_hire_was_skipped():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     hero = _enable_hero_hire(env, gold=100.0)
-    big_action, big_option = _big_hire_action_and_option(env)
+    big_action, big_option = _big_hire_action_and_option(env, "Чёрт")
     _swap_slot_positions(env, 9, 10)
 
     mask = env.compute_action_mask()
@@ -380,7 +482,7 @@ def test_big_hire_places_large_unit_on_front_and_clears_needaunit():
     assert recruited["stand"] == "ahead"
     assert env._is_empty_blue_unit(partner)
     assert hero["needaunit"] == 0
-    assert env.gold == pytest.approx(0.0)
+    assert env.gold == pytest.approx(100.0 - float(big_option["gold"]))
     assert info.get("hire_big_unit") is True
     assert info.get("hire_column_positions") == (9, 12)
     assert info.get("hired") is True

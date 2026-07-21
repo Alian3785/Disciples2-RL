@@ -297,6 +297,17 @@ class CampaignConstantsMixin:
     HIRE_BIG_UNIT_CAPACITY = 2
     HIRE_BIG_UNIT_KIND = "faction_big"
     HIRE_BIG_UNIT_GOLD_COST = 100.0
+    HIRE_BIG_UNIT_GOLD_COST_BY_CAPITAL = {
+        1: 300.0,
+        2: 100.0,
+        3: 100.0,
+        4: 100.0,
+        5: 300.0,
+    }
+    HIRE_BIG_UNIT_REQUIRED_BUILDING_BY_CAPITAL = {
+        1: "Разрушенный храм",
+        5: "Птичник",
+    }
     FULL_PARTY_TARGET_SLOTS = 6
     HIRE_BIG_UNIT_NAME_BY_CAPITAL = {
         1: "\u0422\u0438\u0442\u0430\u043d",
