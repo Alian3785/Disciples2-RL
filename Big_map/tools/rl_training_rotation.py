@@ -32,7 +32,7 @@ NEXT_MAP = {
     for index, map_name in enumerate(MAP_ROTATION)
 }
 MAP_OBJECTIVES = {
-    "default": "green_dragon",
+    "default": "full_party",
     "small": "green_dragon",
     "super_last_stand": "waves",
     "orc_duel": "orc",
@@ -47,6 +47,7 @@ MAP_OBJECTIVES = {
 }
 OBJECTIVE_FLAGS = {
     "green_dragon": "--dragon",
+    "full_party": "--full-party",
 }
 DEFAULT_STATE = {
     "active": True,

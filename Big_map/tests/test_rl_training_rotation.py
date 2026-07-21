@@ -70,8 +70,8 @@ def test_scheduled_run_selects_next_map_for_one_million_steps(tmp_path):
 
     assert prepared["should_run"] == "true"
     assert prepared["campaign_map"] == "default"
-    assert prepared["objective"] == "green_dragon"
-    assert prepared["objective_flag"] == "--dragon"
+    assert prepared["objective"] == "full_party"
+    assert prepared["objective_flag"] == "--full-party"
     assert prepared["seed"] == "101"
     assert prepared["total_steps"] == "1000000"
     assert prepared["cycle_complete"] == "false"
@@ -97,7 +97,7 @@ def test_manual_smoke_uses_selected_map_without_advancing_state(tmp_path):
     assert state == DEFAULT_STATE
 
 
-def test_only_default_and_small_override_their_objective_to_green_dragon(tmp_path):
+def test_default_uses_full_party_and_small_uses_green_dragon(tmp_path):
     for map_name in MAP_ROTATION:
         state = {**DEFAULT_STATE, "next_map": map_name}
         prepared = prepare_run(
@@ -110,9 +110,11 @@ def test_only_default_and_small_override_their_objective_to_green_dragon(tmp_pat
 
         assert prepared["campaign_map"] == map_name
         assert prepared["objective"] == MAP_OBJECTIVES[map_name]
-        assert prepared["objective_flag"] == (
-            "--dragon" if map_name in {"default", "small"} else ""
-        )
+        expected_flag = {
+            "default": "--full-party",
+            "small": "--dragon",
+        }.get(map_name, "")
+        assert prepared["objective_flag"] == expected_flag
 
 
 def test_successful_cycle_advances_all_twelve_maps_then_seed(tmp_path):
@@ -179,7 +181,7 @@ def test_missing_output_does_not_change_state(tmp_path):
             run_dir=run_dir,
             seed=101,
             map_name="default",
-            objective="green_dragon",
+            objective=MAP_OBJECTIVES["default"],
             run_id="failed-run",
             commit_sha="abc123",
         )

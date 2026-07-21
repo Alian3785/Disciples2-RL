@@ -1429,6 +1429,7 @@ class CampaignMagicMixin:
             if (
                 self.grid_env.all_enemies_defeated()
                 and not self._campaign_objective_is_waves()
+                and not self._campaign_objective_is_full_party()
             ):
                 self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")
                 grid_obs = self._get_grid_obs()
@@ -2654,6 +2655,7 @@ class CampaignMagicMixin:
             if (
                 self.grid_env.all_enemies_defeated()
                 and not self._campaign_objective_is_waves()
+                and not self._campaign_objective_is_full_party()
             ):
                 self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")
                 grid_obs = self._get_grid_obs()

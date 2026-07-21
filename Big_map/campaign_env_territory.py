@@ -45,13 +45,16 @@ class CampaignTerritoryMixin:
             "wave": cls.CAMPAIGN_OBJECTIVE_WAVES,
             "last_stand": cls.CAMPAIGN_OBJECTIVE_WAVES,
             "survival_waves": cls.CAMPAIGN_OBJECTIVE_WAVES,
+            "full_party": cls.CAMPAIGN_OBJECTIVE_FULL_PARTY,
+            "full_roster": cls.CAMPAIGN_OBJECTIVE_FULL_PARTY,
+            "party": cls.CAMPAIGN_OBJECTIVE_FULL_PARTY,
         }
         if raw in aliases:
             return aliases[raw]
         raise ValueError(
             f"Unsupported campaign_objective={value!r}; "
             "expected 'cities', 'dragon', 'blue_dragon', 'orc', 'build_all', "
-            "'all_enemies', 'target_enemy' or 'waves'"
+            "'all_enemies', 'target_enemy', 'waves' or 'full_party'"
         )
 
     def _campaign_objective_is_cities(self) -> bool:
@@ -105,6 +108,14 @@ class CampaignTerritoryMixin:
         return (
             self._normalize_campaign_objective(getattr(self, "campaign_objective", "cities"))
             == self.CAMPAIGN_OBJECTIVE_WAVES
+        )
+
+    def _campaign_objective_is_full_party(self) -> bool:
+        return (
+            self._normalize_campaign_objective(
+                getattr(self, "campaign_objective", "cities")
+            )
+            == self.CAMPAIGN_OBJECTIVE_FULL_PARTY
         )
 
     def _is_green_dragon_objective_enemy(self, enemy_id: Optional[int]) -> bool:
@@ -198,6 +209,11 @@ class CampaignTerritoryMixin:
             ):
                 raise ValueError(
                     f"campaign_objective='waves' is not supported on map '{map_label}'"
+                )
+        elif objective == self.CAMPAIGN_OBJECTIVE_FULL_PARTY:
+            if map_config is None or str(map_label) != "default":
+                raise ValueError(
+                    f"campaign_objective='full_party' is not supported on map '{map_label}'"
                 )
 
     def _compute_green_dragon_objective_reward(self) -> float:
