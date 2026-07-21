@@ -194,6 +194,10 @@ class CampaignConstantsMixin:
     HERO_BOOK_LORE_LEVEL = 11
     HERO_BOOK_LORE_DESCRIPTION = "Позволяет предводителю читать магические книги"
     HERO_BOOK_LORE_ABILITY_KEY = "book_lore"
+    HERO_WEAPON_MASTER_LEVEL = 12
+    HERO_WEAPON_MASTER_DESCRIPTION = "+25% опыта всему отряду за бой"
+    HERO_WEAPON_MASTER_ABILITY_KEY = "weapon_master"
+    HERO_WEAPON_MASTER_EXP_MULTIPLIER = 1.25
     HERO_MIGHT_DESCRIPTION = "+25% основной урон героя"
     HERO_MIGHT_ABILITY_KEY = "might"
     HERO_MIGHT_DAMAGE_MULTIPLIER = 1.25

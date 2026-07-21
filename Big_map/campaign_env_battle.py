@@ -822,7 +822,15 @@ class CampaignBattleMixin:
         self.battle_env.equipped_hero_items = list(equipped_hero_items)
         self.battle_env.equipped_hero_item_uses_left = list(equipped_hero_item_uses_left)
         self.battle_env.hero_item_effects = dict(hero_item_effects)
-        self.battle_env.exp_multiplier = float(self._active_book_exp_multiplier())
+        exp_multiplier = float(self._active_book_exp_multiplier())
+        if self._hero_has_weapon_master(units=prepared_blue_team):
+            # In Disciples II the Weapon Master ability and Tome of War provide
+            # the same party bonus and do not stack with one another.
+            exp_multiplier = max(
+                exp_multiplier,
+                float(self.HERO_WEAPON_MASTER_EXP_MULTIPLIER),
+            )
+        self.battle_env.exp_multiplier = exp_multiplier
 
         # Инициализируем бой с кастомными командами
         self.battle_env._init_with_custom_teams(red_team, prepared_blue_team)

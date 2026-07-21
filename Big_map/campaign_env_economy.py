@@ -513,6 +513,19 @@ class CampaignEconomyMixin:
             return True
         hero = self._resolve_travel_hero(units=units)
         return str(self.HERO_BOOK_LORE_ABILITY_KEY).lower() in self._hero_ability_tokens(hero)
+    def _hero_has_weapon_master(self, units: Optional[List[Dict]] = None) -> bool:
+        """Проверить бонус опыта Weapon Master по уровню или ability-token'у."""
+        if self._hero_level(units=units) >= int(self.HERO_WEAPON_MASTER_LEVEL):
+            return True
+        hero = self._resolve_travel_hero(units=units)
+        tokens = self._hero_ability_tokens(hero)
+        return bool(
+            {
+                str(self.HERO_WEAPON_MASTER_ABILITY_KEY).lower(),
+                "weapons_master",
+            }
+            & tokens
+        )
     def _lord_replacement_might_level(self) -> Optional[int]:
         """Вернуть уровень, на котором классовый lore заменяет Might.
 
