@@ -16,6 +16,7 @@ _REGISTRY = {
     "builder": "maps.builder",
     "default": "maps.default",
     "formation_train": "maps.formation_train",
+    "green_dragon_minimal": "maps.green_dragon_minimal",
     "hire_train": "maps.hire_train",
     "item_train": "maps.item_train",
     "magic_train": "maps.magic_train",
@@ -25,6 +26,7 @@ _REGISTRY = {
     "small": "maps.small",
     "super_last_stand": "maps.super_last_stand",
     "trade_train": "maps.trade_train",
+    "wotans_retribution": "maps.wotans_retribution",
 }
 
 

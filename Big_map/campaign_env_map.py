@@ -939,6 +939,18 @@ class CampaignMapSitesMixin:
         stocks: Dict[str, Dict[str, int]] = {
             str(site_name): {} for site_name in self.BASE_MERCHANT_SITE_DATA.keys()
         }
+        exact_site_items = dict(
+            getattr(self, "MERCHANT_BUY_ITEMS_BY_SITE", {}) or {}
+        )
+        if exact_site_items:
+            for site_name in stocks:
+                for item_data in tuple(exact_site_items.get(site_name, ()) or ()):
+                    item_name = str(item_data.get("name", "") or "")
+                    if item_name:
+                        stocks[site_name][item_name] = max(
+                            0, int(item_data.get("stock", 0) or 0)
+                        )
+            return stocks
         alara_stock: Dict[str, int] = {}
         for item_data in self.MERCHANT_BUY_ITEMS:
             item_name = str(item_data.get("name", "") or "")

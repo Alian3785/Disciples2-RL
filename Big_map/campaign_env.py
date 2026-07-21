@@ -176,6 +176,13 @@ class CampaignEnv(
         reward_no_dragon_victory_late_step_penalty_cap: float = 0.05,
         reward_no_dragon_victory_late_step_start_fraction: float = 0.35,
         reward_building_built: float = 1.0,  # Промежуточная награда за здание (цель build_all).
+        reward_full_party_hire_multiplier: float = 1.5,
+        reward_full_party_hero_levelup_multiplier: float = 1.5,
+        reward_full_party_new_slot: float = 2.0,
+        reward_full_party_capacity_unlock: float = 3.0,
+        reward_full_party_near_complete: float = 5.0,
+        reward_full_party_unit_lost_penalty: float = 2.0,
+        reward_full_party_complete: float = 20.0,
     ):
         """Собрать конфигурацию кампании и базовое состояние среды.
 
@@ -192,6 +199,16 @@ class CampaignEnv(
         self._map = get_map(self.map_name)
         map_merchant_buy_items = getattr(self._map, "merchant_buy_items", None)
         self._uses_map_merchant_buy_items = map_merchant_buy_items is not None
+        self.MERCHANT_BUY_ITEMS_BY_SITE = {
+            str(site_name): tuple(
+                dict(item_data)
+                for item_data in tuple(site_items or ())
+                if isinstance(item_data, dict)
+            )
+            for site_name, site_items in dict(
+                getattr(self._map, "merchant_buy_items_by_site", None) or {}
+            ).items()
+        }
         if map_merchant_buy_items is not None:
             self.MERCHANT_BUY_ITEMS = tuple(
                 dict(item_data)
@@ -379,6 +396,23 @@ class CampaignEnv(
             max(0.0, float(reward_no_dragon_victory_late_step_start_fraction)),
         )
         self.reward_building_built = max(0.0, float(reward_building_built))
+        self.reward_full_party_hire_multiplier = max(
+            1.0, float(reward_full_party_hire_multiplier)
+        )
+        self.reward_full_party_hero_levelup_multiplier = max(
+            1.0, float(reward_full_party_hero_levelup_multiplier)
+        )
+        self.reward_full_party_new_slot = max(0.0, float(reward_full_party_new_slot))
+        self.reward_full_party_capacity_unlock = max(
+            0.0, float(reward_full_party_capacity_unlock)
+        )
+        self.reward_full_party_near_complete = max(
+            0.0, float(reward_full_party_near_complete)
+        )
+        self.reward_full_party_unit_lost_penalty = max(
+            0.0, float(reward_full_party_unit_lost_penalty)
+        )
+        self.reward_full_party_complete = max(0.0, float(reward_full_party_complete))
         # Базовый лимит шагов внутри одного хода кампании.
         self.moves_per_turn = int(self.MOVES_PER_TURN)
         self.turn_norm_k = max(
@@ -966,6 +1000,7 @@ class CampaignEnv(
             self.campaign_objective = self._normalize_campaign_objective(
                 options.get("campaign_objective")
             )
+            self._validate_objective_for_map()
         if isinstance(options, dict) and "scripted_capital_bot_enabled" in options:
             self.scripted_capital_bot_config_enabled = bool(
                 options.get("scripted_capital_bot_enabled")
@@ -992,6 +1027,7 @@ class CampaignEnv(
         self.blue_team_state = self._create_starting_blue_team()
         self._sync_hero_progression_flags(self.blue_team_state)
         self._grant_map_starting_hero_abilities()
+        self._reset_full_party_objective_tracking()
         self.heal_bottles_used = 0
         self.healing_bottles_used = 0
         self.revive_bottles_used = 0
@@ -1619,6 +1655,7 @@ class CampaignEnv(
             and not self._campaign_objective_is_build_all()
             and not self._campaign_objective_is_target_enemy()
             and not self._campaign_objective_is_waves()
+            and not self._campaign_objective_is_full_party()
         ):
             reward = self._apply_all_enemies_objective_reward_if_needed(reward, info)
             self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")
