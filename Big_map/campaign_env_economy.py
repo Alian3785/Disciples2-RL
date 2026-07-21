@@ -1546,13 +1546,44 @@ class CampaignEconomyMixin:
         unit_name = str(self.HIRE_BIG_UNIT_NAME_BY_CAPITAL.get(int(capital_value), "") or "").strip()
         if not unit_name:
             return None
-        return {
+        option = {
             "id": f"big_d2_h{int(capital_value):03d}",
             "name": unit_name,
             "role": "big",
-            "gold": float(self.HIRE_BIG_UNIT_GOLD_COST),
+            "gold": float(
+                self.HIRE_BIG_UNIT_GOLD_COST_BY_CAPITAL.get(
+                    int(capital_value),
+                    self.HIRE_BIG_UNIT_GOLD_COST,
+                )
+            ),
             "hire_kind": str(self.HIRE_BIG_UNIT_KIND),
         }
+        required_building = str(
+            self.HIRE_BIG_UNIT_REQUIRED_BUILDING_BY_CAPITAL.get(
+                int(capital_value),
+                "",
+            )
+            or ""
+        ).strip()
+        if required_building:
+            option["required_building"] = required_building
+        return option
+
+    def _hire_option_required_building_is_built(
+        self,
+        option: Optional[Dict[str, object]],
+        *,
+        built_names: Optional[set[str]] = None,
+    ) -> bool:
+        """Check the optional capital-building gate on a faction recruit."""
+        if not isinstance(option, dict):
+            return False
+        required_building = str(option.get("required_building", "") or "").strip()
+        if not required_building:
+            return True
+        if built_names is None:
+            built_names = self._built_building_names_set()
+        return required_building in built_names
     def _is_blue_position_empty_for_hire(
         self,
         position: int,
@@ -1850,6 +1881,8 @@ class CampaignEconomyMixin:
             return self._can_hire_faction_big_unit_option(option)
         if not self._is_at_castle():
             return False
+        if not self._hire_option_required_building_is_built(option):
+            return False
 
         hero = self._resolve_travel_hero()
         if hero is None:
@@ -1881,6 +1914,8 @@ class CampaignEconomyMixin:
         if not isinstance(option, dict):
             return False
         if not self._is_at_castle():
+            return False
+        if not self._hire_option_required_building_is_built(option):
             return False
 
         hero = self._resolve_travel_hero()
@@ -1915,6 +1950,7 @@ class CampaignEconomyMixin:
         gold_available = float(self.gold or 0.0)
         needs_hire = self._sync_hero_needaunit_from_party() > 0
         can_use_big_hire = self._hero_can_use_big_leadership_hire(hero)
+        built_names = self._built_building_names_set()
         first_empty_by_positions: Dict[Tuple[int, ...], Optional[int]] = {}
         first_empty_big_column = self._find_first_empty_blue_column_front_position(
             occupancy=occupancy,
@@ -1932,6 +1968,12 @@ class CampaignEconomyMixin:
                 values.append(False)
                 continue
             if gold_available < cost:
+                values.append(False)
+                continue
+            if not self._hire_option_required_building_is_built(
+                option,
+                built_names=built_names,
+            ):
                 values.append(False)
                 continue
 
@@ -2616,6 +2658,11 @@ class CampaignEconomyMixin:
             "hire_unit_name": unit_name,
             "hire_role": hire_role,
             "hire_big_unit": bool(hire_big_unit),
+            "hire_required_building": (
+                None
+                if option is None
+                else str(option.get("required_building", "") or "").strip() or None
+            ),
             "hire_cost": float(hire_cost),
             "hire_target_pos": hire_target_pos,
             "hire_column_positions": hire_column_positions,
