@@ -360,6 +360,7 @@ class CampaignBattleMixin:
                     and not self._campaign_objective_is_build_all()
                     and not self._campaign_objective_is_target_enemy()
                     and not self._campaign_objective_is_waves()
+                    and not self._campaign_objective_is_full_party()
                 ):
                     self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")
                     grid_obs = self._get_grid_obs()
@@ -1574,9 +1575,17 @@ class CampaignBattleMixin:
             target_level = int(unit.get("Level", 0) or 0)
         except (TypeError, ValueError):
             return
-        if not (2 <= target_level <= 4):
+        full_party_objective = self._campaign_objective_is_full_party()
+        max_rewarded_level = (
+            int(self.HERO_SECOND_LEADERSHIP_LEVEL) if full_party_objective else 4
+        )
+        if not (2 <= target_level <= max_rewarded_level):
             return
         reward = self._unit_upgrade_reward_for_tier(target_level)
+        if full_party_objective:
+            reward *= float(
+                getattr(self, "reward_full_party_hero_levelup_multiplier", 1.0)
+            )
         self._last_hero_levelup_count += 1
         self._last_hero_levelup_max_level = max(
             self._last_hero_levelup_max_level, target_level

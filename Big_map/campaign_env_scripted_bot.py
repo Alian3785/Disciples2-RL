@@ -39,8 +39,12 @@ class CampaignScriptedBotMixin:
             getattr(self, "scripted_capital_bot_config_enabled", True)
         )
         self.scripted_capital_bot_enemy_id = int(self.SCRIPTED_CAPITAL_BOT_INTERNAL_ENEMY_ID)
-        self.scripted_capital_bot_home = tuple(
-            int(coord) for coord in self.empire_territory_source_tile
+        configured_home = getattr(self._map, "scripted_capital_bot_home_tile", None)
+        if configured_home is None:
+            configured_home = self.empire_territory_source_tile
+        self.scripted_capital_bot_home = tuple(int(coord) for coord in configured_home)
+        self.scripted_capital_bot_faction = str(
+            getattr(self._map, "scripted_capital_bot_faction", "Империя") or "Империя"
         )
         self.scripted_capital_bot_position = tuple(self.scripted_capital_bot_home)
         self.scripted_capital_bot_state = (
@@ -116,6 +120,28 @@ class CampaignScriptedBotMixin:
 
     def _create_scripted_capital_bot_team(self) -> List[Dict]:
         """Собирает боевую команду бота из имен юнитов и blue-позиций BattleEnv."""
+        configured_roster = getattr(self._map, "scripted_capital_bot_roster", None)
+        if configured_roster is not None:
+            bot_units: List[Dict] = []
+            for raw_position, raw_name in sorted(
+                configured_roster.items(), key=lambda item: int(item[0])
+            ):
+                position = int(raw_position)
+                unit_name = str(raw_name or "").strip()
+                if not unit_name:
+                    continue
+                if position not in self.GRID_BOTTLE_POSITIONS:
+                    raise ValueError(
+                        f"Invalid scripted bot battle position {position}; expected 7-12"
+                    )
+                unit_data = self._find_unit_data_by_name(unit_name)
+                if unit_data is None:
+                    raise ValueError(f"Unknown scripted bot unit {unit_name!r}")
+                bot_units.append(self._build_unit_from_data(unit_data, "blue", position))
+            team = self._build_battle_team_with_placeholders("blue", bot_units)
+            self._sync_hero_progression_flags(team)
+            return team
+
         source_team: List[Dict] = []
         for source_position, unit_name in enumerate(
             self.SCRIPTED_CAPITAL_BOT_TEAM_FRONT + self.SCRIPTED_CAPITAL_BOT_TEAM_BACK,
@@ -155,6 +181,7 @@ class CampaignScriptedBotMixin:
                 "state": str(getattr(self, "scripted_capital_bot_state", "")),
                 "position": tuple(getattr(self, "scripted_capital_bot_position", ())),
                 "home": tuple(getattr(self, "scripted_capital_bot_home", ())),
+                "faction": str(getattr(self, "scripted_capital_bot_faction", "Империя")),
                 "symbol": self.SCRIPTED_CAPITAL_BOT_SYMBOL,
                 "enemies_defeated": int(
                     getattr(self, "scripted_capital_bot_enemies_defeated", 0) or 0
@@ -498,10 +525,8 @@ class CampaignScriptedBotMixin:
     ) -> Tuple[Dict[Tuple[int, int], int], Tuple[Tuple[int, Tuple[int, int], bool, bool], ...]]:
         """Собирает живые enemy tiles и компактную сигнатуру для кеша BFS."""
         bot_enemy_id = int(self.scripted_capital_bot_enemy_id)
-        forbidden_enemy_ids = {
-            bot_enemy_id,
-            int(self.EMPIRE_TERRITORY_SOURCE_ENEMY_ID),
-        }
+        forbidden_enemy_ids = self._scripted_bot_forbidden_enemy_ids()
+        forbidden_enemy_ids.add(bot_enemy_id)
         enemies_alive = getattr(self.grid_env, "enemies_alive", {}) or {}
         result: Dict[Tuple[int, int], int] = {}
         signature_entries: List[Tuple[int, Tuple[int, int], bool, bool]] = []
@@ -524,6 +549,21 @@ class CampaignScriptedBotMixin:
                 continue
             result[tile] = enemy_id
         return result, tuple(signature_entries)
+
+    def _scripted_bot_forbidden_enemy_ids(self) -> set[int]:
+        """Враги, которых конкретная карта запрещает выбирать scripted-боту."""
+        configured = {
+            int(enemy_id)
+            for enemy_id in (
+                tuple(getattr(self._map, "scripted_capital_bot_home_enemy_ids", ()) or ())
+                + tuple(
+                    getattr(self._map, "scripted_capital_bot_protected_enemy_ids", ()) or ()
+                )
+            )
+        }
+        if not configured:
+            configured.add(int(self.EMPIRE_TERRITORY_SOURCE_ENEMY_ID))
+        return configured
 
     def _scripted_bot_enemy_search_signature(
         self,
@@ -662,8 +702,17 @@ class CampaignScriptedBotMixin:
 
     def _run_scripted_capital_bot_battle(self, enemy_id: int) -> Dict[str, object]:
         """Запускает авто-бой бота с enemy stack и сохраняет результат на campaign-карту."""
-        if int(enemy_id) == int(self.EMPIRE_TERRITORY_SOURCE_ENEMY_ID):
-            self._log("Бот столицы людей игнорирует Мизраэля и не атакует столицу Империи.")
+        if int(enemy_id) in self._scripted_bot_forbidden_enemy_ids():
+            has_map_specific_forbidden = bool(
+                tuple(getattr(self._map, "scripted_capital_bot_home_enemy_ids", ()) or ())
+                or tuple(
+                    getattr(self._map, "scripted_capital_bot_protected_enemy_ids", ()) or ()
+                )
+            )
+            self._log(
+                f"Бот фракции {self.scripted_capital_bot_faction} игнорирует "
+                f"защищённый отряд {enemy_id}."
+            )
             return {
                 "enemy_id": int(enemy_id),
                 "winner": "skipped",
@@ -672,7 +721,11 @@ class CampaignScriptedBotMixin:
                 "levelups": [],
                 "enemies_defeated": int(self.scripted_capital_bot_enemies_defeated),
                 "skipped": True,
-                "skip_reason": "empire_capital_enemy_forbidden",
+                "skip_reason": (
+                    "map_protected_enemy_forbidden"
+                    if has_map_specific_forbidden
+                    else "empire_capital_enemy_forbidden"
+                ),
             }
         self._log(f"Бот столицы людей вступает в бой с врагом {enemy_id}.")
         red_team_state = self._get_enemy_team_state(enemy_id)

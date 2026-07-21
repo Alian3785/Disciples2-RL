@@ -1,0 +1,43 @@
+{
+  "scenario_id": "S117SC0000",
+  "source_hashes": {
+    "Scens\\Sinfo.DBF": "9073d072e2b9e338f13a24466520ae07cf28c64b982bd22978c819c77cc6df12",
+    "Scens\\SMapBlck.DBF": "b7e6f8ce8d838e6d8c96e7e84d5788173e7a781739af47383544c1e2666a5a24",
+    "Scens\\SMounts.DBF": "a36e82d40ea413778d72e229797e8f40eca81bdc5867ea315045ae1bb3f2553d",
+    "Scens\\SRoad.dbf": "0f86329ad32297bb4ae1ad319cc30bff3dc06a1cd9fa7111922d2da8b8bddb18",
+    "Scens\\Splayer.DBF": "aa3856f6804470d909db5285677d2d7f32cb5da89fea6ed0d1badaee22b97e92",
+    "Scens\\SFort.DBF": "507b40899f57f2a1cd80d9497bfe7ac76f15eff5c8c36ded3c7e933536d2aecf",
+    "Scens\\Sstack.dbf": "967c8a22e211dfcec7dafa1dd660d45070c09f578799b4afefdcd1441f2ead38",
+    "Scens\\SUGroup.dbf": "b20cfbcd3e8398e4a3653479bf1b76065749593711b9ca4ad6e6e485262122fe",
+    "Scens\\SUnit.DBF": "80b5a3a697f13ed8d9446ed3a4c4bfbf7c40fa3e74e5a12ec2a759854c1c4857",
+    "Scens\\Tscen.DBF": "49d159ba4c8b7f4ff7eb6da5b6910560d73516886f3f549226bdfc3c31c8ca8c",
+    "Scens\\SBag.dbf": "3e51bb92cd413a986615152262506b2f5421ab7cb636d6b406f7e6ed59a5dfd5",
+    "Scens\\SInventr.DBF": "62d33c1e0c69b3536dd385be0790c3c7e8534d6cab4f6918f4d94707c1de1143",
+    "Scens\\SItem.DBF": "a68b06988fc4f4f69ab5311a4e4afa776eadc6f0c85ae2d123ee0e33b7b549da",
+    "Scens\\SCrys.DBF": "feb268337a0ad07e7b5b4ecd6edf0ac4e842d25e3d24c1aa32feffc5d61bca0d",
+    "Scens\\SRuin.DBF": "f014257dfd229a0857c595d6af980bb60c0ef69f9819c50b7b8f368bfcf051a0",
+    "Scens\\SSite.DBF": "42a4dfb2a466f89e524a84f9865a0408a04d38256f4d0aa9f74a86b7240704e2",
+    "Scens\\SMerch.DBF": "e0f80b5d72f4b4892dee238d73ddbfb01cc838bfe33b9c565c9a810ba398e939",
+    "Globals\\Gunits.dbf": "c663448bc47c08a40863d0efe4ae1476478ccf082af095a612416f181f7721db",
+    "Globals\\GItem.DBF": "9defb57de768aa0b4bff6b0c5434112aca9021fcf9df61347e4ced7bf8886942",
+    "Globals\\Tglobal.dbf": "5da65f5cb78f714e1814f97d301b43ae54e1b7bf086e61c8f3f93abdfc9e12ce"
+  },
+  "counts": {
+    "map_cells": 2304,
+    "map_blocks": 72,
+    "roads": 194,
+    "mountain_entries": 196,
+    "capitals": 2,
+    "settlements": 6,
+    "source_stacks": 63,
+    "runtime_enemies": 71,
+    "chests": 24,
+    "resources": 11,
+    "ruins": 4,
+    "merchants": 2,
+    "trainers": 1,
+    "water_tiles": 181,
+    "forest_tiles": 441
+  },
+  "event_tables_read": []
+}

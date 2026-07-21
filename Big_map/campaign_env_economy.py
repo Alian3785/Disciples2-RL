@@ -422,12 +422,23 @@ class CampaignEconomyMixin:
         info["leadership_occupied"] = int(composition["occupied_capacity"])
         info["leadership_points"] = int(composition["leadership_points"])
         info["leadership_step_penalty"] = float(penalty)
-        info["reward"] = float(finalized_reward)
         if "grid_reward_scaled" in info:
             try:
                 info["grid_reward_scaled"] = float(info["grid_reward_scaled"]) - float(penalty)
             except (TypeError, ValueError):
                 info["grid_reward_scaled"] = float(finalized_reward)
+        reward_before_full_party = float(finalized_reward)
+        finalized_reward, terminated, truncated = self._apply_full_party_objective_progress(
+            reward=finalized_reward,
+            terminated=bool(terminated),
+            truncated=bool(truncated),
+            info=info,
+        )
+        if "grid_reward_scaled" in info:
+            info["grid_reward_scaled"] = float(info["grid_reward_scaled"]) + (
+                float(finalized_reward) - reward_before_full_party
+            )
+        info["reward"] = float(finalized_reward)
         return obs, finalized_reward, terminated, truncated, info
     def _hero_has_pathfinding(self, units: Optional[List[Dict]] = None) -> bool:
         """Проверить открытие pathfinding по уровню героя."""
@@ -1648,6 +1659,155 @@ class CampaignEconomyMixin:
             "occupied_capacity": int(occupied_capacity),
             "leadership_points": int(leadership_points),
         }
+
+    def _full_party_hero_slots(self, units: Optional[List[Dict]] = None) -> int:
+        """Return the living hero's tactical footprint (small=1, big=2)."""
+        roster = units if units is not None else self.blue_team_state
+        hero = self._resolve_travel_hero(units=roster, alive_only=True)
+        if hero is None:
+            return 0
+        return int(
+            self.HIRE_BIG_UNIT_CAPACITY
+            if self._is_big_blue_unit(hero)
+            else self.HIRE_SMALL_UNIT_CAPACITY
+        )
+
+    def _full_party_target_companion_capacity(
+        self,
+        units: Optional[List[Dict]] = None,
+    ) -> int:
+        """Return the companion footprint needed to occupy all six slots."""
+        return max(
+            0,
+            int(self.FULL_PARTY_TARGET_SLOTS) - self._full_party_hero_slots(units),
+        )
+
+    def _reset_full_party_objective_tracking(self) -> None:
+        composition = self._party_hire_composition(units=self.blue_team_state)
+        occupied = int(composition["occupied_capacity"])
+        capacity = int(composition["leadership_capacity"])
+        hero_slots = self._full_party_hero_slots(units=self.blue_team_state)
+        total_occupied = occupied + hero_slots
+        self._full_party_previous_occupied_capacity = occupied
+        self._full_party_max_occupied_capacity = occupied
+        self._full_party_max_leadership_capacity = capacity
+        self._full_party_near_complete_reward_granted = bool(
+            total_occupied >= int(self.FULL_PARTY_TARGET_SLOTS) - 1
+        )
+        self._full_party_completion_reward_granted = False
+
+    def _apply_full_party_objective_progress(
+        self,
+        *,
+        reward: float,
+        terminated: bool,
+        truncated: bool,
+        info: Dict[str, object],
+    ) -> Tuple[float, bool, bool]:
+        """Shape and finish the default-map objective for a six-slot party.
+
+        Positive slot progress is paid only for a new episode record, so dismissing,
+        reviving, or rehiring the same capacity cannot farm the shaping reward.
+        """
+        if not self._campaign_objective_is_full_party():
+            return float(reward), bool(terminated), bool(truncated)
+
+        composition = self._party_hire_composition(units=self.blue_team_state)
+        occupied = int(composition["occupied_capacity"])
+        capacity = int(composition["leadership_capacity"])
+        hero_slots = self._full_party_hero_slots(units=self.blue_team_state)
+        hero_alive = hero_slots > 0
+        total_occupied = occupied + hero_slots
+        target_total = int(self.FULL_PARTY_TARGET_SLOTS)
+        target_companions = self._full_party_target_companion_capacity(
+            units=self.blue_team_state
+        )
+
+        previous_occupied = int(
+            getattr(self, "_full_party_previous_occupied_capacity", occupied)
+        )
+        previous_max_occupied = int(
+            getattr(self, "_full_party_max_occupied_capacity", occupied)
+        )
+        previous_max_capacity = int(
+            getattr(self, "_full_party_max_leadership_capacity", capacity)
+        )
+        new_slots = max(0, occupied - previous_max_occupied)
+        unlocked_capacity = max(0, capacity - previous_max_capacity)
+        lost_slots = max(0, previous_occupied - occupied)
+
+        new_slot_reward = float(new_slots) * float(self.reward_full_party_new_slot)
+        capacity_reward = float(unlocked_capacity) * float(
+            self.reward_full_party_capacity_unlock
+        )
+        lost_slot_penalty = float(lost_slots) * float(
+            self.reward_full_party_unit_lost_penalty
+        )
+        near_complete_reward = 0.0
+        if (
+            total_occupied >= target_total - 1
+            and not bool(
+                getattr(self, "_full_party_near_complete_reward_granted", False)
+            )
+        ):
+            near_complete_reward = float(self.reward_full_party_near_complete)
+            self._full_party_near_complete_reward_granted = True
+
+        progress_reward = (
+            new_slot_reward
+            + capacity_reward
+            + near_complete_reward
+            - lost_slot_penalty
+        )
+        finalized_reward = float(reward) + float(progress_reward)
+
+        full_party_complete = bool(
+            hero_alive
+            and occupied >= target_companions
+            and capacity >= target_companions
+        )
+        completion_reward = 0.0
+        if (
+            full_party_complete
+            and not terminated
+            and not truncated
+            and not bool(
+                getattr(self, "_full_party_completion_reward_granted", False)
+            )
+        ):
+            completion_reward = float(self.reward_full_party_complete)
+            finalized_reward += completion_reward
+            terminated = True
+            self._full_party_completion_reward_granted = True
+            info["campaign_result"] = "victory"
+            info["campaign_victory_reason"] = "full_party_assembled"
+
+        self._full_party_previous_occupied_capacity = occupied
+        self._full_party_max_occupied_capacity = max(previous_max_occupied, occupied)
+        self._full_party_max_leadership_capacity = max(previous_max_capacity, capacity)
+
+        info.update(
+            {
+                "full_party_target_slots": target_total,
+                "full_party_occupied_slots": int(total_occupied),
+                "full_party_hero_slots": int(hero_slots),
+                "full_party_companion_capacity": occupied,
+                "full_party_companion_capacity_target": target_companions,
+                "full_party_small_units": int(composition["small_units"]),
+                "full_party_big_units": int(composition["big_units"]),
+                "full_party_new_slots": int(new_slots),
+                "full_party_unlocked_capacity": int(unlocked_capacity),
+                "full_party_lost_slots": int(lost_slots),
+                "full_party_new_slot_reward": float(new_slot_reward),
+                "full_party_capacity_reward": float(capacity_reward),
+                "full_party_near_complete_reward": float(near_complete_reward),
+                "full_party_lost_slot_penalty": float(lost_slot_penalty),
+                "full_party_progress_reward": float(progress_reward),
+                "full_party_completion_reward": float(completion_reward),
+                "full_party_complete": bool(full_party_complete),
+            }
+        )
+        return float(finalized_reward), bool(terminated), bool(truncated)
     def _available_leadership_points(self, units: Optional[List[Dict]] = None) -> int:
         """Вернуть число свободных пунктов лидерства героя."""
         return int(self._party_hire_composition(units=units)["leadership_points"])

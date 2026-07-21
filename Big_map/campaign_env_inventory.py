@@ -462,7 +462,10 @@ class CampaignInventoryMixin:
         return self.BATTLE_EQUIPPABLE_ITEM_NAMES
 
     def _hire_reward_value(self) -> float:
-        return max(0.0, 3.0 * float(self.reward_defeat_enemy))
+        reward = max(0.0, 3.0 * float(self.reward_defeat_enemy))
+        if self._campaign_objective_is_full_party():
+            reward *= float(getattr(self, "reward_full_party_hire_multiplier", 1.0))
+        return float(reward)
     def _max_heal_bottles_available(self) -> int:
         return int(self.MAX_HEAL_BOTTLES) + max(0, int(self.extra_heal_bottles or 0))
     def _heal_bottles_left(self) -> int:

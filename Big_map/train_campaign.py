@@ -124,6 +124,13 @@ REWARD_CONFIG = {
     "reward_survival_hp_weight": 0.4,
     "reward_unit_upgrade": 3.0,
     "reward_unit_tier_bonus": 0.5,
+    "reward_full_party_hire_multiplier": 1.5,
+    "reward_full_party_hero_levelup_multiplier": 1.5,
+    "reward_full_party_new_slot": 2.0,
+    "reward_full_party_capacity_unlock": 3.0,
+    "reward_full_party_near_complete": 5.0,
+    "reward_full_party_unit_lost_penalty": 2.0,
+    "reward_full_party_complete": 20.0,
     "reward_enemies_defeated_weight": 5.0,
     "battle_reward_scale": 0.25,
     "battle_reward_win": 2.0,
@@ -2549,6 +2556,11 @@ if __name__ == "__main__":
         help="Same as --dragon, but the objective dragon is the blue (water) dragon instead of the green one",
     )
     parser.add_argument(
+        "--full-party",
+        action="store_true",
+        help="Win the default map by filling all six party slots (big units occupy two slots)",
+    )
+    parser.add_argument(
         "--map",
         dest="map_name",
         choices=available_maps(),
@@ -2726,7 +2738,15 @@ if __name__ == "__main__":
     SCRIPTED_CAPITAL_BOT_ENABLED = not bool(args.no_scripted_bot)
     EMPIRE_TERRITORY_ENABLED = not bool(args.no_empire_territory)
     MAP_NAME = str(args.map_name or "default")
-    if bool(args.blue_dragon):
+    selected_objective_flags = sum(
+        int(enabled)
+        for enabled in (args.dragon, args.blue_dragon, args.full_party)
+    )
+    if selected_objective_flags > 1:
+        parser.error("--dragon, --blue-dragon and --full-party are mutually exclusive")
+    if bool(args.full_party):
+        CAMPAIGN_OBJECTIVE = "full_party"
+    elif bool(args.blue_dragon):
         CAMPAIGN_OBJECTIVE = "blue_dragon"
     elif bool(args.dragon):
         CAMPAIGN_OBJECTIVE = "dragon"
@@ -2741,6 +2761,8 @@ if __name__ == "__main__":
             f"--dragon/--blue-dragon require the dragon (enemy 31) on the map; "
             f"map '{MAP_NAME}' does not have it"
         )
+    if CAMPAIGN_OBJECTIVE == "full_party" and MAP_NAME != "default":
+        parser.error("--full-party is supported only on the default map")
 
     test_env = CampaignEnv(
         log_enabled=False,
@@ -2799,6 +2821,7 @@ if __name__ == "__main__":
         "build_all": "-buildall",
         "target_enemy": "-target",
         "waves": "-waves",
+        "full_party": "-fullparty",
     }.get(CAMPAIGN_OBJECTIVE_EFFECTIVE, "")
     if MAP_NAME != "default":
         run_name_suffix = f"-{MAP_NAME}{run_name_suffix}"
