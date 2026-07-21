@@ -211,6 +211,10 @@ class CampaignMapSitesMixin:
             abilities.append(
                 f"Колдовство ({self.HERO_BOOK_LORE_DESCRIPTION})"
             )
+        if self._hero_has_weapon_master(units=[hero]):
+            abilities.append(
+                f"Мастер оружия ({self.HERO_WEAPON_MASTER_DESCRIPTION})"
+            )
         if self._hero_has_might(units=[hero]):
             abilities.append(f"Мощь ({self.HERO_MIGHT_DESCRIPTION})")
         if self._hero_has_flying(hero):

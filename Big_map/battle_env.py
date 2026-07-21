@@ -222,6 +222,31 @@ SUPPORT_TYPES = (
     | MASS_HEAL_TYPES
 )
 
+# Only these innate healers receive one healing-only turn after their team has
+# defeated the opposition.  The name allowlist is intentional: a Doppelganger
+# that copied a healer and units with healing items must not enter this phase.
+POST_VICTORY_HEALER_NAMES = frozenset(
+    {
+        "Служка",
+        "Жрец",
+        "Священник",
+        "Архангел",
+        "Медиум",
+        "Оракул",
+        "Дева рощи",
+        "Патриарх",
+        "Клирик",
+        "Аббатиса",
+        "Прорицательница",
+        "Нейтральный эльфийский оракул",
+        "Солнечная танцовщица",
+        "Сильфида",
+    }
+)
+POST_VICTORY_HEALER_TYPES = (
+    POINT_HEAL_SUPPORT_TYPES | PATRIACH_SUPPORT_TYPES | MASS_HEAL_TYPES
+)
+
 FEATURES_PER_UNIT = 8 + len(TYPE_LIST) + 5 * len(ATTACK_TYPES) + 14 + 3
 OBSERVATION_SIZE = FEATURES_PER_UNIT * 12
 
@@ -924,6 +949,8 @@ class BattleEnv(gym.Env):
         self.combined: List[Dict] = []
         self.round_no: int = 1
         self.winner: Optional[str] = None
+        self._post_victory_team: Optional[str] = None
+        self._post_victory_healer_positions: List[int] = []
         self.current_blue_attacker_pos: Optional[int] = None
         self.blue_attacks_left: int = 0
         self._lord_applied_burn: Dict[int, bool] = {}
@@ -2038,6 +2065,12 @@ class BattleEnv(gym.Env):
                     mask_targets[i] = is_alive_red(pos)
                 if not mask_targets.any():
                     mask_targets[:] = True
+
+        if self._post_victory_team == "blue":
+            # The battle has already been won. During the deferred healing
+            # phase only native support targets (or an explicit skip) remain.
+            mask[n_targets:] = False
+            mask[WAIT_ACTION_INDEX] = True
 
         return mask
 
@@ -3512,6 +3545,8 @@ class BattleEnv(gym.Env):
             u["_battle_exp_earned"] = 0.0
         self.round_no = 1
         self.winner = None
+        self._post_victory_team = None
+        self._post_victory_healer_positions = []
         self.current_blue_attacker_pos = None
         self.blue_attacks_left = 0
         self._lord_applied_burn = {}
@@ -5443,25 +5478,153 @@ class BattleEnv(gym.Env):
             if int(unit.get("running_away", 0) or 0) == 1 and not self._alive(unit):
                 unit["running_away"] = 0
 
+    def _is_post_victory_healer(self, unit: Optional[Dict], team: str) -> bool:
+        return bool(
+            isinstance(unit, dict)
+            and unit.get("team") == team
+            and unit.get("name") in POST_VICTORY_HEALER_NAMES
+            and unit.get("unit_type") in POST_VICTORY_HEALER_TYPES
+        )
+
+    def _support_selector_for_recipient(
+        self, healer: Dict, recipient_pos: int
+    ) -> Optional[int]:
+        """Return the mirrored action position used to select an allied unit."""
+        if healer.get("team") == "blue":
+            own_positions = BLUE_POSITIONS
+            selector_positions = RED_POSITIONS
+        else:
+            own_positions = RED_POSITIONS
+            selector_positions = BLUE_POSITIONS
+        try:
+            return selector_positions[own_positions.index(int(recipient_pos))]
+        except (TypeError, ValueError):
+            return None
+
+    def _post_victory_auto_selector(self, healer: Dict) -> Optional[int]:
+        unit_type = healer.get("unit_type")
+        if unit_type in POINT_HEAL_SUPPORT_TYPES:
+            recipient_pos = self._cliric_auto_target(healer)
+        elif unit_type in PATRIACH_SUPPORT_TYPES:
+            recipient_pos = self._patriach_auto_target(healer)
+        elif unit_type in MASS_HEAL_TYPES:
+            selector_positions = (
+                RED_POSITIONS if healer.get("team") == "blue" else BLUE_POSITIONS
+            )
+            return selector_positions[0] if selector_positions else None
+        else:
+            return None
+        if recipient_pos is None:
+            return None
+        return self._support_selector_for_recipient(healer, recipient_pos)
+
+    def _execute_post_victory_heal_turn(
+        self, healer: Dict, target_pos: Optional[int] = None
+    ) -> float:
+        """Execute exactly one native healing action and return restored HP."""
+        if not self._alive(healer):
+            return 0.0
+        if target_pos is None:
+            target_pos = self._post_victory_auto_selector(healer)
+        if target_pos is None:
+            self._log(
+                f"Послепобедное лечение: {healer['team'].upper()} "
+                f"{healer['name']}#{healer['position']} не находит подходящей цели."
+            )
+            return 0.0
+
+        team = str(healer.get("team", "") or "")
+        before_hp = sum(
+            max(0.0, float(unit.get("health", 0) or 0))
+            for unit in self.combined
+            if unit.get("team") == team
+        )
+        self._attack(healer, int(target_pos))
+        after_hp = sum(
+            max(0.0, float(unit.get("health", 0) or 0))
+            for unit in self.combined
+            if unit.get("team") == team
+        )
+        return max(0.0, after_hp - before_hp)
+
+    def _finalize_victory(self, winner_team: str) -> None:
+        loser_team = "red" if winner_team == "blue" else "blue"
+        self._post_victory_team = None
+        self._post_victory_healer_positions = []
+        self.current_blue_attacker_pos = None
+        self.blue_attacks_left = 0
+        self.winner = winner_team
+        self._log(f"Победа {winner_team.upper()}!")
+        self._apply_battle_exp(loser_team)
+
+    def _activate_next_blue_post_victory_healer(self) -> None:
+        while self._post_victory_healer_positions:
+            position = int(self._post_victory_healer_positions.pop(0))
+            healer = self._unit_by_position(position)
+            if not self._is_post_victory_healer(healer, "blue"):
+                continue
+            if not self._alive(healer):
+                continue
+            self.current_blue_attacker_pos = position
+            self.blue_attacks_left = 1
+            self._log(
+                f"Послепобедный ход лечения BLUE: "
+                f"{healer['name']}#{healer['position']} получает одно действие."
+            )
+            return
+        self._finalize_victory("blue")
+
+    def _begin_post_victory_healing(self, winner_team: str) -> None:
+        # Preserve the old victory cleanup ordering before selecting healers.
+        # Restoring copied Doppelgangers also keeps them out of this phase.
+        self._clear_dead_running_away_flags()
+        self._revert_fenrir_survivors()
+        self._restore_default_doppelgangers()
+        self._restore_all_transformed_units()
+
+        healer_positions = sorted(
+            int(unit.get("position", 0) or 0)
+            for unit in self.combined
+            if self._is_post_victory_healer(unit, winner_team) and self._alive(unit)
+        )
+        if not healer_positions:
+            self._finalize_victory(winner_team)
+            return
+
+        self._post_victory_team = winner_team
+        self._post_victory_healer_positions = healer_positions
+        self.current_blue_attacker_pos = None
+        self.blue_attacks_left = 0
+        self._log(
+            f"Противник побеждён. Начинается послепобедное лечение "
+            f"отряда {winner_team.upper()}: {len(healer_positions)} ход(а)."
+        )
+
+        if winner_team == "blue":
+            self._activate_next_blue_post_victory_healer()
+            return
+
+        while self._post_victory_healer_positions:
+            position = int(self._post_victory_healer_positions.pop(0))
+            healer = self._unit_by_position(position)
+            if not self._is_post_victory_healer(healer, "red"):
+                continue
+            if not self._alive(healer):
+                continue
+            self._log(
+                f"Послепобедный ход лечения RED: "
+                f"{healer['name']}#{healer['position']} получает одно действие."
+            )
+            self._execute_post_victory_heal_turn(healer)
+        self._finalize_victory("red")
+
     def _check_victory_after_hit(self):
-        if self.winner is not None:
+        if self.winner is not None or self._post_victory_team is not None:
             return
         if not self._team_alive("blue"):
-            self.winner = "red"
-            self._clear_dead_running_away_flags()
-            self._revert_fenrir_survivors()
-            self._restore_default_doppelgangers()
-            self._restore_all_transformed_units()
-            self._log("Победа RED!")
-            self._apply_battle_exp("blue")
+            self._begin_post_victory_healing("red")
         elif not self._team_alive("red"):
-            self.winner = "blue"
-            self._clear_dead_running_away_flags()
-            self._revert_fenrir_survivors()
-            self._restore_default_doppelgangers()
-            self._restore_all_transformed_units()
-            self._log("Победа BLUE!")
-            self._apply_battle_exp("red")
+            self._begin_post_victory_healing("blue")
 
     def _advance_until_blue_turn(self) -> bool:
         """
@@ -5812,14 +5975,24 @@ class BattleEnv(gym.Env):
         unit_type = str(attacker.get("unit_type", "") or "")
 
         if unit_type in POINT_HEAL_SUPPORT_TYPES:
-            target_pos = self._cliric_auto_target(attacker)
+            recipient_pos = self._cliric_auto_target(attacker)
+            target_pos = (
+                self._support_selector_for_recipient(attacker, recipient_pos)
+                if recipient_pos is not None
+                else None
+            )
             if target_pos in TARGET_POSITIONS:
                 action_index = TARGET_POSITIONS.index(target_pos)
                 if bool(mask[action_index]):
                     return int(action_index)
 
         if unit_type in PATRIACH_SUPPORT_TYPES:
-            target_pos = self._patriach_auto_target(attacker)
+            recipient_pos = self._patriach_auto_target(attacker)
+            target_pos = (
+                self._support_selector_for_recipient(attacker, recipient_pos)
+                if recipient_pos is not None
+                else None
+            )
             if target_pos in TARGET_POSITIONS:
                 action_index = TARGET_POSITIONS.index(target_pos)
                 if bool(mask[action_index]):
@@ -6033,11 +6206,71 @@ class BattleEnv(gym.Env):
                 except Exception:
                     pass
 
+    def _step_post_victory_blue_heal(self, action):
+        """Consume one BLUE healer's single action after combat is decided."""
+        assert self._post_victory_team == "blue"
+        healer = self._unit_by_position(self.current_blue_attacker_pos)
+        if not self._is_post_victory_healer(healer, "blue") or not self._alive(healer):
+            self.current_blue_attacker_pos = None
+            self.blue_attacks_left = 0
+            self._activate_next_blue_post_victory_healer()
+            if self.winner is not None:
+                info = {
+                    "post_victory_heal_phase": True,
+                    "post_victory_heal_completed": True,
+                }
+                return self._obs(), self.reward_win, True, False, info
+            healer = self._unit_by_position(self.current_blue_attacker_pos)
+
+        action_idx = int(action)
+        action_mask = self.compute_action_mask()
+        valid_action = 0 <= action_idx < len(action_mask) and bool(action_mask[action_idx])
+        skipped = action_idx == WAIT_ACTION_INDEX or not valid_action
+        restored_hp = 0.0
+
+        if not skipped and action_idx < len(TARGET_POSITIONS):
+            restored_hp = self._execute_post_victory_heal_turn(
+                healer, TARGET_POSITIONS[action_idx]
+            )
+        else:
+            reason = "пропускает действие" if valid_action else "выбрал недопустимое действие"
+            self._log(
+                f"Послепобедное лечение BLUE: {healer['name']}#{healer['position']} "
+                f"{reason}."
+            )
+
+        healer["initiative"] = 0
+        healer_name = str(healer.get("name", "") or "")
+        healer_position = int(healer.get("position", 0) or 0)
+        self.current_blue_attacker_pos = None
+        self.blue_attacks_left = 0
+        self._activate_next_blue_post_victory_healer()
+
+        terminated = self.winner is not None
+        info = {
+            "post_victory_heal_phase": True,
+            "post_victory_healer_name": healer_name,
+            "post_victory_healer_position": healer_position,
+            "post_victory_healed_hp": float(restored_hp),
+            "post_victory_heal_skipped": bool(skipped),
+            "post_victory_heal_completed": bool(terminated),
+            "post_victory_healers_remaining": len(
+                self._post_victory_healer_positions
+            ),
+        }
+        reward = self.reward_win if terminated else self.reward_step
+        return self._obs(), reward, terminated, False, info
+
     def step(self, action):
         assert self.winner is None, "Эпизод завершён — вызовите reset()."
 
+        if self._post_victory_team == "blue":
+            return self._step_post_victory_blue_heal(action)
+
         if self.current_blue_attacker_pos is None:
             self._advance_until_blue_turn()
+            if self._post_victory_team == "blue":
+                return self._step_post_victory_blue_heal(action)
             if self.winner is not None:
                 # Эпизод завершён в промежуточном апдейте — возвращаем Фенрира в Волка
                 base = self.reward_win if self.winner == "blue" else self.reward_loss
@@ -6380,6 +6613,35 @@ class BattleEnv(gym.Env):
                 }
             )
 
+        if self._post_victory_team == "blue":
+            healer = self._unit_by_position(self.current_blue_attacker_pos)
+            step_info.update(
+                {
+                    "post_victory_heal_phase": True,
+                    "post_victory_heal_started": True,
+                    "post_victory_healer_name": (
+                        str(healer.get("name", "") or "")
+                        if isinstance(healer, dict)
+                        else ""
+                    ),
+                    "post_victory_healer_position": (
+                        int(healer.get("position", 0) or 0)
+                        if isinstance(healer, dict)
+                        else None
+                    ),
+                    "post_victory_healers_remaining": len(
+                        self._post_victory_healer_positions
+                    ),
+                }
+            )
+            return (
+                self._obs(),
+                self.reward_step + step_shaping,
+                False,
+                False,
+                step_info,
+            )
+
         if self.winner is None:
             if self.blue_attacks_left > 0:
                 self.blue_attacks_left -= 1
@@ -6471,6 +6733,8 @@ class BattleEnv(gym.Env):
         # Сбрасываем глобальное состояние боя
         self.round_no = 1
         self.winner = None
+        self._post_victory_team = None
+        self._post_victory_healer_positions = []
         self.current_blue_attacker_pos = None
         self.blue_attacks_left = 0
         self._lord_applied_burn = {}
