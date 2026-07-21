@@ -2,6 +2,7 @@
   "active": true,
   "seed": 119,
   "next_map": "default",
+  "next_objective": "cities",
   "completed_runs": 54,
   "last_success": {
     "run_id": "seed118-blue_dragon-29807891747-1",

@@ -19,6 +19,7 @@ on:
         options:
           - default
           - small
+          - green_dragon_minimal
           - super_last_stand
           - orc_duel
           - builder
@@ -29,6 +30,7 @@ on:
           - scroll_train
           - siege_train
           - trade_train
+          - wotans_retribution
 
 permissions:
   contents: write
@@ -58,7 +60,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           FULL_TRAINING: ${{ inputs.full_training || false }}
           RESULTS_BRANCH: github-experiments
-          CYCLE_BRANCH: rl-training-all-maps-cycle
+          CYCLE_BRANCH: rl-training-20-modes-cycle
         run: |
           set -euo pipefail
           rotation_run=false

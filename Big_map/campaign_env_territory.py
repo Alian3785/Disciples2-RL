@@ -142,6 +142,17 @@ class CampaignTerritoryMixin:
         map_enemy_ids = set(map_config.enemy_positions().keys()) if map_config else set()
         map_label = getattr(map_config, "name", "default")
         objective = self.campaign_objective
+        supported_objectives = tuple(
+            self._normalize_campaign_objective(value)
+            for value in tuple(
+                getattr(map_config, "supported_objectives", ()) or ()
+            )
+        )
+        if supported_objectives and objective not in supported_objectives:
+            raise ValueError(
+                f"campaign_objective={objective!r} is not supported on map "
+                f"'{map_label}'; expected one of {supported_objectives}"
+            )
         if objective == self.CAMPAIGN_OBJECTIVE_CITIES:
             if not self.FINAL_OBJECTIVE_CITIES:
                 raise ValueError(

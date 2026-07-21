@@ -1917,13 +1917,15 @@ class CampaignMagicMixin:
         healed_units = 0
         healed_total = 0.0
 
-        # Полная регенерация — свойство именно Зелёного дракона (id 31), а не
-        # целевого врага кампании: орк из orc_duel лечится обычной долей.
-        green_dragon_enemy_id = int(self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID)
+        # Полная регенерация привязана к драконьему стеку id 31. В режиме
+        # blue_dragon этот же стек содержит Синего дракона вместо Зелёного,
+        # поэтому оба варианта полностью восстанавливаются каждый новый ход.
+        # Остальные целевые враги (например, орк из orc_duel) лечатся обычной долей.
+        dragon_enemy_id = int(self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID)
         for enemy_id, is_alive in self.grid_env.enemies_alive.items():
             if not bool(is_alive):
                 continue
-            is_green_dragon = int(enemy_id) == green_dragon_enemy_id
+            is_dragon = int(enemy_id) == dragon_enemy_id
             enemy_position = self.grid_env.enemy_positions.get(int(enemy_id))
             on_player_territory = self._is_player_controlled_territory_tile(enemy_position)
             heal_fraction = 0.05 if on_player_territory else 0.15
@@ -1935,7 +1937,7 @@ class CampaignMagicMixin:
                 max_hp = float(unit.get("max_health", 0) or unit.get("maxhp", 0) or 0.0)
                 if max_hp <= 0.0 or current_hp <= 0.0 or current_hp >= max_hp:
                     continue
-                if is_green_dragon:
+                if is_dragon:
                     new_hp = max_hp
                 else:
                     heal_amount = max(1.0, max_hp * float(heal_fraction))

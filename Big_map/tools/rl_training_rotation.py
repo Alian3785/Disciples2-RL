@@ -16,6 +16,7 @@ from typing import Any
 MAP_ROTATION = (
     "default",
     "small",
+    "green_dragon_minimal",
     "super_last_stand",
     "orc_duel",
     "builder",
@@ -26,14 +27,42 @@ MAP_ROTATION = (
     "scroll_train",
     "siege_train",
     "trade_train",
+    "wotans_retribution",
 )
-NEXT_MAP = {
-    map_name: MAP_ROTATION[(index + 1) % len(MAP_ROTATION)]
-    for index, map_name in enumerate(MAP_ROTATION)
+# One seed is held constant until every supported map/objective pair has run.
+# The order deliberately keeps modes of the same physical map adjacent.
+MODE_ROTATION = (
+    ("default", "cities"),
+    ("default", "green_dragon"),
+    ("default", "blue_dragon"),
+    ("default", "full_party"),
+    ("small", "cities"),
+    ("small", "green_dragon"),
+    ("small", "blue_dragon"),
+    ("green_dragon_minimal", "green_dragon"),
+    ("green_dragon_minimal", "blue_dragon"),
+    ("super_last_stand", "waves"),
+    ("orc_duel", "orc"),
+    ("builder", "build_all"),
+    ("formation_train", "all_enemies"),
+    ("hire_train", "orc"),
+    ("item_train", "all_enemies"),
+    ("magic_train", "all_enemies"),
+    ("scroll_train", "all_enemies"),
+    ("siege_train", "target_enemy"),
+    ("trade_train", "all_enemies"),
+    ("wotans_retribution", "cities"),
+)
+NEXT_MODE = {
+    mode: MODE_ROTATION[(index + 1) % len(MODE_ROTATION)]
+    for index, mode in enumerate(MODE_ROTATION)
 }
+# Default objective for a manually selected smoke map. Scheduled runs use the
+# exact pair stored in next_map + next_objective instead.
 MAP_OBJECTIVES = {
     "default": "full_party",
     "small": "green_dragon",
+    "green_dragon_minimal": "green_dragon",
     "super_last_stand": "waves",
     "orc_duel": "orc",
     "builder": "build_all",
@@ -44,15 +73,18 @@ MAP_OBJECTIVES = {
     "scroll_train": "all_enemies",
     "siege_train": "target_enemy",
     "trade_train": "all_enemies",
+    "wotans_retribution": "cities",
 }
 OBJECTIVE_FLAGS = {
     "green_dragon": "--dragon",
+    "blue_dragon": "--blue-dragon",
     "full_party": "--full-party",
 }
 DEFAULT_STATE = {
     "active": True,
     "seed": 101,
     "next_map": "default",
+    "next_objective": "cities",
     "completed_runs": 0,
     "last_success": None,
 }
@@ -69,9 +101,20 @@ def load_state(path: Path) -> dict[str, Any]:
         # successful run. A completed legacy cycle starts the all-map rotation
         # from its first map without discarding the accumulated seed/counters.
         data["next_map"] = "default"
-        data.pop("next_objective", None)
+        data["next_objective"] = "cities"
     if data.get("next_map") not in MAP_ROTATION:
         raise ValueError(f"state.next_map must be one of {MAP_ROTATION}")
+    if "next_objective" not in data:
+        # Migrate the previous physical-map rotation to the first mode of the
+        # pending map. This keeps its seed and completion counter intact.
+        data["next_objective"] = next(
+            objective
+            for map_name, objective in MODE_ROTATION
+            if map_name == data["next_map"]
+        )
+    next_mode = (str(data["next_map"]), str(data["next_objective"]))
+    if next_mode not in MODE_ROTATION:
+        raise ValueError(f"state next mode must be one of {MODE_ROTATION}, got {next_mode}")
     if not isinstance(data.get("completed_runs"), int) or data["completed_runs"] < 0:
         raise ValueError("state.completed_runs must be a non-negative integer")
     if "last_success" not in data:
@@ -108,10 +151,21 @@ def prepare_run(
     map_name = manual_map if is_manual else str(state["next_map"])
     if map_name not in MAP_ROTATION:
         raise ValueError(f"unknown map: {map_name}")
-    objective = MAP_OBJECTIVES[map_name]
+    objective = (
+        MAP_OBJECTIVES[map_name]
+        if is_manual
+        else str(state["next_objective"])
+    )
+    mode = (map_name, objective)
+    if mode not in MODE_ROTATION:
+        raise ValueError(f"unknown map/objective mode: {mode}")
     seed = int(state["seed"])
     token = _safe_token(run_token)
-    prefix = f"smoke-{map_name}" if is_manual else f"seed{seed}-{map_name}"
+    prefix = (
+        f"smoke-{map_name}-{objective}"
+        if is_manual
+        else f"seed{seed}-{map_name}-{objective}"
+    )
     run_id = f"{prefix}-{token}"
     if is_manual:
         run_dir = output_base / run_id
@@ -119,7 +173,7 @@ def prepare_run(
         checkpoint_freq = 12_288
         eval_freq = 2_048
     else:
-        run_dir = output_base / str(seed) / map_name / run_id
+        run_dir = output_base / str(seed) / map_name / objective / run_id
         total_steps = 1_000_000
         checkpoint_freq = 500_000
         eval_freq = 83_334
@@ -133,7 +187,7 @@ def prepare_run(
         "campaign_map": map_name,
         "objective": objective,
         "objective_flag": OBJECTIVE_FLAGS.get(objective, ""),
-        "cycle_complete": str(map_name == MAP_ROTATION[-1]).lower(),
+        "cycle_complete": str(mode == MODE_ROTATION[-1]).lower(),
         "run_id": run_id,
         "run_dir": str(run_dir.resolve()),
         "total_steps": str(total_steps),
@@ -162,12 +216,11 @@ def finalize_success(
     state = load_state(state_file)
     if map_name not in MAP_ROTATION:
         raise ValueError(f"unknown map: {map_name}")
-    expected_objective = MAP_OBJECTIVES[map_name]
-    if objective != expected_objective:
-        raise ValueError(
-            f"map {map_name!r} requires objective {expected_objective!r}, got {objective!r}"
-        )
-    if seed != state["seed"] or map_name != state["next_map"]:
+    mode = (map_name, objective)
+    if mode not in MODE_ROTATION:
+        raise ValueError(f"unknown map/objective mode: {mode}")
+    expected_mode = (str(state["next_map"]), str(state["next_objective"]))
+    if seed != state["seed"] or mode != expected_mode:
         raise ValueError("run no longer matches the current rotation state")
 
     checkpoint_dir = run_dir / "checkpoints"
@@ -191,8 +244,8 @@ def finalize_success(
         shutil.move(str(model_best_dir / name), str(eval_dir / name))
 
     completed_at = datetime.now(timezone.utc).isoformat()
-    next_map = NEXT_MAP[map_name]
-    cycle_complete = map_name == MAP_ROTATION[-1]
+    next_map, next_objective = NEXT_MODE[mode]
+    cycle_complete = mode == MODE_ROTATION[-1]
     next_seed = seed + 1 if cycle_complete else seed
     manifest = {
         "status": "success",
@@ -236,6 +289,7 @@ def finalize_success(
             "active": True,
             "seed": next_seed,
             "next_map": next_map,
+            "next_objective": next_objective,
             "completed_runs": int(state["completed_runs"]) + 1,
             "last_success": {
                 "run_id": run_id,

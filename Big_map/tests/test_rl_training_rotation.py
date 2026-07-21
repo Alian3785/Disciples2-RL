@@ -5,8 +5,8 @@ import pytest
 
 from maps import available_maps
 from tools.rl_training_rotation import DEFAULT_STATE
-from tools.rl_training_rotation import MAP_OBJECTIVES
 from tools.rl_training_rotation import MAP_ROTATION
+from tools.rl_training_rotation import MODE_ROTATION
 from tools.rl_training_rotation import finalize_success
 from tools.rl_training_rotation import load_state
 from tools.rl_training_rotation import prepare_run
@@ -22,7 +22,7 @@ def test_workflow_rotates_all_maps_every_three_hours():
     workflow = workflow_path.read_text(encoding="utf-8")
 
     assert 'cron: "17 */3 * * *"' in workflow
-    assert "CYCLE_BRANCH: rl-training-all-maps-cycle" in workflow
+    assert "CYCLE_BRANCH: rl-training-20-modes-cycle" in workflow
     assert "CAMPAIGN_MAP: ${{ steps.prepare.outputs.campaign_map }}" in workflow
     assert '--map "$CAMPAIGN_MAP"' in workflow
     assert 'if [[ "$CYCLE_COMPLETE" != "true" ]]' in workflow
@@ -31,9 +31,37 @@ def test_workflow_rotates_all_maps_every_three_hours():
 
 
 def test_rotation_contains_every_registered_map_once():
-    assert len(MAP_ROTATION) == 12
+    assert len(MAP_ROTATION) == 14
     assert len(set(MAP_ROTATION)) == len(MAP_ROTATION)
     assert set(MAP_ROTATION) == set(available_maps())
+
+
+def test_mode_rotation_contains_all_twenty_map_objective_pairs_once():
+    assert len(MODE_ROTATION) == 20
+    assert len(set(MODE_ROTATION)) == len(MODE_ROTATION)
+    assert {map_name for map_name, _objective in MODE_ROTATION} == set(MAP_ROTATION)
+    assert MODE_ROTATION == (
+        ("default", "cities"),
+        ("default", "green_dragon"),
+        ("default", "blue_dragon"),
+        ("default", "full_party"),
+        ("small", "cities"),
+        ("small", "green_dragon"),
+        ("small", "blue_dragon"),
+        ("green_dragon_minimal", "green_dragon"),
+        ("green_dragon_minimal", "blue_dragon"),
+        ("super_last_stand", "waves"),
+        ("orc_duel", "orc"),
+        ("builder", "build_all"),
+        ("formation_train", "all_enemies"),
+        ("hire_train", "orc"),
+        ("item_train", "all_enemies"),
+        ("magic_train", "all_enemies"),
+        ("scroll_train", "all_enemies"),
+        ("siege_train", "target_enemy"),
+        ("trade_train", "all_enemies"),
+        ("wotans_retribution", "cities"),
+    )
 
 
 def _write_state(path: Path, state: dict | None = None) -> None:
@@ -70,8 +98,8 @@ def test_scheduled_run_selects_next_map_for_one_million_steps(tmp_path):
 
     assert prepared["should_run"] == "true"
     assert prepared["campaign_map"] == "default"
-    assert prepared["objective"] == "full_party"
-    assert prepared["objective_flag"] == "--full-party"
+    assert prepared["objective"] == "cities"
+    assert prepared["objective_flag"] == ""
     assert prepared["seed"] == "101"
     assert prepared["total_steps"] == "1000000"
     assert prepared["cycle_complete"] == "false"
@@ -97,9 +125,13 @@ def test_manual_smoke_uses_selected_map_without_advancing_state(tmp_path):
     assert state == DEFAULT_STATE
 
 
-def test_default_uses_full_party_and_small_uses_green_dragon(tmp_path):
-    for map_name in MAP_ROTATION:
-        state = {**DEFAULT_STATE, "next_map": map_name}
+def test_scheduled_rotation_uses_all_twenty_modes_and_objective_flags(tmp_path):
+    for map_name, objective in MODE_ROTATION:
+        state = {
+            **DEFAULT_STATE,
+            "next_map": map_name,
+            "next_objective": objective,
+        }
         prepared = prepare_run(
             state=state,
             output_base=tmp_path,
@@ -109,19 +141,24 @@ def test_default_uses_full_party_and_small_uses_green_dragon(tmp_path):
         )
 
         assert prepared["campaign_map"] == map_name
-        assert prepared["objective"] == MAP_OBJECTIVES[map_name]
+        assert prepared["objective"] == objective
         expected_flag = {
-            "default": "--full-party",
-            "small": "--dragon",
-        }.get(map_name, "")
+            "green_dragon": "--dragon",
+            "blue_dragon": "--blue-dragon",
+            "full_party": "--full-party",
+        }.get(objective, "")
         assert prepared["objective_flag"] == expected_flag
+        assert prepared["seed"] == "101"
+        assert prepared["cycle_complete"] == str(
+            (map_name, objective) == MODE_ROTATION[-1]
+        ).lower()
 
 
-def test_successful_cycle_advances_all_twelve_maps_then_seed(tmp_path):
+def test_successful_cycle_advances_all_twenty_modes_then_seed(tmp_path):
     state_file = tmp_path / "state.json"
     _write_state(state_file)
 
-    for index, map_name in enumerate(MAP_ROTATION):
+    for index, (map_name, objective) in enumerate(MODE_ROTATION):
         run_dir = tmp_path / f"run-{index + 1}"
         _create_success_outputs(run_dir)
         finalize_success(
@@ -129,18 +166,22 @@ def test_successful_cycle_advances_all_twelve_maps_then_seed(tmp_path):
             run_dir=run_dir,
             seed=101,
             map_name=map_name,
-            objective=MAP_OBJECTIVES[map_name],
+            objective=objective,
             run_id=f"run-{index + 1}",
             commit_sha="abc123",
         )
 
         state = json.loads(state_file.read_text(encoding="utf-8"))
-        expected_next_map = MAP_ROTATION[(index + 1) % len(MAP_ROTATION)]
-        expected_seed = 102 if index == len(MAP_ROTATION) - 1 else 101
+        expected_next_map, expected_next_objective = MODE_ROTATION[
+            (index + 1) % len(MODE_ROTATION)
+        ]
+        expected_seed = 102 if index == len(MODE_ROTATION) - 1 else 101
         assert state["seed"] == expected_seed
         assert state["next_map"] == expected_next_map
+        assert state["next_objective"] == expected_next_objective
         assert state["completed_runs"] == index + 1
         assert state["last_success"]["map"] == map_name
+        assert state["last_success"]["objective"] == objective
         assert (run_dir / "eval" / "best_model.zip").is_file()
         assert (run_dir / "eval" / "best_vecnormalize.pkl").is_file()
         assert (run_dir / "manifest.json").is_file()
@@ -162,9 +203,29 @@ def test_legacy_objective_state_migrates_to_first_map(tmp_path):
     state = load_state(state_file)
 
     assert state["next_map"] == "default"
-    assert "next_objective" not in state
+    assert state["next_objective"] == "cities"
     assert state["seed"] == 118
     assert state["completed_runs"] == 51
+
+
+def test_previous_physical_map_state_migrates_to_its_first_mode(tmp_path):
+    state_file = tmp_path / "state.json"
+    _write_state(
+        state_file,
+        {
+            "active": True,
+            "seed": 119,
+            "next_map": "small",
+            "completed_runs": 54,
+            "last_success": None,
+        },
+    )
+
+    state = load_state(state_file)
+
+    assert state["seed"] == 119
+    assert state["next_map"] == "small"
+    assert state["next_objective"] == "cities"
 
 
 def test_missing_output_does_not_change_state(tmp_path):
@@ -181,7 +242,7 @@ def test_missing_output_does_not_change_state(tmp_path):
             run_dir=run_dir,
             seed=101,
             map_name="default",
-            objective=MAP_OBJECTIVES["default"],
+            objective="cities",
             run_id="failed-run",
             commit_sha="abc123",
         )

@@ -1258,7 +1258,26 @@ def render_campaign_stack_match_png(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Inspect Disciples II .sg map structure")
-    parser.add_argument("path", type=Path, help="Path to .sg file")
+    parser.add_argument("path", nargs="?", type=Path, help="Path to .sg file")
+    parser.add_argument(
+        "--game-root",
+        type=Path,
+        help="Read a campaign scenario from the installed Disciples II DBF tables",
+    )
+    parser.add_argument(
+        "--scenario-id",
+        help="Campaign scenario id, for example S117SC0000",
+    )
+    parser.add_argument(
+        "--map-data-output",
+        type=Path,
+        help="Write a deterministic static campaign-map JSON snapshot",
+    )
+    parser.add_argument(
+        "--conversion-report-output",
+        type=Path,
+        help="Write the campaign conversion counts and source hashes",
+    )
     parser.add_argument(
         "--json",
         action="store_true",
@@ -1326,6 +1345,23 @@ def main() -> int:
         help="Write a PNG view that highlights stacks matching campaign enemy templates",
     )
     args = parser.parse_args()
+
+    campaign_mode = bool(args.game_root or args.scenario_id or args.map_data_output)
+    if campaign_mode:
+        if not args.game_root or not args.scenario_id or not args.map_data_output:
+            parser.error("--game-root, --scenario-id and --map-data-output are required together")
+        from tools.d2_campaign_converter import convert_campaign
+
+        _snapshot, report = convert_campaign(
+            args.game_root,
+            str(args.scenario_id),
+            args.map_data_output,
+            args.conversion_report_output,
+        )
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0
+    if args.path is None:
+        parser.error("path is required unless campaign DBF mode is selected")
 
     data = args.path.read_bytes()
     summary = build_summary(data, include_cells=args.include_cells)

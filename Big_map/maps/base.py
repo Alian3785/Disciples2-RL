@@ -259,6 +259,16 @@ class MapConfig:
     empire_territory_source_enemy_id: Optional[int]
     empire_territory_source_tile: Optional[Tuple[int, int]]
     scripted_capital_bot_supported: bool
+    # Optional map-specific scripted-bot identity. When omitted, the legacy
+    # Empire-capital tile and hard-coded party remain in effect.
+    scripted_capital_bot_home_tile: Optional[Tuple[int, int]] = None
+    scripted_capital_bot_faction: str = "Империя"
+    scripted_capital_bot_roster: Optional[Mapping[int, str]] = None
+    scripted_capital_bot_home_enemy_ids: Tuple[int, ...] = ()
+    scripted_capital_bot_protected_enemy_ids: Tuple[int, ...] = ()
+    # Optional explicit objective allow-list. Empty keeps legacy capability-
+    # based validation for existing maps.
+    supported_objectives: Tuple[str, ...] = ()
     # Игровой размер сетки по умолчанию (None = grid_size). Позволяет играть
     # уменьшенную копию карты: данные в 48-координатах, игра на 24x24.
     play_grid_size: Optional[int] = None
@@ -279,6 +289,11 @@ class MapConfig:
     starting_gold: float = 0.0
     # Optional map-specific replacement for the global merchant assortment.
     merchant_buy_items: Optional[Tuple[Dict[str, object], ...]] = None
+    # Optional exact inventory per merchant site. Item definitions still come
+    # from merchant_buy_items, while these mappings control per-site stocks.
+    merchant_buy_items_by_site: Optional[
+        Mapping[str, Tuple[Dict[str, object], ...]]
+    ] = None
     # Arbitrary items placed directly into the hero inventory at episode start.
     starting_hero_items: Tuple[str, ...] = ()
     # Scrolls placed directly into the hero inventory at episode start.

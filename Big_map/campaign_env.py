@@ -199,6 +199,16 @@ class CampaignEnv(
         self._map = get_map(self.map_name)
         map_merchant_buy_items = getattr(self._map, "merchant_buy_items", None)
         self._uses_map_merchant_buy_items = map_merchant_buy_items is not None
+        self.MERCHANT_BUY_ITEMS_BY_SITE = {
+            str(site_name): tuple(
+                dict(item_data)
+                for item_data in tuple(site_items or ())
+                if isinstance(item_data, dict)
+            )
+            for site_name, site_items in dict(
+                getattr(self._map, "merchant_buy_items_by_site", None) or {}
+            ).items()
+        }
         if map_merchant_buy_items is not None:
             self.MERCHANT_BUY_ITEMS = tuple(
                 dict(item_data)
