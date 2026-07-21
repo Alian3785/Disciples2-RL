@@ -50,6 +50,147 @@ class CampaignObservationMixin:
             target[start_i : start_i + source_size] = source_arr
         target[start_i + source_size : end_i] = 0.0
 
+    def _green_dragon_minimal_obs_cache_enabled(self) -> bool:
+        """Return whether the focused per-block observation cache is active."""
+        return str(getattr(self, "map_name", "") or "") == "green_dragon_minimal"
+
+    def _clear_green_dragon_minimal_obs_cache(self) -> None:
+        """Drop cached blocks after an observation-layout change."""
+        if hasattr(self, "_green_dragon_minimal_obs_block_cache"):
+            self._green_dragon_minimal_obs_block_cache.clear()
+
+    def _green_dragon_minimal_cached_obs_block(
+        self,
+        block_name: str,
+        signature: object,
+        builder,
+    ) -> np.ndarray:
+        """Reuse an immutable block while its compact state signature is unchanged.
+
+        The cached arrays are only copied into the final observation and are never
+        returned directly by the Gym API.  This lets the minimal dragon map avoid
+        rebuilding its many static/seldom-changing campaign blocks without risking
+        aliasing observations retained by a rollout buffer.
+        """
+        cache = getattr(self, "_green_dragon_minimal_obs_block_cache", None)
+        if cache is None:
+            cache = {}
+            self._green_dragon_minimal_obs_block_cache = cache
+            self._green_dragon_minimal_obs_cache_hits = 0
+            self._green_dragon_minimal_obs_cache_misses = 0
+
+        cached = cache.get(str(block_name))
+        if cached is not None and cached[0] == signature:
+            self._green_dragon_minimal_obs_cache_hits += 1
+            return cached[1]
+
+        block = np.asarray(builder(), dtype=np.float32).reshape(-1)
+        block.setflags(write=False)
+        cache[str(block_name)] = (signature, block)
+        self._green_dragon_minimal_obs_cache_misses += 1
+        return block
+
+    def _green_dragon_minimal_enemy_obs_signature(self) -> Tuple[object, ...]:
+        """Describe only the dynamic fields patched into the cached enemy layout."""
+        self._ensure_enemy_obs_layout()
+        enemies_alive = getattr(self.grid_env, "enemies_alive", {}) or {}
+        alive_signature = tuple(
+            (enemy_id, bool(enemies_alive.get(enemy_id, False)))
+            for enemy_id in self._enemy_obs_enemy_ids
+        )
+        hp_signature = tuple(
+            (
+                enemy_id,
+                unit.get("hp"),
+                unit.get("health"),
+                unit.get("maxhp"),
+                unit.get("max_health"),
+            )
+            for enemy_id, unit, _hp_offset in self._enemy_obs_hp_entries
+        )
+        return (
+            self._enemy_obs_position_signature,
+            self._enemy_obs_cached_team_signature,
+            alive_signature,
+            hp_signature,
+        )
+
+    def _green_dragon_minimal_blue_obs_signature(self) -> Tuple[object, ...]:
+        units = self._get_blue_state() or []
+        unit_signature = tuple(
+            (
+                unit.get("position"),
+                unit.get("name"),
+                unit.get("unit_type"),
+                unit.get("Unitclass"),
+                unit.get("hero"),
+                unit.get("next_level_exp"),
+                unit.get("hp"),
+                unit.get("health"),
+                unit.get("maxhp"),
+                unit.get("max_health"),
+                unit.get("Level"),
+            )
+            for unit in units
+        )
+        return (
+            unit_signature,
+            tuple(sorted(int(pos) for pos in self.active_invulnerability_potion_positions)),
+            tuple(sorted(int(pos) for pos in self.active_strength_potion_positions)),
+        )
+
+    def _green_dragon_minimal_resource_obs_signature(self) -> Tuple[object, ...]:
+        inventory = self.get_bottle_inventory_counters()
+        mana_signature = tuple(
+            float(getattr(self, str(self.MANA_ATTR_BY_KIND.get(kind, "") or ""), 0.0) or 0.0)
+            for kind in self.grid_mana_total_kinds
+        )
+        return (
+            float(self.moves),
+            float(self.moves_per_turn),
+            tuple(self.grid_env.agent_pos),
+            self.active_buildings.get("alredybuilt", 0),
+            tuple(sorted((str(key), int(value or 0)) for key, value in inventory.items())),
+            len(self.chests),
+            tuple(sorted(str(name) for name in self.captured_objective_cities)),
+            tuple(str(name or "") for name in self.equipped_hero_items),
+            tuple(str(name or "") for name in self.equipped_book_items),
+            mana_signature,
+        )
+
+    def _green_dragon_minimal_building_obs_signature(self) -> Tuple[object, ...]:
+        entries: List[Tuple[object, ...]] = []
+        for build_key in self.building_keys:
+            building = self.active_buildings.get(build_key)
+            if not isinstance(building, dict):
+                entries.append((str(build_key), None))
+                continue
+            entries.append(
+                (
+                    str(build_key),
+                    building.get("Build"),
+                    building.get("built"),
+                    building.get("blocked"),
+                    float(self._get_building_gold_cost(building)),
+                )
+            )
+        return (int(self.Realcapital), tuple(entries))
+
+    def _green_dragon_minimal_merchant_obs_signature(self) -> Tuple[object, ...]:
+        stock_signature = tuple(
+            (
+                str(site_name),
+                tuple(
+                    sorted(
+                        (str(item_name), int(stock or 0))
+                        for item_name, stock in site_stock.items()
+                    )
+                ),
+            )
+            for site_name, site_stock in sorted(self.merchant_stocks.items())
+        )
+        return (tuple(self.grid_env.agent_pos), stock_signature)
+
     def _enemy_team_for_observation_layout(self, enemy_id: object) -> List[Dict]:
         try:
             normalized_enemy_id = int(enemy_id)
@@ -154,6 +295,7 @@ class CampaignObservationMixin:
         self.grid_campaign_obs_block_order = tuple(name for name, _ in block_sizes)
         self.grid_campaign_obs_slices = slices
         self.grid_campaign_obs_size = int(offset)
+        self._clear_green_dragon_minimal_obs_cache()
 
     def _refresh_grid_obs_slices(self) -> None:
         base_start = 0
@@ -166,6 +308,7 @@ class CampaignObservationMixin:
             "campaign": (enemy_end, campaign_end),
         }
         self.GRID_OBS_SIZE = int(campaign_end)
+        self._clear_green_dragon_minimal_obs_cache()
 
     def _refresh_full_obs_slices(self) -> None:
         mode_end = 1
@@ -1593,9 +1736,50 @@ class CampaignObservationMixin:
             ("waves", self._build_wave_grid_obs),
             ("trainer", self._build_trainer_grid_obs),
         )
+        use_minimal_cache = self._green_dragon_minimal_obs_cache_enabled()
+        static_minimal_blocks = {
+            "mana_source",
+            "heal_tiles",
+            "ruin",
+            "objective_city",
+            "spell_shop_site",
+            "current_spell_shop_stock",
+            "mercenary_site",
+            "current_mercenary_roster",
+            "waves",
+            "trainer",
+        }
         for block_name, builder in builders:
             start, end = self.grid_campaign_obs_slices[block_name]
-            self._copy_obs_block(campaign_obs, start, end, builder())
+            block = None
+            if use_minimal_cache:
+                signature = None
+                if block_name in static_minimal_blocks:
+                    signature = ("static", int(end) - int(start))
+                elif block_name == "blue":
+                    signature = self._green_dragon_minimal_blue_obs_signature()
+                elif block_name == "resource":
+                    signature = self._green_dragon_minimal_resource_obs_signature()
+                elif block_name == "building":
+                    signature = self._green_dragon_minimal_building_obs_signature()
+                elif block_name == "chest":
+                    signature = tuple(sorted(tuple(pos) for pos in self.chests.keys()))
+                elif block_name in {"merchant_site", "current_merchant_stock"}:
+                    signature = self._green_dragon_minimal_merchant_obs_signature()
+
+                if signature is not None:
+                    block = self._green_dragon_minimal_cached_obs_block(
+                        block_name,
+                        signature,
+                        builder,
+                    )
+
+            self._copy_obs_block(
+                campaign_obs,
+                start,
+                end,
+                builder() if block is None else block,
+            )
         return campaign_obs
     def _augment_grid_obs(self, base_obs: np.ndarray) -> np.ndarray:
         """
@@ -1614,7 +1798,19 @@ class CampaignObservationMixin:
         enemy_start, enemy_end = self.grid_obs_slices["enemy"]
         campaign_start, campaign_end = self.grid_obs_slices["campaign"]
         self._copy_obs_block(grid_obs, base_start, base_end, base_obs)
-        self._copy_obs_block(grid_obs, enemy_start, enemy_end, self._build_enemy_grid_obs())
+        enemy_obs = None
+        if self._green_dragon_minimal_obs_cache_enabled():
+            enemy_obs = self._green_dragon_minimal_cached_obs_block(
+                "enemy",
+                self._green_dragon_minimal_enemy_obs_signature(),
+                self._build_enemy_grid_obs,
+            )
+        self._copy_obs_block(
+            grid_obs,
+            enemy_start,
+            enemy_end,
+            self._build_enemy_grid_obs() if enemy_obs is None else enemy_obs,
+        )
         self._copy_obs_block(grid_obs, campaign_start, campaign_end, self._build_campaign_grid_obs())
         return grid_obs
     def _get_grid_obs(self) -> np.ndarray:

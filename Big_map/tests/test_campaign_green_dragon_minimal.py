@@ -2,6 +2,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -331,3 +332,69 @@ def test_green_and_blue_dragon_modes_replace_the_boss_and_restore_full_hp_each_t
         env._advance_turns(1)
         assert dragon["health"] == pytest.approx(max_hp)
         assert dragon["hp"] == pytest.approx(max_hp)
+
+
+def test_minimal_observation_cache_reuses_blocks_and_tracks_dynamic_changes():
+    env = _make_env(campaign_objective="dragon")
+    env.reset(seed=123)
+
+    first = env._get_grid_obs()
+    hits_before = int(env._green_dragon_minimal_obs_cache_hits)
+    second = env._get_grid_obs()
+
+    assert np.array_equal(second, first)
+    assert env._green_dragon_minimal_obs_cache_hits > hits_before
+    assert env._green_dragon_minimal_obs_cache_misses > 0
+    assert all(
+        cached_block.flags.writeable is False
+        for _signature, cached_block in env._green_dragon_minimal_obs_block_cache.values()
+    )
+
+    enemy_start, enemy_end = env.grid_obs_slices["enemy"]
+    enemy = next(
+        unit
+        for unit in env.enemy_team_states[1]
+        if not env._is_empty_enemy_unit(unit)
+    )
+    enemy["health"] = max(
+        1.0,
+        float(enemy.get("max_health", 0.0) or 0.0) * 0.5,
+    )
+    enemy["hp"] = enemy["health"]
+    enemy_updated = env._get_grid_obs()
+    assert not np.array_equal(
+        enemy_updated[enemy_start:enemy_end],
+        first[enemy_start:enemy_end],
+    )
+
+    campaign_start, _campaign_end = env.grid_obs_slices["campaign"]
+    chest_start, chest_end = env.grid_campaign_obs_slices["chest"]
+    before_chest = enemy_updated.copy()
+    env.chests.pop(next(iter(env.chests)))
+    chest_updated = env._get_grid_obs()
+    assert not np.array_equal(
+        chest_updated[campaign_start + chest_start : campaign_start + chest_end],
+        before_chest[campaign_start + chest_start : campaign_start + chest_end],
+    )
+
+    merchant_start, merchant_end = env.grid_campaign_obs_slices["merchant_site"]
+    before_merchant = chest_updated.copy()
+    first_item = next(iter(env.merchant_stocks[MERCHANT_NAME]))
+    env.merchant_stocks[MERCHANT_NAME][first_item] -= 1
+    merchant_updated = env._get_grid_obs()
+    assert not np.array_equal(
+        merchant_updated[
+            campaign_start + merchant_start : campaign_start + merchant_end
+        ],
+        before_merchant[
+            campaign_start + merchant_start : campaign_start + merchant_end
+        ],
+    )
+
+
+def test_minimal_observation_cache_is_not_enabled_for_other_maps():
+    env = CampaignEnv(map_name="default", log_enabled=False, persist_blue_hp=False)
+    env.reset(seed=123)
+    env._get_grid_obs()
+
+    assert not hasattr(env, "_green_dragon_minimal_obs_block_cache")
