@@ -2,26 +2,33 @@ name: RL training rotation
 
 on:
   schedule:
-    - cron: "17 23 * * *"
-      timezone: "Europe/Moscow"
-    - cron: "17 3,7,11,15,19 * * *"
+    - cron: "17 */3 * * *"
       timezone: "Europe/Moscow"
   workflow_dispatch:
     inputs:
       full_training:
-        description: Run the full 1,000,000-step rotation task and advance state
+        description: Run the next 1,000,000-step map task and advance the rotation
         required: true
         default: false
         type: boolean
-      objective:
-        description: Scenario used by the 24,576-step smoke run
+      map_name:
+        description: Map used by the 24,576-step smoke run
         required: true
-        default: cities
+        default: default
         type: choice
         options:
-          - cities
-          - green_dragon
-          - blue_dragon
+          - default
+          - small
+          - super_last_stand
+          - orc_duel
+          - builder
+          - formation_train
+          - hire_train
+          - item_train
+          - magic_train
+          - scroll_train
+          - siege_train
+          - trade_train
 
 permissions:
   contents: write
@@ -51,7 +58,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           FULL_TRAINING: ${{ inputs.full_training || false }}
           RESULTS_BRANCH: github-experiments
-          CYCLE_BRANCH: rl-training-small-map-cycle
+          CYCLE_BRANCH: rl-training-all-maps-cycle
         run: |
           set -euo pipefail
           rotation_run=false
@@ -83,20 +90,13 @@ jobs:
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
-          SCHEDULE: ${{ github.event.schedule }}
-          MANUAL_OBJECTIVE: ${{ inputs.objective || 'cities' }}
+          MANUAL_MAP: ${{ inputs.map_name || 'default' }}
           FULL_TRAINING: ${{ inputs.full_training || false }}
         run: |
           set -euo pipefail
-          activation_args=()
           rotation_event="$EVENT_NAME"
-          if [[ "$EVENT_NAME" == "schedule" && "$SCHEDULE" == "17 23 * * *" ]]; then
-            activation_args+=(--activation-slot)
-          fi
-
           if [[ "$EVENT_NAME" == "workflow_dispatch" && "$FULL_TRAINING" == "true" ]]; then
             rotation_event=schedule
-            activation_args+=(--activation-slot)
           fi
 
           if [[ "$rotation_event" == "workflow_dispatch" ]]; then
@@ -109,9 +109,8 @@ jobs:
             --state-file github_experiments/state.json \
             --output-base "$output_base" \
             --event-name "$rotation_event" \
-            --manual-objective "$MANUAL_OBJECTIVE" \
-            --run-token "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
-            "${activation_args[@]}"
+            --manual-map "$MANUAL_MAP" \
+            --run-token "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
 
       - name: Set up Python 3.14
         if: steps.prepare.outputs.should_run == 'true'
@@ -148,7 +147,7 @@ jobs:
           CHECKPOINT_FREQ: ${{ steps.prepare.outputs.checkpoint_freq }}
           EVAL_FREQ: ${{ steps.prepare.outputs.eval_freq }}
           OBJECTIVE_FLAG: ${{ steps.prepare.outputs.objective_flag }}
-          CAMPAIGN_MAP: small
+          CAMPAIGN_MAP: ${{ steps.prepare.outputs.campaign_map }}
           PYTHONUNBUFFERED: "1"
         run: |
           set -euo pipefail
@@ -187,6 +186,7 @@ jobs:
           RUN_DIR: ${{ steps.prepare.outputs.run_dir }}
           RUN_ID: ${{ steps.prepare.outputs.run_id }}
           SEED: ${{ steps.prepare.outputs.seed }}
+          CAMPAIGN_MAP: ${{ steps.prepare.outputs.campaign_map }}
           OBJECTIVE: ${{ steps.prepare.outputs.objective }}
         run: |
           set -euo pipefail
@@ -194,6 +194,7 @@ jobs:
             --state-file github_experiments/state.json \
             --run-dir "$RUN_DIR" \
             --seed "$SEED" \
+            --map-name "$CAMPAIGN_MAP" \
             --objective "$OBJECTIVE" \
             --run-id "$RUN_ID" \
             --commit-sha "$GITHUB_SHA"
@@ -235,7 +236,9 @@ jobs:
           RUN_DIR: ${{ steps.prepare.outputs.run_dir }}
           RUN_ID: ${{ steps.prepare.outputs.run_id }}
           SEED: ${{ steps.prepare.outputs.seed }}
+          CAMPAIGN_MAP: ${{ steps.prepare.outputs.campaign_map }}
           OBJECTIVE: ${{ steps.prepare.outputs.objective }}
+          CYCLE_COMPLETE: ${{ steps.prepare.outputs.cycle_complete }}
           TARGET_BRANCH: ${{ steps.storage.outputs.target_branch }}
           CYCLE_BRANCH: ${{ steps.storage.outputs.cycle_branch }}
           FALLBACK_BRANCH: github-experiments
@@ -250,7 +253,7 @@ jobs:
           git commit -m "Stage RL experiment $RUN_ID"
           git push origin "HEAD:$CYCLE_BRANCH"
 
-          if [[ "$OBJECTIVE" != "blue_dragon" ]]; then
+          if [[ "$CYCLE_COMPLETE" != "true" ]]; then
             echo "Cycle is still in progress; main history is unchanged."
             exit 0
           fi
