@@ -952,6 +952,7 @@ class CampaignBattleMixin:
             restored_unit["paralyzed"] = 0
             restored_unit["long_paralyzed"] = 0
             restored_unit["running_away"] = 0
+            restored_unit["feared"] = 0
             restored_unit["transformed"] = 0
             restored_unit["poison_turns_left"] = 0
             restored_unit["poison_damage_per_tick"] = 0
@@ -965,6 +966,11 @@ class CampaignBattleMixin:
             restored_unit["resilience_used_types"] = []
             restored_unit.pop("teamated", None)
             restored_unit.pop("hermited", None)
+            restored_unit.pop("lower_damage_original_damage", None)
+            restored_unit.pop("lower_damage_original_unit_type", None)
+            restored_unit.pop("shattered_armor", None)
+            restored_unit.pop("shatter_original_armor", None)
+            restored_unit.pop("shatter_original_unit_type", None)
             position = int(restored_unit.get("position", -1) or -1)
             if "campaign_banner_base_damage" in restored_unit:
                 restored_unit["damage"] = self._normalize_damage_value(
@@ -1434,6 +1440,7 @@ class CampaignBattleMixin:
             original_unit["paralyzed"] = 0
             original_unit["long_paralyzed"] = 0
             original_unit["running_away"] = 0
+            original_unit["feared"] = 0
             original_unit["transformed"] = 0
             original_unit["poison_turns_left"] = 0
             original_unit["poison_damage_per_tick"] = 0
@@ -1447,6 +1454,11 @@ class CampaignBattleMixin:
             original_unit["bonusturn"] = 0
             original_unit.pop("teamated", None)
             original_unit.pop("hermited", None)
+            original_unit.pop("lower_damage_original_damage", None)
+            original_unit.pop("lower_damage_original_unit_type", None)
+            original_unit.pop("shattered_armor", None)
+            original_unit.pop("shatter_original_armor", None)
+            original_unit.pop("shatter_original_unit_type", None)
             original_unit.pop("settlement_armor_bonus", None)
             original_unit.pop("settlement_level", None)
             saved_team.append(original_unit)

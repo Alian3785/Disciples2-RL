@@ -142,3 +142,8 @@ def test_alternative_progression_buildings_block_each_other_symmetrically():
                 alternative_names,
                 target_building.get("blocks", ()),
             )
+
+
+def test_undead_service_buildings_are_not_prebuilt():
+    for build_key in ("und_d2_b023", "und_d2_b024", "und_d2_b025"):
+        assert undead_hordes_buildings_d2[build_key]["built"] == 0

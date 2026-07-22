@@ -648,6 +648,7 @@ class CampaignEnv(
         self.gold: float = max(0.0, float(getattr(self._map, "starting_gold", 0.0) or 0.0))
         self.moves: int = self.moves_per_turn
         self.active_buildings = self._get_buildings_for_capital(self.Realcapital)
+        self._apply_lord_starting_building()
         self.building_keys = self._get_building_keys(self.active_buildings)
         self.active_spells = self._get_spells_for_capital(self.Realcapital)
         self.spell_keys = self._get_spell_keys(self.active_spells)
@@ -1009,6 +1010,7 @@ class CampaignEnv(
 
         self._reset_buildings_state()
         self.active_buildings = self._get_buildings_for_capital(self.Realcapital)
+        self._apply_lord_starting_building()
         self.building_keys = self._get_building_keys(self.active_buildings)
         self._reset_spells_state()
         self.active_spells = self._get_spells_for_capital(self.Realcapital)

@@ -305,6 +305,39 @@ def test_campaign_economy_uses_higher_turn_income_and_scaled_building_costs():
     assert env.grid_max_build_price == pytest.approx(4500.0)
 
 
+@pytest.mark.parametrize("Realcapital", [1, 2, 3, 4, 5])
+@pytest.mark.parametrize(
+    ("typeoflord", "expected_built"),
+    [
+        (1, set()),
+        (2, {"Башня магии"}),
+        (3, {"Гильдия"}),
+    ],
+)
+def test_lord_type_applies_original_starting_building(Realcapital, typeoflord, expected_built):
+    env = CampaignEnv(
+        log_enabled=False,
+        persist_blue_hp=True,
+        Realcapital=Realcapital,
+        typeoflord=typeoflord,
+    )
+
+    env.reset(seed=123)
+
+    assert set(env.get_built_building_names()) == expected_built
+    assert int(env.active_buildings.get("alredybuilt", 0) or 0) == 0
+
+
+def test_reset_options_reapply_lord_starting_building_for_new_capital():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2, typeoflord=1)
+
+    env.reset(seed=123, options={"Realcapital": 4, "typeoflord": 2})
+    assert set(env.get_built_building_names()) == {"Башня магии"}
+
+    env.reset(seed=456, options={"Realcapital": 5, "typeoflord": 3})
+    assert set(env.get_built_building_names()) == {"Гильдия"}
+
+
 def test_building_state_is_isolated_between_campaign_env_instances():
     env1 = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=1)
     env2 = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=1)
@@ -385,7 +418,7 @@ def test_building_requires_block_mask_and_direct_step_until_prerequisite_is_buil
 
 
 @pytest.mark.parametrize("Realcapital", [1, 2, 3, 4, 5])
-def test_typeoflord_three_halves_building_costs_for_all_capitals(Realcapital: int):
+def test_typeoflord_three_uses_normal_building_costs_for_all_capitals(Realcapital: int):
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=Realcapital)
     env.reset(seed=123)
     env.typeoflord = 3
@@ -396,7 +429,7 @@ def test_typeoflord_three_halves_building_costs_for_all_capitals(Realcapital: in
         assert isinstance(building, dict)
         raw_cost = float(building.get("gold", 0.0) or 0.0)
         effective_costs[build_key] = env._get_building_gold_cost(building)
-        assert effective_costs[build_key] == pytest.approx(raw_cost * 0.5)
+        assert effective_costs[build_key] == pytest.approx(raw_cost)
 
     first_build_key = env.building_keys[0]
     first_action = env.GRID_BUILD_ACTION_START + env.building_keys.index(first_build_key)
