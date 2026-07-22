@@ -2818,33 +2818,22 @@ class CampaignEconomyMixin:
             except (TypeError, ValueError):
                 continue
             entry["gold"] = base_gold * cost_multiplier
-    def _building_cost_multiplier(self) -> float:
-        """Вернуть классовый множитель стоимости зданий.
-
-        Для `typeoflord == 3` используется отдельный коэффициент, остальные
-        типы лорда строят здания по базовой цене.
-        """
-        return (
-            float(self.TYPEOFLORD_THREE_BUILDING_COST_MULTIPLIER)
-            if int(self.typeoflord) == 3
-            else 1.0
-        )
     def _get_building_gold_cost(self, building: Optional[Dict[str, object]]) -> float:
-        """Посчитать итоговую цену здания с учётом классового множителя."""
+        """Вернуть цену здания столицы без скидки за тип лорда."""
         if not isinstance(building, dict):
             return 0.0
         try:
             base_cost = max(0.0, float(building.get("gold", 0.0) or 0.0))
         except (TypeError, ValueError):
             base_cost = 0.0
-        return base_cost * float(self._building_cost_multiplier())
+        return base_cost
     def _current_max_building_gold_cost(self) -> float:
         """Вернуть максимальную цену среди активных зданий текущей фракции.
 
         Значение используется для нормализации observation, поэтому минимум
         равен 1.0 и деление на ноль невозможно даже при пустой таблице зданий.
         """
-        signature = (id(self.active_buildings), int(self.typeoflord))
+        signature = id(self.active_buildings)
         if getattr(self, "_grid_max_build_price_cache_signature", None) == signature:
             return float(getattr(self, "_grid_max_build_price_cache", 1.0) or 1.0)
 
@@ -2854,10 +2843,7 @@ class CampaignEconomyMixin:
         except (TypeError, ValueError):
             active_max_gold = 0.0
         if active_max_gold > 0.0:
-            max_price = max(
-                1.0,
-                active_max_gold * float(self._building_cost_multiplier()),
-            )
+            max_price = max(1.0, active_max_gold)
         else:
             for build_key in self.building_keys:
                 max_price = max(
@@ -3345,6 +3331,29 @@ class CampaignEconomyMixin:
         max_gold_by_capital = getattr(self, "_building_max_gold_by_capital_key", {})
         self._active_building_max_gold = float(max_gold_by_capital.get(building_key, 1.0) or 1.0)
         return tables[building_key]
+    def _apply_lord_starting_building(self) -> Optional[str]:
+        """Применить бесплатную стартовую постройку выбранного типа лорда.
+
+        В оригинальном Disciples II маг начинает с Башней магии, а
+        гильдмастер — с Гильдией. Лорд-воин не получает готового здания.
+        Постройка не занимает лимит строительства текущего хода.
+        """
+        starting_building_name = {
+            2: str(self.MAGIC_TOWER_BUILDING_NAME),
+            3: str(self.GUILD_BUILDING_NAME),
+        }.get(int(self.typeoflord))
+        if not starting_building_name:
+            return None
+
+        for building in self.active_buildings.values():
+            if not isinstance(building, dict):
+                continue
+            building_name = str(building.get("name", "") or "").strip()
+            if building_name != starting_building_name:
+                continue
+            building["built"] = 1
+            return building_name
+        return None
     def _get_hire_options_for_capital(self, capital: Optional[int]) -> List[Dict[str, object]]:
         """Вернуть список фракционных вариантов найма для выбранной столицы.
 

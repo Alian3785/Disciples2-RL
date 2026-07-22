@@ -202,6 +202,13 @@ AOE_TYPES = frozenset(
 )
 VAMPIRE_AOE_TYPES = frozenset({"Vampire", "Highvampire"})
 
+# In the original game mage heroes and Nosferatu lose ten percentage points of
+# displayed accuracy for every subsequent living target of their mass attack.
+# Ordinary Mage/Vampire units keep the same accuracy against every target.
+HERO_AOE_ACCURACY_FALLOFF_TYPES = frozenset({"Mage"})
+HERO_AOE_ACCURACY_FALLOFF_NAMES = frozenset({"Носферату"})
+HERO_AOE_ACCURACY_FALLOFF_PER_TARGET = 10.0
+
 POINT_HEAL_SUPPORT_TYPES = frozenset({"Cliric", "Deva roshi"})
 PATRIACH_SUPPORT_TYPES = frozenset({"Patriach"})
 POINT_BUFF_SUPPORT_TYPES = frozenset(
@@ -214,6 +221,15 @@ POINT_BUFF_SUPPORT_TYPES = frozenset(
     }
 )
 CLEANSING_SUPPORT_TYPES = frozenset({"Dwarfdruid", "Arhidruid"})
+MASS_CURE_SUPPORT_NAMES = frozenset(
+    {
+        "Аббатиса",
+        "Прорицательница",
+        # English names are kept for campaign snapshots imported from the game.
+        "Matriarch",
+        "Prophetess",
+    }
+)
 MASS_HEAL_TYPES = frozenset({"Profit", "Sundancer", "Sylfid"})
 SUPPORT_TYPES = (
     POINT_HEAL_SUPPORT_TYPES
@@ -710,6 +726,7 @@ def _build_default_battle_unit(name: str, team: str, position: int) -> Dict:
             "paralyzed": 0,
             "long_paralyzed": 0,
             "running_away": 0,
+            "feared": 0,
             "transformed": 0,
             "basestats": [],
         }
@@ -812,7 +829,7 @@ FIRST_HERO_ITEM_ENEMY_ACTION_START: int = SECOND_HERO_ITEM_ACTION_START + len(
 SECOND_HERO_ITEM_ENEMY_ACTION_START: int = FIRST_HERO_ITEM_ENEMY_ACTION_START + len(
     HERO_ITEM_TARGET_SLOTS
 )
-DEFEND_ARMOR_BONUS: int = 50
+DEFEND_DAMAGE_MULTIPLIER: float = 0.5
 WAIT_INIT_DIVISOR: int = 10
 TOTAL_AGENT_ACTIONS: int = SECOND_HERO_ITEM_ENEMY_ACTION_START + len(
     HERO_ITEM_TARGET_SLOTS
@@ -1274,6 +1291,8 @@ class BattleEnv(gym.Env):
         target_unit["paralyzed"] = 0
         target_unit["long_paralyzed"] = 0
         target_unit["running_away"] = 0
+        target_unit["feared"] = 0
+        self._cleanse_negative_effects(target_unit)
         return revive_hp
 
     def _apply_hero_item_damage(
@@ -1517,6 +1536,10 @@ class BattleEnv(gym.Env):
             multiplier = 1.0
         current_damage = int(target_unit.get("damage", 0) or 0)
         new_damage = max(0, int(round(current_damage * max(0.0, multiplier))))
+        target_unit["lower_damage_original_damage"] = current_damage
+        target_unit["lower_damage_original_unit_type"] = str(
+            target_unit.get("unit_type", "") or ""
+        )
         target_unit["teamated"] = 1
         target_unit["damage"] = new_damage
         return float(max(0, current_damage - new_damage))
@@ -2893,6 +2916,7 @@ class BattleEnv(gym.Env):
         recipient["paralyzed"] = 0
         recipient["long_paralyzed"] = 0
         recipient["running_away"] = 0
+        recipient["feared"] = 0
         recipient.setdefault("poison_turns_left", 0)
         recipient.setdefault("burn_turns_left", 0)
         recipient.setdefault("uran_turns_left", 0)
@@ -2941,11 +2965,19 @@ class BattleEnv(gym.Env):
                 elif turns_key == "uran_turns_left":
                     uran_cleared = True
 
-        # Снимаем паралич, долгий паралич и состояние «бегства».
+        # Снимаем паралич и окаменение. Оба коротких эффекта хранятся
+        # в paralyzed; длительный паралич — в long_paralyzed.
         for flag in ("paralyzed", "long_paralyzed"):
             if unit.get(flag, 0):
                 unit[flag] = 0
                 cleared = True
+
+        # Fear and a voluntary retreat share running_away in the action loop.
+        # Cure must cancel only Fear and must not undo a retreat chosen by the player.
+        if unit.get("feared", 0):
+            unit["feared"] = 0
+            unit["running_away"] = 0
+            cleared = True
 
         # Hermit-замедление: возвращаем базовую инициативу и убираем флаг.
         if unit.get("hermited", 0):
@@ -2961,6 +2993,43 @@ class BattleEnv(gym.Env):
         if unit.get("transformed", 0):
             if self._restore_transformed_unit(unit):
                 cleared = True
+
+        # Lower Damage (Tiamat and equivalent battle effects).
+        if unit.get("teamated", 0):
+            saved_damage = unit.pop("lower_damage_original_damage", None)
+            saved_unit_type = str(
+                unit.pop("lower_damage_original_unit_type", "") or ""
+            )
+            if saved_damage is None:
+                saved_damage = unit.get("original_damage")
+            if saved_damage is not None and (
+                not saved_unit_type
+                or saved_unit_type == str(unit.get("unit_type", "") or "")
+            ):
+                unit["damage"] = max(0, int(saved_damage))
+            unit["teamated"] = 0
+            cleared = True
+
+        # Shatter.  Restore the armor that existed before the first successful
+        # shatter instead of blindly resetting every temporary armor modifier.
+        shattered_armor = int(unit.get("shattered_armor", 0) or 0)
+        if shattered_armor > 0:
+            original_armor = unit.pop("shatter_original_armor", None)
+            saved_unit_type = str(
+                unit.pop("shatter_original_unit_type", "") or ""
+            )
+            if original_armor is None:
+                original_armor = int(unit.get("armor", 0) or 0) + shattered_armor
+            if (
+                not saved_unit_type
+                or saved_unit_type == str(unit.get("unit_type", "") or "")
+            ):
+                unit["armor"] = max(
+                    int(unit.get("armor", 0) or 0),
+                    int(original_armor),
+                )
+            unit["shattered_armor"] = 0
+            cleared = True
 
         # Если убрали поджог – сбрасываем кэш Владыки так же, как poison/water-кэши.
         if burn_cleared:
@@ -3224,15 +3293,13 @@ class BattleEnv(gym.Env):
         first_activation = not unit.get("round_effects_done", 0)
         unit["round_effects_done"] = 1
 
-        # DEFEND: временная броня спадает только в начале следующего хода этого юнита.
+        # DEFEND halves final incoming attack damage until this unit's next turn.
+        # It does not modify armor: armor is applied first, then DEFEND.
         if unit.get("defense", 0) == 1:
-            current_armor = int(unit.get("armor", 0) or 0)
-            reduced_armor = max(0, current_armor - DEFEND_ARMOR_BONUS)
-            unit["armor"] = reduced_armor
             unit["defense"] = 0
             self._log(
-                f"DEFENCE EXPIRE: {unit['team'].upper()} {unit['name']}#{unit['position']} теряет бонус брони "
-                f"-{DEFEND_ARMOR_BONUS} ({current_armor}->{unit['armor']})."
+                f"DEFENCE EXPIRE: {unit['team'].upper()} {unit['name']}#{unit['position']} "
+                "больше не получает половину урона."
             )
         # Переключатель «нет целей — бей как Warrior» касается только
         # НЕскопировавшегося Двойника: копия воина не должна терять свой тип.
@@ -3534,6 +3601,13 @@ class BattleEnv(gym.Env):
             u["burn_damage_per_tick"] = 0  # per-tick для поджога
             u["uran_turns_left"] = 0
             u["uran_damage_per_tick"] = 0
+            u["feared"] = 0
+            u["teamated"] = 0
+            u["shattered_armor"] = 0
+            u.pop("lower_damage_original_damage", None)
+            u.pop("lower_damage_original_unit_type", None)
+            u.pop("shatter_original_armor", None)
+            u.pop("shatter_original_unit_type", None)
             u["resilience_used_types"] = []
             u["round_effects_done"] = 0
             u["doppel_copied"] = 0
@@ -3609,6 +3683,7 @@ class BattleEnv(gym.Env):
     def _mark_unit_escaped(self, unit: Dict) -> None:
         snapshot = deepcopy(unit)
         snapshot["running_away"] = 0
+        snapshot["feared"] = 0
         self.escaped_units.append(snapshot)
 
         empty_slot = self._empty_battle_slot(
@@ -3701,6 +3776,8 @@ class BattleEnv(gym.Env):
         eff = boosted * max(0.0, factor)
         incoming_multiplier = float(victim.get("incoming_damage_multiplier", 1.0) or 1.0)
         eff *= max(0.0, incoming_multiplier)
+        if victim.get("defense", 0) == 1:
+            eff *= DEFEND_DAMAGE_MULTIPLIER
         return int(round(eff))
 
     def _subtract_health(self, unit: Dict, damage: float) -> Tuple[float, float]:
@@ -3714,13 +3791,59 @@ class BattleEnv(gym.Env):
             self._record_unit_defeat_for_exp(unit)
         return before, after
 
+    def _roll_accuracy(self, chance_percent: float) -> bool:
+        """Roll Disciples II accuracy from the average of two 0..99 results.
+
+        The original game does not use one uniform percentage roll.  It draws two
+        integer results, averages them and compares that average with the displayed
+        accuracy.  The strict comparison reproduces the original discrete table
+        (for example, displayed 80% becomes an actual 92.2% hit rate).
+        """
+        accuracy = max(0.0, min(100.0, float(chance_percent or 0.0)))
+
+        # random.Random.random() is used instead of randrange() so custom RNGs used
+        # by battle tests and scenario probes only need to expose the common random
+        # interface.  Clamping also keeps defensive test doubles returning 1.0 in
+        # the same 0..99 domain as the original game.
+        first = max(0, min(99, int(float(self.rng.random()) * 100.0)))
+        second = max(0, min(99, int(float(self.rng.random()) * 100.0)))
+        return ((first + second) / 2.0) < accuracy
+
     def _roll_hit(self, attacker: Dict) -> bool:
-        acc = float(attacker.get("accuracy", 100) or 0)
-        return self.rng.random() < (acc / 100.0)
+        return self._roll_accuracy(float(attacker.get("accuracy", 100) or 0))
 
     def _roll_status(self, chance_percent: float) -> bool:
-        cp = max(0.0, min(100.0, float(chance_percent or 0.0)))
-        return self.rng.random() < (cp / 100.0)
+        # Secondary attacks/effects have their own accuracy value in Gattacks and
+        # therefore use the same two-result hit check as primary attacks.
+        return self._roll_accuracy(chance_percent)
+
+    @staticmethod
+    def _uses_hero_aoe_accuracy_falloff(attacker: Optional[Dict]) -> bool:
+        if not isinstance(attacker, dict) or not _resolve_unit_hero_flag(attacker):
+            return False
+        unit_type = str(attacker.get("unit_type", "") or "")
+        unit_name = str(attacker.get("name", "") or "")
+        return bool(
+            unit_type in HERO_AOE_ACCURACY_FALLOFF_TYPES
+            or unit_name in HERO_AOE_ACCURACY_FALLOFF_NAMES
+        )
+
+    def _hero_aoe_accuracy_for_target(
+        self,
+        attacker: Dict,
+        target_index: int,
+    ) -> float:
+        base_accuracy = max(
+            0.0,
+            min(100.0, float(attacker.get("accuracy", 100) or 0)),
+        )
+        if not self._uses_hero_aoe_accuracy_falloff(attacker):
+            return base_accuracy
+        penalty = (
+            max(0, int(target_index))
+            * float(HERO_AOE_ACCURACY_FALLOFF_PER_TARGET)
+        )
+        return max(0.0, base_accuracy - penalty)
 
     def _apply_fear_effect(self, attacker: Dict, victim: Dict) -> bool:
         if victim.get("running_away", 0) == 1:
@@ -3742,6 +3865,7 @@ class BattleEnv(gym.Env):
                 )
                 return False
         victim["running_away"] = 1
+        victim["feared"] = 1
         self._log(
             f"{attacker['team'].upper()} {attacker['name']}#{attacker['position']} вселяет страх в "
             f"{victim['team'].upper()} {victim['name']}#{victim['position']}: бегство!"
@@ -4151,6 +4275,10 @@ class BattleEnv(gym.Env):
         if victim.get("teamated", 0) == 1:
             return False
 
+        victim["lower_damage_original_damage"] = int(victim.get("damage", 0) or 0)
+        victim["lower_damage_original_unit_type"] = str(
+            victim.get("unit_type", "") or ""
+        )
         victim["teamated"] = 1
         base_primary = int(victim.get("damage", 0) or 0)
         new_primary = max(0, int(round(base_primary * 0.68)))
@@ -4253,6 +4381,16 @@ class BattleEnv(gym.Env):
         current_armor = int(victim.get("armor", 0) or 0)
         new_armor = max(0, current_armor - 15)
         victim["armor"] = new_armor
+        armor_lost = max(0, current_armor - new_armor)
+        if armor_lost > 0:
+            if int(victim.get("shattered_armor", 0) or 0) <= 0:
+                victim["shatter_original_armor"] = current_armor
+                victim["shatter_original_unit_type"] = str(
+                    victim.get("unit_type", "") or ""
+                )
+            victim["shattered_armor"] = (
+                int(victim.get("shattered_armor", 0) or 0) + armor_lost
+            )
         if new_armor == current_armor:
             self._log(
                 f"Teurg armor shred: armor of {victim['team'].upper()} {victim['name']}#{victim['position']} already 0."
@@ -4334,11 +4472,32 @@ class BattleEnv(gym.Env):
             )
             vamp_total = 0  # суммарный реальный урон для Vampire/Highvampire
 
-            for victim in targets:
-                if not self._roll_hit(attacker):
+            uses_accuracy_falloff = self._uses_hero_aoe_accuracy_falloff(attacker)
+            if uses_accuracy_falloff:
+                # Position order is the stable battle-formation order. Empty and
+                # dead slots are not targets and therefore do not consume a step.
+                targets.sort(key=lambda unit: int(unit.get("position", 999) or 999))
+
+            for target_index, victim in enumerate(targets):
+                target_accuracy = self._hero_aoe_accuracy_for_target(
+                    attacker,
+                    target_index,
+                )
+                hit = (
+                    self._roll_accuracy(target_accuracy)
+                    if uses_accuracy_falloff
+                    else self._roll_hit(attacker)
+                )
+                if not hit:
+                    accuracy_suffix = (
+                        f" (точность {target_accuracy:g}%)"
+                        if uses_accuracy_falloff
+                        else ""
+                    )
                     self._log(
                         f"Промах: {atk_team.upper()} {attacker['name']}#{attacker['position']} по "
-                        f"{victim['team'].upper()} {victim['name']}#{victim['position']}."
+                        f"{victim['team'].upper()} {victim['name']}#{victim['position']}"
+                        f"{accuracy_suffix}."
                     )
                     continue
                 if self._is_immune_damage(attacker, victim):
@@ -5053,7 +5212,10 @@ class BattleEnv(gym.Env):
         elif unit_type in MASS_HEAL_TYPES:
             healed_any = False
             cleansed_any = False
-            profit_cleanses = unit_type == "Profit"
+            profit_cleanses = (
+                unit_type == "Profit"
+                and str(attacker.get("name", "") or "") in MASS_CURE_SUPPORT_NAMES
+            )
 
             for ally in self.combined:
                 if (
@@ -5103,11 +5265,9 @@ class BattleEnv(gym.Env):
                 self._log(
                     f"{atk_team.upper()} ход: {atk_name}#{attacker['position']} ({unit_type}) не может призвать союзников и встаёт в защиту."
                 )
-                armor_before = int(attacker.get("armor", 0) or 0)
-                attacker["armor"] = armor_before + DEFEND_ARMOR_BONUS
                 attacker["defense"] = 1
                 self._log(
-                    f"{atk_team.upper()} DEFENCE: {atk_name}#{attacker['position']} получает броню +{DEFEND_ARMOR_BONUS} ({armor_before}->{attacker['armor']})."
+                    f"{atk_team.upper()} DEFENCE: {atk_name}#{attacker['position']} получает половину урона."
                 )
             return spawned, reason
 
@@ -5126,11 +5286,9 @@ class BattleEnv(gym.Env):
                 self._log(
                     f"{atk_team.upper()} ход: {atk_name}#{attacker['position']} ({unit_type}) не может призвать союзников и встаёт в защиту."
                 )
-                armor_before = int(attacker.get("armor", 0) or 0)
-                attacker["armor"] = armor_before + DEFEND_ARMOR_BONUS
                 attacker["defense"] = 1
                 self._log(
-                    f"{atk_team.upper()} DEFENCE: {atk_name}#{attacker['position']} получает броню +{DEFEND_ARMOR_BONUS} ({armor_before}->{attacker['armor']})."
+                    f"{atk_team.upper()} DEFENCE: {atk_name}#{attacker['position']} получает половину урона."
                 )
             return spawned, reason
 
@@ -5149,11 +5307,9 @@ class BattleEnv(gym.Env):
                 self._log(
                     f"{atk_team.upper()} ход: {atk_name}#{attacker['position']} ({unit_type}) не может призвать союзников и встаёт в защиту."
                 )
-                armor_before = int(attacker.get("armor", 0) or 0)
-                attacker["armor"] = armor_before + DEFEND_ARMOR_BONUS
                 attacker["defense"] = 1
                 self._log(
-                    f"{atk_team.upper()} DEFENCE: {atk_name}#{attacker['position']} получает броню +{DEFEND_ARMOR_BONUS} ({armor_before}->{attacker['armor']})."
+                    f"{atk_team.upper()} DEFENCE: {atk_name}#{attacker['position']} получает половину урона."
                 )
             return spawned, reason
 
@@ -5477,6 +5633,7 @@ class BattleEnv(gym.Env):
         for unit in self.combined:
             if int(unit.get("running_away", 0) or 0) == 1 and not self._alive(unit):
                 unit["running_away"] = 0
+                unit["feared"] = 0
 
     def _is_post_victory_healer(self, unit: Optional[Dict], team: str) -> bool:
         return bool(
@@ -5723,11 +5880,9 @@ class BattleEnv(gym.Env):
                         self._log(
                             f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) не может атаковать: доступных целей нет."
                         )
-                        armor_before = int(nxt.get("armor", 0) or 0)
-                        nxt["armor"] = armor_before + DEFEND_ARMOR_BONUS
                         nxt["defense"] = 1
                         self._log(
-                            f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает броню +{DEFEND_ARMOR_BONUS} ({armor_before}->{nxt['armor']})."
+                            f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает половину урона."
                         )
                         break
                 elif nxt_type in MELEE_TYPES:
@@ -5746,11 +5901,9 @@ class BattleEnv(gym.Env):
                         self._log(
                             f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) не может атаковать: доступных целей нет."
                         )
-                        armor_before = int(nxt.get("armor", 0) or 0)
-                        nxt["armor"] = armor_before + DEFEND_ARMOR_BONUS
                         nxt["defense"] = 1
                         self._log(
-                            f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает броню +{DEFEND_ARMOR_BONUS} ({armor_before}->{nxt['armor']})."
+                            f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает половину урона."
                         )
                         break
                 elif nxt_type in AOE_TYPES:
@@ -5767,11 +5920,9 @@ class BattleEnv(gym.Env):
                             self._log(
                                 f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) не находит союзников для лечения."
                             )
-                            armor_before = int(nxt.get("armor", 0) or 0)
-                            nxt["armor"] = armor_before + DEFEND_ARMOR_BONUS
                             nxt["defense"] = 1
                             self._log(
-                                f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает броню +{DEFEND_ARMOR_BONUS} ({armor_before}->{nxt['armor']})."
+                                f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает половину урона."
                             )
                             break
                         recipient = units_by_pos.get(ally_pos)
@@ -5788,11 +5939,9 @@ class BattleEnv(gym.Env):
                             self._log(
                                 f"RED ход: {nxt['name']}#{nxt['position']} (Patriach) не находит союзников для помощи."
                             )
-                            armor_before = int(nxt.get("armor", 0) or 0)
-                            nxt["armor"] = armor_before + DEFEND_ARMOR_BONUS
                             nxt["defense"] = 1
                             self._log(
-                                f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает броню +{DEFEND_ARMOR_BONUS} ({armor_before}->{nxt['armor']})."
+                                f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает половину урона."
                             )
                             break
                         recipient = units_by_pos.get(ally_pos)
@@ -5845,11 +5994,9 @@ class BattleEnv(gym.Env):
                             f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) не находит союзников для поддержки."
                         )
                         if nxt_type == "Alchemist" and nxt.get("team") == "red":
-                            armor_before = int(nxt.get("armor", 0) or 0)
-                            nxt["armor"] = armor_before + DEFEND_ARMOR_BONUS
                             nxt["defense"] = 1
                             self._log(
-                                f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает броню +{DEFEND_ARMOR_BONUS} ({armor_before}->{nxt['armor']})."
+                                f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает половину урона."
                             )
                         break
 
@@ -5881,11 +6028,9 @@ class BattleEnv(gym.Env):
                             self._log(
                                 f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) не находит свободных клеток для призыва."
                             )
-                            armor_before = int(nxt.get("armor", 0) or 0)
-                            nxt["armor"] = armor_before + DEFEND_ARMOR_BONUS
                             nxt["defense"] = 1
                             self._log(
-                                f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает броню +{DEFEND_ARMOR_BONUS} ({armor_before}->{nxt['armor']})."
+                                f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает половину урона."
                             )
                             break
                         log_target = "клетку для призыва"
@@ -5914,11 +6059,9 @@ class BattleEnv(gym.Env):
                                     f"RED ход: {nxt['name']}#{nxt['position']} (Doppelganger) "
                                     f"не находит целей для копирования и встаёт в защиту."
                                 )
-                                armor_before = int(nxt.get("armor", 0) or 0)
-                                nxt["armor"] = armor_before + DEFEND_ARMOR_BONUS
                                 nxt["defense"] = 1
                                 self._log(
-                                    f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает броню +{DEFEND_ARMOR_BONUS} ({armor_before}->{nxt['armor']})."
+                                    f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает половину урона."
                                 )
                             break
                         elif nxt_type == "Baroness":
@@ -5941,11 +6084,9 @@ class BattleEnv(gym.Env):
                                 self._log(
                                     f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) не находит уязвимых целей."
                                 )
-                                armor_before = int(nxt.get("armor", 0) or 0)
-                                nxt["armor"] = armor_before + DEFEND_ARMOR_BONUS
                                 nxt["defense"] = 1
                                 self._log(
-                                    f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает броню +{DEFEND_ARMOR_BONUS} ({armor_before}->{nxt['armor']})."
+                                    f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает половину урона."
                                 )
                                 break
                     self._log(
@@ -6382,8 +6523,6 @@ class BattleEnv(gym.Env):
                 attacker["initiative"] = 0
 
                 if is_defend_action:
-                    armor_before = int(attacker.get("armor", 0) or 0)
-                    attacker["armor"] = armor_before + DEFEND_ARMOR_BONUS
                     attacker["defense"] = 1
                     if (
                         attacker.get("unit_type") in DOUBLE_STRIKE_TYPES
@@ -6391,10 +6530,11 @@ class BattleEnv(gym.Env):
                     ):
                         self.blue_attacks_left = 1
                     self._log(
-                        f"BLUE действие: {attacker['name']}#{attacker['position']} усиливает броню +{DEFEND_ARMOR_BONUS} ({armor_before}->{attacker['armor']})."
+                        f"BLUE действие: {attacker['name']}#{attacker['position']} встаёт в защиту и получает половину урона."
                     )
                 elif is_run_away_action:
                     attacker["running_away"] = 1
+                    attacker["feared"] = 0
                     if (
                         attacker.get("unit_type") in DOUBLE_STRIKE_TYPES
                         and self.blue_attacks_left > 1
@@ -6720,6 +6860,13 @@ class BattleEnv(gym.Env):
             u["burn_damage_per_tick"] = 0
             u["uran_turns_left"] = 0
             u["uran_damage_per_tick"] = 0
+            u["feared"] = 0
+            u["teamated"] = 0
+            u["shattered_armor"] = 0
+            u.pop("lower_damage_original_damage", None)
+            u.pop("lower_damage_original_unit_type", None)
+            u.pop("shatter_original_armor", None)
+            u.pop("shatter_original_unit_type", None)
             u["resilience_used_types"] = []
             u["round_effects_done"] = 0
             u["doppel_copied"] = 0

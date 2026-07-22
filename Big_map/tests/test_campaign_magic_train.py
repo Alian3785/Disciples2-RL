@@ -93,7 +93,7 @@ def test_magic_train_is_registered_and_contains_only_requested_map_objects():
     assert map_config.ruin_rewards == {}
 
 
-def test_magic_train_starts_with_basic_legions_mage_party_and_tower_gold():
+def test_magic_train_starts_with_basic_legions_mage_party_and_prebuilt_tower():
     env = _make_env(Realcapital=1, typeoflord=1, use_boss_starting_roster=True)
     env.reset(seed=123)
 
@@ -115,7 +115,8 @@ def test_magic_train_starts_with_basic_legions_mage_party_and_tower_gold():
     assert env._get_building_gold_cost(
         env.active_buildings[MAGIC_TOWER_BUILDING_ID]
     ) == pytest.approx(150.0)
-    assert bool(env.compute_action_mask()[tower_action]) is True
+    assert env._has_magic_tower_built() is True
+    assert bool(env.compute_action_mask()[tower_action]) is False
 
 
 def test_both_enemy_stacks_are_fully_enclosed_and_unreachable_by_movement():
@@ -183,11 +184,6 @@ def test_learned_magic_can_hit_unreachable_stack_without_starting_battle():
     env = _make_env()
     env.reset(seed=123)
 
-    tower_action = (
-        int(env.GRID_BUILD_ACTION_START)
-        + env.building_keys.index(MAGIC_TOWER_BUILDING_ID)
-    )
-    env.step(tower_action)
     assert env._has_magic_tower_built() is True
 
     spell = env.active_spells[POWERFUL_DAMAGE_SPELL_ID]

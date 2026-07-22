@@ -736,14 +736,20 @@ class CampaignTerritoryMixin:
         except (TypeError, ValueError, IndexError):
             return False
         return normalized_position in self.legions_territory_tile_set
-    @classmethod
-    def _settlement_upgrade_cost_for_level(cls, current_level: int) -> float:
-        """Стоимость апгрейда задается уровнем до улучшения, а не целевым уровнем."""
+    def _settlement_upgrade_cost_for_level(self, current_level: int) -> float:
+        """Вернуть цену роста города с учётом бонуса гильдмастера."""
         try:
             normalized_level = int(current_level)
         except (TypeError, ValueError):
             normalized_level = 0
-        return float(cls.SETTLEMENT_UPGRADE_GOLD_COST_BY_LEVEL.get(normalized_level, 0.0))
+        base_cost = float(
+            self.SETTLEMENT_UPGRADE_GOLD_COST_BY_LEVEL.get(normalized_level, 0.0)
+        )
+        if int(self.typeoflord) == 3:
+            return base_cost * float(
+                self.TYPEOFLORD_THREE_SETTLEMENT_UPGRADE_COST_MULTIPLIER
+            )
+        return base_cost
     def _can_upgrade_settlement(self, settlement_name: str) -> bool:
         """Проверяет, доступен ли апгрейд уже захваченного поселения за текущее золото."""
         if str(settlement_name) not in self.legions_active_settlement_territory_capture_turn_by_name:
