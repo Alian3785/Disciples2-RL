@@ -15,8 +15,7 @@ def test_save_blue_state_restores_battle_start_armor():
     )
     base_armor = int(unit.get("base_armor", unit.get("armor", 0)) or 0)
 
-    # Simulate temporary armor gain from DEFEND that should not persist after battle.
-    unit["armor"] = base_armor + 50
+    # DEFEND is a damage modifier and must not alter persistent armor.
     unit["defense"] = 1
 
     env._save_blue_state()

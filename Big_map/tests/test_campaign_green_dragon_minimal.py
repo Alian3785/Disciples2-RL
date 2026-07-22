@@ -16,6 +16,7 @@ from maps.green_dragon_minimal import (
     GOLD_MINE_TILE,
     GREEN_DRAGON_ENEMY_ID,
     GREEN_DRAGON_NAME,
+    HELL_WARRIORS_ENEMY_ID,
     HERO_START,
     KRAKEN_TILE,
     LEVEL_THREE_CITY_ENEMY_ID,
@@ -74,7 +75,7 @@ def test_green_dragon_minimal_is_registered_and_starts_with_requested_legions_pa
     assert map_config.hero_start == HERO_START
     assert map_config.default_objective == "dragon"
     assert map_config.objective_enemy_id == GREEN_DRAGON_ENEMY_ID == 31
-    assert len(map_config.enemy_stacks) == 24
+    assert len(map_config.enemy_stacks) == 25
     assert map_config.starting_capital_id == 2
     assert map_config.starting_lord_type == 1
     assert map_config.starting_roster == {
@@ -134,6 +135,13 @@ def test_requested_roaming_armies_have_exact_compositions_and_formations():
     }
     for enemy_id, composition in expected.items():
         assert _living_names(env, enemy_id) == Counter(composition)
+    assert _living_names(env, HELL_WARRIORS_ENEMY_ID) == Counter(
+        {
+            "Адский рыцарь": 2,
+            "Толстый бес": 1,
+            "Колдунья": 1,
+        }
+    )
 
     specs = get_map("green_dragon_minimal").enemy_team_specs()
     assert specs[2]["front"] == ["Гоблин", None, "Гоблин"]
@@ -156,11 +164,13 @@ def test_enemy_strength_bands_move_away_from_the_capital_toward_the_dragon():
 
     weak_band = (2, 3, 5, 4, 7, 10, 1)
     middle_band = (8, 17, 12, 9, 16, 18, 13, 6, 15)
-    final_band = (11, 14, 19, 20, GREEN_DRAGON_ENEMY_ID)
+    final_band = (11, 14, 19, HELL_WARRIORS_ENEMY_ID, 20, GREEN_DRAGON_ENEMY_ID)
 
     assert max(map(distance, weak_band)) < min(map(distance, middle_band))
     assert max(map(distance, middle_band)) < min(map(distance, final_band))
-    assert distance(19) < distance(20) < distance(GREEN_DRAGON_ENEMY_ID)
+    assert distance(19) < distance(HELL_WARRIORS_ENEMY_ID) < distance(20) < distance(
+        GREEN_DRAGON_ENEMY_ID
+    )
 
 
 def test_minimal_terrain_cities_resources_and_ruin_match_the_request():
@@ -293,9 +303,9 @@ def test_reduced_map_observation_is_measured_against_default():
 
     assert minimal.grid_size == 32
     assert minimal.grid_legions_territory_obs_size == 32**2 == 1024
-    assert minimal.GRID_OBS_SIZE == 3395
+    assert minimal.GRID_OBS_SIZE == 3483
     assert minimal.BATTLE_OBS_SIZE == default.BATTLE_OBS_SIZE == 1464
-    assert minimal_obs.shape == minimal.observation_space.shape == (4862,)
+    assert minimal_obs.shape == minimal.observation_space.shape == (4950,)
     assert default_obs.shape == default.observation_space.shape == (9864,)
 
 
