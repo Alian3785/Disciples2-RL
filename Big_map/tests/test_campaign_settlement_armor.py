@@ -368,6 +368,40 @@ def test_settlement_upgrade_action_advances_levels_costs_and_updates_city_bonuse
     assert float(unit.get("hp", 0) or 0.0) == pytest.approx(expected_hp)
 
 
+def test_guildmaster_halves_settlement_upgrade_costs():
+    env = CampaignEnv(
+        log_enabled=False,
+        persist_blue_hp=True,
+        Realcapital=2,
+        typeoflord=3,
+    )
+    env.reset(seed=123)
+
+    source_data = next(
+        source
+        for source in env._static_legions_settlement_territory_sources
+        if int(source.get("settlement_level", 0) or 0) == 1
+    )
+    settlement_name = _capture_settlement(env, source_data)
+    action = _settlement_upgrade_action_index(env, settlement_name)
+
+    expected_costs = [75.0, 125.0, 250.0, 375.0]
+    expected_levels = [2, 3, 4, 5]
+    env.gold = sum(expected_costs)
+
+    for expected_cost, expected_level in zip(expected_costs, expected_levels):
+        assert bool(env.compute_action_mask()[action]) is True
+        _, _, terminated, truncated, info = env.step(action)
+        assert terminated is False
+        assert truncated is False
+        assert info.get("settlement_upgrade_applied") is True
+        assert info.get("settlement_upgrade_cost") == pytest.approx(expected_cost)
+        assert int(env.legions_settlement_level_by_name[settlement_name]) == expected_level
+
+    assert env.gold == pytest.approx(0.0)
+    assert bool(env.compute_action_mask()[action]) is False
+
+
 def test_enemy_regeneration_on_city_and_enemy_capital_tiles_uses_percentage_bonus():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)

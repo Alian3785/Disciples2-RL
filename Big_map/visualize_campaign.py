@@ -45,7 +45,6 @@ from battle_env import (
     FIRST_HERO_ITEM_ENEMY_ACTION_START,
     SECOND_HERO_ITEM_ENEMY_ACTION_START,
     HERO_ITEM_TARGET_SLOTS,
-    DEFEND_ARMOR_BONUS,
 )
 from console_encoding import setup_utf8_console
 
@@ -2357,7 +2356,7 @@ def run_campaign_visualization(
         # Логируем действие агента в режиме боя
         if current_mode == "battle" and env_base.battle_env:
             if action_idx == DEFEND_ACTION_INDEX:
-                chosen_line = f"[STEP {step_count}] Агент выбирает action={action_idx} > защита (+{DEFEND_ARMOR_BONUS} брони)"
+                chosen_line = f"[STEP {step_count}] Агент выбирает action={action_idx} > защита (половина получаемого урона)"
             elif action_idx == WAIT_ACTION_INDEX:
                 chosen_line = f"[STEP {step_count}] Агент выбирает action={action_idx} > ожидание (сброс инициативы)"
             elif action_idx == RUN_AWAY_ACTION_INDEX:

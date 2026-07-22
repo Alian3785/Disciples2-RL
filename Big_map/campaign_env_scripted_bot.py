@@ -829,6 +829,7 @@ class CampaignScriptedBotMixin:
             ("paralyzed", 0),
             ("long_paralyzed", 0),
             ("running_away", 0),
+            ("feared", 0),
             ("transformed", 0),
             ("poison_turns_left", 0),
             ("poison_damage_per_tick", 0),
@@ -841,6 +842,12 @@ class CampaignScriptedBotMixin:
         ):
             saved[key] = value
         saved["resilience_used_types"] = []
+        saved.pop("teamated", None)
+        saved.pop("lower_damage_original_damage", None)
+        saved.pop("lower_damage_original_unit_type", None)
+        saved.pop("shattered_armor", None)
+        saved.pop("shatter_original_armor", None)
+        saved.pop("shatter_original_unit_type", None)
         return saved
 
     def _apply_scripted_capital_bot_levelups(self, battle_env: BattleEnv) -> int:

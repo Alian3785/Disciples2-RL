@@ -96,9 +96,9 @@ undead_hordes_buildings_d2 = {
     "und_d2_b021": {"id": "und_d2_b021", "name": "Проклятый могильник","gold": 22.5, "requires": ["Кладбище костей"],     "blocks": ["Драконий могильник"],  "built": 0, "unit": "Змей ужаса", "blocked": 0},
     "und_d2_b022": {"id": "und_d2_b022", "name": "Драконий могильник", "gold": 22.5, "requires": ["Кладбище костей"],     "blocks": ["Проклятый могильник"], "built": 0, "unit": "Драколич", "blocked": 0},
 
-    "und_d2_b023": {"id": "und_d2_b023", "name": "Гильдия",            "gold": 1.5,  "requires": [],                      "blocks": [],                      "built": 1, "unit": "Вор нежити", "blocked": 0},
-    "und_d2_b024": {"id": "und_d2_b024", "name": "Башня магии",        "gold": 1.5,  "requires": [],                      "blocks": [],                      "built": 1, "unit": None, "blocked": 0},
-    "und_d2_b025": {"id": "und_d2_b025", "name": "Храм",               "gold": 3,    "requires": [],                      "blocks": [],                      "built": 1, "unit": None, "blocked": 0},
+    "und_d2_b023": {"id": "und_d2_b023", "name": "Гильдия",            "gold": 1.5,  "requires": [],                      "blocks": [],                      "built": 0, "unit": "Вор нежити", "blocked": 0},
+    "und_d2_b024": {"id": "und_d2_b024", "name": "Башня магии",        "gold": 1.5,  "requires": [],                      "blocks": [],                      "built": 0, "unit": None, "blocked": 0},
+    "und_d2_b025": {"id": "und_d2_b025", "name": "Храм",               "gold": 3,    "requires": [],                      "blocks": [],                      "built": 0, "unit": None, "blocked": 0},
 }
 
 

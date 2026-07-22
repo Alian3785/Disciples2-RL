@@ -11,6 +11,7 @@ HERO_START = (4, 24)
 GREEN_DRAGON_ENEMY_ID = 31
 GREEN_DRAGON_NAME = "Зелёный дракон"
 BLUE_DRAGON_NAME = "Синий дракон"
+HELL_WARRIORS_ENEMY_ID = 21
 LEVEL_TWO_CITY_ENEMY_ID = 40
 LEVEL_THREE_CITY_ENEMY_ID = 41
 RUIN_ENEMY_ID = 42
@@ -180,6 +181,13 @@ ROAMING_ENEMY_STACKS = (
         "Мантикора",
         [None, "Мантикора", None],
         [None, None, None],
+    ),
+    _stack(
+        HELL_WARRIORS_ENEMY_ID,
+        (41, 17),
+        "Два Адских рыцаря, Толстый бес и Колдунья",
+        ["Адский рыцарь", None, "Адский рыцарь"],
+        ["Толстый бес", "Колдунья", None],
     ),
     _stack(
         20,
