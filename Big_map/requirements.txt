@@ -7,6 +7,6 @@ numpy==2.5.1
 pandas==3.0.5
 matplotlib==3.11.1
 pytest==9.1.1
-ruff==0.15.22
+ruff==0.16.0
 tensorboard==2.21.0
 comet_ml==3.58.4
