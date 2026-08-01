@@ -1,0 +1,35 @@
+{
+  "status": "success",
+  "run_id": "seed122-green_dragon_minimal-green_dragon-30602564898-1",
+  "seed": 122,
+  "map": "green_dragon_minimal",
+  "objective": "green_dragon",
+  "commit_sha": "506ad7478e1543a89544456e9024554039f8bc91",
+  "completed_at": "2026-07-31T04:15:09.571659+00:00",
+  "parameters": {
+    "total_steps": 1000000,
+    "map": "green_dragon_minimal",
+    "objective": "green_dragon",
+    "n_envs": 12,
+    "vec_env": "subproc",
+    "vec_start_method": "forkserver",
+    "torch_num_threads": 4,
+    "checkpoint_freq": 500000,
+    "eval_freq": 83334,
+    "scripted_bot": false,
+    "comet": false,
+    "vec_check_nan": false,
+    "diagnostics": false
+  },
+  "artifacts": {
+    "persistent": [
+      "eval/evaluations.npz",
+      "eval/best_model.zip",
+      "eval/best_vecnormalize.pkl",
+      "logs/",
+      "tensorboard/",
+      "plots/"
+    ],
+    "checkpoint_artifact_retention_days": 1
+  }
+}
