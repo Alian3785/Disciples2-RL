@@ -1,0 +1,35 @@
+{
+  "status": "success",
+  "run_id": "seed133-orc_duel-orc-33517702479-1",
+  "seed": 133,
+  "map": "orc_duel",
+  "objective": "orc",
+  "commit_sha": "7c7e724e727b1bf0dcff6315a7d181e28a40bd01",
+  "completed_at": "2026-09-01T14:32:34.522962+00:00",
+  "parameters": {
+    "total_steps": 1000000,
+    "map": "orc_duel",
+    "objective": "orc",
+    "n_envs": 12,
+    "vec_env": "subproc",
+    "vec_start_method": "forkserver",
+    "torch_num_threads": 4,
+    "checkpoint_freq": 500000,
+    "eval_freq": 83334,
+    "scripted_bot": false,
+    "comet": false,
+    "vec_check_nan": false,
+    "diagnostics": false
+  },
+  "artifacts": {
+    "persistent": [
+      "eval/evaluations.npz",
+      "eval/best_model.zip",
+      "eval/best_vecnormalize.pkl",
+      "logs/",
+      "tensorboard/",
+      "plots/"
+    ],
+    "checkpoint_artifact_retention_days": 1
+  }
+}
