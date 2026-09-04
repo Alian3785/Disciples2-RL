@@ -2,14 +2,14 @@
   "active": true,
   "seed": 134,
   "next_map": "default",
-  "next_objective": "blue_dragon",
-  "completed_runs": 356,
+  "next_objective": "full_party",
+  "completed_runs": 357,
   "last_success": {
-    "run_id": "seed134-default-green_dragon-33805730648-1",
+    "run_id": "seed134-default-blue_dragon-33816903453-1",
     "seed": 134,
     "map": "default",
-    "objective": "green_dragon",
-    "completed_at": "2026-09-03T21:42:26.992427+00:00",
+    "objective": "blue_dragon",
+    "completed_at": "2026-09-04T00:05:36.191677+00:00",
     "commit_sha": "e803b8ca831dc175a522b53c6f9922ba4c15b868"
   }
 }
