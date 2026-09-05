@@ -1,15 +1,15 @@
 {
   "active": true,
   "seed": 134,
-  "next_map": "orc_duel",
-  "next_objective": "orc",
-  "completed_runs": 364,
+  "next_map": "builder",
+  "next_objective": "build_all",
+  "completed_runs": 365,
   "last_success": {
-    "run_id": "seed134-super_last_stand-waves-33961073899-1",
+    "run_id": "seed134-orc_duel-orc-33974176995-1",
     "seed": 134,
-    "map": "super_last_stand",
-    "objective": "waves",
-    "completed_at": "2026-09-05T11:23:24.636023+00:00",
+    "map": "orc_duel",
+    "objective": "orc",
+    "completed_at": "2026-09-05T15:47:38.078309+00:00",
     "commit_sha": "e803b8ca831dc175a522b53c6f9922ba4c15b868"
   }
 }
