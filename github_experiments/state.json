@@ -1,15 +1,15 @@
 {
   "active": true,
   "seed": 134,
-  "next_map": "trade_train",
-  "next_objective": "all_enemies",
-  "completed_runs": 372,
+  "next_map": "wotans_retribution",
+  "next_objective": "cities",
+  "completed_runs": 373,
   "last_success": {
-    "run_id": "seed134-siege_train-target_enemy-34057882413-1",
+    "run_id": "seed134-trade_train-all_enemies-34065321960-1",
     "seed": 134,
-    "map": "siege_train",
-    "objective": "target_enemy",
-    "completed_at": "2026-09-06T21:02:44.441282+00:00",
+    "map": "trade_train",
+    "objective": "all_enemies",
+    "completed_at": "2026-09-06T23:27:30.026000+00:00",
     "commit_sha": "e803b8ca831dc175a522b53c6f9922ba4c15b868"
   }
 }
