@@ -1,0 +1,35 @@
+{
+  "status": "success",
+  "run_id": "seed134-wotans_retribution-cities-34084065976-1",
+  "seed": 134,
+  "map": "wotans_retribution",
+  "objective": "cities",
+  "commit_sha": "42c17223b48410eb078f2d9b0ff45c9aafc3056d",
+  "completed_at": "2026-09-07T05:22:22.044347+00:00",
+  "parameters": {
+    "total_steps": 1000000,
+    "map": "wotans_retribution",
+    "objective": "cities",
+    "n_envs": 12,
+    "vec_env": "subproc",
+    "vec_start_method": "forkserver",
+    "torch_num_threads": 4,
+    "checkpoint_freq": 500000,
+    "eval_freq": 83334,
+    "scripted_bot": false,
+    "comet": false,
+    "vec_check_nan": false,
+    "diagnostics": false
+  },
+  "artifacts": {
+    "persistent": [
+      "eval/evaluations.npz",
+      "eval/best_model.zip",
+      "eval/best_vecnormalize.pkl",
+      "logs/",
+      "tensorboard/",
+      "plots/"
+    ],
+    "checkpoint_artifact_retention_days": 1
+  }
+}
