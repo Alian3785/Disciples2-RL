@@ -1,15 +1,15 @@
 {
   "active": true,
-  "seed": 135,
+  "seed": 136,
   "next_map": "default",
   "next_objective": "cities",
-  "completed_runs": 374,
+  "completed_runs": 394,
   "last_success": {
-    "run_id": "seed134-wotans_retribution-cities-34084065976-1",
-    "seed": 134,
+    "run_id": "seed135-wotans_retribution-cities-34593627073-1",
+    "seed": 135,
     "map": "wotans_retribution",
     "objective": "cities",
-    "completed_at": "2026-09-07T05:22:22.044347+00:00",
-    "commit_sha": "42c17223b48410eb078f2d9b0ff45c9aafc3056d"
+    "completed_at": "2026-09-11T12:13:05.626706+00:00",
+    "commit_sha": "2c109f3a806f59ef85c7d79bd29137355db6ae33"
   }
 }
