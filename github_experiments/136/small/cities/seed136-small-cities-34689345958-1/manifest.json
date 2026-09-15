@@ -1,0 +1,35 @@
+{
+  "status": "success",
+  "run_id": "seed136-small-cities-34689345958-1",
+  "seed": 136,
+  "map": "small",
+  "objective": "cities",
+  "commit_sha": "d3e4ebb4d1b6c94eef6c98c4e9d67406a846be62",
+  "completed_at": "2026-09-12T11:28:30.013635+00:00",
+  "parameters": {
+    "total_steps": 1000000,
+    "map": "small",
+    "objective": "cities",
+    "n_envs": 12,
+    "vec_env": "subproc",
+    "vec_start_method": "forkserver",
+    "torch_num_threads": 4,
+    "checkpoint_freq": 500000,
+    "eval_freq": 83334,
+    "scripted_bot": false,
+    "comet": false,
+    "vec_check_nan": false,
+    "diagnostics": false
+  },
+  "artifacts": {
+    "persistent": [
+      "eval/evaluations.npz",
+      "eval/best_model.zip",
+      "eval/best_vecnormalize.pkl",
+      "logs/",
+      "tensorboard/",
+      "plots/"
+    ],
+    "checkpoint_artifact_retention_days": 1
+  }
+}
