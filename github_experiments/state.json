@@ -2,14 +2,14 @@
   "active": true,
   "seed": 137,
   "next_map": "small",
-  "next_objective": "green_dragon",
-  "completed_runs": 419,
+  "next_objective": "blue_dragon",
+  "completed_runs": 420,
   "last_success": {
-    "run_id": "seed137-small-cities-35151636320-1",
+    "run_id": "seed137-small-green_dragon-35183623002-1",
     "seed": 137,
     "map": "small",
-    "objective": "cities",
-    "completed_at": "2026-09-16T22:00:46.439490+00:00",
+    "objective": "green_dragon",
+    "completed_at": "2026-09-17T05:36:51.717872+00:00",
     "commit_sha": "0ca693e14c1968315b0871b008dfec312f610c76"
   }
 }
