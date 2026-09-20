@@ -1,0 +1,35 @@
+{
+  "status": "success",
+  "run_id": "seed137-formation_train-all_enemies-35393972826-1",
+  "seed": 137,
+  "map": "formation_train",
+  "objective": "all_enemies",
+  "commit_sha": "0ca693e14c1968315b0871b008dfec312f610c76",
+  "completed_at": "2026-09-18T21:29:54.501453+00:00",
+  "parameters": {
+    "total_steps": 1000000,
+    "map": "formation_train",
+    "objective": "all_enemies",
+    "n_envs": 12,
+    "vec_env": "subproc",
+    "vec_start_method": "forkserver",
+    "torch_num_threads": 4,
+    "checkpoint_freq": 500000,
+    "eval_freq": 83334,
+    "scripted_bot": false,
+    "comet": false,
+    "vec_check_nan": false,
+    "diagnostics": false
+  },
+  "artifacts": {
+    "persistent": [
+      "eval/evaluations.npz",
+      "eval/best_model.zip",
+      "eval/best_vecnormalize.pkl",
+      "logs/",
+      "tensorboard/",
+      "plots/"
+    ],
+    "checkpoint_artifact_retention_days": 1
+  }
+}
