@@ -13,35 +13,8 @@ from pathlib import Path
 from typing import Any
 
 
-MAP_ROTATION = (
-    "default",
-    "small",
-    "green_dragon_minimal",
-    "super_last_stand",
-    "orc_duel",
-    "builder",
-    "formation_train",
-    "hire_train",
-    "item_train",
-    "magic_train",
-    "scroll_train",
-    "siege_train",
-    "trade_train",
-    "wotans_retribution",
-)
-# One seed is held constant until every supported map/objective pair has run.
-# The order deliberately keeps modes of the same physical map adjacent.
+# One seed is held constant until all seven selected training maps have run.
 MODE_ROTATION = (
-    ("default", "cities"),
-    ("default", "green_dragon"),
-    ("default", "blue_dragon"),
-    ("default", "full_party"),
-    ("small", "cities"),
-    ("small", "green_dragon"),
-    ("small", "blue_dragon"),
-    ("green_dragon_minimal", "green_dragon"),
-    ("green_dragon_minimal", "blue_dragon"),
-    ("super_last_stand", "waves"),
     ("orc_duel", "orc"),
     ("builder", "build_all"),
     ("formation_train", "all_enemies"),
@@ -49,32 +22,22 @@ MODE_ROTATION = (
     ("item_train", "all_enemies"),
     ("magic_train", "all_enemies"),
     ("scroll_train", "all_enemies"),
-    ("siege_train", "target_enemy"),
-    ("trade_train", "all_enemies"),
-    ("wotans_retribution", "cities"),
 )
+MAP_ROTATION = tuple(map_name for map_name, _objective in MODE_ROTATION)
+RETIRED_MAPS = {
+    "default", "small", "green_dragon_minimal", "super_last_stand",
+    "siege_train", "trade_train", "wotans_retribution",
+}
+TRAINING_STEPS = 1_500_000
+CHECKPOINT_FREQ = 500_000
+EVAL_FREQ = 83_334
 NEXT_MODE = {
     mode: MODE_ROTATION[(index + 1) % len(MODE_ROTATION)]
     for index, mode in enumerate(MODE_ROTATION)
 }
 # Default objective for a manually selected smoke map. Scheduled runs use the
 # exact pair stored in next_map + next_objective instead.
-MAP_OBJECTIVES = {
-    "default": "full_party",
-    "small": "green_dragon",
-    "green_dragon_minimal": "green_dragon",
-    "super_last_stand": "waves",
-    "orc_duel": "orc",
-    "builder": "build_all",
-    "formation_train": "all_enemies",
-    "hire_train": "orc",
-    "item_train": "all_enemies",
-    "magic_train": "all_enemies",
-    "scroll_train": "all_enemies",
-    "siege_train": "target_enemy",
-    "trade_train": "all_enemies",
-    "wotans_retribution": "cities",
-}
+MAP_OBJECTIVES = dict(MODE_ROTATION)
 OBJECTIVE_FLAGS = {
     "green_dragon": "--dragon",
     "blue_dragon": "--blue-dragon",
@@ -83,8 +46,8 @@ OBJECTIVE_FLAGS = {
 DEFAULT_STATE = {
     "active": True,
     "seed": 101,
-    "next_map": "default",
-    "next_objective": "cities",
+    "next_map": MODE_ROTATION[0][0],
+    "next_objective": MODE_ROTATION[0][1],
     "completed_runs": 0,
     "last_success": None,
 }
@@ -97,11 +60,10 @@ def load_state(path: Path) -> dict[str, Any]:
     if not isinstance(data.get("seed"), int) or data["seed"] < 0:
         raise ValueError("state.seed must be a non-negative integer")
     if "next_map" not in data and data.get("next_objective") is not None:
-        # Migrate the previous three-objective small-map rotation at the next
-        # successful run. A completed legacy cycle starts the all-map rotation
-        # from its first map without discarding the accumulated seed/counters.
-        data["next_map"] = "default"
-        data["next_objective"] = "cities"
+        # Preserve the accumulated seed/counters when migrating legacy state.
+        data["next_map"], data["next_objective"] = MODE_ROTATION[0]
+    if data.get("next_map") in RETIRED_MAPS:
+        data["next_map"], data["next_objective"] = MODE_ROTATION[0]
     if data.get("next_map") not in MAP_ROTATION:
         raise ValueError(f"state.next_map must be one of {MAP_ROTATION}")
     if "next_objective" not in data:
@@ -174,9 +136,9 @@ def prepare_run(
         eval_freq = 2_048
     else:
         run_dir = output_base / str(seed) / map_name / objective / run_id
-        total_steps = 1_000_000
-        checkpoint_freq = 500_000
-        eval_freq = 83_334
+        total_steps = TRAINING_STEPS
+        checkpoint_freq = CHECKPOINT_FREQ
+        eval_freq = EVAL_FREQ
 
     return {
         "should_run": "true",
@@ -229,10 +191,12 @@ def finalize_success(
     _require_files(
         checkpoint_dir,
         {
-            "campaign_ppo_step_500000.zip",
-            "vecnormalize_step_500000.pkl",
-            "campaign_ppo_step_1000000.zip",
-            "vecnormalize_step_1000000.pkl",
+            filename
+            for step in range(CHECKPOINT_FREQ, TRAINING_STEPS + 1, CHECKPOINT_FREQ)
+            for filename in (
+                f"campaign_ppo_step_{step}.zip",
+                f"vecnormalize_step_{step}.pkl",
+            )
         },
         "scheduled checkpoints",
     )
@@ -256,15 +220,15 @@ def finalize_success(
         "commit_sha": commit_sha,
         "completed_at": completed_at,
         "parameters": {
-            "total_steps": 1_000_000,
+            "total_steps": TRAINING_STEPS,
             "map": map_name,
             "objective": objective,
             "n_envs": 12,
             "vec_env": "subproc",
             "vec_start_method": "forkserver",
             "torch_num_threads": 4,
-            "checkpoint_freq": 500_000,
-            "eval_freq": 83_334,
+            "checkpoint_freq": CHECKPOINT_FREQ,
+            "eval_freq": EVAL_FREQ,
             "scripted_bot": False,
             "comet": False,
             "vec_check_nan": False,
@@ -323,7 +287,7 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("schedule", "workflow_dispatch"),
         required=True,
     )
-    prepare.add_argument("--manual-map", choices=MAP_ROTATION, default="default")
+    prepare.add_argument("--manual-map", choices=MAP_ROTATION, default=MAP_ROTATION[0])
     prepare.add_argument("--run-token", required=True)
     prepare.add_argument(
         "--github-output",
