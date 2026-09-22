@@ -2160,8 +2160,13 @@ def run_campaign_visualization(
     seed: int | None = None,
     max_grid_steps: int = 1800,
     map_name: str = "default",
+    use_boss_starting_roster: bool | None = None,
 ):
-    """Запускает визуализацию кампании."""
+    """Запускает визуализацию кампании.
+
+    use_boss_starting_roster: None — дефолт карты, False — классический отряд
+    (как при обучении с --no-boss-roster); должен совпадать с обучением модели.
+    """
 
     # Загрузка модели
     if model_path and os.path.exists(model_path):
@@ -2194,6 +2199,7 @@ def run_campaign_visualization(
             campaign_objective=campaign_objective,
             max_grid_steps=max_grid_steps,
             Realcapital=2,
+            use_boss_starting_roster=use_boss_starting_roster,
         )
 
     env_base = make_campaign_env(log_enabled=True)
@@ -2852,6 +2858,21 @@ if __name__ == "__main__":
         action="store_true",
         help="Disable the scripted Empire capital bot",
     )
+    parser.add_argument(
+        "--no-boss-roster",
+        action="store_true",
+        help="Start with the classic party instead of the map's boss roster (match training)",
+    )
+    parser.add_argument(
+        "--vecnormalize",
+        type=str,
+        default=None,
+        help=(
+            "VecNormalize .pkl saved with the model; without it a model trained with "
+            "normalized observations plays on raw inputs"
+        ),
+    )
+    parser.add_argument("--seed", type=int, default=None, help="Optional episode seed")
     args = parser.parse_args()
 
     # Ищем модель
@@ -2871,4 +2892,7 @@ if __name__ == "__main__":
         map_name=args.map_name,
         campaign_objective=args.objective,
         scripted_capital_bot_enabled=not args.no_scripted_bot,
+        vecnormalize_path=args.vecnormalize,
+        seed=args.seed,
+        use_boss_starting_roster=False if args.no_boss_roster else None,
     )

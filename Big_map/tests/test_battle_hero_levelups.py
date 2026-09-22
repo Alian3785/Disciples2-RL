@@ -45,8 +45,8 @@ def test_hero_levelup_raises_level_resets_exp_and_buffs_hero_stats():
     assert duke["Level"] == 1
     assert duke["exp_current"] == 0
     assert duke["exp_required"] == 650
-    assert duke["damage"] == 55
-    assert duke["original_damage"] == 55
+    assert duke["damage"] == 60
+    assert duke["original_damage"] == 60
     assert duke["health"] == 165
     assert duke["max_health"] == 165
     assert duke["exp_kill"] == 66
@@ -90,8 +90,8 @@ def test_hero_levelup_to_fourth_level_grants_endurance_health_bonus():
     assert duke["Level"] == 4
     assert duke["exp_current"] == 0
     assert duke["exp_required"] == 1650
-    assert duke["health"] == 264
-    assert duke["max_health"] == 264
+    assert duke["health"] == 258
+    assert duke["max_health"] == 258
     assert duke["exp_kill"] == 80
     assert duke["accuracy"] == 83
     assert duke["needaunit"] == 0

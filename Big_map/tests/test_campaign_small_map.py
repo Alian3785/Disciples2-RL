@@ -9,6 +9,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from campaign_env import CampaignEnv
 from maps import available_maps, get_map
+from maps.base import settlement_footprint_blocks
 
 
 def _make_small_env(**kwargs) -> CampaignEnv:
@@ -27,7 +28,19 @@ def test_small_map_is_registered_and_halved():
     assert len(default.enemy_stacks) == 76  # 75 уникальных id, стек 22 задан дважды
     assert len(small.chests) == len(default.chests) // 2
     assert len(small.mana_sources) == len(default.mana_sources) // 2
-    assert len(small.obstacle_blocks) == (len(default.obstacle_blocks) + 1) // 2
+    # Препятствия прорежены вдвое, но габариты обеих столиц и обоих оставленных
+    # городов возвращены целиком (без дублей с уже прореженным списком).
+    thinned_blocks = default.obstacle_blocks[::2]
+    settlement_blocks = settlement_footprint_blocks(
+        capitals=(default.hero_start, default.empire_territory_source_tile),
+        cities=small.village_heal_tiles,
+    )
+    assert small.obstacle_blocks == (
+        *thinned_blocks,
+        *(block for block in settlement_blocks if block not in thinned_blocks),
+    )
+    assert len(thinned_blocks) == (len(default.obstacle_blocks) + 1) // 2
+    assert set(settlement_blocks) <= set(default.obstacle_blocks)
     assert len(small.ruin_rewards) == 2
     assert len(small.merchant_sites) == 1
     assert len(small.mercenary_sites) == 1

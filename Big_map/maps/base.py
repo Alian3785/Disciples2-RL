@@ -221,6 +221,74 @@ def _no_tiles() -> Tuple[Tuple[int, int], ...]:
     return ()
 
 
+# Габариты поселений на сетке кампании — скопированы с occupancy-карты сценария
+# «A Return To Simpler Times» (maps/default.py). Столица занимает 5x5 клеток,
+# её единственная открытая клетка (вход, она же старт героя) — середина
+# восточной стороны; город занимает 4x4, вход — юго-восточный угол. Вход
+# остаётся проходимым сам по себе: resolve_obstacle_tiles никогда не ставит
+# препятствие на старт героя, heal tile или клетку вражеского отряда.
+CAPITAL_FOOTPRINT_SIZE = 5
+CAPITAL_ENTRANCE_OFFSET: Tuple[int, int] = (4, 2)
+CITY_FOOTPRINT_SIZE = 4
+CITY_ENTRANCE_OFFSET: Tuple[int, int] = (3, 3)
+
+
+def _footprint_block(
+    entrance: Tuple[int, int],
+    entrance_offset: Tuple[int, int],
+    size: int,
+    grid_size: Optional[int],
+) -> Tuple[int, int, int, int]:
+    x0 = int(entrance[0]) - int(entrance_offset[0])
+    y0 = int(entrance[1]) - int(entrance_offset[1])
+    x1 = x0 + int(size)
+    y1 = y0 + int(size)
+    if grid_size is not None:
+        # Обрезаем по краю карты, не сдвигая: вход должен остаться на своём месте.
+        x0, y0 = max(0, x0), max(0, y0)
+        x1, y1 = min(int(grid_size), x1), min(int(grid_size), y1)
+    return (x0, y0, max(0, x1 - x0), max(0, y1 - y0))
+
+
+def capital_footprint_block(
+    entrance: Tuple[int, int],
+    *,
+    grid_size: Optional[int] = None,
+) -> Tuple[int, int, int, int]:
+    """Obstacle-блок 5x5 столицы с входом на клетке ``entrance``."""
+    return _footprint_block(entrance, CAPITAL_ENTRANCE_OFFSET, CAPITAL_FOOTPRINT_SIZE, grid_size)
+
+
+def city_footprint_block(
+    entrance: Tuple[int, int],
+    *,
+    grid_size: Optional[int] = None,
+) -> Tuple[int, int, int, int]:
+    """Obstacle-блок 4x4 города с входом (heal tile) на клетке ``entrance``."""
+    return _footprint_block(entrance, CITY_ENTRANCE_OFFSET, CITY_FOOTPRINT_SIZE, grid_size)
+
+
+def settlement_footprint_blocks(
+    *,
+    capitals: Tuple[Tuple[int, int], ...] = (),
+    cities: Tuple[Tuple[int, int], ...] = (),
+    grid_size: Optional[int] = None,
+) -> Tuple[Tuple[int, int, int, int], ...]:
+    """Obstacle-блоки для всех столиц и городов карты (в порядке аргументов)."""
+    blocks: list[Tuple[int, int, int, int]] = []
+    for entrance in capitals:
+        blocks.append(capital_footprint_block(entrance, grid_size=grid_size))
+    for entrance in cities:
+        blocks.append(city_footprint_block(entrance, grid_size=grid_size))
+    return tuple(blocks)
+
+
+def footprint_tiles(block: Tuple[int, int, int, int]) -> frozenset[Tuple[int, int]]:
+    """Все клетки obstacle-блока (включая вход — его вырежет resolve_obstacle_tiles)."""
+    x0, y0, width, height = (int(value) for value in block)
+    return frozenset((x, y) for x in range(x0, x0 + width) for y in range(y0, y0 + height))
+
+
 @dataclass(frozen=True)
 class MapConfig:
     """Полное описание содержимого одной кампанейской карты.
@@ -309,6 +377,10 @@ class MapConfig:
     # Optional fixed faction/lord identity for scenario-specific starting parties.
     starting_capital_id: Optional[int] = None
     starting_lord_type: Optional[int] = None
+    # Buildings already standing in the capital at episode start, by display name
+    # (e.g. "Храм"). They cost nothing and are applied after the lord's own free
+    # starting building, so a map can open mechanics that normally require a build.
+    starting_built_buildings: Tuple[str, ...] = ()
     # Optional per-free-leadership-point step penalty override for focused maps.
     leadership_step_penalty: Optional[float] = None
     # Optional override for the REST/end-turn campaign penalty.

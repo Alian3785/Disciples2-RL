@@ -130,7 +130,7 @@ class CampaignMaskMixin:
             if self._merchant_sites_at_position(self.grid_env.agent_pos):
                 for idx, item_name in enumerate(self.scenario_merchant_item_names):
                     item_data = self._merchant_item_definition(item_name) or {}
-                    item_price = float(item_data.get("price", 0.0) or 0.0)
+                    item_price = self._shop_buy_price(item_data.get("price", 0.0))
                     mask[self.GRID_MERCHANT_POTION_BUY_ACTION_START + idx] = (
                         bool(item_name)
                         and float(self.gold or 0.0) >= item_price
@@ -144,7 +144,7 @@ class CampaignMaskMixin:
                 for idx, spell_data in enumerate(self.SPELL_SHOP_BUY_SPELLS):
                     spell_name = str(spell_data.get("name", "") or "")
                     spell_id = str(spell_data.get("spell_id", "") or "")
-                    spell_price = float(spell_data.get("price", 0.0) or 0.0)
+                    spell_price = self._shop_buy_price(spell_data.get("price", 0.0))
                     mask[self.GRID_SPELL_SHOP_BUY_ACTION_START + idx] = (
                         bool(spell_name)
                         and float(self.gold or 0.0) >= spell_price

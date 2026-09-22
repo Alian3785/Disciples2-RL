@@ -123,6 +123,7 @@ class CampaignMapSitesMixin:
         *,
         units: Optional[List[Dict]] = None,
         allow_boots: bool = True,
+        allow_spell_effects: bool = True,
     ) -> int:
         """Считает стоимость входа в клетку кампании."""
         if self._travel_hero_ignores_terrain(units=units):
@@ -133,6 +134,9 @@ class CampaignMapSitesMixin:
             cost = int(self.GRID_TERRAIN_MOVE_COSTS.get(terrain, self.GRID_MOVE_COST))
         except (TypeError, ValueError):
             cost = int(self.GRID_MOVE_COST)
+
+        if allow_spell_effects and self._blue_stack_ignores_terrain_penalty(terrain):
+            cost = min(cost, int(self.GRID_MOVE_COST))
 
         boot_cost = (
             self._active_boot_terrain_move_cost(terrain, units=units)
@@ -217,6 +221,10 @@ class CampaignMapSitesMixin:
             )
         if self._hero_has_might(units=[hero]):
             abilities.append(f"Мощь ({self.HERO_MIGHT_DESCRIPTION})")
+        abilities.extend(
+            label for level, _, label, *_ in HERO_LEVEL_STAT_ABILITIES
+            if self._hero_level(units=[hero]) >= level
+        )
         if self._hero_has_flying(hero):
             abilities.append("Полёт (игнорирует тип клетки при перемещении)")
 
@@ -396,7 +404,7 @@ class CampaignMapSitesMixin:
         )
         item_data = self._merchant_item_definition(item_name) or {}
         item_name = str(item_data.get("name", item_name) or "")
-        item_price = float(item_data.get("price", 0.0) or 0.0)
+        item_price = self._shop_buy_price(item_data.get("price", 0.0))
         site_names = self._merchant_sites_at_position(self.grid_env.agent_pos)
         site_name = self._merchant_site_for_item(item_name, position=self.grid_env.agent_pos)
         stock_before = self._merchant_item_stock(site_name, item_name) if site_name else 0
@@ -461,7 +469,7 @@ class CampaignMapSitesMixin:
         )
         spell_name = str(spell_data.get("name", "") or "")
         spell_id = str(spell_data.get("spell_id", "") or "")
-        spell_price = float(spell_data.get("price", 0.0) or 0.0)
+        spell_price = self._shop_buy_price(spell_data.get("price", 0.0))
         site_names = self._spell_shop_sites_at_position(self.grid_env.agent_pos)
         site_name = self._spell_shop_site_for_spell(spell_name, position=self.grid_env.agent_pos)
         stock_before = self._spell_shop_spell_stock(site_name, spell_name) if site_name else 0
@@ -544,7 +552,7 @@ class CampaignMapSitesMixin:
         stock_before = 0
         if option is not None:
             try:
-                hire_cost = max(0.0, float(option.get("gold", 0.0) or 0.0))
+                hire_cost = self._shop_buy_price(option.get("gold", 0.0))
             except (TypeError, ValueError):
                 hire_cost = 0.0
             stock_before = max(0, int(option.get("stock", 0) or 0))
@@ -1144,7 +1152,7 @@ class CampaignMapSitesMixin:
                     "slot": int(entry.get("slot", 0) or 0),
                     "unit_id": str(entry.get("unit_id", "") or ""),
                     "unit_name": str(entry.get("unit_name", "") or ""),
-                    "gold": float(entry.get("gold", 0.0) or 0.0),
+                    "gold": self._shop_buy_price(entry.get("gold", 0.0)),
                     "stock": max(0, int(entry.get("stock", 0) or 0)),
                     "stand": str(entry.get("stand", "") or ""),
                     "unit_type": str(entry.get("unit_type", "") or ""),

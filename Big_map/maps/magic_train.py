@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from maps.base import MapConfig
+from maps.base import MapConfig, settlement_footprint_blocks
 
 GRID_SIZE = 48
 HERO_START = (5, 27)
@@ -12,11 +12,13 @@ SECOND_ENEMY_ID = 2
 FIRST_ENEMY_TILE = (30, 14)
 SECOND_ENEMY_TILE = (38, 35)
 
+# Все источники стоят сразу за восточным входом столицы (сама столица 5x5
+# занята стенами), чтобы территория захватила их на первом же ходу.
 MANA_SOURCE_TILES = {
-    "life": (4, 27),
+    "life": (6, 26),
     "runes": (6, 27),
-    "infernal": (5, 26),
-    "death": (5, 28),
+    "infernal": (6, 28),
+    "death": (7, 27),
 }
 
 
@@ -34,12 +36,16 @@ ENEMY_ENCLOSURE_BLOCKS = (
     *_enclosure_blocks(FIRST_ENEMY_TILE),
     *_enclosure_blocks(SECOND_ENEMY_TILE),
 )
+OBSTACLE_BLOCKS = (
+    *settlement_footprint_blocks(capitals=(HERO_START,)),
+    *ENEMY_ENCLOSURE_BLOCKS,
+)
 
 MAP = MapConfig(
     name="magic_train",
     grid_size=GRID_SIZE,
     hero_start=HERO_START,
-    obstacle_blocks=ENEMY_ENCLOSURE_BLOCKS,
+    obstacle_blocks=OBSTACLE_BLOCKS,
     empty_tiles=(),
     village_heal_tiles=(),
     settlement_level_by_heal_tile={},

@@ -857,6 +857,7 @@ def test_legions_settlement_territory_requires_full_city_clear_and_then_grows_fr
     assert "Стагириас" not in env.legions_active_settlement_territory_capture_turn_by_name
 
     env.grid_env.mark_enemy_defeated(67)
+    env.grid_env.agent_pos = (6, 4)
     assert env._activate_legions_settlement_territory_if_cleared(67) == ["Стагириас"]
     assert env.legions_active_settlement_territory_capture_turn_by_name["Стагириас"] == 0
     assert env.legions_settlement_territory_tiles_by_name["Стагириас"] == ((6, 4),)
@@ -889,13 +890,16 @@ def test_legions_settlement_territories_use_configured_growth_rates():
     env.reset(seed=123)
 
     env.grid_env.mark_enemy_defeated(22)
+    env.grid_env.agent_pos = tuple(env.grid_env.enemy_positions[22])
     assert env._activate_legions_settlement_territory_if_cleared(22) == ["Порт Бирмингем"]
 
     env.grid_env.mark_enemy_defeated(33)
+    env.grid_env.agent_pos = tuple(env.grid_env.enemy_positions[33])
     assert env._activate_legions_settlement_territory_if_cleared(33) == ["Кордилия"]
 
     env.grid_env.mark_enemy_defeated(35)
     env.grid_env.mark_enemy_defeated(69)
+    env.grid_env.agent_pos = tuple(env.grid_env.enemy_positions[69])
     assert env._activate_legions_settlement_territory_if_cleared(69) == ["Соругирилла"]
 
     env._advance_turns(1)

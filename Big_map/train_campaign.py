@@ -267,6 +267,7 @@ def make_env(
     empire_territory_enabled: bool = True,
     campaign_objective: str | None = None,
     map_name: str = "default",
+    use_boss_starting_roster: bool | None = None,
 ):
     env = CampaignEnv(
         # grid_size не передаем: берется игровой размер выбранной карты.
@@ -281,6 +282,8 @@ def make_env(
         campaign_objective=campaign_objective,
         max_grid_steps=3000,
         Realcapital=2,
+        # None -> дефолт карты (на default это боссовые демоны).
+        use_boss_starting_roster=use_boss_starting_roster,
     )
     # Жёсткий потолок полной длины эпизода: в eval — eval_max_episode_steps,
     # в обучении — TRAIN_MAX_EPISODE_STEPS (гарантирует завершение даже при
@@ -2541,6 +2544,14 @@ if __name__ == "__main__":
         help="Disable the scripted capital bot completely for faster training",
     )
     parser.add_argument(
+        "--no-boss-roster",
+        action="store_true",
+        help=(
+            "Start with the classic Legions party (Одержимый x2, Герцог, Сектант) "
+            "instead of the map's default boss demons roster"
+        ),
+    )
+    parser.add_argument(
         "--no-empire-territory",
         action="store_true",
         help="Disable Empire territory expansion and its observation layer for faster training",
@@ -2737,6 +2748,8 @@ if __name__ == "__main__":
     FREEZE_DYNAMIC_ACTION_LAYOUT = not bool(args.no_freeze_action_layout)
     SCRIPTED_CAPITAL_BOT_ENABLED = not bool(args.no_scripted_bot)
     EMPIRE_TERRITORY_ENABLED = not bool(args.no_empire_territory)
+    # None оставляет дефолт карты; False принудительно даёт классический отряд.
+    USE_BOSS_STARTING_ROSTER = False if bool(args.no_boss_roster) else None
     MAP_NAME = str(args.map_name or "default")
     selected_objective_flags = sum(
         int(enabled)
@@ -2773,6 +2786,7 @@ if __name__ == "__main__":
         map_name=MAP_NAME,
         campaign_objective=CAMPAIGN_OBJECTIVE,
         Realcapital=2,
+        use_boss_starting_roster=USE_BOSS_STARTING_ROSTER,
         **REWARD_CONFIG,
     )
     # Фактическая цель после применения map-default (для run-name и метрик).
@@ -2867,6 +2881,7 @@ if __name__ == "__main__":
             "freeze_dynamic_action_layout": bool(FREEZE_DYNAMIC_ACTION_LAYOUT),
             "scripted_capital_bot_enabled": bool(SCRIPTED_CAPITAL_BOT_ENABLED),
             "empire_territory_enabled": bool(EMPIRE_TERRITORY_ENABLED),
+            "use_boss_starting_roster": bool(test_env.use_boss_starting_roster),
             "torch_num_threads": TORCH_NUM_THREADS,
             "grid_size": DEFAULT_GRID_SIZE,
             "num_enemies": len(test_env.grid_env.enemy_positions),
@@ -2947,6 +2962,7 @@ if __name__ == "__main__":
         empire_territory_enabled=EMPIRE_TERRITORY_ENABLED,
         campaign_objective=CAMPAIGN_OBJECTIVE,
         map_name=MAP_NAME,
+        use_boss_starting_roster=USE_BOSS_STARTING_ROSTER,
     )
     print(f"Создание {N_ENVS} параллельных сред ({VEC_ENV_MODE})...")
     vec_env = make_vec_env(
@@ -2988,6 +3004,7 @@ if __name__ == "__main__":
                 empire_territory_enabled=EMPIRE_TERRITORY_ENABLED,
                 campaign_objective=CAMPAIGN_OBJECTIVE,
                 map_name=MAP_NAME,
+                use_boss_starting_roster=USE_BOSS_STARTING_ROSTER,
             )
         ]
     )
@@ -3136,6 +3153,15 @@ if __name__ == "__main__":
     print(f"VecCheckNan: {'enabled' if USE_VEC_CHECK_NAN else 'disabled'}")
     print(f"Freeze action layout: {'enabled' if FREEZE_DYNAMIC_ACTION_LAYOUT else 'disabled'}")
     print(f"Empire territory: {'enabled' if EMPIRE_TERRITORY_ENABLED else 'disabled'}")
+    print(
+        "Scripted capital bot: "
+        f"{'enabled' if SCRIPTED_CAPITAL_BOT_ENABLED else 'disabled'}"
+    )
+    print(
+        "Starting roster: "
+        f"{'boss demons' if test_env.use_boss_starting_roster else 'classic party'} "
+        f"({', '.join(str(unit.get('name', '')) for unit in test_env.blue_team_state if str(unit.get('name', '')) != 'пусто')})"
+    )
     print(f"Torch threads per process: {TORCH_NUM_THREADS}")
     print(f"Diagnostics: {'enabled' if USE_DIAGNOSTICS else 'disabled'}")
     print(

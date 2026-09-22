@@ -10,6 +10,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from battle_env import FEATURES_PER_UNIT, FIRST_HERO_ITEM_ACTION_START, HERO_ITEM_TARGET_SLOTS
 from campaign_env import CampaignEnv
 from maps import available_maps, get_map
+from maps.base import settlement_footprint_blocks
 from maps.item_train import (
     ANGEL_ORB_ITEM,
     ARMOR_STACK_ENEMY_ID,
@@ -70,7 +71,9 @@ def test_item_train_is_a_clean_small_map_with_two_separate_item_chests():
 
     assert map_config.play_grid_size == 24
     assert map_config.default_objective == "all_enemies"
-    assert map_config.obstacle_blocks == ()
+    assert map_config.obstacle_blocks == settlement_footprint_blocks(
+        capitals=(map_config.hero_start,)
+    )
     assert map_config.village_heal_tiles == ()
     assert map_config.mana_sources == ()
     assert map_config.merchant_sites == {}

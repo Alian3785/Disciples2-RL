@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 from campaign_env_data import *
+from grid import LEGIONS_SETTLEMENT_TERRITORY_EXPANSION_BY_LEVEL
 
 
 class CampaignTerritoryMixin:
@@ -609,6 +610,7 @@ class CampaignTerritoryMixin:
     def _reset_legions_settlement_territory_state(self) -> None:
         """Сбрасывает активные поселения Легионов и их уровни перед новым episode."""
         self.legions_active_settlement_territory_capture_turn_by_name: Dict[str, int] = {}
+        self.legions_settlement_growth_history_by_name: Dict[str, List[Tuple[int, int]]] = {}
         self.legions_settlement_territory_tiles_by_name: Dict[str, Tuple[Tuple[int, int], ...]] = {
             str(source_name): ()
             for source_name in self.legions_settlement_territory_source_by_name.keys()
@@ -623,6 +625,39 @@ class CampaignTerritoryMixin:
             )
             for source_name, source_data in self.legions_settlement_territory_source_by_name.items()
         }
+    def _settlement_expansion_per_turn(self, settlement_name: str) -> int:
+        level = int(self.legions_settlement_level_by_name.get(settlement_name, 1))
+        return int(LEGIONS_SETTLEMENT_TERRITORY_EXPANSION_BY_LEVEL.get(level, 0))
+
+    def _set_settlement_level_with_territory_growth(self, settlement_name: str, level: int) -> None:
+        """Record a rate change at this day without repricing past territory growth."""
+        capture_turn = self.legions_active_settlement_territory_capture_turn_by_name.get(settlement_name)
+        if capture_turn is not None:
+            history = self.legions_settlement_growth_history_by_name.setdefault(
+                settlement_name, [(int(capture_turn), self._settlement_expansion_per_turn(settlement_name))]
+            )
+            new_rate = int(LEGIONS_SETTLEMENT_TERRITORY_EXPANSION_BY_LEVEL.get(int(level), 0))
+            if history[-1][0] == int(self.turns):
+                history[-1] = (int(self.turns), new_rate)
+            elif history[-1][1] != new_rate:
+                history.append((int(self.turns), new_rate))
+        self.legions_settlement_level_by_name[settlement_name] = int(level)
+
+    def _current_settlement_territory_claim_count(self, settlement_name: str, total_tiles: int) -> int:
+        capture_turn = self.legions_active_settlement_territory_capture_turn_by_name.get(settlement_name)
+        if capture_turn is None or int(self.turns) < int(capture_turn):
+            return 0
+        history = self.legions_settlement_growth_history_by_name.get(
+            settlement_name, [(int(capture_turn), self._settlement_expansion_per_turn(settlement_name))]
+        )
+        count = 1
+        for index, (start_turn, rate) in enumerate(history):
+            end_turn = int(self.turns)
+            if index + 1 < len(history):
+                end_turn = min(end_turn, history[index + 1][0])
+            count += max(0, end_turn - start_turn) * max(0, rate)
+        return min(int(total_tiles), count)
+
     def _legions_settlement_territory_info(self) -> Dict[str, object]:
         """Возвращает диагностическое состояние всех поселений и их территорий."""
         return {
@@ -640,6 +675,10 @@ class CampaignTerritoryMixin:
             "legions_settlement_level_by_name": {
                 str(name): int(level)
                 for name, level in self.legions_settlement_level_by_name.items()
+            },
+            "legions_settlement_expansion_per_turn_by_name": {
+                name: self._settlement_expansion_per_turn(name)
+                for name in self.legions_settlement_level_by_name
             },
         }
     def _grant_ruin_reward(self, enemy_id: Optional[int]) -> Dict[str, object]:
@@ -796,7 +835,7 @@ class CampaignTerritoryMixin:
                 return False
         return True
     def _capture_objective_city_if_cleared(self, enemy_id: Optional[int]) -> List[str]:
-        """Помечает город как захваченный, если текущий бой зачистил его полностью."""
+        """Захватывает зачищенный город только при присутствии основного героя."""
         city_name = self._objective_city_for_enemy(enemy_id)
         if city_name is None:
             return []
@@ -804,8 +843,38 @@ class CampaignTerritoryMixin:
             return []
         if not self._is_objective_city_cleared(city_name):
             return []
+        if not self._hero_is_on_city_tile(enemy_id):
+            return []
         self.captured_objective_cities.add(city_name)
         return [city_name]
+    def _hero_is_on_city_tile(self, enemy_id: int) -> bool:
+        settlement = self.legions_settlement_territory_source_name_by_enemy_id.get(int(enemy_id))
+        tile = self.legions_settlement_source_tile_by_name.get(settlement)
+        if tile is None:
+            tile = self._static_enemy_positions.get(int(enemy_id))
+        return tile is not None and tuple(self.grid_env.agent_pos) == tuple(tile)
+    def _capture_cities_on_hero_entry(self, reward: float, info: Dict[str, object]) -> float:
+        """Зачистка хранится в enemies_alive; владение и награда ждут входа героя."""
+        captured_before = len(self.captured_objective_cities)
+        captured = []
+        for enemy_ids in self.FINAL_OBJECTIVE_CITIES.values():
+            for enemy_id in enemy_ids:
+                captured.extend(self._capture_objective_city_if_cleared(enemy_id))
+        activated = []
+        settlement = self.legions_settlement_source_name_by_tile.get(tuple(self.grid_env.agent_pos))
+        if settlement:
+            for enemy_id in self.legions_settlement_territory_source_by_name[settlement]['required_enemy_ids']:
+                activated.extend(self._activate_legions_settlement_territory_if_cleared(enemy_id))
+        info['objective_cities_captured_total'] = sorted(self.captured_objective_cities)
+        if activated:
+            info['legions_settlement_territories_activated'] = activated
+        if captured:
+            info['captured_objective_cities'] = captured
+            if self._campaign_objective_is_cities():
+                bonus = self._compute_final_objective_reward(len(captured), captured_before=captured_before)
+                info['final_objective_reward'] = bonus
+                reward += bonus
+        return float(reward)
     def _all_objective_cities_captured(self) -> bool:
         """True, когда игрок захватил все города из FINAL_OBJECTIVE_CITIES."""
         return (
@@ -830,7 +899,7 @@ class CampaignTerritoryMixin:
         self,
         enemy_id: Optional[int],
     ) -> List[str]:
-        """Активирует рост территории поселения после победы над последним защитником."""
+        """Активирует рост территории зачищенного поселения при входе героя."""
         try:
             normalized_enemy_id = int(enemy_id)
         except (TypeError, ValueError):
@@ -841,6 +910,8 @@ class CampaignTerritoryMixin:
         if settlement_name in self.legions_active_settlement_territory_capture_turn_by_name:
             return []
         if not self._is_legions_settlement_territory_cleared(settlement_name):
+            return []
+        if not self._hero_is_on_city_tile(normalized_enemy_id):
             return []
         self.legions_active_settlement_territory_capture_turn_by_name[str(settlement_name)] = int(self.turns)
         # Захват поселения сразу добавляет его источник роста территории в общий frontier.
@@ -1220,29 +1291,73 @@ class CampaignTerritoryMixin:
             if normalized_enemy_id in self.grid_env.enemies_alive:
                 self.grid_env.enemies_alive[normalized_enemy_id] = False
 
+    def _scheduled_enemy_path_distances(
+        self,
+        target: Tuple[int, int],
+    ) -> Dict[Tuple[int, int], int]:
+        """BFS-дистанции до цели волны с учётом статических препятствий (кешируется)."""
+        return self._build_territory_path_distances(
+            source_tile=(int(target[0]), int(target[1])),
+            blocked_tile_set=set(self.grid_env.obstacle_positions),
+        )
     def _scheduled_enemy_next_step(
         self,
         origin: Tuple[int, int],
         target: Tuple[int, int],
+        distances: Optional[Dict[Tuple[int, int], int]] = None,
     ) -> Tuple[int, int]:
+        """Один шаг волны к цели: кратчайший путь в обход препятствий.
+
+        На открытой карте BFS-дистанция (8 соседей) совпадает с чебышёвской, и
+        порядок кандидатов (диагональ, затем по x, затем по y) даёт ту же
+        траекторию, что и прежний жадный шаг. Стены столиц и городов волна
+        обходит; если цель недостижима, откатываемся к жадному шагу и упираемся
+        в стену, как раньше.
+        """
         origin_x, origin_y = int(origin[0]), int(origin[1])
         target_x, target_y = int(target[0]), int(target[1])
         step_x = 0 if target_x == origin_x else (1 if target_x > origin_x else -1)
         step_y = 0 if target_y == origin_y else (1 if target_y > origin_y else -1)
-        candidates = [
+        greedy_candidates = [
             (origin_x + step_x, origin_y + step_y),
             (origin_x + step_x, origin_y),
             (origin_x, origin_y + step_y),
         ]
+        obstacle_tiles = set(self.grid_env.obstacle_positions)
+        if distances is None:
+            distances = self._scheduled_enemy_path_distances((target_x, target_y))
+        current_path_distance = distances.get((origin_x, origin_y))
+
+        def _in_bounds(tile: Tuple[int, int]) -> bool:
+            return 0 <= tile[0] < self.grid_size and 0 <= tile[1] < self.grid_size
+
+        if current_path_distance is not None:
+            candidates = list(greedy_candidates)
+            candidates.extend(
+                (origin_x + dx, origin_y + dy)
+                for dx in (-1, 0, 1)
+                for dy in (-1, 0, 1)
+                if (dx, dy) != (0, 0)
+            )
+            seen: set[Tuple[int, int]] = set()
+            for candidate in candidates:
+                if candidate in seen or candidate == (origin_x, origin_y):
+                    continue
+                seen.add(candidate)
+                if not _in_bounds(candidate) or candidate in obstacle_tiles:
+                    continue
+                candidate_distance = distances.get(candidate)
+                if candidate_distance is not None and candidate_distance < current_path_distance:
+                    return candidate
+            return origin_x, origin_y
+
         current_distance = max(abs(target_x - origin_x), abs(target_y - origin_y))
-        seen: set[Tuple[int, int]] = set()
-        for candidate in candidates:
+        seen = set()
+        for candidate in greedy_candidates:
             if candidate in seen or candidate == (origin_x, origin_y):
                 continue
             seen.add(candidate)
-            if not (0 <= candidate[0] < self.grid_size and 0 <= candidate[1] < self.grid_size):
-                continue
-            if candidate in self.grid_env.obstacle_positions:
+            if not _in_bounds(candidate) or candidate in obstacle_tiles:
                 continue
             candidate_distance = max(
                 abs(target_x - candidate[0]),
@@ -1285,10 +1400,11 @@ class CampaignTerritoryMixin:
         position = tuple(self.grid_env.enemy_positions[normalized_enemy_id])
         target = tuple(self.grid_env.agent_pos)
         moved_path: List[Tuple[int, int]] = []
+        path_distances = self._scheduled_enemy_path_distances(target) if moves_per_turn > 0 else {}
         for _ in range(moves_per_turn):
             if position == target:
                 break
-            next_position = self._scheduled_enemy_next_step(position, target)
+            next_position = self._scheduled_enemy_next_step(position, target, path_distances)
             if next_position == position:
                 break
             position = tuple(next_position)
@@ -1710,13 +1826,7 @@ class CampaignTerritoryMixin:
         for source_data in self._static_legions_settlement_territory_sources:
             settlement_name = str(source_data.get("name", "") or "")
             source_order = self.legions_settlement_territory_orders_by_name.get(settlement_name, ())
-            capture_turn = self.legions_active_settlement_territory_capture_turn_by_name.get(settlement_name)
-            settlement_claim_count = self._settlement_territory_claim_count(
-                len(source_order),
-                int(source_data.get("expansion_per_turn", 0) or 0),
-                self.turns,
-                capture_turn,
-            )
+            settlement_claim_count = self._current_settlement_territory_claim_count(settlement_name, len(source_order))
             settlement_tiles = self._claim_territory_tiles(source_order, settlement_claim_count)
             self.legions_settlement_territory_tiles_by_name[settlement_name] = settlement_tiles
             for tile in settlement_tiles:

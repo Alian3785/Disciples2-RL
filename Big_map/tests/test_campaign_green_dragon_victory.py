@@ -73,6 +73,7 @@ def test_first_objective_city_capture_gives_reduced_reward_but_does_not_end_epis
     env.grid_env.enemies_alive[34] = False
     env.grid_env.enemies_alive[68] = True
     env.mode = env.MODE_BATTLE
+    env.grid_env.agent_pos = tuple(env.grid_env.enemy_positions[68])
     env.current_enemy_id = 68
     env.battle_env = _DummyBattleEnv()
 
@@ -230,6 +231,7 @@ def test_second_objective_city_capture_ends_episode_and_keeps_full_reward():
     env.grid_env.enemies_alive[69] = True
 
     env.mode = env.MODE_BATTLE
+    env.grid_env.agent_pos = tuple(env.grid_env.enemy_positions[69])
     env.current_enemy_id = 69
     env.battle_env = _DummyBattleEnv()
 
@@ -255,6 +257,7 @@ def test_second_objective_city_does_not_end_episode_in_dragon_mode():
     env.grid_env.enemies_alive[69] = True
 
     env.mode = env.MODE_BATTLE
+    env.grid_env.agent_pos = tuple(env.grid_env.enemy_positions[69])
     env.current_enemy_id = 69
     env.battle_env = _DummyBattleEnv()
 
@@ -314,7 +317,7 @@ def test_agent_returns_to_attack_origin_after_battle_victory():
     env.battle_env = _DummyBattleEnv()
     _, _, terminated, truncated, info = env.step(0)
 
-    assert terminated is True
+    assert terminated is False
     assert truncated is False
     assert info.get("battle_result") == "victory"
     assert tuple(env.grid_env.agent_pos) == attack_origin

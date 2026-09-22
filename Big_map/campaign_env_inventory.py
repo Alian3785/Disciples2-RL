@@ -110,7 +110,7 @@ class CampaignInventoryMixin:
 
     @classmethod
     def _is_battle_orb_item_name(cls, item_name: str) -> bool:
-        normalized_name = str(item_name or "").strip()
+        normalized_name = cls._canonical_item_name(item_name)
         if not normalized_name:
             return False
         normalized_lower = normalized_name.lower()
@@ -118,7 +118,7 @@ class CampaignInventoryMixin:
 
     @classmethod
     def _is_battle_talisman_item_name(cls, item_name: str) -> bool:
-        normalized_name = str(item_name or "").strip()
+        normalized_name = cls._canonical_item_name(item_name)
         if not normalized_name:
             return False
         normalized_lower = normalized_name.lower()
@@ -175,7 +175,7 @@ class CampaignInventoryMixin:
 
     @classmethod
     def _canonical_potion_item_name(cls, item_name: object) -> str:
-        normalized_name = str(item_name or "").strip()
+        normalized_name = cls._canonical_item_name(item_name)
         if not normalized_name:
             return ""
         return str(cls._potion_alias_to_canonical().get(normalized_name, "") or "")
@@ -317,14 +317,14 @@ class CampaignInventoryMixin:
 
     @classmethod
     def _is_staff_spell_item_name(cls, item_name: str) -> bool:
-        normalized_name = str(item_name or "").strip()
+        normalized_name = cls._canonical_item_name(item_name)
         return bool(normalized_name) and normalized_name in set(cls.STAFF_SPELL_ITEM_NAMES)
 
     def _scenario_staff_spell_item_names(self) -> Tuple[str, ...]:
         staff_item_names: List[str] = []
 
         def add_if_staff(raw_item_name: object) -> None:
-            normalized_name = str(raw_item_name or "").strip()
+            normalized_name = self._canonical_item_name(raw_item_name)
             if not self._is_staff_spell_item_name(normalized_name):
                 return
             staff_item_names.append(normalized_name)
@@ -364,7 +364,7 @@ class CampaignInventoryMixin:
         seen_names: set[str] = set()
 
         def add_if_battle_magic(raw_item_name: object) -> None:
-            normalized_name = str(raw_item_name or "").strip()
+            normalized_name = self._canonical_item_name(raw_item_name)
             if not self._is_battle_magic_item_name(normalized_name):
                 return
             if normalized_name in seen_names:
@@ -396,7 +396,7 @@ class CampaignInventoryMixin:
 
     @classmethod
     def _is_book_item_name(cls, item_name: str) -> bool:
-        normalized_name = str(item_name or "").strip()
+        normalized_name = cls._canonical_item_name(item_name)
         return bool(normalized_name) and normalized_name in set(cls.BOOK_ITEM_NAMES)
 
     def _scenario_book_item_names(self) -> Tuple[str, ...]:
@@ -404,7 +404,7 @@ class CampaignInventoryMixin:
         seen_names: set[str] = set()
 
         def add_if_book(raw_item_name: object) -> None:
-            normalized_name = str(raw_item_name or "").strip()
+            normalized_name = self._canonical_item_name(raw_item_name)
             if not self._is_book_item_name(normalized_name):
                 return
             if normalized_name in seen_names:
@@ -807,6 +807,9 @@ class CampaignInventoryMixin:
             "item_category": "talisman",
             "uses_per_item": int(cls.TALISMAN_USES_PER_ITEM),
         }
+        for item_id, original, canonical in cls.ORIGINAL_ITEM_BINDINGS:
+            if canonical in effects:
+                effects[original] = dict(effects[canonical])
         return effects
     def _battle_items_counter_signature(self) -> Tuple[int, int, int, int, int, int]:
         return (
@@ -1235,13 +1238,17 @@ class CampaignInventoryMixin:
             return max(0, int(round(float(value or 0))))
         except (TypeError, ValueError):
             return 0
-    @staticmethod
-    def _hero_item_name(entry: object) -> str:
-        if isinstance(entry, HeroInventoryItem):
-            return str(entry)
+    @classmethod
+    def _canonical_item_name(cls, item_name: object) -> str:
+        name = str(item_name or "").strip()
+        return cls.ITEM_ID_TO_CANONICAL_NAME.get(name.lower(), cls.ORIGINAL_ITEM_NAME_ALIASES.get(name.casefold(), name))
+
+    @classmethod
+    def _hero_item_name(cls, entry: object) -> str:
         if isinstance(entry, dict):
-            return str(entry.get("name", "") or "")
-        return str(entry or "")
+            item_id = str(entry.get("item_id") or entry.get("ITEM_ID") or "").lower()
+            return cls.ITEM_ID_TO_CANONICAL_NAME.get(item_id, cls._canonical_item_name(entry.get("name", "")))
+        return cls._canonical_item_name(entry)
     @staticmethod
     def _hero_item_gold(entry: object) -> int:
         if isinstance(entry, HeroInventoryItem):
@@ -1459,6 +1466,7 @@ class CampaignInventoryMixin:
         return self._scroll_cast_slot_entries_cache
     @classmethod
     def _hero_item_gold_value_by_name(cls, item_name: str) -> int:
+        item_name = cls._canonical_item_name(item_name)
         canonical_scroll_name = cls._canonical_scroll_item_name(item_name)
         if canonical_scroll_name:
             try:
@@ -1485,7 +1493,7 @@ class CampaignInventoryMixin:
             return 0
     @classmethod
     def _make_hero_item_entry(cls, item_name: str) -> HeroInventoryItem:
-        normalized_name = str(item_name or "")
+        normalized_name = cls._canonical_item_name(item_name)
         return HeroInventoryItem(
             normalized_name,
             cls._hero_item_gold_value_by_name(normalized_name),
@@ -1706,7 +1714,7 @@ class CampaignInventoryMixin:
             "artifact_auto_equip_previous": previous_item,
         }
     def _auto_equip_book_item(self, item_name: str) -> Dict[str, object]:
-        normalized_name = str(item_name or "")
+        normalized_name = self._canonical_item_name(item_name)
         if not self._is_book_item_name(normalized_name):
             return {
                 "book_auto_equipped": False,
@@ -1798,7 +1806,7 @@ class CampaignInventoryMixin:
             }
         return self._add_hero_item(item_name)
     def _add_hero_item(self, item_name: str) -> Dict[str, object]:
-        normalized_name = str(item_name or "")
+        normalized_name = self._canonical_item_name(item_name)
         previous_boot_slots = list(getattr(self, "equipped_boot_items", []) or [])
         self._append_hero_item(normalized_name)
         artifact_info = self._auto_equip_artifact_item(normalized_name)
@@ -1865,6 +1873,14 @@ class CampaignInventoryMixin:
         else:
             self._sync_equipped_boot_items()
         return {**artifact_info, **book_info, **boot_info}
+    def _shop_buy_price(self, base_price: float) -> float:
+        """Lute of Charming: 10% off items, spells and mercenaries (GmodifL)."""
+        price = max(0.0, float(base_price or 0.0))
+        self._sync_equipped_artifact_items()
+        if self.LUTE_OF_CHARMING_ITEM_NAME in self.equipped_artifact_items:
+            return float(int(price * 90 / 100))
+        return price
+
     def _artifact_state_info(self) -> Dict[str, object]:
         self._refresh_campaign_equipment_effects(log=False)
         return {
@@ -1935,7 +1951,7 @@ class CampaignInventoryMixin:
         return dict(cls.BOOT_EFFECT_DEFINITIONS.get(normalized_name, {}))
     @classmethod
     def _book_effect_definition(cls, item_name: str) -> Dict[str, object]:
-        normalized_name = str(item_name or "").strip()
+        normalized_name = cls._canonical_item_name(item_name)
         return dict(cls.BOOK_EFFECT_DEFINITIONS.get(normalized_name, {}))
     def _active_book_item_name(self) -> Optional[str]:
         self._sync_equipped_book_items()
@@ -2014,7 +2030,7 @@ class CampaignInventoryMixin:
     @classmethod
     @lru_cache(maxsize=None)
     def _hero_item_aliases(cls, item_name: str) -> Tuple[str, ...]:
-        normalized_name = str(item_name or "")
+        normalized_name = cls._canonical_item_name(item_name)
         aliases = {normalized_name}
         potion_aliases = cls._potion_item_aliases_for_name(normalized_name)
         if potion_aliases:
@@ -2068,7 +2084,9 @@ class CampaignInventoryMixin:
             return gold_value
         return self._hero_item_gold_value_by_name(self._hero_item_name(entry))
     def _is_useful_hero_item_name(self, item_name: str) -> bool:
-        normalized_name = str(item_name or "")
+        normalized_name = self._canonical_item_name(item_name)
+        if self._is_battle_magic_item_name(normalized_name) and normalized_name in self._battle_item_effect_definitions():
+            return True
         if self._is_artifact_item_name(normalized_name):
             return True
         if self._is_banner_item_name(normalized_name):
@@ -2523,13 +2541,14 @@ class CampaignInventoryMixin:
             unit["max_health"] = int(new_max_hp)
             unit["hp"] = int(new_hp)
             unit["health"] = int(new_hp)
-        elif effect_kind == "damage_reduction":
-            multiplier = max(
-                0.0,
-                float(effect.get("incoming_damage_multiplier", 1.0) or 1.0),
-            )
-            base_multiplier = float(unit.get("incoming_damage_multiplier", 1.0) or 1.0)
-            unit["incoming_damage_multiplier"] = max(0.0, base_multiplier * multiplier)
+        elif effect_kind == "armor":
+            bonus = max(0, int(effect.get("armor_bonus", 0) or 0))
+            unit["armor"] = self._normalize_armor_value(unit.get("armor", 0)) + bonus
+            unit["base_armor"] = int(unit["armor"])
+            # Equipment refresh restores these snapshots; retain the permanent bonus.
+            for key in ("campaign_artifact_base_armor", "campaign_banner_base_armor"):
+                if key in unit:
+                    unit[key] = self._normalize_armor_value(unit[key]) + bonus
         elif effect_kind == "accuracy":
             multiplier = max(0.0, float(effect.get("multiplier", 1.0) or 1.0))
             base_accuracy = self._normalize_accuracy_value(unit.get("accuracy", 0))
@@ -2793,7 +2812,7 @@ class CampaignInventoryMixin:
             damage_multiplier = 1.0
             initiative_multiplier = 1.0
             accuracy_multiplier = 1.0
-            incoming_damage_multiplier = 1.0
+            armor_bonus = 0
             added_resistance: List[str] = []
             resistance = [str(res) for res in (unit.get("resistance") or [])]
 
@@ -2816,11 +2835,8 @@ class CampaignInventoryMixin:
                         0.0,
                         float(effect.get("multiplier", 1.0) or 1.0),
                     )
-                elif effect_kind == "damage_reduction":
-                    incoming_damage_multiplier *= max(
-                        0.0,
-                        float(effect.get("incoming_damage_multiplier", 1.0) or 1.0),
-                    )
+                elif effect_kind == "armor":
+                    armor_bonus += max(0, int(effect.get("armor_bonus", 0) or 0))
                 elif effect_kind == "ward":
                     element = str(effect.get("resistance_type", "") or "")
                     if element and element not in resistance:
@@ -2865,20 +2881,11 @@ class CampaignInventoryMixin:
                 )
                 unit["campaign_accuracy_potion_multiplier"] = float(accuracy_multiplier)
 
-            if abs(incoming_damage_multiplier - 1.0) > 1e-9:
-                base_incoming_multiplier = float(
-                    unit.get("incoming_damage_multiplier", 1.0) or 1.0
-                )
-                unit["campaign_potion_base_incoming_damage_multiplier"] = float(
-                    base_incoming_multiplier
-                )
-                unit["incoming_damage_multiplier"] = max(
-                    0.0,
-                    base_incoming_multiplier * incoming_damage_multiplier,
-                )
-                unit["campaign_incoming_damage_potion_multiplier"] = float(
-                    incoming_damage_multiplier
-                )
+            if armor_bonus:
+                base_armor = self._normalize_armor_value(unit.get("armor", 0))
+                unit["campaign_potion_base_armor"] = base_armor
+                unit["armor"] = base_armor + armor_bonus
+                unit["base_armor"] = int(unit["armor"])
 
             if added_resistance:
                 unit["resistance"] = resistance

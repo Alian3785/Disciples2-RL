@@ -55,14 +55,14 @@ def _finish_battle(env: CampaignEnv, enemy_id: int):
     return env.step(0)
 
 
-def test_scroll_train_is_registered_with_exactly_99_unique_supported_scrolls():
+def test_scroll_train_is_registered_with_exactly_101_unique_supported_scrolls():
     assert "scroll_train" in available_maps()
     map_config = get_map("scroll_train")
 
     assert map_config.play_grid_size == 24
     assert map_config.default_objective == "all_enemies"
-    assert len(STARTING_SCROLL_ITEMS) == 99
-    assert len(set(STARTING_SCROLL_ITEMS)) == 99
+    assert len(STARTING_SCROLL_ITEMS) == 101
+    assert len(set(STARTING_SCROLL_ITEMS)) == 101
     assert map_config.starting_scroll_items == STARTING_SCROLL_ITEMS
     assert map_config.starting_scroll_magic_unlocked is False
     assert map_config.passive_mana_income_enabled is False
@@ -87,12 +87,12 @@ def test_scroll_train_starts_with_all_scroll_actions_and_legions_mage_party():
     ]
     assert env.scroll_magic_unlocked is True
     assert env.reward_turn_penalty == pytest.approx(0.03)
-    assert env.GRID_SCROLL_CAST_ACTION_COUNT == 99
-    assert len(env.scenario_scroll_spell_entries) == 99
-    assert len(env.scroll_cast_slot_entries()) == 99
+    assert env.GRID_SCROLL_CAST_ACTION_COUNT == 101
+    assert len(env.scenario_scroll_spell_entries) == 101
+    assert len(env.scroll_cast_slot_entries()) == 101
     assert all(int(entry["copies"]) == 1 for entry in env.scroll_cast_slot_entries())
-    assert info["supported_scroll_types_count"] == 99
-    assert info["total_scroll_count"] == 99
+    assert info["supported_scroll_types_count"] == 101
+    assert info["total_scroll_count"] == 101
 
 
 def test_scroll_train_enemy_compositions_match_the_requested_three_stacks():
@@ -143,7 +143,7 @@ def test_scroll_train_can_consume_a_supported_scroll_without_spending_mana():
     assert info["spell_cast_executed"] is True
     assert info["scroll_item_consumed"] is True
     assert env.count_scroll_item(item_name) == 0
-    assert env._scroll_state_info()["total_scroll_count"] == 98
+    assert env._scroll_state_info()["total_scroll_count"] == 100
     assert env._current_mana_totals() == mana_before
 
 

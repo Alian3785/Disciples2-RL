@@ -51,6 +51,7 @@ def _living_names(env: CampaignEnv, enemy_id: int) -> list[str]:
 
 def _finish_battle(env: CampaignEnv, enemy_id: int):
     env.mode = env.MODE_BATTLE
+    env.grid_env.agent_pos = tuple(env.grid_env.enemy_positions[enemy_id])
     env.current_enemy_id = enemy_id
     env.battle_env = _DummyBattleEnv(env.blue_team_state)
     return env.step(0)

@@ -389,6 +389,7 @@ def test_castle_revive_actions_available_on_all_heal_tiles_when_gold_is_enough()
     unit["hp"] = 0.0
     unit["health"] = 0.0
     unit["Level"] = 1
+    env.gold = env._castle_revive_gold_cost(unit)
 
     castle_revive_slice = _castle_revive_action_slice(env)
 
@@ -662,7 +663,7 @@ def test_castle_heal_level_4_or_5_costs_three_gold_per_hp_and_can_be_partial():
         (5, 800.0),
     ],
 )
-def test_castle_revive_spends_gold_by_unit_level(level, revive_cost):
+def test_unknown_unit_castle_revive_keeps_level_fallback(level, revive_cost):
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
     _mark_temple_built(env)
@@ -675,6 +676,8 @@ def test_castle_revive_spends_gold_by_unit_level(level, revive_cost):
     unit["hp"] = 0.0
     unit["health"] = 0.0
     unit["Level"] = level
+    unit["name"] = "Custom revival test creature"
+    unit["unit_id"] = ""
 
     env.gold = revive_cost + 25.0
     _, reward, _, _, info = env.step(action)
@@ -702,6 +705,8 @@ def test_castle_revive_action_is_blocked_when_gold_is_below_required_cost():
     unit["hp"] = 0.0
     unit["health"] = 0.0
     unit["Level"] = 4
+    unit["name"] = "Custom revival test creature"
+    unit["unit_id"] = ""
 
     env.gold = 599.0
     mask = env.compute_action_mask()

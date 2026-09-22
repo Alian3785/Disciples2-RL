@@ -1561,7 +1561,7 @@ class CampaignObservationMixin:
                     1.0 if stand == "ahead" else 0.0,
                     1.0 if stand == "behind" else 0.0,
                     self._normalize_ratio(
-                        float(entry.get("gold", 0.0) or 0.0),
+                        self._shop_buy_price(entry.get("gold", 0.0)),
                         self.grid_max_mercenary_price,
                     ),
                     self._normalize_ratio(

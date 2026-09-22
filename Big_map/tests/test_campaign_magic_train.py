@@ -7,12 +7,14 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from campaign_env import CampaignEnv
 from maps import available_maps, get_map
+from maps.base import capital_footprint_block, footprint_tiles, settlement_footprint_blocks
 from maps.magic_train import (
     ENEMY_ENCLOSURE_BLOCKS,
     FIRST_ENEMY_ID,
     FIRST_ENEMY_TILE,
     HERO_START,
     MANA_SOURCE_TILES,
+    OBSTACLE_BLOCKS,
     SECOND_ENEMY_ID,
     SECOND_ENEMY_TILE,
 )
@@ -83,7 +85,16 @@ def test_magic_train_is_registered_and_contains_only_requested_map_objects():
         SECOND_ENEMY_ID: SECOND_ENEMY_TILE,
     }
     assert dict(map_config.mana_sources) == MANA_SOURCE_TILES
-    assert map_config.obstacle_blocks == ENEMY_ENCLOSURE_BLOCKS
+    assert map_config.obstacle_blocks == OBSTACLE_BLOCKS
+    assert OBSTACLE_BLOCKS == (
+        *settlement_footprint_blocks(capitals=(HERO_START,)),
+        *ENEMY_ENCLOSURE_BLOCKS,
+    )
+    # Все источники маны стоят снаружи стен столицы, вплотную к её входу.
+    capital_walls = footprint_tiles(capital_footprint_block(HERO_START)) - {HERO_START}
+    for position in MANA_SOURCE_TILES.values():
+        assert position not in capital_walls
+        assert max(abs(position[0] - HERO_START[0]), abs(position[1] - HERO_START[1])) <= 2
     assert map_config.chests == ()
     assert map_config.village_heal_tiles == ()
     assert map_config.merchant_sites == {}
@@ -124,7 +135,10 @@ def test_both_enemy_stacks_are_fully_enclosed_and_unreachable_by_movement():
     env.reset(seed=123)
 
     obstacle_tiles = set(env.grid_env.obstacle_positions)
-    assert len(obstacle_tiles) == 16
+    # 16 клеток двух вольеров + 24 клетки стен столицы (5x5 без входа).
+    assert len(obstacle_tiles) == 16 + 24
+    assert footprint_tiles(capital_footprint_block(HERO_START)) - {HERO_START} <= obstacle_tiles
+    assert HERO_START not in obstacle_tiles
 
     for enemy_tile in (FIRST_ENEMY_TILE, SECOND_ENEMY_TILE):
         x, y = enemy_tile

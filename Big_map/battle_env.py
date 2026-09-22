@@ -21,6 +21,9 @@ from typing import Dict, List, Optional, Tuple
 from gymnasium import spaces
 from data_dicts_compact_lines import DATA as UNIT_DATA, placeholder_unit
 from grid import BLUE_TEAM_TEMPLATE
+from unit_dynamic_xp import dynamic_kill_xp_increment
+from unit_dynamic_stats import apply_dynamic_stat_growth
+from hero_level_abilities import apply_hero_level_stat_abilities
 
 # Импорт действий юнитов (предполагается, что эти файлы лежат рядом)
 from summon_actions import (
@@ -105,6 +108,7 @@ UNHOLY_DAGGER_ARTIFACT_ITEM_NAME = "Unholy Dagger (Artifact)"
 THANATOS_BLADE_ARTIFACT_ITEM_NAME = "Thanatos Blade (Artifact)"
 SKULL_OF_THANATOS_ARTIFACT_ITEM_NAME = "Skull of Thanatos (Artifact)"
 HAGS_RING_ARTIFACT_ITEM_NAME = "Hag's Ring (Artifact)"
+WIGHT_BLADE_ARTIFACT_ITEM_NAME = "Wight Blade (Artifact)"
 
 HERO_COMBAT_ARTIFACT_ITEMS = frozenset(
     {
@@ -114,6 +118,7 @@ HERO_COMBAT_ARTIFACT_ITEMS = frozenset(
         THANATOS_BLADE_ARTIFACT_ITEM_NAME,
         SKULL_OF_THANATOS_ARTIFACT_ITEM_NAME,
         HAGS_RING_ARTIFACT_ITEM_NAME,
+        WIGHT_BLADE_ARTIFACT_ITEM_NAME,
     }
 )
 UNHOLY_DAGGER_DRAIN_PERCENT = 25
@@ -125,6 +130,7 @@ HERO_ARTIFACT_STATUS_CHANCES = {
     THANATOS_BLADE_ARTIFACT_ITEM_NAME: 80,
     SKULL_OF_THANATOS_ARTIFACT_ITEM_NAME: 80,
     HAGS_RING_ARTIFACT_ITEM_NAME: 70,
+    WIGHT_BLADE_ARTIFACT_ITEM_NAME: 75,  # Gattacks.dbf: g000aa9018
 }
 HERO_ARTIFACT_POISON_DAMAGE = {
     THANATOS_BLADE_ARTIFACT_ITEM_NAME: THANATOS_BLADE_POISON_DAMAGE,
@@ -161,7 +167,8 @@ MELEE_TYPES = frozenset(
         "Bone Lord",
         "Dregazul",
         "Ismir son",
-        "Betrezen",
+        # "Betrezen" сознательно не ближник: одержимый Утер бьёт одну любую
+        # цель, как стрелок, сохраняя долгий паралич вторичной атакой.
         "Uter",
         "Abyss Devil",
         "Aleman",
@@ -610,6 +617,8 @@ def _apply_ten_percent_levelup_stats(unit: Dict) -> None:
 def _apply_hero_level_milestone_bonuses(unit: Dict) -> None:
     """Apply leadership/endurance/strength bonuses tied to the new hero level."""
     unit["needaunit"] = _resolve_unit_needaunit(unit)
+    if _is_travel_hero_unit(unit):
+        apply_hero_level_stat_abilities(unit)
     if _is_travel_hero_unit(unit) and _resolve_unit_level(unit) in (
         HERO_LEADERSHIP_LEVEL,
         HERO_SECOND_LEADERSHIP_LEVEL,
@@ -647,7 +656,8 @@ def _apply_hero_level_milestone_bonuses(unit: Dict) -> None:
 
 
 def _apply_hero_levelup_bonuses(unit: Dict) -> None:
-    _apply_ten_percent_levelup_stats(unit)
+    if not apply_dynamic_stat_growth(unit, _resolve_unit_level(unit)):
+        _apply_ten_percent_levelup_stats(unit)
     current_exp_kill = float(unit.get("exp_kill", 0) or 0)
     unit["exp_kill"] = max(0, _to_int_or_default(current_exp_kill * 1.1, default=0))
     _apply_hero_level_milestone_bonuses(unit)
@@ -683,6 +693,7 @@ def _uses_dynamic_unit_levelup(unit: Dict) -> bool:
 def _apply_dynamic_unit_levelup(unit: Dict, exp_required: int) -> None:
     """Level a dynamic unit, optionally applying a scenario-specific XP curve."""
     unit["Level"] = _to_int_or_default(unit.get("Level", 0), default=0) + 1
+    unit["exp_kill"] = max(0, _to_int_or_default(unit.get("exp_kill", 0), default=0)) + dynamic_kill_xp_increment(unit, unit["Level"])
     exp_increment = max(
         0,
         _to_int_or_default(
@@ -692,7 +703,8 @@ def _apply_dynamic_unit_levelup(unit: Dict, exp_required: int) -> None:
     )
     unit["exp_required"] = max(0, int(exp_required) + int(exp_increment))
     unit["exp_current"] = 0
-    _apply_ten_percent_levelup_stats(unit)
+    if not apply_dynamic_stat_growth(unit, unit["Level"]):
+        _apply_ten_percent_levelup_stats(unit)
     if _resolve_unit_hero_flag(unit):
         _apply_hero_level_milestone_bonuses(unit)
 
@@ -2536,6 +2548,30 @@ class BattleEnv(gym.Env):
         far2 = [behind[c] for c in far_cols if alive(behind[c])]
         return far2
 
+    def _smart_paralysis_target_options(
+        self,
+        attacker: Dict,
+        *,
+        units_by_pos: Optional[Dict[int, Dict]] = None,
+    ) -> List[int]:
+        """Позиции, доступные «умному» парализующему типу.
+
+        Ближники (Uter) ограничены обычной досягаемостью воина, дальнобойные
+        (Betrezen) бьют любую живую цель, как стрелки.
+        """
+        if attacker.get("unit_type") in MELEE_TYPES:
+            return self._warrior_allowed_targets(attacker, units_by_pos=units_by_pos)
+
+        if units_by_pos is None:
+            units_by_pos = self._units_by_position()
+        ahead, behind = self._enemy_rows(attacker["team"])
+        options: List[int] = []
+        for pos in list(ahead) + list(behind):
+            unit = units_by_pos.get(pos)
+            if unit is not None and self._alive(unit):
+                options.append(pos)
+        return options
+
     def _travnitsa_auto_target(self, healer: Dict) -> Optional[int]:
         allies = [
             u
@@ -4247,6 +4283,15 @@ class BattleEnv(gym.Env):
                 )
             elif artifact_name == HAGS_RING_ARTIFACT_ITEM_NAME:
                 self._apply_hero_artifact_transform(attacker, victim, artifact_name)
+            elif artifact_name == WIGHT_BLADE_ARTIFACT_ITEM_NAME:
+                if _is_neutral_battle_unit(victim):
+                    continue
+                if self._roll_hero_artifact_status(attacker, victim, artifact_name, chance):
+                    proxy = self._artifact_attacker(attacker, effect_type="Death")
+                    if not self._is_immune_status(proxy, victim) and not self._resilience_blocks(
+                        proxy, victim, custom_tag="Death"
+                    ):
+                        self._apply_wight_decay_effect(proxy, victim)
 
     def _apply_tiamat_damage_debuff(self, attacker: Dict, victim: Dict) -> bool:
         effect_type = attacker.get("attack_type_secondary", "")
@@ -5856,7 +5901,9 @@ class BattleEnv(gym.Env):
                 if nxt_type in SMART_MELEE_TARGET_TYPES:
                     # Особая логика для юнитов с параличом/окаменением:
                     # Атакуем цель с макс. уроном, без паралича и иммунитета
-                    options = self._warrior_allowed_targets(nxt, units_by_pos=units_by_pos)
+                    options = self._smart_paralysis_target_options(
+                        nxt, units_by_pos=units_by_pos
+                    )
                     valid_options = (
                         self._filter_non_immune_targets(nxt, options) if options else []
                     )
@@ -6543,6 +6590,12 @@ class BattleEnv(gym.Env):
                     self._log(
                         f"BLUE действие: {attacker['name']}#{attacker['position']} выбирает побег (running_away=1)."
                     )
+                    if _is_combat_hero_unit(attacker) and "Rusted Shackles (Artifact)" in (
+                        attacker.get("campaign_active_artifacts") or ()
+                    ):
+                        self._mark_unit_escaped(attacker)
+                        self.blue_attacks_left = 1
+                        self._check_victory_after_hit()
                 elif is_hero_item_action:
                     target_unit = (
                         units_by_pos.get(hero_item_target_pos)

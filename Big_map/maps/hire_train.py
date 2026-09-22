@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from maps.base import MapConfig
+from maps.base import MapConfig, settlement_footprint_blocks
 
 GRID_SIZE = 48
 PLAY_GRID_SIZE = 24
@@ -19,7 +19,11 @@ MAP = MapConfig(
     name="hire_train",
     grid_size=GRID_SIZE,
     hero_start=HERO_START,
-    obstacle_blocks=(),
+    # 5x5 столицы и 4x4 учебного города; проходимыми остаются только входы.
+    obstacle_blocks=settlement_footprint_blocks(
+        capitals=(HERO_START,),
+        cities=(TRAINING_CITY_TILE,),
+    ),
     empty_tiles=(),
     village_heal_tiles=(TRAINING_CITY_TILE,),
     settlement_level_by_heal_tile={TRAINING_CITY_TILE: 1},

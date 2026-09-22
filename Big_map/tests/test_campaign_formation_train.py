@@ -7,6 +7,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from campaign_env import CampaignEnv
 from maps import available_maps, get_map
+from maps.base import settlement_footprint_blocks
 from maps.formation_train import FORMATION_ENEMY_ID, FORMATION_ENEMY_TILE
 
 
@@ -38,7 +39,7 @@ def test_formation_train_is_registered_as_a_clean_single_enemy_map():
     assert map_config.enemy_positions() == {
         FORMATION_ENEMY_ID: FORMATION_ENEMY_TILE,
     }
-    assert map_config.obstacle_blocks == ()
+    assert map_config.obstacle_blocks == settlement_footprint_blocks(capitals=((5, 27),))
     assert map_config.village_heal_tiles == ()
     assert map_config.chests == ()
     assert map_config.mana_sources == ()

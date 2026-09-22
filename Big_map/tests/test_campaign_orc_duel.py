@@ -11,6 +11,7 @@ from battle_env import FEATURES_PER_UNIT, UNITS_BLUE
 from campaign_env import CampaignEnv
 from campaign_env_data import CampaignConstantsMixin
 from maps import available_maps, get_map
+from maps.base import capital_footprint_block, footprint_tiles
 from maps.orc_duel import ORC_ENEMY_ID
 
 
@@ -59,7 +60,10 @@ def test_orc_duel_env_is_a_clean_field_with_single_orc():
     assert dict(env.grid_env.enemy_positions) == {ORC_ENEMY_ID: (30, 46)}
     assert tuple(env.castle_heal_tiles) == ((5, 27),)
     assert env.CASTLE_POS == (5, 27)
-    assert env._static_obstacle_tiles == ()
+    # Единственные препятствия — стены 5x5 столицы; вход (5, 27) открыт.
+    assert set(env._static_obstacle_tiles) == footprint_tiles(
+        capital_footprint_block((5, 27))
+    ) - {(5, 27)}
     assert env._static_chests == {}
     assert env._static_mana_sources == {}
     assert env.water_tiles == ()

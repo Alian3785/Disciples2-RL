@@ -94,7 +94,7 @@ def test_neutral_unit_revive_cost_uses_max_health_buckets(max_health, expected_r
     assert env._castle_revive_gold_cost(unit) == pytest.approx(expected_revive_cost)
 
 
-def test_faction_unit_revive_cost_still_uses_level_and_not_hp_bucket():
+def test_known_faction_unit_revive_cost_uses_profile_despite_changed_level_and_hp():
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     unit = map_unit_to_battle(_unit_entry("Скваер"), team="blue", position=7)
     unit["Level"] = 4
@@ -102,4 +102,4 @@ def test_faction_unit_revive_cost_still_uses_level_and_not_hp_bucket():
 
     assert unit["is_neutral_unit"] is False
     assert int(unit["capital"]) == 1
-    assert env._castle_revive_gold_cost(unit) == pytest.approx(600.0)
+    assert env._castle_revive_gold_cost(unit) == pytest.approx(50.0)

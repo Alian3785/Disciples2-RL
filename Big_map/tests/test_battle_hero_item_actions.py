@@ -577,6 +577,7 @@ def test_drain_orb_heals_hero_and_elder_overflow_heals_allies():
         ("Orb of Thanatos", "poison_turns_left", "poison_damage_per_tick", 30),
         ("Orb of Freezing", "uran_turns_left", "uran_damage_per_tick", 30),
         ("Orb of Flame", "burn_turns_left", "burn_damage_per_tick", 15),
+        ("Orb of Flames", "burn_turns_left", "burn_damage_per_tick", 15),
     ],
 )
 def test_group_dot_orbs_apply_to_all_living_red_units(
@@ -659,11 +660,12 @@ def test_status_transform_weakening_and_rage_orbs_apply():
     assert rage_info["battle_hero_item_effect_kind"] == "extra_turn"
 
 
-def test_talisman_of_nightmare_fears_single_living_red_target():
+@pytest.mark.parametrize('item_name', ['Talisman of Nightmare', 'Talisman of Horror'])
+def test_talisman_of_nightmare_fears_single_living_red_target(item_name):
     env = BattleEnv(log_enabled=False)
     env.reset(seed=123)
     _configure_campaign_orbs(env)
-    env.equipped_hero_items = ["Talisman of Nightmare", None]
+    env.equipped_hero_items = [item_name, None]
     env.equipped_hero_item_uses_left = [5, None]
 
     for unit in env.combined:

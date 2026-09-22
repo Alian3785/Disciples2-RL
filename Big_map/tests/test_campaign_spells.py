@@ -6,6 +6,7 @@ import pytest
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from campaign_env import CampaignEnv as _CampaignEnv
+from campaign_env_data import SPELLS_D2
 
 
 class CampaignEnv(_CampaignEnv):
@@ -33,6 +34,59 @@ def _spell_mask(env: CampaignEnv):
     return env.compute_action_mask()[
         env.grid_spell_action_start : env.grid_settlement_upgrade_action_start
     ]
+
+
+LEVEL5_GAME_RESEARCH = {
+    "emp_d2_s021": {"hell": 300, "life": 1250, "death": 600, "rune": 350, "nature": 0},
+    "emp_d2_s022": {"hell": 500, "life": 1250, "death": 400, "rune": 350, "nature": 0},
+    "emp_d2_s023": {"hell": 450, "life": 1250, "death": 300, "rune": 500, "nature": 0},
+    "emp_d2_s024": {"hell": 800, "life": 2500, "death": 800, "rune": 900, "nature": 0},
+    "mcl_d2_s021": {"hell": 600, "life": 350, "death": 300, "rune": 1250, "nature": 0},
+    "mcl_d2_s022": {"hell": 400, "life": 500, "death": 350, "rune": 1250, "nature": 0},
+    "mcl_d2_s023": {"hell": 300, "life": 550, "death": 400, "rune": 1250, "nature": 0},
+    "mcl_d2_s024": {"hell": 800, "life": 900, "death": 800, "rune": 2500, "nature": 0},
+    "lod_d2_s021": {"hell": 1250, "life": 400, "death": 550, "rune": 300, "nature": 0},
+    "lod_d2_s022": {"hell": 500, "life": 0, "death": 0, "rune": 0, "nature": 0},
+    "lod_d2_s023": {"hell": 1250, "life": 350, "death": 400, "rune": 500, "nature": 0},
+    "lod_d2_s024": {"hell": 2500, "life": 800, "death": 900, "rune": 800, "nature": 0},
+    "und_d2_s021": {"hell": 500, "life": 300, "death": 1250, "rune": 450, "nature": 0},
+    "und_d2_s022": {"hell": 350, "life": 500, "death": 1250, "rune": 400, "nature": 0},
+    "und_d2_s023": {"hell": 500, "life": 400, "death": 1250, "rune": 350, "nature": 0},
+    "und_d2_s024": {"hell": 680, "life": 600, "death": 1880, "rune": 600, "nature": 0},
+    "elf_d2_s021": {"hell": 0, "life": 500, "death": 450, "rune": 300, "nature": 1250},
+    "elf_d2_s022": {"hell": 0, "life": 300, "death": 500, "rune": 450, "nature": 1250},
+    "elf_d2_s023": {"hell": 0, "life": 450, "death": 500, "rune": 300, "nature": 1250},
+    "elf_d2_s024": {"hell": 0, "life": 550, "death": 300, "rune": 400, "nature": 1250},
+}
+
+
+def test_level5_learning_costs_match_game_base_and_mage_discount():
+    env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
+
+    all_level5 = {
+        spell_key: spell
+        for faction_spells in SPELLS_D2.values()
+        for spell_key, spell in faction_spells.items()
+        if int(spell.get("level", 0) or 0) == 5
+    }
+    assert set(all_level5) == set(LEVEL5_GAME_RESEARCH)
+
+    env.typeoflord = 1
+    for spell_key, spell in all_level5.items():
+        expected = LEVEL5_GAME_RESEARCH[spell_key]
+        assert {
+            suffix: spell[f"learn_{suffix}"]
+            for suffix in ("hell", "life", "death", "rune", "nature")
+        } == expected
+
+    env.typeoflord = 2
+    for spell_key, spell in all_level5.items():
+        expected = LEVEL5_GAME_RESEARCH[spell_key]
+        adjusted = env._get_spell_learning_costs(spell)
+        assert adjusted == {
+            env.SPELL_COST_MANA_KIND_BY_SUFFIX[suffix]: pytest.approx(value * 0.5)
+            for suffix, value in expected.items()
+        }
 
 
 def test_spell_actions_require_magic_tower_and_mana():
