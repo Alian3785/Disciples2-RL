@@ -649,6 +649,7 @@ class CampaignEnv(
         self.moves: int = self.moves_per_turn
         self.active_buildings = self._get_buildings_for_capital(self.Realcapital)
         self._apply_lord_starting_building()
+        self._apply_map_starting_buildings()
         self.building_keys = self._get_building_keys(self.active_buildings)
         self.active_spells = self._get_spells_for_capital(self.Realcapital)
         self.spell_keys = self._get_spell_keys(self.active_spells)
@@ -1011,6 +1012,7 @@ class CampaignEnv(
         self._reset_buildings_state()
         self.active_buildings = self._get_buildings_for_capital(self.Realcapital)
         self._apply_lord_starting_building()
+        self._apply_map_starting_buildings()
         self.building_keys = self._get_building_keys(self.active_buildings)
         self._reset_spells_state()
         self.active_spells = self._get_spells_for_capital(self.Realcapital)
@@ -1540,6 +1542,11 @@ class CampaignEnv(
 
         # Обработка действия REST — восстановление базового процента HP и бонусного лечения на своей столице/городе.
         if grid_info.get("rest_action"):
+            self._sync_equipped_banner_items()
+            rest_heal_banner_bonus_percent = sum(
+                float(self._banner_effect_definition(name).get("regeneration_bonus", 0.0))
+                for name in self.equipped_banner_items
+            )
             rest_heal_percent = self._resolve_rest_heal_percent(self.grid_env.agent_pos)
             rest_heal_typeoflord_bonus_percent = self._resolve_typeoflord_rest_heal_bonus_percent()
             (
@@ -1551,13 +1558,16 @@ class CampaignEnv(
                 rest_heal_percent
                 + rest_heal_typeoflord_bonus_percent
                 + rest_heal_bonus_percent
+                + rest_heal_banner_bonus_percent
             )
             healed = self._heal_blue_team(
                 heal_percent=rest_heal_percent,
-                bonus_percent=rest_heal_typeoflord_bonus_percent + rest_heal_bonus_percent,
+                bonus_percent=rest_heal_typeoflord_bonus_percent + rest_heal_bonus_percent + rest_heal_banner_bonus_percent,
             )
             if healed > 0:
                 rest_heal_formula_parts = [f"{rest_heal_percent * 100.0:g}%"]
+                if rest_heal_banner_bonus_percent > 0.0:
+                    rest_heal_formula_parts.append(f"{rest_heal_banner_bonus_percent * 100.0:g}% знамя")
                 if rest_heal_typeoflord_bonus_percent > 0.0:
                     rest_heal_formula_parts.append(
                         f"{rest_heal_typeoflord_bonus_percent * 100.0:g}%"
@@ -1614,6 +1624,7 @@ class CampaignEnv(
             info["moves"] = self.moves
             info["healed_units"] = healed
             info["rest_heal_percent"] = float(rest_heal_percent)
+            info["rest_heal_banner_bonus_percent"] = float(rest_heal_banner_bonus_percent)
             info["rest_heal_typeoflord_bonus_percent"] = float(
                 rest_heal_typeoflord_bonus_percent
             )
@@ -1622,6 +1633,18 @@ class CampaignEnv(
             info["rest_heal_bonus_source"] = rest_heal_bonus_source
             if rest_heal_bonus_level is not None:
                 info["rest_heal_bonus_level"] = rest_heal_bonus_level
+
+        if old_pos != new_pos:
+            reward = self._capture_cities_on_hero_entry(reward, info)
+            info["grid_reward_scaled"] = float(reward)
+            if info.get("captured_objective_cities") or info.get("legions_settlement_territories_activated"):
+                grid_obs = self._get_grid_obs()
+        if self._all_objective_cities_captured():
+            info['campaign_result'] = 'victory'
+            info['campaign_victory_reason'] = 'objective_cities_cleared'
+            return self._finalize_grid_step_result(
+                grid_obs=grid_obs, reward=reward, terminated=True, truncated=False, info=info,
+            )
 
         # Проверяем столкновение с врагом
         if grid_info.get("battle_triggered"):
@@ -1654,6 +1677,7 @@ class CampaignEnv(
         # статисты: кампания выигрывается только строительством.
         if (
             self.grid_env.all_enemies_defeated()
+            and not self._campaign_objective_is_cities()
             and not self._campaign_objective_is_build_all()
             and not self._campaign_objective_is_target_enemy()
             and not self._campaign_objective_is_waves()

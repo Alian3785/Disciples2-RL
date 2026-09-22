@@ -439,6 +439,7 @@ class CampaignScriptedBotMixin:
                     tile,
                     units=self.scripted_capital_bot_team_state,
                     allow_boots=False,
+                    allow_spell_effects=False,
                 )
             )
             terrain = self._campaign_tile_terrain(tile)
@@ -761,8 +762,6 @@ class CampaignScriptedBotMixin:
             self._save_scripted_capital_bot_state_from_battle(battle_env)
             self.grid_env.mark_enemy_defeated(enemy_id)
             self._clear_enemy_map_spell_effects_for_enemy(enemy_id)
-            self._capture_objective_city_if_cleared(enemy_id)
-            self._activate_legions_settlement_territory_if_cleared(enemy_id)
             self.scripted_capital_bot_enemies_defeated += 1
             self.scripted_capital_bot_state = "returning"
             self._log(

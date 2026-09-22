@@ -357,6 +357,7 @@ class CampaignBattleMixin:
                 # не завершает кампанию — победа только строительством.
                 if (
                     self.grid_env.all_enemies_defeated()
+                    and not self._campaign_objective_is_cities()
                     and not self._campaign_objective_is_build_all()
                     and not self._campaign_objective_is_target_enemy()
                     and not self._campaign_objective_is_waves()
@@ -521,8 +522,8 @@ class CampaignBattleMixin:
         """Определяет бонусы клетки лечения для BLUE-отряда перед боем.
 
         Возвращает кортеж: бонус брони, бонус лечения от отдыха, имя поселения
-        и уровень поселения. Бонус действует только на территории поселения,
-        которое уже активировано фракцией Легионов.
+        и уровень поселения. Бонус даёт собственная столица, а также территория
+        поселения, которое уже активировано фракцией Легионов.
         """
         if position is None:
             return 0, 0.0, "", None
@@ -531,6 +532,16 @@ class CampaignBattleMixin:
             normalized_position = (int(position[0]), int(position[1]))
         except (TypeError, ValueError, IndexError):
             return 0, 0.0, "", None
+
+        # Оборона собственной столицы даёт тот же бонус брони, что и RED-защитнику
+        # столичной клетки в _resolve_settlement_defender_armor_bonus.
+        if normalized_position == tuple(self.CASTLE_POS):
+            return (
+                int(CAPITAL_HEAL_TILE_ARMOR_BONUS),
+                float(CAPITAL_HEAL_TILE_REST_BONUS) / 100.0,
+                "capital",
+                None,
+            )
 
         settlement_name = self.legions_settlement_source_name_by_tile.get(normalized_position)
         if not settlement_name:
@@ -737,6 +748,11 @@ class CampaignBattleMixin:
             self._log(
                 f"Бонус города {source} уровня {settlement_level}: BLUE-отряд героя получает "
                 f"+{bonus} брони на каждого юнита ({affected_units} юнитов)."
+            )
+        elif source == "capital":
+            self._log(
+                f"Оборона столицы: BLUE-отряд героя получает +{bonus} брони "
+                f"на каждого юнита ({affected_units} юнитов)."
             )
     def _init_battle(
         self,
@@ -1227,7 +1243,7 @@ class CampaignBattleMixin:
                     if str(res) not in added_resistance_set
                 ]
             restored_unit.pop("campaign_potion_added_resistance", None)
-            if position in self.active_invulnerability_potion_positions:
+            if "campaign_potion_base_armor" in restored_unit:
                 base_armor = self._normalize_armor_value(
                     restored_unit.get(
                         "campaign_potion_base_armor",
@@ -1242,6 +1258,7 @@ class CampaignBattleMixin:
                     restored_unit.get("campaign_heal_tile_base_armor", base_armor)
                 )
             restored_unit["armor"] = max(0, base_armor)
+            restored_unit["base_armor"] = int(restored_unit["armor"])
             restored_unit.pop("campaign_potion_base_armor", None)
             restored_unit.pop("campaign_invulnerability_potion_bonus", None)
             restored_unit.pop("campaign_heal_tile_base_armor", None)

@@ -243,3 +243,35 @@ def test_render_and_state_summary_include_equipped_banner():
     assert rendered is not None
     assert env.BANNER_OF_SPEED_ITEM_NAME in rendered
     assert summary["equipped_banner_items"] == [env.BANNER_OF_SPEED_ITEM_NAME]
+
+
+@pytest.mark.parametrize("level,other_banner,bonus", [(6, False, 0.0), (7, False, 0.1), (7, True, 0.0)])
+def test_health_banner_rest_heals_once_only_when_equipped(level, other_banner, bonus):
+    env = _new_env()
+    _set_hero_level(env, level)
+    env.grid_env.agent_pos = tuple(env.CASTLE_POS)
+    env._add_hero_item(env.BANNER_OF_HEALTH_ITEM_NAME)
+    env._add_hero_item(env.BANNER_OF_HEALTH_ITEM_NAME)  # Duplicate is not a second bonus.
+    if other_banner:
+        env._add_hero_item(env.BANNER_OF_WAR_ITEM_NAME)
+    assert env._hero_item_gold_value_by_name(env.BANNER_OF_HEALTH_ITEM_NAME) == 5000
+    assert not env._is_sell_only_hero_item(env._make_hero_item_entry(env.BANNER_OF_HEALTH_ITEM_NAME))
+    living, capped, dead = _non_empty_blue_units(env)
+    for unit, fraction in ((living, 0.1), (capped, 0.99), (dead, 0.0)):
+        unit['hp'] = unit['health'] = env._unit_max_hp(unit) * fraction
+    start = living['hp']
+    for _ in range(3):
+        env._banner_state_info()
+        env.compute_action_mask()
+    assert living['hp'] == start  # Refreshing equipment never heals.
+    _, _, _, _, info = env.step(8)
+    assert info['rest_heal_banner_bonus_percent'] == pytest.approx(bonus)
+    expected = info['rest_heal_percent'] + info['rest_heal_typeoflord_bonus_percent'] + info['rest_heal_bonus_percent'] + bonus
+    assert info['rest_heal_total_percent'] == pytest.approx(expected)
+    assert living['hp'] == pytest.approx(min(env._unit_max_hp(living), start + env._unit_max_hp(living) * expected))
+    assert capped['hp'] == env._unit_max_hp(capped)
+    assert dead['hp'] == 0
+    env._consume_hero_item(env.BANNER_OF_HEALTH_ITEM_NAME)
+    env._consume_hero_item(env.BANNER_OF_HEALTH_ITEM_NAME)
+    _, _, _, _, info = env.step(8)
+    assert info['rest_heal_banner_bonus_percent'] == 0

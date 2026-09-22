@@ -281,3 +281,33 @@ def test_staff_support_spell_uses_same_effect_and_does_not_spend_turn_counter():
     assert second_info["spell_moves_restored"] == pytest.approx(10.0)
     assert env.moves == 20
     assert env._spell_cast_count_this_turn(spell_key) == 0
+
+
+def test_staff_uses_own_item_price_for_mask_payment_and_inventory():
+    env = _make_staff_env()
+    assert env._staff_spell_action_entry_for_item('Staff of Tree Summoning')['summon_unit_name'] == 'Энт'
+    assert env._staff_spell_action_entry_for_item('Staff of Clumsiness')['accuracy_multiplier'] == 0.8
+    name = 'Staff of Ice Spirits'
+    entry = env._staff_spell_action_entry_for_item(name)
+    env._staff_spell_action_entries_cache = (entry,)
+    action = env.grid_staff_spell_action_start
+    env._append_hero_item(name)
+    env.scroll_magic_unlocked = True
+    _grant_sorcery_lore(env)
+    env.enemy_team_states[10][0]['hp'] = env.enemy_team_states[10][0]['health'] = 1000
+    assert env._hero_item_sell_value(env._make_hero_item_entry(name)) == 4800
+    _set_spell_use_mana(env, entry['spell_id'])  # Book is cheaper: 150 / 150 / 300.
+    assert not env.compute_action_mask()[action]
+    costs = {'life': 200, 'death': 200, 'runes': 400}
+    for kind in env.MANA_KIND_ORDER:
+        setattr(env, env.MANA_ATTR_BY_KIND[kind], costs.get(kind, 0))
+    for kind, price in costs.items():
+        setattr(env, env.MANA_ATTR_BY_KIND[kind], price - 1)
+        assert not env.compute_action_mask()[action]
+        setattr(env, env.MANA_ATTR_BY_KIND[kind], price)
+    assert env.compute_action_mask()[action]
+    _, _, _, _, info = env.step(action)
+    assert info['spell_cast_executed']
+    assert all(getattr(env, env.MANA_ATTR_BY_KIND[kind]) == 0 for kind in env.MANA_KIND_ORDER)
+    assert env._count_hero_item(name) == 1
+    assert not env.compute_action_mask()[action]

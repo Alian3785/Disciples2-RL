@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from maps.base import MapConfig
+from maps.base import MapConfig, settlement_footprint_blocks
 
 GRID_SIZE = 48
 PLAY_GRID_SIZE = 32
@@ -18,14 +18,16 @@ RUIN_ENEMY_ID = 42
 
 LEVEL_TWO_CITY_TILE = (30, 4)
 LEVEL_THREE_CITY_TILE = (35, 44)
-RUIN_TILE = (26, 3)
-RUIN_MARKER_TILE = (27, 4)
+# Города занимают 4x4 клеток к северо-западу от своего входа, поэтому руины и
+# ресурсы стоят снаружи стен, но по-прежнему вплотную к входу.
+RUIN_TILE = (24, 3)
+RUIN_MARKER_TILE = (25, 4)
 KRAKEN_TILE = (29, 42)
 WILD_CENTAUR_TILE = (21, 23)
 
-LIFE_MANA_TILE = (29, 4)
-DEATH_MANA_TILE = (34, 44)
-GOLD_MINE_TILE = (35, 43)
+LIFE_MANA_TILE = (31, 4)
+DEATH_MANA_TILE = (36, 44)
+GOLD_MINE_TILE = (35, 45)
 
 MERCHANT_NAME = "Лавка странствующего алхимика"
 
@@ -281,6 +283,15 @@ WATER_TILES = (
 # around the centaur after the official 48 -> 32 coordinate scaling.
 FOREST_TILES = tuple((x, y) for x in (20, 21, 22) for y in (21, 23, 24))
 
+# Одиночные валуны посреди карты; поверх них идут 5x5/4x4 столицы и городов.
+SCATTERED_OBSTACLE_BLOCKS = (
+    (16, 25, 1, 1),
+    (23, 27, 1, 1),
+    (32, 20, 1, 1),
+    (37, 30, 1, 1),
+    (44, 20, 1, 1),
+)
+
 
 def _water_tiles() -> tuple[tuple[int, int], ...]:
     return WATER_TILES
@@ -300,11 +311,11 @@ MAP = MapConfig(
     play_grid_size=PLAY_GRID_SIZE,
     hero_start=HERO_START,
     obstacle_blocks=(
-        (16, 25, 1, 1),
-        (23, 27, 1, 1),
-        (32, 20, 1, 1),
-        (37, 30, 1, 1),
-        (44, 20, 1, 1),
+        *settlement_footprint_blocks(
+            capitals=(HERO_START,),
+            cities=(LEVEL_TWO_CITY_TILE, LEVEL_THREE_CITY_TILE),
+        ),
+        *SCATTERED_OBSTACLE_BLOCKS,
     ),
     empty_tiles=(),
     village_heal_tiles=(LEVEL_TWO_CITY_TILE, LEVEL_THREE_CITY_TILE),

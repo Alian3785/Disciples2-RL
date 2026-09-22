@@ -8,7 +8,14 @@ import pytest
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from campaign_env import CampaignEnv
+from grid import scale_static_tiles
 from maps import available_maps, get_map
+from maps.base import (
+    capital_footprint_block,
+    city_footprint_block,
+    footprint_tiles,
+    settlement_footprint_blocks,
+)
 from maps.green_dragon_minimal import (
     BLUE_DRAGON_NAME,
     DEATH_MANA_TILE,
@@ -30,6 +37,7 @@ from maps.green_dragon_minimal import (
     RUIN_ENEMY_ID,
     RUIN_MARKER_TILE,
     RUIN_TILE,
+    SCATTERED_OBSTACLE_BLOCKS,
     WATER_TILES,
 )
 
@@ -176,8 +184,22 @@ def test_enemy_strength_bands_move_away_from_the_capital_toward_the_dragon():
 def test_minimal_terrain_cities_resources_and_ruin_match_the_request():
     map_config = get_map("green_dragon_minimal")
 
-    assert len(map_config.obstacle_blocks) == 5
-    assert all(width == height == 1 for _, _, width, height in map_config.obstacle_blocks)
+    # Стены столицы (5x5) и двух городов (4x4) плюс пять одиночных валунов.
+    assert map_config.obstacle_blocks == (
+        *settlement_footprint_blocks(
+            capitals=(HERO_START,),
+            cities=(LEVEL_TWO_CITY_TILE, LEVEL_THREE_CITY_TILE),
+        ),
+        *SCATTERED_OBSTACLE_BLOCKS,
+    )
+    assert len(SCATTERED_OBSTACLE_BLOCKS) == 5
+    assert all(width == height == 1 for _, _, width, height in SCATTERED_OBSTACLE_BLOCKS)
+    # Руины и ресурсы вынесены за стены городов, но остаются вплотную к входам.
+    city_walls = set()
+    for city_tile in (LEVEL_TWO_CITY_TILE, LEVEL_THREE_CITY_TILE):
+        city_walls |= footprint_tiles(city_footprint_block(city_tile)) - {city_tile}
+    for tile in (RUIN_TILE, RUIN_MARKER_TILE, LIFE_MANA_TILE, DEATH_MANA_TILE, GOLD_MINE_TILE):
+        assert tile not in city_walls
     assert set(map_config.water_tiles_provider()) == set(WATER_TILES)
     assert len(WATER_TILES) == 5
     assert KRAKEN_TILE in WATER_TILES
@@ -214,13 +236,22 @@ def test_minimal_terrain_cities_resources_and_ruin_match_the_request():
     assert len(env.water_tiles) == 5
     assert kraken_play_tile in env.water_tiles
     assert set(env.forest_tiles) == expected_play_forest
-    assert set(env._static_obstacle_tiles) == {
-        (11, 16),
-        (15, 18),
-        (21, 13),
-        (24, 20),
-        (29, 13),
-    }
+    scattered_play_tiles = {(11, 16), (15, 18), (21, 13), (24, 20), (29, 13)}
+    settlement_play_tiles = set()
+    for block in (
+        capital_footprint_block(HERO_START),
+        city_footprint_block(LEVEL_TWO_CITY_TILE),
+        city_footprint_block(LEVEL_THREE_CITY_TILE),
+    ):
+        settlement_play_tiles |= set(
+            scale_static_tiles(PLAY_GRID_SIZE, tuple(sorted(footprint_tiles(block))))
+        )
+    # Входы (старт героя и heal tiles городов) и клетки отрядов остаются открытыми.
+    open_play_tiles = set(env.castle_heal_tiles) | set(env._static_enemy_positions.values())
+    open_play_tiles.add(tuple(env.CASTLE_POS))
+    assert set(env._static_obstacle_tiles) == (
+        scattered_play_tiles | settlement_play_tiles
+    ) - open_play_tiles
     assert len(set(env._static_enemy_positions.values())) == len(
         env._static_enemy_positions
     )

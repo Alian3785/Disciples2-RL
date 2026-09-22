@@ -11,6 +11,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from battle_env import FEATURES_PER_UNIT
 from campaign_env import CampaignEnv
 from maps import available_maps, get_map
+from maps.base import settlement_footprint_blocks
 from maps.siege_train import (
     HERO_START,
     SIEGE_ENEMY_ID,
@@ -73,7 +74,7 @@ def test_siege_train_is_registered_with_twenty_five_static_stacks_and_one_pursue
     assert map_config.scheduled_enemy_spawn_turn == SIEGE_SPAWN_TURN == 25
     assert map_config.scheduled_enemy_moves_per_turn == SIEGE_MOVES_PER_TURN == 25
     assert map_config.enemy_positions()[SIEGE_ENEMY_ID] == SIEGE_SPAWN_TILE
-    assert map_config.obstacle_blocks == ()
+    assert map_config.obstacle_blocks == settlement_footprint_blocks(capitals=(HERO_START,))
     assert map_config.chests == ()
     assert map_config.mana_sources == ()
 

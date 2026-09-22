@@ -160,6 +160,7 @@ def test_each_city_requires_all_defenders_and_victory_is_after_the_third():
         enemy_ids = FINAL_OBJECTIVE_CITIES[city_name]
         for enemy_id in enemy_ids:
             env.grid_env.enemies_alive[enemy_id] = False
+        env.grid_env.agent_pos = tuple(env.grid_env.enemy_positions[enemy_ids[-1]])
         assert env._capture_objective_city_if_cleared(enemy_ids[-1]) == [city_name]
         assert env._all_objective_cities_captured() is (city_index == 2)
 

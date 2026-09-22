@@ -297,8 +297,8 @@ def test_invulnerability_potion_use_consumes_item_rewards_and_buffs_next_battle(
 
     env._init_battle(enemy_id=1)
     battle_unit = _battle_blue_unit(env, target_pos)
-    assert int(battle_unit.get("armor", 0) or 0) == base_armor
-    assert float(battle_unit.get("incoming_damage_multiplier", 1.0) or 1.0) == pytest.approx(0.5)
+    assert int(battle_unit.get("armor", 0) or 0) == base_armor + 50
+    assert float(battle_unit.get("incoming_damage_multiplier", 1.0) or 1.0) == pytest.approx(1.0)
 
 
 def test_strength_potion_use_consumes_item_rewards_and_buffs_next_battle():
@@ -683,8 +683,8 @@ def test_battle_save_strips_combat_potion_bonuses_from_persistent_blue_state():
     env._init_battle(enemy_id=1)
 
     battle_unit = _battle_blue_unit(env, target_pos)
-    assert int(battle_unit.get("armor", 0) or 0) == base_armor
-    assert float(battle_unit.get("incoming_damage_multiplier", 1.0) or 1.0) == pytest.approx(0.5)
+    assert int(battle_unit.get("armor", 0) or 0) == base_armor + 50
+    assert float(battle_unit.get("incoming_damage_multiplier", 1.0) or 1.0) == pytest.approx(1.0)
     assert int(battle_unit.get("damage", 0) or 0) == int(
         round(base_damage * env.STRENGTH_POTION_DAMAGE_MULTIPLIER)
     )

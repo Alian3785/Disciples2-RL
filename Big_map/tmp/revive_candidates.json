@@ -1,0 +1,3719 @@
+{
+  "Скваер": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0001",
+        "name": "Squire",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      },
+      {
+        "id": "g000uu5201",
+        "name": "Squire",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Рыцарь": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0002",
+        "name": "Knight",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Охотник на ведьм": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0004",
+        "name": "Witch-Hunter",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Имперский рыцарь": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0003",
+        "name": "Imperial Knight",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Инквизитор": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0005",
+        "name": "Inquisitor",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Ангел": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0014",
+        "name": "Angel",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Защитник Веры": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0156",
+        "name": "Defender of Faith",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Великий инквизитор": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0157",
+        "name": "Grand Inquisitor",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Мастер клинка": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0155",
+        "name": "Holy Avenger",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Паладин": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0015",
+        "name": "Paladin",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Ученик": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0008",
+        "name": "Apprentice",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Волшебник": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0010",
+        "name": "Wizard",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Маг": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0009",
+        "name": "Mage",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Элементалист": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0153",
+        "name": "Elementalist",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Белый маг": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0152",
+        "name": "White Wizard",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Лучник": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0006",
+        "name": "Archer",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Стрелок": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0007",
+        "name": "Marksman",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Имперский ассасин": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0154",
+        "name": "Imperial Assassin",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Служка": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0011",
+        "name": "Acolyte",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Жрец": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0012",
+        "name": "Priest",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Клирик": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0016",
+        "name": "Cleric",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Священник": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0013",
+        "name": "Imperial Priest",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Аббатиса": {
+    "score": 1,
+    "candidates": [
+      {
+        "id": "g000uu0017",
+        "name": "Matriarch",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Патриарх": {
+    "score": 1,
+    "candidates": [
+      {
+        "id": "g000uu0150",
+        "name": "Hierophant",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Прорицательница": {
+    "score": 1,
+    "candidates": [
+      {
+        "id": "g000uu0151",
+        "name": "Prophetess",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      }
+    ]
+  },
+  "Титан": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0018",
+        "name": "Titan",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "0"
+      },
+      {
+        "id": "g000uu5218",
+        "name": "Titan",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Оживший доспех": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0024",
+        "name": "Living Armor",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "4"
+      }
+    ]
+  },
+  "Голем": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0025",
+        "name": "Golem",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "4"
+      }
+    ]
+  },
+  "Мизраэль": {
+    "score": 2,
+    "candidates": [
+      {
+        "id": "g000uu3001",
+        "name": "Myzrael",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "8"
+      },
+      {
+        "id": "g000uu3002",
+        "name": "Vithar",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "8"
+      },
+      {
+        "id": "g000uu3003",
+        "name": "Ashkael",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "8"
+      },
+      {
+        "id": "g000uu3004",
+        "name": "Ashgan",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "8"
+      }
+    ]
+  },
+  "Рыцарь на пегасе": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0019",
+        "name": "Pegasus Knight",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "2"
+      },
+      {
+        "id": "g000uu0070",
+        "name": "Duke",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "2"
+      }
+    ]
+  },
+  "Рейнджер людей": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0020",
+        "name": "Ranger",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "2"
+      },
+      {
+        "id": "g000uu0071",
+        "name": "Counselor",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "2"
+      }
+    ]
+  },
+  "Архимаг": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0021",
+        "name": "Archmage",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "2"
+      }
+    ]
+  },
+  "Архангел": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0022",
+        "name": "Arch-Angel",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "2"
+      }
+    ]
+  },
+  "Вор империи": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0023",
+        "name": "Thief",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "1"
+      },
+      {
+        "id": "g000uu0074",
+        "name": "Thief",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "1"
+      },
+      {
+        "id": "g000uu0100",
+        "name": "Thief",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "1"
+      }
+    ]
+  },
+  "Одержимый": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0052",
+        "name": "Possessed",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      },
+      {
+        "id": "g000uu0086",
+        "name": "Fighter",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Берсерк": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0053",
+        "name": "Berzerker",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Темный паладин": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0054",
+        "name": "Anti-Paladin",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Адский рыцарь": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0166",
+        "name": "Infernal Knight",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Сектант": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0062",
+        "name": "Cultist",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      },
+      {
+        "id": "g000uu5262",
+        "name": "Cultist",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Колдун": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0063",
+        "name": "Sorcerer",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Ведьма": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0067",
+        "name": "Witch",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Двойник": {
+    "score": 1,
+    "candidates": [
+      {
+        "id": "g000uu0171",
+        "name": "Doppelganger",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Демонолог": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0064",
+        "name": "Demonologist",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Колдунья": {
+    "score": 1,
+    "candidates": [
+      {
+        "id": "g000uu0068",
+        "name": "Hag",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Инкуб": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0065",
+        "name": "Incubus",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Пандемонеус": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0066",
+        "name": "Pandemoneus",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Суккуб": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0173",
+        "name": "Succubus",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Модеус": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0172",
+        "name": "Modeus",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Гаргулья": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0055",
+        "name": "Gargoyle",
+        "revive": "g0100:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Мраморная гаргулья": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0056",
+        "name": "Marble Gargoyle",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Ониксовая гаргулья": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0167",
+        "name": "Onyx Gargoyle",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Чёрт": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0057",
+        "name": "Devil",
+        "revive": "g0100:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Демон": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0058",
+        "name": "Demon",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Молох": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0059",
+        "name": "Moloch",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Тварь": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0060",
+        "name": "Beast",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Повелитель демонов": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0061",
+        "name": "Demon Lord",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Тиамат": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0168",
+        "name": "Tiamath",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Владыка": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0169",
+        "name": "Overlord",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Дьявол Бездны": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0170",
+        "name": "Abyssal Devil",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Сатир": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0069",
+        "name": "Fiend",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      }
+    ]
+  },
+  "Адская гончая": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0075",
+        "name": "Hellhound",
+        "revive": "g0100:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "4"
+      },
+      {
+        "id": "g000uu0105",
+        "name": "Hellhound",
+        "revive": "g0100:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "5"
+      }
+    ]
+  },
+  "Белиарх": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0076",
+        "name": "Beliarh",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "4"
+      },
+      {
+        "id": "g000uu0106",
+        "name": "Beliarh",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "5"
+      }
+    ]
+  },
+  "Мститель": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0077",
+        "name": "Avenger",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "4"
+      },
+      {
+        "id": "g000uu0107",
+        "name": "Avenger",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "5"
+      }
+    ]
+  },
+  "Ашкаэль": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu3001",
+        "name": "Myzrael",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "8"
+      },
+      {
+        "id": "g000uu3002",
+        "name": "Vithar",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "8"
+      },
+      {
+        "id": "g000uu3003",
+        "name": "Ashkael",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "8"
+      },
+      {
+        "id": "g000uu3004",
+        "name": "Ashgan",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "8"
+      }
+    ]
+  },
+  "Герцог": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0019",
+        "name": "Pegasus Knight",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "2"
+      },
+      {
+        "id": "g000uu0070",
+        "name": "Duke",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "2"
+      }
+    ]
+  },
+  "Советник": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0020",
+        "name": "Ranger",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "2"
+      },
+      {
+        "id": "g000uu0071",
+        "name": "Counselor",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "2"
+      }
+    ]
+  },
+  "Архидьявол": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0072",
+        "name": "Arch-Devil",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "2"
+      }
+    ]
+  },
+  "Баронесса": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0073",
+        "name": "Baroness",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "2"
+      }
+    ]
+  },
+  "Вор легионов": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0023",
+        "name": "Thief",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "1"
+      },
+      {
+        "id": "g000uu0074",
+        "name": "Thief",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "1"
+      },
+      {
+        "id": "g000uu0100",
+        "name": "Thief",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "1"
+      }
+    ]
+  },
+  "Гном": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0036",
+        "name": "Dwarf",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      },
+      {
+        "id": "g000uu5236",
+        "name": "Dwarf",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Гном воин": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0037",
+        "name": "Warrior",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Ветеран": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0038",
+        "name": "Veteran",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Горец": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0041",
+        "name": "Mountaineer",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Отшельник": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0163",
+        "name": "Hermit",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Повелитель волков": {
+    "score": 2,
+    "candidates": [
+      {
+        "id": "g000uu0164",
+        "name": "Wolf Lord",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Старый ветеран": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0040",
+        "name": "Venerable Warrior",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Король гномов": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0039",
+        "name": "Dwarf King",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Владыка рун": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0165",
+        "name": "Rune Master",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Травница": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0033",
+        "name": "Tenderfoot",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Посвященная": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0034",
+        "name": "Novice",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Друид": {
+    "score": 1,
+    "candidates": [
+      {
+        "id": "g000uu0035",
+        "name": "Druidess",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Алхимик": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0161",
+        "name": "Alchemist",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Архидруид": {
+    "score": 1,
+    "candidates": [
+      {
+        "id": "g000uu0160",
+        "name": "Archdruidess",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Метатель топоров": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0026",
+        "name": "Axe Thrower",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Арбалетчик": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0027",
+        "name": "Crossbowman",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Хранитель кузни": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0162",
+        "name": "Forge Guardian",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Огнеметчик": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0028",
+        "name": "Flame Caster",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Холмовой гигант": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0029",
+        "name": "Hill Giant",
+        "revive": "g0100:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      },
+      {
+        "id": "g000uu5229",
+        "name": "Hill Giant",
+        "revive": "g0100:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Скальной гигант": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0030",
+        "name": "Rock Giant",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Штормовой гигант": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0031",
+        "name": "Tempest Giant",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Ледяной гигант": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0032",
+        "name": "Ice Giant",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Старейшина": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0158",
+        "name": "Elder One",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Сын Имира": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0159",
+        "name": "Son of Ymir",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Йети": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0043",
+        "name": "Yeti",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "0"
+      }
+    ]
+  },
+  "Рух": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0049",
+        "name": "Roc",
+        "revive": "g0100:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "4"
+      }
+    ]
+  },
+  "Валькирия": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0050",
+        "name": "Valkyrie",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "4"
+      },
+      {
+        "id": "g000uu7050",
+        "name": "Valkyrie",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Каменный предок": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0051",
+        "name": "Stone Ancestor",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "4"
+      }
+    ]
+  },
+  "Видар": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu3001",
+        "name": "Myzrael",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "8"
+      },
+      {
+        "id": "g000uu3002",
+        "name": "Vithar",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "8"
+      },
+      {
+        "id": "g000uu3003",
+        "name": "Ashkael",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "8"
+      },
+      {
+        "id": "g000uu3004",
+        "name": "Ashgan",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "8"
+      }
+    ]
+  },
+  "Королевский страж": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0044",
+        "name": "King's Guard",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "2"
+      }
+    ]
+  },
+  "Инженер": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0045",
+        "name": "Engineer",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "2"
+      }
+    ]
+  },
+  "Хранитель знаний": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0046",
+        "name": "Loremaster",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "2"
+      }
+    ]
+  },
+  "Жезловик гномов": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0047",
+        "name": "Dwarf Champion",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "2"
+      }
+    ]
+  },
+  "Вор гномов": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0048",
+        "name": "Thief",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "1"
+      }
+    ]
+  },
+  "Воин": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0052",
+        "name": "Possessed",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "0"
+      },
+      {
+        "id": "g000uu0086",
+        "name": "Fighter",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Зомби": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0087",
+        "name": "Zombie",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Тамплиер": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0090",
+        "name": "Templar",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Скелет воин": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0088",
+        "name": "Skeleton Warrior",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Лорд тьмы": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0091",
+        "name": "Dark Lord",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Скелет рыцарь": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0089",
+        "name": "Skeleton Champion",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Скелет призрак": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0179",
+        "name": "Phantom Warrior",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Адепт": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0080",
+        "name": "Initiate",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Чернокнижник": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0081",
+        "name": "Warlock",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Некромант": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0082",
+        "name": "Necromancer",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Дух": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0085",
+        "name": "Wraith",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Вампир": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0083",
+        "name": "Vampire",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Лич": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0084",
+        "name": "Lich",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Смерть": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0177",
+        "name": "Death",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Сущий": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0178",
+        "name": "Wight",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Высший вампир": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0175",
+        "name": "Elder Vampire",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Архилич": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0176",
+        "name": "Archlich",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Привидение": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0078",
+        "name": "Ghost",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Призрак": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0079",
+        "name": "Specter",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Тень": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0174",
+        "name": "Shade",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Виверна": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0093",
+        "name": "Wyvern",
+        "revive": "g0100:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Дракон рока": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0094",
+        "name": "Doomdrake",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Дракон смерти": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0095",
+        "name": "Deathdragon",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Змей ужаса": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0180",
+        "name": "Dreadwyrm",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Драколич": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0181",
+        "name": "Dracolich",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      }
+    ]
+  },
+  "Оборотень": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0092",
+        "name": "Werewolf",
+        "revive": "g0500:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "0"
+      },
+      {
+        "id": "g000uu5292",
+        "name": "Werewolf",
+        "revive": "g0500:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Скелет": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0101",
+        "name": "Skeleton",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "4"
+      }
+    ]
+  },
+  "Темный энт": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0102",
+        "name": "Evil Ent",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "4"
+      },
+      {
+        "id": "g000uu8037",
+        "name": "Ent",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "4"
+      }
+    ]
+  },
+  "Кошмар": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0103",
+        "name": "Nightmare",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "4"
+      }
+    ]
+  },
+  "Танатос": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0104",
+        "name": "Thanatos",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "4"
+      }
+    ]
+  },
+  "Ашган": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu3001",
+        "name": "Myzrael",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "8"
+      },
+      {
+        "id": "g000uu3002",
+        "name": "Vithar",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0001",
+        "category": "8"
+      },
+      {
+        "id": "g000uu3003",
+        "name": "Ashkael",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "8"
+      },
+      {
+        "id": "g000uu3004",
+        "name": "Ashgan",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "8"
+      }
+    ]
+  },
+  "Рыцарь смерти": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0096",
+        "name": "Death Knight",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "2"
+      }
+    ]
+  },
+  "Носферату": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0097",
+        "name": "Nosferat",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "2"
+      }
+    ]
+  },
+  "Королева лич": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0098",
+        "name": "Lich Queen",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "2"
+      }
+    ]
+  },
+  "Баньши": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0099",
+        "name": "Banshee",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "2"
+      }
+    ]
+  },
+  "Вор нежити": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0023",
+        "name": "Thief",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0000",
+        "category": "1"
+      },
+      {
+        "id": "g000uu0074",
+        "name": "Thief",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0002",
+        "category": "1"
+      },
+      {
+        "id": "g000uu0100",
+        "name": "Thief",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "1"
+      }
+    ]
+  },
+  "Кентавр копейщик": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8014",
+        "name": "Centaur Lancer",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Кентавр странник": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8016",
+        "name": "Centaur Strider",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Кентавр латник": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8015",
+        "name": "Centaur Charger",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Кентавр дикарь": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8017",
+        "name": "Centaur Savage",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Адепт эльфов": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8025",
+        "name": "Adept",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Проводник": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8026",
+        "name": "Channeler",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Теург": {
+    "score": 1,
+    "candidates": [
+      {
+        "id": "g000uu8028",
+        "name": "Theurgist",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Архонт": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8027",
+        "name": "Archon",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Рейнджер": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8018",
+        "name": "Scout",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Охотник": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8019",
+        "name": "Hunter",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Дозорный": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8022",
+        "name": "Watchman",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Бандит": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8021",
+        "name": "Bandit",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Стингер": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8020",
+        "name": "Stinger",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Смотритель": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8023",
+        "name": "Warden",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Часовой": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8024",
+        "name": "Sentry",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Разбойник эльф": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8051",
+        "name": "Brigand",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Мародёр": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8052",
+        "name": "Marauder",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Медиум": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8031",
+        "name": "Spiritess",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Оракул": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8032",
+        "name": "Oracle",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Дева рощи": {
+    "score": 2,
+    "candidates": [
+      {
+        "id": "g000uu8033",
+        "name": "Grovemaiden",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Солнечная танцовщица": {
+    "score": 2,
+    "candidates": [
+      {
+        "id": "g000uu8034",
+        "name": "Sun Dancer",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Сильфида": {
+    "score": 2,
+    "candidates": [
+      {
+        "id": "g000uu8035",
+        "name": "Sylph",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Грифон": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8029",
+        "name": "Griffin",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Повелитель небес": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8030",
+        "name": "Skylord",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      }
+    ]
+  },
+  "Малый энт": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8036",
+        "name": "Ent Minor",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "0"
+      },
+      {
+        "id": "g000uu8136",
+        "name": "Ent Minor",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "4"
+      }
+    ]
+  },
+  "Энт": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu0102",
+        "name": "Evil Ent",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0003",
+        "category": "4"
+      },
+      {
+        "id": "g000uu8037",
+        "name": "Ent",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "4"
+      }
+    ]
+  },
+  "Великий энт": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8038",
+        "name": "Ent Major",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "4"
+      }
+    ]
+  },
+  "Буйный энт": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8039",
+        "name": "Verdant",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "4"
+      }
+    ]
+  },
+  "Иллюмиэлль": {
+    "score": 2,
+    "candidates": [
+      {
+        "id": "g000uu8040",
+        "name": "Illumielle",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "8"
+      }
+    ]
+  },
+  "Лесной лорд": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8009",
+        "name": "Forest Liege",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "2"
+      }
+    ]
+  },
+  "Хранитель леса": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8011",
+        "name": "Guardian",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "2"
+      }
+    ]
+  },
+  "Дриада": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8010",
+        "name": "Dryad",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "2"
+      }
+    ]
+  },
+  "Мудрец": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8012",
+        "name": "Sage",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "2"
+      }
+    ]
+  },
+  "Вор эльфов": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8013",
+        "name": "Thief",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0005",
+        "category": "1"
+      }
+    ]
+  },
+  "Нейтральный лорд эльфов": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5008",
+        "name": "Elf Lord",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Нейтральный эльф-рейнджер": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5009",
+        "name": "Elf Ranger",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Нейтральный грифон": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5004",
+        "name": "Griffin",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Нейтральный повелитель небес": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5010",
+        "name": "Skylord",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Нейтральный эльфийский оракул": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5006",
+        "name": "Oracle Elf",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Нейтральный кентавр-копейщик": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5011",
+        "name": "Centaur Lancer",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Крестьянин": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5101",
+        "name": "Peasant",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu5001",
+        "name": "Peasant",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Разбойник": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5130",
+        "name": "Thug",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu5030",
+        "name": "Thug",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Головорез": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5031",
+        "name": "Master Thug",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu5131",
+        "name": "Master Thug",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Ополченец": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5002",
+        "name": "Man at Arms",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Копейщик": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5103",
+        "name": "Spearman",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu5003",
+        "name": "Spearman",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Варвар": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5040",
+        "name": "Barbarian Warrior",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Ловчий": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8045",
+        "name": "Trapper",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu8145",
+        "name": "Trapper",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Шаманка": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8046",
+        "name": "Shamaness",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu8146",
+        "name": "Shamaness",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Вождь варваров": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5132",
+        "name": "Barbarian Chieftain",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu5032",
+        "name": "Barbarian Chieftain",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Кентавр": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5007",
+        "name": "Centaur",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Лесной эльф": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5105",
+        "name": "Forest Elf",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu5005",
+        "name": "Forest Elf",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Упырь": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5033",
+        "name": "Ghoul",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Оккультист": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu6013",
+        "name": "Occultist",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu6113",
+        "name": "Occultist",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Мастер оккультист": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu6014",
+        "name": "Master Occultist",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu6114",
+        "name": "Master Occultist",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Тёмный эльф жнец": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8042",
+        "name": "Dark Elf Reaper",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Тёмный эльф мясник": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8041",
+        "name": "Dark Elf Butcher",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu8141",
+        "name": "Dark Elf Butcher",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Тёмный эльф маг": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8043",
+        "name": "Dark Elf Crone",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu8143",
+        "name": "Dark Elf Crone",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Тёмный эльф призрак": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8044",
+        "name": "Dark Elf Gast",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Гоблин": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5117",
+        "name": "Goblin",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu5017",
+        "name": "Goblin",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Гоблин лучник": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5018",
+        "name": "Goblin Archer",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Гоблин старейшина": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8048",
+        "name": "Goblin Elder",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Орк": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5013",
+        "name": "Orc",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu5113",
+        "name": "Orc",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Орк чемпион": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5012",
+        "name": "Orc Champion",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu5112",
+        "name": "Orc Champion",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Король орков": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5014",
+        "name": "Orc King",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Тролль": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5116",
+        "name": "Troll",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu5016",
+        "name": "Troll",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu5127",
+        "name": "Kraken",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu5027",
+        "name": "Kraken",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Людоед": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5115",
+        "name": "Ogre",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Циклоп": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8047",
+        "name": "Cyclops",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu8147",
+        "name": "Cyclops",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Зелёный дракон": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5123",
+        "name": "Green Dragon",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu5023",
+        "name": "Green Dragon",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Синий дракон": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5121",
+        "name": "Blue Dragon",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu5021",
+        "name": "Blue Dragon",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Красный дракон": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5119",
+        "name": "Red Dragon",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu5019",
+        "name": "Red Dragon",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Белый дракон": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5120",
+        "name": "White Dragon",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu5020",
+        "name": "White Dragon",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Чёрный дракон": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5122",
+        "name": "Black Dragon",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu5022",
+        "name": "Black Dragon",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Тритон": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5028",
+        "name": "Merman",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Русалка": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5126",
+        "name": "Mermaid",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu5026",
+        "name": "Mermaid",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Человек ящер": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5124",
+        "name": "Lizard Man",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu5024",
+        "name": "Lizard Man",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Медуза": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5025",
+        "name": "Medusa",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Морской змей": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5129",
+        "name": "Sea Serpent",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu5029",
+        "name": "Sea Serpent",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Кракен": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5116",
+        "name": "Troll",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu5016",
+        "name": "Troll",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu5127",
+        "name": "Kraken",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu5027",
+        "name": "Kraken",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Волк": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5039",
+        "name": "Wolf",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu5139",
+        "name": "Wolf",
+        "revive": "g0200:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Дух волка": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8005",
+        "name": "Spirit Wolf",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu8105",
+        "name": "Spirit Wolf",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Медведь": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5038",
+        "name": "Brown Bear",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Белый медведь": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5037",
+        "name": "Polar Bear",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu5137",
+        "name": "Polar Bear",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Мантикора": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu6016",
+        "name": "Manticore",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu6116",
+        "name": "Manticore",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Гигантский паук": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5036",
+        "name": "Giant Spider",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu5136",
+        "name": "Giant Spider",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Гигантский чёрный паук": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5135",
+        "name": "Giant Black Spider",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu5035",
+        "name": "Giant Black Spider",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Бес": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu5034",
+        "name": "Imp",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Элементаль Воздуха": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu6003",
+        "name": "Air Elemental",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu6103",
+        "name": "Air Elemental",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Толстый бес": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu6004",
+        "name": "Fat Imp",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu6104",
+        "name": "Fat Imp",
+        "revive": "g0050:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Дикий гигант": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu6012",
+        "name": "Primitive Giant",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu6112",
+        "name": "Primitive Giant",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Эрхог Тёмная": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu6009",
+        "name": "Erhog the Dark",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu6109",
+        "name": "Erhog the Dark",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Эрхог Некромант": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu6019",
+        "name": "Erhog the Necromancer",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu6119",
+        "name": "Erhog the Necromancer",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Тёмный эльф Лиф": {
+    "score": 3,
+    "candidates": [
+      {
+        "id": "g000uu6007",
+        "name": "Dark Elf Lyf",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu6107",
+        "name": "Dark Elf Lyf",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Хьюберт де Лейли": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu6008",
+        "name": "Hubert de Lalye",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu6108",
+        "name": "Hubert de Lalye",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Утер ребенок": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu6120",
+        "name": "Uther",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu6020",
+        "name": "Uther",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Утер": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu6001",
+        "name": "Uther",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu6101",
+        "name": "Uther",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Утер демон": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu6002",
+        "name": "Demon Uther",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu6102",
+        "name": "Demon Uther",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Маг хугин": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu6005",
+        "name": "Mage Hugin",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu6105",
+        "name": "Mage Hugin",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Ятаа Халли": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu6006",
+        "name": "Yataa' Halli",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu6106",
+        "name": "Yataa' Halli",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Король гномов нейтрал": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu6015",
+        "name": "Dwarf King",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu6115",
+        "name": "Dwarf King",
+        "revive": "g0800:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Ниддог": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu6010",
+        "name": "Nhiddog",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu6110",
+        "name": "Nhiddog",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Костяной лорд": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu6017",
+        "name": "Bone Lord",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu6117",
+        "name": "Bone Lord",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Королева эльфов": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu6018",
+        "name": "Elf Queen",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu6118",
+        "name": "Elf Queen",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Граф Фламель Кроули": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8008",
+        "name": "Count Flamel Crowley",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Лаклаан": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8006",
+        "name": "Lachla'an",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu8106",
+        "name": "Lachla'an",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Тёмный Лаклаан": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8007",
+        "name": "Dark Lachla'an",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu8107",
+        "name": "Dark Lachla'an",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Драллиаан": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8003",
+        "name": "Drullia'an",
+        "revive": "g1500:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu8103",
+        "name": "Drullia'an",
+        "revive": "g1500:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Дрега Зул": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu6021",
+        "name": "Drega Zul",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu6121",
+        "name": "Drega Zul",
+        "revive": "g0600:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  },
+  "Небирос": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8001",
+        "name": "Nebiros",
+        "revive": "g1500:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu8101",
+        "name": "Nebiros",
+        "revive": "g1500:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Могильный голем": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8002",
+        "name": "Grave Golem",
+        "revive": "g1500:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu8102",
+        "name": "Grave Golem",
+        "revive": "g1500:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Зверь Галлеана": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8004",
+        "name": "Gallean's Beast",
+        "revive": "g1500:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu8104",
+        "name": "Gallean's Beast",
+        "revive": "g1500:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Гамтик кровавый": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu8049",
+        "name": "Gumtik Bledwater",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu8149",
+        "name": "Gumtik Bledwater",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Сэр Аллемон": {
+    "score": 1,
+    "candidates": [
+      {
+        "id": "g000uu8050",
+        "name": "Sir Allemon",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      },
+      {
+        "id": "g000uu8150",
+        "name": "Sir Allemon",
+        "revive": "g0400:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      }
+    ]
+  },
+  "Астерот": {
+    "score": 0,
+    "candidates": [
+      {
+        "id": "g000uu6011",
+        "name": "Asteroth",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "2"
+      },
+      {
+        "id": "g000uu6111",
+        "name": "Asteroth",
+        "revive": "g1000:r0000:y0000:e0000:w0000",
+        "race": "g000rr0004",
+        "category": "0"
+      }
+    ]
+  }
+}

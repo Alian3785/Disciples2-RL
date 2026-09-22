@@ -21,7 +21,7 @@
 from __future__ import annotations
 
 from maps import default as _default
-from maps.base import MapConfig
+from maps.base import MapConfig, settlement_footprint_blocks
 
 PLAY_GRID_SIZE = 24
 
@@ -64,7 +64,17 @@ SETTLEMENT_DEFENDER_HEAL_TILE_BY_ENEMY_ID = {
 }
 
 # Половина объектов каждого списка (каждый второй элемент).
-OBSTACLE_BLOCKS = _default.BASE_STATIC_OBSTACLE_BLOCKS[::2]
+_THINNED_OBSTACLE_BLOCKS = _default.BASE_STATIC_OBSTACLE_BLOCKS[::2]
+# Габариты столиц и оставленных городов прореживать нельзя: они возвращаются
+# явно (блоки, уже попавшие в прореженный список, не дублируются).
+_SETTLEMENT_BLOCKS = settlement_footprint_blocks(
+    capitals=(_default.HERO_START, _default.MAP.empire_territory_source_tile),
+    cities=VILLAGE_HEAL_TILES,
+)
+OBSTACLE_BLOCKS = (
+    *_THINNED_OBSTACLE_BLOCKS,
+    *(block for block in _SETTLEMENT_BLOCKS if block not in _THINNED_OBSTACLE_BLOCKS),
+)
 CHESTS = _default.BASE_STATIC_CHESTS[::2]
 # Источники маны: 8 -> 4, по одному каждого вида.
 MANA_SOURCES = (

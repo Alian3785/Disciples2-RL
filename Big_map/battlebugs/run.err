@@ -1,0 +1,29 @@
+Traceback (most recent call last):
+  File "C:\Users\Admin\Desktop\disciple\realnewdisciples-main\Big_map\tools\run_33_battlebugs.py", line 258, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\Admin\Desktop\disciple\realnewdisciples-main\Big_map\tools\run_33_battlebugs.py", line 247, in main
+    run_config(
+    ~~~~~~~~~~^
+        config,
+        ^^^^^^^
+    ...<4 lines>...
+        root=root,
+        ^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Admin\Desktop\disciple\realnewdisciples-main\Big_map\tools\run_33_battlebugs.py", line 120, in run_config
+    result = run_battle(
+        seed,
+    ...<6 lines>...
+        log_dir=logs_dir,
+    )
+  File "C:\Users\Admin\Desktop\disciple\realnewdisciples-main\Big_map\tools\sim_bughunt_battle.py", line 486, in run_battle
+    action = agent.action_for(env)
+  File "C:\Users\Admin\Desktop\disciple\realnewdisciples-main\Big_map\tools\sim_bughunt_battle.py", line 170, in action_for
+    obs = campaign._build_obs(battle_obs=battle._obs())
+                                         ~~~~~~~~~~~^^
+  File "C:\Users\Admin\Desktop\disciple\realnewdisciples-main\Big_map\battle_env.py", line 5679, in _obs
+    exp_required_raw = max(0.0, float(u.get("exp_required", 0) or 0))
+                                ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: could not convert string to float: 'max'

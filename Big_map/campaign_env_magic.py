@@ -349,7 +349,7 @@ class CampaignMagicMixin:
 
     def _staff_spell_definition_by_item_name(self, item_name: str) -> Dict[str, object]:
         return dict(
-            self._staff_spell_definitions_by_item_name().get(str(item_name or "").strip(), {})
+            self._staff_spell_definitions_by_item_name().get(self._canonical_item_name(item_name), {})
         )
 
     def _staff_spell_action_entry_for_item(self, item_name: str) -> Dict[str, object]:
@@ -454,7 +454,7 @@ class CampaignMagicMixin:
             return False
         if self._is_spell_blocked_by_typeoflord(spell):
             return False
-        if not self._has_mana_for_costs(self._get_spell_use_costs(spell)):
+        if not self._has_mana_for_costs(self._get_spell_use_costs(slot_entry)):
             return False
 
         if self._spell_kind_is_offensive(spell_kind):
@@ -637,6 +637,7 @@ class CampaignMagicMixin:
                     "spell_name": str(entry.get("spell_name", "") or ""),
                     "spell_kind": str(entry.get("spell_kind", "") or ""),
                     "spell_level": int(entry.get("spell_level", 0) or 0),
+                    "mana_costs": self._get_spell_use_costs(entry),
                     "required_item_count": int(
                         entry.get("required_item_count", 1) or 1
                     ),
@@ -1144,34 +1145,12 @@ class CampaignMagicMixin:
             self._clear_enemy_map_spell_effects_for_enemy(target_enemy_id)
             self._log(f"=== ВРАГ {target_enemy_id} УНИЧТОЖЕН ЗАКЛИНАНИЕМ НА КАРТЕ ===")
 
-            objective_cities_captured_before = len(self.captured_objective_cities)
-            result["newly_captured_objective_cities"] = self._capture_objective_city_if_cleared(
-                target_enemy_id
-            )
-            result["newly_activated_settlement_territories"] = (
-                self._activate_legions_settlement_territory_if_cleared(target_enemy_id)
-            )
-            if (
-                result["newly_captured_objective_cities"]
-                and self._campaign_objective_is_cities()
-            ):
-                result["final_objective_reward"] = self._compute_final_objective_reward(
-                    len(result["newly_captured_objective_cities"]),
-                    captured_before=objective_cities_captured_before,
-                )
-                result["reward"] = float(result["reward"]) + float(
-                    result["final_objective_reward"]
-                )
             result["reward"] = self._apply_green_dragon_objective_reward_if_needed(
                 target_enemy_id,
                 float(result["reward"]),
                 result,
             )
-            if result["newly_activated_settlement_territories"]:
-                for settlement_name in result["newly_activated_settlement_territories"]:
-                    self._log(
-                        f"=== ЗЕМЛЯ ЛЕГИОНОВ НАЧИНАЕТ РАСПРОСТРАНЯТЬСЯ ИЗ ПОСЕЛЕНИЯ {settlement_name} ==="
-                    )
+
 
         result["moves_after_cast"] = float(self.moves or 0.0)
         return result
@@ -1364,11 +1343,6 @@ class CampaignMagicMixin:
                 reward,
                 info,
             )
-            reward = self._apply_objective_city_reached_reward_if_needed(
-                self.current_enemy_id,
-                reward,
-                info,
-            )
             info["battle_triggered"] = True
             info["mode"] = "battle"
             info["enemy_id"] = self.current_enemy_id
@@ -1428,6 +1402,7 @@ class CampaignMagicMixin:
 
             if (
                 self.grid_env.all_enemies_defeated()
+                and not self._campaign_objective_is_cities()
                 and not self._campaign_objective_is_waves()
                 and not self._campaign_objective_is_full_party()
             ):
@@ -1752,6 +1727,9 @@ class CampaignMagicMixin:
             heal_amount = float(spell_spec.get("heal_amount", 0.0) or 0.0)
             return self._blue_stack_has_healable_units(heal_amount)
         if spell_kind in {"buff", "ward", "health_bonus"}:
+            ignored_terrain = str(spell_spec.get("ignore_terrain_penalty", "") or "")
+            if ignored_terrain and self._blue_stack_ignores_terrain_penalty(ignored_terrain):
+                return False
             normalized_spell_key = str(
                 spell_key
                 or spell_spec.get("spell_id", "")
@@ -1760,6 +1738,14 @@ class CampaignMagicMixin:
             )
             return bool(normalized_spell_key) and normalized_spell_key not in self.blue_map_spell_effects
         return False
+    def _blue_stack_ignores_terrain_penalty(self, terrain: str) -> bool:
+        """Book and scroll IDs share the same non-stacking day-long movement effect."""
+        specs = self._combined_map_support_spell_specs_by_id()
+        return any(
+            specs.get(spell_id, {}).get("ignore_terrain_penalty") == terrain
+            for spell_id in self.blue_map_spell_effects
+        )
+
     def _blue_stack_spell_effect_summary(self) -> Dict[str, object]:
         active_spell_ids = sorted(str(spell_id) for spell_id in self.blue_map_spell_effects if str(spell_id))
         specs_by_id = self._combined_map_support_spell_specs_by_id()
@@ -1803,6 +1789,10 @@ class CampaignMagicMixin:
             "initiative_multiplier": float(initiative_multiplier),
             "accuracy_multiplier": float(accuracy_multiplier),
             "health_delta": int(health_delta),
+            "ignored_terrain_penalties": [
+                terrain for terrain in ("forest", "water")
+                if self._blue_stack_ignores_terrain_penalty(terrain)
+            ],
         }
     def _apply_heal_to_blue_stack(self, heal_amount: float) -> Tuple[int, float]:
         if heal_amount <= 0.0:
@@ -2359,7 +2349,7 @@ class CampaignMagicMixin:
         item_owned = bool(item_name) and self._count_hero_item(item_name) >= required_item_count
         hero_is_mage = self._travel_hero_is_mage()
         has_sorcery_lore = self._hero_has_sorcery_lore()
-        mana_costs = self._get_spell_use_costs(spell) if isinstance(spell, dict) else {}
+        mana_costs = self._get_spell_use_costs(spell_data)
         blocked_by_typeoflord = self._is_spell_blocked_by_typeoflord(spell)
         nearest_targetable_enemy = None
         nearest_any_enemy = None
@@ -2602,30 +2592,8 @@ class CampaignMagicMixin:
                 info,
             )
 
-            objective_cities_captured_before = len(self.captured_objective_cities)
-            newly_captured_objective_cities = self._capture_objective_city_if_cleared(enemy_id)
-            newly_activated_settlement_territories = (
-                self._activate_legions_settlement_territory_if_cleared(enemy_id)
-            )
             info.update(self._grant_ruin_reward(enemy_id))
             info["objective_cities_captured_total"] = sorted(self.captured_objective_cities)
-            if newly_activated_settlement_territories:
-                info["legions_settlement_territories_activated"] = list(
-                    newly_activated_settlement_territories
-                )
-                for settlement_name in newly_activated_settlement_territories:
-                    self._log(
-                        f"=== ЗЕМЛЯ ЛЕГИОНОВ НАЧИНАЕТ РАСПРОСТРАНЯТЬСЯ ИЗ ПОСЕЛЕНИЯ {settlement_name} ==="
-                    )
-
-            if newly_captured_objective_cities and self._campaign_objective_is_cities():
-                final_objective_reward = self._compute_final_objective_reward(
-                    len(newly_captured_objective_cities),
-                    captured_before=objective_cities_captured_before,
-                )
-                reward += final_objective_reward
-                info["captured_objective_cities"] = list(newly_captured_objective_cities)
-                info["final_objective_reward"] = float(final_objective_reward)
 
             reward = self._apply_green_dragon_objective_reward_if_needed(
                 enemy_id,
@@ -2656,6 +2624,7 @@ class CampaignMagicMixin:
 
             if (
                 self.grid_env.all_enemies_defeated()
+                and not self._campaign_objective_is_cities()
                 and not self._campaign_objective_is_waves()
                 and not self._campaign_objective_is_full_party()
             ):

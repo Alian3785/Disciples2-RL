@@ -1,0 +1,158 @@
+{
+  "date": "2026-09-15",
+  "game": "Disciples II Rise of the Elves · Steam",
+  "game_tables": {
+    "Gaction.DBF": "a507b75d24dd92760aae61a7d74be65fbc82cc79ac9cf402aebb5cc2ef2a8cf4",
+    "GAI.dbf": "b5dacb0df5f3b6390222b4f951840f91cf950c140362261f345366c28253ab74",
+    "Gattacks.dbf": "0f4d3eacb636e4484de376186e48daff04cb425878b5ef61cced7ae405589a44",
+    "Gbuild.DBF": "4d66fdc094aab7328e0ad7950308d1b4b27daacf3170ee83e95869b3941fb5e8",
+    "GbuiList.dbf": "3df07210fa5ca5b662976a2a3e62232686009afafec38453fa4ca34d8c933396",
+    "GcityInf.dbf": "11f82049a1cb45a2528482b3253c08d4919b9034c54099544289ef77491e6750",
+    "GDynUpgr.DBF": "85debbfc03ac7deba04f24f5a3b93a4570c96265af689c80f8147a6bf212d5d2",
+    "Gimmu.dbf": "b8a8442c3d762bfef2d5291083625309613ad3e56cf56c59638ee2eae4c50ca4",
+    "GimmuC.dbf": "fc058eb48913134c1def928644513cbe698f5269616bfae6561b1db5556899e6",
+    "GItem.DBF": "9defb57de768aa0b4bff6b0c5434112aca9021fcf9df61347e4ced7bf8886942",
+    "GLabi.dbf": "22eaefd526f0c73b5bc0da92a42dd53cc16e91644b76da0cceac2155b0e12a27",
+    "GleaUpg.dbf": "048e690d8e310c8efc3db8640937688297716f5ca30fe256464ac83fd1afa21b",
+    "GLmark.dbf": "b742306d13702bf1948593feef5b47da0832c940a6b06226cc4a4bbd67551392",
+    "Glord.dbf": "ca2e8d7e5ab9e43d6cdb4e8c37c2bbd1331db10ebab95aff7a7e5a40ba6213a1",
+    "GMabi.dbf": "796523528c8f57cba2e99776ad7160006f99dd50102837653c7a3ba346dde047",
+    "Gmodif.dbf": "78003ddc29d8a00acde01f860a9d215ef4089536b88b2e89150dabac8107f3fa",
+    "GmodifL.dbf": "b3a8ff7a3e9de3ff4cee15f41e45ccabeb821c198d22501e9af8ae00cf26e671",
+    "Grace.dbf": "ce369781f7286f81b458d3634c9e03138b9155cf42692a2316ed2a7292d55336",
+    "GspellR.dbf": "63a05c89da94cb4adc4f44c965b53d59375db76864c5721dd1512f0c579e8d5a",
+    "Gspells.dbf": "4ae108be0679ee6473c2ef5d5ea351e53e9a28512c2f74b2d5af9f8f0a2d97b5",
+    "GSubRace.dbf": "ec91420a2ee2009f933f0f68ea9141ec579e21556124fe062bbb0b4143fd0635",
+    "GTileDBI.dbf": "44c2ac2dd3ff8597d705c5ddb4186374791293bce51b0b490b12f77666bd03fe",
+    "Gtransf.dbf": "39cedaf726e0c780307d31a5305a3f8253980fbfb2b5a924a6d814bfeabd6159",
+    "Gunits.dbf": "c663448bc47c08a40863d0efe4ae1476478ccf082af095a612416f181f7721db",
+    "GVars.DBF": "7a58ec3b871884433f92cb30be1c9f93cd5fbb467cdd3a17498bbf7ce0d6dc74",
+    "Laction.dbf": "2299d631047c4918d3095e37d39bf5796b109681fad552748e3e8b1942c30fc7",
+    "LaiAtt.dbf": "23d9ca0353f728b62c5bd7af62850cbfaf31ba6b1dce047a23c22d18c9fed505",
+    "LAiMsg.dbf": "c1af73aa8bd631966a4afc10cf1a02a7a343b10384c7c85c798a0079293e58c4",
+    "LAiSpell.dbf": "95e70c2fed9677e0f515bcd6c53e54c140952296601c19d8c9ecbb633da12dd2",
+    "LattC.dbf": "57a51a967c015d82962edd40c6eefd6f6ebcf34c87ed254526243df7d4c96405",
+    "LAttR.dbf": "e1efd8163b35f193c6d5a5f55df05d70afd88e1853e203706dfc71a409cd6247",
+    "LattS.dbf": "74ec5de903e9273383a6e6592807f647742fbca73e752296eae284db0193de6d",
+    "Lbuild.dbf": "fd210b761ad674351c8b9afb9d89184f19567c28b0d3e339b8beaca0e23fa3a2",
+    "Ldiff.dbf": "205e2a90d01ff6abe28d6b57f9f1920d73e2b1a10d725b1ffdf82748d79de1b6",
+    "LDthAnim.dbf": "1a8925931cd10b18d6620d64e891e91f3708f29f674ae3730accdecd2223677f",
+    "LEvCond.DBF": "aee06d3fb4eb8bad5954f103bc584803e26f722539574a9ed2e9904415480d65",
+    "LEvEffct.DBF": "77ed28f108ce3c8d49ca5baca8fac28ff8e8df85b350d8dfb5bbb6ed31c394c7",
+    "LFort.dbf": "07ba2514afc44113d245ee85d5570b4aa6455cb07b6eb62349f6cefb0214cebe",
+    "Lground.DBF": "b3a019bea7a824784b1e7c3096f89e7d8b5585127f3a112d35bcb02b201b12a8",
+    "LImmune.dbf": "b3cd6eafff663e2ed0e0e4b447626bee13c053f3031bd6c497b72e285bfba826",
+    "LleadA.dbf": "4a4a6797ae46f2d177ea2aa82b046361a8d9af2a3222d0f233d80aba89490701",
+    "LleadC.dbf": "d28f479678380b1455b0aa195e5e9b40723fd622b4356d29c9ef99e29f0d338f",
+    "LLMCat.dbf": "401316dd2b937a08cb2bcc0946c66be418e2aa9bf30f55e67df00a54fa45aaee",
+    "Llord.dbf": "0f7c4a78823af837858657a98d4a8176680eee19d3a4d0764ddb89be1e97947d",
+    "LmagItm.dbf": "e39deeb6697945ec1b70ef856c5b8d4a60f7695a67e21ed272c46765c453789c",
+    "LmodifE.dbf": "264a92622e01251a988007c032eabf5f1d777b3bf6f1e522703854bbce3d895a",
+    "LModifS.dbf": "9dc9035d8b95f731d7d270df9ed94610f8a4d3076672dc8ca766331646f5fac2",
+    "LOrder.DBF": "e79a69fcbd9ada57b5b1a7f2918488adcfd0f23685a976abe108574fd2019e19",
+    "Lrace.dbf": "27fb013196c5397103cf95594ff11a9095a92d94435e8d435e2c4f65c20baa75",
+    "Lres.dbf": "91fdd22bd771c105c475fa725849ba78cdcd2293d7f326fd96d376a3fd0aec37",
+    "Lsite.dbf": "28b92b6d8e126d20fd95dbd7a86600e9e5d536773dfb5b66a9344347ea23f7bc",
+    "Lspell.DBF": "7f0365bc096412e36dbf5f20e94d9b1a0e7a4b603157a8160eedb52992f5e362",
+    "LSplPhas.dbf": "936d3404c277bf583cd85e10f1c58c2077f5d19deb2d70d92e1da995cfb3fcc9",
+    "LSubRace.dbf": "897f51439bcb1c220343d8758b818c77331b4a18016acc11101411ac688a47ee",
+    "Lterrain.dbf": "783c037400160be22fd5f4f1c0d2fb9391643ba5a5964df0fc6fb15d4508a442",
+    "Ltreaty.DBF": "74009920ba4f5437324963d1d758e0708e8139f7ee34552b3c6b2e697fb9445e",
+    "LunitB.dbf": "ca9fba518defb2181e596927a963516c8797ef2653864fce8efe33b060fd67dc",
+    "LunitC.dbf": "e26d15cc7a18c5240a95458bac139923405577ff571cdeb116d0b152534d51bf",
+    "TAiMsg.DBF": "c566958882112629fec2e448c6508a1ddf54ef7cd93f5d220321b694bfb18d4c",
+    "Tglobal.dbf": "5da65f5cb78f714e1814f97d301b43ae54e1b7bf086e61c8f3f93abdfc9e12ce",
+    "Tleader.dbf": "865aa4091996d71e20be08a0da63f1bea23a7c7d28d6619393b316217da7882d",
+    "Tplayer.DBF": "4af492802e2307d29f07027c544b9ff3fca6685af23caf568b608e0c92f9d3e6"
+  },
+  "environment_files": {
+    "battle_env.py": "88ff1a2c04727c05cdd120d6d82fe126ec5c64085ea806497ded7f6fa43c5b6a",
+    "campaign_env_data.py": "96b9fe2fc30c28206b5f977d57cc1d807bac23d9b51851152791ccbd64c1bb02",
+    "campaign_env_magic.py": "c3170ab97a6f6a64a48e239164aed28287814542259abc48af11f4895fc353ed",
+    "campaign_env_inventory.py": "67738e521fe2fda6bc4e24928574c7d8489d99c0dbd059d1a947dbf33422023d",
+    "campaign_env_battle.py": "57744719969b4a74173010f27655806f6d635d8bc75d203c25f3223516912758",
+    "campaign_env_economy.py": "26ae8389eff28f625952424a2666f28adc53703f61c9cea5de638f8fefff25ec",
+    "campaign_env_territory.py": "dc2ec624b0471ae9a3237abda1fb43787eb1e1b188ca5ef76e34af2216124046",
+    "campaign_env_masks.py": "e3f6780f08309e59dad5b82fbe678f876b4e8e594952a611aac43285ade6b168",
+    "spells.py": "4c85f5b05e4ca0184e510ebb937ea07ce2b1acf5f9ffecaeff34a27b2ad49edd",
+    "scroll_spell_data.py": "5d8ca97e2f3dd69b52e2cf359b1901e51a4d4891a60afb53db61688207e95a6c",
+    "data_dicts_compact_lines.py": "e183d24e7ab4efe2ce2df672ace6b04d160c95f532e1b994bbb81efd8f708f69"
+  },
+  "checks": {
+    "unresolved_Хуорн": true,
+    "unresolved_Энт Малый": true,
+    "unresolved_Энт Большой": true,
+    "unresolved_Вердант": true,
+    "might_wrong_30": true,
+    "treebark_unresolved": true,
+    "tome_thought_unresolved": true,
+    "tome_mind_exists": true,
+    "all_missing_scroll_aliases_absent_from_maps": true,
+    "growth_compounds": true,
+    "dynamic_xp_unchanged": true
+  },
+  "completed_fixes": {
+    "date": "2026-09-16",
+    "finding_ids": [
+      "unit_stats",
+      "scroll_alias",
+      "might",
+      "cast_cost"
+    ],
+    "tests_passed": 115,
+    "book_casting_costs_verified": 120,
+    "environment_files": {
+      "data_dicts_compact_lines.py": "93046631ecf43080dea1c0923c485be79b7a4673f911fd86d80db6acd4722cba",
+      "scroll_spell_data.py": "56639d397d8298b99ed39417def812e64f8c00b0dac8e75105b6689f9f5ea5e8",
+      "campaign_env_data.py": "b76e523687de423e0d78b19bb86f42f6d537f879adb0a556de219a3bcc22fd9c",
+      "spells.py": "302d071b14fa6a16af24ad387b67f4953fbc3a237ecb1d5d417b75fe7278bc01"
+    }
+  },
+  "terrain_spells": {
+    "date": "2026-09-16",
+    "tests_passed": 211,
+    "spell_ids": [
+      "g000ss0022",
+      "g000ss0027"
+    ],
+    "environment_files": {
+      "campaign_env_data.py": "6e41c85ab539e1be875ca1e26654c067054951d58bb8ef67c7d156ef947db32f",
+      "campaign_env_magic.py": "26cf7b9968a832069a85cb1932fb6f47555ca39503be297793f24bf3ae0989d4",
+      "campaign_env_map.py": "beef517831e9ac3213a1d2d2840677f14708efad904fa94ec0cd1bfcd2ad796d",
+      "campaign_env_scripted_bot.py": "3f5ab01ad4c928effc78e79cf39663dca0b40027e04b713af1f4245a56358285",
+      "scroll_spell_data.py": "d8b55162297d74a40bfc875d1a1b456b7bc10098863781ec253cdac930abd931",
+      "maps/scroll_train.py": "7f3dc4769cc0648c7bbbd65120d97aaffcf68ce8a5ab70332c87783801b6d1ca"
+    }
+  },
+  "revive_and_city_growth": {
+    "date": "2026-09-16",
+    "tests_passed": 215,
+    "environment_files": {
+      "unit_revive_costs.py": "484d5351e8a7b7824f925e866650c3f4d2cea0f55475bf37c0245a05fb0e45ce",
+      "campaign_env_economy.py": "8acfce20cd8a930d2e0d582ca590dd6efeb84f5e329e564696edcc5210d51a7f",
+      "campaign_env_territory.py": "8588e881bbd5b4d807137745a1e1ffe4fcaeac82e802f0ded95f5a5d2de00882",
+      "tests/test_campaign_revive_and_city_growth.py": "f417431e4629edad2344aaa9f7f4b86db1fad0fc401f3392084d753ef948ed3b"
+    }
+  },
+  "banner_and_staff": {
+    "date": "2026-09-16",
+    "tests_passed": 46,
+    "environment_files": {
+      "campaign_env.py": "427e7ab608f89853a19116897cce75ed865ec4c4b5081f6e217a41bf53bee44c",
+      "campaign_env_data.py": "e00b41b03aa12f7df95bd095b5660424ebbbf94f0767a4406efccea8976b4c88",
+      "campaign_env_magic.py": "62df1d77bcfcf2df3c6df7bd974ec19d82615de04ed7b842d6f8ff3bb58739bc"
+    }
+  },
+  "item_aliases_and_dynamic_xp": {
+    "date": "2026-09-16",
+    "tests_passed": 156,
+    "environment_files": {
+      "campaign_env_data.py": "e00b41b03aa12f7df95bd095b5660424ebbbf94f0767a4406efccea8976b4c88",
+      "campaign_env_inventory.py": "88f84b64ef48add40155a922a72b6f33350e3d0d04b3c8cc8210ce8458ca8e21",
+      "campaign_env_magic.py": "62df1d77bcfcf2df3c6df7bd974ec19d82615de04ed7b842d6f8ff3bb58739bc",
+      "battle_env.py": "3e33638cf9a9f2e6508f1799ec72db951d0955514da00e3c8cd667196083fec3",
+      "data_dicts_compact_lines.py": "4deeadc9745070e2a8228fcdc5682c5719a9decc7c6814e344dd58cebaad798f",
+      "unit_dynamic_xp.py": "75545b4c58b8f57d841ecfa2c8a626904c53cea9d0591596f4595d4101c84b73"
+    }
+  }
+}

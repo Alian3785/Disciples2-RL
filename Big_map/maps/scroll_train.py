@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from maps.base import MapConfig
+from maps.base import MapConfig, settlement_footprint_blocks
 from scroll_spell_data import SCROLL_ITEM_DEFINITIONS
 
 GRID_SIZE = 48
@@ -24,16 +24,17 @@ STARTING_SCROLL_ITEMS = tuple(
     and str(definition.get("item_name", "") or "")
 )
 
-if len(STARTING_SCROLL_ITEMS) != 99 or len(set(STARTING_SCROLL_ITEMS)) != 99:
+if len(STARTING_SCROLL_ITEMS) != 101 or len(set(STARTING_SCROLL_ITEMS)) != 101:
     raise RuntimeError(
-        "scroll_train requires exactly 99 unique supported scroll definitions"
+        "scroll_train requires exactly 101 unique supported scroll definitions"
     )
 
 MAP = MapConfig(
     name="scroll_train",
     grid_size=GRID_SIZE,
     hero_start=HERO_START,
-    obstacle_blocks=(),
+    # 5x5 столицы: только вход (HERO_START) остаётся проходимым.
+    obstacle_blocks=settlement_footprint_blocks(capitals=(HERO_START,)),
     empty_tiles=(),
     village_heal_tiles=(),
     settlement_level_by_heal_tile={},

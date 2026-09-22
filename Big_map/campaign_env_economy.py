@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from campaign_env_data import *
+from unit_revive_costs import known_unit_revive_gold_cost
 
 
 class CampaignEconomyMixin:
@@ -60,10 +61,12 @@ class CampaignEconomyMixin:
     def _castle_revive_gold_cost(unit: Dict) -> float:
         """Посчитать полную стоимость воскрешения юнита золотом.
 
-        Для обычных фракционных юнитов цена растёт по Level. Для нейтралов
-        используется шкала max HP: такие существа могут быть сильными без
-        нормальной фракционной ветки, и Level для них ненадёжен.
+        Известные профили используют Gunits.REVIVE_C. Шкалы уровня/HP
+        остаются только резервом для пользовательских неизвестных существ.
         """
+        original_cost = known_unit_revive_gold_cost(unit)
+        if original_cost is not None:
+            return float(original_cost)
         is_neutral_unit = bool(unit.get("is_neutral_unit", False))
         if not is_neutral_unit:
             capital_raw = unit.get("capital", None)
@@ -284,6 +287,8 @@ class CampaignEconomyMixin:
             unit["hero"] = self._is_hero_unit(unit)
             unit["needaunit"] = self._resolve_hero_needaunit(unit)
             self._ensure_hero_flying_ability_token(unit)
+            if unit["hero"]:
+                apply_hero_level_stat_abilities(unit)
         self._sync_hero_needaunit_from_party(roster)
     @staticmethod
     def _is_travel_unit_alive(unit: Dict) -> bool:
@@ -2170,7 +2175,7 @@ class CampaignEconomyMixin:
             return False
 
         try:
-            cost = max(0.0, float(option.get("gold", 0.0) or 0.0))
+            cost = self._shop_buy_price(option.get("gold", 0.0))
         except (TypeError, ValueError):
             return False
         if float(self.gold or 0.0) < cost:
@@ -2247,7 +2252,7 @@ class CampaignEconomyMixin:
                 continue
 
             try:
-                cost = max(0.0, float(option.get("gold", 0.0) or 0.0))
+                cost = self._shop_buy_price(option.get("gold", 0.0))
             except (TypeError, ValueError):
                 values.append(False)
                 continue
@@ -2311,7 +2316,7 @@ class CampaignEconomyMixin:
 
         self._clear_hero_needaunit_after_hire(state)
 
-        cost = max(0.0, float(option.get("gold", 0.0) or 0.0))
+        cost = self._shop_buy_price(option.get("gold", 0.0))
         self.gold = max(0.0, float(self.gold or 0.0) - cost)
         if roster_entry is not None:
             roster_entry["stock"] = max(0, stock_before - 1)
@@ -3269,7 +3274,7 @@ class CampaignEconomyMixin:
             next_level = min(int(self.MAX_SETTLEMENT_LEVEL), current_level + 1)
             if captured and not at_max_level and upgrade_cost > 0.0 and not insufficient_gold:
                 self.gold -= float(upgrade_cost)
-                self.legions_settlement_level_by_name[settlement_name] = int(next_level)
+                self._set_settlement_level_with_territory_growth(settlement_name, int(next_level))
                 upgraded = True
                 self._log(
                     f'Город "{settlement_name}" улучшен: уровень {current_level} -> {next_level} '
@@ -3354,6 +3359,37 @@ class CampaignEconomyMixin:
             building["built"] = 1
             return building_name
         return None
+    def _apply_map_starting_buildings(self) -> List[str]:
+        """Отметить построенными здания, которые карта даёт на старте эпизода.
+
+        Карта может сразу открыть механику, обычно требующую стройки (например
+        «Храм» для лечения в замке). Здания достаются бесплатно и не занимают
+        лимит строительства хода, как и стартовая постройка лорда.
+        """
+        building_names = tuple(
+            str(name).strip()
+            for name in getattr(self._map, "starting_built_buildings", ())
+            if str(name).strip()
+        )
+        if not building_names:
+            return []
+        applied: List[str] = []
+        for wanted_name in building_names:
+            for building in self.active_buildings.values():
+                if not isinstance(building, dict):
+                    continue
+                if str(building.get("name", "") or "").strip() != wanted_name:
+                    continue
+                building["built"] = 1
+                self.active_buildings["alredybuilt"] = 1
+                applied.append(wanted_name)
+                break
+            else:
+                raise ValueError(
+                    f"Map {self.map_name!r} starts with building {wanted_name!r}, "
+                    "which is missing from the capital building table"
+                )
+        return applied
     def _get_hire_options_for_capital(self, capital: Optional[int]) -> List[Dict[str, object]]:
         """Вернуть список фракционных вариантов найма для выбранной столицы.
 

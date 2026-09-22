@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
-from maps.base import MapConfig
+from maps.base import MapConfig, settlement_footprint_blocks
 
 GRID_SIZE = 48
 HERO_START = (24, 42)
 STARTING_GOLD = 3000.0
 
+# Вход города — юго-восточный угол его 4x4; оба города целиком лежат внутри
+# своих водяных рвов (x=2..7 слева, x=40..45 справа).
 LEFT_CITY_TILE = (5, 24)
-RIGHT_CITY_TILE = (42, 24)
+RIGHT_CITY_TILE = (43, 24)
 LEFT_CITY_ENEMY_ID = 10
 RIGHT_CITY_ENEMY_ID = 11
 
@@ -36,9 +38,10 @@ DWARF_WAVE_ENEMY_ID = wave_enemy_id(1, 2)
 MERCHANT_NAME = "Лавка Последнего рубежа"
 SPELL_SHOP_NAME = "Башня дальней магии"
 
-CAPITAL_GOLD_MINE_TILE = (23, 42)
+# Ресурсы стоят снаружи стен столицы (5x5 к западу от входа) и городов.
+CAPITAL_GOLD_MINE_TILE = (25, 43)
 CAPITAL_INFERNAL_MANA_TILE = (25, 42)
-LEFT_GOLD_MINE_TILE = (3, 22)
+LEFT_GOLD_MINE_TILE = (3, 20)
 LEFT_DEATH_MANA_TILE = (3, 27)
 RIGHT_GOLD_MINE_TILE = (44, 22)
 RIGHT_LIFE_MANA_TILE = (44, 27)
@@ -538,7 +541,11 @@ MAP = MapConfig(
     name="super_last_stand",
     grid_size=GRID_SIZE,
     hero_start=HERO_START,
-    obstacle_blocks=(),
+    # 5x5 столицы и 4x4 обоих городов; проходимыми остаются только входы.
+    obstacle_blocks=settlement_footprint_blocks(
+        capitals=(HERO_START,),
+        cities=(LEFT_CITY_TILE, RIGHT_CITY_TILE),
+    ),
     empty_tiles=(),
     village_heal_tiles=(LEFT_CITY_TILE, RIGHT_CITY_TILE),
     settlement_level_by_heal_tile={
@@ -609,8 +616,10 @@ MAP = MapConfig(
     starting_roster={11: "Утер"},
     starting_unit_overrides={
         11: {
+            # unit_type сознательно не переопределяется: из данных «Утер»
+            # приходит тип "Betrezen", который даёт долгий паралич вторичной
+            # атакой вместо массовой атаки мага.
             "name": "Бетрезен",
-            "unit_type": "Mage",
             "hero": True,
             "exp_current": 0,
             "exp_required": 150,
@@ -622,6 +631,10 @@ MAP = MapConfig(
     starting_gold=STARTING_GOLD,
     merchant_buy_items=MERCHANT_ITEMS,
     starting_hero_abilities=("sorcery_lore", "artifact_knowledge"),
+    # Герой больше не маг по типу юнита, поэтому магию свитков открывает карта.
+    starting_scroll_magic_unlocked=True,
+    # Храм стоит с первого хода: лечение отряда в замке доступно сразу.
+    starting_built_buildings=("Храм",),
     starting_capital_id=2,
     starting_lord_type=2,
     scheduled_enemy_waves=SCHEDULED_WAVES,

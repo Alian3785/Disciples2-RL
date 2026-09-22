@@ -8,7 +8,7 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from battle_env import FEATURES_PER_UNIT
+from battle_env import AOE_TYPES, FEATURES_PER_UNIT, LONG_PARALYSIS_TYPES
 from campaign_env import CampaignEnv
 from maps import available_maps, get_map
 from maps.super_last_stand import (
@@ -96,7 +96,7 @@ def _enemy_names(env: CampaignEnv, enemy_id: int) -> Counter:
     )
 
 
-def test_super_last_stand_is_registered_and_starts_with_bethrezen_mage_only():
+def test_super_last_stand_is_registered_and_starts_with_bethrezen_hero_only():
     assert "super_last_stand" in available_maps()
     map_config = get_map("super_last_stand")
 
@@ -125,16 +125,24 @@ def test_super_last_stand_is_registered_and_starts_with_bethrezen_mage_only():
     ] == [(11, "Бетрезен")]
     hero = living[0]
     assert hero["hero"] is True
-    assert hero["unit_type"] == "Mage"
+    # Тип берётся из данных «Утер» и даёт долгий паралич, а не массовую атаку.
+    assert hero["unit_type"] == "Betrezen"
+    assert hero["unit_type"] in LONG_PARALYSIS_TYPES
+    assert hero["unit_type"] not in AOE_TYPES
+    assert hero["accuracy_secondary"] == 90
     assert hero["exp_current"] == 0
     assert hero["exp_required"] == 150
     assert hero["next_level_exp"] == 500
     assert hero["dynamic_level_exp_increment"] == 500
-    assert env._travel_hero_is_mage() is True
+    # Лорд-маг (typeoflord=2) сохраняет магию кампании, несмотря на тип юнита.
+    assert env._travel_hero_is_mage() is False
     assert env.scroll_magic_unlocked is True
     assert env._hero_has_sorcery_lore() is True
     assert env._hero_has_artifact_knowledge() is True
     assert env._find_unit_data_by_name("Бетрезен") is not None
+
+    # Храм стоит с первого хода, лечение в замке доступно сразу.
+    assert env._has_temple_built() is True
 
     assert info["scheduled_enemy_wave_count"] == 11
     assert info["scheduled_enemy_waves_spawned"] == 0
@@ -198,9 +206,11 @@ def test_capital_territory_cannot_cross_water_but_captured_cities_claim_resource
 
     env.grid_env.mark_enemy_defeated(LEFT_CITY_ENEMY_ID)
     env.grid_env.mark_enemy_defeated(RIGHT_CITY_ENEMY_ID)
+    env.grid_env.agent_pos = tuple(env.grid_env.enemy_positions[LEFT_CITY_ENEMY_ID])
     assert env._activate_legions_settlement_territory_if_cleared(
         LEFT_CITY_ENEMY_ID
     ) == ["Ноктурна"]
+    env.grid_env.agent_pos = tuple(env.grid_env.enemy_positions[RIGHT_CITY_ENEMY_ID])
     assert env._activate_legions_settlement_territory_if_cleared(
         RIGHT_CITY_ENEMY_ID
     ) == ["Крепость Бурь"]

@@ -730,7 +730,9 @@ def test_legion_summon_spell_victory_defeats_enemy_without_blue_exp():
     )
 
 
-def test_summon_victory_over_city_captures_city_immediately():
+@pytest.mark.parametrize('spell_key', ['lod_d2_s006', 'lod_d2_s003'])
+@pytest.mark.parametrize('last_city', [False, True])
+def test_remote_city_clear_requires_hero_entry(spell_key, last_city):
     env = CampaignEnv(log_enabled=False, persist_blue_hp=True, Realcapital=2)
     env.reset(seed=123)
 
@@ -765,25 +767,20 @@ def test_summon_victory_over_city_captures_city_immediately():
         ),
     ]
 
-    spell_key = "lod_d2_s006"
+    # Model a scenario whose garrison is targetable by map damage spells.
+    env._is_enemy_stack_spell_targetable = lambda enemy_id: True
+    if last_city:
+        env.captured_objective_cities = set(env.FINAL_OBJECTIVE_CITIES) - {env._objective_city_for_enemy(city_enemy_id)}
+        env.grid_env.enemies_alive[other_enemy_id] = False
     env.active_spells[spell_key]["learned"] = 1
     _set_spell_use_mana(env, spell_key)
-
-    _, _, _, _, cast_info = env.step(_spell_action_index(env, spell_key))
-    assert cast_info["battle_triggered"] is True
-    assert cast_info["target_enemy_id"] == city_enemy_id
-
-    summoned_unit = next(
-        unit
-        for unit in env.battle_env.combined
-        if unit.get("team") == "blue" and float(unit.get("max_health", 0) or 0) > 0
-    )
-    summoned_unit["damage"] = 999
-    summoned_unit["accuracy"] = 100
-    summoned_unit["initiative"] = 999
-    summoned_unit["initiative_base"] = 999
-
-    _, _, terminated, truncated, info = env.step(_battle_target_action(1))
+    _, _, terminated, truncated, info = env.step(_spell_action_index(env, spell_key))
+    if spell_key == 'lod_d2_s006':
+        assert info['battle_triggered'] is True
+        assert not info.get('objective_city_reached_reward')
+        summoned_unit = next(unit for unit in env.battle_env.combined if unit.get('team') == 'blue' and unit.get('max_health', 0) > 0)
+        summoned_unit.update(damage=999, accuracy=100, initiative=999, initiative_base=999)
+        _, _, terminated, truncated, info = env.step(_battle_target_action(1))
 
     city_name = env._objective_city_for_enemy(city_enemy_id)
     settlement_name = env.legions_settlement_territory_source_name_by_enemy_id[
@@ -794,20 +791,33 @@ def test_summon_victory_over_city_captures_city_immediately():
     assert terminated is False
     assert truncated is False
     assert env.grid_env.enemies_alive[city_enemy_id] is False
-    assert city_name in env.captured_objective_cities
-    assert settlement_name in env.legions_active_settlement_territory_capture_turn_by_name
-    assert info["captured_objective_cities"] == [city_name]
-    assert info["legions_settlement_territories_activated"] == [settlement_name]
-    assert info["final_objective_reward"] == pytest.approx(env.reward_all_enemies)
-    assert "summon_city_capture_deferred" not in info
-    assert "pending_summon_city_capture_count" not in info
-
-    upgrade_action = (
-        env.grid_settlement_upgrade_action_start
-        + env.settlement_upgrade_names.index(settlement_name)
-    )
+    assert city_name not in env.captured_objective_cities
+    assert settlement_name not in env.legions_active_settlement_territory_capture_turn_by_name
+    assert not info.get('captured_objective_cities')
+    assert not info.get('final_objective_reward')
+    upgrade_action = env.grid_settlement_upgrade_action_start + env.settlement_upgrade_names.index(settlement_name)
     env.gold = 999.0
-    assert bool(env.compute_action_mask()[upgrade_action]) is True
+    assert not env.compute_action_mask()[upgrade_action]
+    _, _, terminated, _, _ = env.step(8)
+    assert not terminated
+    assert settlement_name not in env.legions_active_settlement_territory_capture_turn_by_name
+    assert not env.legions_settlement_territory_tiles_by_name[settlement_name]
+    entry = next(a for a in range(8) if env.grid_env._target_pos_for_action(a) == city_tile)
+    assert env.compute_action_mask()[entry]
+    _, _, terminated, truncated, info = env.step(entry)
+    assert terminated is last_city
+    assert not truncated
+    assert info['captured_objective_cities'] == [city_name]
+    assert info['legions_settlement_territories_activated'] == [settlement_name]
+    assert info['final_objective_reward'] == pytest.approx(env._compute_final_objective_reward(1, captured_before=int(last_city)))
+    assert env.legions_active_settlement_territory_capture_turn_by_name[settlement_name] == env.turns
+    assert env.compute_action_mask()[upgrade_action]
+    if last_city:
+        assert info['campaign_victory_reason'] == 'objective_cities_cleared'
+    else:
+        _, _, _, _, repeat = env.step(8)
+        assert not repeat.get('final_objective_reward')
+        assert not repeat.get('captured_objective_cities')
 
 
 def test_legion_summon_spell_defeat_persists_enemy_damage_and_enemy_exp():

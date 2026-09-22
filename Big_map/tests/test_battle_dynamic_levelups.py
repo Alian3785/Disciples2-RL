@@ -1,6 +1,7 @@
 import sys
 from copy import deepcopy
 from pathlib import Path
+import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -60,8 +61,8 @@ def test_terminal_faction_healer_gains_level_without_transforming():
     assert patriarch["Level"] == 5
     assert patriarch["exp_current"] == 0
     assert patriarch["exp_required"] == 2000
-    assert patriarch["health"] == 138
-    assert patriarch["max_health"] == 138
+    assert patriarch["health"] == 140
+    assert patriarch["max_health"] == 140
     assert patriarch["damage"] == 132
     assert patriarch["accuracy"] == 100
     assert patriarch["turns_into"] == []
@@ -94,7 +95,7 @@ def test_explicit_boss_flag_uses_dynamic_level_even_with_evolution_targets():
     assert boss["Level"] == 3
     assert boss["exp_current"] == 0
     assert boss["exp_required"] == 475
-    assert boss["health"] == 83
+    assert boss["health"] == 85
     assert boss["damage"] == 44
     assert boss["accuracy"] == 100
 
@@ -128,6 +129,7 @@ def test_super_last_stand_bethrezen_level_persists_back_to_campaign():
     battle = BattleEnv(log_enabled=False)
     battle_blue = deepcopy(campaign.blue_team_state)
     bethrezen = next(unit for unit in battle_blue if unit.get("name") == "Бетрезен")
+    original_kill_xp = bethrezen['exp_kill']
     bethrezen["exp_current"] = bethrezen["exp_required"] - 1
     battle.combined = [*battle_blue, _enemy()]
     battle._apply_battle_exp("red")
@@ -142,6 +144,8 @@ def test_super_last_stand_bethrezen_level_persists_back_to_campaign():
     assert saved["max_health"] == 330
     assert saved["damage"] == 110
     assert saved["accuracy"] == 91
+    assert saved['exp_kill'] > original_kill_xp
+    assert saved['exp_kill'] == bethrezen['exp_kill']
     assert campaign.moves_per_turn == 25
 
 
@@ -159,3 +163,21 @@ def test_super_last_stand_bethrezen_uses_archdevil_xp_curve_across_levels():
     assert bethrezen["Level"] == 3
     assert bethrezen["exp_current"] == 0
     assert bethrezen["exp_required"] == 1150
+
+
+@pytest.mark.parametrize('level,increment', [(1, 103), (9, 103), (10, 52), (11, 52)])
+def test_dynamic_kill_xp_uses_profile_on_both_sides_of_level_ten(level, increment):
+    env = BattleEnv(log_enabled=False)
+    dragon = _unit('Зелёный дракон')
+    dragon['Level'] = level
+    before = dragon['exp_kill']
+    _reach_level(env, dragon)
+    assert dragon['exp_kill'] == before + increment
+    dragon['team'] = 'red'
+    dragon['health'] = dragon['hp'] = 0
+    winner = _unit('Скваер')
+    winner['exp_required'] = 100000
+    env.combined = [winner, dragon]
+    env._apply_battle_exp('red')
+    assert env.last_battle_exp == before + increment
+    assert winner['exp_current'] == before + increment

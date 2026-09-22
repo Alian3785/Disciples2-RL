@@ -13,6 +13,7 @@ from copy import deepcopy
 from pathlib import Path
 
 from battle_env import BattleEnv, UNITS_BLUE, FEATURES_PER_UNIT
+from hero_level_abilities import HERO_LEVEL_STAT_ABILITIES, apply_hero_level_stat_abilities
 from enemy_configs import (
     ENEMY_CONFIGS,
     ENEMY_CONFIGS_BLUE_DRAGON,
@@ -553,6 +554,8 @@ class CampaignConstantsMixin:
         {"id": "mcl_d2_s020", "kind": "moves", "moves_restore_fraction": 1.00},
         {"id": "mcl_d2_s023", "kind": "buff", "buff_type": "damage", "damage_multiplier": 1.50},
         {"id": "mcl_d2_s024", "kind": "buff", "buff_type": "armor", "armor_delta": 33},
+        {"id": "mcl_d2_s002", "kind": "buff", "buff_type": "terrain", "ignore_terrain_penalty": "forest"},
+        {"id": "mcl_d2_s007", "kind": "buff", "buff_type": "terrain", "ignore_terrain_penalty": "water"},
     )
     MOUNTAIN_DAMAGE_SPELL_ACTION_SPECS = (
         {
@@ -668,6 +671,9 @@ class CampaignConstantsMixin:
     THANATOS_BLADE_ARTIFACT_ITEM_NAME = "Thanatos Blade (Artifact)"
     SKULL_OF_THANATOS_ARTIFACT_ITEM_NAME = "Skull of Thanatos (Artifact)"
     HAGS_RING_ARTIFACT_ITEM_NAME = "Hag's Ring (Artifact)"
+    WIGHT_BLADE_ARTIFACT_ITEM_NAME = "Wight Blade (Artifact)"
+    RUSTED_SHACKLES_ITEM_NAME = "Rusted Shackles (Artifact)"
+    LUTE_OF_CHARMING_ITEM_NAME = "Lute of Charming (Artifact)"
     ARTIFACT_EQUIP_SLOTS = 2
     ARTIFACT_ITEM_GOLD_VALUES = {
         RUNESTONE_ARTIFACT_ITEM_NAME: 500,
@@ -689,6 +695,9 @@ class CampaignConstantsMixin:
         THANATOS_BLADE_ARTIFACT_ITEM_NAME: 1500,
         SKULL_OF_THANATOS_ARTIFACT_ITEM_NAME: 3750,
         HAGS_RING_ARTIFACT_ITEM_NAME: 2500,
+        WIGHT_BLADE_ARTIFACT_ITEM_NAME: 5000,
+        RUSTED_SHACKLES_ITEM_NAME: 1500,
+        LUTE_OF_CHARMING_ITEM_NAME: 1500,
     }
     BANNER_OF_PROTECTION_ITEM_NAME = "Banner of Protection"
     BANNER_OF_RESISTANCE_ITEM_NAME = "Banner of Resistance"
@@ -700,6 +709,7 @@ class CampaignConstantsMixin:
     BANNER_OF_STRENGTH_ITEM_NAME = "Banner of Strength"
     BANNER_OF_MIGHT_ITEM_NAME = "Banner of Might"
     BANNER_OF_WAR_ITEM_NAME = "Banner of War"
+    BANNER_OF_HEALTH_ITEM_NAME = "Banner of Health"
     BANNER_EQUIP_SLOTS = 1
     BANNER_ITEM_NAMES = (
         BANNER_OF_PROTECTION_ITEM_NAME,
@@ -712,10 +722,12 @@ class CampaignConstantsMixin:
         BANNER_OF_STRENGTH_ITEM_NAME,
         BANNER_OF_MIGHT_ITEM_NAME,
         BANNER_OF_WAR_ITEM_NAME,
+        BANNER_OF_HEALTH_ITEM_NAME,
     )
     BANNER_EQUIP_PRIORITY = (
         BANNER_OF_WAR_ITEM_NAME,
         BANNER_OF_FORTITUDE_ITEM_NAME,
+        BANNER_OF_HEALTH_ITEM_NAME,
         BANNER_OF_MIGHT_ITEM_NAME,
         BANNER_OF_RESISTANCE_ITEM_NAME,
         BANNER_OF_BATTLE_ITEM_NAME,
@@ -726,6 +738,7 @@ class CampaignConstantsMixin:
         BANNER_OF_SPEED_ITEM_NAME,
     )
     BANNER_ITEM_GOLD_VALUES = {
+        BANNER_OF_HEALTH_ITEM_NAME: 5000,
         BANNER_OF_PROTECTION_ITEM_NAME: 1000,
         BANNER_OF_STRIKING_ITEM_NAME: 1000,
         BANNER_OF_SPEED_ITEM_NAME: 1000,
@@ -738,6 +751,7 @@ class CampaignConstantsMixin:
         BANNER_OF_WAR_ITEM_NAME: 5000,
     }
     BANNER_EFFECT_DEFINITIONS = {
+        BANNER_OF_HEALTH_ITEM_NAME: {"regeneration_bonus": 0.10},
         BANNER_OF_PROTECTION_ITEM_NAME: {"armor_bonus": 10},
         BANNER_OF_RESISTANCE_ITEM_NAME: {"armor_bonus": 15},
         BANNER_OF_FORTITUDE_ITEM_NAME: {"armor_bonus": 20},
@@ -819,9 +833,9 @@ class CampaignConstantsMixin:
     HASTE_ELIXIR_INITIATIVE_MULTIPLIER = 1.60
     TITAN_ELIXIR_DAMAGE_MULTIPLIER = 1.10
     SUPREME_ELIXIR_HEALTH_MULTIPLIER = 1.15
-    PROTECTION_POTION_ITEM_NAME = "Зелье защиты (-15%)"
-    BARK_POTION_ITEM_NAME = "Зелье коры дерева (-30%)"
-    IRON_SKIN_POTION_ITEM_NAME = "Зелье железной кожи (-10%)"
+    PROTECTION_POTION_ITEM_NAME = "Зелье защиты (+15 брони)"
+    BARK_POTION_ITEM_NAME = "Зелье коры дерева (+30 брони)"
+    IRON_SKIN_POTION_ITEM_NAME = "Зелье железной кожи (+10 брони)"
     HIT_POTION_ITEM_NAME = "Зелье меткости (+15%)"
     ACCURACY_POTION_ITEM_NAME = "Зелье точности (+30%)"
     LUCK_POTION_ITEM_NAME = "Эликсир удачи (+10%)"
@@ -832,10 +846,10 @@ class CampaignConstantsMixin:
     VIGOR_POTION_ITEM_NAME = "Зелье бодрости (+15%)"
     MIGHT_POTION_ITEM_NAME = "Зелье мощи (+30%)"
     STRENGTH_POTION_CANONICAL_ITEM_NAME = "Зелье силы (+30%)"
-    POTION_DAMAGE_REDUCTION_INVULNERABILITY_MULTIPLIER = 0.50
-    POTION_DAMAGE_REDUCTION_BARK_MULTIPLIER = 0.70
-    POTION_DAMAGE_REDUCTION_PROTECTION_MULTIPLIER = 0.85
-    POTION_DAMAGE_REDUCTION_IRON_SKIN_MULTIPLIER = 0.90
+    POTION_INVULNERABILITY_ARMOR_BONUS = 50
+    POTION_BARK_ARMOR_BONUS = 30
+    POTION_PROTECTION_ARMOR_BONUS = 15
+    POTION_IRON_SKIN_ARMOR_BONUS = 10
     POTION_ACCURACY_HIT_MULTIPLIER = 1.15
     POTION_ACCURACY_ACCURACY_MULTIPLIER = 1.30
     POTION_ACCURACY_LUCK_MULTIPLIER = 1.10
@@ -941,11 +955,12 @@ class CampaignConstantsMixin:
                 "Potion of Protection",
                 "Protection Potion",
                 "Зелье защиты",
+                "Зелье защиты (-15%)",
             ),
-            "category": "temporary_damage_reduction",
+            "category": "temporary_armor",
             "effect": {
-                "kind": "damage_reduction",
-                "incoming_damage_multiplier": POTION_DAMAGE_REDUCTION_PROTECTION_MULTIPLIER,
+                "kind": "armor",
+                "armor_bonus": POTION_PROTECTION_ARMOR_BONUS,
             },
             "duration": "temporary",
             "battle_equip": False,
@@ -959,11 +974,12 @@ class CampaignConstantsMixin:
                 "Bark Potion",
                 "Barkskin Potion",
                 "Зелье коры дерева",
+                "Зелье коры дерева (-30%)",
             ),
-            "category": "temporary_damage_reduction",
+            "category": "temporary_armor",
             "effect": {
-                "kind": "damage_reduction",
-                "incoming_damage_multiplier": POTION_DAMAGE_REDUCTION_BARK_MULTIPLIER,
+                "kind": "armor",
+                "armor_bonus": POTION_BARK_ARMOR_BONUS,
             },
             "duration": "temporary",
             "battle_equip": False,
@@ -977,10 +993,10 @@ class CampaignConstantsMixin:
                 "Invulnerability Potion",
                 "Elixir of Invulnerability",
             ),
-            "category": "temporary_damage_reduction",
+            "category": "temporary_armor",
             "effect": {
-                "kind": "damage_reduction",
-                "incoming_damage_multiplier": POTION_DAMAGE_REDUCTION_INVULNERABILITY_MULTIPLIER,
+                "kind": "armor",
+                "armor_bonus": POTION_INVULNERABILITY_ARMOR_BONUS,
             },
             "duration": "temporary",
             "battle_equip": False,
@@ -993,11 +1009,12 @@ class CampaignConstantsMixin:
                 "Potion of Iron Skin",
                 "Iron Skin Potion",
                 "Зелье железной кожи",
+                "Зелье железной кожи (-10%)",
             ),
-            "category": "permanent_damage_reduction",
+            "category": "permanent_armor",
             "effect": {
-                "kind": "damage_reduction",
-                "incoming_damage_multiplier": POTION_DAMAGE_REDUCTION_IRON_SKIN_MULTIPLIER,
+                "kind": "armor",
+                "armor_bonus": POTION_IRON_SKIN_ARMOR_BONUS,
             },
             "duration": "permanent",
             "battle_equip": False,
@@ -1110,10 +1127,7 @@ class CampaignConstantsMixin:
                 MIGHT_POTION_ITEM_NAME,
                 "Potion of Strength",
                 "Strength Potion",
-                "Potion of Might",
-                "Might Potion",
                 "Зелье силы",
-                "Зелье мощи",
             ),
             "category": "temporary_damage",
             "effect": {"kind": "damage", "multiplier": STRENGTH_POTION_DAMAGE_MULTIPLIER},
@@ -1125,6 +1139,9 @@ class CampaignConstantsMixin:
         {
             "name": ENERGY_ELIXIR_ITEM_NAME,
             "aliases": (
+                "Potion of Might",
+                "Might Potion",
+                "Зелье мощи",
                 "Potion of Energy",
                 "Energy Potion",
                 "Elixir of Energy",
@@ -1230,21 +1247,22 @@ class CampaignConstantsMixin:
         {"name": "Вызов Мстителя", "spell_id": "lod_d2_s021", "price": 1000.0, "stock": 1},
     )
     MAX_SPELL_SHOP_CAST_ACTIONS = 5
+    # Installed Rise of the Elves GItem.DBF: each item's VALUE and CASTING.
     STAFF_SPELL_ITEM_DEFINITIONS = (
-        {"item_name": "Staff of Celerity", "spell_id": "emp_d2_s002"},
-        {"item_name": "Staff of Necromancy", "spell_id": "und_d2_s001"},
-        {"item_name": "Staff of Thunder", "spell_id": "emp_d2_s004"},
-        {"item_name": "Staff of Holiness", "spell_id": "emp_d2_s007"},
-        {"item_name": "Staff of Traveling", "spell_id": "emp_d2_s006"},
-        {"item_name": "Staff of Tree Summoning", "spell_id": "elf_d2_s012"},
-        {"item_name": "Spirit Staff", "spell_id": "emp_d2_s011"},
-        {"item_name": "Staff of Dragon Mastering", "spell_id": "und_d2_s012"},
-        {"item_name": "Staff of Clumsiness", "spell_id": "und_d2_s013"},
-        {"item_name": "Staff of Protection", "spell_id": "emp_d2_s012"},
-        {"item_name": "Highfather Staff", "spell_id": "emp_d2_s019"},
-        {"item_name": "Staff of Demonology", "spell_id": "lod_d2_s017"},
-        {"item_name": "Staff of Earth Elemental Control", "spell_id": "emp_d2_s016"},
-        {"item_name": "Staff of Ice Spirits", "spell_id": "mcl_d2_s019"},
+        {"item_name": "Staff of Celerity", "spell_id": "emp_d2_s002", "item_id": "G000IG6012", "gold_value": 600, "use_life": 100},
+        {"item_name": "Staff of Necromancy", "spell_id": "und_d2_s001", "item_id": "G000IG6002", "gold_value": 600, "use_death": 100},
+        {"item_name": "Staff of Thunder", "spell_id": "emp_d2_s004", "item_id": "G000IG6001", "gold_value": 600, "use_life": 100},
+        {"item_name": "Staff of Holiness", "spell_id": "emp_d2_s007", "item_id": "G000IG6003", "gold_value": 1200, "use_life": 200},
+        {"item_name": "Staff of Traveling", "spell_id": "emp_d2_s006", "item_id": "G000IG6005", "gold_value": 1200, "use_life": 200},
+        {"item_name": "Staff of Tree Summoning", "spell_id": "elf_d2_s007", "item_id": "G000IG6021", "gold_value": 1800, "use_nature": 200},
+        {"item_name": "Spirit Staff", "spell_id": "emp_d2_s011", "item_id": "G000IG6013", "gold_value": 1800, "use_life": 150, "use_rune": 150},
+        {"item_name": "Staff of Dragon Mastering", "spell_id": "und_d2_s012", "item_id": "G000IG6011", "gold_value": 1800, "use_death": 150, "use_rune": 150},
+        {"item_name": "Staff of Clumsiness", "spell_id": "elf_d2_s015", "item_id": "G000IG6020", "gold_value": 1800, "use_death": 150, "use_nature": 150},
+        {"item_name": "Staff of Protection", "spell_id": "emp_d2_s012", "item_id": "G000IG6014", "gold_value": 1800, "use_life": 150, "use_rune": 150},
+        {"item_name": "Highfather Staff", "spell_id": "emp_d2_s019", "item_id": "G000IG6015", "gold_value": 3600, "use_hell": 150, "use_life": 300, "use_rune": 150},
+        {"item_name": "Staff of Demonology", "spell_id": "lod_d2_s017", "item_id": "G000IG6010", "gold_value": 3000, "use_hell": 200, "use_life": 100, "use_death": 100},
+        {"item_name": "Staff of Earth Elemental Control", "spell_id": "emp_d2_s016", "item_id": "G000IG6009", "gold_value": 2400, "use_hell": 100, "use_life": 200, "use_rune": 100},
+        {"item_name": "Staff of Ice Spirits", "spell_id": "mcl_d2_s019", "item_id": "G000IG6016", "gold_value": 4800, "use_life": 200, "use_death": 200, "use_rune": 400},
     )
     STAFF_SPELL_ITEM_NAMES = frozenset(
         str(definition.get("item_name", "") or "")
@@ -1252,17 +1270,58 @@ class CampaignConstantsMixin:
         if str(definition.get("item_name", "") or "")
     )
     STAFF_SPELL_ITEM_GOLD_VALUES = {
-        str(definition.get("item_name", "") or ""): 1200
+        str(definition.get("item_name", "") or ""): int(definition["gold_value"])
         for definition in STAFF_SPELL_ITEM_DEFINITIONS
         if str(definition.get("item_name", "") or "")
     }
     SCROLL_MAGE_UNLOCK_GOLD_COST = 500.0
+    # Verified GItem.DBF identities for effects already implemented in the environment.
+    ORIGINAL_ITEM_BINDINGS = (
+        ("G000IG2007", "Rusted Shackles", RUSTED_SHACKLES_ITEM_NAME),
+        ("G000IG3022", "Lute of Charming", LUTE_OF_CHARMING_ITEM_NAME),
+        ("G000IG0002", "Potion of Protection", PROTECTION_POTION_ITEM_NAME),
+        ("G000IG0004", "Iron Skin Potion", IRON_SKIN_POTION_ITEM_NAME),
+        ("G000IG0017", "Potion of Invulnerability", RUIN_INVULNERABILITY_ELIXIR_ITEM_NAME),
+        ("G000IG3018", "Wight Blade", WIGHT_BLADE_ARTIFACT_ITEM_NAME),
+        ("G000IG9041", "Orb of Flames", "Orb of Flame"),
+        ("G000IG9141", "Talisman of Horror", "Talisman of Nightmare"),
+        ("G000IG0003", "Treebark Potion", BARK_POTION_ITEM_NAME),
+        ("G000IG0007", "Highfather's Potion", SUPREME_ELIXIR_ITEM_NAME),
+        ("G000IG0008", "Potion of Striking", HIT_POTION_ITEM_NAME),
+        ("G000IG0010", "Potion of Fortune", LUCK_POTION_ITEM_NAME),
+        ("G000IG0013", "Quicksilver Potion", INITIATIVE_ELIXIR_ITEM_NAME),
+        ("G000IG0016", "Titan's Might Potion", TITAN_ELIXIR_ITEM_NAME),
+        ("G000IG0019", "Potion of Celerity", HASTE_ELIXIR_ITEM_NAME),
+        ("G000IG0021", "Potion of Air Warding", AIR_WARD_ITEM_NAME),
+        ("G000IG0022", "Potion of Water Warding", WATER_WARD_ITEM_NAME),
+        ("G000IG0023", "Potion of Earth Warding", EARTH_WARD_ITEM_NAME),
+        ("G000IG0024", "Potion of Fire Warding", FIRE_WARD_ITEM_NAME),
+        ("G000IG4008", "Tome of Thought", TOME_OF_MIND_ITEM_NAME),
+        ("G000IG6005", "Staff of Travelling", "Staff of Traveling"),
+        ("G000IG6011", "Staff of Dragon mastering", "Staff of Dragon Mastering"),
+        ("G000IG6016", "Staff of Tempest", "Staff of Ice Spirits"),
+        ("G000IG6020", "Staff of Fumbling", "Staff of Clumsiness"),
+        ("G000IG6021", "Staff of Treecalling", "Staff of Tree Summoning"),
+    )
+    ITEM_ID_TO_CANONICAL_NAME = {
+        **{entry["item_id"].lower(): entry["item_name"] for entry in STAFF_SPELL_ITEM_DEFINITIONS},
+        **{item_id.lower(): canonical for item_id, original, canonical in ORIGINAL_ITEM_BINDINGS},
+    }
+    ORIGINAL_ITEM_NAME_ALIASES = {
+        **{original.casefold(): canonical for item_id, original, canonical in ORIGINAL_ITEM_BINDINGS},
+        "ржавые кандалы": RUSTED_SHACKLES_ITEM_NAME,
+        "лютня очарования": LUTE_OF_CHARMING_ITEM_NAME,
+        "лютня обаяния": LUTE_OF_CHARMING_ITEM_NAME,
+    }
     MAX_SCROLL_CAST_ACTIONS = 5
     GRID_SCROLL_CAST_ACTION_COUNT = 0
     GRID_BUILD_ACTION_START = (
         GRID_SUPREME_ELIXIR_ACTION_START + len(SUPREME_ELIXIR_POSITIONS)
     )
     CHEST_ITEM_GOLD_VALUES = {
+        "Orb of Flame": 1000,
+        "Talisman of Nightmare": 600,
+        BANNER_OF_HEALTH_ITEM_NAME: 5000,
         "Potion of Healing": 150,
         "Life Potion": 400,
         "Potion of Strength": 450,

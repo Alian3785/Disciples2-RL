@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from maps.base import MapConfig
+from maps.base import MapConfig, settlement_footprint_blocks
 
 FORMATION_ENEMY_ID = 1
 FORMATION_ENEMY_TILE = (30, 46)
@@ -11,7 +11,8 @@ MAP = MapConfig(
     name="formation_train",
     grid_size=48,
     hero_start=(5, 27),
-    obstacle_blocks=(),
+    # 5x5 столицы: только вход (5, 27) остаётся проходимым.
+    obstacle_blocks=settlement_footprint_blocks(capitals=((5, 27),)),
     empty_tiles=(),
     village_heal_tiles=(),
     settlement_level_by_heal_tile={},
