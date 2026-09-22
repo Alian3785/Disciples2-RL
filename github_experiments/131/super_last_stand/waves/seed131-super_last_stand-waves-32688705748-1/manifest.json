@@ -1,0 +1,35 @@
+{
+  "status": "success",
+  "run_id": "seed131-super_last_stand-waves-32688705748-1",
+  "seed": 131,
+  "map": "super_last_stand",
+  "objective": "waves",
+  "commit_sha": "c469eb9f326628ec58f1b2e8d3c3564e43e5444f",
+  "completed_at": "2026-08-24T04:51:17.562430+00:00",
+  "parameters": {
+    "total_steps": 1000000,
+    "map": "super_last_stand",
+    "objective": "waves",
+    "n_envs": 12,
+    "vec_env": "subproc",
+    "vec_start_method": "forkserver",
+    "torch_num_threads": 4,
+    "checkpoint_freq": 500000,
+    "eval_freq": 83334,
+    "scripted_bot": false,
+    "comet": false,
+    "vec_check_nan": false,
+    "diagnostics": false
+  },
+  "artifacts": {
+    "persistent": [
+      "eval/evaluations.npz",
+      "eval/best_model.zip",
+      "eval/best_vecnormalize.pkl",
+      "logs/",
+      "tensorboard/",
+      "plots/"
+    ],
+    "checkpoint_artifact_retention_days": 1
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "status": "success",
+  "run_id": "seed124-item_train-all_enemies-31158637302-1",
+  "seed": 124,
+  "map": "item_train",
+  "objective": "all_enemies",
+  "commit_sha": "75f57228422a6f0798c345c313ce21c037e3a78e",
+  "completed_at": "2026-08-07T08:16:33.808854+00:00",
+  "parameters": {
+    "total_steps": 1000000,
+    "map": "item_train",
+    "objective": "all_enemies",
+    "n_envs": 12,
+    "vec_env": "subproc",
+    "vec_start_method": "forkserver",
+    "torch_num_threads": 4,
+    "checkpoint_freq": 500000,
+    "eval_freq": 83334,
+    "scripted_bot": false,
+    "comet": false,
+    "vec_check_nan": false,
+    "diagnostics": false
+  },
+  "artifacts": {
+    "persistent": [
+      "eval/evaluations.npz",
+      "eval/best_model.zip",
+      "eval/best_vecnormalize.pkl",
+      "logs/",
+      "tensorboard/",
+      "plots/"
+    ],
+    "checkpoint_artifact_retention_days": 1
+  }
+}

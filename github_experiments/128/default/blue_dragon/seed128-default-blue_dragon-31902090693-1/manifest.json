@@ -1,0 +1,35 @@
+{
+  "status": "success",
+  "run_id": "seed128-default-blue_dragon-31902090693-1",
+  "seed": 128,
+  "map": "default",
+  "objective": "blue_dragon",
+  "commit_sha": "f5694ab9f6d61dcf650fda07d69ded88929ff128",
+  "completed_at": "2026-08-15T19:24:43.792929+00:00",
+  "parameters": {
+    "total_steps": 1000000,
+    "map": "default",
+    "objective": "blue_dragon",
+    "n_envs": 12,
+    "vec_env": "subproc",
+    "vec_start_method": "forkserver",
+    "torch_num_threads": 4,
+    "checkpoint_freq": 500000,
+    "eval_freq": 83334,
+    "scripted_bot": false,
+    "comet": false,
+    "vec_check_nan": false,
+    "diagnostics": false
+  },
+  "artifacts": {
+    "persistent": [
+      "eval/evaluations.npz",
+      "eval/best_model.zip",
+      "eval/best_vecnormalize.pkl",
+      "logs/",
+      "tensorboard/",
+      "plots/"
+    ],
+    "checkpoint_artifact_retention_days": 1
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "status": "success",
+  "run_id": "seed119-builder-build_all-29962259333-1",
+  "seed": 119,
+  "map": "builder",
+  "objective": "build_all",
+  "commit_sha": "6bb47e919ec9173c2419781e702b50bd4a64cdff",
+  "completed_at": "2026-07-22T23:06:12.988382+00:00",
+  "parameters": {
+    "total_steps": 1000000,
+    "map": "builder",
+    "objective": "build_all",
+    "n_envs": 12,
+    "vec_env": "subproc",
+    "vec_start_method": "forkserver",
+    "torch_num_threads": 4,
+    "checkpoint_freq": 500000,
+    "eval_freq": 83334,
+    "scripted_bot": false,
+    "comet": false,
+    "vec_check_nan": false,
+    "diagnostics": false
+  },
+  "artifacts": {
+    "persistent": [
+      "eval/evaluations.npz",
+      "eval/best_model.zip",
+      "eval/best_vecnormalize.pkl",
+      "logs/",
+      "tensorboard/",
+      "plots/"
+    ],
+    "checkpoint_artifact_retention_days": 1
+  }
+}
