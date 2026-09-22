@@ -7,20 +7,16 @@ on:
   workflow_dispatch:
     inputs:
       full_training:
-        description: Run the next 1,000,000-step map task and advance the rotation
+        description: Run the next 1,500,000-step map task and advance the rotation
         required: true
         default: false
         type: boolean
       map_name:
         description: Map used by the 24,576-step smoke run
         required: true
-        default: default
+        default: orc_duel
         type: choice
         options:
-          - default
-          - small
-          - green_dragon_minimal
-          - super_last_stand
           - orc_duel
           - builder
           - formation_train
@@ -28,9 +24,6 @@ on:
           - item_train
           - magic_train
           - scroll_train
-          - siege_train
-          - trade_train
-          - wotans_retribution
 
 permissions:
   contents: write
@@ -60,7 +53,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           FULL_TRAINING: ${{ inputs.full_training || false }}
           RESULTS_BRANCH: github-experiments
-          CYCLE_BRANCH: rl-training-20-modes-cycle
+          CYCLE_BRANCH: rl-training-7-maps-1500k-cycle
         run: |
           set -euo pipefail
           rotation_run=false
@@ -92,7 +85,7 @@ jobs:
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
-          MANUAL_MAP: ${{ inputs.map_name || 'default' }}
+          MANUAL_MAP: ${{ inputs.map_name || 'orc_duel' }}
           FULL_TRAINING: ${{ inputs.full_training || false }}
         run: |
           set -euo pipefail

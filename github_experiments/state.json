@@ -1,8 +1,8 @@
 {
   "active": true,
   "seed": 138,
-  "next_map": "default",
-  "next_objective": "cities",
+  "next_map": "orc_duel",
+  "next_objective": "orc",
   "completed_runs": 434,
   "last_success": {
     "run_id": "seed137-wotans_retribution-cities-35490297825-1",
