@@ -1,15 +1,15 @@
 {
   "active": true,
-  "seed": 138,
+  "seed": 139,
   "next_map": "orc_duel",
   "next_objective": "orc",
-  "completed_runs": 434,
+  "completed_runs": 441,
   "last_success": {
-    "run_id": "seed137-wotans_retribution-cities-35490297825-1",
-    "seed": 137,
-    "map": "wotans_retribution",
-    "objective": "cities",
-    "completed_at": "2026-09-20T05:47:09.725280+00:00",
-    "commit_sha": "0ca693e14c1968315b0871b008dfec312f610c76"
+    "run_id": "seed138-scroll_train-all_enemies-35995714372-1",
+    "seed": 138,
+    "map": "scroll_train",
+    "objective": "all_enemies",
+    "completed_at": "2026-09-24T13:09:36.112699+00:00",
+    "commit_sha": "085417078235d93743e59caabb7a9164015dd375"
   }
 }
