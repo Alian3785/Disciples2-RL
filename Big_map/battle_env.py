@@ -6781,7 +6781,10 @@ class BattleEnv(gym.Env):
                             step_shaping += self.penalty_invalid_target
                         self._check_victory_after_hit()
 
-        step_info = {"battle_hero_item_action": bool(is_hero_item_action)}
+        step_info = {
+            "battle_hero_item_action": bool(is_hero_item_action),
+            "battle_defend_applied": bool(is_defend_action and can_strike),
+        }
         if is_hero_item_action or self.log_enabled or bool(getattr(self, "debug_info", False)):
             step_info.update(
                 {

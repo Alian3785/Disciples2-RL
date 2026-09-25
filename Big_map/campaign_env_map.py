@@ -236,6 +236,18 @@ class CampaignMapSitesMixin:
     def _sync_grid_chest_positions(self) -> None:
         """Синхронизирует позиции сундуков кампании с grid-окружением."""
         self.grid_env.chest_positions = set(self.chests.keys())
+
+    def _movement_tile_is_nonempty(self, position: Tuple[int, int]) -> bool:
+        """Live enemies and map objects count; terrain and cleared enemy sites do not."""
+        tile = tuple(position)
+        if self.grid_env.get_enemy_at_position(tile) is not None:
+            return True
+        return any(tile in locations for locations in (
+            self.chests, self.mana_sources, self.gold_mine_tiles,
+            self.castle_heal_tiles, self.legions_settlement_source_name_by_tile,
+            self.grid_env.merchant_positions, self.grid_env.spell_shop_positions,
+            self.grid_env.mercenary_positions, self.grid_env.trainer_positions,
+        )) or tile == tuple(self.CASTLE_POS)
     def _sync_grid_mana_sources(self) -> None:
         """Синхронизирует источники маны кампании с grid-окружением."""
         self.grid_env.mana_sources = {

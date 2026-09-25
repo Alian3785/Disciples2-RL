@@ -88,6 +88,23 @@ class CampaignMaskMixin:
 
     def compute_action_mask(self) -> np.ndarray:
         """
+        Собирает маску, синхронизируя hero-флаги BLUE не чаще раза за сборку.
+
+        Проверки маски (свитки, заклинания, зелья и т.п.) только читают отряд,
+        но каждая берёт его через _get_blue_state(), который пересинхронизирует
+        производные hero-флаги. Пока открыт scope, повторная синхронизация
+        пропускается (см. _get_blue_state).
+        """
+        if getattr(self, "_blue_state_sync_scope", None) is not None:
+            return self._build_action_mask()
+        self._blue_state_sync_scope = False
+        try:
+            return self._build_action_mask()
+        finally:
+            self._blue_state_sync_scope = None
+
+    def _build_action_mask(self) -> np.ndarray:
+        """
         Собирает полную маску допустимых действий для текущего режима среды.
 
         В grid-режиме метод комбинирует маску передвижения GridWorldEnv с
@@ -107,13 +124,10 @@ class CampaignMaskMixin:
             self._ensure_inventory_cache()
             # В grid режиме движение доступно при любом положительном остатке moves:
             # дорогие клетки добирают все оставшиеся очки, если полной стоимости не хватает.
-            # REST (8) доступен при ранении или когда очки перемещения закончились.
+            # REST (8) позволяет завершить ход на месте даже при полном здоровье.
             grid_mask = self.grid_env.compute_action_mask()
             mask[:8] = bool(self.moves > 0) & grid_mask[:8]
-            movement_available = bool(np.any(mask[:8]))
-            mask[8] = bool(grid_mask[8]) and (
-                self._has_wounded_blue() or self.moves <= 0 or not movement_available
-            )
+            mask[8] = bool(grid_mask[8])
             potion_mask_values = self._grid_potion_action_mask_values()
             for potion_idx, item_name in enumerate(self.scenario_potion_item_names):
                 action_start = self.GRID_POTION_USE_ACTION_START + potion_idx * len(

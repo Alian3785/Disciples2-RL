@@ -252,6 +252,7 @@ class CampaignBattleMixin:
                 # Победа: помечаем врага побеждённым
                 self._log(f"=== ПОБЕДА В БОЮ ПРОТИВ ВРАГА {self.current_enemy_id}! ===")
                 self.grid_env.mark_enemy_defeated(self.current_enemy_id)
+                self.hero_defeated_enemy_ids.add(int(self.current_enemy_id))
                 self._clear_enemy_map_spell_effects_for_enemy(self.current_enemy_id)
                 reward = self._apply_wave_defeat_reward_if_needed(
                     self.current_enemy_id,
@@ -330,6 +331,7 @@ class CampaignBattleMixin:
                     self.current_enemy_id,
                     reward,
                     info,
+                    defeat_source="hero_battle",
                 )
                 reward = self._apply_all_enemies_objective_reward_if_needed(reward, info)
                 reward = self._apply_target_enemy_objective_reward_if_needed(
@@ -831,7 +833,10 @@ class CampaignBattleMixin:
             self._log("Используется дефолтная BLUE команда")
 
         self.battle_env = BattleEnv(
-            reward_win=self.battle_reward_win,
+            reward_win=(
+                0.0 if self.current_battle_context.get("kind") == "summon_spell"
+                else self.battle_reward_win
+            ),
             reward_loss=self.battle_reward_loss,
             reward_step=self.battle_reward_step,
             log_enabled=self.log_enabled,
@@ -1787,8 +1792,12 @@ class CampaignBattleMixin:
             self._mark_equipment_dirty()
             self._sync_hero_progression_flags(self.blue_team_state)
             self._sync_moves_per_turn_with_hero(units=self.blue_team_state, refill=True)
-        else:
+        elif getattr(self, "_blue_state_sync_scope", None) is not True:
             self._sync_hero_progression_flags(self.blue_team_state)
+        if getattr(self, "_blue_state_sync_scope", None) is False:
+            # Внутри сборки маски отряд не меняется: первый вызов синхронизировал
+            # hero-флаги, остальные вызовы до конца сборки её пропускают.
+            self._blue_state_sync_scope = True
         return self.blue_team_state
     def _battle_grid_move_cost(self) -> int:
         """Возвращает стоимость входа в бой в очках перемещения по лимиту героя."""

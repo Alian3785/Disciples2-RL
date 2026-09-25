@@ -1,13 +1,5 @@
-# Local artifacts for the Big_map workspace
-.venv/
-.pytest_cache/
 __pycache__/
 *.pyc
+runs/
 comet_offline/
-campaign_checkpoints/
-campaign_eval/
-campaign_models/
-campaign_tb_logs/
-campaign_run_logs/
-campaign_diagnostics/
-outputs/
+.tensorboard/
