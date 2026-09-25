@@ -298,14 +298,18 @@ class CampaignMaskMixin:
                 action_index = int(self.GRID_SWAP_UNIT_ACTION_START) + int(idx)
                 if action_index < len(mask):
                     mask[action_index] = bool(can_swap)
+            for idx, position in enumerate(self.GRID_DISMISS_UNIT_POSITIONS):
+                mask[self.GRID_DISMISS_UNIT_ACTION_START + idx] = (
+                    self._dismiss_blue_unit_target(position) is not None
+                )
         else:
             # В battle режиме используем маску из BattleEnv
             if self.battle_env is not None:
                 battle_mask = self.battle_env.compute_action_mask()
                 mask[: len(battle_mask)] = battle_mask
             else:
-                # Фолбэк: все действия доступны
-                mask[:] = True
+                # Keep dismissal disabled even when BattleEnv is missing.
+                mask[: self.GRID_DISMISS_UNIT_ACTION_START] = True
 
         return mask
     def _has_wounded_blue(self) -> bool:

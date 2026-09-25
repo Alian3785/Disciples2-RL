@@ -958,9 +958,7 @@ class CampaignBattleMixin:
                 or int(restored_unit.get("teamated", 0) or 0) != 0
             ) and original_damage > 0:
                 restored_unit["damage"] = original_damage
-            if int(restored_unit.get("hermited", 0) or 0) != 0:
-                base_ini = int(restored_unit.get("initiative_base", 0) or 0)
-                restored_unit["initiative_base"] = base_ini * 2 if base_ini > 0 else base_ini
+            BattleEnv._restore_hermit_initiative(restored_unit)
             
             # СОХРАНЯЕМ ТЕКУЩЕЕ HP (не восстанавливаем!)
             current_hp = self._unit_current_hp(restored_unit)
@@ -987,6 +985,7 @@ class CampaignBattleMixin:
             restored_unit["resilience_used_types"] = []
             restored_unit.pop("teamated", None)
             restored_unit.pop("hermited", None)
+            restored_unit.pop("hermit_original_initiative_base", None)
             restored_unit.pop("lower_damage_original_damage", None)
             restored_unit.pop("lower_damage_original_unit_type", None)
             restored_unit.pop("shattered_armor", None)
@@ -1476,6 +1475,7 @@ class CampaignBattleMixin:
             original_unit["bonusturn"] = 0
             original_unit.pop("teamated", None)
             original_unit.pop("hermited", None)
+            original_unit.pop("hermit_original_initiative_base", None)
             original_unit.pop("lower_damage_original_damage", None)
             original_unit.pop("lower_damage_original_unit_type", None)
             original_unit.pop("shattered_armor", None)

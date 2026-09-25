@@ -803,8 +803,8 @@ class CampaignEnv(
         self._refresh_grid_obs_slices()
         self._refresh_full_obs_slices()
         total_actions = (
-            self.GRID_SWAP_UNIT_ACTION_START
-            + int(self.GRID_SWAP_UNIT_ACTION_COUNT)
+            self.GRID_DISMISS_UNIT_ACTION_START
+            + int(self.GRID_DISMISS_UNIT_ACTION_COUNT)
         )
         # Action space: grid is wider than battle (battle = 39 actions).
         self.action_space = spaces.Discrete(total_actions)
@@ -1070,6 +1070,7 @@ class CampaignEnv(
         self._sync_hero_progression_flags(self.blue_team_state)
         self._grant_map_starting_hero_abilities()
         self._reset_full_party_objective_tracking()
+        self._hire_rewarded_capacity = self._party_hire_composition()["occupied_capacity"]
         self.heal_bottles_used = 0
         self.healing_bottles_used = 0
         self.revive_bottles_used = 0
@@ -1185,8 +1186,8 @@ class CampaignEnv(
         self._sync_grid_trainer_positions()
         if not bool(getattr(self, "freeze_dynamic_action_layout", False)):
             total_actions = (
-                self.GRID_SWAP_UNIT_ACTION_START
-                + int(self.GRID_SWAP_UNIT_ACTION_COUNT)
+                self.GRID_DISMISS_UNIT_ACTION_START
+                + int(self.GRID_DISMISS_UNIT_ACTION_COUNT)
             )
             self.action_space = spaces.Discrete(total_actions)
 
@@ -1368,6 +1369,8 @@ class CampaignEnv(
                 False,
                 info,
             )
+        if action >= self.GRID_DISMISS_UNIT_ACTION_START:
+            return self._step_dismiss_blue_unit(action)
         if action >= self.GRID_SWAP_UNIT_ACTION_START:
             return self._step_swap_blue_unit_positions(action)
         if action >= self.grid_scroll_cast_action_start:

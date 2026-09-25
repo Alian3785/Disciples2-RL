@@ -3015,14 +3015,8 @@ class BattleEnv(gym.Env):
             unit["running_away"] = 0
             cleared = True
 
-        # Hermit-замедление: возвращаем базовую инициативу и убираем флаг.
-        if unit.get("hermited", 0):
-            base_ini = int(unit.get("initiative_base", 0) or 0)
-            unit["initiative_base"] = base_ini * 2 if base_ini > 0 else base_ini
-            unit["initiative"] = max(
-                int(unit.get("initiative", 0) or 0), unit["initiative_base"]
-            )
-            unit["hermited"] = 0
+        # Hermit-замедление: возвращаем точное значение до атаки.
+        if self._restore_hermit_initiative(unit):
             cleared = True
 
         # Если юнит превращён ведьмой/суккубом/Сущим — откатываем сохранённые характеристики.
@@ -3442,11 +3436,8 @@ class BattleEnv(gym.Env):
         ):
             if self.rng.random() < 0.5:
                 old_base = int(unit.get("initiative_base", 0) or 0)
-                new_base = old_base * 2
-                unit["hermited"] = 0
-                unit["initiative_base"] = new_base
-                current_ini = int(unit.get("initiative", 0) or 0)
-                unit["initiative"] = max(current_ini, new_base)
+                self._restore_hermit_initiative(unit)
+                new_base = int(unit.get("initiative_base", 0) or 0)
                 self._log(
                     f"Hermit slow fades: {unit['team'].upper()} {unit['name']}#{unit['position']} восстанавливает инициативу "
                     f"{old_base}->{new_base}."
@@ -4342,6 +4333,19 @@ class BattleEnv(gym.Env):
 
         return True
 
+    @staticmethod
+    def _restore_hermit_initiative(unit: Dict) -> bool:
+        """Restore the exact pre-slow initiative, including for dead campaign units."""
+        if not unit.get("hermited", 0):
+            return False
+        current_base = int(unit.get("initiative_base", 0) or 0)
+        # The fallback only supports older battle states without a saved value.
+        original_base = int(unit.pop("hermit_original_initiative_base", current_base * 2))
+        unit["initiative_base"] = original_base
+        unit["initiative"] = max(int(unit.get("initiative", 0) or 0), original_base)
+        unit["hermited"] = 0
+        return True
+
     def _apply_hermit_initiative_slow(self, attacker: Dict, victim: Dict) -> bool:
         """
         Разово режет инициативу цели на 50% (и базовую, и текущую), не стакается.
@@ -4380,6 +4384,7 @@ class BattleEnv(gym.Env):
 
         base_ini = int(victim.get("initiative_base", 0) or 0)
         cur_ini = int(victim.get("initiative", 0) or 0)
+        victim["hermit_original_initiative_base"] = base_ini
 
         new_base = max(0, int(round(base_ini * 0.5)))
         new_cur = min(cur_ini, new_base)

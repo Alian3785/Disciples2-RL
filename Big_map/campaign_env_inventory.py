@@ -462,6 +462,12 @@ class CampaignInventoryMixin:
         return self.BATTLE_EQUIPPABLE_ITEM_NAMES
 
     def _hire_reward_value(self) -> float:
+        # Reward new party capacity, not repeated dismiss/rehire cycles.
+        occupied = self._party_hire_composition()["occupied_capacity"]
+        previous = int(getattr(self, "_hire_rewarded_capacity", 0))
+        self._hire_rewarded_capacity = max(previous, occupied)
+        if occupied <= previous:
+            return 0.0
         reward = max(0.0, 3.0 * float(self.reward_defeat_enemy))
         if self._campaign_objective_is_full_party():
             reward *= float(getattr(self, "reward_full_party_hire_multiplier", 1.0))
