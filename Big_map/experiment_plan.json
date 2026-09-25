@@ -1,0 +1,180 @@
+{
+  "created_at": "2026-09-23T18:19:33.233317+00:00",
+  "baseline_commit": "76a5d3b",
+  "branch": "experiment/local-observation-5x5",
+  "default_observation": "local5",
+  "training_seed": 42,
+  "evaluation_seeds": [
+    10000,
+    10001,
+    10002,
+    10003,
+    10004,
+    10005,
+    10006,
+    10007,
+    10008,
+    10009,
+    10010,
+    10011,
+    10012,
+    10013,
+    10014,
+    10015,
+    10016,
+    10017,
+    10018,
+    10019
+  ],
+  "runs": [
+    {
+      "name": "orc_local5_s42",
+      "map": "orc_duel",
+      "objective": null,
+      "steps": 500000,
+      "milestones": [
+        500000
+      ],
+      "seed": 42
+    },
+    {
+      "name": "small_green_local5_s42",
+      "map": "small",
+      "objective": "dragon",
+      "steps": 800000,
+      "milestones": [
+        400000,
+        800000
+      ],
+      "seed": 42
+    },
+    {
+      "name": "small_blue_local5_s42",
+      "map": "small",
+      "objective": "blue_dragon",
+      "steps": 800000,
+      "milestones": [
+        400000,
+        800000
+      ],
+      "seed": 42
+    },
+    {
+      "name": "last_stand_local5_s42",
+      "map": "super_last_stand",
+      "objective": null,
+      "steps": 800000,
+      "milestones": [
+        400000,
+        800000
+      ],
+      "seed": 42
+    },
+    {
+      "name": "magic_local5_s42",
+      "map": "magic_train",
+      "objective": null,
+      "steps": 800000,
+      "milestones": [
+        400000,
+        800000
+      ],
+      "seed": 42
+    },
+    {
+      "name": "small_green_local5_s42_continue",
+      "map": "small",
+      "objective": "dragon",
+      "steps": 1600000,
+      "milestones": [
+        1600000
+      ],
+      "seed": 42,
+      "resume_from": "small_green_local5_s42"
+    },
+    {
+      "name": "small_blue_local5_s42_continue",
+      "map": "small",
+      "objective": "blue_dragon",
+      "steps": 1600000,
+      "milestones": [
+        1600000
+      ],
+      "seed": 42,
+      "resume_from": "small_blue_local5_s42"
+    }
+  ],
+  "frozen_sources": {
+    "A Return To Simpler Times.sg": "b69fe212641345de9a4186175396f29ac504eb926bb224f545578471efb1b76c",
+    "Buildings.py": "f1450a25d42d0a7d2e0983736ce2d88a1a398f44ce57967ff2fad4ee53e2e5ca",
+    "battle_env.py": "f42761867bf3062862beaf8512618b947d93c75258685b3f9cdd1adc9fc725a2",
+    "benchmark_training.py": "a9b1d84480cb0a0fe7a89280ccdc65cc9f0d597f1bd72f6bb5a40d0d6ccb8e12",
+    "bestmodeltest.py": "dda3d376907bc71aab3ce82009aa34d41d3e8b5c994a45ef25b30717cd6a3553",
+    "campaign_env.py": "f353221ceb2c0eb55a24e6df958c3a77df432160ae8a3c606978f3a8e03ed613",
+    "campaign_env_battle.py": "41f730762afc5cc693599e4fc5e0fdfbb69b7197a61cfc6be306225adc8e1e3b",
+    "campaign_env_data.py": "37522e1f3b622eab52d52d8f408a9ff7348b743aa5ba39c92e0553084bd9810c",
+    "campaign_env_economy.py": "8aa5abc712721d36674464b87803ae10145facff18ee2dbd89a8517cf41e4fe8",
+    "campaign_env_inventory.py": "eba78d6d3e44d04b672ce50ed70306feb2a21dccba8a9dc5ce0b06bede236924",
+    "campaign_env_magic.py": "30e67db040a4bdad97e48890080697f5e993e1ad8c23e632c3699b5ef9eef1ad",
+    "campaign_env_map.py": "8fea270df5d284b0c36e3028b41644a0e72b47e494e0ee657d4851a81ba3a637",
+    "campaign_env_masks.py": "62600dca5e1e67440767e8f477d42dd2b0b9bf01a0f13ce56c6629192dc21325",
+    "campaign_env_observation.py": "06f97217a3567b06f80ea4d2cb383004851255d345224c79c630983754210c53",
+    "campaign_env_scenario.py": "7f97c2148c32d374b4166cb496079191cdbf8aca764fe8b9e3bd9d5462e7d76e",
+    "campaign_env_scripted_bot.py": "f67ddd5eb6b4fd15f30a9519c187ae4437bf760f97a3944d4fc7664c4871631e",
+    "campaign_env_territory.py": "49abff709a3eb256d9100cba5fde4745e821800c48e795e22ce58c7d1a56ee9f",
+    "compare_training_configs.py": "6a55501ea56f86a07a1e234cee364644d04170d9b078a9e87cd609b3e519bb10",
+    "console_encoding.py": "eb38cb8ba1e1f0422803731fc527e6b0adaa587b1b6688c2af713949f814d97e",
+    "data_dicts_compact_lines.py": "4deeadc9745070e2a8228fcdc5682c5719a9decc7c6814e344dd58cebaad798f",
+    "enemy_configs.py": "de43ada3754d1c6a87f12af73ec5273df9c68212d8788e385aca83d6b390f353",
+    "episode_logs.py": "cdfb2666447439acc8acda7d581a4ec23417e025b5ce67ecd954535853c30f1e",
+    "eval_top_checkpoints.py": "b8b7bdd3e06491e75f54f5a797ed3f270bdfa705e2106a0b1481be77a57ecc2a",
+    "experiment_continue.py": "b3cbc47a2b78517b4e6a84c1b3e90a2afeaede71815aee313061a0f3bd931e98",
+    "experiment_train.py": "f142e6f7560d5a13102d5a957c9e8e2c8d41aba23e53b73c41051e998d9eee79",
+    "export_campaign_replay.py": "57c7edb5c79b4d3b052330b4df61832e1942bf8f8f5dabb0dc5a119fea5c19c3",
+    "grid.py": "dec701a71fcc290ea3c8224a8dd85f8cf4483da8ac4ef486e1dec71fc5c8a95d",
+    "grid_world_env.py": "ffccd91ab1de63a3fc39fc8114ad907c4e7bfc6145b6732582d8c281866f3fe7",
+    "hero_level_abilities.py": "61d05a30a9c5a673f435b1451c2ff382ba8816aa59d55d093e9c3556051c881d",
+    "hire.py": "ffbf0e589367d93548a7743d059bd6f311ffb74027c4c1c2f2453e5f02afa84a",
+    "local_observation.py": "284c57ed3d441d6593e676adfcb94cabd4ac8a22f5b1841ad14c8063480de74f",
+    "maps/__init__.py": "dd48b58a11f6132b42568556d53a65d9ecf5171d7b0cc567dbd9e0f9ca069054",
+    "maps/base.py": "e7601d45fd5d68139f49624a0c02b0f96b0e4117a9420c0958d47faa75f3bd39",
+    "maps/builder.py": "647a3c010ad892e1eecc7656f32a563a3f0a7912fb20d2b7c7941e8a529a73ae",
+    "maps/default.py": "d135903b152ce28398e1fb349950b0fe1d5bcf6b1548d364ad3502adff37547b",
+    "maps/formation_train.py": "12154d7bf3b4ecfeff9b292c8accdbb111fe2fe0880cb00e89b045878a600e08",
+    "maps/green_dragon_minimal.py": "1cbe012294cdc401f00a769e5843c663f3070d729aebf93adb26e8dea76bceff",
+    "maps/hire_train.py": "44629d6260abc4301e7995daef491a25b01c9f63446cb8b05df6b0dd5111e75d",
+    "maps/item_train.py": "b3504f5f51caaa85e19504dbd51f78435d0ac45a3c070d68cca9f4ac07af66ba",
+    "maps/magic_train.py": "2fbdb387176ccc7eb2b9d4131c930a8127bba4c295be978a22d87b6068d5f849",
+    "maps/orc_duel.py": "b6f84911400012b6ae438462bf08f0d199455978f8ec06ad8d111ee0ad2c2fa3",
+    "maps/scroll_train.py": "7f3dc4769cc0648c7bbbd65120d97aaffcf68ce8a5ab70332c87783801b6d1ca",
+    "maps/siege_train.py": "dd009625bf1b48252e59161f8ec03e4b54ca4886734e2d2f863d0e7475e8e80a",
+    "maps/small.py": "bffae225687dec22fb828180caf96bc012e203ed8d2e0bb561923503f8d9cec5",
+    "maps/super_last_stand.py": "343e0634c9c7a382edd7bb214c892f026e9ac05743c06d20fa4d71f2493f321a",
+    "maps/trade_train.py": "cdef9d41077fe12b406c845ee77f752291b99278e1d7d305c38634009aafb810",
+    "maps/wotans_retribution.py": "c9783085b9be497f9443b1b7abd7eef3c72ba0a79e0b50631406c96d6d1556f1",
+    "record_campaign_video.py": "7e4bf10bce4443e588b08c7e0692db21c9ac65ff51afe051c055f1fe53e15601",
+    "report_training_benchmark.py": "30261ef0554e3d2636d4bc94a9b5e3138fc0646548bc87307128e602a3ecb94e",
+    "run_local_experiment.py": "87e4dc315d78e4beeed99df9b9822c6b58f15cd03432e7a4917c70825808fc04",
+    "scroll_spell_data.py": "d8b55162297d74a40bfc875d1a1b456b7bc10098863781ec253cdac930abd931",
+    "spells.py": "302d071b14fa6a16af24ad387b67f4953fbc3a237ecb1d5d417b75fe7278bc01",
+    "summon_actions.py": "0c3c680d58a1c32497813d97648e485fa77ab129f7ec940377500ab4189fffc4",
+    "test_local_observation.py": "a95a1aafe1d3dfb0635daee5fb57e170361554d7e2f560e96c6379bf919542fd",
+    "train_campaign.py": "dd53855f6a920e579dcf5845056db1be23041b052f86805d4c0e09be12e4caf7",
+    "unit_dynamic_stats.py": "a5699df7412e3d3683efc74d9b770a065b9bccc0deb068d8d54bb9aa0804f0fb",
+    "unit_dynamic_xp.py": "3cfc4ea0036fbe3c9436b72345ebafd41caac59cf599aec663972f0936081fe5",
+    "unit_revive_costs.py": "484d5351e8a7b7824f925e866650c3f4d2cea0f55475bf37c0245a05fb0e45ce",
+    "visualize_campaign.py": "cc69acd717683959c1e7ffbaf4f82ea2f62549351ec329244713a47facd3adaf",
+    "visualize_final_model.py": "1086ebb2d642d13e25b4e573f6740c0c21541050ef9e34a73427d2adfcde2a1d",
+    "watch_campaign_training.py": "4e91369512605f592719c2dc044cfe9247df55e8c1eae426bc16313487eb3f59"
+  },
+  "reference_directory": "../obs_experiment_1",
+  "notes": [
+    "Historical baseline and v2 references: identical budgets, PPO hyperparameters, evaluation protocol, ordinary rosters. Baseline is not retrained in this experiment.",
+    "500k orc; 800k all comparison tasks; small continued from 800k to 1600k exactly as previous experiment.",
+    "Only observations change. Original masks and spell targeting retained; they can indirectly reveal existence or eligibility of offscreen targets.",
+    "No visited-cell features, global coordinates, offscreen entity slots, remaining-chest count, nearest enemy debuffs or distant directions.",
+    "Original party and economy features retained. Current battle opponent remains visible, including summoned battles.",
+    "Single training seed; training battle RNG remains original unseeded; evaluation battle RNG fixed.",
+    "Main new training: 3.7 million steps, extensions 1.6 million, total 5.3 million; 11 assessments, 440 evaluation episodes."
+  ]
+}

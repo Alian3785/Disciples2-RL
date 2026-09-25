@@ -325,10 +325,20 @@ class CampaignTerritoryMixin:
         enemy_id: Optional[int],
         reward: float,
         info: Dict[str, object],
+        *,
+        defeat_source: str,
     ) -> float:
         if not self._is_green_dragon_objective_enemy(enemy_id):
             return float(reward)
         objective_reward = self._compute_green_dragon_objective_reward()
+        # The blue-dragon objective bonus requires a victory by the hero's army.
+        # Magic may weaken the target, but map spells and separate summon battles
+        # do not earn this bonus when they deliver the killing blow.
+        eligible = not self._campaign_objective_is_blue_dragon() or defeat_source == "hero_battle"
+        if not eligible:
+            objective_reward = 0.0
+        info["objective_defeat_source"] = defeat_source
+        info["objective_reward_eligible"] = eligible
         city_count = len(self.FINAL_OBJECTIVE_CITIES) or int(
             getattr(self, "OBJECTIVE_ENEMY_REWARD_CITY_EQUIVALENT", 2)
         )
@@ -405,7 +415,7 @@ class CampaignTerritoryMixin:
         return total
 
     def _episode_enemies_defeated_bonus(self, info: Dict[str, object]) -> float:
-        """Терминальная награда за число побеждённых за эпизод врагов в нормализованном виде.
+        """Терминальная награда за врагов, побеждённых армией героя.
 
         Нормировка — доля побеждённых от всех врагов на карте [0..1], умноженная на вес.
         Вес подобран так, чтобы максимум был заметно ниже награды за убийство дракона."""
@@ -415,9 +425,14 @@ class CampaignTerritoryMixin:
         if total <= 0:
             return 0.0
         defeated = sum(1 for alive in enemies_alive.values() if not bool(alive))
-        fraction = float(defeated) / float(total)
+        hero_defeated = sum(
+            1 for enemy_id, alive in enemies_alive.items()
+            if not bool(alive) and enemy_id in self.hero_defeated_enemy_ids
+        )
+        fraction = float(hero_defeated) / float(total)
         bonus = float(getattr(self, "reward_enemies_defeated_weight", 0.0) or 0.0) * fraction
         info["enemies_defeated_count"] = int(defeated)
+        info["hero_enemies_defeated_count"] = int(hero_defeated)
         info["enemies_defeated_total"] = int(total)
         info["enemies_defeated_bonus"] = float(bonus)
         return float(bonus)

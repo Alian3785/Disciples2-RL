@@ -1129,17 +1129,16 @@ class CampaignMagicMixin:
             and not self._enemy_team_has_living_units(target_enemy_id)
         ):
             result["spell_enemy_defeated"] = True
-            result["enemy_defeat_reward"] = self._compute_enemy_defeat_reward(target_enemy_id)
-            result["enemy_defeat_reward_base"] = float(self.reward_defeat_enemy)
+            result["enemy_defeat_reward"] = self._compute_enemy_defeat_reward(target_enemy_id, magic=True)
+            result["enemy_defeat_reward_base"] = float(self.reward_defeat_enemy) * self.reward_magic_enemy_defeat_multiplier
             result["ruin_clear_bonus_reward"] = (
-                float(self.reward_ruin_clear_bonus)
+                float(self.reward_ruin_clear_bonus) * self.reward_magic_enemy_defeat_multiplier
                 if int(target_enemy_id or -1) in self.RUIN_REWARD_BY_ENEMY_ID
                 else 0.0
             )
             result["reward"] = (
                 float(result["reward"])
                 + float(result["enemy_defeat_reward"])
-                + float(result["ruin_clear_bonus_reward"])
             )
             self.grid_env.mark_enemy_defeated(target_enemy_id)
             self._clear_enemy_map_spell_effects_for_enemy(target_enemy_id)
@@ -1149,6 +1148,7 @@ class CampaignMagicMixin:
                 target_enemy_id,
                 float(result["reward"]),
                 result,
+                defeat_source="map_spell",
             )
 
 
@@ -1210,6 +1210,7 @@ class CampaignMagicMixin:
             "spell_cast_applied": spell_cast_applied,
             "spell_cast_executed": spell_cast_executed,
             "spell_cast_reward": spell_cast_reward,
+            "scroll_item_consumed": bool(cast_result.get("scroll_item_consumed", False)),
             "spell_enemy_defeated": spell_enemy_defeated,
             "target_enemy_id": target_enemy_id,
             "insufficient_mana": insufficient_mana,
@@ -1219,6 +1220,10 @@ class CampaignMagicMixin:
         }
         if minimal_extra:
             info.update(minimal_extra)
+        if "objective_reward_eligible" in cast_result:
+            for key in ("objective_reward_eligible", "objective_defeat_source",
+                        "final_objective_reward", "green_dragon_objective_reward"):
+                info[key] = cast_result[key]
         if not self._include_detailed_step_info():
             return info
 
@@ -1314,7 +1319,7 @@ class CampaignMagicMixin:
                 ),
                 "enemy_defeat_reward": enemy_defeat_reward,
                 "enemy_defeat_reward_base": (
-                    float(self.reward_defeat_enemy) if spell_enemy_defeated else 0.0
+                    _result_float("enemy_defeat_reward_base") if spell_enemy_defeated else 0.0
                 ),
                 "blue_exp_reward": 0.0,
                 "blue_exp_raw": 0.0,
@@ -2574,12 +2579,12 @@ class CampaignMagicMixin:
                 self.summon_hero_battle_bonus_pending = bool(
                     self.summon_hero_battle_bonus_enemy_ids_this_turn
                 )
-            enemy_reward = self._compute_enemy_defeat_reward(enemy_id)
+            enemy_reward = self._compute_enemy_defeat_reward(enemy_id, magic=True)
             reward += enemy_reward
             info["enemy_defeat_reward"] = float(enemy_reward)
-            info["enemy_defeat_reward_base"] = float(self.reward_defeat_enemy)
+            info["enemy_defeat_reward_base"] = float(self.reward_defeat_enemy) * self.reward_magic_enemy_defeat_multiplier
             if int(enemy_id or -1) in self.RUIN_REWARD_BY_ENEMY_ID:
-                info["ruin_clear_bonus_reward"] = float(self.reward_ruin_clear_bonus)
+                info["ruin_clear_bonus_reward"] = float(self.reward_ruin_clear_bonus) * self.reward_magic_enemy_defeat_multiplier
 
             self._log(
                 f"=== ПРИЗВАННЫЙ ЮНИТ ПОБЕДИЛ В БОЮ ПРОТИВ ВРАГА {enemy_id}! ==="
@@ -2599,6 +2604,7 @@ class CampaignMagicMixin:
                 enemy_id,
                 reward,
                 info,
+                defeat_source="summon_battle",
             )
             self.mode = self.MODE_GRID
             self.battle_env = None

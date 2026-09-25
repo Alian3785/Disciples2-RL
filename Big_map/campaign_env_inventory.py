@@ -2674,7 +2674,7 @@ class CampaignInventoryMixin:
                     self._append_hero_item(str(item_name or ""))
                     consumed = False
                 if applied and duration == "temporary":
-                    reward = self._combat_potion_reward_value()
+                    reward = 0.5 * self._combat_potion_reward_value()
                     self.combat_potion_battle_bonus_pending = True
 
         info = {
@@ -3351,8 +3351,8 @@ class CampaignInventoryMixin:
                 f"(урон x{damage_multiplier:.3g}, инициатива x{initiative_multiplier:.3g}, "
                 f"броня +{int(armor_bonus)})."
             )
-    def _compute_enemy_defeat_reward(self, enemy_id: Optional[int]) -> float:
-        """Enemy defeat reward including ruin bonus."""
+    def _compute_enemy_defeat_reward(self, enemy_id: Optional[int], *, magic: bool = False) -> float:
+        """Enemy defeat reward including ruin bonus; discount spell/summon kills."""
         reward = float(self.reward_defeat_enemy)
         try:
             normalized_enemy_id = int(enemy_id)
@@ -3360,4 +3360,6 @@ class CampaignInventoryMixin:
             normalized_enemy_id = -1
         if normalized_enemy_id in self.RUIN_REWARD_BY_ENEMY_ID:
             reward += float(self.reward_ruin_clear_bonus)
+        if magic:
+            reward *= self.reward_magic_enemy_defeat_multiplier
         return reward

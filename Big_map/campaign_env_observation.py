@@ -777,7 +777,11 @@ class CampaignObservationMixin:
             self._refresh_grid_obs_slices()
         if hasattr(self, "GRID_OBS_SIZE") and hasattr(self, "BATTLE_OBS_SIZE"):
             self._refresh_full_obs_slices()
-        if hasattr(self, "observation_space"):
+        if self._local_observation is not None:
+            from local_observation import LocalObservation
+            self._local_observation = LocalObservation(self)
+            self.observation_space = self._local_observation.space
+        elif hasattr(self, "observation_space"):
             total_obs = int(getattr(self, "full_obs_size", 1 + int(self.GRID_OBS_SIZE) + int(self.BATTLE_OBS_SIZE) + 2))
             self.observation_space = spaces.Box(
                 low=np.zeros(total_obs, dtype=np.float32),
@@ -1094,7 +1098,8 @@ class CampaignObservationMixin:
                 1.0 if spell_key and self._spell_cast_limit_reached_this_turn(spell_key) else 0.0
             )
 
-        nearest_enemy = self._get_nearest_enemy_stack_for_mask(spell_targetable_only=True)
+        nearest_enemy = (self._get_nearest_enemy_stack_for_mask(spell_targetable_only=True)
+                         if self.observation_version == "baseline" else None)
         nearest_enemy_summary = self._enemy_stack_spell_effect_summary(
             None if nearest_enemy is None else nearest_enemy.get("enemy_id")
         )
@@ -1793,6 +1798,8 @@ class CampaignObservationMixin:
         if not hasattr(self, "grid_obs_slices"):
             self._refresh_grid_obs_slices()
 
+        if self._local_observation is not None:
+            return np.zeros(0, dtype=np.float32)
         grid_obs = np.empty(int(self.GRID_OBS_SIZE), dtype=np.float32)
         base_start, base_end = self.grid_obs_slices["base"]
         enemy_start, enemy_end = self.grid_obs_slices["enemy"]
@@ -1821,6 +1828,8 @@ class CampaignObservationMixin:
         берет базовое наблюдение из GridWorldEnv и добавляет все кампанийные
         расширения через `_augment_grid_obs()`.
         """
+        if self._local_observation is not None:
+            return np.zeros(0, dtype=np.float32)
         return self._augment_grid_obs(self.grid_env._get_obs())
     def _build_obs(
         self,
@@ -1837,6 +1846,8 @@ class CampaignObservationMixin:
         и бесконечности заменяются безопасными значениями, а весь observation
         зажимается в диапазон [0, 1], совпадающий с observation_space.
         """
+        if self._local_observation is not None:
+            return self._local_observation.build(battle_obs)
         if not hasattr(self, "full_obs_slices"):
             self._refresh_full_obs_slices()
 

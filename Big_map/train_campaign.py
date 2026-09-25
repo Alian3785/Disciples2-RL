@@ -118,6 +118,11 @@ REWARD_CONFIG = {
     "reward_repeat_position_penalty_cap": 0.08,
     "reward_backtrack_penalty": 0.03,
     "reward_no_movement_penalty": 0.02,
+    "reward_movement": 0.01,
+    "reward_new_cell": 0.08,
+    "reward_nonempty_cell": 0.05,
+    "reward_new_nonempty_cell": 0.10,
+    "reward_rest_with_moves_penalty": 0.20,
     "exp_reward_norm_k": 100.0,
     "reward_exp_weight": 0.2,
     "reward_survival_alive_weight": 0.4,
@@ -140,8 +145,10 @@ REWARD_CONFIG = {
     "reward_battle_item_use": 0.05,
     "reward_sell_junk_item": 0.05,
     "reward_unit_swap_penalty": 0.004,
-    "reward_spell_learn": 2.0,
+    "reward_spell_learn": 1.0,
     "reward_spell_cast": 0.005,
+    "reward_magic_enemy_defeat_multiplier": 0.0,
+    "reward_first_uses": (0.0, 0.0, 0.0),
 }
 
 REQUIRED_COMET_VERSION = (3, 57, 0)
@@ -186,6 +193,9 @@ def _init_comet_experiment(
 ):
     normalized_workspace = _normalize_optional_name(workspace)
     api_key = os.getenv("COMET_API_KEY", "").strip() or None
+    if api_key is None:
+        # Fallback: ключ из ~/.comet.config (стандартный конфиг comet_ml).
+        api_key = str(comet_ml.config.get_config("comet.api_key") or "").strip() or None
     common_kwargs = {
         "project_name": project,
         "workspace": normalized_workspace,

@@ -1,0 +1,11 @@
+LOCALITY/RADIUS/BOUNDARY orc_duel None PASS
+LOCALITY/RADIUS/BOUNDARY small dragon PASS
+LOCALITY/RADIUS/BOUNDARY small blue_dragon PASS
+LOCALITY/RADIUS/BOUNDARY super_last_stand None PASS
+LOCALITY/RADIUS/BOUNDARY magic_train None PASS
+TRANSITIONS orc_duel None (4021,) (2388,) battle steps 0 PASS
+TRANSITIONS small dragon (4953,) (3754,) battle steps 191 PASS
+TRANSITIONS small blue_dragon (4953,) (3754,) battle steps 191 PASS
+TRANSITIONS super_last_stand None (10217,) (5854,) battle steps 78 PASS
+TRANSITIONS magic_train None (4073,) (2688,) battle steps 10 PASS
+ALL CHECKS PASSED

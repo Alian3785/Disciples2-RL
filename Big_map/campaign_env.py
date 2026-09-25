@@ -17,6 +17,7 @@
   - За таймаут (лимит шагов): -6.0
 """
 
+import os
 import gymnasium as gym
 
 from campaign_env_data import *
@@ -133,6 +134,11 @@ class CampaignEnv(
         reward_repeat_position_penalty_cap: float = 0.08,  # Кеп на повторный штраф за 1 шаг.
         reward_backtrack_penalty: float = 0.03,  # Штраф за микро-цикл A->B->A.
         reward_no_movement_penalty: float = 0.02,  # Штраф если движение не сменило позицию.
+        reward_movement: float = 0.01,
+        reward_new_cell: float = 0.08,
+        reward_nonempty_cell: float = 0.05,
+        reward_new_nonempty_cell: float = 0.10,
+        reward_rest_with_moves_penalty: float = 0.20,
         exp_reward_norm_k: float = 100.0,   # Нормализация опыта: norm=exp/(exp+k)
         reward_exp_weight: float = 0.2,     # Вес exp-компоненты
         reward_survival_alive_weight: float = 0.5,  # Вес доли выживших BLUE
@@ -150,8 +156,10 @@ class CampaignEnv(
         reward_combat_potion_battle_participation: float = 0.05,
         reward_sell_junk_item: float = 0.05,
         reward_unit_swap_penalty: float = 0.004,
-        reward_spell_learn: float = 2.0,
+        reward_spell_learn: float = 1.0,
         reward_spell_cast: float = 0.005,
+        reward_magic_enemy_defeat_multiplier: float = 0.0,
+        reward_first_uses: Tuple[float, float, float] = (0.0, 0.0, 0.0),
         reward_summon_hero_battle_engage: float = 0.05,
         reward_castle_heal_per_hp: float = 0.01,
         reward_castle_revive: float = 0.5,
@@ -183,6 +191,7 @@ class CampaignEnv(
         reward_full_party_near_complete: float = 5.0,
         reward_full_party_unit_lost_penalty: float = 2.0,
         reward_full_party_complete: float = 20.0,
+        observation_version: Optional[str] = None,
     ):
         """Собрать конфигурацию кампании и базовое состояние среды.
 
@@ -193,6 +202,10 @@ class CampaignEnv(
         нужны миксинам, observation и action mask ещё до первого сброса.
         """
         super().__init__()
+        self.observation_version = observation_version or os.environ.get("CAMPAIGN_OBSERVATION_VERSION", "local5")
+        if self.observation_version not in {"baseline", "local5"}:
+            raise ValueError(f"Unknown observation version: {self.observation_version}")
+        self._local_observation = None
 
         # --- Выбор карты: данные забираются из пакета maps/. ---
         self.map_name = str(map_name or "default").strip().lower()
@@ -321,6 +334,15 @@ class CampaignEnv(
         self.reward_repeat_position_penalty_cap = max(0.0, float(reward_repeat_position_penalty_cap))
         self.reward_backtrack_penalty = max(0.0, float(reward_backtrack_penalty))
         self.reward_no_movement_penalty = max(0.0, float(reward_no_movement_penalty))
+        for name, value in (("reward_movement", reward_movement),
+                            ("reward_new_cell", reward_new_cell),
+                            ("reward_nonempty_cell", reward_nonempty_cell),
+                            ("reward_new_nonempty_cell", reward_new_nonempty_cell),
+                            ("reward_rest_with_moves_penalty", reward_rest_with_moves_penalty)):
+            value = float(value)
+            if not np.isfinite(value) or value < 0:
+                raise ValueError(f"{name} must be finite and nonnegative")
+            setattr(self, name, value)
         self.exp_reward_norm_k = max(1.0, float(exp_reward_norm_k))
         self.reward_exp_weight = max(0.0, float(reward_exp_weight))
         self.reward_survival_alive_weight = max(0.0, float(reward_survival_alive_weight))
@@ -355,6 +377,17 @@ class CampaignEnv(
         self.reward_unit_swap_penalty = max(0.0, float(reward_unit_swap_penalty))
         self.reward_spell_learn = max(0.0, float(reward_spell_learn))
         self.reward_spell_cast = max(0.0, float(reward_spell_cast))
+        self.reward_magic_enemy_defeat_multiplier = float(reward_magic_enemy_defeat_multiplier)
+        if not np.isfinite(self.reward_magic_enemy_defeat_multiplier) or not 0 <= self.reward_magic_enemy_defeat_multiplier <= 1:
+            raise ValueError("reward_magic_enemy_defeat_multiplier must be between 0 and 1")
+        self.reward_first_uses = tuple(float(value) for value in reward_first_uses)
+        if (
+            len(self.reward_first_uses) != 3
+            or any(not np.isfinite(value) or value < 0 for value in self.reward_first_uses)
+            or any(a < b for a, b in zip(self.reward_first_uses, self.reward_first_uses[1:]))
+        ):
+            raise ValueError("reward_first_uses must contain three finite, nonnegative, decreasing bonuses")
+        self.first_use_counts: Dict[str, int] = {}
         self.reward_summon_hero_battle_engage = max(
             0.0,
             float(reward_summon_hero_battle_engage),
@@ -789,6 +822,10 @@ class CampaignEnv(
         self._campaign_logs: List[str] = []
         self.grid_visit_counts: Dict[Tuple[int, int], int] = {}
         self.recent_positions: List[Tuple[int, int]] = []
+        if self.observation_version == "local5":
+            from local_observation import LocalObservation
+            self._local_observation = LocalObservation(self)
+            self.observation_space = self._local_observation.space
     def _starting_blue_roster_spec(self) -> Optional[Dict[int, str]]:
         """Подобрать стартовый состав BLUE для текущей фракции и типа лорда.
 
@@ -964,6 +1001,7 @@ class CampaignEnv(
         сундуками/источниками/сайтами и формирует стартовый info для отладки.
         """
         super().reset(seed=seed)
+        self.first_use_counts = {}
         map_capital_id = getattr(self._map, "starting_capital_id", None)
         requested_capital = self._normalize_capital_id(
             map_capital_id
@@ -1037,6 +1075,7 @@ class CampaignEnv(
         self.revive_bottles_used = 0
         self.turns = 0
         self.campaign_steps = 0
+        self.hero_defeated_enemy_ids = set()
         self.gold = max(0.0, float(getattr(self._map, "starting_gold", 0.0) or 0.0))
         self.spell_learning_locked = False
         self.battle_env = None
@@ -1242,7 +1281,40 @@ class CampaignEnv(
             step_result = self._step_grid(action)
         else:
             step_result = self._step_battle(action)
+        step_result = self._apply_first_use_bonus(step_result)
         return self._apply_leadership_step_penalty(step_result)
+
+    def _apply_first_use_bonus(self, step_result):
+        """Reward the first three uses per category per campaign, across battles.
+
+        Spells (including staff/shop spells) share one counter. Consumed scrolls
+        have their own counter and never also receive the spell-use bonus.
+        These bonuses are added in campaign reward units, outside battle scaling.
+        """
+        obs, reward, terminated, truncated, info = step_result
+        category = None
+        if info.get("scroll_cast_action"):
+            if info.get("scroll_item_consumed"):
+                category = "scroll"
+        elif info.get("spell_cast_executed"):
+            category = "spell"
+        elif info.get("battle_defend_applied"):
+            category = "defend"
+        elif info.get("merchant_buy_purchased"):
+            category = "merchant_purchase"
+        if category is None:
+            return step_result
+
+        count = self.first_use_counts.get(category, 0) + 1
+        self.first_use_counts[category] = count
+        bonus = self.reward_first_uses[count - 1] if count <= len(self.reward_first_uses) else 0.0
+        reward = float(reward) + bonus
+        info = dict(info)
+        info.update(first_use_category=category, first_use_count=count, first_use_reward=bonus)
+        if "reward" in info:
+            info["reward"] = reward
+        return obs, reward, terminated, truncated, info
+
     def _step_grid(self, action: int):
         """Обработать действие агента на глобальной карте.
 
@@ -1390,6 +1462,8 @@ class CampaignEnv(
         grid_action = min(action, 8)
 
         old_pos = self.grid_env.agent_pos
+        moves_before_action = float(self.moves)
+        visited_count_before = len(self.grid_env.visited_cells)
         grid_obs, _grid_reward, terminated, truncated, grid_info = self.grid_env.step(
             grid_action
         )
@@ -1397,6 +1471,17 @@ class CampaignEnv(
         reward = 0.2 * float(_grid_reward)
         grid_obs = self._augment_grid_obs(grid_obs)
         new_pos = self.grid_env.agent_pos
+        movement_applied = 0 <= grid_action <= 7 and old_pos != new_pos
+        new_cell = movement_applied and len(self.grid_env.visited_cells) > visited_count_before
+        # Inspect objects before chest collection or other entry effects remove them.
+        nonempty_cell = movement_applied and self._movement_tile_is_nonempty(new_pos)
+        movement_reward = self.reward_movement if movement_applied else 0.0
+        new_cell_reward = self.reward_new_cell if new_cell else 0.0
+        nonempty_cell_reward = self.reward_nonempty_cell if nonempty_cell else 0.0
+        # Boost first visits to objects without increasing rewards for revisiting them.
+        if new_cell and nonempty_cell:
+            nonempty_cell_reward += self.reward_new_nonempty_cell
+        reward += movement_reward + new_cell_reward + nonempty_cell_reward
         stagnation_penalty = 0.0
         battle_engage_bonus = 0.0
         summon_hero_battle_bonus = 0.0
@@ -1483,6 +1568,12 @@ class CampaignEnv(
             "grid_reward_raw": float(_grid_reward),
             "grid_reward_scaled": float(reward),
             "stagnation_penalty": float(stagnation_penalty),
+            "movement_applied": bool(movement_applied),
+            "movement_new_cell": bool(new_cell),
+            "movement_nonempty_cell": bool(nonempty_cell),
+            "movement_reward": float(movement_reward),
+            "new_cell_reward": float(new_cell_reward),
+            "nonempty_cell_reward": float(nonempty_cell_reward),
             "battle_engage_bonus": float(battle_engage_bonus),
             "summon_hero_battle_bonus": float(summon_hero_battle_bonus),
             "summon_hero_battle_bonus_applied": bool(summon_hero_battle_bonus > 0.0),
@@ -1542,6 +1633,12 @@ class CampaignEnv(
 
         # Обработка действия REST — восстановление базового процента HP и бонусного лечения на своей столице/городе.
         if grid_info.get("rest_action"):
+            rest_with_moves_penalty = (
+                self.reward_rest_with_moves_penalty if moves_before_action > 0 else 0.0
+            )
+            reward -= rest_with_moves_penalty
+            info["rest_moves_before"] = moves_before_action
+            info["rest_with_moves_penalty"] = float(rest_with_moves_penalty)
             self._sync_equipped_banner_items()
             rest_heal_banner_bonus_percent = sum(
                 float(self._banner_effect_definition(name).get("regeneration_bonus", 0.0))
