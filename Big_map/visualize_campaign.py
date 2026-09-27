@@ -89,6 +89,8 @@ GRID_MOVE_ACTION_NAMES = ["↑", "↓", "←", "→", "↖", "↗", "↙", "↘"
 
 def _format_grid_action_label(action: int, info: dict | None = None) -> str:
     info = dict(info or {})
+    if info.get("garrison_hire_action"):
+        return f"Guard: {info.get('hired_unit_name') or 'unit'} ({info.get('garrison_city')})"
     if info.get("spell_cast_action"):
         spell_description = str(info.get("spell_description") or info.get("spell_key") or "spell")
         target_enemy_id = info.get("target_enemy_id")
