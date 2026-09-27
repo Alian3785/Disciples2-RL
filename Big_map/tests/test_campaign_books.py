@@ -32,7 +32,7 @@ class BookScenarioEnv(CampaignEnv):
         self.chests = dict(self._static_chests)
         self._refresh_dynamic_action_layout()
         self.action_space = self.action_space.__class__(
-            self.GRID_SWAP_UNIT_ACTION_START + self.GRID_SWAP_UNIT_ACTION_COUNT
+            self.GRID_GARRISON_HIRE_ACTION_START + self.GRID_GARRISON_HIRE_ACTION_COUNT
         )
 
 

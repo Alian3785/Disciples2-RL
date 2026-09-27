@@ -25,7 +25,7 @@ def _setup(terrain, book_id, scroll_id):
     env._static_chests = dict(env._static_chests)
     env._static_chests[(1, 1)] = (scroll['item_name'],)
     env._refresh_dynamic_action_layout()
-    env.action_space = env.action_space.__class__(env.GRID_SWAP_UNIT_ACTION_START + env.GRID_SWAP_UNIT_ACTION_COUNT)
+    env.action_space = env.action_space.__class__(env.GRID_GARRISON_HIRE_ACTION_START + env.GRID_GARRISON_HIRE_ACTION_COUNT)
     env.heroitems = [scroll['item_name'], scroll['item_name']]
     start, move_action, tile = _entry_move_for_terrain(env, terrain)
     env.grid_env.agent_pos = start

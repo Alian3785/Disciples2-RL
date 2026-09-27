@@ -336,8 +336,8 @@ def test_reduced_map_observation_is_measured_against_default():
     assert minimal.grid_legions_territory_obs_size == 32**2 == 1024
     assert minimal.GRID_OBS_SIZE == 3483
     assert minimal.BATTLE_OBS_SIZE == default.BATTLE_OBS_SIZE == 1464
-    assert minimal_obs.shape == minimal.observation_space.shape == (4950,)
-    assert default_obs.shape == default.observation_space.shape == (9864,)
+    assert minimal_obs.shape == minimal.observation_space.shape == (4950 + 23 * len(minimal.garrison_city_names),)
+    assert default_obs.shape == default.observation_space.shape == (9864 + 23 * len(default.garrison_city_names),)
 
 
 @pytest.mark.parametrize(

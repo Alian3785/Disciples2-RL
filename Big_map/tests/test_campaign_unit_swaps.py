@@ -119,8 +119,11 @@ def test_grid_unit_swap_actions_cover_initial_occupied_positions():
         (11, 12),
     )
     assert env.GRID_SWAP_UNIT_ACTION_COUNT == 15
-    assert env.action_space.n == (
+    assert env.GRID_GARRISON_HIRE_ACTION_START == (
         env.GRID_SWAP_UNIT_ACTION_START + env.GRID_SWAP_UNIT_ACTION_COUNT
+    )
+    assert env.action_space.n == (
+        env.GRID_GARRISON_HIRE_ACTION_START + env.GRID_GARRISON_HIRE_ACTION_COUNT
     )
 
     mask = env.compute_action_mask()

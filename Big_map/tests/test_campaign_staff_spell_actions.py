@@ -80,7 +80,7 @@ class StaffScenarioEnv(CampaignEnv):
         self.chests = dict(self._static_chests)
         self._refresh_dynamic_action_layout()
         self.action_space = spaces.Discrete(
-            self.GRID_SWAP_UNIT_ACTION_START + self.GRID_SWAP_UNIT_ACTION_COUNT
+            self.GRID_GARRISON_HIRE_ACTION_START + self.GRID_GARRISON_HIRE_ACTION_COUNT
         )
 
 
@@ -112,7 +112,7 @@ def test_staff_spell_slots_are_reserved_from_chests_ruins_and_merchants():
     ]
     assert env.GRID_UNLOCK_SCROLL_MAGIC_ACTION == env.grid_staff_spell_action_start + 4
     assert env.action_space.n == (
-        env.GRID_SWAP_UNIT_ACTION_START + env.GRID_SWAP_UNIT_ACTION_COUNT
+        env.GRID_GARRISON_HIRE_ACTION_START + env.GRID_GARRISON_HIRE_ACTION_COUNT
     )
 
 
@@ -125,7 +125,7 @@ def test_duplicate_staffs_reserve_duplicate_slots_and_require_matching_count():
             self.chests = dict(self._static_chests)
             self._refresh_dynamic_action_layout()
             self.action_space = spaces.Discrete(
-                self.GRID_SWAP_UNIT_ACTION_START + self.GRID_SWAP_UNIT_ACTION_COUNT
+                self.GRID_GARRISON_HIRE_ACTION_START + self.GRID_GARRISON_HIRE_ACTION_COUNT
             )
 
     env = DuplicateStaffEnv(log_enabled=False, persist_blue_hp=True, Realcapital=1)

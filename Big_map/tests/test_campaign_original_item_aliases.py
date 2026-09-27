@@ -9,7 +9,7 @@ class AliasEnv(CampaignEnv):
         self._static_chests = dict(self._static_chests)
         self._static_chests[(1, 1)] = tuple(value for item_id, name, canonical in self.ORIGINAL_ITEM_BINDINGS for value in (item_id, name))
         self._refresh_dynamic_action_layout()
-        self.action_space = spaces.Discrete(self.GRID_SWAP_UNIT_ACTION_START + self.GRID_SWAP_UNIT_ACTION_COUNT)
+        self.action_space = spaces.Discrete(self.GRID_GARRISON_HIRE_ACTION_START + self.GRID_GARRISON_HIRE_ACTION_COUNT)
 
 
 @pytest.mark.parametrize('item_id,original,canonical', CampaignEnv.ORIGINAL_ITEM_BINDINGS)
