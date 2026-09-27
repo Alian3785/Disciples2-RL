@@ -309,9 +309,15 @@ class CampaignEnv(
         if reward_ruin_clear_bonus is None:
             reward_ruin_clear_bonus = max(0.1, float(reward_defeat_enemy) * 0.25)
         self.reward_ruin_clear_bonus = max(0.0, float(reward_ruin_clear_bonus))
-        self.reward_all_enemies = reward_all_enemies      # База награды за захват целевого города
+        self.reward_all_enemies = float(
+            reward_all_enemies if self._map.all_enemies_reward is None
+            else self._map.all_enemies_reward
+        )
         self.reward_loss = reward_loss
-        self.reward_timeout = reward_timeout
+        map_timeout_reward = self._map.timeout_reward
+        self.reward_timeout = float(
+            reward_timeout if map_timeout_reward is None else map_timeout_reward
+        )
         map_turn_penalty = getattr(self._map, "turn_penalty", None)
         self.reward_turn_penalty = max(
             0.0,
@@ -335,10 +341,13 @@ class CampaignEnv(
         self.reward_backtrack_penalty = max(0.0, float(reward_backtrack_penalty))
         self.reward_no_movement_penalty = max(0.0, float(reward_no_movement_penalty))
         for name, value in (("reward_movement", reward_movement),
-                            ("reward_new_cell", reward_new_cell),
+                            ("reward_new_cell", reward_new_cell if self._map.new_cell_reward is None
+                             else self._map.new_cell_reward),
                             ("reward_nonempty_cell", reward_nonempty_cell),
                             ("reward_new_nonempty_cell", reward_new_nonempty_cell),
-                            ("reward_rest_with_moves_penalty", reward_rest_with_moves_penalty)):
+                            ("reward_rest_with_moves_penalty", reward_rest_with_moves_penalty
+                             if self._map.rest_with_moves_penalty is None
+                             else self._map.rest_with_moves_penalty)):
             value = float(value)
             if not np.isfinite(value) or value < 0:
                 raise ValueError(f"{name} must be finite and nonnegative")
@@ -376,7 +385,10 @@ class CampaignEnv(
         self.reward_sell_junk_item = max(0.0, float(reward_sell_junk_item))
         self.reward_unit_swap_penalty = max(0.0, float(reward_unit_swap_penalty))
         self.reward_spell_learn = max(0.0, float(reward_spell_learn))
-        self.reward_spell_cast = max(0.0, float(reward_spell_cast))
+        map_spell_cast_reward = self._map.spell_cast_reward
+        self.reward_spell_cast = max(0.0, float(
+            reward_spell_cast if map_spell_cast_reward is None else map_spell_cast_reward
+        ))
         self.reward_magic_enemy_defeat_multiplier = float(reward_magic_enemy_defeat_multiplier)
         if not np.isfinite(self.reward_magic_enemy_defeat_multiplier) or not 0 <= self.reward_magic_enemy_defeat_multiplier <= 1:
             raise ValueError("reward_magic_enemy_defeat_multiplier must be between 0 and 1")
