@@ -1130,7 +1130,7 @@ class CampaignMagicMixin:
         ):
             result["spell_enemy_defeated"] = True
             result["enemy_defeat_reward"] = self._compute_enemy_defeat_reward(target_enemy_id, magic=True)
-            result["enemy_defeat_reward_base"] = float(self.reward_defeat_enemy) * self.reward_magic_enemy_defeat_multiplier
+            result["enemy_defeat_reward_base"] = self._magic_enemy_defeat_reward_value()
             result["ruin_clear_bonus_reward"] = (
                 float(self.reward_ruin_clear_bonus) * self.reward_magic_enemy_defeat_multiplier
                 if int(target_enemy_id or -1) in self.RUIN_REWARD_BY_ENEMY_ID
@@ -1389,6 +1389,7 @@ class CampaignMagicMixin:
                 )
                 info["campaign_objective"] = self.campaign_objective
 
+            reward = self._apply_all_enemies_objective_reward_if_needed(reward, info)
             campaign_objective_reason = self._campaign_objective_completion_reason(
                 target_enemy_id
             )
@@ -2582,7 +2583,7 @@ class CampaignMagicMixin:
             enemy_reward = self._compute_enemy_defeat_reward(enemy_id, magic=True)
             reward += enemy_reward
             info["enemy_defeat_reward"] = float(enemy_reward)
-            info["enemy_defeat_reward_base"] = float(self.reward_defeat_enemy) * self.reward_magic_enemy_defeat_multiplier
+            info["enemy_defeat_reward_base"] = self._magic_enemy_defeat_reward_value()
             if int(enemy_id or -1) in self.RUIN_REWARD_BY_ENEMY_ID:
                 info["ruin_clear_bonus_reward"] = float(self.reward_ruin_clear_bonus) * self.reward_magic_enemy_defeat_multiplier
 
@@ -2614,6 +2615,7 @@ class CampaignMagicMixin:
             info["agent_pos"] = self._restore_agent_to_battle_origin()
             info["enemies_alive"] = dict(self.grid_env.enemies_alive)
 
+            reward = self._apply_all_enemies_objective_reward_if_needed(reward, info)
             campaign_objective_reason = self._campaign_objective_completion_reason(enemy_id)
             if campaign_objective_reason is not None:
                 self._log("=== ЗАХВАЧЕНЫ ВСЕ ЦЕЛЕВЫЕ ГОРОДА: ПОБЕДА В КАМПАНИИ ===")

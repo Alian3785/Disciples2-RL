@@ -3357,6 +3357,12 @@ class CampaignInventoryMixin:
                 f"(урон x{damage_multiplier:.3g}, инициатива x{initiative_multiplier:.3g}, "
                 f"броня +{int(armor_bonus)})."
             )
+    def _magic_enemy_defeat_reward_value(self) -> float:
+        override = self._map.magic_enemy_defeat_reward
+        if override is not None:
+            return max(0.0, float(override))
+        return float(self.reward_defeat_enemy) * self.reward_magic_enemy_defeat_multiplier
+
     def _compute_enemy_defeat_reward(self, enemy_id: Optional[int], *, magic: bool = False) -> float:
         """Enemy defeat reward including ruin bonus; discount spell/summon kills."""
         reward = float(self.reward_defeat_enemy)
@@ -3367,5 +3373,8 @@ class CampaignInventoryMixin:
         if normalized_enemy_id in self.RUIN_REWARD_BY_ENEMY_ID:
             reward += float(self.reward_ruin_clear_bonus)
         if magic:
-            reward *= self.reward_magic_enemy_defeat_multiplier
+            ruin_bonus = reward - float(self.reward_defeat_enemy)
+            reward = self._magic_enemy_defeat_reward_value() + (
+                ruin_bonus * self.reward_magic_enemy_defeat_multiplier
+            )
         return reward

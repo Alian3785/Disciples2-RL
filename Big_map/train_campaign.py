@@ -265,6 +265,14 @@ class EvalStepCapWrapper(gym.Wrapper):
             info["campaign_result"] = "eval_timeout"
             info["eval_step_cap_hit"] = True
             info["eval_step_cap"] = self.max_steps
+            # Other maps retain their existing cap behavior. Never charge twice
+            # when the underlying environment already ended the episode.
+            base = self.env.unwrapped
+            if base._map.timeout_reward is not None:
+                penalty = float(base.reward_timeout)
+                reward += penalty
+                info["step_cap_timeout_reward"] = penalty
+                info["reward"] = float(reward)
 
         return obs, reward, terminated, truncated, info
 
@@ -2896,7 +2904,9 @@ if __name__ == "__main__":
             "grid_size": DEFAULT_GRID_SIZE,
             "num_enemies": len(test_env.grid_env.enemy_positions),
             "persist_blue_hp": True,
-            **REWARD_CONFIG,
+            **{key: getattr(test_env, key, value) for key, value in REWARD_CONFIG.items()},
+            "reward_magic_enemy_defeat": test_env._magic_enemy_defeat_reward_value(),
+            "observation_version": test_env.observation_version,
             "vecnormalize_norm_obs": VECNORM_NORM_OBS,
             "vecnormalize_norm_reward": VECNORM_NORM_REWARD,
             "vecnormalize_clip_reward": VECNORM_CLIP_REWARD,
