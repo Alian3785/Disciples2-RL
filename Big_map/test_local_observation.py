@@ -122,7 +122,8 @@ def test_locality():
         tiles = encoder.tiles().reshape(25, -1)
         assert not tiles[:10].any() and not tiles[10:12].any()
         assert tiles[12, 0] == 1
-        assert env.observation_space.contains(encoder.build())
+        assert encoder.space.contains(encoder.build())
+        assert env.observation_space.contains(e._build_obs())
         print('LOCALITY/RADIUS/BOUNDARY', name, objective, 'PASS', flush=True)
         env.close()
     os.environ.pop('CAMPAIGN_OBSERVATION_VERSION', None)
