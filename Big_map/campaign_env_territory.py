@@ -1472,6 +1472,7 @@ class CampaignTerritoryMixin:
             self._clear_all_blue_map_spell_effects()
             total_gold_income += self._legions_gold_income_per_turn()
             self._apply_mana_income_for_turn()
+            self._heal_city_garrisons_for_turn()
             self._heal_wounded_enemy_teams_for_turn()
             scheduled_enemy_turn_infos.extend(
                 self._advance_scheduled_enemies_one_turn()

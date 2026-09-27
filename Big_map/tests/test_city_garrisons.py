@@ -289,3 +289,150 @@ def test_map_layout_and_reset(map_name):
         e.step(int(np.flatnonzero(e.compute_action_mask())[0]))
     finally:
         e.close()
+
+
+def wounded_guard(e, city, option=0, hp=1, max_hp=200):
+    assert hire(e, city, option)[4]['garrison_hired']
+    guard = e.city_garrisons[city][-1]
+    guard.update(health=hp, hp=hp, max_health=max_hp, maxhp=max_hp)
+    return guard
+
+
+@pytest.mark.parametrize('level,city_percent', [(1, 10), (2, 15), (3, 20), (4, 25), (5, 30)])
+@pytest.mark.parametrize('lord,lord_percent', [(1, 15), (2, 0), (3, 0)])
+def test_garrison_daily_regeneration_matches_d2_fort_formula(env, level, city_percent, lord, lord_percent):
+    city = capture(env, level=level)
+    guard = wounded_guard(env, city)
+    env.typeoflord = lord
+    env.grid_env.agent_pos = tuple(env.CASTLE_POS)
+    hero, gold, obs_shape, action_count = deepcopy(env.blue_team_state), env.gold, env.observation_space.shape, env.action_space.n
+    env._advance_turns(1)
+    expected = 1 + 200 * (5 + city_percent + lord_percent) / 100
+    assert guard['health'] == pytest.approx(expected)
+    assert guard['hp'] == guard['health']
+    assert env.blue_team_state == hero
+    assert env.gold >= gold
+    obs = env._build_obs(grid_obs=env._get_grid_obs())
+    assert env.observation_space.contains(obs) and obs.shape == obs_shape
+    assert env.action_space.n == action_count
+    offset = env.garrison_obs_slice[0] + env.garrison_city_names.index(city) * 23 + 5
+    assert obs[offset + (guard['position'] - 7) * 3 + 1] == pytest.approx(expected / 200)
+
+
+def test_regeneration_caps_hp_and_never_revives_dead_guards(env):
+    city = capture(env)
+    wounded = wounded_guard(env, city, hp=199)
+    dead = wounded_guard(env, city, hp=0)
+    full = wounded_guard(env, city, option=1, hp=200)
+    dead['hp'] = 100  # Canonical health=0 must win over a stale legacy alias.
+    env._advance_turns(1)
+    assert wounded['health'] == wounded['hp'] == 200
+    assert dead['health'] == 0
+    assert full['health'] == 200
+
+
+def test_regeneration_each_day_and_city_upgrade(env):
+    city = capture(env, level=1)
+    guard = wounded_guard(env, city)
+    env.typeoflord = 2
+    env._advance_turns(0)
+    assert guard['health'] == 1
+    env._advance_turns(2)
+    assert guard['health'] == pytest.approx(61)
+    env._set_settlement_level_with_territory_growth(city, 5)
+    env._advance_turns(1)
+    assert guard['health'] == pytest.approx(131)
+    env._advance_turns(2)
+    assert guard['health'] == 200
+
+
+def test_guard_heals_on_end_turn_but_not_recruitment_or_observation(env):
+    city = capture(env)
+    guard = wounded_guard(env, city)
+    env.typeoflord = 2
+    assert hire(env, city, 1)[4]['garrison_hired']
+    env.compute_action_mask()
+    env._build_obs()
+    assert guard['health'] == 1
+    env.moves = 0
+    env.step(8)
+    assert guard['health'] == pytest.approx(71)
+
+
+def test_regeneration_excludes_terrain_and_hero_equipment(env):
+    city = capture(env, level=1)
+    guard = wounded_guard(env, city)
+    env.typeoflord = 3
+    tile = env.legions_settlement_source_tile_by_name[city]
+    env.legions_territory_tile_set.add(tile)
+    env.equipped_banner_items = ['Banner of Regeneration']
+    assert env._garrison_regeneration_fraction(city, guard) == pytest.approx(.15)
+    env.legions_territory_tile_set.discard(tile)
+    assert env._garrison_regeneration_fraction(city, guard) == pytest.approx(.15)
+
+
+def test_regeneration_respects_innate_value_and_rate_cap(env):
+    city = capture(env, level=1)
+    guard = wounded_guard(env, city)
+    env.typeoflord = 2
+    guard['regeneration_percent'] = 20
+    assert env._garrison_regeneration_fraction(city, guard) == pytest.approx(.30)
+    guard['regeneration_percent'] = 200
+    assert env._garrison_regeneration_fraction(city, guard) == 1
+    env._advance_turns(1)
+    assert guard['health'] == 200
+
+
+def test_only_owned_idle_garrisons_heal(env):
+    cities = [capture(env, i) for i in range(3)]
+    guards = [wounded_guard(env, city) for city in cities]
+    env.typeoflord = 2
+    env.legions_active_settlement_territory_capture_turn_by_name.pop(cities[0])
+    env.pending_garrison_city = cities[1]
+    env._advance_turns(1)
+    assert [u['health'] for u in guards] == pytest.approx([1, 1, 71])
+    env.pending_garrison_city = None
+    env.current_battle_context = {'kind': 'city_garrison', 'city': cities[1]}
+    env._advance_turns(1)
+    assert [u['health'] for u in guards] == pytest.approx([1, 1, 141])
+
+
+def test_regeneration_happens_before_bot_enters_city(env):
+    city = capture(env, level=1)
+    guard = wounded_guard(env, city)
+    env.typeoflord = 2
+    bot(env, city, weak=True)
+    env._advance_turns(1)
+    assert guard['health'] == pytest.approx(31)
+    assert env.pending_garrison_city == city
+    env._finish_pending_city_defence((None, 0, False, False, {}))
+    assert env.current_battle_context['kind'] == 'city_garrison'
+    assert env.city_garrisons[city][0]['health'] == pytest.approx(31)
+
+
+def test_wounded_survivor_regenerates_on_day_after_defence(env):
+    city = capture(env, level=1)
+    wounded_guard(env, city, hp=100)
+    env.typeoflord = 2
+    bot(env, city, weak=True)
+    env._start_city_defence(city)
+    for unit in env.battle_env.combined:
+        if unit['team'] == 'blue' and unit['health'] > 0:
+            unit['health'] = 1
+    env.battle_env.winner = 'blue'
+    env.step(0)
+    survivor = env.city_garrisons[city][0]
+    assert survivor['health'] == 1
+    env._advance_turns(1)
+    assert survivor['health'] == pytest.approx(31)
+
+
+@pytest.mark.parametrize('capital', range(1, 6))
+def test_regeneration_for_each_faction(env, capital):
+    city = capture(env)
+    env.Realcapital = capital
+    env.active_hire_options = env._get_hire_options_for_capital(capital)
+    guard = wounded_guard(env, city)
+    env.typeoflord = 2
+    env._advance_turns(1)
+    assert guard['health'] == pytest.approx(71)

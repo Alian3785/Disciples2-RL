@@ -26,6 +26,28 @@ Defenders receive the existing level-dependent city armour bonus without the
 hero's equipment. Survivors keep HP and XP; temporary battle effects and city
 armour are removed when saved. Dead guards are removed after battle.
 
+Living, wounded guards regenerate automatically once per campaign day, before
+the scripted bot moves. The Disciples II fort formula is **innate unit regen +
+city bonus + warrior-lord bonus**; the friendly-terrain bonus applies only to
+units outside fortifications and is not added to guards. The current recruitable
+units have 5% innate regeneration (a scenario can override `regeneration_percent`
+in percentage points). City bonuses for levels 1–5 are 10/15/20/25/30%; warrior
+lords (`typeoflord == 1`) add 15 percentage points. Thus ordinary guards restore
+15/20/25/30/35% of maximum HP daily, or 30/35/40/45/50% under a warrior lord.
+
+The rate is capped at 100%, HP at the unit's maximum; dead units are not revived.
+HP uses the campaign's existing fractional representation. Each elapsed day is
+processed separately, and an upgrade changes the next day's city bonus. Healing
+does not cost gold, require a Temple or the hero's presence, or award a reward.
+Hero equipment does not affect a separate garrison. Lost cities and units in a
+pending/active defence do not heal. Updated HP appears in the existing garrison
+observation block without changing its size.
+
+Formula verified against the reverse-engineered game implementation in
+[D2ModdingToolset, getUnitRegen/getFortRegen](https://github.com/VladimirMakeev/D2ModdingToolset/blob/10b24c6b71a23074a858e854035257b21afbaf32/mss32/src/unitutils.cpp#L359-L474).
+The [official DII unit tables](https://manuals.plus/m/ac61986f73b2b5016fec8ab1d17d7874a84463082bbb10d7dd6c1c3d3a0557a9.pdf)
+list the recruits' base regeneration; city bonuses are listed in the FAQ above.
+
 On defeat the bot takes ownership, city recruitment/upgrades are masked, and
 the city spreads the bot side's faction terrain at its level's growth rate.
 The existing `empire_territory_*` fields represent this opponent side, as they
