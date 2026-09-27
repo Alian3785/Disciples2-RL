@@ -44,6 +44,47 @@ class CampaignGarrisonMixin:
     def _garrison_capacity(self, city):
         return min(5, max(1, int(self.legions_settlement_level_by_name.get(city, 1))))
 
+    def _garrison_regeneration_fraction(self, city, unit):
+        """DII fort regeneration: unit + warrior lord + city, without terrain.
+
+        Current faction recruits have 5% innate regeneration. Scenario units
+        may override it with regeneration_percent (percentage points).
+        See D2ModdingToolset unitutils.cpp::getUnitRegen/getFortRegen.
+        """
+        innate = float(unit.get('regeneration_percent', self.DEFAULT_REST_HEAL_PERCENT * 100)) / 100
+        city_bonus = float(self.SETTLEMENT_REST_HEAL_BONUS_BY_LEVEL[self._garrison_capacity(city)]) / 100
+        lord_bonus = self._resolve_typeoflord_rest_heal_bonus_percent()
+        return min(1.0, max(0.0, innate + city_bonus + lord_bonus))
+
+    def _heal_city_garrisons_for_turn(self):
+        """Regenerate living reserves once per campaign day, before bot movement.
+
+        The travelling hero's banners, equipment and terrain bonus do not
+        belong to reserves. Do not mutate a roster awaiting/in an active battle.
+        """
+        active_city = (self.current_battle_context.get('city')
+                       if self.current_battle_context.get('kind') == 'city_garrison' else None)
+        healed_units, healed_hp = 0, 0.0
+        for city, units in self.city_garrisons.items():
+            if (not self._garrison_player_owns(city)
+                    or city == active_city or city == self.pending_garrison_city):
+                continue
+            for unit in units:
+                if self._is_empty_blue_unit(unit):
+                    continue
+                hp, max_hp = self._unit_current_hp(unit), self._unit_max_hp(unit)
+                if not 0 < hp < max_hp:
+                    continue
+                restored = min(max_hp - hp, max_hp * self._garrison_regeneration_fraction(city, unit))
+                if restored <= 0:
+                    continue
+                unit['health'] = unit['hp'] = hp + restored
+                healed_units += 1
+                healed_hp += restored
+        if healed_units:
+            self._log(f"Городская охрана восстановила {healed_hp:g} HP у {healed_units} юнитов за ход.")
+        return healed_units, healed_hp
+
     def _garrison_occupied_positions(self, city):
         occupied = set()
         for unit in self.city_garrisons.get(city, ()):
