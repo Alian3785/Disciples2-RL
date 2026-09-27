@@ -223,7 +223,8 @@ class AllMapDismissalTests(unittest.TestCase):
                         env.reset(seed=42)
                         starting_roster = deepcopy(env.blue_team_state)
                         space_size = env.action_space.n
-                        self.assertEqual(space_size, env.GRID_DISMISS_UNIT_ACTION_START + 6)
+                        self.assertEqual(env.GRID_GARRISON_HIRE_ACTION_START, env.GRID_DISMISS_UNIT_ACTION_START + 6)
+                        self.assertEqual(space_size, env.GRID_GARRISON_HIRE_ACTION_START + env.GRID_GARRISON_HIRE_ACTION_COUNT)
                         self.assertEqual(env.GRID_DISMISS_UNIT_ACTION_START,
                                          env.GRID_SWAP_UNIT_ACTION_START + env.GRID_SWAP_UNIT_ACTION_COUNT)
                         companion = next((u for u in env.blue_team_state
