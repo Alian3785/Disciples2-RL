@@ -21,6 +21,7 @@ import os
 import gymnasium as gym
 
 from campaign_env_data import *
+from campaign_env_garrison import CampaignGarrisonMixin
 from campaign_env_battle import CampaignBattleMixin
 from campaign_env_economy import CampaignEconomyMixin
 from campaign_env_inventory import CampaignInventoryMixin
@@ -33,6 +34,7 @@ from campaign_env_territory import CampaignTerritoryMixin
 
 
 class CampaignEnv(
+    CampaignGarrisonMixin,
     CampaignConstantsMixin,
     CampaignObservationMixin,
     CampaignMaskMixin,
@@ -815,8 +817,8 @@ class CampaignEnv(
         self._refresh_grid_obs_slices()
         self._refresh_full_obs_slices()
         total_actions = (
-            self.GRID_DISMISS_UNIT_ACTION_START
-            + int(self.GRID_DISMISS_UNIT_ACTION_COUNT)
+            self.GRID_GARRISON_HIRE_ACTION_START
+            + int(self.GRID_GARRISON_HIRE_ACTION_COUNT)
         )
         # Action space: grid is wider than battle (battle = 39 actions).
         self.action_space = spaces.Discrete(total_actions)
@@ -838,6 +840,7 @@ class CampaignEnv(
             from local_observation import LocalObservation
             self._local_observation = LocalObservation(self)
             self.observation_space = self._local_observation.space
+        self._refresh_garrison_observation_space()
     def _starting_blue_roster_spec(self) -> Optional[Dict[int, str]]:
         """Подобрать стартовый состав BLUE для текущей фракции и типа лорда.
 
@@ -1198,8 +1201,8 @@ class CampaignEnv(
         self._sync_grid_trainer_positions()
         if not bool(getattr(self, "freeze_dynamic_action_layout", False)):
             total_actions = (
-                self.GRID_DISMISS_UNIT_ACTION_START
-                + int(self.GRID_DISMISS_UNIT_ACTION_COUNT)
+                self.GRID_GARRISON_HIRE_ACTION_START
+                + int(self.GRID_GARRISON_HIRE_ACTION_COUNT)
             )
             self.action_space = spaces.Discrete(total_actions)
 
@@ -1294,6 +1297,7 @@ class CampaignEnv(
             step_result = self._step_grid(action)
         else:
             step_result = self._step_battle(action)
+        step_result = self._finish_pending_city_defence(step_result)
         step_result = self._apply_first_use_bonus(step_result)
         return self._apply_leadership_step_penalty(step_result)
 
@@ -1381,6 +1385,8 @@ class CampaignEnv(
                 False,
                 info,
             )
+        if action >= self.GRID_GARRISON_HIRE_ACTION_START:
+            return self._step_hire_garrison(action)
         if action >= self.GRID_DISMISS_UNIT_ACTION_START:
             return self._step_dismiss_blue_unit(action)
         if action >= self.GRID_SWAP_UNIT_ACTION_START:
@@ -2192,6 +2198,7 @@ class CampaignEnv(
             "visited_cells": len(self.grid_env.visited_cells),
             "grid_steps": self.grid_env.step_count,
             "current_enemy": self.current_enemy_id,
+            **self._garrison_info(),
             "blue_hp_saved": self.blue_team_state is not None,
             "turns": self.turns,
             "gold": self.gold,
