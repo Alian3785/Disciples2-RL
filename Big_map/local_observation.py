@@ -8,7 +8,8 @@ from gymnasium import spaces
 
 
 class LocalObservation:
-    ENCODING_VERSION = "local5-tactical-v1"
+    ENCODING_VERSION = "local5-rosters-v3"
+    VISIBLE_STACK_SLOTS = 6
     RADIUS = 2
     TILE_FEATURES = (
         'in_bounds', 'walkable', 'capital', 'healing', 'chest', 'ruin',
@@ -18,10 +19,12 @@ class LocalObservation:
 
     def __init__(self, env):
         self.env = env
-        self.enemy_width = 4  # alive count, total HP, total damage, max HP
+        self.enemy_width = 0
+        self.enemy_roster_width = env.grid_enemy_unit_slots * env.grid_enemy_unit_feature_size
         self.tile_width = len(self.TILE_FEATURES) + self.enemy_width
         sizes = [
             ('mode', 1), ('local_tiles', 25 * self.tile_width),
+            ('visible_enemies', self.VISIBLE_STACK_SLOTS * (4 + self.enemy_roster_width) + 1),
             ('party', env.grid_blue_obs_size),
             ('resources', env.grid_resource_obs_size - 1),  # No remaining-chest count.
             ('buildings', env.grid_building_obs_size),
@@ -73,18 +76,41 @@ class LocalObservation:
                 e.grid_mana_kind_to_norm.get(str(mana.get('kind', '')), 0),
                 bool(ids), e._map.objective_enemy_id in ids,
             ]
-            if ids:
-                # Standard maps have at most one active stack per tile. If a
-                # scenario overlaps stacks, show the same first-ID encounter.
-                team = [u for enemy_id in ids for u in e.enemy_team_states.get(enemy_id, ())
-                        if not e._is_empty_enemy_unit(u) and self.health(u) > 0]
-                hp = sum(self.health(u) for u in team)
-                damage = sum(float(u.get('damage', 0) or 0) for u in team)
-                maximum = sum(self.max_health(u) for u in team)
-                result[index, len(self.TILE_FEATURES):] = (
-                    len(team) / 6.0, hp / (hp + 400.0),
-                    damage / (damage + 200.0), maximum / (maximum + 400.0))
         return result.ravel()
+
+    def visible_enemies(self):
+        """Six nearest visible stack rosters; no distant enemy unit information.
+
+        Spatial ordering replaces 25 mostly empty per-cell roster blocks. Every
+        visible cell still retains the enemy/objective flags in local_tiles.
+        The final scalar reports overflow when more than six stacks are visible.
+        """
+        e, grid = self.env, self.env.grid_env
+        ax, ay = grid.agent_pos
+        visible = []
+        for enemy_id, pos in grid.enemy_positions.items():
+            dx, dy = pos[0] - ax, pos[1] - ay
+            distance = max(abs(dx), abs(dy))
+            if distance <= self.RADIUS and grid.enemies_alive.get(enemy_id, False):
+                visible.append((distance, dy, dx, int(enemy_id)))
+        visible.sort()
+        width = 4 + self.enemy_roster_width
+        result = np.zeros(self.VISIBLE_STACK_SLOTS * width + 1, dtype=np.float32)
+        for index, (_distance, dy, dx, enemy_id) in enumerate(visible[:self.VISIBLE_STACK_SLOTS]):
+            row = result[index*width:(index+1)*width]
+            row[:4] = (1.0, (dx+self.RADIUS)/(2*self.RADIUS),
+                       (dy+self.RADIUS)/(2*self.RADIUS), enemy_id == e._map.objective_enemy_id)
+            team = e.enemy_team_states.get(enemy_id, ())
+            for slot, unit in enumerate(team[:e.grid_enemy_unit_slots]):
+                if e._is_empty_enemy_unit(unit):
+                    continue
+                start = 4 + slot * e.grid_enemy_unit_feature_size
+                end = start + e.grid_enemy_unit_type_feature_size
+                row[start:end] = e._encode_enemy_unit_type(unit.get('unit_type'))
+                row[end] = e._normalize_unit_health(unit)
+        overflow = max(0, len(visible) - self.VISIBLE_STACK_SLOTS)
+        result[-1] = overflow / (overflow + self.VISIBLE_STACK_SLOTS)
+        return result
 
     @staticmethod
     def health(unit):
@@ -158,6 +184,7 @@ class LocalObservation:
             obs[start:end] = values
         put('mode', float(e.mode))
         put('local_tiles', self.tiles())
+        put('visible_enemies', self.visible_enemies())
         put('party', e._build_blue_team_grid_obs())
         put('party_strength', self.party_strength())
         put('landmarks', self.landmarks())
