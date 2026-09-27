@@ -3,12 +3,14 @@
 Observation-only experiment: exposes current map state, without selecting actions
 or changing rewards, transitions, action masks, rosters or the PPO trainer.
 """
+from collections import deque
+
 import numpy as np
 from gymnasium import spaces
 
 
 class LocalObservation:
-    ENCODING_VERSION = "local5-tactical-v1"
+    ENCODING_VERSION = "local5-navigation-v2"
     RADIUS = 2
     TILE_FEATURES = (
         'in_bounds', 'walkable', 'capital', 'healing', 'chest', 'ruin',
@@ -18,6 +20,7 @@ class LocalObservation:
 
     def __init__(self, env):
         self.env = env
+        self._distance_cache = {}
         self.enemy_width = 4  # alive count, total HP, total damage, max HP
         self.tile_width = len(self.TILE_FEATURES) + self.enemy_width
         sizes = [
@@ -32,7 +35,8 @@ class LocalObservation:
             ('wave_progress', 2 if env.grid_wave_obs_size else 0),
             ('trainer', 3 if env.grid_trainer_obs_size else 0),
             ('battle', env.BATTLE_OBS_SIZE), ('battle_turn', 26),
-            ('party_strength', 24), ('landmarks', 32), ('time_gold', 2),
+            ('party_strength', 24), ('landmarks', 32), ('paths', 40),
+            ('visited', 25), ('time_gold', 2),
         ]
         self.slices = {}
         offset = 0
@@ -74,8 +78,7 @@ class LocalObservation:
                 bool(ids), e._map.objective_enemy_id in ids,
             ]
             if ids:
-                # Standard maps have at most one active stack per tile. If a
-                # scenario overlaps stacks, show the same first-ID encounter.
+                # Aggregate all living stacks sharing the visible tile.
                 team = [u for enemy_id in ids for u in e.enemy_team_states.get(enemy_id, ())
                         if not e._is_empty_enemy_unit(u) and self.health(u) > 0]
                 hp = sum(self.health(u) for u in team)
@@ -150,6 +153,73 @@ class LocalObservation:
                 max(abs(dx), abs(dy))/scale, float(dx == 0 and dy == 0))
         return result
 
+    def visited(self):
+        grid = self.env.grid_env
+        ax, ay = grid.agent_pos
+        return np.array([(ax + dx, ay + dy) in grid.visited_cells
+                         for dy in range(-2, 3) for dx in range(-2, 3)], dtype=np.float32)
+
+    def distance_field(self, group, targets, blocked):
+        """Terrain-only geodesic distance; does not choose or execute actions."""
+        grid = self.env.grid_env
+        size = grid.grid_size
+        targets = tuple(sorted(set(tuple(p) for p in targets)))
+        signature = (size, targets, blocked)
+        cached = self._distance_cache.get(group)
+        if cached is not None and cached[0] == signature:
+            return cached[1]
+        distance = np.full((size, size), -1, dtype=np.int32)
+        queue = deque()
+        for x, y in targets:
+            if 0 <= x < size and 0 <= y < size and (x, y) not in blocked:
+                distance[y, x] = 0
+                queue.append((x, y))
+        deltas = grid.ACTION_DELTAS[:8]
+        while queue:
+            x, y = queue.popleft()
+            next_distance = int(distance[y, x]) + 1
+            for dx, dy in deltas:
+                nx, ny = x + dx, y + dy
+                if (0 <= nx < size and 0 <= ny < size and
+                        distance[ny, nx] < 0 and (nx, ny) not in blocked):
+                    distance[ny, nx] = next_distance
+                    queue.append((nx, ny))
+        distance.setflags(write=False)
+        self._distance_cache[group] = (signature, distance)
+        return distance
+
+    def paths(self):
+        e, grid = self.env, self.env.grid_env
+        result = np.zeros((4, 10), dtype=np.float32)
+        # These spatial fields have no use during a tactical battle.
+        if e.mode == e.MODE_BATTLE:
+            return result.ravel()
+        ax, ay = grid.agent_pos
+        if not (0 <= ax < grid.grid_size and 0 <= ay < grid.grid_size):
+            return result.ravel()
+        objective_id = e._map.objective_enemy_id
+        objective = ([grid.enemy_positions[objective_id]]
+                     if grid.enemies_alive.get(objective_id, False)
+                     and objective_id in grid.enemy_positions else [])
+        groups = (objective, [tuple(e.CASTLE_POS)], list(e.chests), list(e.trainer_interaction_tiles))
+        blocked = frozenset(grid.obstacle_positions) | frozenset(grid.dynamic_blocked_positions)
+        for index, targets in enumerate(groups):
+            if not targets:
+                continue
+            field = self.distance_field(index, targets, blocked)
+            current = int(field[ay, ax])
+            if current < 0:
+                continue
+            result[index, 0] = 1.0
+            result[index, 1] = current / (current + 20.0)
+            for action, (dx, dy) in enumerate(grid.ACTION_DELTAS[:8]):
+                nx, ny = ax + dx, ay + dy
+                if 0 <= nx < grid.grid_size and 0 <= ny < grid.grid_size:
+                    value = int(field[ny, nx])
+                    if value >= 0:
+                        result[index, 2 + action] = max(0.0, min(1.0, 0.5 + 0.5*(current-value)))
+        return result.ravel()
+
     def build(self, battle_obs=None):
         e = self.env
         obs = np.zeros(self.space.shape, dtype=np.float32)
@@ -161,6 +231,8 @@ class LocalObservation:
         put('party', e._build_blue_team_grid_obs())
         put('party_strength', self.party_strength())
         put('landmarks', self.landmarks())
+        put('paths', self.paths())
+        put('visited', self.visited())
         put('battle_turn', self.battle_turn())
         resource = e._build_resource_grid_obs()
         put('resources', np.concatenate((resource[:9], resource[10:])))
