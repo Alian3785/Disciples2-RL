@@ -1,14 +1,14 @@
-"""Egocentric 5x5 observations, without an off-screen map or map memory.
+"""Compact semantic local tiles, tactical turn identity and navigation landmarks.
 
-The unchanged baseline party, economy, inventory and battle encodings are kept.
-Visible enemies retain baseline per-unit type/HP features, indexed by local tile
-rather than global enemy ID. No absolute coordinates or distant target pointers.
+Observation-only experiment: exposes current map state, without selecting actions
+or changing rewards, transitions, action masks, rosters or the PPO trainer.
 """
 import numpy as np
 from gymnasium import spaces
 
 
 class LocalObservation:
+    ENCODING_VERSION = "local5-tactical-v1"
     RADIUS = 2
     TILE_FEATURES = (
         'in_bounds', 'walkable', 'capital', 'healing', 'chest', 'ruin',
@@ -18,7 +18,7 @@ class LocalObservation:
 
     def __init__(self, env):
         self.env = env
-        self.enemy_width = env.grid_enemy_unit_slots * env.grid_enemy_unit_feature_size
+        self.enemy_width = 4  # alive count, total HP, total damage, max HP
         self.tile_width = len(self.TILE_FEATURES) + self.enemy_width
         sizes = [
             ('mode', 1), ('local_tiles', 25 * self.tile_width),
@@ -31,7 +31,8 @@ class LocalObservation:
             ('mercenary_roster', env.grid_mercenary_roster_obs_size),
             ('wave_progress', 2 if env.grid_wave_obs_size else 0),
             ('trainer', 3 if env.grid_trainer_obs_size else 0),
-            ('battle', env.BATTLE_OBS_SIZE), ('time_gold', 2),
+            ('battle', env.BATTLE_OBS_SIZE), ('battle_turn', 26),
+            ('party_strength', 24), ('landmarks', 32), ('time_gold', 2),
         ]
         self.slices = {}
         offset = 0
@@ -75,15 +76,79 @@ class LocalObservation:
             if ids:
                 # Standard maps have at most one active stack per tile. If a
                 # scenario overlaps stacks, show the same first-ID encounter.
-                team = e.enemy_team_states.get(ids[0], ())
-                for slot, unit in enumerate(team[:e.grid_enemy_unit_slots]):
-                    if e._is_empty_enemy_unit(unit):
-                        continue
-                    start = len(self.TILE_FEATURES) + slot * e.grid_enemy_unit_feature_size
-                    end = start + e.grid_enemy_unit_type_feature_size
-                    result[index, start:end] = e._encode_enemy_unit_type(unit.get('unit_type'))
-                    result[index, end] = e._normalize_unit_health(unit)
+                team = [u for enemy_id in ids for u in e.enemy_team_states.get(enemy_id, ())
+                        if not e._is_empty_enemy_unit(u) and self.health(u) > 0]
+                hp = sum(self.health(u) for u in team)
+                damage = sum(float(u.get('damage', 0) or 0) for u in team)
+                maximum = sum(self.max_health(u) for u in team)
+                result[index, len(self.TILE_FEATURES):] = (
+                    len(team) / 6.0, hp / (hp + 400.0),
+                    damage / (damage + 200.0), maximum / (maximum + 400.0))
         return result.ravel()
+
+    @staticmethod
+    def health(unit):
+        return max(0.0, float(unit.get('health', unit.get('hp', 0)) or 0))
+
+    @staticmethod
+    def max_health(unit):
+        return max(0.0, float(unit.get('max_health', unit.get('maxhp', 0)) or 0))
+
+    def battle_turn(self):
+        result = np.zeros(26, dtype=np.float32)
+        e = self.env
+        battle = e.battle_env
+        if e.mode != e.MODE_BATTLE or battle is None:
+            return result
+        active = getattr(battle, 'current_blue_attacker_pos', None)
+        for u in battle.combined:
+            pos = int(u.get('position', 0) or 0)
+            if 1 <= pos <= 12 and self.max_health(u) > 0:
+                result[pos - 1] = float(pos == active and self.health(u) > 0)
+                maximum = self.max_health(u)
+                result[12 + pos - 1] = maximum / (maximum + 200.0)
+        attacks = max(0.0, float(getattr(battle, 'blue_attacks_left', 0) or 0))
+        result[24] = attacks / (attacks + 1.0)
+        result[25] = getattr(battle, '_post_victory_team', None) == 'blue'
+        return result
+
+    def party_strength(self):
+        result = np.zeros((6, 4), dtype=np.float32)
+        for u in self.env._get_blue_state() or ():
+            slot = int(u.get('position', 0) or 0) - 7
+            if not 0 <= slot < 6 or self.max_health(u) <= 0:
+                continue
+            hp = self.max_health(u)
+            damage = max(0.0, float(u.get('damage', 0) or 0))
+            armor = max(0.0, float(u.get('armor', 0) or 0))
+            initiative = max(0.0, float(u.get('initiative', 0) or 0))
+            result[slot] = (hp / (hp + 200.0), damage / (damage + 100.0),
+                            armor / 165.0, initiative / (initiative + 50.0))
+        return result.ravel()
+
+    def landmarks(self):
+        e, grid = self.env, self.env.grid_env
+        ax, ay = grid.agent_pos
+        scale = max(1, grid.grid_size - 1)
+        result = np.zeros(32, dtype=np.float32)
+        result[:2] = (ax / scale, ay / scale)
+        living = [tuple(pos) for enemy_id, pos in grid.enemy_positions.items()
+                  if grid.enemies_alive.get(enemy_id, False)]
+        objective_id = e._map.objective_enemy_id
+        objective = ([tuple(grid.enemy_positions[objective_id])]
+                     if grid.enemies_alive.get(objective_id, False)
+                     and objective_id in grid.enemy_positions else [])
+        groups = (objective, living, [tuple(e.CASTLE_POS)],
+                  list(e.castle_heal_tiles), list(e.chests), list(e.trainer_interaction_tiles))
+        for index, positions in enumerate(groups):
+            if not positions:
+                continue
+            x, y = min(positions, key=lambda p: (max(abs(p[0]-ax), abs(p[1]-ay)), p[0], p[1]))
+            dx, dy = x - ax, y - ay
+            result[2 + 5*index:7 + 5*index] = (
+                1, 0.5 + 0.5*dx/scale, 0.5 + 0.5*dy/scale,
+                max(abs(dx), abs(dy))/scale, float(dx == 0 and dy == 0))
+        return result
 
     def build(self, battle_obs=None):
         e = self.env
@@ -94,6 +159,9 @@ class LocalObservation:
         put('mode', float(e.mode))
         put('local_tiles', self.tiles())
         put('party', e._build_blue_team_grid_obs())
+        put('party_strength', self.party_strength())
+        put('landmarks', self.landmarks())
+        put('battle_turn', self.battle_turn())
         resource = e._build_resource_grid_obs()
         put('resources', np.concatenate((resource[:9], resource[10:])))
         put('buildings', e._build_building_grid_obs())
