@@ -119,7 +119,7 @@ def _reserve_scroll_action(env: CampaignEnv, item_name: str) -> None:
     env.chests = dict(env._static_chests)
     env._refresh_dynamic_action_layout()
     env.action_space = env.action_space.__class__(
-        env.GRID_SWAP_UNIT_ACTION_START + env.GRID_SWAP_UNIT_ACTION_COUNT
+        env.GRID_GARRISON_HIRE_ACTION_START + env.GRID_GARRISON_HIRE_ACTION_COUNT
     )
 
 

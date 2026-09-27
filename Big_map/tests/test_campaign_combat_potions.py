@@ -101,7 +101,7 @@ def test_dynamic_potion_layout_does_not_reserve_missing_potion_types():
     env._static_chests = {(1, 1): ("Potion of Strength",)}
     env._refresh_dynamic_action_layout()
     env.action_space = env.action_space.__class__(
-        env.GRID_SWAP_UNIT_ACTION_START + env.GRID_SWAP_UNIT_ACTION_COUNT
+        env.GRID_GARRISON_HIRE_ACTION_START + env.GRID_GARRISON_HIRE_ACTION_COUNT
     )
 
     assert env.scenario_potion_item_names == (env.STRENGTH_POTION_ITEM_NAME,)
