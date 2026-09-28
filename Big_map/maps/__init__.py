@@ -13,6 +13,7 @@ from functools import lru_cache
 from maps.base import MapConfig
 
 _REGISTRY = {
+    "city_defence_train": "maps.city_defence_train",
     "builder": "maps.builder",
     "default": "maps.default",
     "formation_train": "maps.formation_train",
