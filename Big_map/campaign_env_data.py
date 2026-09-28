@@ -396,6 +396,7 @@ class CampaignConstantsMixin:
         }
     )
     FINAL_OBJECTIVE_CITY_REWARD_MULTIPLIER = 5.0
+    CAMPAIGN_OBJECTIVE_CITY_DEFENCE = "city_defence"
     CAMPAIGN_OBJECTIVE_CITIES = "cities"
     CAMPAIGN_OBJECTIVE_DRAGON = "dragon"
     CAMPAIGN_OBJECTIVE_BLUE_DRAGON = "blue_dragon"

@@ -23,6 +23,7 @@ class CampaignTerritoryMixin:
         raw = str(value or cls.CAMPAIGN_OBJECTIVE_CITIES).strip().lower()
         raw = raw.replace("-", "_")
         aliases = {
+            "city_defence": cls.CAMPAIGN_OBJECTIVE_CITY_DEFENCE,
             "city": cls.CAMPAIGN_OBJECTIVE_CITIES,
             "cities": cls.CAMPAIGN_OBJECTIVE_CITIES,
             "objective_city": cls.CAMPAIGN_OBJECTIVE_CITIES,
@@ -55,7 +56,7 @@ class CampaignTerritoryMixin:
         raise ValueError(
             f"Unsupported campaign_objective={value!r}; "
             "expected 'cities', 'dragon', 'blue_dragon', 'orc', 'build_all', "
-            "'all_enemies', 'target_enemy', 'waves' or 'full_party'"
+            "'all_enemies', 'target_enemy', 'waves', 'city_defence' or 'full_party'"
         )
 
     def _campaign_objective_is_cities(self) -> bool:
@@ -154,7 +155,10 @@ class CampaignTerritoryMixin:
                 f"campaign_objective={objective!r} is not supported on map "
                 f"'{map_label}'; expected one of {supported_objectives}"
             )
-        if objective == self.CAMPAIGN_OBJECTIVE_CITIES:
+        if objective == self.CAMPAIGN_OBJECTIVE_CITY_DEFENCE:
+            if map_label != "city_defence_train":
+                raise ValueError("city_defence is only supported on city_defence_train")
+        elif objective == self.CAMPAIGN_OBJECTIVE_CITIES:
             if not self.FINAL_OBJECTIVE_CITIES:
                 raise ValueError(
                     f"campaign_objective='cities' is not supported on map '{map_label}': "
