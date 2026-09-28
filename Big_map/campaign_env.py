@@ -21,6 +21,7 @@ import os
 import gymnasium as gym
 
 from campaign_env_data import *
+from campaign_env_city_defence import CampaignCityDefenceMixin
 from campaign_env_garrison import CampaignGarrisonMixin
 from campaign_env_battle import CampaignBattleMixin
 from campaign_env_economy import CampaignEconomyMixin
@@ -34,6 +35,7 @@ from campaign_env_territory import CampaignTerritoryMixin
 
 
 class CampaignEnv(
+    CampaignCityDefenceMixin,
     CampaignGarrisonMixin,
     CampaignConstantsMixin,
     CampaignObservationMixin,
@@ -1783,6 +1785,7 @@ class CampaignEnv(
         # статисты: кампания выигрывается только строительством.
         if (
             self.grid_env.all_enemies_defeated()
+            and self.campaign_objective != self.CAMPAIGN_OBJECTIVE_CITY_DEFENCE
             and not self._campaign_objective_is_cities()
             and not self._campaign_objective_is_build_all()
             and not self._campaign_objective_is_target_enemy()
