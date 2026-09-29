@@ -1,15 +1,15 @@
 {
   "active": true,
-  "seed": 139,
+  "seed": 141,
   "next_map": "orc_duel",
   "next_objective": "orc",
-  "completed_runs": 441,
+  "completed_runs": 455,
   "last_success": {
-    "run_id": "seed138-scroll_train-all_enemies-35995714372-1",
-    "seed": 138,
+    "run_id": "seed140-scroll_train-all_enemies-36335379571-1",
+    "seed": 140,
     "map": "scroll_train",
     "objective": "all_enemies",
-    "completed_at": "2026-09-24T13:09:36.112699+00:00",
-    "commit_sha": "085417078235d93743e59caabb7a9164015dd375"
+    "completed_at": "2026-09-27T18:41:09.518365+00:00",
+    "commit_sha": "a6785e764890e996fe783a099379a83d40d2ac7d"
   }
 }
