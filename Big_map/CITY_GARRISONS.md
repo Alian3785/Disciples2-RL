@@ -72,3 +72,11 @@ remain in place before the appended block.
 Run regression tests with `PYTHONPATH=. python -m pytest -q tests/test_city_garrisons.py`.
 Tests use ordinary starting rosters and explicitly disable the bot except in
 focused city-defence unit tests. They do not start training or evaluation runs.
+
+City guards cannot select Retreat. The travelling hero and party also cannot
+select Retreat when the battle starts on a city or capital entrance tile.
+Neighbouring tiles, including owned territory, do not impose this restriction.
+The origin of the hero party is used, not the enemy destination tile; a remote
+summoned army does not inherit the restriction from the hero’s location.
+The final siege army retains its separate retreat prohibition. Illegal direct
+Retreat actions are rejected as well as excluded from the action mask.

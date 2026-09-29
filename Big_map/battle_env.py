@@ -948,12 +948,14 @@ class BattleEnv(gym.Env):
         penalty_invalid_target: float = -0.10,
         penalty_unreachable_warrior: float = -0.20,
         log_enabled: bool = False,
+        retreat_enabled: bool = True,
     ):
         super().__init__()
         self.reward_win = float(reward_win)
         self.reward_loss = float(reward_loss)
         self.reward_step = float(reward_step)
 
+        self.retreat_enabled = bool(retreat_enabled)
         self.penalty_invalid_target = float(penalty_invalid_target)
         self.penalty_unreachable_warrior = float(penalty_unreachable_warrior)
 
@@ -976,6 +978,7 @@ class BattleEnv(gym.Env):
         # Состояние боя
         self.rng = random.Random()  # без seed > случайность между эпизодами
         self.combined: List[Dict] = []
+        self._reset_recovery_combat_tracking()
         self.round_no: int = 1
         self.winner: Optional[str] = None
         self._post_victory_team: Optional[str] = None
@@ -1327,6 +1330,7 @@ class BattleEnv(gym.Env):
             return 0.0
         damage = min(current_health, effect_amount)
         new_health = max(0.0, current_health - damage)
+        self._record_recovery_damage(target_unit, current_health, int(round(new_health)))
         target_unit["health"] = int(round(new_health))
         if "hp" in target_unit:
             target_unit["hp"] = int(round(new_health))
@@ -1921,7 +1925,7 @@ class BattleEnv(gym.Env):
         ]
         mask[DEFEND_ACTION_INDEX] = True
         mask[WAIT_ACTION_INDEX] = True
-        mask[RUN_AWAY_ACTION_INDEX] = True
+        mask[RUN_AWAY_ACTION_INDEX] = self.retreat_enabled
         first_item_mask[:] = False
         second_item_mask[:] = False
         first_enemy_item_mask[:] = False
@@ -3667,6 +3671,7 @@ class BattleEnv(gym.Env):
         self.overwritten_exp_kill = {"red": 0.0, "blue": 0.0}
         self._battle_exp_event_count = 0
         self._battle_defeated_exp = {"red": 0.0, "blue": 0.0}
+        self._reset_recovery_combat_tracking()
         self.step_count = 0
         self.hero_item_slots_used_this_battle = [False] * len(self.equipped_hero_items)
         if len(getattr(self, "equipped_hero_item_uses_left", []) or []) < len(
@@ -3816,10 +3821,37 @@ class BattleEnv(gym.Env):
             eff *= DEFEND_DAMAGE_MULTIPLIER
         return int(round(eff))
 
+    def _reset_recovery_combat_tracking(self):
+        # Only enemies present and alive at battle entry fund campaign recovery.
+        # Repeated healing/revival and endlessly summoned units cannot inflate it.
+        self.recovery_enemy_initial_hp = {
+            int(unit["position"]): float(unit.get("health", 0) or 0)
+            for unit in self.combined
+            if unit.get("team") == "red" and not unit.get("Summoned")
+            and float(unit.get("health", 0) or 0) > 0
+        }
+        self.recovery_damage_by_position = {}
+        self.recovery_killed_positions = set()
+        self.recovery_credit_claimed = False
+
+    def _record_recovery_damage(self, unit, before, after):
+        if unit.get("team") != "red" or unit.get("Summoned"):
+            return
+        position = int(unit.get("position", -1))
+        initial_hp = self.recovery_enemy_initial_hp.get(position, 0.0)
+        if initial_hp <= 0:
+            return
+        previous = self.recovery_damage_by_position.get(position, 0.0)
+        damage = max(0.0, float(before) - max(0.0, float(after)))
+        self.recovery_damage_by_position[position] = min(initial_hp, previous + damage)
+        if before > 0 and after <= 0:
+            self.recovery_killed_positions.add(position)
+
     def _subtract_health(self, unit: Dict, damage: float) -> Tuple[float, float]:
         """Apply damage without ever leaving a unit with negative health."""
         before = unit.get("health", 0) or 0
         after = max(0, before - damage)
+        self._record_recovery_damage(unit, before, after)
         unit["health"] = after
         if "hp" in unit:
             unit["hp"] = after
@@ -6451,6 +6483,10 @@ class BattleEnv(gym.Env):
 
     def step(self, action):
         assert self.winner is None, "Эпизод завершён — вызовите reset()."
+        if int(action) == RUN_AWAY_ACTION_INDEX and not self.retreat_enabled:
+            return self._obs(), self.penalty_invalid_target, False, False, {
+                "battle_retreat_blocked": True,
+            }
 
         if self._post_victory_team == "blue":
             return self._step_post_victory_blue_heal(action)
@@ -6945,6 +6981,7 @@ class BattleEnv(gym.Env):
         self.overwritten_exp_kill = {"red": 0.0, "blue": 0.0}
         self._battle_exp_event_count = 0
         self._battle_defeated_exp = {"red": 0.0, "blue": 0.0}
+        self._reset_recovery_combat_tracking()
         self.step_count = 0
         self.hero_item_slots_used_this_battle = [False] * len(self.equipped_hero_items)
         if len(getattr(self, "equipped_hero_item_uses_left", []) or []) < len(

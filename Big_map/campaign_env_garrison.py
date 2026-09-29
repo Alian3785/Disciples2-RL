@@ -308,7 +308,8 @@ class CampaignGarrisonMixin:
         for unit in red:
             unit['position'] = int(unit['position']) - 6
             unit['team'] = 'red'
-        self.battle_env = BattleEnv(reward_win=self.battle_reward_win, reward_loss=self.battle_reward_loss,
+        self.battle_env = BattleEnv(retreat_enabled=False,
+                                   reward_win=self.battle_reward_win, reward_loss=self.battle_reward_loss,
                                    reward_step=self.battle_reward_step, log_enabled=self.log_enabled)
         self.battle_env._init_with_custom_teams(self._build_battle_team_with_placeholders('red', red), blue)
         self.current_battle_context = {'kind': 'city_garrison', 'city': city}
@@ -346,6 +347,7 @@ class CampaignGarrisonMixin:
         if not (terminated or truncated):
             return self._build_obs(grid_obs=self._get_grid_obs(), battle_obs=obs), reward, False, False, info
         winner = self.battle_env.winner
+        self._credit_victorious_battle_recovery(info)
         self.city_garrisons[city] = [u for u in self._saved_city_battle_team('blue')
                                      if not self._is_empty_blue_unit(u) and self._unit_current_hp(u) > 0]
         self.scripted_capital_bot_team_state = self._saved_city_battle_team('red')

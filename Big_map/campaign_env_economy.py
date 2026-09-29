@@ -423,6 +423,7 @@ class CampaignEconomyMixin:
         composition = self._party_hire_composition(units=self.blue_team_state)
         finalized_reward = float(reward) - float(penalty)
         info = dict(raw_info or {})
+        info.update(self._recovery_reward_budget_info())
         info["leadership_capacity"] = int(composition["leadership_capacity"])
         info["leadership_occupied"] = int(composition["occupied_capacity"])
         info["leadership_points"] = int(composition["leadership_points"])
@@ -2400,6 +2401,49 @@ class CampaignEconomyMixin:
             return healed, name
 
         return 0.0, None
+    def _reset_recovery_reward_budget(self):
+        self.healing_reward_hp_balance = 0.0
+        self.revive_reward_kill_balance = 0
+        self.healing_reward_hp_earned = 0.0
+        self.revive_reward_kills_earned = 0
+
+    def _credit_victorious_battle_recovery(self, info):
+        """Commit combat earnings only once, after an actual BLUE victory."""
+        battle = self.battle_env
+        if (battle is None or battle.winner != "blue"
+                or getattr(battle, "recovery_credit_claimed", False)):
+            return
+        battle.recovery_credit_claimed = True
+        damage = float(sum(battle.recovery_damage_by_position.values()))
+        kills = len(battle.recovery_killed_positions)
+        self.healing_reward_hp_balance += damage
+        self.revive_reward_kill_balance += kills
+        self.healing_reward_hp_earned += damage
+        self.revive_reward_kills_earned += kills
+        info.update(recovery_victory_damage_hp=damage, recovery_victory_kills=kills)
+
+    def _consume_healing_reward(self, healed_hp):
+        """Pay for covered HP only; excess healing remains as debt for later wins."""
+        healed_hp = max(0.0, float(healed_hp))
+        eligible_hp = min(healed_hp, max(0.0, self.healing_reward_hp_balance))
+        self.healing_reward_hp_balance -= healed_hp
+        return eligible_hp * self.reward_castle_heal_per_hp
+
+    def _consume_revive_reward(self, revived):
+        if not revived:
+            return 0.0
+        reward = self.reward_castle_revive if self.revive_reward_kill_balance >= 1 else 0.0
+        self.revive_reward_kill_balance -= 1
+        return reward
+
+    def _recovery_reward_budget_info(self):
+        return {
+            "healing_reward_hp_balance": float(self.healing_reward_hp_balance),
+            "revive_reward_kill_balance": int(self.revive_reward_kill_balance),
+            "healing_reward_hp_earned": float(self.healing_reward_hp_earned),
+            "revive_reward_kills_earned": int(self.revive_reward_kills_earned),
+        }
+
     def _step_heal_in_castle(self, action: int):
         """Лечит выбранного юнита BLUE на клетках лечения с ценой за HP по Level."""
         idx = action - self.GRID_CASTLE_HEAL_ACTION_START
@@ -2421,7 +2465,8 @@ class CampaignEconomyMixin:
         if self._is_at_castle() and temple_built and target_pos is not None:
             healed_amount, unit_name = self._heal_unit_to_full_at_position(position=target_pos)
             gold_spent = max(0.0, gold_before - float(self.gold))
-        reward = max(0.0, float(healed_amount)) * self.reward_castle_heal_per_hp
+        requested_reward = max(0.0, float(healed_amount)) * self.reward_castle_heal_per_hp
+        reward = self._consume_healing_reward(healed_amount)
 
         info = {
             "mode": "grid",
@@ -2439,6 +2484,8 @@ class CampaignEconomyMixin:
             "healed_unit_name": unit_name,
             "gold_spent": gold_spent,
             "castle_heal_reward": reward,
+            "castle_heal_reward_requested": requested_reward,
+            **self._recovery_reward_budget_info(),
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
@@ -2573,7 +2620,8 @@ class CampaignEconomyMixin:
             revived, revived_unit_name, gold_spent = self._revive_unit_with_gold_at_position(
                 position=target_pos
             )
-        reward = self.reward_castle_revive if revived else 0.0
+        requested_reward = self.reward_castle_revive if revived else 0.0
+        reward = self._consume_revive_reward(revived)
 
         info = {
             "mode": "grid",
@@ -2597,6 +2645,8 @@ class CampaignEconomyMixin:
             "revive_cost": revive_cost,
             "gold_spent": gold_spent,
             "castle_revive_reward": reward,
+            "castle_revive_reward_requested": requested_reward,
+            **self._recovery_reward_budget_info(),
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
