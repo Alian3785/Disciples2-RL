@@ -189,6 +189,7 @@ class CampaignBattleMixin:
         if terminated or truncated:
             winner = self.battle_env.winner
             info["battle_winner"] = winner
+            self._credit_victorious_battle_recovery(info)
 
             if battle_context_kind == "summon_spell":
                 return self._finalize_summon_spell_battle(
@@ -754,6 +755,16 @@ class CampaignBattleMixin:
                 f"Оборона столицы: BLUE-отряд героя получает +{bonus} брони "
                 f"на каждого юнита ({affected_units} юнитов)."
             )
+    def _hero_party_in_settlement_at_battle_start(self) -> bool:
+        """Settlement entrances forbid retreat; surrounding faction land does not."""
+        if self.current_battle_context.get("kind") == "summon_spell":
+            # A remote summoned army is not the travelling hero's party.
+            return False
+        position = self.battle_origin_pos
+        if position is None:
+            position = self.grid_env.agent_pos
+        return tuple(position) in self.castle_heal_tiles
+
     def _init_battle(
         self,
         enemy_id: int,
@@ -831,6 +842,10 @@ class CampaignBattleMixin:
             self._log("Используется дефолтная BLUE команда")
 
         self.battle_env = BattleEnv(
+            retreat_enabled=not (
+                (self.map_name == "siege_train" and enemy_id == self._map.objective_enemy_id)
+                or self._hero_party_in_settlement_at_battle_start()
+            ),
             reward_win=self.battle_reward_win,
             reward_loss=self.battle_reward_loss,
             reward_step=self.battle_reward_step,
