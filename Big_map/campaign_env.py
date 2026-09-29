@@ -196,6 +196,8 @@ class CampaignEnv(
         reward_full_party_unit_lost_penalty: float = 2.0,
         reward_full_party_complete: float = 20.0,
         observation_version: Optional[str] = None,
+        reward_first_unit_hp_200: float = 3.0,
+        reward_first_unit_hp_250: float = 3.0,
     ):
         """Собрать конфигурацию кампании и базовое состояние среды.
 
@@ -361,6 +363,13 @@ class CampaignEnv(
         self.reward_survival_alive_weight = max(0.0, float(reward_survival_alive_weight))
         self.reward_survival_hp_weight = max(0.0, float(reward_survival_hp_weight))
         self.reward_unit_upgrade = max(0.0, float(reward_unit_upgrade))
+        for name, value in (("reward_first_unit_hp_200", reward_first_unit_hp_200),
+                            ("reward_first_unit_hp_250", reward_first_unit_hp_250)):
+            value = float(value)
+            if not np.isfinite(value) or value < 0:
+                raise ValueError(f"{name} must be finite and nonnegative")
+            setattr(self, name, value)
+        self.party_hp_thresholds_reached: set[int] = set()
         self.reward_unit_tier_bonus = max(0.0, float(reward_unit_tier_bonus))
         self.reward_unit_tier3_multiplier = max(0.0, float(reward_unit_tier3_multiplier))
         self.reward_enemies_defeated_weight = max(0.0, float(reward_enemies_defeated_weight))
@@ -410,6 +419,7 @@ class CampaignEnv(
         )
         self.reward_castle_heal_per_hp = max(0.0, float(reward_castle_heal_per_hp))
         self.reward_castle_revive = max(0.0, float(reward_castle_revive))
+        self._reset_recovery_reward_budget()
         self.persist_blue_hp = persist_blue_hp
         self.log_enabled = log_enabled
         self.detailed_step_info = bool(detailed_step_info)
@@ -1018,6 +1028,7 @@ class CampaignEnv(
         сундуками/источниками/сайтами и формирует стартовый info для отладки.
         """
         super().reset(seed=seed)
+        self._reset_recovery_reward_budget()
         self.first_use_counts = {}
         map_capital_id = getattr(self._map, "starting_capital_id", None)
         requested_capital = self._normalize_capital_id(
@@ -1282,6 +1293,9 @@ class CampaignEnv(
         info.update(self._mercenary_context_info(self.grid_env.agent_pos))
         info.update(self._trainer_context_info(self.grid_env.agent_pos))
 
+        # Starting parties already meeting a threshold do not earn a free bonus.
+        self.party_hp_thresholds_reached = self._party_hp_thresholds()
+        info.update(self._recovery_reward_budget_info())
         return self._build_obs(grid_obs=grid_obs), info
     def step(self, action: int):
         """Выполнить один шаг Gym-среды в активном режиме.
@@ -1301,6 +1315,7 @@ class CampaignEnv(
             step_result = self._step_battle(action)
         step_result = self._finish_pending_city_defence(step_result)
         step_result = self._apply_first_use_bonus(step_result)
+        step_result = self._apply_party_hp_milestone_bonus(step_result)
         return self._apply_leadership_step_penalty(step_result)
 
     def _apply_first_use_bonus(self, step_result):
@@ -1332,6 +1347,28 @@ class CampaignEnv(
         info.update(first_use_category=category, first_use_count=count, first_use_reward=bonus)
         if "reward" in info:
             info["reward"] = reward
+        return obs, reward, terminated, truncated, info
+
+    def _party_hp_thresholds(self) -> set[int]:
+        """HP milestones use permanent party stats, not wounds or battle summons."""
+        max_hp = max((self._unit_max_hp(unit) for unit in self.blue_team_state or ()), default=0.0)
+        return {threshold for threshold in (200, 250) if max_hp > threshold}
+
+    def _apply_party_hp_milestone_bonus(self, step_result):
+        """Pay each strict max-HP threshold once per episode, outside battle scaling."""
+        obs, reward, terminated, truncated, raw_info = step_result
+        reached = self._party_hp_thresholds() - self.party_hp_thresholds_reached
+        if not reached:
+            return step_result
+        self.party_hp_thresholds_reached.update(reached)
+        bonus = sum(getattr(self, f"reward_first_unit_hp_{threshold}") for threshold in reached)
+        reward = float(reward) + bonus
+        info = dict(raw_info or {})
+        info["party_hp_milestones"] = sorted(reached)
+        info["party_hp_milestone_reward"] = float(bonus)
+        if "grid_reward_scaled" in info:
+            info["grid_reward_scaled"] = float(info["grid_reward_scaled"]) + bonus
+        info["reward"] = reward
         return obs, reward, terminated, truncated, info
 
     def _step_grid(self, action: int):
