@@ -11,6 +11,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Tuple
 
+import scenario_map_data as _scenario_map_data
+
 DEFAULT_SCENARIO_FILENAME = "A Return To Simpler Times.sg"
 
 LEGIONS_TERRITORY_PASSABLE_POSITIONED_CLASSES = frozenset(
@@ -22,27 +24,16 @@ LEGIONS_TERRITORY_PASSABLE_POSITIONED_CLASSES = frozenset(
 )
 
 
-def _load_base_scenario_cells(parser_name: str) -> Tuple[Tuple[int, int], ...]:
+@lru_cache(maxsize=1)
+def _load_base_scenario_data() -> bytes:
     scenario_path = Path(__file__).resolve().with_name(DEFAULT_SCENARIO_FILENAME)
-    if not scenario_path.exists():
-        return ()
+    return scenario_path.read_bytes()
 
-    try:
-        from tools import inspect_sg_map
-    except Exception:
-        return ()
 
-    parser = getattr(inspect_sg_map, parser_name, None)
-    if parser is None:
-        return ()
-
-    try:
-        data = scenario_path.read_bytes()
-        map_size = int(inspect_sg_map.parse_map_size(data))
-        cells = parser(data, map_size)
-    except Exception:
-        return ()
-
+def _load_base_scenario_cells(parser_name: str) -> Tuple[Tuple[int, int], ...]:
+    data = _load_base_scenario_data()
+    map_size = _scenario_map_data.parse_map_size(data)
+    cells = getattr(_scenario_map_data, parser_name)(data, map_size)
     return tuple(
         sorted(
             (int(x), int(y))
@@ -69,31 +60,12 @@ def _load_campaign_base_road_tiles() -> Tuple[Tuple[int, int], ...]:
 
 @lru_cache(maxsize=1)
 def _load_legions_territory_base_forbidden_tiles() -> Tuple[Tuple[int, int], ...]:
-    scenario_path = Path(__file__).resolve().with_name(DEFAULT_SCENARIO_FILENAME)
-    if not scenario_path.exists():
-        return ()
-
-    try:
-        from tools.inspect_sg_map import (
-            RENDER_OBJECT_SPECS,
-            extract_render_objects,
-            parse_map_size,
-            parse_positioned_objects,
-            parse_resource_objects,
-            parse_water_cells,
-        )
-    except Exception:
-        return ()
-
-    try:
-        data = scenario_path.read_bytes()
-        map_size = int(parse_map_size(data))
-        water_cells = parse_water_cells(data, map_size)
-        render_objects = extract_render_objects(data)
-        positioned_objects = parse_positioned_objects(data)
-        resource_objects = parse_resource_objects(data)
-    except Exception:
-        return ()
+    data = _load_base_scenario_data()
+    map_size = _scenario_map_data.parse_map_size(data)
+    water_cells = _scenario_map_data.parse_water_cells(data, map_size)
+    render_objects = _scenario_map_data.extract_render_objects(data)
+    positioned_objects = _scenario_map_data.parse_positioned_objects(data)
+    resource_objects = _scenario_map_data.parse_resource_objects(data)
 
     forbidden_tiles: set[Tuple[int, int]] = {
         (int(x), int(y))
@@ -102,7 +74,7 @@ def _load_legions_territory_base_forbidden_tiles() -> Tuple[Tuple[int, int], ...
     }
 
     for class_name, objects in render_objects.items():
-        spec = RENDER_OBJECT_SPECS.get(class_name, {})
+        spec = _scenario_map_data.RENDER_OBJECT_SPECS.get(class_name, {})
         width, height = spec.get("footprint", (1, 1))
         width = max(1, int(width))
         height = max(1, int(height))
@@ -142,21 +114,9 @@ def _load_legions_territory_base_water_tiles() -> Tuple[Tuple[int, int], ...]:
 
 @lru_cache(maxsize=1)
 def _load_legions_territory_base_gold_mine_tiles() -> Tuple[Tuple[int, int], ...]:
-    scenario_path = Path(__file__).resolve().with_name(DEFAULT_SCENARIO_FILENAME)
-    if not scenario_path.exists():
-        return ()
-
-    try:
-        from tools.inspect_sg_map import parse_map_size, parse_resource_objects
-    except Exception:
-        return ()
-
-    try:
-        data = scenario_path.read_bytes()
-        map_size = int(parse_map_size(data))
-        resource_objects = parse_resource_objects(data)
-    except Exception:
-        return ()
+    data = _load_base_scenario_data()
+    map_size = _scenario_map_data.parse_map_size(data)
+    resource_objects = _scenario_map_data.parse_resource_objects(data)
 
     return tuple(
         sorted(
