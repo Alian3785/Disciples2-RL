@@ -1,15 +1,15 @@
 {
   "active": true,
   "seed": 143,
-  "next_map": "formation_train",
-  "next_objective": "all_enemies",
-  "completed_runs": 471,
+  "next_map": "hire_train",
+  "next_objective": "orc",
+  "completed_runs": 472,
   "last_success": {
-    "run_id": "seed143-builder-build_all-36992215659-1",
+    "run_id": "seed143-formation_train-all_enemies-37043804240-1",
     "seed": 143,
-    "map": "builder",
-    "objective": "build_all",
-    "completed_at": "2026-10-02T10:47:33.435535+00:00",
+    "map": "formation_train",
+    "objective": "all_enemies",
+    "completed_at": "2026-10-02T18:50:26.634816+00:00",
     "commit_sha": "d167051db6be6615ad50515268cc46cc6184e568"
   }
 }
