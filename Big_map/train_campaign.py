@@ -1084,6 +1084,8 @@ class CampaignMetricsCallback(BaseCallback):
         if self.story_path is not None:
             self.story_path.parent.mkdir(parents=True, exist_ok=True)
 
+        self.recent_enemy_squads_defeated = deque(maxlen=100)
+        self._episode_defeated_enemy_ids: list[set[int]] = []
         self.episode_rewards: list[float] = []
         self.episode_lengths: list[int] = []
         self.recent_episode_rewards = deque(maxlen=self.episode_window)
@@ -1209,6 +1211,7 @@ class CampaignMetricsCallback(BaseCallback):
         if env_count <= len(self._episode_castle_heal_uses):
             return
         missing = env_count - len(self._episode_castle_heal_uses)
+        self._episode_defeated_enemy_ids.extend(set() for _ in range(missing))
         self._episode_castle_heal_uses.extend([0] * missing)
         self._episode_castle_heal_flags.extend([False] * missing)
         self._episode_castle_healed_hp.extend([0.0] * missing)
@@ -1534,8 +1537,27 @@ class CampaignMetricsCallback(BaseCallback):
 
         self._episode_unit_swaps[env_index] = 0
 
+    def _consume_enemy_squad_victories(self, info: dict[str, Any], env_index: int) -> None:
+        # Track unique defeated stacks per environment before finalizing a
+        # terminal step, so its final victory belongs to the completed episode.
+        defeated = self._episode_defeated_enemy_ids[env_index]
+        if info.get("battle_result") == "victory" or info.get("spell_enemy_defeated"):
+            raw_id = info.get("enemy_id")
+            if raw_id is None:
+                raw_id = info.get("target_enemy_id")
+            try:
+                enemy_id = int(raw_id)
+            except (TypeError, ValueError):
+                enemy_id = -1
+            if enemy_id >= 0:
+                defeated.add(enemy_id)
+        if isinstance(info.get("episode"), dict):
+            self.recent_enemy_squads_defeated.append(len(defeated))
+            defeated.clear()
+
     def _consume_info(self, info: dict[str, Any], env_index: int | None = None) -> None:
         if env_index is not None:
+            self._consume_enemy_squad_victories(info, env_index)
             self._consume_castle_heal(info, env_index)
             self._consume_chests(info, env_index)
             self._consume_buildings(info, env_index)
@@ -1816,6 +1838,12 @@ class CampaignMetricsCallback(BaseCallback):
                 self.window_battle_counter.get("victory", 0),
                 window_battles,
             ),
+            "campaign/window/enemy_squads_defeated_mean_100": _safe_mean(
+                self.recent_enemy_squads_defeated
+            ),
+            "campaign/window/enemy_squads_defeated_sample_count": float(
+                len(self.recent_enemy_squads_defeated)
+            ),
             "campaign/window/chests_collected_mean": _safe_mean(self.recent_chests_collected),
             "campaign/window/buildings_built_mean": _safe_mean(self.recent_buildings_built),
             "campaign/window/ruins_cleared_mean": _safe_mean(self.recent_ruins_cleared),
@@ -1852,6 +1880,7 @@ class CampaignMetricsCallback(BaseCallback):
             for enemy_key in sorted(terminal_defeat_detail_keys)
         }
         recent_activity = {
+            "enemy_squads_defeated_mean_100": _safe_mean(self.recent_enemy_squads_defeated),
             "magic_spell_casts_mean": float(payload.get("campaign/window/spell_casts_mean", 0.0)),
             "summons_mean": _safe_mean(self.recent_summoned_units),
             "hires_mean": float(payload.get("campaign/window/hired_units_mean", 0.0)),

@@ -493,7 +493,7 @@ class CampaignMapSitesMixin:
         out_of_stock = bool(site_names) and not bool(site_name)
         added_to_spellbook = False
 
-        if site_name is not None and spell_name:
+        if site_name is not None and spell_name and not self._is_spell_disabled(spell_id):
             if already_owned:
                 pass
             elif float(self.gold or 0.0) < spell_price:
