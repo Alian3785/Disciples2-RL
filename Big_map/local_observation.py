@@ -4,6 +4,7 @@ Observation-only experiment: exposes current map state, without selecting action
 or changing rewards, transitions, action masks, rosters or the PPO trainer.
 """
 from collections import deque
+import os
 
 import numpy as np
 from gymnasium import spaces
@@ -20,11 +21,23 @@ class LocalObservation:
 
     def __init__(self, env):
         self.env = env
+        self.window_size = int(os.environ.get('CAMPAIGN_LOCAL_WINDOW_SIZE', '5'))
+        if self.window_size not in (5, 7, 10):
+            raise ValueError('CAMPAIGN_LOCAL_WINDOW_SIZE must be 5, 7 or 10')
+        self.RADIUS = self.window_size // 2
+        self.offset_min = -self.RADIUS
+        self.offset_max = self.offset_min + self.window_size - 1
+        # Even windows contain five negative and four positive offsets at size 10.
+        self.offsets = tuple((dy, dx)
+                             for dy in range(self.offset_min, self.offset_max + 1)
+                             for dx in range(self.offset_min, self.offset_max + 1))
+        self.tile_count = self.window_size ** 2
+        self.ENCODING_VERSION = f'local{self.window_size}-navigation-v2'
         self._distance_cache = {}
         self.enemy_width = 4  # alive count, total HP, total damage, max HP
         self.tile_width = len(self.TILE_FEATURES) + self.enemy_width
         sizes = [
-            ('mode', 1), ('local_tiles', 25 * self.tile_width),
+            ('mode', 1), ('local_tiles', self.tile_count * self.tile_width),
             ('party', env.grid_blue_obs_size),
             ('resources', env.grid_resource_obs_size - 1),  # No remaining-chest count.
             ('buildings', env.grid_building_obs_size),
@@ -36,7 +49,7 @@ class LocalObservation:
             ('trainer', 3 if env.grid_trainer_obs_size else 0),
             ('battle', env.BATTLE_OBS_SIZE), ('battle_turn', 26),
             ('party_strength', 24), ('landmarks', 32), ('paths', 40),
-            ('visited', 25), ('time_gold', 2),
+            ('visited', self.tile_count), ('time_gold', 2),
         ]
         self.slices = {}
         offset = 0
@@ -48,11 +61,13 @@ class LocalObservation:
     def tiles(self):
         e, grid = self.env, self.env.grid_env
         ax, ay = grid.agent_pos
-        result = np.zeros((25, self.tile_width), dtype=np.float32)
+        result = np.zeros((self.tile_count, self.tile_width), dtype=np.float32)
         # Only visible positions enter the tile dictionary. No global-ID slots.
         enemies = {}
         for enemy_id, pos in grid.enemy_positions.items():
-            if max(abs(pos[0] - ax), abs(pos[1] - ay)) <= self.RADIUS and grid.enemies_alive.get(enemy_id, False):
+            if (self.offset_min <= pos[0] - ax <= self.offset_max and
+                    self.offset_min <= pos[1] - ay <= self.offset_max and
+                    grid.enemies_alive.get(enemy_id, False)):
                 enemies.setdefault(tuple(pos), []).append(enemy_id)
         def interaction_tiles(attribute):
             return {tuple(p) for tiles in getattr(e, attribute, {}).values() for p in tiles}
@@ -62,7 +77,7 @@ class LocalObservation:
         heals = set(e.castle_heal_tiles) | {tuple(e.CASTLE_POS)}
         ruins = set(e.grid_ruin_positions)
         mines = set(getattr(e, 'gold_mine_tiles', ()))
-        for index, (dy, dx) in enumerate((dy, dx) for dy in range(-2, 3) for dx in range(-2, 3)):
+        for index, (dy, dx) in enumerate(self.offsets):
             pos = (ax + dx, ay + dy)
             if not (0 <= pos[0] < grid.grid_size and 0 <= pos[1] < grid.grid_size):
                 continue  # Explicit all-zero padding beyond the map boundary.
@@ -157,7 +172,7 @@ class LocalObservation:
         grid = self.env.grid_env
         ax, ay = grid.agent_pos
         return np.array([(ax + dx, ay + dy) in grid.visited_cells
-                         for dy in range(-2, 3) for dx in range(-2, 3)], dtype=np.float32)
+                         for dy, dx in self.offsets], dtype=np.float32)
 
     def distance_field(self, group, targets, blocked):
         """Terrain-only geodesic distance; does not choose or execute actions."""

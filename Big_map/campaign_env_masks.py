@@ -156,6 +156,8 @@ class CampaignMaskMixin:
                     )
             if self._spell_shop_sites_at_position(self.grid_env.agent_pos):
                 for idx, spell_data in enumerate(self.SPELL_SHOP_BUY_SPELLS):
+                    if self._is_spell_disabled(spell_data.get("spell_id", "")):
+                        continue
                     spell_name = str(spell_data.get("name", "") or "")
                     spell_id = str(spell_data.get("spell_id", "") or "")
                     spell_price = self._shop_buy_price(spell_data.get("price", 0.0))
@@ -190,6 +192,8 @@ class CampaignMaskMixin:
                 mask[self.GRID_BUILD_ACTION_START + idx] = bool(can_build)
             if self._has_magic_tower_built() and not self.spell_learning_locked:
                 for idx, spell_key in enumerate(self.spell_keys):
+                    if self._is_spell_disabled(spell_key):
+                        continue
                     spell = self.active_spells.get(spell_key)
                     if not isinstance(spell, dict):
                         continue

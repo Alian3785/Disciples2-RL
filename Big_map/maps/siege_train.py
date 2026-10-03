@@ -1,4 +1,4 @@
-"""Siege scenario with twenty roaming stacks and a turn-25 pursuing army."""
+"""Siege scenario with thirty-two static stacks and a turn-27 pursuing army."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ HERO_START = (5, 27)
 
 SIEGE_ENEMY_ID = 100
 SIEGE_SPAWN_TILE = (47, 47)
-SIEGE_SPAWN_TURN = 25
+SIEGE_SPAWN_TURN = 27
 SIEGE_MOVES_PER_TURN = 25
 
 STARTING_ELIXIR_ITEMS = (
@@ -42,7 +42,49 @@ def _stack(
     }
 
 
+# Five nearby first-tier patrols add 320 XP to the original 330-XP easy route.
+# Together they cover the first promotion of all four starting party members.
+STARTER_ENEMY_STACKS = (
+    _stack(
+        26,
+        (7, 25),
+        "Ближний дозор I: два Скваера и Служка",
+        ["Скваер", None, "Скваер"],
+        [None, "Служка", None],
+    ),
+    _stack(
+        27,
+        (7, 29),
+        "Ближний дозор II: два Скваера и Адепт",
+        ["Скваер", None, "Скваер"],
+        [None, "Адепт", None],
+    ),
+    _stack(
+        28,
+        (9, 23),
+        "Ближний дозор III: Скваер, Воин и Служка",
+        ["Скваер", None, "Воин"],
+        [None, "Служка", None],
+    ),
+    _stack(
+        29,
+        (9, 29),
+        "Ближний дозор IV: Скваер, Воин и Адепт",
+        ["Скваер", None, "Воин"],
+        [None, "Адепт", None],
+    ),
+    _stack(
+        30,
+        (9, 31),
+        "Ближний дозор V: два Воина и Адепт",
+        ["Воин", None, "Воин"],
+        [None, "Адепт", None],
+    ),
+)
+
+
 STATIC_ENEMY_STACKS = (
+    *STARTER_ENEMY_STACKS,
     _stack(1, (10, 25), "Дозор I: один Гоблин", [None, "Гоблин", None], [None, None, None]),
     _stack(
         2,
@@ -148,37 +190,37 @@ STATIC_ENEMY_STACKS = (
     _stack(
         11,
         (30, 43),
-        "Костяная гвардия: два Скелета-воина, Некромант и Дух",
-        ["Скелет воин", None, "Скелет воин"],
-        ["Некромант", None, "Дух"],
+        "Костяной дозор: два Зомби и Чернокнижник",
+        ["Зомби", None, "Зомби"],
+        [None, "Чернокнижник", None],
     ),
     _stack(
         12,
         (33, 15),
-        "Гномьи ветераны: два Ветерана, Друид и Алхимик",
-        ["Ветеран", None, "Ветеран"],
-        ["Друид", None, "Алхимик"],
+        "Гномий патруль: два Гнома-воина и Арбалетчик",
+        ["Гном воин", None, "Гном воин"],
+        [None, "Арбалетчик", None],
     ),
     _stack(
         13,
         (35, 32),
-        "Тёмный конклав: два Тёмных паладина, Демонолог и Колдунья",
-        ["Темный паладин", None, "Темный паладин"],
-        ["Демонолог", None, "Колдунья"],
+        "Тёмный дозор: два Берсерка и Колдун",
+        ["Берсерк", None, "Берсерк"],
+        [None, "Колдун", None],
     ),
     _stack(
         14,
         (37, 5),
-        "Дикая стража: два Кентавра-дикаря, Архонт и Теург",
-        ["Кентавр дикарь", None, "Кентавр дикарь"],
-        ["Архонт", None, "Теург"],
+        "Лесной дозор: два Кентавра-латника и Проводник",
+        ["Кентавр латник", None, "Кентавр латник"],
+        [None, "Проводник", None],
     ),
     _stack(
         15,
         (39, 40),
-        "Старшая гвардия: Ветеран, Старый ветеран, Архидруид и Отшельник",
-        ["Ветеран", None, "Старый ветеран"],
-        ["Архидруид", None, "Отшельник"],
+        "Гномья стража: два Гнома-воина и Посвященная",
+        ["Гном воин", None, "Гном воин"],
+        [None, "Посвященная", None],
     ),
     _stack(
         16,
@@ -215,6 +257,21 @@ STATIC_ENEMY_STACKS = (
         ["Король гномов", "Владыка рун", "Защитник Веры"],
         ["Архидруид", "Отшельник", "Архилич"],
     ),
+    # Small elite formations on the middle route, beyond the starting patrols.
+    _stack(
+        41,
+        (31, 35),
+        "Адский дозор: Адский рыцарь впереди; Модеус позади",
+        [None, "Адский рыцарь", None],
+        [None, "Модеус", None],
+    ),
+    _stack(
+        42,
+        (34, 23),
+        "Королевский дозор: Король гномов впереди; Арбалетчик и Алхимик позади",
+        [None, "Король гномов", None],
+        ["Арбалетчик", None, "Алхимик"],
+    ),
 )
 
 SIEGE_STACK = _stack(
@@ -237,7 +294,7 @@ MAP = MapConfig(
     legions_settlement_territory_data=(),
     settlement_defender_heal_tile_by_enemy_id={},
     chests=(),
-    mana_sources=(),
+    mana_sources=(("infernal", (6, 27)),),
     enemy_stacks=(*STATIC_ENEMY_STACKS, SIEGE_STACK),
     merchant_sites={},
     spell_shop_sites={},

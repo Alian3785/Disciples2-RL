@@ -7,6 +7,16 @@ from campaign_env_data import *
 
 
 class CampaignMagicMixin:
+    # Keep action slots stable for existing models; disable these spells in
+    # masks and execution, including the corresponding scroll spell IDs.
+    DISABLED_ILLUSION_SPELL_IDS = frozenset({
+        "lod_d2_s002", "lod_d2_s007", "g000ss0042", "g000ss0047",
+    })
+
+    @classmethod
+    def _is_spell_disabled(cls, spell_key: str) -> bool:
+        return str(spell_key or "") in cls.DISABLED_ILLUSION_SPELL_IDS
+
     @classmethod
     def _empty_mana_dict(cls, value: float = 0.0) -> Dict[str, float]:
         return {
@@ -428,6 +438,8 @@ class CampaignMagicMixin:
         nearest_targetable_enemy: Optional[Dict[str, object]] = None,
         nearest_any_enemy: Optional[Dict[str, object]] = None,
     ) -> bool:
+        if self._is_spell_disabled((slot_entry or {}).get("spell_id", (slot_entry or {}).get("id", ""))):
+            return False
         if not bool(self.scroll_magic_unlocked):
             return False
         if not isinstance(slot_entry, dict):
@@ -711,6 +723,8 @@ class CampaignMagicMixin:
         *,
         nearest_enemy: Optional[Dict[str, object]] = None,
     ) -> bool:
+        if self._is_spell_disabled(spell_key):
+            return False
         normalized_spell_key = str(spell_key or "")
         current_spell_ids = self._map_offensive_spell_ids_for_capital(self.Realcapital)
         if not current_spell_ids:
@@ -743,6 +757,8 @@ class CampaignMagicMixin:
             return False
         return self._has_mana_for_costs(self._get_spell_use_costs(spell))
     def _can_cast_support_spell(self, spell_key: str) -> bool:
+        if self._is_spell_disabled(spell_key):
+            return False
         normalized_spell_key = str(spell_key or "")
         current_spell_ids = self._map_support_spell_ids_for_capital(self.Realcapital)
         if not current_spell_ids:
@@ -769,6 +785,8 @@ class CampaignMagicMixin:
         nearest_targetable_enemy: Optional[Dict[str, object]] = None,
         nearest_any_enemy: Optional[Dict[str, object]] = None,
     ) -> bool:
+        if self._is_spell_disabled(spell_key):
+            return False
         normalized_spell_key = str(spell_key or "")
         if not normalized_spell_key:
             return False
@@ -852,6 +870,8 @@ class CampaignMagicMixin:
         nearest_targetable_enemy: Optional[Dict[str, object]] = None,
         nearest_any_enemy: Optional[Dict[str, object]] = None,
     ) -> bool:
+        if self._is_spell_disabled((slot_entry or {}).get("spell_id", (slot_entry or {}).get("id", ""))):
+            return False
         if not bool(self.scroll_magic_unlocked):
             return False
         if not isinstance(slot_entry, dict):
@@ -956,6 +976,9 @@ class CampaignMagicMixin:
             ),
             "reward": 0.0,
         }
+        if self._is_spell_disabled(normalized_spell_key):
+            result["spell_disabled"] = True
+            return result
         if self._spell_kind_is_support(spell_kind) and not self._support_spell_spec_would_apply(
             normalized_spell_key,
             spell_spec,
@@ -1975,7 +1998,7 @@ class CampaignMagicMixin:
         if 0 <= idx < len(self.spell_keys):
             spell_key = self.spell_keys[idx]
             spell = self.active_spells.get(spell_key)
-            if isinstance(spell, dict):
+            if isinstance(spell, dict) and not self._is_spell_disabled(spell_key):
                 spell_description = str(spell.get("description", "") or "").strip()
                 try:
                     spell_level = int(spell.get("level", 0) or 0)
@@ -2014,6 +2037,7 @@ class CampaignMagicMixin:
             "spell_key": spell_key,
             "spell_description": spell_description,
             "spell_level": spell_level,
+            "spell_disabled": self._is_spell_disabled(spell_key),
             "spell_learned": spell_learned,
             "spell_already_learned": spell_already_learned,
             "spell_learning_locked": spell_learning_locked,
