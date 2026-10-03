@@ -1645,37 +1645,26 @@ class CampaignBattleMixin:
     def _log_turns_into_levelups(self) -> int:
         """Применяет превращения BLUE-юнитов после level-up и возвращает их число.
 
-        BattleEnv только сообщает, какие имена получили уровень. CampaignEnv
+        BattleEnv передаёт конкретных юнитов, получивших уровень. CampaignEnv
         дополнительно проверяет, построено ли здание, открывающее целевой юнит
         из turns_into, и уже после этого заменяет боевую и persistent-запись.
         """
         self._reset_last_upgrade_reward_tracking()
         if self.battle_env is None:
             return 0
-        levelup_names = getattr(self.battle_env, "last_levelups", []) or []
-        if not levelup_names:
-            return 0
-
-        name_to_units: Dict[str, List[Dict]] = {}
-        for unit in getattr(self.battle_env, "combined", []) or []:
-            if unit.get("team") != "blue":
-                continue
-            name = str(unit.get("name", "") or "").strip()
-            if not name:
-                continue
-            name_to_units.setdefault(name, []).append(unit)
-
+        levelup_names = self.battle_env.last_levelups
+        levelup_units = self.battle_env.last_levelup_units
         upgraded_count = 0
         # Сумма и максимум тиров (уровней) юнитов, достигнутых апгрейдом — для бонуса и отчёта.
-        for name in levelup_names:
+        for name, unit in zip(levelup_names, levelup_units):
+            # Names are for logging; identity comes from the XP recipient.
+            # Ignore opposing-team events and already-applied evolutions.
+            if unit.get("team") != "blue" or unit.get("name") != name:
+                continue
             unit_data = self._find_unit_data_by_name(name)
             capital_value = unit_data.get("\u0441\u0442\u043e\u043b\u0438\u0446\u0430") if unit_data else None
             buildings = self._get_buildings_for_capital(capital_value)
 
-            units = name_to_units.get(name)
-            if not units:
-                continue
-            unit = units.pop(0)
             pos = unit.get("position")
             if pos is None:
                 unit_label = name

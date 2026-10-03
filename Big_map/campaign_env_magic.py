@@ -1936,7 +1936,7 @@ class CampaignMagicMixin:
         healed_units = 0
         healed_total = 0.0
 
-        # Полная регенерация привязана к драконьему стеку id 31. В режиме
+        # Полная регенерация — только для дракона в стеке id 31. В режиме
         # blue_dragon этот же стек содержит Синего дракона вместо Зелёного,
         # поэтому оба варианта полностью восстанавливаются каждый новый ход.
         # Остальные целевые враги (например, орк из orc_duel) лечатся обычной долей.
@@ -1956,7 +1956,7 @@ class CampaignMagicMixin:
                 max_hp = float(unit.get("max_health", 0) or unit.get("maxhp", 0) or 0.0)
                 if max_hp <= 0.0 or current_hp <= 0.0 or current_hp >= max_hp:
                     continue
-                if is_dragon:
+                if is_dragon and unit.get("name") in ("Зелёный дракон", "Синий дракон"):
                     new_hp = max_hp
                 else:
                     heal_amount = max(1.0, max_hp * float(heal_fraction))

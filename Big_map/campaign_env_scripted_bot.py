@@ -851,23 +851,10 @@ class CampaignScriptedBotMixin:
 
     def _apply_scripted_capital_bot_levelups(self, battle_env: BattleEnv) -> int:
         """Применяет levelup-ы бота сразу после победы, без проверки построек."""
-        levelup_names = list(getattr(battle_env, "last_levelups", []) or [])
-        if not levelup_names:
-            return 0
-        blue_units_by_name: Dict[str, List[Dict]] = {}
-        for unit in battle_env.combined:
-            if unit.get("team") != "blue":
-                continue
-            name = str(unit.get("name", "") or "").strip()
-            if name:
-                blue_units_by_name.setdefault(name, []).append(unit)
-
         upgraded_count = 0
-        for name in levelup_names:
-            units = blue_units_by_name.get(str(name), [])
-            if not units:
+        for name, unit in zip(battle_env.last_levelups, battle_env.last_levelup_units):
+            if unit.get("team") != "blue" or unit.get("name") != name:
                 continue
-            unit = units.pop(0)
             turns_into = unit.get("turns_into", [])
             if not isinstance(turns_into, list):
                 turns_into = [turns_into]
