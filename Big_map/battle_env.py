@@ -963,6 +963,9 @@ class BattleEnv(gym.Env):
         self._pretty_events: List[str] = []
         self.last_battle_exp: float = 0.0
         self.last_levelups: List[str] = []
+        # Exact XP recipients, parallel to the names retained for logs.
+        # References also identify escaped units outside combined.
+        self.last_levelup_units: List[Dict] = []
         self.exp_multiplier: float = 1.0
 
         # Action space = 12 targets + defend/wait/run + 24 hero item actions.
@@ -3650,6 +3653,9 @@ class BattleEnv(gym.Env):
             u["_battle_exp_earned"] = 0.0
         self.round_no = 1
         self.winner = None
+        self.last_battle_exp = 0.0
+        self.last_levelups = []
+        self.last_levelup_units = []
         self._post_victory_team = None
         self._post_victory_healer_positions = []
         self.current_blue_attacker_pos = None
@@ -3743,11 +3749,17 @@ class BattleEnv(gym.Env):
         return atk1 in immunities
 
     def _is_immune_status(self, attacker: Dict, victim: Dict) -> bool:
-        atk2 = (attacker.get("attack_type_secondary", "") or "").lower()
-        if not atk2:
+        # Status-only attacks (e.g. Succub) use their primary source; secondary
+        # effects keep their own source even when the primary one is different.
+        effect_type = (
+            attacker.get("attack_type_secondary", "")
+            or attacker.get("attack_type_primary", "")
+            or ""
+        ).lower()
+        if not effect_type:
             return False
         immunities = [str(i).lower() for i in (victim.get("immunity") or [])]
-        return atk2 in immunities
+        return effect_type in immunities
 
     def _resilience_blocks(
         self, attacker: Dict, victim: Dict, custom_tag: Optional[str] = None
@@ -3907,22 +3919,16 @@ class BattleEnv(gym.Env):
     def _apply_fear_effect(self, attacker: Dict, victim: Dict) -> bool:
         if victim.get("running_away", 0) == 1:
             return False
-        atk_type = attacker.get("attack_type_primary", "")
-        immun = set(victim.get("immunity") or [])
-        resist = set(victim.get("resistance") or [])
-        if atk_type and atk_type in immun:
+        effect_type = attacker.get("attack_type_secondary", "") or attacker.get(
+            "attack_type_primary", ""
+        )
+        if self._is_immune_status(attacker, victim):
             self._log(
-                f"Страх Баронессы не действует на {victim['team'].upper()} {victim['name']}#{victim['position']} — тип атаки '{atk_type}' поглощён."
+                f"Страх не действует на {victim['team'].upper()} {victim['name']}#{victim['position']} — тип атаки '{effect_type}' поглощён."
             )
             return False
-        if atk_type and atk_type in resist:
-            used = set(victim.get("resilience_used_types") or [])
-            if atk_type not in used:
-                victim.setdefault("resilience_used_types", []).append(atk_type)
-                self._log(
-                    f"Страх Баронессы не действует на {victim['team'].upper()} {victim['name']}#{victim['position']} — тип атаки '{atk_type}' поглощён."
-                )
-                return False
+        if self._resilience_blocks(attacker, victim, custom_tag=effect_type):
+            return False
         victim["running_away"] = 1
         victim["feared"] = 1
         self._log(
@@ -5150,19 +5156,19 @@ class BattleEnv(gym.Env):
                     "Мизраэль",
                     "Иллюмиэлль",
                 }
-                # Иммунитет/стойкость к «превращению»
+                # Иммунитет и стойкость проверяют один и тот же источник эффекта.
+                status_tag = attacker.get("attack_type_secondary", "") or attacker.get(
+                    "attack_type_primary", ""
+                )
                 if self._is_immune_status(attacker, v):
                     self._log(
-                        f"Иммунитет к эффекту '{attacker.get('attack_type_secondary', '')}' — превращение НЕ накладывается "
+                        f"Иммунитет к эффекту '{status_tag}' — превращение НЕ накладывается "
                         f"на {v['team'].upper()} {v['name']}#{v['position']}."
                     )
                     return
                 elif v.get("name") in forbiddenwitch_names:
                     self._log("Это страж столицы")
                     return
-                status_tag = attacker.get("attack_type_secondary", "") or attacker.get(
-                    "attack_type_primary", ""
-                )
                 if self._resilience_blocks(attacker, v, custom_tag=status_tag):
                     return
                 self._apply_witch_effect(attacker, v)
@@ -5600,6 +5606,7 @@ class BattleEnv(gym.Env):
             unit["exp_current"] = max(0.0, req_value - 1)
         self._log(f"Уровень юнита {unit_name} повышен")
         self.last_levelups.append(unit_name)
+        self.last_levelup_units.append(unit)
 
     def _apply_battle_exp(self, losing_team: str) -> None:
         """Award XP with original-game timing for deaths, revivals and escapes."""
@@ -5651,6 +5658,7 @@ class BattleEnv(gym.Env):
 
         self.last_battle_exp = total_exp
         self.last_levelups = []
+        self.last_levelup_units = []
         self._log(f"Опыт за бой: {total_exp:g}")
 
         current_winners = [
@@ -6977,6 +6985,9 @@ class BattleEnv(gym.Env):
         # Сбрасываем глобальное состояние боя
         self.round_no = 1
         self.winner = None
+        self.last_battle_exp = 0.0
+        self.last_levelups = []
+        self.last_levelup_units = []
         self._post_victory_team = None
         self._post_victory_healer_positions = []
         self.current_blue_attacker_pos = None

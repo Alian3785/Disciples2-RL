@@ -133,16 +133,37 @@ def _territory_forbidden_tiles() -> tuple[tuple[int, int], ...]:
     return tuple(sorted(tiles))
 
 
-ENEMY_STACKS = tuple(
-    {
+_SOURCE_GROUPS = {
+    row["source_id"]: row[group_key]
+    for category, group_key in (
+        ("stacks", "group"), ("settlements", "garrison"), ("ruins", "garrison")
+    )
+    for row in SOURCE_SNAPSHOT[category]
+}
+
+
+def _build_enemy_stack(row: dict) -> dict[str, object]:
+    slots = [None] * 6
+    seen = set()
+    for unit in _SOURCE_GROUPS[row["source_id"]]["units"]:
+        # A large source unit occupies two cells; equal names can be distinct units.
+        source_unit_id = unit["source_unit_id"]
+        if source_unit_id in seen:
+            continue
+        seen.add(source_unit_id)
+        slots[int(unit["battle_slot"])] = str(unit["unit_name"])
+    return {
         "enemy_id": int(row["enemy_id"]),
         "position": _tile(row["position"]),
-        "description": str(row["description"]),
-        "front": list(row["front"]),
-        "back": list(row["back"]),
+        "description": f"{row['kind']} {row['source_id']}: " + ", ".join(
+            name for name in slots if name
+        ),
+        "front": slots[:3],
+        "back": slots[3:],
     }
-    for row in SOURCE_SNAPSHOT["enemies"]
-)
+
+
+ENEMY_STACKS = tuple(_build_enemy_stack(row) for row in SOURCE_SNAPSHOT["enemies"])
 
 CHESTS = tuple(
     (
