@@ -1,15 +1,15 @@
 {
   "active": true,
   "seed": 143,
-  "next_map": "magic_train",
+  "next_map": "scroll_train",
   "next_objective": "all_enemies",
-  "completed_runs": 474,
+  "completed_runs": 475,
   "last_success": {
-    "run_id": "seed143-item_train-all_enemies-37099695343-1",
+    "run_id": "seed143-magic_train-all_enemies-37120642895-1",
     "seed": 143,
-    "map": "item_train",
+    "map": "magic_train",
     "objective": "all_enemies",
-    "completed_at": "2026-10-03T06:14:11.244646+00:00",
+    "completed_at": "2026-10-03T12:19:57.430060+00:00",
     "commit_sha": "d167051db6be6615ad50515268cc46cc6184e568"
   }
 }
