@@ -285,6 +285,7 @@ class CampaignGarrisonMixin:
         armor = int(SETTLEMENT_ARMOR_BONUS_BY_LEVEL[self._garrison_capacity(city)])
         for unit in blue:
             unit['garrison_base_armor'] = unit.get('armor', 0)
+            unit['garrison_armor_bonus'] = armor
             if not self._is_empty_blue_unit(unit):
                 unit['armor'] = min(90, int(unit.get('armor', 0)) + armor)
         red = deepcopy(self.scripted_capital_bot_team_state)
@@ -298,6 +299,36 @@ class CampaignGarrisonMixin:
         self.current_battle_context = {'kind': 'city_garrison', 'city': city}
         self.current_enemy_id = None
         self.mode = self.MODE_BATTLE
+
+    def _apply_garrison_victory_promotions(self):
+        """Evolve the actual surviving guards before saving their city roster.
+
+        Do not call the travelling party's replacement/reward handler: its
+        positions overlap the independent garrison formation.
+        """
+        battle = self.battle_env
+        if battle is None or battle.winner != 'blue':
+            return 0
+        participants = {id(unit) for unit in battle.combined}
+        count = 0
+        for name, unit in zip(battle.last_levelups, battle.last_levelup_units):
+            if (id(unit) not in participants or unit.get('team') != 'blue'
+                    or unit.get('name') != name or unit.get('Summoned')
+                    or self._is_empty_blue_unit(unit) or self._unit_current_hp(unit) <= 0):
+                continue
+            upgraded = self._build_built_unit_promotion(unit)
+            if upgraded is None:
+                continue
+            # Scenario provenance is identity, not the old unit's stat layer.
+            upgraded.update({key: deepcopy(value) for key, value in unit.items()
+                             if key.startswith('source_')})
+            self._log(f'City guard "{name}" (pos {unit["position"]}) upgraded to "{upgraded["name"]}"')
+            # Replace in place to preserve the BattleEnv event's identity. The
+            # new canonical form deliberately has no old city armour snapshot.
+            unit.clear()
+            unit.update(upgraded)
+            count += 1
+        return count
 
     def _saved_city_battle_team(self, team):
         saved = []
@@ -313,6 +344,7 @@ class CampaignGarrisonMixin:
             unit['damage'] = unit.get('original_damage', unit.get('damage', 0))
             unit['armor'] = unit.pop('garrison_base_armor', unit.get('base_armor', unit.get('armor', 0)))
             unit['base_armor'] = unit['armor']
+            unit.pop('garrison_armor_bonus', None)
             saved.append(self._normalize_scripted_bot_saved_unit(unit))
         return self._build_battle_team_with_placeholders('blue', saved)
 
@@ -331,6 +363,7 @@ class CampaignGarrisonMixin:
             return self._build_obs(grid_obs=self._get_grid_obs(), battle_obs=obs), reward, False, False, info
         winner = self.battle_env.winner
         self._credit_victorious_battle_recovery(info)
+        info['garrison_unit_upgrades'] = self._apply_garrison_victory_promotions()
         self.city_garrisons[city] = [u for u in self._saved_city_battle_team('blue')
                                      if not self._is_empty_blue_unit(u) and self._unit_current_hp(u) > 0]
         self.scripted_capital_bot_team_state = self._saved_city_battle_team('red')

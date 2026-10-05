@@ -1565,6 +1565,9 @@ class CampaignMagicMixin:
             unit["initiative_base"] = base_initiative
             unit["accuracy"] = base_accuracy
             unit["accuracy_secondary"] = base_accuracy_secondary
+            for kind in ("damage", "initiative", "accuracy"):
+                unit.pop("campaign_map_spell_" + kind + "_multiplier", None)
+            unit.pop("campaign_map_spell_armor_bonus", None)
 
             current_hp = float(unit.get("health", 0) or unit.get("hp", 0) or 0.0)
             max_hp = float(unit.get("max_health", 0) or unit.get("maxhp", 0) or 0.0)
@@ -1659,6 +1662,9 @@ class CampaignMagicMixin:
                 )
             )
 
+            for kind in ("damage", "initiative", "accuracy"):
+                unit["campaign_map_spell_" + kind + "_multiplier"] = float(summary[kind + "_multiplier"])
+            unit["campaign_map_spell_armor_bonus"] = int(summary["armor_delta"])
             unit["armor"] = self._normalize_armor_value(
                 float(base_armor) + float(summary["armor_delta"])
             )
