@@ -23,6 +23,7 @@ from data_dicts_compact_lines import DATA as UNIT_DATA, placeholder_unit
 from grid import BLUE_TEAM_TEMPLATE
 from unit_dynamic_xp import dynamic_kill_xp_increment
 from unit_dynamic_stats import apply_dynamic_stat_growth
+from permanent_unit_stats import intrinsic_stat_mutation, rebuild_stat_layers
 from hero_level_abilities import apply_hero_level_stat_abilities
 
 # Импорт действий юнитов (предполагается, что эти файлы лежат рядом)
@@ -655,6 +656,7 @@ def _apply_hero_level_milestone_bonuses(unit: Dict) -> None:
         unit["original_damage"] = strength_damage
 
 
+@intrinsic_stat_mutation
 def _apply_hero_levelup_bonuses(unit: Dict) -> None:
     if not apply_dynamic_stat_growth(unit, _resolve_unit_level(unit)):
         _apply_ten_percent_levelup_stats(unit)
@@ -690,6 +692,7 @@ def _uses_dynamic_unit_levelup(unit: Dict) -> bool:
     return not _unit_has_available_evolution(unit)
 
 
+@intrinsic_stat_mutation
 def _apply_dynamic_unit_levelup(unit: Dict, exp_required: int) -> None:
     """Level a dynamic unit, optionally applying a scenario-specific XP curve."""
     unit["Level"] = _to_int_or_default(unit.get("Level", 0), default=0) + 1
@@ -1519,6 +1522,7 @@ class BattleEnv(gym.Env):
         target_unit["stand"] = template.get("stand", target_unit.get("stand", "ahead"))
         target_unit["armor"] = int(template.get("armor", 0) or 0)
         target_unit["immunity"] = list(template.get("immunity", []))
+        self._clear_temporary_healer_wards(target_unit, include_snapshots=False)
         target_unit["resistance"] = list(template.get("resistance", []))
         target_unit["resilience_used_types"] = []
         target_unit["big"] = bool(template.get("big", False))
@@ -2054,13 +2058,9 @@ class BattleEnv(gym.Env):
             for i, pos in enumerate(TARGET_POSITIONS):
                 mask_targets[i] = is_alive_red(pos) and (pos in allowed_reach)
 
-            # Страховка от пустой маски:
-            if not mask_targets.any():
-                live_idxs = [
-                    i for i, pos in enumerate(TARGET_POSITIONS) if is_alive_red(pos)
-                ]
-                if live_idxs:
-                    mask_targets[live_idxs] = True
+            # An empty target mask is valid for a blocked rear melee unit.
+            # Keep the same reachability as step(); the ordinary non-target
+            # actions above (defend/wait/retreat/items) retain their own rules.
 
         # AoE: формальная цель, запрещаем только мёртвые слоты
         elif atype in AOE_TYPES:
@@ -2234,10 +2234,15 @@ class BattleEnv(gym.Env):
                 0.0 if prev_max <= 0 else max(0.0, min(1.0, current_health / prev_max))
             )
 
+            self._clear_temporary_healer_wards(unit)
             for key, value in defaults.items():
                 unit[key] = list(value) if isinstance(value, list) else value
 
-            unit["health"] = int(round(defaults["max_health"] * ratio))
+            # Elixir recipients return to their own grown, permanent form.
+            rebuild_stat_layers(unit)
+            unit["health"] = int(round(unit["max_health"] * ratio))
+            if "campaign_stat_sources" in unit:
+                unit["hp"] = unit["health"]
 
     def _apply_doppelganger_copy(
         self, attacker: Dict, target_unit: Optional[Dict]
@@ -2268,7 +2273,12 @@ class BattleEnv(gym.Env):
             "accuracy_secondary", attacker.get("accuracy_secondary")
         )
         attacker["immunity"] = list(target_unit.get("immunity", []))
+        self._clear_temporary_healer_wards(attacker)
         attacker["resistance"] = list(target_unit.get("resistance", []))
+        if target_unit.get("_temporary_healer_wards"):
+            attacker["_temporary_healer_wards"] = deepcopy(target_unit["_temporary_healer_wards"])
+            for element in attacker["_temporary_healer_wards"]:
+                attacker[element + "defence"] = 1
         attacker["attack_type_primary"] = target_unit.get(
             "attack_type_primary", attacker.get("attack_type_primary")
         )
@@ -2369,6 +2379,8 @@ class BattleEnv(gym.Env):
             "immunity",
             "resistance",
             "resilience_used_types",
+            "_temporary_healer_wards",
+            "Firedefence", "Airdefence", "Waterdefence", "Earthdefence",
             "big",
             "Level",
             "next_level_exp",
@@ -2419,7 +2431,12 @@ class BattleEnv(gym.Env):
         snapshot = snapshots[0]
         if isinstance(snapshot, dict):
             for key in self._transform_snapshot_keys(include_health_fields):
-                if key not in snapshot and key in unit:
+                # Temporary grants belong to the form at snapshot creation.
+                # Never backfill a later form's grant into the original form.
+                ward_key = key == "_temporary_healer_wards" or key in (
+                    "Firedefence", "Airdefence", "Waterdefence", "Earthdefence",
+                )
+                if key not in snapshot and key in unit and not ward_key:
                     snapshot[key] = deepcopy(unit[key])
             snapshot.setdefault(
                 "initiative",
@@ -2478,6 +2495,7 @@ class BattleEnv(gym.Env):
             unit.pop("transform_recover_chance", None)
             return False
 
+        self._clear_temporary_healer_wards(unit, include_snapshots=False)
         current_health = unit.get("health", unit.get("hp", 0))
         current_max = unit.get("max_health", unit.get("maxhp", current_health))
         restored_max = snapshot.get("max_health", snapshot.get("maxhp"))
@@ -2843,6 +2861,73 @@ class BattleEnv(gym.Env):
         )
         return True
 
+    @staticmethod
+    def _grant_temporary_healer_ward(healer: Dict, recipient: Dict, element: str) -> None:
+        """Refresh one shared block without replacing the underlying native ward."""
+        wards = recipient.setdefault("_temporary_healer_wards", {})
+        resistance = recipient.setdefault("resistance", [])
+        used = recipient.setdefault("resilience_used_types", [])
+        tag = element.lower()
+        native = any(str(value).lower() == tag for value in resistance)
+        consumed = any(str(value).lower() == tag for value in used)
+        ward = wards.setdefault(element, {
+            "native": native, "native_used": consumed, "sources": [],
+        })
+        # A recast must not forget a native ward consumed during an earlier cast.
+        ward["native_used"] = ward["native_used"] or (ward["native"] and consumed)
+        source = (healer.get("team"), healer.get("position"))
+        if source not in ward["sources"]:
+            ward["sources"].append(source)
+        if not native:
+            resistance.append(element)
+        recipient["resilience_used_types"] = [value for value in used if str(value).lower() != tag]
+        recipient[element + "defence"] = 1
+
+    @staticmethod
+    def _clear_temporary_healer_wards(unit: Dict, source=None, *, include_snapshots=True) -> None:
+        """Expire one caster's grants, or all grants at a battle boundary.
+
+        The resistance/used lists remain the shared one-hit projection used by
+        damage, status effects and observations. Native consumption is sticky.
+        """
+        states = [unit]
+        if include_snapshots:
+            basestats = unit.get("basestats")
+            groups = basestats.values() if isinstance(basestats, dict) else [basestats]
+            for group in groups:
+                if isinstance(group, list):
+                    states.extend(state for state in group if isinstance(state, dict))
+            if isinstance(unit.get("wolflord_base"), dict):
+                states.append(unit["wolflord_base"])
+        for state in states:
+            wards = state.get("_temporary_healer_wards", {})
+            for element, ward in list(wards.items()):
+                if source is not None:
+                    ward["sources"] = [caster for caster in ward["sources"] if tuple(caster) != source]
+                    if ward["sources"]:
+                        continue
+                tag = element.lower()
+                used = state.get("resilience_used_types") or []
+                consumed = any(str(value).lower() == tag for value in used)
+                if not ward["native"]:
+                    state["resistance"] = [value for value in state.get("resistance", [])
+                                           if str(value).lower() != tag]
+                    state["resilience_used_types"] = [value for value in used if str(value).lower() != tag]
+                elif ward["native_used"] and not consumed:
+                    state.setdefault("resilience_used_types", []).append(element)
+                state[element + "defence"] = 0
+                del wards[element]
+            if not wards:
+                state.pop("_temporary_healer_wards", None)
+                if source is None:
+                    for element in ("Fire", "Air", "Water", "Earth"):
+                        if element + "defence" in state:
+                            state[element + "defence"] = 0
+
+    def _clear_all_temporary_healer_wards(self) -> None:
+        for unit in [*self.combined, *self.escaped_units]:
+            self._clear_temporary_healer_wards(unit)
+
     def _apply_cliric_heal(self, healer: Dict, recipient: Optional[Dict]) -> bool:
         if recipient is None or not self._alive(recipient):
             return False
@@ -2855,49 +2940,22 @@ class BattleEnv(gym.Env):
             return False
 
         if healer.get("unit_type") == "Sundancer":
-            if "resistance" not in recipient:
-                recipient["resistance"] = []
-            if "Fire" not in recipient["resistance"]:
-                recipient["resistance"].append("Fire")
-            recipient.setdefault("resilience_used_types", [])
-            if "Fire" in recipient["resilience_used_types"]:
-                recipient["resilience_used_types"].remove("Fire")
-            recipient["Firedefence"] = 1
+            self._grant_temporary_healer_ward(healer, recipient, "Fire")
             self._log(
                 f"? Защита от огня: {healer['team'].upper()} {healer['name']}#{healer['position']} даёт огненную защиту "
                 f"для {recipient['team'].upper()} {recipient['name']}#{recipient['position']}"
             )
 
         elif healer.get("unit_type") == "Sylfid":
-            if "resistance" not in recipient:
-                recipient["resistance"] = []
-            if "Air" not in recipient["resistance"]:
-                recipient["resistance"].append("Air")
-            recipient.setdefault("resilience_used_types", [])
-            if "Air" in recipient["resilience_used_types"]:
-                recipient["resilience_used_types"].remove("Air")
-            recipient["Airdefence"] = 1
+            self._grant_temporary_healer_ward(healer, recipient, "Air")
             self._log(
                 f"? Защита от воздуха: {healer['team'].upper()} {healer['name']}#{healer['position']} даёт воздушную защиту "
                 f"для {recipient['team'].upper()} {recipient['name']}#{recipient['position']}"
             )
 
         elif healer.get("unit_type") == "Deva roshi":
-            if "resistance" not in recipient:
-                recipient["resistance"] = []
-            recipient.setdefault("resilience_used_types", [])
-            element_map = (
-                ("Fire", "Firedefence"),
-                ("Air", "Airdefence"),
-                ("Water", "Waterdefence"),
-                ("Earth", "Earthdefence"),
-            )
-            for element, field in element_map:
-                if element not in recipient["resistance"]:
-                    recipient["resistance"].append(element)
-                if element in recipient["resilience_used_types"]:
-                    recipient["resilience_used_types"].remove(element)
-                recipient[field] = 1
+            for element in ("Fire", "Air", "Water", "Earth"):
+                self._grant_temporary_healer_ward(healer, recipient, element)
             self._log(
                 f"? Четверная защита: {healer['team'].upper()} {healer['name']}#{healer['position']} усиливает защиту "
                 f"{recipient['team'].upper()} {recipient['name']}#{recipient['position']} от огня, воздуха, воды и земли."
@@ -3355,86 +3413,10 @@ class BattleEnv(gym.Env):
                     "Двойник: цели появились — тип переключён на Doppelganger."
                 )
 
-        if unit.get("unit_type") == "Sundancer":
-            for ally in self.combined:
-                if ally.get("team") != unit.get("team"):
-                    continue
-                if ally.get("Firedefence", 0) == 1:
-                    ally["Firedefence"] = 0
-                    if "resistance" in ally:
-                        ally["resistance"] = [
-                            res for res in ally.get("resistance", []) if res != "Fire"
-                        ]
-                        if not ally["resistance"]:
-                            ally["resistance"] = []
-                    if (
-                        "resilience_used_types" in ally
-                        and ally["resilience_used_types"]
-                    ):
-                        ally["resilience_used_types"] = [
-                            res
-                            for res in ally["resilience_used_types"]
-                            if res != "Fire"
-                        ]
-                    self._log(
-                        f"? Солнечная защита рассеялась: {ally['team'].upper()} {ally['name']}#{ally['position']} лишается огненной стойкости."
-                    )
-
-        if unit.get("unit_type") == "Sylfid":
-            for ally in self.combined:
-                if ally.get("team") != unit.get("team"):
-                    continue
-                if ally.get("Airdefence", 0) == 1:
-                    ally["Airdefence"] = 0
-                    if "resistance" in ally:
-                        ally["resistance"] = [
-                            res for res in ally.get("resistance", []) if res != "Air"
-                        ]
-                        if not ally["resistance"]:
-                            ally["resistance"] = []
-                    if (
-                        "resilience_used_types" in ally
-                        and ally["resilience_used_types"]
-                    ):
-                        ally["resilience_used_types"] = [
-                            res for res in ally["resilience_used_types"] if res != "Air"
-                        ]
-                    self._log(
-                        f"? Воздушная защита рассеялась: {ally['team'].upper()} {ally['name']}#{ally['position']} лишается воздушной стойкости."
-                    )
-
-        if unit.get("unit_type") == "Deva roshi":
-            for ally in self.combined:
-                if ally.get("team") != unit.get("team"):
-                    continue
-                reset_map = (
-                    ("Firedefence", "Fire"),
-                    ("Airdefence", "Air"),
-                    ("Waterdefence", "Water"),
-                    ("Earthdefence", "Earth"),
-                )
-                cleared = []
-                for field, element in reset_map:
-                    if ally.get(field, 0) == 1:
-                        ally[field] = 0
-                        cleared.append(element)
-                if not cleared:
-                    continue
-                if "resistance" in ally:
-                    ally["resistance"] = [
-                        res for res in ally.get("resistance", []) if res not in cleared
-                    ]
-                    if not ally["resistance"]:
-                        ally["resistance"] = []
-                if "resilience_used_types" in ally and ally["resilience_used_types"]:
-                    ally["resilience_used_types"] = [
-                        res
-                        for res in ally["resilience_used_types"]
-                        if res not in cleared
-                    ]
-                self._log(
-                    f"? Защита Дэвы рассеялась: {ally['team'].upper()} {ally['name']}#{ally['position']} теряет стойкость против {', '.join(cleared)}."
-                )
+        # Ownership follows the caster's slot even if its current form changes.
+        source = (unit.get("team"), unit.get("position"))
+        for ally in self.combined:
+            self._clear_temporary_healer_wards(ally, source)
 
         if (
             unit.get("hermited", 0) == 1
@@ -3720,6 +3702,7 @@ class BattleEnv(gym.Env):
 
     def _mark_unit_escaped(self, unit: Dict) -> None:
         snapshot = deepcopy(unit)
+        self._clear_temporary_healer_wards(snapshot)
         snapshot["running_away"] = 0
         snapshot["feared"] = 0
         self.escaped_units.append(snapshot)
@@ -3999,6 +3982,7 @@ class BattleEnv(gym.Env):
         victim["unit_type"] = str(form_template["unit_type"])
         victim["armor"] = int(form_template["armor"])
         victim["immunity"] = list(form_template["immunity"])
+        self._clear_temporary_healer_wards(victim, include_snapshots=False)
         victim["resistance"] = list(form_template["resistance"])
         victim["resilience_used_types"] = []
         victim["transformed"] = 1
@@ -4066,6 +4050,7 @@ class BattleEnv(gym.Env):
         victim["stand"] = lower_template.get("stand", victim.get("stand", "ahead"))
         victim["armor"] = int(lower_template.get("armor", 0) or 0)
         victim["immunity"] = list(lower_template.get("immunity", []))
+        self._clear_temporary_healer_wards(victim, include_snapshots=False)
         victim["resistance"] = list(lower_template.get("resistance", []))
         victim["resilience_used_types"] = []
         victim["big"] = bool(lower_template.get("big", False))
@@ -5803,6 +5788,7 @@ class BattleEnv(gym.Env):
         self.winner = winner_team
         self._log(f"Победа {winner_team.upper()}!")
         self._apply_battle_exp(loser_team)
+        self._clear_all_temporary_healer_wards()
 
     def _activate_next_blue_post_victory_healer(self) -> None:
         while self._post_victory_healer_positions:
@@ -6749,6 +6735,8 @@ class BattleEnv(gym.Env):
                         )
                         # Снимем снапшот исходных характеристик Повелителя волков, чтобы вернуть их по окончании боя
                         if not attacker.get("wolflord_base"):
+                            ward_free_base = deepcopy(attacker)
+                            self._clear_temporary_healer_wards(ward_free_base)
                             attacker["wolflord_base"] = {
                                 "name": attacker.get("name"),
                                 "unit_type": attacker.get("unit_type"),
@@ -6769,7 +6757,7 @@ class BattleEnv(gym.Env):
                                     "accuracy_secondary", 0
                                 ),
                                 "immunity": list(attacker.get("immunity", [])),
-                                "resistance": list(attacker.get("resistance", [])),
+                                "resistance": list(ward_free_base.get("resistance", [])),
                                 "big": bool(attacker.get("big", False)),
                             }
                         current_health = float(attacker.get("health", 0) or 0)
@@ -6911,6 +6899,7 @@ class BattleEnv(gym.Env):
             if self.step_count >= 1000:
                 truncated = True
                 self._clear_dead_running_away_flags()
+                self._clear_all_temporary_healer_wards()
                 self._log("? Лимит по шагам: бой остановлен на 1000 такте.")
         return self._obs(), reward, terminated, truncated, step_info
 
@@ -6928,6 +6917,8 @@ class BattleEnv(gym.Env):
         """
         self._patriach_revived_recipients: set[Tuple[str, int]] = set()
         self.combined = deepcopy(red_team + blue_team)
+        for unit in self.combined:
+            self._clear_temporary_healer_wards(unit)
         _apply_transformations_to_units(self.combined)
 
         # Применяем стандартную инициализацию к каждому юниту

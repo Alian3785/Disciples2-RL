@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from campaign_env_data import *
+from permanent_unit_stats import has_stat_sources, mutate_intrinsic
 from unit_revive_costs import known_unit_revive_gold_cost
 
 
@@ -581,6 +582,9 @@ class CampaignEconomyMixin:
         """
         if not isinstance(hero, dict) or not self._is_hero_unit(hero):
             return False
+
+        if has_stat_sources(hero):
+            return mutate_intrinsic(hero, self._apply_lord_replacement_might_bonus)
 
         might_level = self._lord_replacement_might_level()
         if might_level is None:

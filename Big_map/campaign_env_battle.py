@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from campaign_env_data import *
+from permanent_unit_stats import rebuild_stat_layers
 
 
 class CampaignBattleMixin:
@@ -974,6 +975,7 @@ class CampaignBattleMixin:
             ) and original_damage > 0:
                 restored_unit["damage"] = original_damage
             BattleEnv._restore_hermit_initiative(restored_unit)
+            BattleEnv._clear_temporary_healer_wards(restored_unit)
             
             # СОХРАНЯЕМ ТЕКУЩЕЕ HP (не восстанавливаем!)
             current_hp = self._unit_current_hp(restored_unit)
@@ -1285,6 +1287,15 @@ class CampaignBattleMixin:
             restored_unit.pop("settlement_armor_bonus", None)
             restored_unit.pop("settlement_level", None)
             
+            # Rebuild permanent stats after removing temporary combat layers.
+            for key in ("campaign_potion_armor_bonus",
+                        "campaign_map_spell_damage_multiplier",
+                        "campaign_map_spell_initiative_multiplier",
+                        "campaign_map_spell_accuracy_multiplier",
+                        "campaign_map_spell_armor_bonus"):
+                restored_unit.pop(key, None)
+            rebuild_stat_layers(restored_unit, layers=False)
+
             # Восстанавливаем initiative к базовому значению
             restored_unit["initiative"] = restored_unit.get("initiative_base", 0)
             restored_unit["needaunit"] = self._resolve_hero_needaunit(restored_unit)

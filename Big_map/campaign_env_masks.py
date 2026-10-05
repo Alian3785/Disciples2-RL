@@ -192,7 +192,7 @@ class CampaignMaskMixin:
                 mask[self.GRID_BUILD_ACTION_START + idx] = bool(can_build)
             if self._has_magic_tower_built() and not self.spell_learning_locked:
                 for idx, spell_key in enumerate(self.spell_keys):
-                    if self._is_spell_disabled(spell_key):
+                    if not self._is_spell_research_supported(spell_key):
                         continue
                     spell = self.active_spells.get(spell_key)
                     if not isinstance(spell, dict):
