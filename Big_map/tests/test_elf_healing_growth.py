@@ -147,7 +147,8 @@ def test_campaign_save_and_battle_rebuild_preserve_growth(
         grown = next(u for u in env.battle_env.combined if u["position"] == 8)
         initial_level = grown["Level"]
         _apply_dynamic_unit_levelup(grown, grown["exp_required"])
-        assert grown["damage"] == round(base * multiplier) + early
+        # Growth changes the permanent heal first; the live map layer is replayed.
+        assert grown["damage"] == round((base + early) * multiplier)
         assert grown["damage_secondary"] == 0
         env._save_blue_state()
         saved = next(u for u in env.blue_team_state if u["position"] == 8)

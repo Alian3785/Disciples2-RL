@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from campaign_env_data import *
+from formation_occupancy import formation_footprint_is_free
 
 
 class CampaignMaskMixin:
@@ -55,7 +56,10 @@ class CampaignMaskMixin:
             hp = float(unit.get("hp", 0) or unit.get("health", 0))
             max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or hp)
             can_heal_by_pos[position] = max_hp > 0 and hp > 0 and hp < max_hp
-            can_revive_by_pos[position] = max_hp > 0 and hp <= 0
+            can_revive_by_pos[position] = (
+                max_hp > 0 and hp <= 0
+                and self._revival_footprint_is_free(unit, state)
+            )
             is_living_by_pos[position] = max_hp > 0 and hp > 0
 
         definitions = self._potion_definitions_by_canonical()
@@ -332,6 +336,14 @@ class CampaignMaskMixin:
             if hp > 0 and hp < max_hp:
                 return True
         return False
+    def _revival_footprint_is_free(self, unit: Dict, state=None) -> bool:
+        if state is None:
+            state = self._get_blue_state()
+        return formation_footprint_is_free(
+            unit, (other for other in state
+                   if float(other.get("hp", 0) or other.get("health", 0)) > 0)
+        )
+
     def _can_revive_position(self, position: int) -> bool:
         """
         Определяет, можно ли применить воскрешение к конкретной позиции.
@@ -347,7 +359,8 @@ class CampaignMaskMixin:
                 continue
             hp = float(unit.get("hp", 0) or unit.get("health", 0))
             max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
-            return max_hp > 0 and hp <= 0
+            return (max_hp > 0 and hp <= 0
+                    and self._revival_footprint_is_free(unit, state))
         return False
     def _is_living_blue_position(self, position: int) -> bool:
         """
@@ -421,7 +434,8 @@ class CampaignMaskMixin:
             hp = float(unit.get("hp", 0) or unit.get("health", 0))
             max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
 
-            if max_hp <= 0 or hp > 0:
+            if (max_hp <= 0 or hp > 0
+                    or not self._revival_footprint_is_free(unit, state)):
                 return False, None
 
             unit["hp"] = 1.0

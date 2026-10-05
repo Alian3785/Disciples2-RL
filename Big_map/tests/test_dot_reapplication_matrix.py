@@ -138,6 +138,9 @@ def activate(battle, unit):
 def finish_first_effect(battle, source, ally, first, dot, transition):
     turns, damage = effect_keys(dot)
     if transition in {"allied_kill", "target_revive", "source_revive"}:
+        # Exercise a real lethal hit within the native 300 attack cap.
+        # The fixture previously relied on an impossible 10,000-damage strike.
+        first["health"] = 1
         assert battle._attack(ally, first["position"])[0]
         assert first["health"] == 0
     elif transition == "source_kill":

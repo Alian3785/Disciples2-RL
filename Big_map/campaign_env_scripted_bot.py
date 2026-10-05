@@ -823,6 +823,7 @@ class CampaignScriptedBotMixin:
         )
 
         battle_env = BattleEnv(
+            fear_paralysis_teams=self._fear_paralysis_teams_for_battle(enemy_id),
             reward_win=self.battle_reward_win,
             reward_loss=self.battle_reward_loss,
             reward_step=self.battle_reward_step,
@@ -885,6 +886,9 @@ class CampaignScriptedBotMixin:
                 ),
                 placeholder_unit("blue", position),
             )
+            battle_env._restore_transformed_unit(battle_unit)
+            battle_env._cleanse_negative_effects(battle_unit)
+            battle_env._reset_powerup(battle_unit)
             saved_team.append(self._normalize_scripted_bot_saved_unit(battle_unit))
         self.scripted_capital_bot_team_state = self._build_battle_team_with_placeholders(
             "blue",
@@ -893,7 +897,33 @@ class CampaignScriptedBotMixin:
 
     def _normalize_scripted_bot_saved_unit(self, unit: Dict) -> Dict:
         """Очищает battle-only flags перед возвратом юнита бота на campaign-карту."""
+        from permanent_unit_stats import ensure_stat_sources, rebuild_stat_layers
+
         saved = deepcopy(unit)
+        temporary_prefixes = (
+            "campaign_potion_", "campaign_map_spell_", "campaign_heal_tile_",
+            "campaign_artifact_", "campaign_banner_", "campaign_settlement_",
+        )
+        if (any(key.startswith(temporary_prefixes) for key in saved)
+                or any(key in saved for key in ("lower_damage_original_damage",
+                       "shatter_original_armor", "hermit_original_initiative_base",
+                       "garrison_base_armor", "_battle_damage_factors"))):
+            ensure_stat_sources(saved)
+        if "campaign_map_spell_base_max_health" in saved:
+            saved["health"] = saved["hp"] = max(
+                0, float(saved.get("health", saved.get("hp", 0)) or 0)
+                - float(saved.get("campaign_map_spell_health_bonus", 0) or 0))
+        for key in ("campaign_potion_added_resistance",
+                    "campaign_map_spell_added_resistance", "campaign_book_added_resistance"):
+            added = set(saved.get(key) or ())
+            if added:
+                saved["resistance"] = [value for value in saved.get("resistance", [])
+                                       if value not in added]
+        if "campaign_potion_base_incoming_damage_multiplier" in saved:
+            saved["incoming_damage_multiplier"] = saved[
+                "campaign_potion_base_incoming_damage_multiplier"]
+        BattleEnv._restore_hermit_initiative(saved)
+        BattleEnv._clear_temporary_healer_wards(saved)
         hp = max(0.0, float(saved.get("health", saved.get("hp", 0.0)) or 0.0))
         saved["health"] = hp
         saved["hp"] = hp
@@ -919,12 +949,31 @@ class CampaignScriptedBotMixin:
         ):
             saved[key] = value
         saved["resilience_used_types"] = []
+        saved.pop("_attack_form_unit_id", None)
         saved.pop("teamated", None)
         saved.pop("lower_damage_original_damage", None)
         saved.pop("lower_damage_original_unit_type", None)
         saved.pop("shattered_armor", None)
         saved.pop("shatter_original_armor", None)
         saved.pop("shatter_original_unit_type", None)
+        saved.pop("hermited", None)
+        saved.pop("hermit_original_initiative_base", None)
+        rebuild_stat_layers(saved, layers=False)
+        # These layers expire at this save boundary. Keeping their snapshots
+        # would silently reactivate them on the next level or learned skill.
+        temporary_keys = {
+            "campaign_damage_potion_multiplier", "campaign_strength_potion_multiplier",
+            "campaign_energy_elixir_multiplier", "campaign_initiative_potion_multiplier",
+            "campaign_accuracy_potion_multiplier", "campaign_incoming_damage_potion_multiplier",
+            "campaign_invulnerability_potion_bonus", "campaign_active_artifacts",
+            "campaign_active_banner", "campaign_active_book", "campaign_book_added_resistance",
+            "settlement_armor_bonus", "settlement_level", "garrison_base_armor",
+            "garrison_armor_bonus", "_battle_damage_factors", "_battle_lower_damage_factors",
+        }
+        for key in tuple(saved):
+            if key.startswith(temporary_prefixes) or key in temporary_keys:
+                saved.pop(key)
+        saved["initiative"] = int(saved.get("initiative_base", 0) or 0) if hp > 0 else 0
         return saved
 
     def _apply_scripted_capital_bot_levelups(self, battle_env: BattleEnv) -> int:
@@ -947,6 +996,10 @@ class CampaignScriptedBotMixin:
                 team="blue",
                 position=int(unit.get("position", 7) or 7),
             )
+            self._reapply_persistent_elixir_bonuses_to_promoted_unit(
+                source_unit=unit, upgraded_unit=upgraded)
+            upgraded.update({key: deepcopy(value) for key, value in unit.items()
+                             if key.startswith("source_")})
             unit.clear()
             unit.update(deepcopy(upgraded))
             upgraded_count += 1
@@ -965,6 +1018,10 @@ class CampaignScriptedBotMixin:
                 continue
             hp = float(unit.get("hp", unit.get("health", 0)) or 0)
             if hp <= 0:
+                if not self._revival_footprint_is_free(
+                    unit, self.scripted_capital_bot_team_state
+                ):
+                    continue
                 revived += 1
             elif hp < max_hp:
                 healed += 1
