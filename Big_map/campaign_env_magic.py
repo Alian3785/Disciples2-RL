@@ -727,6 +727,20 @@ class CampaignMagicMixin:
         return normalized_level >= 5 and int(self.typeoflord) != 2
     def _is_spell_blocked_by_typeoflord(self, spell: Optional[Dict[str, object]]) -> bool:
         return self._is_spell_level_masked_by_typeoflord(self._spell_level_from_entry(spell))
+    def _is_spellbook_spell_blocked_by_typeoflord(self, spell_key: str) -> bool:
+        """Purchases bypass the ruler's level limit for casting, never research.
+
+        Use purchase provenance rather than the learned/owned flag: that flag
+        also represents researched spells and does not establish acquisition.
+        The existing purchase set is part of the copied campaign state and
+        is cleared with the spellbook on reset.
+        """
+        normalized_spell_key = str(spell_key or "")
+        if normalized_spell_key in self.spell_shop_purchased_spell_ids:
+            return False
+        return self._is_spell_blocked_by_typeoflord(
+            self.active_spells.get(normalized_spell_key)
+        )
     def _can_cast_legion_damage_spell(
         self,
         spell_key: str,
@@ -747,7 +761,7 @@ class CampaignMagicMixin:
         if not isinstance(spell, dict):
             return False
         spell_spec = self._map_offensive_spell_spec(normalized_spell_key)
-        if self._is_spell_blocked_by_typeoflord(spell):
+        if self._is_spellbook_spell_blocked_by_typeoflord(spell_key):
             return False
         if not self._is_spell_learned(normalized_spell_key):
             return False
@@ -780,7 +794,7 @@ class CampaignMagicMixin:
         spell = self.active_spells.get(normalized_spell_key)
         if not isinstance(spell, dict):
             return False
-        if self._is_spell_blocked_by_typeoflord(spell):
+        if self._is_spellbook_spell_blocked_by_typeoflord(spell_key):
             return False
         if not self._is_spell_learned(normalized_spell_key):
             return False
@@ -2110,7 +2124,7 @@ class CampaignMagicMixin:
         spell_used_this_turn = bool(spell_key) and self._spell_cast_limit_reached_this_turn(
             str(spell_key)
         )
-        blocked_by_typeoflord = self._is_spell_blocked_by_typeoflord(spell)
+        blocked_by_typeoflord = self._is_spellbook_spell_blocked_by_typeoflord(spell_key)
         nearest_enemy = (
             self._get_map_offensive_spell_target(str(spell_key))
             if spell_key
@@ -2220,7 +2234,7 @@ class CampaignMagicMixin:
         spell_used_this_turn = bool(spell_key) and self._spell_cast_limit_reached_this_turn(
             str(spell_key)
         )
-        blocked_by_typeoflord = self._is_spell_blocked_by_typeoflord(spell)
+        blocked_by_typeoflord = self._is_spellbook_spell_blocked_by_typeoflord(spell_key)
         can_cast = (
             bool(spell_key)
             and isinstance(spell, dict)

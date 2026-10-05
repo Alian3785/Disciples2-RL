@@ -789,6 +789,40 @@ class CampaignBattleMixin:
             position = self.grid_env.agent_pos
         return tuple(position) in self.castle_heal_tiles
 
+    def _fear_paralysis_teams_for_battle(
+        self, enemy_id: Optional[int], *, attacker_team: str = "blue"
+    ) -> Tuple[str, ...]:
+        """Fear immobilizes only the army defending inside a site entrance.
+
+        Use resolved runtime entrances, not territory, visual footprints or
+        raw map coordinates. In particular, a BLUE attack's origin can still
+        be its capital even though that army has left to attack in the field.
+        """
+        site_tiles = {
+            tuple(self.CASTLE_POS),
+            tuple(self.empire_territory_source_tile),
+            *self.legions_settlement_source_name_by_tile,
+            *(
+                tuple(self._static_enemy_positions[ruin_id])
+                for ruin_id in self.RUIN_REWARD_BY_ENEMY_ID
+                if ruin_id in self._static_enemy_positions
+            ),
+        }
+        if attacker_team == "blue":
+            defender_team = "red"
+            position = self.grid_env.enemy_positions.get(enemy_id)
+        else:
+            if self.current_battle_context.get("kind") == "summon_spell":
+                # The remote summoned army is not the hero left at home.
+                return ()
+            defender_team = "blue"
+            position = self.battle_origin_pos
+            if position is None:
+                position = self.grid_env.agent_pos
+        if position is not None and tuple(position) in site_tiles:
+            return (defender_team,)
+        return ()
+
     def _init_battle(
         self,
         enemy_id: int,
@@ -878,6 +912,9 @@ class CampaignBattleMixin:
             self._log("Используется дефолтная BLUE команда")
 
         self.battle_env = BattleEnv(
+            fear_paralysis_teams=self._fear_paralysis_teams_for_battle(
+                enemy_id, attacker_team=attacker_team
+            ),
             retreat_enabled=not (
                 (self.map_name == "siege_train" and enemy_id == self._map.objective_enemy_id)
                 or self._hero_party_in_settlement_at_battle_start()

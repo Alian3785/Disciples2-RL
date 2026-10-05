@@ -823,6 +823,7 @@ class CampaignScriptedBotMixin:
         )
 
         battle_env = BattleEnv(
+            fear_paralysis_teams=self._fear_paralysis_teams_for_battle(enemy_id),
             reward_win=self.battle_reward_win,
             reward_loss=self.battle_reward_loss,
             reward_step=self.battle_reward_step,
@@ -1017,6 +1018,10 @@ class CampaignScriptedBotMixin:
                 continue
             hp = float(unit.get("hp", unit.get("health", 0)) or 0)
             if hp <= 0:
+                if not self._revival_footprint_is_free(
+                    unit, self.scripted_capital_bot_team_state
+                ):
+                    continue
                 revived += 1
             elif hp < max_hp:
                 healed += 1

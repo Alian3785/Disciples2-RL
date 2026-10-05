@@ -2641,7 +2641,8 @@ class CampaignEconomyMixin:
                 continue
             hp = float(unit.get("hp", 0) or unit.get("health", 0))
             max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
-            if max_hp <= 0 or hp > 0:
+            if (max_hp <= 0 or hp > 0
+                    or not self._revival_footprint_is_free(unit, state)):
                 return 0.0
             return float(self._castle_revive_gold_cost(unit))
         return 0.0
@@ -2657,7 +2658,8 @@ class CampaignEconomyMixin:
 
             hp = float(unit.get("hp", 0) or unit.get("health", 0))
             max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
-            if max_hp <= 0 or hp > 0:
+            if (max_hp <= 0 or hp > 0
+                    or not self._revival_footprint_is_free(unit, state)):
                 return False, None, 0.0
 
             revive_cost = float(self._castle_revive_gold_cost(unit))

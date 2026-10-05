@@ -293,6 +293,7 @@ class CampaignGarrisonMixin:
             unit['position'] = int(unit['position']) - 6
             unit['team'] = 'red'
         self.battle_env = BattleEnv(retreat_enabled=False,
+                                   fear_paralysis_teams=('blue',),
                                    reward_win=self.battle_reward_win, reward_loss=self.battle_reward_loss,
                                    reward_step=self.battle_reward_step, log_enabled=self.log_enabled)
         self.battle_env._init_with_custom_teams(self._build_battle_team_with_placeholders('red', red), blue)
