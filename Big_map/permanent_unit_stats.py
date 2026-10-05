@@ -1,7 +1,7 @@
-"""Source-driven permanent elixir stats, independent of equipment snapshots.
+"""Permanent growth and elixirs, independent of temporary battle snapshots.
 
-Only elixir recipients opt in. Legacy recipients keep their recoverable bare
-stats as a baked baseline: rounded/capped or already-lost history is not guessed.
+Every actual level/skill mutation enters this gateway, with or without elixirs.
+Legacy units keep recoverable bare stats: lost history is never guessed.
 Order: intrinsic (type/level/skills), each permanent dose, then the existing
 battle layers (tile, temporary potion, map spell, artifacts, banner).
 """
@@ -11,7 +11,8 @@ from functools import wraps
 SOURCE_KEY = "campaign_stat_sources"
 STATS = ("damage", "damage_secondary", "accuracy", "accuracy_secondary",
          "initiative", "armor", "max_health")
-ALIASES = {"initiative": "initiative_base", "max_health": "maxhp"}
+ALIASES = {"initiative": "initiative_base"}
+MUTATING_KEY = "_intrinsic_stat_mutation_active"
 PROGRESSION_KEYS = ("Level", "exp_current", "exp_required", "exp_kill", "needaunit",
                     "hero_level_stat_abilities", "campaign_lord_might_bonus_levels")
 
@@ -30,12 +31,24 @@ def _bare_values(unit):
     result = {}
     for stat in STATS:
         value = unit.get(ALIASES.get(stat, stat), unit.get(stat, 0))
+        if stat == "damage":
+            value = unit.get("original_damage", unit.get("lower_damage_original_damage", value))
+        elif stat == "armor":
+            value = unit.get("shatter_original_armor", unit.get("base_armor", value))
+        elif stat == "max_health":
+            value = unit.get("max_health", unit.get("maxhp", 0))
+        elif stat == "initiative":
+            value = unit.get("hermit_original_initiative_base", value)
         # Earliest saved layer wins. Never divide a rounded/capped value.
-        for layer in ("heal_tile", "potion", "map_spell", "artifact", "banner"):
+        for layer in ("heal_tile", "potion", "map_spell", "artifact", "banner", "settlement"):
             key = "campaign_" + layer + "_base_" + stat
             if key in unit:
                 value = unit[key]
                 break
+        if stat == "initiative" and "campaign_map_spell_base_initiative_base" in unit:
+            value = unit["campaign_map_spell_base_initiative_base"]
+        if stat == "armor" and "garrison_base_armor" in unit:
+            value = unit["garrison_base_armor"]
         result[stat] = _normal(stat, value)
     return result
 
@@ -86,10 +99,14 @@ def rebuild_stat_layers(unit, *, health_mode="keep", layers=True):
         return
     old_max = float(unit.get("max_health", unit.get("maxhp", 0)) or 0)
     old_hp = float(unit.get("health", unit.get("hp", 0)) or 0)
+    old_initiative = int(unit.get("initiative", unit.get("initiative_base", 0)) or 0)
+    old_initiative_base = int(unit.get("initiative_base", old_initiative) or 0)
     values = persistent_values(unit)
 
     def stage(layer, stat, multiplier=1.0, bonus=0):
         key = "campaign_" + layer + "_base_" + stat
+        if layer == "map_spell" and stat == "initiative" and key not in unit:
+            key = "campaign_map_spell_base_initiative_base"
         if key not in unit:
             return
         unit[key] = values[stat]
@@ -111,11 +128,42 @@ def rebuild_stat_layers(unit, *, health_mode="keep", layers=True):
                 stage(layer, stat, unit.get("campaign_" + layer + "_" + stat + "_multiplier", 1.0))
             stage(layer, "armor", bonus=unit.get("campaign_" + layer + "_armor_bonus", 0))
         stage("banner", "accuracy", bonus=unit.get("campaign_banner_accuracy_bonus", 0))
+        stage("settlement", "armor", bonus=unit.get("settlement_armor_bonus", 0))
+    if layers and "garrison_base_armor" in unit:
+        bonus = unit.get("garrison_armor_bonus", 0)
+        unit["garrison_base_armor"] = values["armor"]
+        values["armor"] = min(90, _normal("armor", values["armor"] + bonus))
+    # Battle snapshots describe the derived pre-status values, not intrinsic
+    # sources. Refresh them so cleansing cannot erase permanent growth.
+    original_damage, original_armor = values["damage"], values["armor"]
+    if layers:
+        if "lower_damage_original_damage" in unit:
+            unit["lower_damage_original_damage"] = original_damage
+        if "shatter_original_armor" in unit:
+            unit["shatter_original_armor"] = original_armor
+        for factor in unit.get("_battle_damage_factors", ()):
+            values["damage"] = _normal("damage", values["damage"] * factor)
+        if unit.get("teamated"):
+            saved = original_damage
+            for factor in unit.get("_battle_lower_damage_factors", ()):
+                saved = _normal("damage", saved * factor)
+            unit["lower_damage_original_damage"] = saved
+        if unit.get("shattered_armor", 0):
+            unit["shatter_original_armor"] = values["armor"]
+            values["armor"] = max(0, values["armor"] - int(unit["shattered_armor"]))
+        if unit.get("hermited"):
+            unit["hermit_original_initiative_base"] = values["initiative"]
+            values["initiative"] = _normal("initiative", values["initiative"] * 0.5)
     for stat, value in values.items():
         unit[stat] = value
     unit["initiative_base"] = values["initiative"]
-    unit["original_damage"] = values["damage"]
-    unit["base_armor"] = values["armor"]
+    unit["original_damage"] = original_damage
+    unit["base_armor"] = original_armor
+    # Initiative is also activation state. Keep spent turns and existing jitter
+    # rather than issuing a new turn whenever a source is recalculated.
+    if layers:
+        unit["initiative"] = (old_initiative if old_initiative <= 0 else
+                              max(0, old_initiative + values["initiative"] - old_initiative_base))
     unit["maxhp"] = values["max_health"]
     if health_mode == "ratio" and old_max > 0 and values["max_health"] != old_max:
         # Flat temporary HP is not an injury/level-growth source. Remove it
@@ -153,10 +201,12 @@ def mutate_intrinsic(unit, mutation):
     The clean view has no source record, so nested decorated growth helpers run
     once. The battle's wounds and temporary status never become intrinsic stats.
     """
-    if not has_stat_sources(unit):
+    if unit.get(MUTATING_KEY):
         return mutation(unit)
     clean = deepcopy(unit)
-    source = clean.pop(SOURCE_KEY)
+    source = deepcopy(ensure_stat_sources(clean))
+    clean.pop(SOURCE_KEY, None)
+    clean[MUTATING_KEY] = True
     for key in tuple(clean):
         if key.startswith("campaign_") and "_base_" in key:
             clean.pop(key)
@@ -166,10 +216,17 @@ def mutate_intrinsic(unit, mutation):
     clean["base_armor"] = clean["armor"]
     clean["health"] = clean["hp"] = clean["maxhp"] = clean["max_health"]
     for key in ("lower_damage_original_damage", "shatter_original_armor",
-                "hermit_original_initiative_base"):
+                "hermit_original_initiative_base", "garrison_base_armor"):
         clean.pop(key, None)
     result = mutation(clean)
-    unit[SOURCE_KEY]["base"] = _bare_values(clean)
+    new_base = _bare_values(clean)
+    changed = new_base != source["base"] or any(
+        clean.get(key) != unit.get(key) for key in PROGRESSION_KEYS
+    )
+    if not changed:
+        return result
+    source["base"] = new_base
+    unit[SOURCE_KEY] = source
     for key in PROGRESSION_KEYS:
         if key in clean:
             unit[key] = deepcopy(clean[key])

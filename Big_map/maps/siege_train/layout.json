@@ -1,0 +1,1668 @@
+{
+  "schema_version": 1,
+  "map_id": "siege_train",
+  "title": "Siege · осада",
+  "grid_size": 48,
+  "source_grid_size": 48,
+  "seed": 0,
+  "observation_version": "local5",
+  "scripted_bot_enabled": false,
+  "boss_roster_enabled": false,
+  "objective": "target_enemy",
+  "objective_enemy_id": 100,
+  "turn": 0,
+  "faction": "Легионы Проклятых",
+  "starting_gold": 0.0,
+  "starting_army": "2 × Одержимый + Герцог + Сектант",
+  "starting_roster_mode": "fixed",
+  "hero": [
+    5,
+    27
+  ],
+  "capitals": [
+    {
+      "code": "A",
+      "name": "Столица: Легионы Проклятых",
+      "position": [
+        5,
+        27
+      ],
+      "color": "#b85869",
+      "footprint": [
+        [
+          1,
+          25
+        ],
+        [
+          1,
+          26
+        ],
+        [
+          1,
+          27
+        ],
+        [
+          1,
+          28
+        ],
+        [
+          1,
+          29
+        ],
+        [
+          2,
+          25
+        ],
+        [
+          2,
+          26
+        ],
+        [
+          2,
+          27
+        ],
+        [
+          2,
+          28
+        ],
+        [
+          2,
+          29
+        ],
+        [
+          3,
+          25
+        ],
+        [
+          3,
+          26
+        ],
+        [
+          3,
+          27
+        ],
+        [
+          3,
+          28
+        ],
+        [
+          3,
+          29
+        ],
+        [
+          4,
+          25
+        ],
+        [
+          4,
+          26
+        ],
+        [
+          4,
+          27
+        ],
+        [
+          4,
+          28
+        ],
+        [
+          4,
+          29
+        ],
+        [
+          5,
+          25
+        ],
+        [
+          5,
+          26
+        ],
+        [
+          5,
+          27
+        ],
+        [
+          5,
+          28
+        ],
+        [
+          5,
+          29
+        ]
+      ]
+    }
+  ],
+  "cities": [],
+  "enemies": [
+    {
+      "id": 26,
+      "position": [
+        7,
+        25
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Ближний дозор I: два Скваера и Служка",
+      "units": [
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Служка",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0011"
+        }
+      ],
+      "summary": "2 × Скваер + Служка",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "26"
+    },
+    {
+      "id": 27,
+      "position": [
+        7,
+        29
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Ближний дозор II: два Скваера и Адепт",
+      "units": [
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Адепт",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0080"
+        }
+      ],
+      "summary": "2 × Скваер + Адепт",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "27"
+    },
+    {
+      "id": 28,
+      "position": [
+        9,
+        23
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Ближний дозор III: Скваер, Воин и Служка",
+      "units": [
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Воин",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0086"
+        },
+        {
+          "name": "Служка",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0011"
+        }
+      ],
+      "summary": "Скваер + Воин + Служка",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "28"
+    },
+    {
+      "id": 29,
+      "position": [
+        9,
+        29
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Ближний дозор IV: Скваер, Воин и Адепт",
+      "units": [
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Воин",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0086"
+        },
+        {
+          "name": "Адепт",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0080"
+        }
+      ],
+      "summary": "Скваер + Воин + Адепт",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "29"
+    },
+    {
+      "id": 30,
+      "position": [
+        9,
+        31
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Ближний дозор V: два Воина и Адепт",
+      "units": [
+        {
+          "name": "Воин",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0086"
+        },
+        {
+          "name": "Воин",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0086"
+        },
+        {
+          "name": "Адепт",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0080"
+        }
+      ],
+      "summary": "2 × Воин + Адепт",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "30"
+    },
+    {
+      "id": 1,
+      "position": [
+        10,
+        25
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Дозор I: один Гоблин",
+      "units": [
+        {
+          "name": "Гоблин",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5017"
+        }
+      ],
+      "summary": "Гоблин",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "1"
+    },
+    {
+      "id": 2,
+      "position": [
+        11,
+        33
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Дозор II: два Гоблина и Гоблин-лучник",
+      "units": [
+        {
+          "name": "Гоблин",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5017"
+        },
+        {
+          "name": "Гоблин",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5017"
+        },
+        {
+          "name": "Гоблин лучник",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5018"
+        }
+      ],
+      "summary": "2 × Гоблин + Гоблин лучник",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "2"
+    },
+    {
+      "id": 21,
+      "position": [
+        12,
+        22
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Бедное ополчение: два Крестьянина; Гоблин лучник позади",
+      "units": [
+        {
+          "name": "Крестьянин",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5001"
+        },
+        {
+          "name": "Крестьянин",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5001"
+        },
+        {
+          "name": "Гоблин лучник",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5018"
+        }
+      ],
+      "summary": "2 × Крестьянин + Гоблин лучник",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "21"
+    },
+    {
+      "id": 22,
+      "position": [
+        12,
+        25
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Смешанный дозор: Гоблин и Бес; Гоблин лучник позади",
+      "units": [
+        {
+          "name": "Гоблин",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5017"
+        },
+        {
+          "name": "Бес",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5034"
+        },
+        {
+          "name": "Гоблин лучник",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5018"
+        }
+      ],
+      "summary": "Гоблин + Бес + Гоблин лучник",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "22"
+    },
+    {
+      "id": 23,
+      "position": [
+        12,
+        28
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Шайка: два Разбойника; Гоблин лучник позади",
+      "units": [
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5030"
+        },
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5030"
+        },
+        {
+          "name": "Гоблин лучник",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5018"
+        }
+      ],
+      "summary": "2 × Разбойник + Гоблин лучник",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "23"
+    },
+    {
+      "id": 24,
+      "position": [
+        12,
+        31
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Наёмный патруль: Разбойник и Ополченец впереди; Гоблин лучник позади",
+      "units": [
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5030"
+        },
+        {
+          "name": "Ополченец",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5002"
+        },
+        {
+          "name": "Гоблин лучник",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5018"
+        }
+      ],
+      "summary": "Разбойник + Ополченец + Гоблин лучник",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "24"
+    },
+    {
+      "id": 25,
+      "position": [
+        8,
+        34
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Ополчение с магом: Крестьянин и Ополченец впереди; Адепт позади",
+      "units": [
+        {
+          "name": "Крестьянин",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5001"
+        },
+        {
+          "name": "Ополченец",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5002"
+        },
+        {
+          "name": "Адепт",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0080"
+        }
+      ],
+      "summary": "Крестьянин + Ополченец + Адепт",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "25"
+    },
+    {
+      "id": 3,
+      "position": [
+        13,
+        20
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Имперское ополчение: два Скваера и Служка",
+      "units": [
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Служка",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0011"
+        }
+      ],
+      "summary": "2 × Скваер + Служка",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "3"
+    },
+    {
+      "id": 4,
+      "position": [
+        14,
+        36
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Мёртвый патруль: два Воина и Адепт",
+      "units": [
+        {
+          "name": "Воин",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0086"
+        },
+        {
+          "name": "Воин",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0086"
+        },
+        {
+          "name": "Адепт",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0080"
+        }
+      ],
+      "summary": "2 × Воин + Адепт",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "4"
+    },
+    {
+      "id": 5,
+      "position": [
+        17,
+        27
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Орочий заслон: два Орка и Гоблин-старейшина",
+      "units": [
+        {
+          "name": "Орк",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5013"
+        },
+        {
+          "name": "Орк",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5013"
+        },
+        {
+          "name": "Гоблин старейшина",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu8048"
+        }
+      ],
+      "summary": "2 × Орк + Гоблин старейшина",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "5"
+    },
+    {
+      "id": 6,
+      "position": [
+        18,
+        40
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Горный дозор: два Гнома-воина и Арбалетчик",
+      "units": [
+        {
+          "name": "Гном воин",
+          "Level": 2,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0037"
+        },
+        {
+          "name": "Гном воин",
+          "Level": 2,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0037"
+        },
+        {
+          "name": "Арбалетчик",
+          "Level": 2,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0027"
+        }
+      ],
+      "summary": "2 × Гном воин (ур. 2) + Арбалетчик (ур. 2)",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "6"
+    },
+    {
+      "id": 7,
+      "position": [
+        21,
+        13
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Имперский патруль: два Рыцаря и Маг",
+      "units": [
+        {
+          "name": "Рыцарь",
+          "Level": 2,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0002"
+        },
+        {
+          "name": "Рыцарь",
+          "Level": 2,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0002"
+        },
+        {
+          "name": "Маг",
+          "Level": 2,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0009"
+        }
+      ],
+      "summary": "2 × Рыцарь (ур. 2) + Маг (ур. 2)",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "7"
+    },
+    {
+      "id": 8,
+      "position": [
+        23,
+        34
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Чумной отряд: два Зомби, Призрак и Чернокнижник",
+      "units": [
+        {
+          "name": "Зомби",
+          "Level": 2,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0087"
+        },
+        {
+          "name": "Зомби",
+          "Level": 2,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0087"
+        },
+        {
+          "name": "Призрак",
+          "Level": 2,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0079"
+        },
+        {
+          "name": "Чернокнижник",
+          "Level": 2,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0081"
+        }
+      ],
+      "summary": "2 × Зомби (ур. 2) + Призрак (ур. 2) + Чернокнижник (ур. 2)",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "8"
+    },
+    {
+      "id": 9,
+      "position": [
+        26,
+        6
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Берсерки: два Берсерка, Колдун и Ведьма",
+      "units": [
+        {
+          "name": "Берсерк",
+          "Level": 2,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0053"
+        },
+        {
+          "name": "Берсерк",
+          "Level": 2,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0053"
+        },
+        {
+          "name": "Колдун",
+          "Level": 2,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0063"
+        },
+        {
+          "name": "Ведьма",
+          "Level": 2,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0067"
+        }
+      ],
+      "summary": "2 × Берсерк (ур. 2) + Колдун (ур. 2) + Ведьма (ур. 2)",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "9"
+    },
+    {
+      "id": 10,
+      "position": [
+        27,
+        28
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Орден охотников: Имперский рыцарь, Охотник на ведьм и Священник",
+      "units": [
+        {
+          "name": "Имперский рыцарь",
+          "Level": 3,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0003"
+        },
+        {
+          "name": "Охотник на ведьм",
+          "Level": 2,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0004"
+        },
+        {
+          "name": "Священник",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0013"
+        }
+      ],
+      "summary": "Имперский рыцарь (ур. 3) + Охотник на ведьм (ур. 2) + Священник (ур. 3)",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "10"
+    },
+    {
+      "id": 11,
+      "position": [
+        30,
+        43
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Костяной дозор: два Зомби и Чернокнижник",
+      "units": [
+        {
+          "name": "Зомби",
+          "Level": 2,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0087"
+        },
+        {
+          "name": "Зомби",
+          "Level": 2,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0087"
+        },
+        {
+          "name": "Чернокнижник",
+          "Level": 2,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0081"
+        }
+      ],
+      "summary": "2 × Зомби (ур. 2) + Чернокнижник (ур. 2)",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "11"
+    },
+    {
+      "id": 12,
+      "position": [
+        33,
+        15
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Гномий патруль: два Гнома-воина и Арбалетчик",
+      "units": [
+        {
+          "name": "Гном воин",
+          "Level": 2,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0037"
+        },
+        {
+          "name": "Гном воин",
+          "Level": 2,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0037"
+        },
+        {
+          "name": "Арбалетчик",
+          "Level": 2,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0027"
+        }
+      ],
+      "summary": "2 × Гном воин (ур. 2) + Арбалетчик (ур. 2)",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "12"
+    },
+    {
+      "id": 13,
+      "position": [
+        35,
+        32
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Тёмный дозор: два Берсерка и Колдун",
+      "units": [
+        {
+          "name": "Берсерк",
+          "Level": 2,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0053"
+        },
+        {
+          "name": "Берсерк",
+          "Level": 2,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0053"
+        },
+        {
+          "name": "Колдун",
+          "Level": 2,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0063"
+        }
+      ],
+      "summary": "2 × Берсерк (ур. 2) + Колдун (ур. 2)",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "13"
+    },
+    {
+      "id": 14,
+      "position": [
+        37,
+        5
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Лесной дозор: два Кентавра-латника и Проводник",
+      "units": [
+        {
+          "name": "Кентавр латник",
+          "Level": 2,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu8015"
+        },
+        {
+          "name": "Кентавр латник",
+          "Level": 2,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu8015"
+        },
+        {
+          "name": "Проводник",
+          "Level": 2,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu8026"
+        }
+      ],
+      "summary": "2 × Кентавр латник (ур. 2) + Проводник (ур. 2)",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "14"
+    },
+    {
+      "id": 15,
+      "position": [
+        39,
+        40
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Гномья стража: два Гнома-воина и Посвященная",
+      "units": [
+        {
+          "name": "Гном воин",
+          "Level": 2,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0037"
+        },
+        {
+          "name": "Гном воин",
+          "Level": 2,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0037"
+        },
+        {
+          "name": "Посвященная",
+          "Level": 2,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0034"
+        }
+      ],
+      "summary": "2 × Гном воин (ур. 2) + Посвященная (ур. 2)",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "15"
+    },
+    {
+      "id": 16,
+      "position": [
+        41,
+        19
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Небесный орден: Ангел, Паладин, Белый маг и Аббатиса",
+      "units": [
+        {
+          "name": "Ангел",
+          "Level": 4,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0014"
+        },
+        {
+          "name": "Паладин",
+          "Level": 4,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0015"
+        },
+        {
+          "name": "Белый маг",
+          "Level": 4,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0152"
+        },
+        {
+          "name": "Аббатиса",
+          "Level": 3,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0017"
+        }
+      ],
+      "summary": "Ангел (ур. 4) + Паладин (ур. 4) + Белый маг (ур. 4) + Аббатиса (ур. 3)",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "16"
+    },
+    {
+      "id": 17,
+      "position": [
+        43,
+        34
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Адская гвардия: два Адских рыцаря, Инкуб и Пандемонеус",
+      "units": [
+        {
+          "name": "Адский рыцарь",
+          "Level": 4,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0166"
+        },
+        {
+          "name": "Адский рыцарь",
+          "Level": 4,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0166"
+        },
+        {
+          "name": "Инкуб",
+          "Level": 4,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0065"
+        },
+        {
+          "name": "Пандемонеус",
+          "Level": 4,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0066"
+        }
+      ],
+      "summary": "2 × Адский рыцарь (ур. 4) + Инкуб (ур. 4) + Пандемонеус (ур. 4)",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "17"
+    },
+    {
+      "id": 18,
+      "position": [
+        45,
+        10
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Храмовая элита: Защитник Веры, Мастер клинка, Белый маг и Прорицательница",
+      "units": [
+        {
+          "name": "Защитник Веры",
+          "Level": 5,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0156"
+        },
+        {
+          "name": "Мастер клинка",
+          "Level": 5,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0155"
+        },
+        {
+          "name": "Белый маг",
+          "Level": 4,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0152"
+        },
+        {
+          "name": "Прорицательница",
+          "Level": 4,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0151"
+        }
+      ],
+      "summary": "Защитник Веры (ур. 5) + Мастер клинка (ур. 5) + Белый маг (ур. 4) + Прорицательница (ур. 4)",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "18"
+    },
+    {
+      "id": 19,
+      "position": [
+        46,
+        43
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Высшая нежить: два Скелета-призрака, Архилич и Сущий",
+      "units": [
+        {
+          "name": "Скелет призрак",
+          "Level": 5,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0179"
+        },
+        {
+          "name": "Скелет призрак",
+          "Level": 5,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0179"
+        },
+        {
+          "name": "Архилич",
+          "Level": 5,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0176"
+        },
+        {
+          "name": "Сущий",
+          "Level": 4,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0178"
+        }
+      ],
+      "summary": "2 × Скелет призрак (ур. 5) + Архилич (ур. 5) + Сущий (ур. 4)",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "19"
+    },
+    {
+      "id": 20,
+      "position": [
+        47,
+        2
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Последний рубеж: Король гномов, Владыка рун, Защитник Веры, Архидруид, Отшельник и Архилич",
+      "units": [
+        {
+          "name": "Король гномов",
+          "Level": 5,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0039"
+        },
+        {
+          "name": "Владыка рун",
+          "Level": 5,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0165"
+        },
+        {
+          "name": "Защитник Веры",
+          "Level": 5,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0156"
+        },
+        {
+          "name": "Архидруид",
+          "Level": 4,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0160"
+        },
+        {
+          "name": "Отшельник",
+          "Level": 4,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0163"
+        },
+        {
+          "name": "Архилич",
+          "Level": 5,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0176"
+        }
+      ],
+      "summary": "Король гномов (ур. 5) + Владыка рун (ур. 5) + Защитник Веры (ур. 5) + Архидруид (ур. 4) + Отшельник (ур. 4) + Архилич (ур. 5)",
+      "fighter_count": 6,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "20"
+    },
+    {
+      "id": 41,
+      "position": [
+        31,
+        35
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Адский дозор: Адский рыцарь впереди; Модеус позади",
+      "units": [
+        {
+          "name": "Адский рыцарь",
+          "Level": 4,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0166"
+        },
+        {
+          "name": "Модеус",
+          "Level": 5,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0172"
+        }
+      ],
+      "summary": "Адский рыцарь (ур. 4) + Модеус (ур. 5)",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "41"
+    },
+    {
+      "id": 42,
+      "position": [
+        34,
+        23
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Королевский дозор: Король гномов впереди; Арбалетчик и Алхимик позади",
+      "units": [
+        {
+          "name": "Король гномов",
+          "Level": 5,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0039"
+        },
+        {
+          "name": "Арбалетчик",
+          "Level": 2,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0027"
+        },
+        {
+          "name": "Алхимик",
+          "Level": 3,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0161"
+        }
+      ],
+      "summary": "Король гномов (ур. 5) + Арбалетчик (ур. 2) + Алхимик (ур. 3)",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "42"
+    },
+    {
+      "id": 100,
+      "position": [
+        47,
+        47
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Осадная армия Империи",
+      "units": [
+        {
+          "name": "Имперский рыцарь",
+          "Level": 3,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0003"
+        },
+        {
+          "name": "Рыцарь на пегасе",
+          "Level": 3,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0019"
+        },
+        {
+          "name": "Рейнджер людей",
+          "Level": 2,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0020"
+        },
+        {
+          "name": "Белый маг",
+          "Level": 4,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0152"
+        }
+      ],
+      "summary": "Имперский рыцарь (ур. 3) + Рыцарь на пегасе (ур. 3) + Рейнджер людей (ур. 2) + Белый маг (ур. 4)",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 100,
+        "spawn_turn": 27,
+        "moves_per_turn": 25,
+        "wave_index": 1,
+        "wave_member_index": 1,
+        "wave_member_count": 1
+      },
+      "marker": "100"
+    }
+  ],
+  "sites": [],
+  "terrain": {
+    "water": [],
+    "forest": [],
+    "road": []
+  },
+  "obstacles": [
+    [
+      1,
+      25
+    ],
+    [
+      1,
+      26
+    ],
+    [
+      1,
+      27
+    ],
+    [
+      1,
+      28
+    ],
+    [
+      1,
+      29
+    ],
+    [
+      2,
+      25
+    ],
+    [
+      2,
+      26
+    ],
+    [
+      2,
+      27
+    ],
+    [
+      2,
+      28
+    ],
+    [
+      2,
+      29
+    ],
+    [
+      3,
+      25
+    ],
+    [
+      3,
+      26
+    ],
+    [
+      3,
+      27
+    ],
+    [
+      3,
+      28
+    ],
+    [
+      3,
+      29
+    ],
+    [
+      4,
+      25
+    ],
+    [
+      4,
+      26
+    ],
+    [
+      4,
+      27
+    ],
+    [
+      4,
+      28
+    ],
+    [
+      4,
+      29
+    ],
+    [
+      5,
+      25
+    ],
+    [
+      5,
+      26
+    ],
+    [
+      5,
+      28
+    ],
+    [
+      5,
+      29
+    ]
+  ],
+  "gold_mines": [],
+  "mana": [
+    {
+      "position": [
+        6,
+        27
+      ],
+      "kind": "infernal",
+      "name": "Мана преисподней"
+    }
+  ],
+  "chests": [],
+  "ruins": [],
+  "notes": [
+    "Стартовый отряд закреплён сценарием и сохраняется при отключённом боссовом ростере."
+  ],
+  "conditional_assaults": []
+}

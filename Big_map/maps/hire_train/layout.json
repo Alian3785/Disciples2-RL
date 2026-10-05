@@ -1,0 +1,375 @@
+{
+  "schema_version": 1,
+  "map_id": "hire_train",
+  "title": "Hire · найм",
+  "grid_size": 24,
+  "source_grid_size": 48,
+  "seed": 0,
+  "observation_version": "local5",
+  "scripted_bot_enabled": false,
+  "boss_roster_enabled": false,
+  "objective": "orc",
+  "objective_enemy_id": 1,
+  "turn": 0,
+  "faction": "Империя",
+  "starting_gold": 300.0,
+  "starting_army": "Герцог",
+  "starting_roster_mode": "fixed",
+  "hero": [
+    2,
+    13
+  ],
+  "capitals": [
+    {
+      "code": "A",
+      "name": "Столица: Империя",
+      "position": [
+        2,
+        13
+      ],
+      "color": "#b85869",
+      "footprint": [
+        [
+          0,
+          12
+        ],
+        [
+          0,
+          13
+        ],
+        [
+          0,
+          13
+        ],
+        [
+          0,
+          14
+        ],
+        [
+          0,
+          14
+        ],
+        [
+          1,
+          12
+        ],
+        [
+          1,
+          12
+        ],
+        [
+          1,
+          13
+        ],
+        [
+          1,
+          13
+        ],
+        [
+          1,
+          13
+        ],
+        [
+          1,
+          13
+        ],
+        [
+          1,
+          14
+        ],
+        [
+          1,
+          14
+        ],
+        [
+          1,
+          14
+        ],
+        [
+          1,
+          14
+        ],
+        [
+          2,
+          12
+        ],
+        [
+          2,
+          12
+        ],
+        [
+          2,
+          13
+        ],
+        [
+          2,
+          13
+        ],
+        [
+          2,
+          13
+        ],
+        [
+          2,
+          13
+        ],
+        [
+          2,
+          14
+        ],
+        [
+          2,
+          14
+        ],
+        [
+          2,
+          14
+        ],
+        [
+          2,
+          14
+        ]
+      ]
+    }
+  ],
+  "cities": [
+    {
+      "code": "C1",
+      "name": "Учебный город",
+      "position": [
+        12,
+        6
+      ],
+      "enemy_ids": [
+        2
+      ],
+      "level": 1,
+      "objective": false,
+      "owned": false,
+      "footprint": [
+        [
+          10,
+          4
+        ],
+        [
+          10,
+          5
+        ],
+        [
+          10,
+          5
+        ],
+        [
+          10,
+          6
+        ],
+        [
+          11,
+          4
+        ],
+        [
+          11,
+          4
+        ],
+        [
+          11,
+          5
+        ],
+        [
+          11,
+          5
+        ],
+        [
+          11,
+          5
+        ],
+        [
+          11,
+          5
+        ],
+        [
+          11,
+          6
+        ],
+        [
+          11,
+          6
+        ],
+        [
+          12,
+          4
+        ],
+        [
+          12,
+          5
+        ],
+        [
+          12,
+          5
+        ],
+        [
+          12,
+          6
+        ]
+      ]
+    }
+  ],
+  "enemies": [
+    {
+      "id": 1,
+      "position": [
+        23,
+        23
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Целевой отряд: Орк слева, два Гоблина впереди и Гоблин лучник сзади",
+      "units": [
+        {
+          "name": "Орк",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5013"
+        },
+        {
+          "name": "Гоблин",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5017"
+        },
+        {
+          "name": "Гоблин",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5017"
+        },
+        {
+          "name": "Гоблин лучник",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5018"
+        }
+      ],
+      "summary": "Орк + 2 × Гоблин + Гоблин лучник",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "1"
+    },
+    {
+      "id": 2,
+      "position": [
+        12,
+        6
+      ],
+      "alive": true,
+      "kind": "city",
+      "description": "Гарнизон Учебный город: Гоблин лучник",
+      "units": [
+        {
+          "name": "Гоблин лучник",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5018"
+        }
+      ],
+      "summary": "Гоблин лучник",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "2"
+    }
+  ],
+  "sites": [],
+  "terrain": {
+    "water": [],
+    "forest": [],
+    "road": []
+  },
+  "obstacles": [
+    [
+      0,
+      12
+    ],
+    [
+      0,
+      13
+    ],
+    [
+      0,
+      14
+    ],
+    [
+      1,
+      12
+    ],
+    [
+      1,
+      13
+    ],
+    [
+      1,
+      14
+    ],
+    [
+      2,
+      12
+    ],
+    [
+      2,
+      14
+    ],
+    [
+      10,
+      4
+    ],
+    [
+      10,
+      5
+    ],
+    [
+      10,
+      6
+    ],
+    [
+      11,
+      4
+    ],
+    [
+      11,
+      5
+    ],
+    [
+      11,
+      6
+    ],
+    [
+      12,
+      4
+    ],
+    [
+      12,
+      5
+    ]
+  ],
+  "gold_mines": [],
+  "mana": [],
+  "chests": [],
+  "ruins": [],
+  "notes": [
+    "Стартовый отряд закреплён сценарием и сохраняется при отключённом боссовом ростере.",
+    "Игровая сетка 24×24: координаты взяты после масштабирования и разрешения конфликтов."
+  ],
+  "conditional_assaults": []
+}

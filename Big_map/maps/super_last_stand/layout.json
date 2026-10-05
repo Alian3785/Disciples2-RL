@@ -1,0 +1,3727 @@
+{
+  "schema_version": 1,
+  "map_id": "super_last_stand",
+  "title": "Super Last Stand",
+  "grid_size": 48,
+  "source_grid_size": 48,
+  "seed": 0,
+  "observation_version": "local5",
+  "scripted_bot_enabled": false,
+  "boss_roster_enabled": false,
+  "objective": "waves",
+  "objective_enemy_id": null,
+  "turn": 0,
+  "faction": "Легионы Проклятых",
+  "starting_gold": 3000.0,
+  "starting_army": "Бетрезен",
+  "starting_roster_mode": "fixed",
+  "hero": [
+    24,
+    42
+  ],
+  "capitals": [
+    {
+      "code": "A",
+      "name": "Столица: Легионы Проклятых",
+      "position": [
+        24,
+        42
+      ],
+      "color": "#b85869",
+      "footprint": [
+        [
+          20,
+          40
+        ],
+        [
+          20,
+          41
+        ],
+        [
+          20,
+          42
+        ],
+        [
+          20,
+          43
+        ],
+        [
+          20,
+          44
+        ],
+        [
+          21,
+          40
+        ],
+        [
+          21,
+          41
+        ],
+        [
+          21,
+          42
+        ],
+        [
+          21,
+          43
+        ],
+        [
+          21,
+          44
+        ],
+        [
+          22,
+          40
+        ],
+        [
+          22,
+          41
+        ],
+        [
+          22,
+          42
+        ],
+        [
+          22,
+          43
+        ],
+        [
+          22,
+          44
+        ],
+        [
+          23,
+          40
+        ],
+        [
+          23,
+          41
+        ],
+        [
+          23,
+          42
+        ],
+        [
+          23,
+          43
+        ],
+        [
+          23,
+          44
+        ],
+        [
+          24,
+          40
+        ],
+        [
+          24,
+          41
+        ],
+        [
+          24,
+          42
+        ],
+        [
+          24,
+          43
+        ],
+        [
+          24,
+          44
+        ]
+      ]
+    }
+  ],
+  "cities": [
+    {
+      "code": "C1",
+      "name": "Ноктурна",
+      "position": [
+        5,
+        24
+      ],
+      "enemy_ids": [
+        10
+      ],
+      "level": 2,
+      "objective": false,
+      "owned": false,
+      "footprint": [
+        [
+          2,
+          21
+        ],
+        [
+          2,
+          22
+        ],
+        [
+          2,
+          23
+        ],
+        [
+          2,
+          24
+        ],
+        [
+          3,
+          21
+        ],
+        [
+          3,
+          22
+        ],
+        [
+          3,
+          23
+        ],
+        [
+          3,
+          24
+        ],
+        [
+          4,
+          21
+        ],
+        [
+          4,
+          22
+        ],
+        [
+          4,
+          23
+        ],
+        [
+          4,
+          24
+        ],
+        [
+          5,
+          21
+        ],
+        [
+          5,
+          22
+        ],
+        [
+          5,
+          23
+        ],
+        [
+          5,
+          24
+        ]
+      ]
+    },
+    {
+      "code": "C2",
+      "name": "Крепость Бурь",
+      "position": [
+        43,
+        24
+      ],
+      "enemy_ids": [
+        11
+      ],
+      "level": 3,
+      "objective": false,
+      "owned": false,
+      "footprint": [
+        [
+          40,
+          21
+        ],
+        [
+          40,
+          22
+        ],
+        [
+          40,
+          23
+        ],
+        [
+          40,
+          24
+        ],
+        [
+          41,
+          21
+        ],
+        [
+          41,
+          22
+        ],
+        [
+          41,
+          23
+        ],
+        [
+          41,
+          24
+        ],
+        [
+          42,
+          21
+        ],
+        [
+          42,
+          22
+        ],
+        [
+          42,
+          23
+        ],
+        [
+          42,
+          24
+        ],
+        [
+          43,
+          21
+        ],
+        [
+          43,
+          22
+        ],
+        [
+          43,
+          23
+        ],
+        [
+          43,
+          24
+        ]
+      ]
+    }
+  ],
+  "enemies": [
+    {
+      "id": 1,
+      "position": [
+        15,
+        35
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Один Орк",
+      "units": [
+        {
+          "name": "Орк",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5013"
+        }
+      ],
+      "summary": "Орк",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "1"
+    },
+    {
+      "id": 2,
+      "position": [
+        33,
+        35
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Один Мастер оккультист",
+      "units": [
+        {
+          "name": "Мастер оккультист",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu6014"
+        }
+      ],
+      "summary": "Мастер оккультист",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "2"
+    },
+    {
+      "id": 3,
+      "position": [
+        36,
+        10
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Морской змей и Кракен охраняют драгоценность в озере",
+      "units": [
+        {
+          "name": "Морской змей",
+          "Level": 1,
+          "big": true,
+          "position": 1,
+          "unit_id": "g000uu5029"
+        },
+        {
+          "name": "Кракен",
+          "Level": 1,
+          "big": true,
+          "position": 3,
+          "unit_id": "g000uu5027"
+        }
+      ],
+      "summary": "Морской змей + Кракен",
+      "fighter_count": 2,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "3"
+    },
+    {
+      "id": 10,
+      "position": [
+        5,
+        24
+      ],
+      "alive": true,
+      "kind": "city",
+      "description": "Гарнизон города тёмных эльфов",
+      "units": [
+        {
+          "name": "Тёмный эльф мясник",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu8041"
+        },
+        {
+          "name": "Тёмный эльф мясник",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu8041"
+        },
+        {
+          "name": "Тёмный эльф жнец",
+          "Level": 1,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu8042"
+        },
+        {
+          "name": "Тёмный эльф маг",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu8043"
+        },
+        {
+          "name": "Тёмный эльф призрак",
+          "Level": 1,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu8044"
+        }
+      ],
+      "summary": "2 × Тёмный эльф мясник + Тёмный эльф жнец + Тёмный эльф маг + Тёмный эльф призрак",
+      "fighter_count": 5,
+      "formation_cells": 5,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "10"
+    },
+    {
+      "id": 11,
+      "position": [
+        43,
+        24
+      ],
+      "alive": true,
+      "kind": "city",
+      "description": "Гарнизон города сильных варваров",
+      "units": [
+        {
+          "name": "Варвар",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5040"
+        },
+        {
+          "name": "Вождь варваров",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5032"
+        },
+        {
+          "name": "Варвар",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5040"
+        },
+        {
+          "name": "Шаманка",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu8046"
+        }
+      ],
+      "summary": "2 × Варвар + Вождь варваров + Шаманка",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "11"
+    },
+    {
+      "id": 70,
+      "position": [
+        17,
+        16
+      ],
+      "alive": true,
+      "kind": "ruin",
+      "description": "Руины: Тролль, Людоед и Гоблин старейшина",
+      "units": [
+        {
+          "name": "Тролль",
+          "Level": 1,
+          "big": true,
+          "position": 1,
+          "unit_id": "g000uu5016"
+        },
+        {
+          "name": "Людоед",
+          "Level": 1,
+          "big": true,
+          "position": 3,
+          "unit_id": "g000uu5115"
+        },
+        {
+          "name": "Гоблин старейшина",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu8048"
+        }
+      ],
+      "summary": "Тролль + Людоед + Гоблин старейшина",
+      "fighter_count": 3,
+      "formation_cells": 5,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "70"
+    },
+    {
+      "id": 71,
+      "position": [
+        30,
+        16
+      ],
+      "alive": true,
+      "kind": "ruin",
+      "description": "Забытые эльфийские руины: нейтральный грифон, эльфийский оракул, лорд эльфов и эльф-рейнджер",
+      "units": [
+        {
+          "name": "Нейтральный грифон",
+          "Level": 1,
+          "big": true,
+          "position": 1,
+          "unit_id": "g000uu5004"
+        },
+        {
+          "name": "Нейтральный лорд эльфов",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5008"
+        },
+        {
+          "name": "Нейтральный эльфийский оракул",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5006"
+        },
+        {
+          "name": "Нейтральный эльф-рейнджер",
+          "Level": 1,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu5009"
+        }
+      ],
+      "summary": "Нейтральный грифон + Нейтральный лорд эльфов + Нейтральный эльфийский оракул + Нейтральный эльф-рейнджер",
+      "fighter_count": 4,
+      "formation_cells": 5,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "71"
+    },
+    {
+      "id": 101,
+      "position": [
+        22,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 1 — «Первая волна»; Люди",
+      "units": [
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Лучник",
+          "Level": 1,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0006"
+        },
+        {
+          "name": "Служка",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0011"
+        },
+        {
+          "name": "Ученик",
+          "Level": 1,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0008"
+        }
+      ],
+      "summary": "Скваер + Лучник + Служка + Ученик",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 101,
+        "spawn_turn": 5,
+        "moves_per_turn": 30,
+        "wave_index": 1,
+        "wave_member_index": 1,
+        "wave_member_count": 3
+      },
+      "marker": "101"
+    },
+    {
+      "id": 102,
+      "position": [
+        24,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 1 — «Первая волна»; Эльфы",
+      "units": [
+        {
+          "name": "Малый энт",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu8036"
+        },
+        {
+          "name": "Рейнджер",
+          "Level": 1,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu8018"
+        },
+        {
+          "name": "Медиум",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu8031"
+        },
+        {
+          "name": "Адепт эльфов",
+          "Level": 1,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu8025"
+        }
+      ],
+      "summary": "Малый энт + Рейнджер + Медиум + Адепт эльфов",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 102,
+        "spawn_turn": 10,
+        "moves_per_turn": 30,
+        "wave_index": 1,
+        "wave_member_index": 2,
+        "wave_member_count": 3
+      },
+      "marker": "102"
+    },
+    {
+      "id": 103,
+      "position": [
+        26,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 1 — «Первая волна»; Гномы",
+      "units": [
+        {
+          "name": "Гном",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0036"
+        },
+        {
+          "name": "Метатель топоров",
+          "Level": 1,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0026"
+        },
+        {
+          "name": "Травница",
+          "Level": 1,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0033"
+        }
+      ],
+      "summary": "Гном + Метатель топоров + Травница",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 103,
+        "spawn_turn": 15,
+        "moves_per_turn": 30,
+        "wave_index": 1,
+        "wave_member_index": 3,
+        "wave_member_count": 3
+      },
+      "marker": "103"
+    },
+    {
+      "id": 104,
+      "position": [
+        22,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 2 — «Регулярные роты» (~770); Люди",
+      "units": [
+        {
+          "name": "Рыцарь",
+          "Level": 2,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0002"
+        },
+        {
+          "name": "Стрелок",
+          "Level": 2,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0007"
+        },
+        {
+          "name": "Жрец",
+          "Level": 2,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0012"
+        },
+        {
+          "name": "Маг",
+          "Level": 2,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0009"
+        }
+      ],
+      "summary": "Рыцарь (ур. 2) + Стрелок (ур. 2) + Жрец (ур. 2) + Маг (ур. 2)",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 104,
+        "spawn_turn": 20,
+        "moves_per_turn": 30,
+        "wave_index": 2,
+        "wave_member_index": 1,
+        "wave_member_count": 3
+      },
+      "marker": "104"
+    },
+    {
+      "id": 105,
+      "position": [
+        24,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 2 — «Регулярные роты» (~770); Эльфы",
+      "units": [
+        {
+          "name": "Кентавр копейщик",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu8014"
+        },
+        {
+          "name": "Охотник",
+          "Level": 2,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu8019"
+        },
+        {
+          "name": "Оракул",
+          "Level": 2,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu8032"
+        },
+        {
+          "name": "Дозорный",
+          "Level": 2,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu8022"
+        }
+      ],
+      "summary": "Кентавр копейщик + Охотник (ур. 2) + Оракул (ур. 2) + Дозорный (ур. 2)",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 105,
+        "spawn_turn": 25,
+        "moves_per_turn": 30,
+        "wave_index": 2,
+        "wave_member_index": 2,
+        "wave_member_count": 3
+      },
+      "marker": "105"
+    },
+    {
+      "id": 106,
+      "position": [
+        26,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 2 — «Регулярные роты» (~770); Гномы",
+      "units": [
+        {
+          "name": "Гном воин",
+          "Level": 2,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0037"
+        },
+        {
+          "name": "Арбалетчик",
+          "Level": 2,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0027"
+        },
+        {
+          "name": "Посвященная",
+          "Level": 2,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0034"
+        },
+        {
+          "name": "Метатель топоров",
+          "Level": 1,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0026"
+        }
+      ],
+      "summary": "Гном воин (ур. 2) + Арбалетчик (ур. 2) + Посвященная (ур. 2) + Метатель топоров",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 106,
+        "spawn_turn": 30,
+        "moves_per_turn": 30,
+        "wave_index": 2,
+        "wave_member_index": 3,
+        "wave_member_count": 3
+      },
+      "marker": "106"
+    },
+    {
+      "id": 107,
+      "position": [
+        22,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 3 — «Разведка боем» (~1050); Люди",
+      "units": [
+        {
+          "name": "Охотник на ведьм",
+          "Level": 2,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0004"
+        },
+        {
+          "name": "Рыцарь",
+          "Level": 2,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0002"
+        },
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Стрелок",
+          "Level": 2,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0007"
+        },
+        {
+          "name": "Маг",
+          "Level": 2,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0009"
+        }
+      ],
+      "summary": "Охотник на ведьм (ур. 2) + Рыцарь (ур. 2) + Скваер + Стрелок (ур. 2) + Маг (ур. 2)",
+      "fighter_count": 5,
+      "formation_cells": 5,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 107,
+        "spawn_turn": 35,
+        "moves_per_turn": 30,
+        "wave_index": 3,
+        "wave_member_index": 1,
+        "wave_member_count": 3
+      },
+      "marker": "107"
+    },
+    {
+      "id": 108,
+      "position": [
+        24,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 3 — «Разведка боем» (~1050); Эльфы",
+      "units": [
+        {
+          "name": "Энт",
+          "Level": 1,
+          "big": true,
+          "position": 1,
+          "unit_id": "g000uu8037"
+        },
+        {
+          "name": "Охотник",
+          "Level": 2,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu8019"
+        },
+        {
+          "name": "Кентавр копейщик",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu8014"
+        },
+        {
+          "name": "Дозорный",
+          "Level": 2,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu8022"
+        },
+        {
+          "name": "Проводник",
+          "Level": 2,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu8026"
+        }
+      ],
+      "summary": "Энт + Охотник (ур. 2) + Кентавр копейщик + Дозорный (ур. 2) + Проводник (ур. 2)",
+      "fighter_count": 5,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 108,
+        "spawn_turn": 40,
+        "moves_per_turn": 30,
+        "wave_index": 3,
+        "wave_member_index": 2,
+        "wave_member_count": 3
+      },
+      "marker": "108"
+    },
+    {
+      "id": 109,
+      "position": [
+        26,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 3 — «Разведка боем» (~1050); Гномы",
+      "units": [
+        {
+          "name": "Королевский страж",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0044"
+        },
+        {
+          "name": "Гном воин",
+          "Level": 2,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0037"
+        },
+        {
+          "name": "Гном",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0036"
+        },
+        {
+          "name": "Арбалетчик",
+          "Level": 2,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0027"
+        },
+        {
+          "name": "Посвященная",
+          "Level": 2,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0034"
+        }
+      ],
+      "summary": "Королевский страж + Гном воин (ур. 2) + Гном + Арбалетчик (ур. 2) + Посвященная (ур. 2)",
+      "fighter_count": 5,
+      "formation_cells": 5,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 109,
+        "spawn_turn": 45,
+        "moves_per_turn": 30,
+        "wave_index": 3,
+        "wave_member_index": 3,
+        "wave_member_count": 3
+      },
+      "marker": "109"
+    },
+    {
+      "id": 110,
+      "position": [
+        22,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 4 — «Первая сталь» (~1300); Люди",
+      "units": [
+        {
+          "name": "Имперский рыцарь",
+          "Level": 3,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0003"
+        },
+        {
+          "name": "Инквизитор",
+          "Level": 3,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0005"
+        },
+        {
+          "name": "Стрелок",
+          "Level": 2,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0007"
+        },
+        {
+          "name": "Жрец",
+          "Level": 2,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0012"
+        },
+        {
+          "name": "Волшебник",
+          "Level": 3,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0010"
+        }
+      ],
+      "summary": "Имперский рыцарь (ур. 3) + Инквизитор (ур. 3) + Стрелок (ур. 2) + Жрец (ур. 2) + Волшебник (ур. 3)",
+      "fighter_count": 5,
+      "formation_cells": 5,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 110,
+        "spawn_turn": 50,
+        "moves_per_turn": 30,
+        "wave_index": 4,
+        "wave_member_index": 1,
+        "wave_member_count": 3
+      },
+      "marker": "110"
+    },
+    {
+      "id": 111,
+      "position": [
+        24,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 4 — «Первая сталь» (~1300); Эльфы",
+      "units": [
+        {
+          "name": "Грифон",
+          "Level": 1,
+          "big": true,
+          "position": 1,
+          "unit_id": "g000uu8029"
+        },
+        {
+          "name": "Охотник",
+          "Level": 2,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu8019"
+        },
+        {
+          "name": "Кентавр странник",
+          "Level": 2,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu8016"
+        },
+        {
+          "name": "Архонт",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu8027"
+        },
+        {
+          "name": "Оракул",
+          "Level": 2,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu8032"
+        }
+      ],
+      "summary": "Грифон + Охотник (ур. 2) + Кентавр странник (ур. 2) + Архонт (ур. 3) + Оракул (ур. 2)",
+      "fighter_count": 5,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 111,
+        "spawn_turn": 55,
+        "moves_per_turn": 30,
+        "wave_index": 4,
+        "wave_member_index": 2,
+        "wave_member_count": 3
+      },
+      "marker": "111"
+    },
+    {
+      "id": 112,
+      "position": [
+        26,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 4 — «Первая сталь» (~1300); Гномы",
+      "units": [
+        {
+          "name": "Холмовой гигант",
+          "Level": 1,
+          "big": true,
+          "position": 1,
+          "unit_id": "g000uu0029"
+        },
+        {
+          "name": "Арбалетчик",
+          "Level": 2,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0027"
+        },
+        {
+          "name": "Ветеран",
+          "Level": 3,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0038"
+        },
+        {
+          "name": "Огнеметчик",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0028"
+        },
+        {
+          "name": "Посвященная",
+          "Level": 2,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0034"
+        }
+      ],
+      "summary": "Холмовой гигант + Арбалетчик (ур. 2) + Ветеран (ур. 3) + Огнеметчик (ур. 3) + Посвященная (ур. 2)",
+      "fighter_count": 5,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 112,
+        "spawn_turn": 60,
+        "moves_per_turn": 30,
+        "wave_index": 4,
+        "wave_member_index": 3,
+        "wave_member_count": 3
+      },
+      "marker": "112"
+    },
+    {
+      "id": 113,
+      "position": [
+        22,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 5 — «Гвардия героев» (~1650); Люди",
+      "units": [
+        {
+          "name": "Рыцарь на пегасе",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0019"
+        },
+        {
+          "name": "Имперский рыцарь",
+          "Level": 3,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0003"
+        },
+        {
+          "name": "Инквизитор",
+          "Level": 3,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0005"
+        },
+        {
+          "name": "Рейнджер людей",
+          "Level": 1,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0020"
+        },
+        {
+          "name": "Священник",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0013"
+        },
+        {
+          "name": "Архимаг",
+          "Level": 1,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0021"
+        }
+      ],
+      "summary": "Рыцарь на пегасе + Имперский рыцарь (ур. 3) + Инквизитор (ур. 3) + Рейнджер людей + Священник (ур. 3) + Архимаг",
+      "fighter_count": 6,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 113,
+        "spawn_turn": 65,
+        "moves_per_turn": 30,
+        "wave_index": 5,
+        "wave_member_index": 1,
+        "wave_member_count": 3
+      },
+      "marker": "113"
+    },
+    {
+      "id": 114,
+      "position": [
+        24,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 5 — «Гвардия героев» (~1650); Эльфы",
+      "units": [
+        {
+          "name": "Лесной лорд",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu8009"
+        },
+        {
+          "name": "Кентавр дикарь",
+          "Level": 3,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu8017"
+        },
+        {
+          "name": "Хранитель леса",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu8011"
+        },
+        {
+          "name": "Стингер",
+          "Level": 3,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu8020"
+        },
+        {
+          "name": "Дева рощи",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu8033"
+        },
+        {
+          "name": "Теург",
+          "Level": 3,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu8028"
+        }
+      ],
+      "summary": "Лесной лорд + Кентавр дикарь (ур. 3) + Хранитель леса + Стингер (ур. 3) + Дева рощи (ур. 3) + Теург (ур. 3)",
+      "fighter_count": 6,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 114,
+        "spawn_turn": 70,
+        "moves_per_turn": 30,
+        "wave_index": 5,
+        "wave_member_index": 2,
+        "wave_member_count": 3
+      },
+      "marker": "114"
+    },
+    {
+      "id": 115,
+      "position": [
+        26,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 5 — «Гвардия героев» (~1650); Гномы",
+      "units": [
+        {
+          "name": "Королевский страж",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0044"
+        },
+        {
+          "name": "Друид",
+          "Level": 3,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0035"
+        },
+        {
+          "name": "Скальной гигант",
+          "Level": 2,
+          "big": true,
+          "position": 3,
+          "unit_id": "g000uu0030"
+        },
+        {
+          "name": "Инженер",
+          "Level": 1,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0045"
+        },
+        {
+          "name": "Хранитель кузни",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0162"
+        }
+      ],
+      "summary": "Королевский страж + Друид (ур. 3) + Скальной гигант (ур. 2) + Инженер + Хранитель кузни (ур. 3)",
+      "fighter_count": 5,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 115,
+        "spawn_turn": 75,
+        "moves_per_turn": 30,
+        "wave_index": 5,
+        "wave_member_index": 3,
+        "wave_member_count": 3
+      },
+      "marker": "115"
+    },
+    {
+      "id": 116,
+      "position": [
+        22,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 6 — «Стальной прилив» (~1850); Люди",
+      "units": [
+        {
+          "name": "Паладин",
+          "Level": 4,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0015"
+        },
+        {
+          "name": "Инквизитор",
+          "Level": 3,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0005"
+        },
+        {
+          "name": "Имперский рыцарь",
+          "Level": 3,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0003"
+        },
+        {
+          "name": "Священник",
+          "Level": 3,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0013"
+        },
+        {
+          "name": "Волшебник",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0010"
+        },
+        {
+          "name": "Аббатиса",
+          "Level": 3,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0017"
+        }
+      ],
+      "summary": "Паладин (ур. 4) + Инквизитор (ур. 3) + Имперский рыцарь (ур. 3) + Священник (ур. 3) + Волшебник (ур. 3) + Аббатиса (ур. 3)",
+      "fighter_count": 6,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 116,
+        "spawn_turn": 80,
+        "moves_per_turn": 30,
+        "wave_index": 6,
+        "wave_member_index": 1,
+        "wave_member_count": 3
+      },
+      "marker": "116"
+    },
+    {
+      "id": 117,
+      "position": [
+        24,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 6 — «Стальной прилив» (~1850); Эльфы",
+      "units": [
+        {
+          "name": "Повелитель небес",
+          "Level": 2,
+          "big": true,
+          "position": 1,
+          "unit_id": "g000uu8030"
+        },
+        {
+          "name": "Смотритель",
+          "Level": 3,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu8023"
+        },
+        {
+          "name": "Кентавр дикарь",
+          "Level": 3,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu8017"
+        },
+        {
+          "name": "Часовой",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu8024"
+        },
+        {
+          "name": "Теург",
+          "Level": 3,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu8028"
+        }
+      ],
+      "summary": "Повелитель небес (ур. 2) + Смотритель (ур. 3) + Кентавр дикарь (ур. 3) + Часовой (ур. 3) + Теург (ур. 3)",
+      "fighter_count": 5,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 117,
+        "spawn_turn": 85,
+        "moves_per_turn": 30,
+        "wave_index": 6,
+        "wave_member_index": 2,
+        "wave_member_count": 3
+      },
+      "marker": "117"
+    },
+    {
+      "id": 118,
+      "position": [
+        26,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 6 — «Стальной прилив» (~1850); Гномы",
+      "units": [
+        {
+          "name": "Ледяной гигант",
+          "Level": 3,
+          "big": true,
+          "position": 1,
+          "unit_id": "g000uu0032"
+        },
+        {
+          "name": "Хранитель кузни",
+          "Level": 3,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0162"
+        },
+        {
+          "name": "Ветеран",
+          "Level": 3,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0038"
+        },
+        {
+          "name": "Огнеметчик",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0028"
+        },
+        {
+          "name": "Друид",
+          "Level": 3,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0035"
+        }
+      ],
+      "summary": "Ледяной гигант (ур. 3) + Хранитель кузни (ур. 3) + Ветеран (ур. 3) + Огнеметчик (ур. 3) + Друид (ур. 3)",
+      "fighter_count": 5,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 118,
+        "spawn_turn": 90,
+        "moves_per_turn": 30,
+        "wave_index": 6,
+        "wave_member_index": 3,
+        "wave_member_count": 3
+      },
+      "marker": "118"
+    },
+    {
+      "id": 119,
+      "position": [
+        22,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 7 — «Цвет трёх народов» (~2100); Люди",
+      "units": [
+        {
+          "name": "Мастер клинка",
+          "Level": 5,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0155"
+        },
+        {
+          "name": "Паладин",
+          "Level": 4,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0015"
+        },
+        {
+          "name": "Инквизитор",
+          "Level": 3,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0005"
+        },
+        {
+          "name": "Священник",
+          "Level": 3,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0013"
+        },
+        {
+          "name": "Белый маг",
+          "Level": 4,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0152"
+        },
+        {
+          "name": "Прорицательница",
+          "Level": 4,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0151"
+        }
+      ],
+      "summary": "Мастер клинка (ур. 5) + Паладин (ур. 4) + Инквизитор (ур. 3) + Священник (ур. 3) + Белый маг (ур. 4) + Прорицательница (ур. 4)",
+      "fighter_count": 6,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 119,
+        "spawn_turn": 95,
+        "moves_per_turn": 30,
+        "wave_index": 7,
+        "wave_member_index": 1,
+        "wave_member_count": 3
+      },
+      "marker": "119"
+    },
+    {
+      "id": 120,
+      "position": [
+        24,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 7 — «Цвет трёх народов» (~2100); Эльфы",
+      "units": [
+        {
+          "name": "Кентавр дикарь",
+          "Level": 3,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu8017"
+        },
+        {
+          "name": "Кентавр дикарь",
+          "Level": 3,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu8017"
+        },
+        {
+          "name": "Стингер",
+          "Level": 3,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu8020"
+        },
+        {
+          "name": "Смотритель",
+          "Level": 3,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu8023"
+        },
+        {
+          "name": "Разбойник эльф",
+          "Level": 4,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu8051"
+        },
+        {
+          "name": "Сильфида",
+          "Level": 4,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu8035"
+        }
+      ],
+      "summary": "2 × Кентавр дикарь (ур. 3) + Стингер (ур. 3) + Смотритель (ур. 3) + Разбойник эльф (ур. 4) + Сильфида (ур. 4)",
+      "fighter_count": 6,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 120,
+        "spawn_turn": 100,
+        "moves_per_turn": 30,
+        "wave_index": 7,
+        "wave_member_index": 2,
+        "wave_member_count": 3
+      },
+      "marker": "120"
+    },
+    {
+      "id": 121,
+      "position": [
+        26,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 7 — «Цвет трёх народов» (~2100); Гномы",
+      "units": [
+        {
+          "name": "Сын Имира",
+          "Level": 4,
+          "big": true,
+          "position": 1,
+          "unit_id": "g000uu0159"
+        },
+        {
+          "name": "Хранитель кузни",
+          "Level": 3,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0162"
+        },
+        {
+          "name": "Старый ветеран",
+          "Level": 4,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0040"
+        },
+        {
+          "name": "Огнеметчик",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0028"
+        },
+        {
+          "name": "Архидруид",
+          "Level": 4,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0160"
+        }
+      ],
+      "summary": "Сын Имира (ур. 4) + Хранитель кузни (ур. 3) + Старый ветеран (ур. 4) + Огнеметчик (ур. 3) + Архидруид (ур. 4)",
+      "fighter_count": 5,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 121,
+        "spawn_turn": 105,
+        "moves_per_turn": 30,
+        "wave_index": 7,
+        "wave_member_index": 3,
+        "wave_member_count": 3
+      },
+      "marker": "121"
+    },
+    {
+      "id": 122,
+      "position": [
+        22,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 8 — «Ярость ветеранов» (~2350); Люди",
+      "units": [
+        {
+          "name": "Ангел",
+          "Level": 4,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0014"
+        },
+        {
+          "name": "Великий инквизитор",
+          "Level": 4,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0157"
+        },
+        {
+          "name": "Паладин",
+          "Level": 4,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0015"
+        },
+        {
+          "name": "Патриарх",
+          "Level": 4,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0150"
+        },
+        {
+          "name": "Священник",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0013"
+        },
+        {
+          "name": "Белый маг",
+          "Level": 4,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0152"
+        }
+      ],
+      "summary": "Ангел (ур. 4) + Великий инквизитор (ур. 4) + Паладин (ур. 4) + Патриарх (ур. 4) + Священник (ур. 3) + Белый маг (ур. 4)",
+      "fighter_count": 6,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 122,
+        "spawn_turn": 110,
+        "moves_per_turn": 30,
+        "wave_index": 8,
+        "wave_member_index": 1,
+        "wave_member_count": 3
+      },
+      "marker": "122"
+    },
+    {
+      "id": 123,
+      "position": [
+        24,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 8 — «Ярость ветеранов» (~2350); Эльфы",
+      "units": [
+        {
+          "name": "Кентавр дикарь",
+          "Level": 3,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu8017"
+        },
+        {
+          "name": "Кентавр дикарь",
+          "Level": 3,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu8017"
+        },
+        {
+          "name": "Мародёр",
+          "Level": 5,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu8052"
+        },
+        {
+          "name": "Разбойник эльф",
+          "Level": 4,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu8051"
+        },
+        {
+          "name": "Смотритель",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu8023"
+        },
+        {
+          "name": "Часовой",
+          "Level": 3,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu8024"
+        }
+      ],
+      "summary": "2 × Кентавр дикарь (ур. 3) + Мародёр (ур. 5) + Разбойник эльф (ур. 4) + Смотритель (ур. 3) + Часовой (ур. 3)",
+      "fighter_count": 6,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 123,
+        "spawn_turn": 115,
+        "moves_per_turn": 30,
+        "wave_index": 8,
+        "wave_member_index": 2,
+        "wave_member_count": 3
+      },
+      "marker": "123"
+    },
+    {
+      "id": 124,
+      "position": [
+        26,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 8 — «Ярость ветеранов» (~2350); Гномы",
+      "units": [
+        {
+          "name": "Сын Имира",
+          "Level": 4,
+          "big": true,
+          "position": 1,
+          "unit_id": "g000uu0159"
+        },
+        {
+          "name": "Старый ветеран",
+          "Level": 4,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0040"
+        },
+        {
+          "name": "Ветеран",
+          "Level": 3,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0038"
+        },
+        {
+          "name": "Хранитель кузни",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0162"
+        },
+        {
+          "name": "Архидруид",
+          "Level": 4,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0160"
+        }
+      ],
+      "summary": "Сын Имира (ур. 4) + Старый ветеран (ур. 4) + Ветеран (ур. 3) + Хранитель кузни (ур. 3) + Архидруид (ур. 4)",
+      "fighter_count": 5,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 124,
+        "spawn_turn": 120,
+        "moves_per_turn": 30,
+        "wave_index": 8,
+        "wave_member_index": 3,
+        "wave_member_count": 3
+      },
+      "marker": "124"
+    },
+    {
+      "id": 125,
+      "position": [
+        22,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 9 — «Предвестники бури» (~2500); Люди",
+      "units": [
+        {
+          "name": "Защитник Веры",
+          "Level": 5,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0156"
+        },
+        {
+          "name": "Ангел",
+          "Level": 4,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0014"
+        },
+        {
+          "name": "Великий инквизитор",
+          "Level": 4,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0157"
+        },
+        {
+          "name": "Патриарх",
+          "Level": 4,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0150"
+        },
+        {
+          "name": "Прорицательница",
+          "Level": 4,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0151"
+        },
+        {
+          "name": "Белый маг",
+          "Level": 4,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0152"
+        }
+      ],
+      "summary": "Защитник Веры (ур. 5) + Ангел (ур. 4) + Великий инквизитор (ур. 4) + Патриарх (ур. 4) + Прорицательница (ур. 4) + Белый маг (ур. 4)",
+      "fighter_count": 6,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 125,
+        "spawn_turn": 125,
+        "moves_per_turn": 30,
+        "wave_index": 9,
+        "wave_member_index": 1,
+        "wave_member_count": 3
+      },
+      "marker": "125"
+    },
+    {
+      "id": 126,
+      "position": [
+        24,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 9 — «Предвестники бури» (~2500); Эльфы",
+      "units": [
+        {
+          "name": "Кентавр дикарь",
+          "Level": 3,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu8017"
+        },
+        {
+          "name": "Кентавр дикарь",
+          "Level": 3,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu8017"
+        },
+        {
+          "name": "Кентавр дикарь",
+          "Level": 3,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu8017"
+        },
+        {
+          "name": "Мародёр",
+          "Level": 5,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu8052"
+        },
+        {
+          "name": "Смотритель",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu8023"
+        },
+        {
+          "name": "Часовой",
+          "Level": 3,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu8024"
+        }
+      ],
+      "summary": "3 × Кентавр дикарь (ур. 3) + Мародёр (ур. 5) + Смотритель (ур. 3) + Часовой (ур. 3)",
+      "fighter_count": 6,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 126,
+        "spawn_turn": 130,
+        "moves_per_turn": 30,
+        "wave_index": 9,
+        "wave_member_index": 2,
+        "wave_member_count": 3
+      },
+      "marker": "126"
+    },
+    {
+      "id": 127,
+      "position": [
+        26,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 9 — «Предвестники бури» (~2500); Гномы",
+      "units": [
+        {
+          "name": "Сын Имира",
+          "Level": 4,
+          "big": true,
+          "position": 1,
+          "unit_id": "g000uu0159"
+        },
+        {
+          "name": "Ледяной гигант",
+          "Level": 3,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu0032"
+        },
+        {
+          "name": "Старый ветеран",
+          "Level": 4,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0040"
+        },
+        {
+          "name": "Хранитель кузни",
+          "Level": 3,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0162"
+        }
+      ],
+      "summary": "Сын Имира (ур. 4) + Ледяной гигант (ур. 3) + Старый ветеран (ур. 4) + Хранитель кузни (ур. 3)",
+      "fighter_count": 4,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 127,
+        "spawn_turn": 135,
+        "moves_per_turn": 30,
+        "wave_index": 9,
+        "wave_member_index": 3,
+        "wave_member_count": 3
+      },
+      "marker": "127"
+    },
+    {
+      "id": 128,
+      "position": [
+        22,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 10 — «Канун бури» (~2650); Люди",
+      "units": [
+        {
+          "name": "Защитник Веры",
+          "Level": 5,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0156"
+        },
+        {
+          "name": "Ангел",
+          "Level": 4,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0014"
+        },
+        {
+          "name": "Ангел",
+          "Level": 4,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0014"
+        },
+        {
+          "name": "Патриарх",
+          "Level": 4,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0150"
+        },
+        {
+          "name": "Патриарх",
+          "Level": 4,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0150"
+        },
+        {
+          "name": "Белый маг",
+          "Level": 4,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0152"
+        }
+      ],
+      "summary": "Защитник Веры (ур. 5) + 2 × Ангел (ур. 4) + 2 × Патриарх (ур. 4) + Белый маг (ур. 4)",
+      "fighter_count": 6,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 128,
+        "spawn_turn": 140,
+        "moves_per_turn": 30,
+        "wave_index": 10,
+        "wave_member_index": 1,
+        "wave_member_count": 3
+      },
+      "marker": "128"
+    },
+    {
+      "id": 129,
+      "position": [
+        24,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 10 — «Канун бури» (~2650); Эльфы",
+      "units": [
+        {
+          "name": "Кентавр дикарь",
+          "Level": 3,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu8017"
+        },
+        {
+          "name": "Кентавр дикарь",
+          "Level": 3,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu8017"
+        },
+        {
+          "name": "Кентавр дикарь",
+          "Level": 3,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu8017"
+        },
+        {
+          "name": "Мародёр",
+          "Level": 5,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu8052"
+        },
+        {
+          "name": "Мародёр",
+          "Level": 5,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu8052"
+        },
+        {
+          "name": "Мародёр",
+          "Level": 5,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu8052"
+        }
+      ],
+      "summary": "3 × Кентавр дикарь (ур. 3) + 3 × Мародёр (ур. 5)",
+      "fighter_count": 6,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 129,
+        "spawn_turn": 145,
+        "moves_per_turn": 30,
+        "wave_index": 10,
+        "wave_member_index": 2,
+        "wave_member_count": 3
+      },
+      "marker": "129"
+    },
+    {
+      "id": 130,
+      "position": [
+        26,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 10 — «Канун бури» (~2650); Гномы",
+      "units": [
+        {
+          "name": "Сын Имира",
+          "Level": 4,
+          "big": true,
+          "position": 1,
+          "unit_id": "g000uu0159"
+        },
+        {
+          "name": "Ледяной гигант",
+          "Level": 3,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu0032"
+        },
+        {
+          "name": "Король гномов",
+          "Level": 5,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0039"
+        },
+        {
+          "name": "Владыка рун",
+          "Level": 5,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0165"
+        }
+      ],
+      "summary": "Сын Имира (ур. 4) + Ледяной гигант (ур. 3) + Король гномов (ур. 5) + Владыка рун (ур. 5)",
+      "fighter_count": 4,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 130,
+        "spawn_turn": 150,
+        "moves_per_turn": 30,
+        "wave_index": 10,
+        "wave_member_index": 3,
+        "wave_member_count": 3
+      },
+      "marker": "130"
+    },
+    {
+      "id": 131,
+      "position": [
+        22,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 11 — «Судный час»; Люди",
+      "units": [
+        {
+          "name": "Защитник Веры",
+          "Level": 5,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0156"
+        },
+        {
+          "name": "Мастер клинка",
+          "Level": 5,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0155"
+        },
+        {
+          "name": "Ангел",
+          "Level": 4,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0014"
+        },
+        {
+          "name": "Сэр Аллемон",
+          "Level": 1,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu8050"
+        },
+        {
+          "name": "Патриарх",
+          "Level": 4,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0150"
+        },
+        {
+          "name": "Белый маг",
+          "Level": 4,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0152"
+        }
+      ],
+      "summary": "Защитник Веры (ур. 5) + Мастер клинка (ур. 5) + Ангел (ур. 4) + Сэр Аллемон + Патриарх (ур. 4) + Белый маг (ур. 4)",
+      "fighter_count": 6,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 131,
+        "spawn_turn": 155,
+        "moves_per_turn": 30,
+        "wave_index": 11,
+        "wave_member_index": 1,
+        "wave_member_count": 3
+      },
+      "marker": "131"
+    },
+    {
+      "id": 132,
+      "position": [
+        24,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 11 — «Судный час»; Эльфы",
+      "units": [
+        {
+          "name": "Кентавр дикарь",
+          "Level": 3,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu8017"
+        },
+        {
+          "name": "Кентавр дикарь",
+          "Level": 3,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu8017"
+        },
+        {
+          "name": "Кентавр дикарь",
+          "Level": 3,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu8017"
+        },
+        {
+          "name": "Лаклаан",
+          "Level": 1,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu8006"
+        },
+        {
+          "name": "Мародёр",
+          "Level": 5,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu8052"
+        },
+        {
+          "name": "Сильфида",
+          "Level": 4,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu8035"
+        }
+      ],
+      "summary": "3 × Кентавр дикарь (ур. 3) + Лаклаан + Мародёр (ур. 5) + Сильфида (ур. 4)",
+      "fighter_count": 6,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 132,
+        "spawn_turn": 160,
+        "moves_per_turn": 30,
+        "wave_index": 11,
+        "wave_member_index": 2,
+        "wave_member_count": 3
+      },
+      "marker": "132"
+    },
+    {
+      "id": 133,
+      "position": [
+        26,
+        0
+      ],
+      "alive": false,
+      "kind": "future",
+      "description": "Волна 11 — «Судный час»; Гномы",
+      "units": [
+        {
+          "name": "Сын Имира",
+          "Level": 4,
+          "big": true,
+          "position": 1,
+          "unit_id": "g000uu0159"
+        },
+        {
+          "name": "Король гномов",
+          "Level": 5,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0039"
+        },
+        {
+          "name": "Владыка рун",
+          "Level": 5,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0165"
+        },
+        {
+          "name": "Маг хугин",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu6005"
+        },
+        {
+          "name": "Архидруид",
+          "Level": 4,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0160"
+        }
+      ],
+      "summary": "Сын Имира (ур. 4) + Король гномов (ур. 5) + Владыка рун (ур. 5) + Маг хугин + Архидруид (ур. 4)",
+      "fighter_count": 5,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": {
+        "enemy_id": 133,
+        "spawn_turn": 165,
+        "moves_per_turn": 30,
+        "wave_index": 11,
+        "wave_member_index": 3,
+        "wave_member_count": 3
+      },
+      "marker": "133"
+    }
+  ],
+  "sites": [
+    {
+      "code": "T1",
+      "kind": "merchant",
+      "name": "Лавка Последнего рубежа",
+      "position": [
+        28,
+        39
+      ],
+      "interaction_tiles": [
+        [
+          27,
+          41
+        ],
+        [
+          28,
+          41
+        ],
+        [
+          29,
+          41
+        ],
+        [
+          27,
+          42
+        ],
+        [
+          28,
+          42
+        ]
+      ]
+    },
+    {
+      "code": "M1",
+      "kind": "spell_shop",
+      "name": "Башня дальней магии",
+      "position": [
+        2,
+        2
+      ],
+      "interaction_tiles": [
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          4,
+          4
+        ]
+      ]
+    }
+  ],
+  "terrain": {
+    "water": [
+      [
+        1,
+        18
+      ],
+      [
+        1,
+        19
+      ],
+      [
+        1,
+        20
+      ],
+      [
+        1,
+        21
+      ],
+      [
+        1,
+        22
+      ],
+      [
+        1,
+        23
+      ],
+      [
+        1,
+        24
+      ],
+      [
+        1,
+        25
+      ],
+      [
+        1,
+        26
+      ],
+      [
+        1,
+        27
+      ],
+      [
+        1,
+        28
+      ],
+      [
+        1,
+        29
+      ],
+      [
+        1,
+        30
+      ],
+      [
+        2,
+        18
+      ],
+      [
+        2,
+        30
+      ],
+      [
+        3,
+        18
+      ],
+      [
+        3,
+        30
+      ],
+      [
+        4,
+        18
+      ],
+      [
+        4,
+        30
+      ],
+      [
+        5,
+        18
+      ],
+      [
+        5,
+        30
+      ],
+      [
+        6,
+        18
+      ],
+      [
+        6,
+        30
+      ],
+      [
+        7,
+        18
+      ],
+      [
+        7,
+        30
+      ],
+      [
+        8,
+        18
+      ],
+      [
+        8,
+        19
+      ],
+      [
+        8,
+        20
+      ],
+      [
+        8,
+        21
+      ],
+      [
+        8,
+        22
+      ],
+      [
+        8,
+        23
+      ],
+      [
+        8,
+        24
+      ],
+      [
+        8,
+        25
+      ],
+      [
+        8,
+        26
+      ],
+      [
+        8,
+        27
+      ],
+      [
+        8,
+        28
+      ],
+      [
+        8,
+        29
+      ],
+      [
+        8,
+        30
+      ],
+      [
+        32,
+        3
+      ],
+      [
+        32,
+        4
+      ],
+      [
+        32,
+        5
+      ],
+      [
+        32,
+        6
+      ],
+      [
+        32,
+        7
+      ],
+      [
+        32,
+        8
+      ],
+      [
+        32,
+        9
+      ],
+      [
+        32,
+        10
+      ],
+      [
+        32,
+        11
+      ],
+      [
+        32,
+        12
+      ],
+      [
+        33,
+        3
+      ],
+      [
+        33,
+        4
+      ],
+      [
+        33,
+        5
+      ],
+      [
+        33,
+        6
+      ],
+      [
+        33,
+        7
+      ],
+      [
+        33,
+        8
+      ],
+      [
+        33,
+        9
+      ],
+      [
+        33,
+        10
+      ],
+      [
+        33,
+        11
+      ],
+      [
+        33,
+        12
+      ],
+      [
+        34,
+        3
+      ],
+      [
+        34,
+        4
+      ],
+      [
+        34,
+        5
+      ],
+      [
+        34,
+        6
+      ],
+      [
+        34,
+        7
+      ],
+      [
+        34,
+        8
+      ],
+      [
+        34,
+        9
+      ],
+      [
+        34,
+        10
+      ],
+      [
+        34,
+        11
+      ],
+      [
+        34,
+        12
+      ],
+      [
+        35,
+        3
+      ],
+      [
+        35,
+        4
+      ],
+      [
+        35,
+        5
+      ],
+      [
+        35,
+        6
+      ],
+      [
+        35,
+        7
+      ],
+      [
+        35,
+        8
+      ],
+      [
+        35,
+        9
+      ],
+      [
+        35,
+        10
+      ],
+      [
+        35,
+        11
+      ],
+      [
+        35,
+        12
+      ],
+      [
+        36,
+        3
+      ],
+      [
+        36,
+        4
+      ],
+      [
+        36,
+        5
+      ],
+      [
+        36,
+        6
+      ],
+      [
+        36,
+        7
+      ],
+      [
+        36,
+        8
+      ],
+      [
+        36,
+        9
+      ],
+      [
+        36,
+        10
+      ],
+      [
+        36,
+        11
+      ],
+      [
+        36,
+        12
+      ],
+      [
+        37,
+        3
+      ],
+      [
+        37,
+        4
+      ],
+      [
+        37,
+        5
+      ],
+      [
+        37,
+        6
+      ],
+      [
+        37,
+        7
+      ],
+      [
+        37,
+        8
+      ],
+      [
+        37,
+        9
+      ],
+      [
+        37,
+        10
+      ],
+      [
+        37,
+        11
+      ],
+      [
+        37,
+        12
+      ],
+      [
+        38,
+        3
+      ],
+      [
+        38,
+        4
+      ],
+      [
+        38,
+        5
+      ],
+      [
+        38,
+        6
+      ],
+      [
+        38,
+        7
+      ],
+      [
+        38,
+        8
+      ],
+      [
+        38,
+        9
+      ],
+      [
+        38,
+        10
+      ],
+      [
+        38,
+        11
+      ],
+      [
+        38,
+        12
+      ],
+      [
+        39,
+        3
+      ],
+      [
+        39,
+        4
+      ],
+      [
+        39,
+        5
+      ],
+      [
+        39,
+        6
+      ],
+      [
+        39,
+        7
+      ],
+      [
+        39,
+        8
+      ],
+      [
+        39,
+        9
+      ],
+      [
+        39,
+        10
+      ],
+      [
+        39,
+        11
+      ],
+      [
+        39,
+        12
+      ],
+      [
+        39,
+        18
+      ],
+      [
+        39,
+        19
+      ],
+      [
+        39,
+        20
+      ],
+      [
+        39,
+        21
+      ],
+      [
+        39,
+        22
+      ],
+      [
+        39,
+        23
+      ],
+      [
+        39,
+        24
+      ],
+      [
+        39,
+        25
+      ],
+      [
+        39,
+        26
+      ],
+      [
+        39,
+        27
+      ],
+      [
+        39,
+        28
+      ],
+      [
+        39,
+        29
+      ],
+      [
+        39,
+        30
+      ],
+      [
+        40,
+        3
+      ],
+      [
+        40,
+        4
+      ],
+      [
+        40,
+        5
+      ],
+      [
+        40,
+        6
+      ],
+      [
+        40,
+        7
+      ],
+      [
+        40,
+        8
+      ],
+      [
+        40,
+        9
+      ],
+      [
+        40,
+        10
+      ],
+      [
+        40,
+        11
+      ],
+      [
+        40,
+        12
+      ],
+      [
+        40,
+        18
+      ],
+      [
+        40,
+        30
+      ],
+      [
+        41,
+        18
+      ],
+      [
+        41,
+        30
+      ],
+      [
+        42,
+        18
+      ],
+      [
+        42,
+        30
+      ],
+      [
+        43,
+        18
+      ],
+      [
+        43,
+        30
+      ],
+      [
+        44,
+        18
+      ],
+      [
+        44,
+        30
+      ],
+      [
+        45,
+        18
+      ],
+      [
+        45,
+        30
+      ],
+      [
+        46,
+        18
+      ],
+      [
+        46,
+        19
+      ],
+      [
+        46,
+        20
+      ],
+      [
+        46,
+        21
+      ],
+      [
+        46,
+        22
+      ],
+      [
+        46,
+        23
+      ],
+      [
+        46,
+        24
+      ],
+      [
+        46,
+        25
+      ],
+      [
+        46,
+        26
+      ],
+      [
+        46,
+        27
+      ],
+      [
+        46,
+        28
+      ],
+      [
+        46,
+        29
+      ],
+      [
+        46,
+        30
+      ]
+    ],
+    "forest": [],
+    "road": []
+  },
+  "obstacles": [
+    [
+      2,
+      21
+    ],
+    [
+      2,
+      22
+    ],
+    [
+      2,
+      23
+    ],
+    [
+      2,
+      24
+    ],
+    [
+      3,
+      21
+    ],
+    [
+      3,
+      22
+    ],
+    [
+      3,
+      23
+    ],
+    [
+      3,
+      24
+    ],
+    [
+      4,
+      21
+    ],
+    [
+      4,
+      22
+    ],
+    [
+      4,
+      23
+    ],
+    [
+      4,
+      24
+    ],
+    [
+      5,
+      21
+    ],
+    [
+      5,
+      22
+    ],
+    [
+      5,
+      23
+    ],
+    [
+      20,
+      40
+    ],
+    [
+      20,
+      41
+    ],
+    [
+      20,
+      42
+    ],
+    [
+      20,
+      43
+    ],
+    [
+      20,
+      44
+    ],
+    [
+      21,
+      40
+    ],
+    [
+      21,
+      41
+    ],
+    [
+      21,
+      42
+    ],
+    [
+      21,
+      43
+    ],
+    [
+      21,
+      44
+    ],
+    [
+      22,
+      40
+    ],
+    [
+      22,
+      41
+    ],
+    [
+      22,
+      42
+    ],
+    [
+      22,
+      43
+    ],
+    [
+      22,
+      44
+    ],
+    [
+      23,
+      40
+    ],
+    [
+      23,
+      41
+    ],
+    [
+      23,
+      42
+    ],
+    [
+      23,
+      43
+    ],
+    [
+      23,
+      44
+    ],
+    [
+      24,
+      40
+    ],
+    [
+      24,
+      41
+    ],
+    [
+      24,
+      43
+    ],
+    [
+      24,
+      44
+    ],
+    [
+      40,
+      21
+    ],
+    [
+      40,
+      22
+    ],
+    [
+      40,
+      23
+    ],
+    [
+      40,
+      24
+    ],
+    [
+      41,
+      21
+    ],
+    [
+      41,
+      22
+    ],
+    [
+      41,
+      23
+    ],
+    [
+      41,
+      24
+    ],
+    [
+      42,
+      21
+    ],
+    [
+      42,
+      22
+    ],
+    [
+      42,
+      23
+    ],
+    [
+      42,
+      24
+    ],
+    [
+      43,
+      21
+    ],
+    [
+      43,
+      22
+    ],
+    [
+      43,
+      23
+    ]
+  ],
+  "gold_mines": [
+    [
+      3,
+      20
+    ],
+    [
+      25,
+      43
+    ],
+    [
+      44,
+      22
+    ]
+  ],
+  "mana": [
+    {
+      "position": [
+        25,
+        42
+      ],
+      "kind": "infernal",
+      "name": "Мана преисподней"
+    },
+    {
+      "position": [
+        3,
+        27
+      ],
+      "kind": "death",
+      "name": "Мана смерти"
+    },
+    {
+      "position": [
+        44,
+        27
+      ],
+      "kind": "life",
+      "name": "Мана жизни"
+    }
+  ],
+  "chests": [
+    {
+      "code": "X1",
+      "position": [
+        24,
+        24
+      ],
+      "items": [
+        "Эликсир неуязвимости"
+      ]
+    },
+    {
+      "code": "X2",
+      "position": [
+        36,
+        7
+      ],
+      "items": [
+        "Imperial Crown (Valuable)"
+      ]
+    }
+  ],
+  "ruins": [
+    {
+      "id": 70,
+      "title": "Руины павшего каравана",
+      "ruin_pos": [
+        15,
+        14
+      ],
+      "marker_pos": [
+        17,
+        16
+      ],
+      "items": [
+        "Runestone (Artifact)",
+        "Unholy Chalice (Artifact)"
+      ],
+      "gold": 900,
+      "source_ruin_pos": [
+        15,
+        14
+      ],
+      "source_marker_pos": [
+        17,
+        16
+      ],
+      "guardian_position": [
+        17,
+        16
+      ]
+    },
+    {
+      "id": 71,
+      "title": "Забытые эльфийские руины",
+      "ruin_pos": [
+        29,
+        14
+      ],
+      "marker_pos": [
+        30,
+        16
+      ],
+      "items": [
+        "Banner of War",
+        "Orb of Witches"
+      ],
+      "gold": 600,
+      "source_ruin_pos": [
+        29,
+        14
+      ],
+      "source_marker_pos": [
+        30,
+        16
+      ],
+      "guardian_position": [
+        30,
+        16
+      ]
+    }
+  ],
+  "notes": [
+    "Стартовый отряд закреплён сценарием и сохраняется при отключённом боссовом ростере."
+  ],
+  "conditional_assaults": []
+}

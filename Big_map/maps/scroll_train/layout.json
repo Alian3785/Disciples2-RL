@@ -1,0 +1,289 @@
+{
+  "schema_version": 1,
+  "map_id": "scroll_train",
+  "title": "Scroll · свитки",
+  "grid_size": 24,
+  "source_grid_size": 48,
+  "seed": 0,
+  "observation_version": "local5",
+  "scripted_bot_enabled": false,
+  "boss_roster_enabled": false,
+  "objective": "all_enemies",
+  "objective_enemy_id": null,
+  "turn": 0,
+  "faction": "Легионы Проклятых",
+  "starting_gold": 0.0,
+  "starting_army": "2 × Одержимый + Архидьявол + Сектант",
+  "starting_roster_mode": "fixed",
+  "hero": [
+    2,
+    12
+  ],
+  "capitals": [
+    {
+      "code": "A",
+      "name": "Столица: Легионы Проклятых",
+      "position": [
+        2,
+        12
+      ],
+      "color": "#b85869",
+      "footprint": [
+        [
+          0,
+          11
+        ],
+        [
+          0,
+          11
+        ],
+        [
+          0,
+          11
+        ],
+        [
+          0,
+          11
+        ],
+        [
+          0,
+          12
+        ],
+        [
+          0,
+          12
+        ],
+        [
+          0,
+          12
+        ],
+        [
+          0,
+          12
+        ],
+        [
+          0,
+          13
+        ],
+        [
+          0,
+          13
+        ],
+        [
+          1,
+          11
+        ],
+        [
+          1,
+          11
+        ],
+        [
+          1,
+          11
+        ],
+        [
+          1,
+          11
+        ],
+        [
+          1,
+          12
+        ],
+        [
+          1,
+          12
+        ],
+        [
+          1,
+          12
+        ],
+        [
+          1,
+          12
+        ],
+        [
+          1,
+          13
+        ],
+        [
+          1,
+          13
+        ],
+        [
+          2,
+          11
+        ],
+        [
+          2,
+          11
+        ],
+        [
+          2,
+          12
+        ],
+        [
+          2,
+          12
+        ],
+        [
+          2,
+          13
+        ]
+      ]
+    }
+  ],
+  "cities": [],
+  "enemies": [
+    {
+      "id": 1,
+      "position": [
+        20,
+        8
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Мастер оккультист",
+      "units": [
+        {
+          "name": "Мастер оккультист",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu6014"
+        }
+      ],
+      "summary": "Мастер оккультист",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "1"
+    },
+    {
+      "id": 2,
+      "position": [
+        21,
+        12
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Зелёный дракон",
+      "units": [
+        {
+          "name": "Зелёный дракон",
+          "Level": 1,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu5023"
+        }
+      ],
+      "summary": "Зелёный дракон",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "2"
+    },
+    {
+      "id": 3,
+      "position": [
+        20,
+        16
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Два Скелета-призрака впереди; Архилич и Сущий позади",
+      "units": [
+        {
+          "name": "Скелет призрак",
+          "Level": 5,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0179"
+        },
+        {
+          "name": "Скелет призрак",
+          "Level": 5,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0179"
+        },
+        {
+          "name": "Архилич",
+          "Level": 5,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0176"
+        },
+        {
+          "name": "Сущий",
+          "Level": 4,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0178"
+        }
+      ],
+      "summary": "2 × Скелет призрак (ур. 5) + Архилич (ур. 5) + Сущий (ур. 4)",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "3"
+    }
+  ],
+  "sites": [],
+  "terrain": {
+    "water": [],
+    "forest": [],
+    "road": []
+  },
+  "obstacles": [
+    [
+      0,
+      11
+    ],
+    [
+      0,
+      12
+    ],
+    [
+      0,
+      13
+    ],
+    [
+      1,
+      11
+    ],
+    [
+      1,
+      12
+    ],
+    [
+      1,
+      13
+    ],
+    [
+      2,
+      11
+    ],
+    [
+      2,
+      13
+    ]
+  ],
+  "gold_mines": [],
+  "mana": [],
+  "chests": [],
+  "ruins": [],
+  "notes": [
+    "Стартовый отряд закреплён сценарием и сохраняется при отключённом боссовом ростере.",
+    "Игровая сетка 24×24: координаты взяты после масштабирования и разрешения конфликтов."
+  ],
+  "conditional_assaults": []
+}
