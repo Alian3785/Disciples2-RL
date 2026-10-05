@@ -312,6 +312,14 @@ class CampaignMagicMixin:
                 ]
             )
         )
+    def _is_spell_research_supported(self, spell_key: str) -> bool:
+        """Keep research slots stable, but require an implemented faction cast action."""
+        normalized_spell_key = str(spell_key or "")
+        return (
+            not self._is_spell_disabled(normalized_spell_key)
+            and normalized_spell_key in self._map_castable_spell_ids_for_capital(self.Realcapital)
+        )
+
     @classmethod
     @lru_cache(maxsize=1)
     def _all_spell_entries_by_id(cls) -> Dict[str, Dict[str, object]]:
@@ -496,7 +504,8 @@ class CampaignMagicMixin:
     def _scroll_offensive_spell_specs_by_id(cls) -> Dict[str, Dict[str, object]]:
         offensive_kinds = {"damage", "debuff", "summon_battle"}
         return {
-            str(entry.get("spell_id", "") or ""): dict(entry)
+            # Effect summaries consume the same canonical kind as book spells.
+            str(entry.get("spell_id", "") or ""): dict(entry, kind=entry["spell_kind"])
             for entry in SCROLL_ITEM_DEFINITIONS
             if bool(entry.get("supported", False))
             and str(entry.get("spell_kind", "") or "") in offensive_kinds
@@ -505,7 +514,8 @@ class CampaignMagicMixin:
     @lru_cache(maxsize=1)
     def _scroll_support_spell_specs_by_id(cls) -> Dict[str, Dict[str, object]]:
         return {
-            str(entry.get("spell_id", "") or ""): dict(entry)
+            # Effect summaries consume the same canonical kind as book spells.
+            str(entry.get("spell_id", "") or ""): dict(entry, kind=entry["spell_kind"])
             for entry in SCROLL_ITEM_DEFINITIONS
             if bool(entry.get("supported", False))
             and str(entry.get("spell_kind", "") or "")
@@ -1998,7 +2008,7 @@ class CampaignMagicMixin:
         if 0 <= idx < len(self.spell_keys):
             spell_key = self.spell_keys[idx]
             spell = self.active_spells.get(spell_key)
-            if isinstance(spell, dict) and not self._is_spell_disabled(spell_key):
+            if isinstance(spell, dict) and self._is_spell_research_supported(spell_key):
                 spell_description = str(spell.get("description", "") or "").strip()
                 try:
                     spell_level = int(spell.get("level", 0) or 0)
@@ -2038,6 +2048,7 @@ class CampaignMagicMixin:
             "spell_description": spell_description,
             "spell_level": spell_level,
             "spell_disabled": self._is_spell_disabled(spell_key),
+            "spell_research_supported": self._is_spell_research_supported(spell_key),
             "spell_learned": spell_learned,
             "spell_already_learned": spell_already_learned,
             "spell_learning_locked": spell_learning_locked,

@@ -3278,7 +3278,8 @@ if __name__ == "__main__":
             description = str(details.get("description", "") or "").strip()
             suffix = f" — {description}" if description else ""
             print(f"    {enemy_key}: {count}{suffix}")
-    total = metrics_cb.victories + metrics_cb.defeats + metrics_cb.timeouts
+    # Include every recorded outcome, including episodes ended by the step cap.
+    total = int(sum(metrics_cb.result_counter.values()))
     if total > 0:
         print(f"  Winrate: {100 * metrics_cb.victories / total:.1f}%")
     print(f"{'='*60}")

@@ -4,6 +4,7 @@ primary/secondary attack kind (0=effect, 1=damage, 2=heal), secondary accuracy.
 Generated 2026-09-17; GDynUpgr SHA256: 85debbfc03ac7deba04f24f5a3b93a4570c96265af689c80f8147a6bf212d5d2
 """
 from unit_dynamic_xp import dynamic_unit_id
+from permanent_unit_stats import intrinsic_stat_mutation
 
 DYNAMIC_STAT_PROFILES = {
     unit_id: profile
@@ -159,6 +160,7 @@ DYNAMIC_STAT_PROFILES = {
 }
 
 
+@intrinsic_stat_mutation
 def apply_dynamic_stat_growth(unit, next_level):
     """Apply original increments; keep campaign snapshots in sync for battle save."""
     profile = DYNAMIC_STAT_PROFILES.get(dynamic_unit_id(unit))
@@ -175,6 +177,11 @@ def apply_dynamic_stat_growth(unit, next_level):
         'initiative': initiative,
         'max_health': hp,
     }
+    # These runtime healers store their secondary heal in the primary damage
+    # field consumed by BattleEnv._apply_cliric_heal, unlike the source profile.
+    if secondary == 2 and unit.get('unit_type') in {'Deva roshi', 'Sundancer', 'Sylfid'}:
+        increments['damage'] += increments['damage_secondary']
+        increments['damage_secondary'] = 0
     old_max = float(unit.get('max_health', unit.get('maxhp', 0)) or 0)
     old_hp = float(unit.get('health', unit.get('hp', 0)) or 0)
     for stat, increment in increments.items():
