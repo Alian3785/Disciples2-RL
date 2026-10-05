@@ -29,6 +29,7 @@ from attack_damage_limits import (
 )
 from permanent_unit_stats import ensure_stat_sources, intrinsic_stat_mutation, rebuild_stat_layers
 from hero_level_abilities import apply_hero_level_stat_abilities
+from formation_occupancy import formation_footprint_is_free
 
 # Импорт действий юнитов (предполагается, что эти файлы лежат рядом)
 from summon_actions import (
@@ -962,6 +963,7 @@ class BattleEnv(gym.Env):
         penalty_unreachable_warrior: float = -0.20,
         log_enabled: bool = False,
         retreat_enabled: bool = True,
+        fear_paralysis_teams: Tuple[str, ...] = (),
     ):
         super().__init__()
         self.reward_win = float(reward_win)
@@ -969,6 +971,9 @@ class BattleEnv(gym.Env):
         self.reward_step = float(reward_step)
 
         self.retreat_enabled = bool(retreat_enabled)
+        # Campaign battle context, independent of voluntary-retreat eligibility.
+        # Team-level ownership survives transformations, copies and summons.
+        self.fear_paralysis_teams = frozenset(fear_paralysis_teams)
         self.penalty_invalid_target = float(penalty_invalid_target)
         self.penalty_unreachable_warrior = float(penalty_unreachable_warrior)
 
@@ -1318,7 +1323,8 @@ class BattleEnv(gym.Env):
         max_health = float(
             target_unit.get("max_health", 0) or target_unit.get("health", 0) or 0
         )
-        if max_health <= 0 or current_health > 0:
+        if (max_health <= 0 or current_health > 0
+                or not self._revival_footprint_is_free(target_unit)):
             return 0.0
         revive_hp = min(max_health, max(1.0, float(amount or 0.0)))
         target_unit["health"] = int(round(revive_hp))
@@ -1529,7 +1535,7 @@ class BattleEnv(gym.Env):
         target_unit["accuracy_secondary"] = int(template.get("accuracy_secondary", 0) or 0)
         target_unit["damage"] = int(template.get("damage", 0) or 0)
         target_unit["damage_secondary"] = int(template.get("damage_secondary", 0) or 0)
-        target_unit["original_damage"] = target_unit["damage"]
+        self._start_temporary_damage_form(target_unit)
         target_unit["attack_type_primary"] = template.get("attack_type_primary", "Weapon")
         target_unit["attack_type_secondary"] = template.get("attack_type_secondary", "")
         target_unit["initiative_base"] = int(template.get("initiative_base", 0) or 0)
@@ -1702,7 +1708,8 @@ class BattleEnv(gym.Env):
             max_health = float(
                 target_unit.get("max_health", 0) or target_unit.get("health", 0) or 0
             )
-            return max_health > 0 and current_health <= 0
+            return (max_health > 0 and current_health <= 0
+                    and self._revival_footprint_is_free(target_unit))
         if effect_kind == "summon":
             target_pos = int(target_unit.get("position", 0) or 0)
             unit_name = str(effect.get("summon_unit_name", "") or "").strip()
@@ -2119,7 +2126,8 @@ class BattleEnv(gym.Env):
                             )
                             and (
                                 self._alive(recipient)
-                                or not self._patriach_already_revived(recipient)
+                                or (not self._patriach_already_revived(recipient)
+                                    and self._revival_footprint_is_free(recipient))
                             )
                         )
                     else:
@@ -2351,6 +2359,20 @@ class BattleEnv(gym.Env):
             u["position"] for u in self.combined if u["team"] == team and self._alive(u)
         ]
 
+    def _revival_footprint_is_free(self, unit: Dict) -> bool:
+        # Revival cleanses transformations. Check the form that will actually
+        # stand up, without restoring a corpse or mutating an action mask.
+        revived_form = unit
+        if unit.get("transformed", 0):
+            _, snapshots = self._transform_snapshots_for_unit(unit)
+            if snapshots and isinstance(snapshots[0], dict):
+                revived_form = dict(
+                    unit, big=snapshots[0].get("big", unit.get("big", False))
+                )
+        return formation_footprint_is_free(
+            revived_form, (other for other in self.combined if self._alive(other))
+        )
+
     def _is_position_behind_big(self, pos: int) -> bool:
         if pos in RED_BACK_POSITIONS or pos in BLUE_BACK_POSITIONS:
             front_pos = pos - 3
@@ -2410,6 +2432,10 @@ class BattleEnv(gym.Env):
             "damage",
             "damage_secondary",
             "original_damage",
+            "powerup",
+            "teamated",
+            "lower_damage_original_damage",
+            "lower_damage_original_unit_type",
             "_battle_damage_factors",
             "_battle_lower_damage_factors",
             ATTACK_FORM_ID_KEY,
@@ -2449,6 +2475,11 @@ class BattleEnv(gym.Env):
             "initiative",
             deepcopy(unit.get("initiative_base", unit.get("initiative", 0))),
         )
+        snapshot.setdefault("original_damage", deepcopy(
+            unit.get("lower_damage_original_damage", unit.get("damage", 0))
+        ))
+        snapshot.setdefault("powerup", int(unit.get("powerup", 0) or 0))
+        snapshot.setdefault("teamated", int(unit.get("teamated", 0) or 0))
         snapshot.setdefault(ATTACK_FORM_ID_KEY, current_attack_unit_id(unit))
         snapshot.setdefault("transformed", int(unit.get("transformed", 0) or 0))
         return snapshot
@@ -2479,6 +2510,8 @@ class BattleEnv(gym.Env):
                 # Temporary grants belong to the form at snapshot creation.
                 # Never backfill a later form's grant into the original form.
                 ward_key = key == "_temporary_healer_wards" or key in (
+                    "original_damage", "powerup", "teamated", "lower_damage_original_damage",
+                    "lower_damage_original_unit_type",
                     "_battle_damage_factors", "_battle_lower_damage_factors",
                     ATTACK_FORM_ID_KEY,
                     "Firedefence", "Airdefence", "Waterdefence", "Earthdefence",
@@ -2530,6 +2563,18 @@ class BattleEnv(gym.Env):
             return 1
         return max(0, min(target_max, scaled))
 
+    @staticmethod
+    def _start_temporary_damage_form(unit: Dict) -> None:
+        # Buffs belong to the form that received them. The original form's
+        # active buff is suspended in basestats, with the same turn lifetime.
+        # A temporary form starts at its own native damage, never the fighter's.
+        unit["original_damage"] = unit["damage"]
+        unit["powerup"] = 0
+        unit["teamated"] = 0
+        for key in ("_battle_damage_factors", "_battle_lower_damage_factors",
+                    "lower_damage_original_damage", "lower_damage_original_unit_type"):
+            unit.pop(key, None)
+
     def _restore_transformed_unit(self, unit: Optional[Dict]) -> bool:
         if not isinstance(unit, dict) or not unit.get("transformed", 0):
             return False
@@ -2554,6 +2599,12 @@ class BattleEnv(gym.Env):
             if key != "initiative" and key in snapshot:
                 unit[key] = deepcopy(snapshot[key])
 
+        # Older/default-mode snapshots may predate the baseline field. The
+        # fallback must come from the saved original, never the temporary form.
+        unit["original_damage"] = deepcopy(snapshot.get("original_damage",
+            snapshot.get("lower_damage_original_damage",
+                         snapshot.get("damage", unit.get("damage", 0)))))
+
         # Never revive a spent activation from a pre-transformation snapshot.
         # Conversely, an old zero must not cancel a new-round or Alchemist turn.
         # A waiting unit keeps its already-reduced priority. All other live turn
@@ -2566,7 +2617,9 @@ class BattleEnv(gym.Env):
 
         # Effects applied only to a temporary form must not become growth layers
         # on the restored fighter when its original snapshot had none.
-        for key in ("_battle_damage_factors", "_battle_lower_damage_factors", ATTACK_FORM_ID_KEY):
+        for key in ("powerup", "teamated", "lower_damage_original_damage",
+                    "lower_damage_original_unit_type", "_battle_damage_factors",
+                    "_battle_lower_damage_factors", ATTACK_FORM_ID_KEY):
             if key not in snapshot:
                 unit.pop(key, None)
 
@@ -2767,7 +2820,8 @@ class BattleEnv(gym.Env):
             )
             and (
                 self._alive(unit)
-                or not self._patriach_already_revived(unit)
+                or (not self._patriach_already_revived(unit)
+                    and self._revival_footprint_is_free(unit))
             )
         ]
 
@@ -3062,7 +3116,8 @@ class BattleEnv(gym.Env):
             healed = self._apply_cliric_heal(healer, recipient)
             return "heal_success" if healed else "heal_no_effect"
 
-        if self._patriach_already_revived(recipient):
+        if (self._patriach_already_revived(recipient)
+                or not self._revival_footprint_is_free(recipient)):
             return "invalid"
 
         health = float(recipient.get("health", 0) or 0)
@@ -3473,6 +3528,7 @@ class BattleEnv(gym.Env):
         elif healer.get("unit_type") == "Arhidruid":
             buffed_damage = int(round(stored_original * 2))
 
+        recipient["original_damage"] = stored_original
         recipient["damage"] = buffed_damage
         recipient["powerup"] = 1
         recipient["_battle_damage_factors"] = [{
@@ -3891,11 +3947,33 @@ class BattleEnv(gym.Env):
     def _reset_powerup(self, unit: Optional[Dict]) -> None:
         if unit is None:
             return
-        if unit.get("powerup", 0) != 0:
-            unit["powerup"] = 0
-            if unit.get("original_damage", 0) > 0:
-                unit["damage"] = unit["original_damage"]
-                unit["_battle_damage_factors"] = []
+        # A spent activation expires buffs on both the current form and the
+        # suspended original. Cleaning only the live form would revive a stale
+        # buff when the original snapshot is restored, even after battle.
+        _, snapshots = self._transform_snapshots_for_unit(unit)
+        for state in [unit, *snapshots]:
+            if not isinstance(state, dict) or not state.get("powerup", 0):
+                continue
+            state["powerup"] = 0
+            if state.get("original_damage", 0) > 0:
+                base_damage = state["original_damage"]
+                factors = list(state.get("_battle_damage_factors", []))
+                before_lower = list(state.get("_battle_lower_damage_factors", []))
+                # Preserve Lower Damage only if it is still layered over this
+                # buff. A later buff replaces that layer under existing rules.
+                remaining = (factors[len(before_lower):] if (
+                    state.get("teamated") and before_lower
+                    and factors[:len(before_lower)] == before_lower
+                ) else [])
+                state["damage"] = base_damage
+                for factor in remaining:
+                    state["damage"] = max(0, int(round(state["damage"] * factor)))
+                state["_battle_damage_factors"] = remaining
+                if state.get("teamated"):
+                    # Cure must not resurrect the expired buff from its own
+                    # pre-debuff snapshot either.
+                    state["lower_damage_original_damage"] = base_damage
+                    state["_battle_lower_damage_factors"] = []
 
     def _apply_damage_with_armor(self, attacker: Dict, base_dmg: float, victim: Dict) -> int:
         attacker_type = str(attacker.get("unit_type", "") or "")
@@ -4026,6 +4104,17 @@ class BattleEnv(gym.Env):
             return False
         if self._resilience_blocks(attacker, victim, custom_tag=effect_type):
             return False
+        if victim.get("team") in self.fear_paralysis_teams:
+            if victim.get("paralyzed", 0):
+                return False
+            # Use the existing one-activation paralysis/cleanse lifecycle after
+            # Fear's own immunity and resilience checks, without a second save.
+            victim["paralyzed"] = 1
+            self._log(
+                f"{victim['team'].upper()} {victim['name']}#{victim['position']}: "
+                "страх внутри города, столицы или руин — пропуск одного хода."
+            )
+            return True
         victim["running_away"] = 1
         victim["feared"] = 1
         self._log(
@@ -4087,6 +4176,7 @@ class BattleEnv(gym.Env):
         victim["accuracy_secondary"] = int(form_template["accuracy_secondary"])
         victim["damage"] = int(form_template["damage"])
         victim["damage_secondary"] = int(form_template["damage_secondary"])
+        self._start_temporary_damage_form(victim)
         victim["attack_type_primary"] = str(form_template["attack_type_primary"])
         victim["attack_type_secondary"] = str(form_template["attack_type_secondary"])
         victim["initiative_base"] = new_initiative
@@ -4153,7 +4243,7 @@ class BattleEnv(gym.Env):
         victim["damage_secondary"] = int(
             lower_template.get("damage_secondary", 0) or 0
         )
-        victim["original_damage"] = victim["damage"]
+        self._start_temporary_damage_form(victim)
         victim["attack_type_primary"] = lower_template.get(
             "attack_type_primary", "Weapon"
         )
