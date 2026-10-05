@@ -255,6 +255,9 @@ class CampaignBattleMixin:
                 self._log(f"=== ПОБЕДА В БОЮ ПРОТИВ ВРАГА {self.current_enemy_id}! ===")
                 self.grid_env.mark_enemy_defeated(self.current_enemy_id)
                 self.hero_defeated_enemy_ids.add(int(self.current_enemy_id))
+                reward = self._record_scripted_bot_combat_victory(
+                    self.current_enemy_id, battle_context_kind, reward, info
+                )
                 self._clear_enemy_map_spell_effects_for_enemy(self.current_enemy_id)
                 reward = self._apply_wave_defeat_reward_if_needed(
                     self.current_enemy_id,
@@ -366,6 +369,7 @@ class CampaignBattleMixin:
                     and not self._campaign_objective_is_target_enemy()
                     and not self._campaign_objective_is_waves()
                     and not self._campaign_objective_is_full_party()
+                    and not self._campaign_objective_is_scripted_bot()
                 ):
                     self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")
                     grid_obs = self._get_grid_obs()
@@ -662,21 +666,37 @@ class CampaignBattleMixin:
         bonus = 0
         source = ""
 
+        enemy_pos = self.grid_env.enemy_positions.get(normalized_enemy_id)
+        settlement_name = self.legions_settlement_territory_source_name_by_enemy_id.get(
+            normalized_enemy_id
+        )
+        settlement_tile = self.legions_settlement_source_tile_by_name.get(settlement_name)
         settlement_level = getattr(
             self,
             "SETTLEMENT_DEFENDER_LEVEL_BY_ENEMY_ID",
             SETTLEMENT_DEFENDER_LEVEL_BY_ENEMY_ID,
         ).get(normalized_enemy_id)
-        if settlement_level is not None:
+        # A configured city defender keeps the bonus only while defending that
+        # still-hostile/neutral city, not after moving out or losing ownership.
+        if (
+            settlement_level is not None
+            and settlement_tile is not None
+            and enemy_pos is not None
+            and tuple(enemy_pos) == tuple(settlement_tile)
+            and settlement_name not in self.legions_active_settlement_territory_capture_turn_by_name
+        ):
             bonus = int(SETTLEMENT_ARMOR_BONUS_BY_LEVEL.get(int(settlement_level), 0))
             source = f"settlement_level_{int(settlement_level)}"
 
-        enemy_pos = self.grid_env.enemy_positions.get(normalized_enemy_id)
-        capital_tiles = {tuple(self.CASTLE_POS)}
         empire_source_tile = tuple(getattr(self, "empire_territory_source_tile", ()))
-        if len(empire_source_tile) == 2:
-            capital_tiles.add(empire_source_tile)
-        if enemy_pos is not None and tuple(enemy_pos) in capital_tiles:
+        # Some maps use the player's capital as a fallback territory source;
+        # that does not make it an enemy-owned capital.
+        if (
+            len(empire_source_tile) == 2
+            and empire_source_tile != tuple(self.CASTLE_POS)
+            and enemy_pos is not None
+            and tuple(enemy_pos) == empire_source_tile
+        ):
             capital_bonus = int(CAPITAL_HEAL_TILE_ARMOR_BONUS)
             if capital_bonus >= bonus:
                 bonus = capital_bonus
@@ -773,13 +793,22 @@ class CampaignBattleMixin:
         enemy_id: int,
         *,
         blue_team: Optional[List[Dict]] = None,
+        attacker_team: str = "blue",
     ):
         """Инициализирует BattleEnv с RED-командой врага и текущей BLUE-командой.
 
         RED берется из сохраненного состояния enemy_team_states, если оно есть,
         иначе из enemy configs выбранной карты. BLUE может быть передан явно для
         специальных боев (например, summon), либо собирается из persistent-состояния героя.
+        Hero movement and summon spells attack as BLUE; approaching waves attack
+        as RED. Fortification armor belongs exclusively to the defending side.
         """
+        if attacker_team not in {"blue", "red"}:
+            raise ValueError(f"Unknown attacking team: {attacker_team!r}")
+        self.current_battle_context.update(
+            attacker_team=attacker_team,
+            defender_team="red" if attacker_team == "blue" else "blue",
+        )
         red_team_state = self._get_enemy_team_state(enemy_id)
         if red_team_state:
             red_team = self._build_battle_team_with_placeholders("red", red_team_state)
@@ -789,7 +818,8 @@ class CampaignBattleMixin:
                 self._enemy_configs.get(enemy_id)
                 or next(iter(self._enemy_configs.values())),
             )
-        self._apply_settlement_defender_armor_bonus(enemy_id, red_team)
+        if attacker_team == "blue":
+            self._apply_settlement_defender_armor_bonus(enemy_id, red_team)
 
         # Для рекордной награды по дракону-цели: запоминаем суммарный max-HP RED.
         self._objective_dragon_max_hp = 0.0
@@ -814,7 +844,8 @@ class CampaignBattleMixin:
             )
             self._clear_equipped_banner_effects(prepared_blue_team)
             self._clear_equipped_artifact_effects(prepared_blue_team)
-            self._apply_hero_heal_tile_armor_bonus(prepared_blue_team)
+            if attacker_team == "red":
+                self._apply_hero_heal_tile_armor_bonus(prepared_blue_team)
             self._apply_active_blue_potion_effects(prepared_blue_team)
             self._apply_active_blue_support_spell_effects(prepared_blue_team)
             self._apply_equipped_book_battle_effects(prepared_blue_team)
@@ -832,7 +863,8 @@ class CampaignBattleMixin:
             )
             self._clear_equipped_banner_effects(prepared_blue_team)
             self._clear_equipped_artifact_effects(prepared_blue_team)
-            self._apply_hero_heal_tile_armor_bonus(prepared_blue_team)
+            if attacker_team == "red":
+                self._apply_hero_heal_tile_armor_bonus(prepared_blue_team)
             self._apply_active_blue_potion_effects(prepared_blue_team)
             self._apply_active_blue_support_spell_effects(prepared_blue_team)
             self._apply_equipped_book_battle_effects(prepared_blue_team)

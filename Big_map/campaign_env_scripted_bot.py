@@ -15,6 +15,7 @@ class CampaignScriptedBotMixin:
     SCRIPTED_CAPITAL_BOT_MAX_STEPS_PER_TURN = 20
     SCRIPTED_CAPITAL_BOT_GRID_MOVE_COST = 2
     SCRIPTED_CAPITAL_BOT_BATTLE_STEP_LIMIT = 300
+    SCRIPTED_CAPITAL_BOT_RESPAWN_TURNS = 2
 
     SCRIPTED_CAPITAL_BOT_SYMBOL = "B"
     SCRIPTED_CAPITAL_BOT_COLOR = (0.6, 0.15, 0.85, 0.95)
@@ -64,6 +65,7 @@ class CampaignScriptedBotMixin:
         self._scripted_bot_enemy_search_cache_signature = None
         self._scripted_bot_enemy_search_cache = None
         self.scripted_capital_bot_turn_infos = []
+        self._scripted_bot_pending_hero_encounter = False
         self.scripted_capital_bot_last_info: Dict[str, object] = {
             "enabled": bool(self.scripted_capital_bot_enabled),
             "state": self.scripted_capital_bot_state,
@@ -81,6 +83,7 @@ class CampaignScriptedBotMixin:
         self._scripted_bot_enemy_search_cache_signature = None
         self._scripted_bot_enemy_search_cache = None
         self.scripted_capital_bot_turn_infos = []
+        self._scripted_bot_pending_hero_encounter = False
         if not self.scripted_capital_bot_enabled:
             self.scripted_capital_bot_position = tuple(self.scripted_capital_bot_home)
             self.scripted_capital_bot_state = "disabled"
@@ -183,6 +186,7 @@ class CampaignScriptedBotMixin:
                 "home": tuple(getattr(self, "scripted_capital_bot_home", ())),
                 "faction": str(getattr(self, "scripted_capital_bot_faction", "Империя")),
                 "symbol": self.SCRIPTED_CAPITAL_BOT_SYMBOL,
+                "respawn_turns_left": int(self.scripted_capital_bot_respawn_turns_left),
                 "enemies_defeated": int(
                     getattr(self, "scripted_capital_bot_enemies_defeated", 0) or 0
                 ),
@@ -226,6 +230,64 @@ class CampaignScriptedBotMixin:
             self.grid_env.scripted_bot_position = None
         self.grid_env.dynamic_blocked_positions = dynamic_blocked
 
+    def _mark_scripted_capital_bot_defeated(self) -> None:
+        """Remove a defeated bot until two subsequent campaign turns finish.
+
+        Neutral combat, hero combat, garrisons and magic share this transition.
+        Repeated notifications of the same defeat must not restart the timer.
+        The ordinary configured roster is rebuilt only when the bot respawns.
+        """
+        if self.scripted_capital_bot_state != "defeated":
+            self.scripted_capital_bot_respawn_turns_left = int(
+                self.SCRIPTED_CAPITAL_BOT_RESPAWN_TURNS
+            )
+        self.scripted_capital_bot_state = "defeated"
+        self.scripted_capital_bot_rest_turns_left = 0
+        self._scripted_bot_pending_hero_encounter = False
+        self._scripted_bot_enemy_search_cache_signature = None
+        self._scripted_bot_enemy_search_cache = None
+        self._clear_enemy_map_spell_effects_for_enemy(self.scripted_capital_bot_enemy_id)
+        self._sync_scripted_capital_bot_grid_state()
+
+    def _queue_scripted_bot_agent_battle(self, info: Dict[str, object]) -> bool:
+        """Queue nearby hero contact for the normal interactive battle bridge."""
+        if (
+            self.mode != self.MODE_GRID
+            or getattr(self, "pending_garrison_city", None)
+            or self.scripted_capital_bot_state in {"disabled", "defeated"}
+            or not self._scripted_bot_can_engage_enemy_from_position(
+                self.scripted_capital_bot_position, self.grid_env.agent_pos
+            )
+        ):
+            return False
+        self._scripted_bot_pending_hero_encounter = True
+        info["events"].append("agent_battle_pending")
+        info["battle_pending"] = True
+        return True
+
+    def _pursue_agent_with_scripted_bot(self, info: Dict[str, object]) -> None:
+        """Pursue the hero only after all eligible neutral/city targets are gone.
+
+        Queue contact for the campaign's normal, agent-controlled battle bridge.
+        Never run the neutral autoresolver against the player's party or enter
+        the occupied hero tile. An unreachable hero is a wait, not a teleport.
+        """
+        target = tuple(int(coord) for coord in self.grid_env.agent_pos)
+        info["target"] = {"kind": "agent", "position": target}
+        info["events"].append("pursuing_agent")
+        path = self._scripted_bot_path_to(target, allow_partial=False)
+        # A city can share the hero tile; this pursuit still stops adjacent.
+        path = CampaignScriptedBotMixin._scripted_bot_path_to_engagement_tile(
+            self, path, target
+        )
+        moved_path = self._move_scripted_bot_along_path(path)
+        info["path"] = moved_path
+        info.update(self._scripted_bot_movement_info(moved_path))
+        if not path:
+            info["events"].append("agent_unreachable")
+        if self.scripted_capital_bot_state == "hunting":
+            self._queue_scripted_bot_agent_battle(info)
+
     def _advance_scripted_capital_bot_one_turn(self) -> Dict[str, object]:
         """Продвигает state machine бота на один campaign turn."""
         if not bool(getattr(self, "scripted_capital_bot_enabled", False)):
@@ -255,6 +317,9 @@ class CampaignScriptedBotMixin:
                 self.scripted_capital_bot_state = "hunting"
                 events.append("respawned")
                 self._log("Бот столицы людей снова появился в столице.")
+                if tuple(self.grid_env.agent_pos) == tuple(self.scripted_capital_bot_home):
+                    events.append("home_blocked_by_agent")
+                    self._queue_scripted_bot_agent_battle(info)
         elif state == "resting":
             self.scripted_capital_bot_rest_turns_left = max(
                 0,
@@ -272,12 +337,20 @@ class CampaignScriptedBotMixin:
                     f"воскрешено {revived}, вылечено {healed}."
                 )
         elif state == "returning":
+            home_blocked = tuple(self.grid_env.agent_pos) == tuple(self.scripted_capital_bot_home)
             path = self._scripted_bot_path_to(self.scripted_capital_bot_home)
+            if home_blocked:
+                path = CampaignScriptedBotMixin._scripted_bot_path_to_engagement_tile(
+                    self, path, self.scripted_capital_bot_home
+                )
             moved_path = self._move_scripted_bot_along_path(path)
             events.append("returning")
             info["path"] = moved_path
             info.update(self._scripted_bot_movement_info(moved_path))
-            if tuple(self.scripted_capital_bot_position) == tuple(self.scripted_capital_bot_home):
+            if home_blocked:
+                events.append("home_blocked_by_agent")
+                self._queue_scripted_bot_agent_battle(info)
+            elif tuple(self.scripted_capital_bot_position) == tuple(self.scripted_capital_bot_home):
                 self.scripted_capital_bot_state = "resting"
                 self.scripted_capital_bot_rest_turns_left = 1
                 events.append("arrived_home")
@@ -288,6 +361,7 @@ class CampaignScriptedBotMixin:
             info["target"] = target
             if target is None:
                 events.append("no_target")
+                self._pursue_agent_with_scripted_bot(info)
             else:
                 target_pos = tuple(target["position"])
                 path = self._scripted_bot_path_from_came_from(came_from, target_pos)
@@ -338,8 +412,13 @@ class CampaignScriptedBotMixin:
             blocked.discard(tuple(target_tile))
         return blocked
 
-    def _scripted_bot_path_to(self, target_tile: Tuple[int, int]) -> List[Tuple[int, int]]:
-        """Строит BFS-путь от текущей позиции бота до target tile."""
+    def _scripted_bot_path_to(
+        self,
+        target_tile: Tuple[int, int],
+        *,
+        allow_partial: bool = True,
+    ) -> List[Tuple[int, int]]:
+        """BFS path; neutral hunting keeps its historical partial-path fallback."""
         start = tuple(int(coord) for coord in self.scripted_capital_bot_position)
         target = tuple(int(coord) for coord in target_tile)
         if start == target:
@@ -376,7 +455,7 @@ class CampaignScriptedBotMixin:
                 frontier.append(tile)
 
         if target not in came_from:
-            return self._scripted_bot_greedy_path(target, blocked)
+            return self._scripted_bot_greedy_path(target, blocked) if allow_partial else []
 
         path = [target]
         current = target
@@ -562,8 +641,9 @@ class CampaignScriptedBotMixin:
                 )
             )
         }
-        if not configured:
-            configured.add(int(self.EMPIRE_TERRITORY_SOURCE_ENEMY_ID))
+        source_enemy_id = self.EMPIRE_TERRITORY_SOURCE_ENEMY_ID
+        if not configured and source_enemy_id is not None:
+            configured.add(int(source_enemy_id))
         return configured
 
     def _scripted_bot_enemy_search_signature(
@@ -770,10 +850,8 @@ class CampaignScriptedBotMixin:
             )
         else:
             self._save_enemy_state_from_battle_env(enemy_id, battle_env)
-            self.scripted_capital_bot_team_state = self._create_scripted_capital_bot_team()
-            self.scripted_capital_bot_state = "defeated"
-            self.scripted_capital_bot_respawn_turns_left = 1
-            self._log(f"Бот столицы людей проиграл врагу {enemy_id}; респавн через 1 ход.")
+            self._mark_scripted_capital_bot_defeated()
+            self._log(f"Бот столицы людей проиграл врагу {enemy_id}; респавн через 2 хода.")
 
         return {
             "enemy_id": int(enemy_id),
@@ -816,7 +894,7 @@ class CampaignScriptedBotMixin:
     def _normalize_scripted_bot_saved_unit(self, unit: Dict) -> Dict:
         """Очищает battle-only flags перед возвратом юнита бота на campaign-карту."""
         saved = deepcopy(unit)
-        hp = max(0.0, float(saved.get("health", 0) or saved.get("hp", 0) or 0.0))
+        hp = max(0.0, float(saved.get("health", saved.get("hp", 0.0)) or 0.0))
         saved["health"] = hp
         saved["hp"] = hp
         saved["team"] = "blue"

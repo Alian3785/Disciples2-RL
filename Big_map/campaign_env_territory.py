@@ -14,6 +14,11 @@ from grid import LEGIONS_SETTLEMENT_TERRITORY_EXPANSION_BY_LEVEL
 class CampaignTerritoryMixin:
     """Методы CampaignEnv, связанные с владением клетками глобальной карты."""
 
+    # Exactly one terrain owner per cell. Reached source areas are independent.
+    TERRITORY_NEUTRAL = 0
+    TERRITORY_AGENT = 1
+    TERRITORY_BOT = 2
+
     TERRITORY_PATH_DISTANCE_CACHE_SIZE = 64
 
     @classmethod
@@ -50,14 +55,19 @@ class CampaignTerritoryMixin:
             "full_party": cls.CAMPAIGN_OBJECTIVE_FULL_PARTY,
             "full_roster": cls.CAMPAIGN_OBJECTIVE_FULL_PARTY,
             "party": cls.CAMPAIGN_OBJECTIVE_FULL_PARTY,
+            "scripted_bot": cls.CAMPAIGN_OBJECTIVE_SCRIPTED_BOT,
+            "mirrow_match": cls.CAMPAIGN_OBJECTIVE_SCRIPTED_BOT,
         }
         if raw in aliases:
             return aliases[raw]
         raise ValueError(
             f"Unsupported campaign_objective={value!r}; "
             "expected 'cities', 'dragon', 'blue_dragon', 'orc', 'build_all', "
-            "'all_enemies', 'target_enemy', 'waves', 'city_defence' or 'full_party'"
+            "'all_enemies', 'target_enemy', 'waves', 'city_defence', 'full_party' or 'scripted_bot'"
         )
+
+    def _campaign_objective_is_scripted_bot(self) -> bool:
+        return self.campaign_objective == self.CAMPAIGN_OBJECTIVE_SCRIPTED_BOT
 
     def _campaign_objective_is_cities(self) -> bool:
         return (
@@ -155,7 +165,10 @@ class CampaignTerritoryMixin:
                 f"campaign_objective={objective!r} is not supported on map "
                 f"'{map_label}'; expected one of {supported_objectives}"
             )
-        if objective == self.CAMPAIGN_OBJECTIVE_CITY_DEFENCE:
+        if objective == self.CAMPAIGN_OBJECTIVE_SCRIPTED_BOT:
+            if not map_config.scripted_capital_bot_supported:
+                raise ValueError("scripted_bot objective requires a supported scripted bot")
+        elif objective == self.CAMPAIGN_OBJECTIVE_CITY_DEFENCE:
             if map_label != "city_defence_train":
                 raise ValueError("city_defence is only supported on city_defence_train")
         elif objective == self.CAMPAIGN_OBJECTIVE_CITIES:
@@ -424,7 +437,9 @@ class CampaignTerritoryMixin:
         Нормировка — доля побеждённых от всех врагов на карте [0..1], умноженная на вес.
         Вес подобран так, чтобы максимум был заметно ниже награды за убийство дракона."""
         grid_env = getattr(self, "grid_env", None)
-        enemies_alive = getattr(grid_env, "enemies_alive", {}) or {}
+        enemies_alive = {eid: alive for eid, alive in
+                         (getattr(grid_env, "enemies_alive", {}) or {}).items()
+                         if eid not in getattr(grid_env, "dynamic_enemy_ids", set())}
         total = len(enemies_alive)
         if total <= 0:
             return 0.0
@@ -475,6 +490,9 @@ class CampaignTerritoryMixin:
         self,
         defeated_enemy_id: Optional[int] = None,
     ) -> Optional[str]:
+        if self._campaign_objective_is_scripted_bot():
+            return ("scripted_bot_defeated_by_hero"
+                    if getattr(self, "scripted_bot_hero_victories", 0) >= 1 else None)
         if self._is_green_dragon_objective_enemy(defeated_enemy_id):
             return (
                 "orc_defeated"
@@ -628,6 +646,9 @@ class CampaignTerritoryMixin:
         }
     def _reset_legions_settlement_territory_state(self) -> None:
         """Сбрасывает активные поселения Легионов и их уровни перед новым episode."""
+        self._territory_owner_grid = np.zeros((int(self.grid_size), int(self.grid_size)), dtype=np.uint8)
+        self._territory_agent_reached_tiles = ()
+        self._territory_bot_reached_tiles = ()
         self.legions_active_settlement_territory_capture_turn_by_name: Dict[str, int] = {}
         self.legions_settlement_growth_history_by_name: Dict[str, List[Tuple[int, int]]] = {}
         self.legions_settlement_territory_tiles_by_name: Dict[str, Tuple[Tuple[int, int], ...]] = {
@@ -867,6 +888,13 @@ class CampaignTerritoryMixin:
         self.captured_objective_cities.add(city_name)
         return [city_name]
     def _hero_is_on_city_tile(self, enemy_id: int) -> bool:
+        """Capture requires a living leader in the persistent travelling party."""
+        party = [
+            unit for unit in (self.blue_team_state or [])
+            if not self._is_empty_blue_unit(unit) and not unit.get("Summoned")
+        ]
+        if self._resolve_travel_hero(units=party, alive_only=True) is None:
+            return False
         settlement = self.legions_settlement_territory_source_name_by_enemy_id.get(int(enemy_id))
         tile = self.legions_settlement_source_tile_by_name.get(settlement)
         if tile is None:
@@ -933,8 +961,11 @@ class CampaignTerritoryMixin:
         if not self._hero_is_on_city_tile(normalized_enemy_id):
             return []
         self.legions_active_settlement_territory_capture_turn_by_name[str(settlement_name)] = int(self.turns)
-        # Захват поселения сразу добавляет его источник роста территории в общий frontier.
-        self._refresh_faction_territories()
+        # Capture transfers the source now; surrounding territory grows at end turn.
+        source_tile = self.legions_settlement_source_tile_by_name[str(settlement_name)]
+        self.legions_settlement_territory_tiles_by_name[str(settlement_name)] = (tuple(source_tile),)
+        self._paint_territory_owner(self.TERRITORY_AGENT, (source_tile,))
+        self._refresh_territory_ownership_caches()
         return [str(settlement_name)]
     def _compute_final_objective_reward(
         self,
@@ -1470,7 +1501,7 @@ class CampaignTerritoryMixin:
         scheduled_enemy_turn_infos = []
         for _ in range(int(delta_turns)):
             self.turns += 1
-            # Территории растут в начале каждого turn, поэтому доход ниже уже учитывает новые шахты.
+            # End-turn phases repaint agent first, bot second; income uses the final owner.
             self._refresh_faction_territories()
             self._clear_all_enemy_map_spell_effects()
             self._clear_all_blue_map_spell_effects()
@@ -1777,8 +1808,8 @@ class CampaignTerritoryMixin:
             1 + elapsed_turns * max(0, int(expansion_per_turn)),
         )
     def _refresh_legions_territory_tiles(self) -> None:
-        """Совместимый wrapper для старых вызовов: сейчас обновляются все фракционные территории."""
-        self._refresh_faction_territories()
+        """Refresh compatibility views without repainting or advancing growth."""
+        self._refresh_territory_ownership_caches()
     def _refresh_legions_territory_grid_obs_cache(self) -> None:
         """Обновляет бинарный observation cache клеток территории Легионов."""
         obs_size = int(getattr(self, "grid_legions_territory_obs_size", 0) or 0)
@@ -1817,69 +1848,102 @@ class CampaignTerritoryMixin:
             for kind in self.MANA_KIND_ORDER
         }
         self.mana_income_per_turn = self._compute_mana_income_per_turn()
-    def _refresh_faction_territories(self) -> None:
-        """Главный пересчет текущих территорий фракций по номеру turn.
+    @property
+    def territory_owner_grid(self) -> np.ndarray:
+        """Read-only ownership snapshot, indexed [y, x] (neutral/agent/bot)."""
+        snapshot = self._territory_owner_grid.copy()
+        snapshot.flags.writeable = False
+        return snapshot
 
-        Метод объединяет рост от стартовой столицы и всех активированных поселений,
-        обновляет быстрые set-представления, доходные шахты, источники маны и observation cache.
+    def _paint_territory_owner(self, owner: int, tiles) -> None:
+        """Atomically replace tile ownership; caller publishes derived caches."""
+        if owner not in (self.TERRITORY_NEUTRAL, self.TERRITORY_AGENT, self.TERRITORY_BOT):
+            raise ValueError(f"Unknown territory owner: {owner}")
+        normalized = tuple((int(tile[0]), int(tile[1])) for tile in tiles)
+        if any(not (0 <= x < self.grid_size and 0 <= y < self.grid_size) for x, y in normalized):
+            raise ValueError("Territory tile is outside the map")
+        for x, y in normalized:
+            self._territory_owner_grid[y, x] = owner
+
+    def _territory_reached_tiles(self):
+        """Compute source reach, without reading or modifying current ownership.
+
+        Losing a tile does not rewind a source's growth. Each phase reclaims its
+        full reached area, including old tiles and tiles painted by the opponent.
         """
-        legions_claim_count = self._territory_claim_count(
-            len(self.legions_territory_order),
-            self.LEGIONS_TERRITORY_EXPANSION_PER_TURN,
-            self.turns,
-        )
-        capital_legions_tiles = self._claim_territory_tiles(
+        agent_tiles = list(self._claim_territory_tiles(
             self.legions_territory_order,
-            legions_claim_count,
-        )
-        combined_legions_tiles: List[Tuple[int, int]] = []
-        combined_legions_seen: set[Tuple[int, int]] = set()
-        # Сначала добавляем основную территорию столицы, сохраняя порядок для стабильного render/obs.
-        for tile in capital_legions_tiles:
-            normalized_tile = (int(tile[0]), int(tile[1]))
-            if normalized_tile in combined_legions_seen:
-                continue
-            combined_legions_seen.add(normalized_tile)
-            combined_legions_tiles.append(normalized_tile)
-
-        # Затем добавляем территории поселений, которые были открыты победой над required enemies.
+            self._territory_claim_count(len(self.legions_territory_order),
+                                        self.LEGIONS_TERRITORY_EXPANSION_PER_TURN, self.turns),
+        ))
         for source_data in self._static_legions_settlement_territory_sources:
-            settlement_name = str(source_data.get("name", "") or "")
-            source_order = self.legions_settlement_territory_orders_by_name.get(settlement_name, ())
-            settlement_claim_count = self._current_settlement_territory_claim_count(settlement_name, len(source_order))
-            settlement_tiles = self._claim_territory_tiles(source_order, settlement_claim_count)
-            self.legions_settlement_territory_tiles_by_name[settlement_name] = settlement_tiles
-            for tile in settlement_tiles:
-                normalized_tile = (int(tile[0]), int(tile[1]))
-                if normalized_tile in combined_legions_seen:
-                    continue
-                combined_legions_seen.add(normalized_tile)
-                combined_legions_tiles.append(normalized_tile)
+            name = str(source_data.get("name", "") or "")
+            order = self.legions_settlement_territory_orders_by_name.get(name, ())
+            tiles = self._claim_territory_tiles(
+                order, self._current_settlement_territory_claim_count(name, len(order)))
+            # This legacy per-source diagnostic stores REACH, not ownership.
+            self.legions_settlement_territory_tiles_by_name[name] = tiles
+            agent_tiles.extend(tiles)
+        bot_tiles = []
+        if bool(getattr(self, "empire_territory_enabled", True)):
+            bot_tiles.extend(self._claim_territory_tiles(
+                self.empire_territory_order,
+                self._territory_claim_count(len(self.empire_territory_order),
+                                            self.EMPIRE_TERRITORY_EXPANSION_PER_TURN, self.turns),
+            ))
+        # Captured cities retain their existing independent growth behavior,
+        # including when the optional Empire capital territory is disabled.
+        for city, captured_turn in self.bot_city_capture_turns.items():
+            order = self.legions_settlement_territory_orders_by_name.get(city, ())
+            count = self._territory_claim_count(
+                len(order), self._settlement_expansion_per_turn(city),
+                max(0, self.turns - captured_turn))
+            bot_tiles.extend(self.bot_city_initial_tiles.get(city, ()))
+            bot_tiles.extend(self._claim_territory_tiles(order, count))
+        return tuple(dict.fromkeys(agent_tiles)), tuple(dict.fromkeys(bot_tiles))
 
-        self.legions_territory_tiles = tuple(combined_legions_tiles)
-        self.legions_territory_tile_set = set(self.legions_territory_tiles)
-        # Доходные объекты считаются производными от актуального набора контролируемых клеток.
+    def _apply_territory_growth_phase(self, owner: int, reached_tiles) -> None:
+        """One faction repaints its complete reached area, even at saturation."""
+        self._paint_territory_owner(owner, reached_tiles)
+
+    def _refresh_faction_territories(self) -> None:
+        """Explicit growth transition, called only at initialization/end turn.
+
+        This legacy mutation hook must never be called from an observation,
+        ownership query, or cache getter. Captures publish their own atomic
+        transfer instead. Terrain keeps its last owner until repainted.
+        """
+        agent_tiles, bot_tiles = self._territory_reached_tiles()
+        self._territory_agent_reached_tiles = agent_tiles
+        self._territory_bot_reached_tiles = bot_tiles
+        self._apply_territory_growth_phase(self.TERRITORY_AGENT, agent_tiles)
+        self._apply_territory_growth_phase(self.TERRITORY_BOT, bot_tiles)
+        self._refresh_territory_ownership_caches()
+
+    def _refresh_territory_ownership_caches(self) -> None:
+        """Publish read-only compatibility sets, income and observation caches.
+
+        This method never paints territory or advances a source's frontier.
+        All ownership consumers therefore see the same final owner.
+        """
+        def owned_tiles(owner, reached):
+            # Keep existing source ordering when possible, followed by retained
+            # tiles of lost sources in stable row-major order.
+            candidates = dict.fromkeys(reached)
+            ys, xs = np.nonzero(self._territory_owner_grid == owner)
+            candidates.update(((int(x), int(y)), None) for y, x in zip(ys, xs))
+            return tuple(tile for tile in candidates
+                         if self._territory_owner_grid[tile[1], tile[0]] == owner)
+
+        self.legions_territory_tiles = owned_tiles(
+            self.TERRITORY_AGENT, self._territory_agent_reached_tiles)
+        self.empire_territory_tiles = owned_tiles(
+            self.TERRITORY_BOT, self._territory_bot_reached_tiles)
+        self.legions_territory_tile_set = frozenset(self.legions_territory_tiles)
+        self.empire_territory_tile_set = frozenset(self.empire_territory_tiles)
         self.legions_captured_gold_mine_tiles = tuple(
-            tile
-            for tile in self.gold_mine_tiles
-            if tuple(tile) in self.legions_territory_tile_set
-        )
+            tile for tile in self.gold_mine_tiles if tuple(tile) in self.legions_territory_tile_set)
         self.legions_captured_gold_mine_count = len(self.legions_captured_gold_mine_tiles)
         self._refresh_legions_captured_mana_source_state()
-        # Empire territory is optional for speed-focused training runs.
-        if bool(getattr(self, "empire_territory_enabled", True)):
-            empire_claim_count = self._territory_claim_count(
-                len(self.empire_territory_order),
-                self.EMPIRE_TERRITORY_EXPANSION_PER_TURN,
-                self.turns,
-            )
-            self.empire_territory_tiles = self._claim_territory_tiles(
-                self.empire_territory_order,
-                empire_claim_count,
-            )
-            self.empire_territory_tile_set = set(self.empire_territory_tiles)
-        else:
-            self.empire_territory_tiles = ()
-            self.empire_territory_tile_set = set()
         if hasattr(self, "grid_legions_territory_positions"):
             self._refresh_legions_territory_grid_obs_cache()

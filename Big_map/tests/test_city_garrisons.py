@@ -364,10 +364,12 @@ def test_regeneration_excludes_terrain_and_hero_equipment(env):
     guard = wounded_guard(env, city)
     env.typeoflord = 3
     tile = env.legions_settlement_source_tile_by_name[city]
-    env.legions_territory_tile_set.add(tile)
+    env._paint_territory_owner(env.TERRITORY_AGENT, (tile,))
+    env._refresh_territory_ownership_caches()
     env.equipped_banner_items = ['Banner of Regeneration']
     assert env._garrison_regeneration_fraction(city, guard) == pytest.approx(.15)
-    env.legions_territory_tile_set.discard(tile)
+    env._paint_territory_owner(env.TERRITORY_NEUTRAL, (tile,))
+    env._refresh_territory_ownership_caches()
     assert env._garrison_regeneration_fraction(city, guard) == pytest.approx(.15)
 
 

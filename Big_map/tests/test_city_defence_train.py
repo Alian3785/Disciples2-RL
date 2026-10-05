@@ -83,7 +83,7 @@ def test_empty_city_is_lost_on_second_turn_not_at_reset_or_first_action():
         e.close()
 
 
-def test_second_wave_gets_two_new_turns_and_only_second_win_finishes():
+def test_second_wave_respawns_after_two_turns_then_marches_and_second_win_finishes():
     e = make()
     try:
         hire(e)
@@ -94,15 +94,25 @@ def test_second_wave_gets_two_new_turns_and_only_second_win_finishes():
         obs, _, terminated, truncated, info = e.step(0)
         assert not (terminated or truncated)
         assert e.city_defence_wins == 1 and e.city_defence_wave == 1
-        assert e.scripted_capital_bot_position == BOT_SPAWN_TILE
-        assert living(e.scripted_capital_bot_team_state) == {8: "Гном"}
-        assert info["city_defence_attack_turn"] == 4
+        assert e.scripted_capital_bot_state == "defeated"
+        assert e.scripted_capital_bot_respawn_turns_left == 2
+        assert e.grid_env.scripted_bot_position is None
+        assert info["city_defence_attack_turn"] == 6
         assert e.observation_space.contains(obs)
         e.step(8)
         assert e.turns == 3 and e.mode == e.MODE_GRID
         assert e.city_defence_wins == 1
+        assert e.scripted_capital_bot_state == "defeated"
+        assert e.grid_env.scripted_bot_position is None
         e.step(8)
-        assert e.turns == 4 and e.mode == e.MODE_BATTLE
+        assert e.turns == 4 and e.mode == e.MODE_GRID
+        assert e.scripted_capital_bot_state == "hunting"
+        assert e.scripted_capital_bot_position == BOT_SPAWN_TILE
+        assert living(e.scripted_capital_bot_team_state) == {8: "Гном"}
+        e.step(8)
+        assert e.turns == 5 and e.mode == e.MODE_GRID
+        e.step(8)
+        assert e.turns == 6 and e.mode == e.MODE_BATTLE
         assert living([u for u in e.battle_env.combined if u["team"] == "red"]) == {2: "Гном"}
         e.battle_env.winner = "blue"
         obs, _, terminated, truncated, info = e.step(0)
@@ -135,8 +145,8 @@ def test_lost_garrison_ends_episode_in_either_wave(wave):
         if wave:
             e.battle_env.winner = "blue"
             e.step(0)
-            e.step(8)
-            e.step(8)
+            for _ in range(4):
+                e.step(8)
         e.battle_env.winner = "red"
         obs, _, terminated, truncated, info = e.step(0)
         assert terminated and not truncated and info["campaign_result"] == "defeat"
@@ -154,7 +164,7 @@ def test_real_combat_resolves_campaign_for_every_faction(capital):
         for option in (0, 0, 0, 1, 1):
             hire(e, option)
         hero = deepcopy(e.blue_team_state)
-        for day in range(1, 5):
+        for day in range(1, 7):
             result = e.step(8)
             if e.mode == e.MODE_BATTLE:
                 e.battle_env.seed(42)
@@ -169,7 +179,7 @@ def test_real_combat_resolves_campaign_for_every_faction(capital):
                 break
         assert result[2] and not result[3]
         if result[4]["campaign_result"] == "victory":
-            assert e.city_defence_wins == 2 and day == 4
+            assert e.city_defence_wins == 2 and day == 6
             assert e._garrison_player_owns(CITY_NAME)
         else:
             assert result[4]["campaign_result"] == "defeat"

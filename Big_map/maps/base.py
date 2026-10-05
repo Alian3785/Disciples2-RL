@@ -375,6 +375,7 @@ class MapConfig:
     # Abilities granted to the map's travel hero after normal level-1 progression sync.
     starting_hero_abilities: Tuple[str, ...] = ()
     # Optional fixed faction/lord identity for scenario-specific starting parties.
+    default_capital_id: int = 1
     starting_capital_id: Optional[int] = None
     starting_lord_type: Optional[int] = None
     # Buildings already standing in the capital at episode start, by display name

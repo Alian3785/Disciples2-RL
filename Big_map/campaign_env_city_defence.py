@@ -49,6 +49,8 @@ class CampaignCityDefenceMixin:
                 or self.pending_garrison_city
                 or self.current_battle_context.get("kind") == "city_garrison"):
             return self._scripted_capital_bot_info()["scripted_capital_bot"]
+        if self.scripted_capital_bot_state == "defeated":
+            return super()._advance_scripted_capital_bot_one_turn()
         target = self.legions_settlement_source_tile_by_name[CITY_NAME]
         path = self._scripted_bot_path_to(target)
         # The empty 20-cell approach takes ten ordinary plain tiles per day.
@@ -81,13 +83,14 @@ class CampaignCityDefenceMixin:
                             final_objective_reward=self.reward_all_enemies)
             else:
                 self.city_defence_wave += 1
-                self.city_defence_spawn_turn = int(self.turns)
-                self.scripted_capital_bot_position = tuple(self.scripted_capital_bot_home)
+                self.city_defence_spawn_turn = (
+                    int(self.turns) + self.SCRIPTED_CAPITAL_BOT_RESPAWN_TURNS
+                )
                 self.scripted_capital_bot_faction = ASSAULT_FACTIONS[self.city_defence_wave]
-                self.scripted_capital_bot_team_state = self._create_scripted_capital_bot_team()
-                self.scripted_capital_bot_state = "hunting"
-                self.scripted_capital_bot_respawn_turns_left = 0
-                self.scripted_capital_bot_last_info = {"events": ["next_city_assault_spawned"]}
+                # Garrison resolution already entered the shared defeated state.
+                # The next wave spawns after two completed turns, then marches.
+                self._mark_scripted_capital_bot_defeated()
+                self.scripted_capital_bot_last_info = {"events": ["next_city_assault_waiting"]}
                 self._sync_scripted_capital_bot_grid_state()
             obs = self._build_obs(grid_obs=self._get_grid_obs())
         info.update(self._scripted_capital_bot_info(), **self._garrison_info(), reward=float(reward))

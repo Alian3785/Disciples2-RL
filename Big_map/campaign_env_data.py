@@ -406,6 +406,7 @@ class CampaignConstantsMixin:
     CAMPAIGN_OBJECTIVE_TARGET_ENEMY = "target_enemy"
     CAMPAIGN_OBJECTIVE_WAVES = "waves"
     CAMPAIGN_OBJECTIVE_FULL_PARTY = "full_party"
+    CAMPAIGN_OBJECTIVE_SCRIPTED_BOT = "scripted_bot"
     GREEN_DRAGON_OBJECTIVE_ENEMY_ID = 31
     # Целевой враг «охотничьих» целей кампании (dragon/blue_dragon/orc).
     # Классовый дефолт — дракон; карта затеняет instance-атрибутом.
