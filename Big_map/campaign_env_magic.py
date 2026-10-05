@@ -1444,6 +1444,7 @@ class CampaignMagicMixin:
                 and not self._campaign_objective_is_cities()
                 and not self._campaign_objective_is_waves()
                 and not self._campaign_objective_is_full_party()
+                and not self._campaign_objective_is_scripted_bot()
             ):
                 self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")
                 grid_obs = self._get_grid_obs()
@@ -1952,6 +1953,9 @@ class CampaignMagicMixin:
         # Остальные целевые враги (например, орк из orc_duel) лечатся обычной долей.
         dragon_enemy_id = int(self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID)
         for enemy_id, is_alive in self.grid_env.enemies_alive.items():
+            # The mobile bot retains its own return-home/rest recovery cycle.
+            if enemy_id in self.grid_env.dynamic_enemy_ids:
+                continue
             if not bool(is_alive):
                 continue
             is_dragon = int(enemy_id) == dragon_enemy_id
@@ -2670,6 +2674,7 @@ class CampaignMagicMixin:
                 and not self._campaign_objective_is_cities()
                 and not self._campaign_objective_is_waves()
                 and not self._campaign_objective_is_full_party()
+                and not self._campaign_objective_is_scripted_bot()
             ):
                 self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")
                 grid_obs = self._get_grid_obs()

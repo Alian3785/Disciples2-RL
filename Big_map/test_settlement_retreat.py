@@ -63,7 +63,8 @@ class SettlementRetreatTests(unittest.TestCase):
                             and 0 <= entrance[1] + dy < env.grid_size
                             and (entrance[0] + dx, entrance[1] + dy) not in env.grid_env.obstacle_positions
                             and (entrance[0] + dx, entrance[1] + dy) not in env.castle_heal_tiles)
-            env.legions_territory_tile_set.add(adjacent)
+            env._paint_territory_owner(env.TERRITORY_AGENT, (adjacent,))
+            env._refresh_territory_ownership_caches()
             self.start(env, adjacent)
             self.assertTrue(env.battle_env.retreat_enabled)
             self.assertTrue(env.compute_action_mask()[RUN_AWAY_ACTION_INDEX])

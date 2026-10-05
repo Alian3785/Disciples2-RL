@@ -2585,6 +2585,9 @@ if __name__ == "__main__":
         action="store_true",
         help="Recompute dynamic action layout on every reset instead of freezing it for this run",
     )
+    parser.add_argument("--scripted-bot", dest="no_scripted_bot",
+                        action="store_false", default=False,
+                        help="Explicitly enable the scripted capital bot")
     parser.add_argument(
         "--no-scripted-bot",
         action="store_true",

@@ -90,8 +90,9 @@ def test_locality():
         e.castle_heal_tiles = tuple(p for p in e.castle_heal_tiles if not far(p))
         e.grid_ruin_positions = tuple(p for p in e.grid_ruin_positions if not far(p))
         e.gold_mine_tiles = tuple(p for p in e.gold_mine_tiles if not far(p))
-        e.legions_territory_tile_set = {p for p in e.legions_territory_tile_set if not far(p)}
-        e.empire_territory_tile_set = {p for p in e.empire_territory_tile_set if not far(p)}
+        e._paint_territory_owner(e.TERRITORY_NEUTRAL,
+                                 (p for p in e.legions_territory_tile_set | e.empire_territory_tile_set if far(p)))
+        e._refresh_territory_ownership_caches()
         e.trainer_interaction_tiles = tuple(p for p in e.trainer_interaction_tiles if not far(p))
         for prefix, stock in [('merchant', 'merchant_stocks'), ('spell_shop', 'spell_shop_stocks'),
                               ('mercenary', 'mercenary_site_rosters')]:

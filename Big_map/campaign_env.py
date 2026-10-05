@@ -21,6 +21,7 @@ import os
 import gymnasium as gym
 
 from campaign_env_data import *
+from campaign_env_bot_encounter import CampaignBotEncounterMixin
 from campaign_env_city_defence import CampaignCityDefenceMixin
 from campaign_env_garrison import CampaignGarrisonMixin
 from campaign_env_battle import CampaignBattleMixin
@@ -35,6 +36,7 @@ from campaign_env_territory import CampaignTerritoryMixin
 
 
 class CampaignEnv(
+    CampaignBotEncounterMixin,
     CampaignCityDefenceMixin,
     CampaignGarrisonMixin,
     CampaignConstantsMixin,
@@ -174,7 +176,7 @@ class CampaignEnv(
         scripted_capital_bot_enabled: bool = True,
         empire_territory_enabled: bool = True,
         max_grid_steps: int = 1800,
-        Realcapital: int = 1,
+        Realcapital: Optional[int] = None,
         typeoflord: int = 1,
         use_boss_starting_roster: Optional[bool] = None,
         map_name: str = "default",
@@ -291,10 +293,8 @@ class CampaignEnv(
             )
             if self._map.objective_enemy_id is not None:
                 self.OBJECTIVE_ENEMY_ID = int(self._map.objective_enemy_id)
-        if self._map.empire_territory_source_enemy_id is not None:
-            self.EMPIRE_TERRITORY_SOURCE_ENEMY_ID = int(
-                self._map.empire_territory_source_enemy_id
-            )
+        if self._map.empire_territory_source_tile is not None:
+            self.EMPIRE_TERRITORY_SOURCE_ENEMY_ID = self._map.empire_territory_source_enemy_id
             self.EMPIRE_TERRITORY_SOURCE_TILE = tuple(
                 int(coord) for coord in self._map.empire_territory_source_tile
             )
@@ -482,7 +482,8 @@ class CampaignEnv(
         # Realcapital: 1 = empire, 2 = legions, 3 = mountain_clans, 4 = undead_hordes, 5 = elves
         map_capital_id = getattr(self._map, "starting_capital_id", None)
         self.Realcapital = self._normalize_capital_id(
-            Realcapital if map_capital_id is None else map_capital_id
+            (self._map.default_capital_id if Realcapital is None else Realcapital)
+            if map_capital_id is None else map_capital_id
         )
         # typeoflord: 1 = warrior, 2 = mage, 3 = archer/thief.
         # Значения typeoflord для всех фракций трактуются так:
@@ -620,6 +621,11 @@ class CampaignEnv(
                 int(self.EMPIRE_TERRITORY_SOURCE_ENEMY_ID),
                 scale_static_tiles(self.grid_size, (tuple(self.EMPIRE_TERRITORY_SOURCE_TILE),))[0],
             )
+        elif self._map.empire_territory_source_tile is not None:
+            empire_source_tile = scale_static_tiles(
+                self.grid_size, (tuple(self._map.empire_territory_source_tile),),
+                base_grid_size=int(self._map.grid_size),
+            )[0]
         else:
             # Карта без вражеской столицы: territory-логика все равно читает эту
             # клетку (forbidden/claimable), поэтому подставляем старт героя.
@@ -1314,6 +1320,7 @@ class CampaignEnv(
         else:
             step_result = self._step_battle(action)
         step_result = self._finish_pending_city_defence(step_result)
+        step_result = self._finish_pending_scripted_bot_encounter(step_result)
         step_result = self._apply_first_use_bonus(step_result)
         step_result = self._apply_party_hp_milestone_bonus(step_result)
         return self._apply_leadership_step_penalty(step_result)
@@ -1403,7 +1410,7 @@ class CampaignEnv(
             self.battle_origin_pos = tuple(self.grid_env.agent_pos)
             self.current_battle_context = {"kind": "hero", "scheduled_wave": True}
             self.mode = self.MODE_BATTLE
-            self._init_battle(enemy_id)
+            self._init_battle(enemy_id, attacker_team="red")
             info = {
                 "mode": "battle",
                 "agent_pos": tuple(self.grid_env.agent_pos),
@@ -1770,6 +1777,7 @@ class CampaignEnv(
                     self.grid_env.enemy_positions[int(scheduled_enemy_id)]
                 )
                 grid_info["battle_triggered_by"] = "same_tile"
+                grid_info["battle_attacker_team"] = "red"
                 battle_engage_bonus = float(self.reward_engage_battle)
                 reward += battle_engage_bonus
                 info["battle_triggered"] = True
@@ -1820,8 +1828,11 @@ class CampaignEnv(
             self._log(f"!!! СТОЛКНОВЕНИЕ С ВРАГОМ {enemy_id} !!!")
             self._log(f"Описание: {self._enemy_descriptions.get(enemy_id, 'Неизвестный враг')}")
 
-            # Создаём BattleEnv с нужной RED командой
-            self._init_battle(enemy_id)
+            # Movement attacks as BLUE; a wave arriving during REST attacks as RED.
+            self._init_battle(
+                enemy_id,
+                attacker_team=grid_info.get("battle_attacker_team", "blue"),
+            )
 
             # Возвращаем battle observation
             battle_obs = self.battle_env._obs()
@@ -1840,6 +1851,7 @@ class CampaignEnv(
             and not self._campaign_objective_is_target_enemy()
             and not self._campaign_objective_is_waves()
             and not self._campaign_objective_is_full_party()
+            and not self._campaign_objective_is_scripted_bot()
         ):
             reward = self._apply_all_enemies_objective_reward_if_needed(reward, info)
             self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")

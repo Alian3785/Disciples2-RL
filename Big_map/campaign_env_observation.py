@@ -212,7 +212,8 @@ class CampaignObservationMixin:
         return tuple(signature)
 
     def _refresh_enemy_obs_layout(self) -> None:
-        enemy_positions = getattr(self.grid_env, "enemy_positions", {}) or {}
+        enemy_positions = {eid: pos for eid, pos in self.grid_env.enemy_positions.items()
+                           if eid not in self.grid_env.dynamic_enemy_ids}
         position_signature = tuple(
             (enemy_id, tuple(pos)) for enemy_id, pos in enemy_positions.items()
         )
@@ -252,7 +253,8 @@ class CampaignObservationMixin:
         self._enemy_obs_hp_entries = tuple(hp_entries)
 
     def _ensure_enemy_obs_layout(self) -> None:
-        enemy_positions = getattr(self.grid_env, "enemy_positions", {}) or {}
+        enemy_positions = {eid: pos for eid, pos in self.grid_env.enemy_positions.items()
+                           if eid not in self.grid_env.dynamic_enemy_ids}
         enemy_ids = tuple(getattr(self, "_enemy_obs_enemy_ids", ()))
         position_signature = tuple(
             (enemy_id, tuple(pos)) for enemy_id, pos in enemy_positions.items()
@@ -1231,8 +1233,6 @@ class CampaignObservationMixin:
         """
         if self.grid_empire_territory_obs_size <= 0:
             return np.zeros(0, dtype=np.float32)
-        if not bool(getattr(self, "empire_territory_enabled", True)):
-            return np.zeros(self.grid_empire_territory_obs_size, dtype=np.float32)
 
         territory_tiles = self.empire_territory_tile_set
         territory_obs = np.fromiter(
