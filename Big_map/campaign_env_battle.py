@@ -718,6 +718,7 @@ class CampaignBattleMixin:
             if self._is_empty_enemy_unit(unit):
                 continue
             base_armor = self._normalize_armor_value(unit.get("armor", 0))
+            unit["campaign_settlement_base_armor"] = base_armor
             unit["armor"] = base_armor + bonus
             unit["settlement_armor_bonus"] = int(bonus)
             if source.startswith("settlement_level_"):
@@ -1022,6 +1023,7 @@ class CampaignBattleMixin:
             restored_unit["running_away"] = 0
             restored_unit["feared"] = 0
             restored_unit["transformed"] = 0
+            restored_unit.pop("_attack_form_unit_id", None)
             restored_unit["poison_turns_left"] = 0
             restored_unit["poison_damage_per_tick"] = 0
             restored_unit["burn_turns_left"] = 0
@@ -1032,6 +1034,8 @@ class CampaignBattleMixin:
             restored_unit["powerup"] = 0
             restored_unit["bonusturn"] = 0
             restored_unit["resilience_used_types"] = []
+            restored_unit.pop("_battle_damage_factors", None)
+            restored_unit.pop("_battle_lower_damage_factors", None)
             restored_unit.pop("teamated", None)
             restored_unit.pop("hermited", None)
             restored_unit.pop("hermit_original_initiative_base", None)
@@ -1450,6 +1454,8 @@ class CampaignBattleMixin:
         if self.battle_env is None:
             return
 
+        from permanent_unit_stats import PROGRESSION_KEYS, SOURCE_KEY, has_stat_sources
+
         try:
             normalized_enemy_id = int(enemy_id)
         except (TypeError, ValueError):
@@ -1508,6 +1514,21 @@ class CampaignBattleMixin:
                 original_unit["needaunit"] = int(
                     battle_unit.get("needaunit", original_unit.get("needaunit", 0)) or 0
                 )
+                if has_stat_sources(battle_unit):
+                    # The old roster owns identity/map effects; the battle owns
+                    # earned intrinsic growth, elixirs and learned hero skills.
+                    original_unit[SOURCE_KEY] = deepcopy(battle_unit[SOURCE_KEY])
+                    for key in PROGRESSION_KEYS:
+                        if key in battle_unit:
+                            original_unit[key] = deepcopy(battle_unit[key])
+                    rebuild_stat_layers(original_unit, layers=False)
+                    # Map debuffs remain active after retreat. Their snapshots
+                    # must track the grown bare stats before they are replayed.
+                    for stat in ("armor", "damage", "damage_secondary",
+                                 "initiative_base", "accuracy", "accuracy_secondary"):
+                        base_key = self._enemy_map_spell_base_field(stat)
+                        if base_key in original_unit:
+                            original_unit[base_key] = original_unit[stat]
                 original_unit["initiative"] = (
                     int(original_unit.get("initiative_base", original_unit.get("initiative", 0)) or 0)
                     if current_hp > 0.0
@@ -1521,6 +1542,7 @@ class CampaignBattleMixin:
             original_unit["running_away"] = 0
             original_unit["feared"] = 0
             original_unit["transformed"] = 0
+            original_unit.pop("_attack_form_unit_id", None)
             original_unit["poison_turns_left"] = 0
             original_unit["poison_damage_per_tick"] = 0
             original_unit["burn_turns_left"] = 0
@@ -1685,88 +1707,70 @@ class CampaignBattleMixin:
         self._last_hero_levelup_reward += reward
         self._last_upgrade_reward += reward
 
-    def _log_turns_into_levelups(self) -> int:
-        """Применяет превращения BLUE-юнитов после level-up и возвращает их число.
+    def _build_built_unit_promotion(self, unit: Dict) -> Optional[Dict]:
+        """Build the first unlocked evolution, without changing either army.
 
-        BattleEnv передаёт конкретных юнитов, получивших уровень. CampaignEnv
-        дополнительно проверяет, построено ли здание, открывающее целевой юнит
-        из turns_into, и уже после этого заменяет боевую и persistent-запись.
+        Both the travelling party and city guards use the same faction
+        buildings, branch order, canonical target stats and permanent elixirs.
+        Persistence and reward bookkeeping belong to the caller.
         """
+        source_data = self._find_unit_data_by_name(unit.get("name"))
+        capital = source_data.get("столица") if source_data else None
+        buildings = self._get_buildings_for_capital(capital)
+        targets = unit.get("turns_into", [])
+        if not isinstance(targets, list):
+            targets = [targets]
+        for target in targets:
+            target_name = str(target).strip()
+            if not target_name:
+                continue
+            building = next((entry for entry in buildings.values()
+                             if isinstance(entry, dict)
+                             and entry.get("unit") == target_name), None)
+            if building is None or int(building.get("Build", building.get("built", 0)) or 0) != 1:
+                continue
+            data = self._find_unit_data_by_name(target_name)
+            if data is None:
+                return None
+            upgraded = self._build_unit_from_data(
+                data, unit.get("team", "blue"), unit.get("position"))
+            self._reapply_persistent_elixir_bonuses_to_promoted_unit(
+                source_unit=unit, upgraded_unit=upgraded)
+            return upgraded
+        return None
+
+    def _log_turns_into_levelups(self) -> int:
+        """Apply building-backed BLUE evolutions to the travelling party."""
         self._reset_last_upgrade_reward_tracking()
         if self.battle_env is None:
             return 0
-        levelup_names = self.battle_env.last_levelups
-        levelup_units = self.battle_env.last_levelup_units
         upgraded_count = 0
-        # Сумма и максимум тиров (уровней) юнитов, достигнутых апгрейдом — для бонуса и отчёта.
-        for name, unit in zip(levelup_names, levelup_units):
+        for name, unit in zip(self.battle_env.last_levelups,
+                              self.battle_env.last_levelup_units):
             # Names are for logging; identity comes from the XP recipient.
             # Ignore opposing-team events and already-applied evolutions.
             if unit.get("team") != "blue" or unit.get("name") != name:
                 continue
-            unit_data = self._find_unit_data_by_name(name)
-            capital_value = unit_data.get("\u0441\u0442\u043e\u043b\u0438\u0446\u0430") if unit_data else None
-            buildings = self._get_buildings_for_capital(capital_value)
-
-            pos = unit.get("position")
-            if pos is None:
-                unit_label = name
-            else:
-                unit_label = f"{name} (pos {pos})"
             self._record_hero_levelup_reward(unit)
-            turns_into = unit.get("turns_into", [])
-            if not isinstance(turns_into, list):
-                turns_into = [turns_into]
-
-            for target in turns_into:
-                target_name = str(target).strip()
-                if not target_name:
-                    continue
-                building = None
-                for entry in buildings.values():
-                    if not isinstance(entry, dict):
-                        continue
-                    if entry.get("unit") == target_name:
-                        building = entry
-                        break
-                if building is None:
-                    continue
-                built_flag = building.get("Build", building.get("built", 0))
-                if int(built_flag or 0) == 1:
-                    self._log(f'Unit "{unit_label}" upgraded to "{target_name}"')
-                    unit_data = self._find_unit_data_by_name(target_name)
-                    if unit_data is not None:
-                        upgraded_unit = self._build_unit_from_data(
-                            unit_data,
-                            unit.get("team", "blue"),
-                            unit.get("position", pos),
-                        )
-                        self._reapply_persistent_elixir_bonuses_to_promoted_unit(
-                            source_unit=unit,
-                            upgraded_unit=upgraded_unit,
-                        )
-                        unit.clear()
-                        unit.update(deepcopy(upgraded_unit))
-                        self._replace_blue_unit(upgraded_unit)
-                        upgraded_count += 1
-                        target_tier = int(
-                            float(
-                                unit_data.get("уровень", 0)
-                                or upgraded_unit.get("Level", 0)
-                                or 0
-                            )
-                        )
-                        self._last_upgrade_tier_sum += max(0, target_tier)
-                        self._last_upgrade_max_tier = max(
-                            self._last_upgrade_max_tier, target_tier
-                        )
-                        if target_tier == 3:
-                            self._last_upgrade_tier3_count += 1
-                        self._last_upgrade_reward += self._unit_upgrade_reward_for_tier(
-                            target_tier
-                        )
-                    break
-
+            upgraded_unit = self._build_built_unit_promotion(unit)
+            if upgraded_unit is None:
+                continue
+            pos = unit.get("position")
+            unit_label = name if pos is None else f"{name} (pos {pos})"
+            target_name = upgraded_unit["name"]
+            self._log(f'Unit "{unit_label}" upgraded to "{target_name}"')
+            unit_data = self._find_unit_data_by_name(target_name)
+            unit.clear()
+            unit.update(deepcopy(upgraded_unit))
+            self._replace_blue_unit(upgraded_unit)
+            upgraded_count += 1
+            target_tier = int(float(unit_data.get("уровень", 0)
+                                    or upgraded_unit.get("Level", 0) or 0))
+            self._last_upgrade_tier_sum += max(0, target_tier)
+            self._last_upgrade_max_tier = max(self._last_upgrade_max_tier, target_tier)
+            if target_tier == 3:
+                self._last_upgrade_tier3_count += 1
+            self._last_upgrade_reward += self._unit_upgrade_reward_for_tier(target_tier)
         return int(upgraded_count)
     def _heal_blue_team(self, heal_percent: float = 0.05, bonus_percent: float = 0.0) -> int:
         """

@@ -1,0 +1,10927 @@
+{
+  "schema_version": 1,
+  "map_id": "wotans_retribution",
+  "title": "Wotan’s Retribution",
+  "grid_size": 48,
+  "source_grid_size": 48,
+  "seed": 0,
+  "observation_version": "local5",
+  "scripted_bot_enabled": false,
+  "boss_roster_enabled": false,
+  "objective": "cities",
+  "objective_enemy_id": null,
+  "turn": 0,
+  "faction": "Горные Кланы",
+  "starting_gold": 100.0,
+  "starting_army": "Гном + Королевский страж + Метатель топоров + Травница",
+  "starting_roster_mode": "fixed",
+  "hero": [
+    40,
+    6
+  ],
+  "capitals": [
+    {
+      "code": "A",
+      "name": "Столица: Горные Кланы",
+      "position": [
+        40,
+        6
+      ],
+      "color": "#b85869",
+      "footprint": [
+        [
+          36,
+          4
+        ],
+        [
+          36,
+          5
+        ],
+        [
+          36,
+          6
+        ],
+        [
+          36,
+          7
+        ],
+        [
+          36,
+          8
+        ],
+        [
+          37,
+          4
+        ],
+        [
+          37,
+          5
+        ],
+        [
+          37,
+          6
+        ],
+        [
+          37,
+          7
+        ],
+        [
+          37,
+          8
+        ],
+        [
+          38,
+          4
+        ],
+        [
+          38,
+          5
+        ],
+        [
+          38,
+          6
+        ],
+        [
+          38,
+          7
+        ],
+        [
+          38,
+          8
+        ],
+        [
+          39,
+          4
+        ],
+        [
+          39,
+          5
+        ],
+        [
+          39,
+          6
+        ],
+        [
+          39,
+          7
+        ],
+        [
+          39,
+          8
+        ],
+        [
+          40,
+          4
+        ],
+        [
+          40,
+          5
+        ],
+        [
+          40,
+          6
+        ],
+        [
+          40,
+          7
+        ],
+        [
+          40,
+          8
+        ]
+      ]
+    },
+    {
+      "code": "B",
+      "name": "Вражеская столица: Империя",
+      "position": [
+        13,
+        33
+      ],
+      "color": "#598cd9",
+      "footprint": [
+        [
+          9,
+          31
+        ],
+        [
+          9,
+          32
+        ],
+        [
+          9,
+          33
+        ],
+        [
+          9,
+          34
+        ],
+        [
+          9,
+          35
+        ],
+        [
+          10,
+          31
+        ],
+        [
+          10,
+          32
+        ],
+        [
+          10,
+          33
+        ],
+        [
+          10,
+          34
+        ],
+        [
+          10,
+          35
+        ],
+        [
+          11,
+          31
+        ],
+        [
+          11,
+          32
+        ],
+        [
+          11,
+          33
+        ],
+        [
+          11,
+          34
+        ],
+        [
+          11,
+          35
+        ],
+        [
+          12,
+          31
+        ],
+        [
+          12,
+          32
+        ],
+        [
+          12,
+          33
+        ],
+        [
+          12,
+          34
+        ],
+        [
+          12,
+          35
+        ],
+        [
+          13,
+          31
+        ],
+        [
+          13,
+          32
+        ],
+        [
+          13,
+          33
+        ],
+        [
+          13,
+          34
+        ],
+        [
+          13,
+          35
+        ]
+      ]
+    }
+  ],
+  "cities": [
+    {
+      "code": "C1",
+      "name": "Fogfell",
+      "position": [
+        39,
+        29
+      ],
+      "enemy_ids": [
+        36
+      ],
+      "level": 4,
+      "objective": false,
+      "owned": false,
+      "footprint": [
+        [
+          36,
+          26
+        ],
+        [
+          36,
+          27
+        ],
+        [
+          36,
+          28
+        ],
+        [
+          36,
+          29
+        ],
+        [
+          37,
+          26
+        ],
+        [
+          37,
+          27
+        ],
+        [
+          37,
+          28
+        ],
+        [
+          37,
+          29
+        ],
+        [
+          38,
+          26
+        ],
+        [
+          38,
+          27
+        ],
+        [
+          38,
+          28
+        ],
+        [
+          38,
+          29
+        ],
+        [
+          39,
+          26
+        ],
+        [
+          39,
+          27
+        ],
+        [
+          39,
+          28
+        ],
+        [
+          39,
+          29
+        ]
+      ]
+    },
+    {
+      "code": "C2",
+      "name": "Akar",
+      "position": [
+        46,
+        43
+      ],
+      "enemy_ids": [
+        15
+      ],
+      "level": 1,
+      "objective": false,
+      "owned": false,
+      "footprint": [
+        [
+          43,
+          40
+        ],
+        [
+          43,
+          41
+        ],
+        [
+          43,
+          42
+        ],
+        [
+          43,
+          43
+        ],
+        [
+          44,
+          40
+        ],
+        [
+          44,
+          41
+        ],
+        [
+          44,
+          42
+        ],
+        [
+          44,
+          43
+        ],
+        [
+          45,
+          40
+        ],
+        [
+          45,
+          41
+        ],
+        [
+          45,
+          42
+        ],
+        [
+          45,
+          43
+        ],
+        [
+          46,
+          40
+        ],
+        [
+          46,
+          41
+        ],
+        [
+          46,
+          42
+        ],
+        [
+          46,
+          43
+        ]
+      ]
+    },
+    {
+      "code": "C3",
+      "name": "Kalen's Palace",
+      "position": [
+        5,
+        18
+      ],
+      "enemy_ids": [
+        6,
+        14
+      ],
+      "level": 4,
+      "objective": true,
+      "owned": false,
+      "footprint": [
+        [
+          2,
+          15
+        ],
+        [
+          2,
+          16
+        ],
+        [
+          2,
+          17
+        ],
+        [
+          2,
+          18
+        ],
+        [
+          3,
+          15
+        ],
+        [
+          3,
+          16
+        ],
+        [
+          3,
+          17
+        ],
+        [
+          3,
+          18
+        ],
+        [
+          4,
+          15
+        ],
+        [
+          4,
+          16
+        ],
+        [
+          4,
+          17
+        ],
+        [
+          4,
+          18
+        ],
+        [
+          5,
+          15
+        ],
+        [
+          5,
+          16
+        ],
+        [
+          5,
+          17
+        ],
+        [
+          5,
+          18
+        ]
+      ]
+    },
+    {
+      "code": "C4",
+      "name": "Frelan",
+      "position": [
+        6,
+        42
+      ],
+      "enemy_ids": [
+        7,
+        13
+      ],
+      "level": 3,
+      "objective": true,
+      "owned": false,
+      "footprint": [
+        [
+          3,
+          39
+        ],
+        [
+          3,
+          40
+        ],
+        [
+          3,
+          41
+        ],
+        [
+          3,
+          42
+        ],
+        [
+          4,
+          39
+        ],
+        [
+          4,
+          40
+        ],
+        [
+          4,
+          41
+        ],
+        [
+          4,
+          42
+        ],
+        [
+          5,
+          39
+        ],
+        [
+          5,
+          40
+        ],
+        [
+          5,
+          41
+        ],
+        [
+          5,
+          42
+        ],
+        [
+          6,
+          39
+        ],
+        [
+          6,
+          40
+        ],
+        [
+          6,
+          41
+        ],
+        [
+          6,
+          42
+        ]
+      ]
+    },
+    {
+      "code": "C5",
+      "name": "Hasser's Keep",
+      "position": [
+        7,
+        4
+      ],
+      "enemy_ids": [
+        8
+      ],
+      "level": 3,
+      "objective": true,
+      "owned": false,
+      "footprint": [
+        [
+          4,
+          1
+        ],
+        [
+          4,
+          2
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          5,
+          1
+        ],
+        [
+          5,
+          2
+        ],
+        [
+          5,
+          3
+        ],
+        [
+          5,
+          4
+        ],
+        [
+          6,
+          1
+        ],
+        [
+          6,
+          2
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          6,
+          4
+        ],
+        [
+          7,
+          1
+        ],
+        [
+          7,
+          2
+        ],
+        [
+          7,
+          3
+        ],
+        [
+          7,
+          4
+        ]
+      ]
+    },
+    {
+      "code": "C6",
+      "name": "Odzark",
+      "position": [
+        23,
+        4
+      ],
+      "enemy_ids": [
+        9,
+        46
+      ],
+      "level": 2,
+      "objective": false,
+      "owned": false,
+      "footprint": [
+        [
+          20,
+          1
+        ],
+        [
+          20,
+          2
+        ],
+        [
+          20,
+          3
+        ],
+        [
+          20,
+          4
+        ],
+        [
+          21,
+          1
+        ],
+        [
+          21,
+          2
+        ],
+        [
+          21,
+          3
+        ],
+        [
+          21,
+          4
+        ],
+        [
+          22,
+          1
+        ],
+        [
+          22,
+          2
+        ],
+        [
+          22,
+          3
+        ],
+        [
+          22,
+          4
+        ],
+        [
+          23,
+          1
+        ],
+        [
+          23,
+          2
+        ],
+        [
+          23,
+          3
+        ],
+        [
+          23,
+          4
+        ]
+      ]
+    }
+  ],
+  "enemies": [
+    {
+      "id": 1,
+      "position": [
+        33,
+        5
+      ],
+      "alive": true,
+      "kind": "ruin",
+      "description": "ruin_guardian S117RU0000: Варвар, Варвар",
+      "units": [
+        {
+          "name": "Варвар",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5040"
+        },
+        {
+          "name": "Варвар",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5040"
+        }
+      ],
+      "summary": "2 × Варвар",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "1"
+    },
+    {
+      "id": 2,
+      "position": [
+        11,
+        10
+      ],
+      "alive": true,
+      "kind": "ruin",
+      "description": "ruin_guardian S117RU0001: Вождь варваров, Варвар, Варвар",
+      "units": [
+        {
+          "name": "Вождь варваров",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5032"
+        },
+        {
+          "name": "Варвар",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5040"
+        },
+        {
+          "name": "Варвар",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5040"
+        }
+      ],
+      "summary": "Вождь варваров + 2 × Варвар",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "2"
+    },
+    {
+      "id": 3,
+      "position": [
+        3,
+        31
+      ],
+      "alive": true,
+      "kind": "ruin",
+      "description": "ruin_guardian S117RU0002: Крестьянин, Крестьянин, Крестьянин",
+      "units": [
+        {
+          "name": "Крестьянин",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5001"
+        },
+        {
+          "name": "Крестьянин",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5001"
+        },
+        {
+          "name": "Крестьянин",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5001"
+        }
+      ],
+      "summary": "3 × Крестьянин",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "3"
+    },
+    {
+      "id": 4,
+      "position": [
+        18,
+        46
+      ],
+      "alive": true,
+      "kind": "ruin",
+      "description": "ruin_guardian S117RU0004: Дикий гигант, Штормовой гигант",
+      "units": [
+        {
+          "name": "Дикий гигант",
+          "Level": 1,
+          "big": true,
+          "position": 1,
+          "unit_id": "g000uu6012"
+        },
+        {
+          "name": "Штормовой гигант",
+          "Level": 3,
+          "big": true,
+          "position": 3,
+          "unit_id": "g000uu0031"
+        }
+      ],
+      "summary": "Дикий гигант + Штормовой гигант (ур. 3)",
+      "fighter_count": 2,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "4"
+    },
+    {
+      "id": 5,
+      "position": [
+        13,
+        33
+      ],
+      "alive": true,
+      "kind": "capital",
+      "description": "settlement_garrison S117FT0000: Мизраэль, Охотник на ведьм, Жрец, Имперский ассасин",
+      "units": [
+        {
+          "name": "Мизраэль",
+          "Level": 0,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu3001"
+        },
+        {
+          "name": "Охотник на ведьм",
+          "Level": 2,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0004"
+        },
+        {
+          "name": "Жрец",
+          "Level": 2,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0012"
+        },
+        {
+          "name": "Имперский ассасин",
+          "Level": 3,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0154"
+        }
+      ],
+      "summary": "Мизраэль + Охотник на ведьм (ур. 2) + Жрец (ур. 2) + Имперский ассасин (ур. 3)",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "5"
+    },
+    {
+      "id": 6,
+      "position": [
+        5,
+        18
+      ],
+      "alive": true,
+      "kind": "city",
+      "description": "settlement_garrison S117FT0004: Сектант, Тварь, Сектант",
+      "units": [
+        {
+          "name": "Сектант",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0062"
+        },
+        {
+          "name": "Тварь",
+          "Level": 4,
+          "big": true,
+          "position": 3,
+          "unit_id": "g000uu0060"
+        },
+        {
+          "name": "Сектант",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0062"
+        }
+      ],
+      "summary": "2 × Сектант + Тварь (ур. 4)",
+      "fighter_count": 3,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "6"
+    },
+    {
+      "id": 7,
+      "position": [
+        6,
+        42
+      ],
+      "alive": true,
+      "kind": "city",
+      "description": "settlement_garrison S117FT0005: Рыцарь, Белый маг, Скваер",
+      "units": [
+        {
+          "name": "Рыцарь",
+          "Level": 2,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0002"
+        },
+        {
+          "name": "Белый маг",
+          "Level": 4,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0152"
+        },
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0001"
+        }
+      ],
+      "summary": "Рыцарь (ур. 2) + Белый маг (ур. 4) + Скваер",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "7"
+    },
+    {
+      "id": 8,
+      "position": [
+        7,
+        4
+      ],
+      "alive": true,
+      "kind": "city",
+      "description": "settlement_garrison S117FT0006: Модеус, Темный паладин, Защитник Веры",
+      "units": [
+        {
+          "name": "Модеус",
+          "Level": 5,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0172"
+        },
+        {
+          "name": "Темный паладин",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0054"
+        },
+        {
+          "name": "Защитник Веры",
+          "Level": 5,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0156"
+        }
+      ],
+      "summary": "Модеус (ур. 5) + Темный паладин (ур. 3) + Защитник Веры (ур. 5)",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "8"
+    },
+    {
+      "id": 9,
+      "position": [
+        23,
+        4
+      ],
+      "alive": true,
+      "kind": "city",
+      "description": "settlement_garrison S117FT0007: Варвар",
+      "units": [
+        {
+          "name": "Варвар",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5040"
+        }
+      ],
+      "summary": "Варвар",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "9"
+    },
+    {
+      "id": 10,
+      "position": [
+        13,
+        33
+      ],
+      "alive": true,
+      "kind": "capital",
+      "description": "stack S117KC0000: Рыцарь на пегасе",
+      "units": [
+        {
+          "name": "Рыцарь на пегасе",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0019"
+        }
+      ],
+      "summary": "Рыцарь на пегасе",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "10"
+    },
+    {
+      "id": 11,
+      "position": [
+        29,
+        19
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0004: Холмовой гигант",
+      "units": [
+        {
+          "name": "Холмовой гигант",
+          "Level": 1,
+          "big": true,
+          "position": 3,
+          "unit_id": "g000uu0029"
+        }
+      ],
+      "summary": "Холмовой гигант",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "11"
+    },
+    {
+      "id": 12,
+      "position": [
+        27,
+        24
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0006: Скальной гигант",
+      "units": [
+        {
+          "name": "Скальной гигант",
+          "Level": 2,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu0030"
+        }
+      ],
+      "summary": "Скальной гигант (ур. 2)",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "12"
+    },
+    {
+      "id": 13,
+      "position": [
+        6,
+        42
+      ],
+      "alive": true,
+      "kind": "city",
+      "description": "stack S117KC0009: Имперский ассасин",
+      "units": [
+        {
+          "name": "Имперский ассасин",
+          "Level": 3,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0154"
+        }
+      ],
+      "summary": "Имперский ассасин (ур. 3)",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "13"
+    },
+    {
+      "id": 14,
+      "position": [
+        5,
+        18
+      ],
+      "alive": true,
+      "kind": "city",
+      "description": "stack S117KC000c: Волшебник",
+      "units": [
+        {
+          "name": "Волшебник",
+          "Level": 3,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0010"
+        }
+      ],
+      "summary": "Волшебник (ур. 3)",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "14"
+    },
+    {
+      "id": 15,
+      "position": [
+        46,
+        43
+      ],
+      "alive": true,
+      "kind": "city",
+      "description": "stack S117KC000e: Орк чемпион, Бес, Бес",
+      "units": [
+        {
+          "name": "Орк чемпион",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5012"
+        },
+        {
+          "name": "Бес",
+          "Level": 1,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu5034"
+        },
+        {
+          "name": "Бес",
+          "Level": 1,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu5034"
+        }
+      ],
+      "summary": "Орк чемпион + 2 × Бес",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "15"
+    },
+    {
+      "id": 16,
+      "position": [
+        30,
+        22
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC000f: Холмовой гигант",
+      "units": [
+        {
+          "name": "Холмовой гигант",
+          "Level": 1,
+          "big": true,
+          "position": 3,
+          "unit_id": "g000uu0029"
+        }
+      ],
+      "summary": "Холмовой гигант",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "16"
+    },
+    {
+      "id": 17,
+      "position": [
+        47,
+        39
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0010: Волк",
+      "units": [
+        {
+          "name": "Волк",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5039"
+        }
+      ],
+      "summary": "Волк",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "17"
+    },
+    {
+      "id": 18,
+      "position": [
+        32,
+        31
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0011: Скальной гигант, Холмовой гигант",
+      "units": [
+        {
+          "name": "Холмовой гигант",
+          "Level": 1,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu0029"
+        },
+        {
+          "name": "Скальной гигант",
+          "Level": 2,
+          "big": true,
+          "position": 3,
+          "unit_id": "g000uu0030"
+        }
+      ],
+      "summary": "Холмовой гигант + Скальной гигант (ур. 2)",
+      "fighter_count": 2,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "18"
+    },
+    {
+      "id": 19,
+      "position": [
+        35,
+        34
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0012: Скальной гигант, Холмовой гигант",
+      "units": [
+        {
+          "name": "Холмовой гигант",
+          "Level": 1,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu0029"
+        },
+        {
+          "name": "Скальной гигант",
+          "Level": 2,
+          "big": true,
+          "position": 3,
+          "unit_id": "g000uu0030"
+        }
+      ],
+      "summary": "Холмовой гигант + Скальной гигант (ур. 2)",
+      "fighter_count": 2,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "19"
+    },
+    {
+      "id": 20,
+      "position": [
+        8,
+        2
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0013: Варвар, Вождь варваров, Варвар",
+      "units": [
+        {
+          "name": "Варвар",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5040"
+        },
+        {
+          "name": "Вождь варваров",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5032"
+        },
+        {
+          "name": "Варвар",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5040"
+        }
+      ],
+      "summary": "2 × Варвар + Вождь варваров",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "20"
+    },
+    {
+      "id": 21,
+      "position": [
+        17,
+        18
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0014: Копейщик, Ученик, Ополченец, Стрелок, Копейщик, Служка",
+      "units": [
+        {
+          "name": "Копейщик",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5003"
+        },
+        {
+          "name": "Ученик",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0008"
+        },
+        {
+          "name": "Ополченец",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5002"
+        },
+        {
+          "name": "Стрелок",
+          "Level": 2,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0007"
+        },
+        {
+          "name": "Копейщик",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5003"
+        },
+        {
+          "name": "Служка",
+          "Level": 1,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0011"
+        }
+      ],
+      "summary": "2 × Копейщик + Ученик + Ополченец + Стрелок (ур. 2) + Служка",
+      "fighter_count": 6,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "21"
+    },
+    {
+      "id": 22,
+      "position": [
+        28,
+        42
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0016: Разбойник, Разбойник, Разбойник",
+      "units": [
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5030"
+        },
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5030"
+        },
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5030"
+        }
+      ],
+      "summary": "3 × Разбойник",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "22"
+    },
+    {
+      "id": 23,
+      "position": [
+        43,
+        44
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0017: Тролль",
+      "units": [
+        {
+          "name": "Тролль",
+          "Level": 1,
+          "big": true,
+          "position": 3,
+          "unit_id": "g000uu5016"
+        }
+      ],
+      "summary": "Тролль",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "23"
+    },
+    {
+      "id": 24,
+      "position": [
+        24,
+        3
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0018: Вождь варваров",
+      "units": [
+        {
+          "name": "Вождь варваров",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5032"
+        }
+      ],
+      "summary": "Вождь варваров",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "24"
+    },
+    {
+      "id": 25,
+      "position": [
+        35,
+        10
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0019: Разбойник, Разбойник, Разбойник",
+      "units": [
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5030"
+        },
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5030"
+        },
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5030"
+        }
+      ],
+      "summary": "3 × Разбойник",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "25"
+    },
+    {
+      "id": 26,
+      "position": [
+        45,
+        14
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC001a: Белый медведь",
+      "units": [
+        {
+          "name": "Белый медведь",
+          "Level": 1,
+          "big": true,
+          "position": 3,
+          "unit_id": "g000uu5037"
+        }
+      ],
+      "summary": "Белый медведь",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "26"
+    },
+    {
+      "id": 27,
+      "position": [
+        41,
+        22
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC001c: Волк",
+      "units": [
+        {
+          "name": "Волк",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5039"
+        }
+      ],
+      "summary": "Волк",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "27"
+    },
+    {
+      "id": 28,
+      "position": [
+        30,
+        6
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC001e: Головорез, Головорез",
+      "units": [
+        {
+          "name": "Головорез",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5031"
+        },
+        {
+          "name": "Головорез",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5031"
+        }
+      ],
+      "summary": "2 × Головорез",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "28"
+    },
+    {
+      "id": 29,
+      "position": [
+        25,
+        8
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC001f: Вождь варваров",
+      "units": [
+        {
+          "name": "Вождь варваров",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5032"
+        }
+      ],
+      "summary": "Вождь варваров",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "29"
+    },
+    {
+      "id": 30,
+      "position": [
+        21,
+        8
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0020: Берсерк",
+      "units": [
+        {
+          "name": "Берсерк",
+          "Level": 2,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0053"
+        }
+      ],
+      "summary": "Берсерк (ур. 2)",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "30"
+    },
+    {
+      "id": 31,
+      "position": [
+        5,
+        45
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0025: Русалка",
+      "units": [
+        {
+          "name": "Русалка",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5026"
+        }
+      ],
+      "summary": "Русалка",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "31"
+    },
+    {
+      "id": 32,
+      "position": [
+        29,
+        45
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0027: Копейщик, Скваер, Ополченец",
+      "units": [
+        {
+          "name": "Копейщик",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5003"
+        },
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Ополченец",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5002"
+        }
+      ],
+      "summary": "Копейщик + Скваер + Ополченец",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "32"
+    },
+    {
+      "id": 33,
+      "position": [
+        33,
+        46
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0029: Дикий гигант, Дикий гигант",
+      "units": [
+        {
+          "name": "Дикий гигант",
+          "Level": 1,
+          "big": true,
+          "position": 1,
+          "unit_id": "g000uu6012"
+        },
+        {
+          "name": "Дикий гигант",
+          "Level": 1,
+          "big": true,
+          "position": 3,
+          "unit_id": "g000uu6012"
+        }
+      ],
+      "summary": "2 × Дикий гигант",
+      "fighter_count": 2,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "33"
+    },
+    {
+      "id": 34,
+      "position": [
+        20,
+        40
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC002a: Титан",
+      "units": [
+        {
+          "name": "Титан",
+          "Level": 1,
+          "big": true,
+          "position": 3,
+          "unit_id": "g000uu0018"
+        }
+      ],
+      "summary": "Титан",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "34"
+    },
+    {
+      "id": 35,
+      "position": [
+        46,
+        46
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC002b: Орк",
+      "units": [
+        {
+          "name": "Орк",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5013"
+        }
+      ],
+      "summary": "Орк",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "35"
+    },
+    {
+      "id": 36,
+      "position": [
+        39,
+        29
+      ],
+      "alive": true,
+      "kind": "city",
+      "description": "stack S117KC002c: Дикий гигант",
+      "units": [
+        {
+          "name": "Дикий гигант",
+          "Level": 1,
+          "big": true,
+          "position": 3,
+          "unit_id": "g000uu6012"
+        }
+      ],
+      "summary": "Дикий гигант",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "36"
+    },
+    {
+      "id": 37,
+      "position": [
+        42,
+        10
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC002d: Рыцарь на пегасе",
+      "units": [
+        {
+          "name": "Рыцарь на пегасе",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0019"
+        }
+      ],
+      "summary": "Рыцарь на пегасе",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "37"
+    },
+    {
+      "id": 38,
+      "position": [
+        34,
+        15
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC002e: Дикий гигант",
+      "units": [
+        {
+          "name": "Дикий гигант",
+          "Level": 1,
+          "big": true,
+          "position": 1,
+          "unit_id": "g000uu6012"
+        }
+      ],
+      "summary": "Дикий гигант",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "38"
+    },
+    {
+      "id": 39,
+      "position": [
+        15,
+        1
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC002f: Вождь варваров",
+      "units": [
+        {
+          "name": "Вождь варваров",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5032"
+        }
+      ],
+      "summary": "Вождь варваров",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "39"
+    },
+    {
+      "id": 40,
+      "position": [
+        32,
+        38
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0030: Холмовой гигант, Холмовой гигант",
+      "units": [
+        {
+          "name": "Холмовой гигант",
+          "Level": 1,
+          "big": true,
+          "position": 1,
+          "unit_id": "g000uu0029"
+        },
+        {
+          "name": "Холмовой гигант",
+          "Level": 1,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu0029"
+        }
+      ],
+      "summary": "2 × Холмовой гигант",
+      "fighter_count": 2,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "40"
+    },
+    {
+      "id": 41,
+      "position": [
+        40,
+        35
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0031: Холмовой гигант, Дикий гигант",
+      "units": [
+        {
+          "name": "Холмовой гигант",
+          "Level": 1,
+          "big": true,
+          "position": 1,
+          "unit_id": "g000uu0029"
+        },
+        {
+          "name": "Дикий гигант",
+          "Level": 1,
+          "big": true,
+          "position": 3,
+          "unit_id": "g000uu6012"
+        }
+      ],
+      "summary": "Холмовой гигант + Дикий гигант",
+      "fighter_count": 2,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "41"
+    },
+    {
+      "id": 42,
+      "position": [
+        31,
+        34
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0032: Холмовой гигант, Холмовой гигант",
+      "units": [
+        {
+          "name": "Холмовой гигант",
+          "Level": 1,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu0029"
+        },
+        {
+          "name": "Холмовой гигант",
+          "Level": 1,
+          "big": true,
+          "position": 3,
+          "unit_id": "g000uu0029"
+        }
+      ],
+      "summary": "2 × Холмовой гигант",
+      "fighter_count": 2,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "42"
+    },
+    {
+      "id": 43,
+      "position": [
+        33,
+        45
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0033: Холмовой гигант, Дикий гигант",
+      "units": [
+        {
+          "name": "Холмовой гигант",
+          "Level": 1,
+          "big": true,
+          "position": 1,
+          "unit_id": "g000uu0029"
+        },
+        {
+          "name": "Дикий гигант",
+          "Level": 1,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu6012"
+        }
+      ],
+      "summary": "Холмовой гигант + Дикий гигант",
+      "fighter_count": 2,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "43"
+    },
+    {
+      "id": 44,
+      "position": [
+        45,
+        19
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0034: Белый медведь",
+      "units": [
+        {
+          "name": "Белый медведь",
+          "Level": 1,
+          "big": true,
+          "position": 3,
+          "unit_id": "g000uu5037"
+        }
+      ],
+      "summary": "Белый медведь",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "44"
+    },
+    {
+      "id": 45,
+      "position": [
+        42,
+        21
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0035: Белый медведь",
+      "units": [
+        {
+          "name": "Белый медведь",
+          "Level": 1,
+          "big": true,
+          "position": 3,
+          "unit_id": "g000uu5037"
+        }
+      ],
+      "summary": "Белый медведь",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "45"
+    },
+    {
+      "id": 46,
+      "position": [
+        23,
+        4
+      ],
+      "alive": true,
+      "kind": "city",
+      "description": "stack S117KC0036: Вождь варваров",
+      "units": [
+        {
+          "name": "Вождь варваров",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5032"
+        }
+      ],
+      "summary": "Вождь варваров",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "46"
+    },
+    {
+      "id": 47,
+      "position": [
+        40,
+        2
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0037: Волк",
+      "units": [
+        {
+          "name": "Волк",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5039"
+        }
+      ],
+      "summary": "Волк",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "47"
+    },
+    {
+      "id": 48,
+      "position": [
+        45,
+        3
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0038: Волк",
+      "units": [
+        {
+          "name": "Волк",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5039"
+        }
+      ],
+      "summary": "Волк",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "48"
+    },
+    {
+      "id": 49,
+      "position": [
+        34,
+        1
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0039: Белый медведь",
+      "units": [
+        {
+          "name": "Белый медведь",
+          "Level": 1,
+          "big": true,
+          "position": 3,
+          "unit_id": "g000uu5037"
+        }
+      ],
+      "summary": "Белый медведь",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "49"
+    },
+    {
+      "id": 50,
+      "position": [
+        7,
+        32
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC003a: Головорез, Разбойник, Лучник, Головорез",
+      "units": [
+        {
+          "name": "Головорез",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5031"
+        },
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5030"
+        },
+        {
+          "name": "Лучник",
+          "Level": 1,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0006"
+        },
+        {
+          "name": "Головорез",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5031"
+        }
+      ],
+      "summary": "2 × Головорез + Разбойник + Лучник",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "50"
+    },
+    {
+      "id": 51,
+      "position": [
+        17,
+        15
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC003b: Ополченец, Лучник, Ополченец, Имперский ассасин, Копейщик, Лучник",
+      "units": [
+        {
+          "name": "Ополченец",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5002"
+        },
+        {
+          "name": "Лучник",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0006"
+        },
+        {
+          "name": "Ополченец",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5002"
+        },
+        {
+          "name": "Имперский ассасин",
+          "Level": 3,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0154"
+        },
+        {
+          "name": "Копейщик",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5003"
+        },
+        {
+          "name": "Лучник",
+          "Level": 1,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0006"
+        }
+      ],
+      "summary": "2 × Ополченец + 2 × Лучник + Имперский ассасин (ур. 3) + Копейщик",
+      "fighter_count": 6,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "51"
+    },
+    {
+      "id": 52,
+      "position": [
+        0,
+        0
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC003c: Тритон, Русалка, Тритон",
+      "units": [
+        {
+          "name": "Тритон",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5028"
+        },
+        {
+          "name": "Русалка",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5026"
+        },
+        {
+          "name": "Тритон",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5028"
+        }
+      ],
+      "summary": "2 × Тритон + Русалка",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "52"
+    },
+    {
+      "id": 53,
+      "position": [
+        25,
+        37
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC003d: Лучник, Разбойник, Лучник, Лучник",
+      "units": [
+        {
+          "name": "Лучник",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0006"
+        },
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5030"
+        },
+        {
+          "name": "Лучник",
+          "Level": 1,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0006"
+        },
+        {
+          "name": "Лучник",
+          "Level": 1,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0006"
+        }
+      ],
+      "summary": "3 × Лучник + Разбойник",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "53"
+    },
+    {
+      "id": 54,
+      "position": [
+        12,
+        41
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC003e: Лучник, Головорез, Лучник",
+      "units": [
+        {
+          "name": "Лучник",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0006"
+        },
+        {
+          "name": "Головорез",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5031"
+        },
+        {
+          "name": "Лучник",
+          "Level": 1,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0006"
+        }
+      ],
+      "summary": "2 × Лучник + Головорез",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "54"
+    },
+    {
+      "id": 55,
+      "position": [
+        19,
+        20
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0041: Копейщик, Служка, Ополченец, Лучник, Копейщик, Ученик",
+      "units": [
+        {
+          "name": "Копейщик",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5003"
+        },
+        {
+          "name": "Служка",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0011"
+        },
+        {
+          "name": "Ополченец",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5002"
+        },
+        {
+          "name": "Лучник",
+          "Level": 1,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0006"
+        },
+        {
+          "name": "Копейщик",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5003"
+        },
+        {
+          "name": "Ученик",
+          "Level": 1,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0008"
+        }
+      ],
+      "summary": "2 × Копейщик + Служка + Ополченец + Лучник + Ученик",
+      "fighter_count": 6,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "55"
+    },
+    {
+      "id": 56,
+      "position": [
+        14,
+        10
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0042: Имперский ассасин, Стрелок",
+      "units": [
+        {
+          "name": "Имперский ассасин",
+          "Level": 3,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0154"
+        },
+        {
+          "name": "Стрелок",
+          "Level": 2,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0007"
+        }
+      ],
+      "summary": "Имперский ассасин (ур. 3) + Стрелок (ур. 2)",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "56"
+    },
+    {
+      "id": 57,
+      "position": [
+        6,
+        11
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0043: Вождь варваров, Варвар",
+      "units": [
+        {
+          "name": "Вождь варваров",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5032"
+        },
+        {
+          "name": "Варвар",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5040"
+        }
+      ],
+      "summary": "Вождь варваров + Варвар",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "57"
+    },
+    {
+      "id": 58,
+      "position": [
+        7,
+        26
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0046: Головорез, Головорез, Головорез",
+      "units": [
+        {
+          "name": "Головорез",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5031"
+        },
+        {
+          "name": "Головорез",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5031"
+        },
+        {
+          "name": "Головорез",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5031"
+        }
+      ],
+      "summary": "3 × Головорез",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "58"
+    },
+    {
+      "id": 59,
+      "position": [
+        3,
+        33
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0047: Разбойник, Лучник, Головорез, Разбойник, Лучник",
+      "units": [
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5030"
+        },
+        {
+          "name": "Лучник",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0006"
+        },
+        {
+          "name": "Головорез",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5031"
+        },
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5030"
+        },
+        {
+          "name": "Лучник",
+          "Level": 1,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0006"
+        }
+      ],
+      "summary": "2 × Разбойник + 2 × Лучник + Головорез",
+      "fighter_count": 5,
+      "formation_cells": 5,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "59"
+    },
+    {
+      "id": 60,
+      "position": [
+        4,
+        31
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0048: Головорез, Лучник, Разбойник, Лучник, Головорез, Лучник",
+      "units": [
+        {
+          "name": "Головорез",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5031"
+        },
+        {
+          "name": "Лучник",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0006"
+        },
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5030"
+        },
+        {
+          "name": "Лучник",
+          "Level": 1,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0006"
+        },
+        {
+          "name": "Головорез",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5031"
+        },
+        {
+          "name": "Лучник",
+          "Level": 1,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0006"
+        }
+      ],
+      "summary": "2 × Головорез + 3 × Лучник + Разбойник",
+      "fighter_count": 6,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "60"
+    },
+    {
+      "id": 61,
+      "position": [
+        18,
+        37
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC004a: Головорез, Разбойник",
+      "units": [
+        {
+          "name": "Головорез",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5031"
+        },
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5030"
+        }
+      ],
+      "summary": "Головорез + Разбойник",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "61"
+    },
+    {
+      "id": 62,
+      "position": [
+        11,
+        29
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC004b: Головорез, Лучник, Разбойник, Лучник, Головорез, Лучник",
+      "units": [
+        {
+          "name": "Головорез",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5031"
+        },
+        {
+          "name": "Лучник",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0006"
+        },
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5030"
+        },
+        {
+          "name": "Лучник",
+          "Level": 1,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0006"
+        },
+        {
+          "name": "Головорез",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5031"
+        },
+        {
+          "name": "Лучник",
+          "Level": 1,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0006"
+        }
+      ],
+      "summary": "2 × Головорез + 3 × Лучник + Разбойник",
+      "fighter_count": 6,
+      "formation_cells": 6,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "62"
+    },
+    {
+      "id": 63,
+      "position": [
+        43,
+        6
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC004c: Разбойник, Головорез",
+      "units": [
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5030"
+        },
+        {
+          "name": "Головорез",
+          "Level": 1,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu5031"
+        }
+      ],
+      "summary": "Разбойник + Головорез",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "63"
+    },
+    {
+      "id": 64,
+      "position": [
+        41,
+        13
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC004d: Волк",
+      "units": [
+        {
+          "name": "Волк",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5039"
+        }
+      ],
+      "summary": "Волк",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "64"
+    },
+    {
+      "id": 65,
+      "position": [
+        22,
+        35
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC004e: Орк",
+      "units": [
+        {
+          "name": "Орк",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5013"
+        }
+      ],
+      "summary": "Орк",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "65"
+    },
+    {
+      "id": 66,
+      "position": [
+        14,
+        29
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC004f: Орк",
+      "units": [
+        {
+          "name": "Орк",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5013"
+        }
+      ],
+      "summary": "Орк",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "66"
+    },
+    {
+      "id": 67,
+      "position": [
+        10,
+        26
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0050: Орк",
+      "units": [
+        {
+          "name": "Орк",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5013"
+        }
+      ],
+      "summary": "Орк",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "67"
+    },
+    {
+      "id": 68,
+      "position": [
+        15,
+        18
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0051: Орк чемпион",
+      "units": [
+        {
+          "name": "Орк чемпион",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5012"
+        }
+      ],
+      "summary": "Орк чемпион",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "68"
+    },
+    {
+      "id": 69,
+      "position": [
+        13,
+        23
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0052: Орк чемпион",
+      "units": [
+        {
+          "name": "Орк чемпион",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5012"
+        }
+      ],
+      "summary": "Орк чемпион",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "69"
+    },
+    {
+      "id": 70,
+      "position": [
+        19,
+        29
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0053: Орк чемпион",
+      "units": [
+        {
+          "name": "Орк чемпион",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5012"
+        }
+      ],
+      "summary": "Орк чемпион",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "70"
+    },
+    {
+      "id": 71,
+      "position": [
+        2,
+        35
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "stack S117KC0054: Орк",
+      "units": [
+        {
+          "name": "Орк",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5013"
+        }
+      ],
+      "summary": "Орк",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "71"
+    }
+  ],
+  "sites": [
+    {
+      "code": "T1",
+      "kind": "merchant",
+      "name": "S117SI0002",
+      "position": [
+        9,
+        19
+      ],
+      "interaction_tiles": [
+        [
+          12,
+          20
+        ],
+        [
+          12,
+          21
+        ],
+        [
+          10,
+          22
+        ],
+        [
+          11,
+          22
+        ],
+        [
+          12,
+          22
+        ]
+      ]
+    },
+    {
+      "code": "T2",
+      "kind": "merchant",
+      "name": "S117SI0006",
+      "position": [
+        44,
+        28
+      ],
+      "interaction_tiles": [
+        [
+          47,
+          29
+        ],
+        [
+          47,
+          30
+        ],
+        [
+          45,
+          31
+        ],
+        [
+          46,
+          31
+        ],
+        [
+          47,
+          31
+        ]
+      ]
+    },
+    {
+      "code": "U1",
+      "kind": "trainer",
+      "name": "S117SI0005",
+      "position": [
+        23,
+        43
+      ],
+      "interaction_tiles": [
+        [
+          26,
+          44
+        ],
+        [
+          26,
+          45
+        ],
+        [
+          24,
+          46
+        ],
+        [
+          25,
+          46
+        ],
+        [
+          26,
+          46
+        ]
+      ]
+    }
+  ],
+  "terrain": {
+    "water": [
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        1
+      ],
+      [
+        0,
+        42
+      ],
+      [
+        0,
+        43
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        1,
+        1
+      ],
+      [
+        1,
+        43
+      ],
+      [
+        1,
+        44
+      ],
+      [
+        2,
+        44
+      ],
+      [
+        3,
+        0
+      ],
+      [
+        3,
+        44
+      ],
+      [
+        3,
+        45
+      ],
+      [
+        4,
+        0
+      ],
+      [
+        4,
+        44
+      ],
+      [
+        4,
+        45
+      ],
+      [
+        4,
+        46
+      ],
+      [
+        4,
+        47
+      ],
+      [
+        5,
+        0
+      ],
+      [
+        5,
+        44
+      ],
+      [
+        5,
+        45
+      ],
+      [
+        5,
+        46
+      ],
+      [
+        5,
+        47
+      ],
+      [
+        6,
+        44
+      ],
+      [
+        6,
+        45
+      ],
+      [
+        6,
+        46
+      ],
+      [
+        6,
+        47
+      ],
+      [
+        7,
+        45
+      ],
+      [
+        7,
+        46
+      ],
+      [
+        7,
+        47
+      ],
+      [
+        8,
+        46
+      ],
+      [
+        8,
+        47
+      ],
+      [
+        9,
+        46
+      ],
+      [
+        9,
+        47
+      ],
+      [
+        10,
+        46
+      ],
+      [
+        10,
+        47
+      ],
+      [
+        11,
+        47
+      ],
+      [
+        13,
+        0
+      ],
+      [
+        14,
+        0
+      ],
+      [
+        14,
+        1
+      ],
+      [
+        15,
+        0
+      ],
+      [
+        15,
+        1
+      ],
+      [
+        15,
+        2
+      ],
+      [
+        15,
+        3
+      ],
+      [
+        16,
+        0
+      ],
+      [
+        16,
+        2
+      ],
+      [
+        16,
+        3
+      ],
+      [
+        16,
+        4
+      ],
+      [
+        17,
+        4
+      ],
+      [
+        18,
+        4
+      ],
+      [
+        19,
+        4
+      ],
+      [
+        19,
+        5
+      ],
+      [
+        20,
+        5
+      ],
+      [
+        20,
+        6
+      ],
+      [
+        20,
+        7
+      ],
+      [
+        21,
+        7
+      ],
+      [
+        22,
+        7
+      ],
+      [
+        22,
+        8
+      ],
+      [
+        22,
+        9
+      ],
+      [
+        23,
+        7
+      ],
+      [
+        23,
+        8
+      ],
+      [
+        23,
+        9
+      ],
+      [
+        23,
+        10
+      ],
+      [
+        24,
+        9
+      ],
+      [
+        24,
+        10
+      ],
+      [
+        25,
+        9
+      ],
+      [
+        25,
+        10
+      ],
+      [
+        25,
+        11
+      ],
+      [
+        25,
+        12
+      ],
+      [
+        25,
+        13
+      ],
+      [
+        25,
+        14
+      ],
+      [
+        26,
+        7
+      ],
+      [
+        26,
+        8
+      ],
+      [
+        26,
+        10
+      ],
+      [
+        26,
+        11
+      ],
+      [
+        26,
+        12
+      ],
+      [
+        26,
+        13
+      ],
+      [
+        26,
+        14
+      ],
+      [
+        26,
+        15
+      ],
+      [
+        26,
+        16
+      ],
+      [
+        27,
+        7
+      ],
+      [
+        27,
+        8
+      ],
+      [
+        27,
+        9
+      ],
+      [
+        27,
+        10
+      ],
+      [
+        27,
+        14
+      ],
+      [
+        27,
+        15
+      ],
+      [
+        27,
+        16
+      ],
+      [
+        27,
+        17
+      ],
+      [
+        28,
+        16
+      ],
+      [
+        28,
+        17
+      ],
+      [
+        29,
+        16
+      ],
+      [
+        29,
+        17
+      ],
+      [
+        29,
+        18
+      ],
+      [
+        30,
+        17
+      ],
+      [
+        30,
+        18
+      ],
+      [
+        30,
+        19
+      ],
+      [
+        30,
+        20
+      ],
+      [
+        31,
+        19
+      ],
+      [
+        31,
+        20
+      ],
+      [
+        31,
+        21
+      ],
+      [
+        31,
+        22
+      ],
+      [
+        31,
+        23
+      ],
+      [
+        31,
+        47
+      ],
+      [
+        32,
+        20
+      ],
+      [
+        32,
+        21
+      ],
+      [
+        32,
+        22
+      ],
+      [
+        32,
+        23
+      ],
+      [
+        32,
+        24
+      ],
+      [
+        32,
+        25
+      ],
+      [
+        32,
+        28
+      ],
+      [
+        32,
+        29
+      ],
+      [
+        32,
+        30
+      ],
+      [
+        32,
+        34
+      ],
+      [
+        32,
+        35
+      ],
+      [
+        32,
+        36
+      ],
+      [
+        32,
+        46
+      ],
+      [
+        32,
+        47
+      ],
+      [
+        33,
+        25
+      ],
+      [
+        33,
+        26
+      ],
+      [
+        33,
+        27
+      ],
+      [
+        33,
+        28
+      ],
+      [
+        33,
+        29
+      ],
+      [
+        33,
+        30
+      ],
+      [
+        33,
+        31
+      ],
+      [
+        33,
+        33
+      ],
+      [
+        33,
+        34
+      ],
+      [
+        33,
+        35
+      ],
+      [
+        33,
+        36
+      ],
+      [
+        33,
+        37
+      ],
+      [
+        33,
+        38
+      ],
+      [
+        33,
+        47
+      ],
+      [
+        34,
+        25
+      ],
+      [
+        34,
+        27
+      ],
+      [
+        34,
+        30
+      ],
+      [
+        34,
+        31
+      ],
+      [
+        34,
+        32
+      ],
+      [
+        34,
+        33
+      ],
+      [
+        34,
+        34
+      ],
+      [
+        34,
+        36
+      ],
+      [
+        34,
+        37
+      ],
+      [
+        34,
+        38
+      ],
+      [
+        34,
+        39
+      ],
+      [
+        34,
+        40
+      ],
+      [
+        34,
+        41
+      ],
+      [
+        34,
+        45
+      ],
+      [
+        34,
+        46
+      ],
+      [
+        34,
+        47
+      ],
+      [
+        35,
+        25
+      ],
+      [
+        35,
+        26
+      ],
+      [
+        35,
+        27
+      ],
+      [
+        35,
+        33
+      ],
+      [
+        35,
+        38
+      ],
+      [
+        35,
+        39
+      ],
+      [
+        35,
+        40
+      ],
+      [
+        35,
+        42
+      ],
+      [
+        35,
+        43
+      ],
+      [
+        35,
+        44
+      ],
+      [
+        35,
+        45
+      ],
+      [
+        36,
+        43
+      ],
+      [
+        36,
+        44
+      ],
+      [
+        36,
+        45
+      ],
+      [
+        36,
+        46
+      ],
+      [
+        37,
+        44
+      ],
+      [
+        37,
+        45
+      ],
+      [
+        37,
+        46
+      ],
+      [
+        37,
+        47
+      ],
+      [
+        38,
+        44
+      ],
+      [
+        38,
+        45
+      ],
+      [
+        38,
+        47
+      ],
+      [
+        39,
+        44
+      ],
+      [
+        39,
+        45
+      ],
+      [
+        40,
+        47
+      ],
+      [
+        41,
+        47
+      ],
+      [
+        42,
+        47
+      ],
+      [
+        43,
+        47
+      ],
+      [
+        44,
+        47
+      ],
+      [
+        45,
+        46
+      ],
+      [
+        45,
+        47
+      ],
+      [
+        46,
+        45
+      ],
+      [
+        47,
+        45
+      ],
+      [
+        47,
+        46
+      ],
+      [
+        47,
+        47
+      ]
+    ],
+    "forest": [
+      [
+        0,
+        2
+      ],
+      [
+        0,
+        3
+      ],
+      [
+        0,
+        4
+      ],
+      [
+        0,
+        16
+      ],
+      [
+        0,
+        18
+      ],
+      [
+        0,
+        21
+      ],
+      [
+        0,
+        22
+      ],
+      [
+        0,
+        23
+      ],
+      [
+        0,
+        24
+      ],
+      [
+        0,
+        25
+      ],
+      [
+        0,
+        28
+      ],
+      [
+        0,
+        29
+      ],
+      [
+        0,
+        30
+      ],
+      [
+        0,
+        31
+      ],
+      [
+        0,
+        35
+      ],
+      [
+        0,
+        36
+      ],
+      [
+        0,
+        44
+      ],
+      [
+        1,
+        4
+      ],
+      [
+        1,
+        15
+      ],
+      [
+        1,
+        16
+      ],
+      [
+        1,
+        18
+      ],
+      [
+        1,
+        25
+      ],
+      [
+        1,
+        26
+      ],
+      [
+        1,
+        34
+      ],
+      [
+        1,
+        37
+      ],
+      [
+        1,
+        41
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        2,
+        19
+      ],
+      [
+        2,
+        26
+      ],
+      [
+        2,
+        28
+      ],
+      [
+        2,
+        32
+      ],
+      [
+        2,
+        34
+      ],
+      [
+        2,
+        42
+      ],
+      [
+        2,
+        43
+      ],
+      [
+        3,
+        2
+      ],
+      [
+        3,
+        4
+      ],
+      [
+        3,
+        10
+      ],
+      [
+        3,
+        26
+      ],
+      [
+        3,
+        38
+      ],
+      [
+        3,
+        43
+      ],
+      [
+        3,
+        46
+      ],
+      [
+        3,
+        47
+      ],
+      [
+        4,
+        10
+      ],
+      [
+        4,
+        19
+      ],
+      [
+        4,
+        29
+      ],
+      [
+        4,
+        38
+      ],
+      [
+        4,
+        43
+      ],
+      [
+        5,
+        5
+      ],
+      [
+        5,
+        14
+      ],
+      [
+        5,
+        25
+      ],
+      [
+        5,
+        28
+      ],
+      [
+        5,
+        32
+      ],
+      [
+        5,
+        37
+      ],
+      [
+        5,
+        38
+      ],
+      [
+        5,
+        43
+      ],
+      [
+        6,
+        0
+      ],
+      [
+        6,
+        10
+      ],
+      [
+        6,
+        21
+      ],
+      [
+        6,
+        22
+      ],
+      [
+        6,
+        24
+      ],
+      [
+        6,
+        27
+      ],
+      [
+        6,
+        29
+      ],
+      [
+        6,
+        43
+      ],
+      [
+        7,
+        0
+      ],
+      [
+        7,
+        12
+      ],
+      [
+        7,
+        16
+      ],
+      [
+        7,
+        18
+      ],
+      [
+        7,
+        28
+      ],
+      [
+        7,
+        33
+      ],
+      [
+        7,
+        34
+      ],
+      [
+        8,
+        1
+      ],
+      [
+        8,
+        7
+      ],
+      [
+        8,
+        8
+      ],
+      [
+        8,
+        23
+      ],
+      [
+        8,
+        26
+      ],
+      [
+        8,
+        27
+      ],
+      [
+        8,
+        28
+      ],
+      [
+        8,
+        31
+      ],
+      [
+        8,
+        32
+      ],
+      [
+        8,
+        33
+      ],
+      [
+        8,
+        34
+      ],
+      [
+        8,
+        35
+      ],
+      [
+        8,
+        40
+      ],
+      [
+        8,
+        45
+      ],
+      [
+        9,
+        2
+      ],
+      [
+        9,
+        5
+      ],
+      [
+        9,
+        6
+      ],
+      [
+        9,
+        11
+      ],
+      [
+        9,
+        18
+      ],
+      [
+        9,
+        23
+      ],
+      [
+        9,
+        24
+      ],
+      [
+        9,
+        26
+      ],
+      [
+        9,
+        27
+      ],
+      [
+        9,
+        37
+      ],
+      [
+        9,
+        38
+      ],
+      [
+        9,
+        40
+      ],
+      [
+        10,
+        18
+      ],
+      [
+        10,
+        24
+      ],
+      [
+        10,
+        25
+      ],
+      [
+        10,
+        26
+      ],
+      [
+        10,
+        27
+      ],
+      [
+        10,
+        28
+      ],
+      [
+        10,
+        29
+      ],
+      [
+        10,
+        39
+      ],
+      [
+        10,
+        40
+      ],
+      [
+        10,
+        42
+      ],
+      [
+        10,
+        43
+      ],
+      [
+        11,
+        12
+      ],
+      [
+        11,
+        13
+      ],
+      [
+        11,
+        14
+      ],
+      [
+        11,
+        24
+      ],
+      [
+        11,
+        25
+      ],
+      [
+        11,
+        26
+      ],
+      [
+        11,
+        38
+      ],
+      [
+        11,
+        39
+      ],
+      [
+        11,
+        42
+      ],
+      [
+        11,
+        43
+      ],
+      [
+        11,
+        46
+      ],
+      [
+        12,
+        19
+      ],
+      [
+        12,
+        20
+      ],
+      [
+        12,
+        21
+      ],
+      [
+        12,
+        28
+      ],
+      [
+        12,
+        29
+      ],
+      [
+        12,
+        37
+      ],
+      [
+        13,
+        9
+      ],
+      [
+        13,
+        10
+      ],
+      [
+        13,
+        11
+      ],
+      [
+        13,
+        12
+      ],
+      [
+        13,
+        13
+      ],
+      [
+        13,
+        15
+      ],
+      [
+        13,
+        20
+      ],
+      [
+        13,
+        37
+      ],
+      [
+        13,
+        38
+      ],
+      [
+        13,
+        40
+      ],
+      [
+        13,
+        43
+      ],
+      [
+        14,
+        10
+      ],
+      [
+        14,
+        11
+      ],
+      [
+        14,
+        12
+      ],
+      [
+        14,
+        13
+      ],
+      [
+        14,
+        30
+      ],
+      [
+        14,
+        35
+      ],
+      [
+        14,
+        38
+      ],
+      [
+        14,
+        39
+      ],
+      [
+        14,
+        41
+      ],
+      [
+        15,
+        11
+      ],
+      [
+        15,
+        12
+      ],
+      [
+        15,
+        13
+      ],
+      [
+        15,
+        23
+      ],
+      [
+        15,
+        24
+      ],
+      [
+        15,
+        25
+      ],
+      [
+        15,
+        32
+      ],
+      [
+        15,
+        38
+      ],
+      [
+        15,
+        39
+      ],
+      [
+        15,
+        41
+      ],
+      [
+        15,
+        44
+      ],
+      [
+        15,
+        46
+      ],
+      [
+        15,
+        47
+      ],
+      [
+        16,
+        1
+      ],
+      [
+        16,
+        15
+      ],
+      [
+        16,
+        23
+      ],
+      [
+        16,
+        24
+      ],
+      [
+        16,
+        36
+      ],
+      [
+        16,
+        39
+      ],
+      [
+        16,
+        43
+      ],
+      [
+        16,
+        47
+      ],
+      [
+        17,
+        0
+      ],
+      [
+        17,
+        2
+      ],
+      [
+        17,
+        3
+      ],
+      [
+        17,
+        20
+      ],
+      [
+        17,
+        22
+      ],
+      [
+        17,
+        35
+      ],
+      [
+        17,
+        36
+      ],
+      [
+        17,
+        41
+      ],
+      [
+        18,
+        5
+      ],
+      [
+        18,
+        14
+      ],
+      [
+        18,
+        18
+      ],
+      [
+        19,
+        1
+      ],
+      [
+        19,
+        14
+      ],
+      [
+        19,
+        15
+      ],
+      [
+        19,
+        16
+      ],
+      [
+        19,
+        17
+      ],
+      [
+        19,
+        26
+      ],
+      [
+        19,
+        30
+      ],
+      [
+        19,
+        39
+      ],
+      [
+        19,
+        45
+      ],
+      [
+        20,
+        0
+      ],
+      [
+        20,
+        8
+      ],
+      [
+        20,
+        16
+      ],
+      [
+        20,
+        21
+      ],
+      [
+        20,
+        22
+      ],
+      [
+        20,
+        42
+      ],
+      [
+        20,
+        43
+      ],
+      [
+        20,
+        47
+      ],
+      [
+        21,
+        0
+      ],
+      [
+        21,
+        6
+      ],
+      [
+        21,
+        22
+      ],
+      [
+        21,
+        43
+      ],
+      [
+        22,
+        0
+      ],
+      [
+        22,
+        6
+      ],
+      [
+        22,
+        10
+      ],
+      [
+        22,
+        38
+      ],
+      [
+        22,
+        40
+      ],
+      [
+        22,
+        43
+      ],
+      [
+        22,
+        44
+      ],
+      [
+        22,
+        45
+      ],
+      [
+        23,
+        0
+      ],
+      [
+        23,
+        6
+      ],
+      [
+        24,
+        6
+      ],
+      [
+        24,
+        7
+      ],
+      [
+        24,
+        8
+      ],
+      [
+        24,
+        34
+      ],
+      [
+        24,
+        46
+      ],
+      [
+        24,
+        47
+      ],
+      [
+        25,
+        0
+      ],
+      [
+        25,
+        1
+      ],
+      [
+        25,
+        25
+      ],
+      [
+        25,
+        42
+      ],
+      [
+        25,
+        46
+      ],
+      [
+        26,
+        17
+      ],
+      [
+        26,
+        18
+      ],
+      [
+        26,
+        22
+      ],
+      [
+        26,
+        23
+      ],
+      [
+        26,
+        24
+      ],
+      [
+        26,
+        25
+      ],
+      [
+        26,
+        31
+      ],
+      [
+        26,
+        32
+      ],
+      [
+        26,
+        39
+      ],
+      [
+        26,
+        41
+      ],
+      [
+        26,
+        42
+      ],
+      [
+        26,
+        43
+      ],
+      [
+        26,
+        47
+      ],
+      [
+        27,
+        18
+      ],
+      [
+        27,
+        22
+      ],
+      [
+        27,
+        43
+      ],
+      [
+        27,
+        44
+      ],
+      [
+        27,
+        46
+      ],
+      [
+        27,
+        47
+      ],
+      [
+        28,
+        5
+      ],
+      [
+        28,
+        7
+      ],
+      [
+        28,
+        13
+      ],
+      [
+        28,
+        18
+      ],
+      [
+        28,
+        41
+      ],
+      [
+        28,
+        43
+      ],
+      [
+        28,
+        46
+      ],
+      [
+        29,
+        5
+      ],
+      [
+        29,
+        7
+      ],
+      [
+        29,
+        15
+      ],
+      [
+        29,
+        19
+      ],
+      [
+        29,
+        20
+      ],
+      [
+        29,
+        22
+      ],
+      [
+        29,
+        23
+      ],
+      [
+        29,
+        24
+      ],
+      [
+        29,
+        25
+      ],
+      [
+        29,
+        31
+      ],
+      [
+        29,
+        33
+      ],
+      [
+        29,
+        35
+      ],
+      [
+        29,
+        47
+      ],
+      [
+        30,
+        5
+      ],
+      [
+        30,
+        15
+      ],
+      [
+        30,
+        16
+      ],
+      [
+        30,
+        21
+      ],
+      [
+        30,
+        22
+      ],
+      [
+        30,
+        23
+      ],
+      [
+        30,
+        24
+      ],
+      [
+        30,
+        25
+      ],
+      [
+        30,
+        31
+      ],
+      [
+        30,
+        32
+      ],
+      [
+        30,
+        33
+      ],
+      [
+        30,
+        34
+      ],
+      [
+        30,
+        36
+      ],
+      [
+        30,
+        37
+      ],
+      [
+        30,
+        45
+      ],
+      [
+        30,
+        47
+      ],
+      [
+        31,
+        0
+      ],
+      [
+        31,
+        1
+      ],
+      [
+        31,
+        2
+      ],
+      [
+        31,
+        7
+      ],
+      [
+        31,
+        15
+      ],
+      [
+        31,
+        16
+      ],
+      [
+        31,
+        24
+      ],
+      [
+        31,
+        25
+      ],
+      [
+        31,
+        26
+      ],
+      [
+        31,
+        27
+      ],
+      [
+        31,
+        28
+      ],
+      [
+        31,
+        30
+      ],
+      [
+        31,
+        31
+      ],
+      [
+        31,
+        32
+      ],
+      [
+        31,
+        33
+      ],
+      [
+        31,
+        34
+      ],
+      [
+        31,
+        36
+      ],
+      [
+        31,
+        37
+      ],
+      [
+        31,
+        38
+      ],
+      [
+        31,
+        45
+      ],
+      [
+        32,
+        0
+      ],
+      [
+        32,
+        1
+      ],
+      [
+        32,
+        2
+      ],
+      [
+        32,
+        8
+      ],
+      [
+        32,
+        15
+      ],
+      [
+        32,
+        16
+      ],
+      [
+        32,
+        17
+      ],
+      [
+        32,
+        26
+      ],
+      [
+        32,
+        27
+      ],
+      [
+        32,
+        31
+      ],
+      [
+        32,
+        32
+      ],
+      [
+        32,
+        33
+      ],
+      [
+        32,
+        37
+      ],
+      [
+        32,
+        38
+      ],
+      [
+        32,
+        39
+      ],
+      [
+        32,
+        40
+      ],
+      [
+        32,
+        43
+      ],
+      [
+        32,
+        44
+      ],
+      [
+        32,
+        45
+      ],
+      [
+        33,
+        0
+      ],
+      [
+        33,
+        15
+      ],
+      [
+        33,
+        18
+      ],
+      [
+        33,
+        32
+      ],
+      [
+        33,
+        39
+      ],
+      [
+        33,
+        40
+      ],
+      [
+        33,
+        44
+      ],
+      [
+        33,
+        46
+      ],
+      [
+        34,
+        0
+      ],
+      [
+        34,
+        1
+      ],
+      [
+        34,
+        4
+      ],
+      [
+        34,
+        5
+      ],
+      [
+        34,
+        6
+      ],
+      [
+        34,
+        14
+      ],
+      [
+        34,
+        15
+      ],
+      [
+        34,
+        26
+      ],
+      [
+        34,
+        43
+      ],
+      [
+        35,
+        0
+      ],
+      [
+        35,
+        1
+      ],
+      [
+        35,
+        2
+      ],
+      [
+        35,
+        3
+      ],
+      [
+        35,
+        4
+      ],
+      [
+        35,
+        5
+      ],
+      [
+        35,
+        6
+      ],
+      [
+        35,
+        11
+      ],
+      [
+        35,
+        18
+      ],
+      [
+        35,
+        19
+      ],
+      [
+        35,
+        31
+      ],
+      [
+        35,
+        32
+      ],
+      [
+        35,
+        34
+      ],
+      [
+        35,
+        35
+      ],
+      [
+        35,
+        41
+      ],
+      [
+        35,
+        47
+      ],
+      [
+        36,
+        0
+      ],
+      [
+        36,
+        1
+      ],
+      [
+        36,
+        2
+      ],
+      [
+        36,
+        9
+      ],
+      [
+        36,
+        12
+      ],
+      [
+        36,
+        30
+      ],
+      [
+        36,
+        31
+      ],
+      [
+        36,
+        33
+      ],
+      [
+        36,
+        34
+      ],
+      [
+        36,
+        35
+      ],
+      [
+        36,
+        36
+      ],
+      [
+        36,
+        47
+      ],
+      [
+        37,
+        0
+      ],
+      [
+        37,
+        1
+      ],
+      [
+        37,
+        2
+      ],
+      [
+        37,
+        9
+      ],
+      [
+        37,
+        11
+      ],
+      [
+        37,
+        16
+      ],
+      [
+        37,
+        34
+      ],
+      [
+        37,
+        35
+      ],
+      [
+        37,
+        36
+      ],
+      [
+        37,
+        43
+      ],
+      [
+        38,
+        2
+      ],
+      [
+        38,
+        9
+      ],
+      [
+        38,
+        11
+      ],
+      [
+        38,
+        16
+      ],
+      [
+        38,
+        20
+      ],
+      [
+        38,
+        21
+      ],
+      [
+        38,
+        22
+      ],
+      [
+        38,
+        35
+      ],
+      [
+        38,
+        43
+      ],
+      [
+        38,
+        46
+      ],
+      [
+        39,
+        0
+      ],
+      [
+        39,
+        14
+      ],
+      [
+        39,
+        20
+      ],
+      [
+        39,
+        22
+      ],
+      [
+        39,
+        34
+      ],
+      [
+        39,
+        47
+      ],
+      [
+        40,
+        1
+      ],
+      [
+        40,
+        2
+      ],
+      [
+        40,
+        13
+      ],
+      [
+        40,
+        14
+      ],
+      [
+        40,
+        22
+      ],
+      [
+        40,
+        26
+      ],
+      [
+        40,
+        33
+      ],
+      [
+        40,
+        37
+      ],
+      [
+        40,
+        44
+      ],
+      [
+        41,
+        1
+      ],
+      [
+        41,
+        3
+      ],
+      [
+        41,
+        4
+      ],
+      [
+        41,
+        6
+      ],
+      [
+        41,
+        7
+      ],
+      [
+        41,
+        8
+      ],
+      [
+        41,
+        13
+      ],
+      [
+        41,
+        14
+      ],
+      [
+        41,
+        21
+      ],
+      [
+        41,
+        22
+      ],
+      [
+        41,
+        35
+      ],
+      [
+        41,
+        41
+      ],
+      [
+        42,
+        3
+      ],
+      [
+        42,
+        4
+      ],
+      [
+        42,
+        20
+      ],
+      [
+        42,
+        40
+      ],
+      [
+        42,
+        43
+      ],
+      [
+        43,
+        3
+      ],
+      [
+        43,
+        8
+      ],
+      [
+        43,
+        9
+      ],
+      [
+        43,
+        13
+      ],
+      [
+        43,
+        20
+      ],
+      [
+        43,
+        22
+      ],
+      [
+        43,
+        39
+      ],
+      [
+        44,
+        4
+      ],
+      [
+        44,
+        5
+      ],
+      [
+        44,
+        7
+      ],
+      [
+        44,
+        17
+      ],
+      [
+        44,
+        19
+      ],
+      [
+        44,
+        20
+      ],
+      [
+        44,
+        24
+      ],
+      [
+        44,
+        46
+      ],
+      [
+        45,
+        3
+      ],
+      [
+        45,
+        12
+      ],
+      [
+        45,
+        24
+      ],
+      [
+        45,
+        36
+      ],
+      [
+        46,
+        2
+      ],
+      [
+        46,
+        15
+      ],
+      [
+        46,
+        16
+      ],
+      [
+        46,
+        17
+      ],
+      [
+        46,
+        19
+      ],
+      [
+        46,
+        31
+      ],
+      [
+        46,
+        47
+      ],
+      [
+        47,
+        3
+      ],
+      [
+        47,
+        14
+      ],
+      [
+        47,
+        17
+      ],
+      [
+        47,
+        19
+      ],
+      [
+        47,
+        31
+      ]
+    ],
+    "road": [
+      [
+        4,
+        11
+      ],
+      [
+        4,
+        30
+      ],
+      [
+        5,
+        11
+      ],
+      [
+        5,
+        30
+      ],
+      [
+        6,
+        5
+      ],
+      [
+        6,
+        11
+      ],
+      [
+        6,
+        19
+      ],
+      [
+        6,
+        30
+      ],
+      [
+        7,
+        5
+      ],
+      [
+        7,
+        10
+      ],
+      [
+        7,
+        11
+      ],
+      [
+        7,
+        19
+      ],
+      [
+        7,
+        30
+      ],
+      [
+        7,
+        41
+      ],
+      [
+        7,
+        42
+      ],
+      [
+        8,
+        5
+      ],
+      [
+        8,
+        6
+      ],
+      [
+        8,
+        19
+      ],
+      [
+        8,
+        20
+      ],
+      [
+        8,
+        21
+      ],
+      [
+        8,
+        22
+      ],
+      [
+        8,
+        30
+      ],
+      [
+        8,
+        41
+      ],
+      [
+        9,
+        7
+      ],
+      [
+        9,
+        22
+      ],
+      [
+        9,
+        30
+      ],
+      [
+        9,
+        41
+      ],
+      [
+        10,
+        7
+      ],
+      [
+        10,
+        11
+      ],
+      [
+        10,
+        22
+      ],
+      [
+        10,
+        30
+      ],
+      [
+        10,
+        37
+      ],
+      [
+        10,
+        41
+      ],
+      [
+        11,
+        7
+      ],
+      [
+        11,
+        11
+      ],
+      [
+        11,
+        22
+      ],
+      [
+        11,
+        30
+      ],
+      [
+        11,
+        37
+      ],
+      [
+        11,
+        41
+      ],
+      [
+        12,
+        7
+      ],
+      [
+        12,
+        8
+      ],
+      [
+        12,
+        9
+      ],
+      [
+        12,
+        10
+      ],
+      [
+        12,
+        11
+      ],
+      [
+        12,
+        12
+      ],
+      [
+        12,
+        13
+      ],
+      [
+        12,
+        14
+      ],
+      [
+        12,
+        22
+      ],
+      [
+        12,
+        30
+      ],
+      [
+        12,
+        38
+      ],
+      [
+        12,
+        39
+      ],
+      [
+        12,
+        40
+      ],
+      [
+        12,
+        41
+      ],
+      [
+        12,
+        42
+      ],
+      [
+        12,
+        43
+      ],
+      [
+        12,
+        44
+      ],
+      [
+        13,
+        14
+      ],
+      [
+        13,
+        21
+      ],
+      [
+        13,
+        22
+      ],
+      [
+        13,
+        23
+      ],
+      [
+        13,
+        24
+      ],
+      [
+        13,
+        25
+      ],
+      [
+        13,
+        26
+      ],
+      [
+        13,
+        27
+      ],
+      [
+        13,
+        28
+      ],
+      [
+        13,
+        29
+      ],
+      [
+        13,
+        30
+      ],
+      [
+        13,
+        44
+      ],
+      [
+        14,
+        14
+      ],
+      [
+        14,
+        15
+      ],
+      [
+        14,
+        18
+      ],
+      [
+        14,
+        19
+      ],
+      [
+        14,
+        20
+      ],
+      [
+        14,
+        21
+      ],
+      [
+        14,
+        29
+      ],
+      [
+        14,
+        31
+      ],
+      [
+        14,
+        37
+      ],
+      [
+        14,
+        44
+      ],
+      [
+        15,
+        15
+      ],
+      [
+        15,
+        16
+      ],
+      [
+        15,
+        17
+      ],
+      [
+        15,
+        18
+      ],
+      [
+        15,
+        29
+      ],
+      [
+        15,
+        36
+      ],
+      [
+        15,
+        37
+      ],
+      [
+        15,
+        45
+      ],
+      [
+        16,
+        29
+      ],
+      [
+        16,
+        37
+      ],
+      [
+        17,
+        29
+      ],
+      [
+        17,
+        30
+      ],
+      [
+        17,
+        34
+      ],
+      [
+        17,
+        37
+      ],
+      [
+        17,
+        47
+      ],
+      [
+        18,
+        3
+      ],
+      [
+        18,
+        30
+      ],
+      [
+        18,
+        31
+      ],
+      [
+        18,
+        32
+      ],
+      [
+        18,
+        33
+      ],
+      [
+        18,
+        34
+      ],
+      [
+        18,
+        35
+      ],
+      [
+        18,
+        36
+      ],
+      [
+        18,
+        37
+      ],
+      [
+        19,
+        3
+      ],
+      [
+        21,
+        5
+      ],
+      [
+        22,
+        5
+      ],
+      [
+        23,
+        5
+      ],
+      [
+        24,
+        5
+      ],
+      [
+        25,
+        5
+      ],
+      [
+        26,
+        5
+      ],
+      [
+        27,
+        5
+      ],
+      [
+        28,
+        6
+      ],
+      [
+        29,
+        6
+      ],
+      [
+        30,
+        6
+      ],
+      [
+        31,
+        6
+      ],
+      [
+        32,
+        6
+      ],
+      [
+        33,
+        6
+      ],
+      [
+        33,
+        7
+      ],
+      [
+        33,
+        8
+      ],
+      [
+        33,
+        9
+      ],
+      [
+        34,
+        9
+      ],
+      [
+        34,
+        10
+      ],
+      [
+        34,
+        28
+      ],
+      [
+        34,
+        29
+      ],
+      [
+        35,
+        10
+      ],
+      [
+        35,
+        29
+      ],
+      [
+        36,
+        10
+      ],
+      [
+        37,
+        10
+      ],
+      [
+        38,
+        10
+      ],
+      [
+        39,
+        10
+      ],
+      [
+        39,
+        30
+      ],
+      [
+        39,
+        46
+      ],
+      [
+        40,
+        10
+      ],
+      [
+        40,
+        29
+      ],
+      [
+        40,
+        30
+      ],
+      [
+        40,
+        46
+      ],
+      [
+        41,
+        9
+      ],
+      [
+        41,
+        10
+      ],
+      [
+        41,
+        11
+      ],
+      [
+        41,
+        12
+      ],
+      [
+        41,
+        46
+      ],
+      [
+        42,
+        5
+      ],
+      [
+        42,
+        6
+      ],
+      [
+        42,
+        7
+      ],
+      [
+        42,
+        8
+      ],
+      [
+        42,
+        9
+      ],
+      [
+        42,
+        10
+      ],
+      [
+        42,
+        13
+      ],
+      [
+        42,
+        14
+      ],
+      [
+        42,
+        46
+      ],
+      [
+        43,
+        4
+      ],
+      [
+        43,
+        5
+      ],
+      [
+        43,
+        7
+      ],
+      [
+        43,
+        11
+      ],
+      [
+        43,
+        12
+      ],
+      [
+        43,
+        14
+      ],
+      [
+        43,
+        44
+      ],
+      [
+        43,
+        45
+      ],
+      [
+        43,
+        46
+      ],
+      [
+        44,
+        6
+      ],
+      [
+        44,
+        12
+      ],
+      [
+        44,
+        13
+      ],
+      [
+        44,
+        14
+      ],
+      [
+        44,
+        21
+      ],
+      [
+        44,
+        44
+      ],
+      [
+        45,
+        4
+      ],
+      [
+        45,
+        14
+      ],
+      [
+        45,
+        15
+      ],
+      [
+        45,
+        16
+      ],
+      [
+        45,
+        19
+      ],
+      [
+        45,
+        21
+      ],
+      [
+        45,
+        44
+      ],
+      [
+        46,
+        3
+      ],
+      [
+        46,
+        4
+      ],
+      [
+        46,
+        21
+      ],
+      [
+        46,
+        44
+      ],
+      [
+        47,
+        2
+      ],
+      [
+        47,
+        21
+      ],
+      [
+        47,
+        22
+      ],
+      [
+        47,
+        23
+      ],
+      [
+        47,
+        24
+      ],
+      [
+        47,
+        28
+      ],
+      [
+        47,
+        29
+      ],
+      [
+        47,
+        30
+      ],
+      [
+        47,
+        32
+      ],
+      [
+        47,
+        33
+      ],
+      [
+        47,
+        34
+      ],
+      [
+        47,
+        35
+      ],
+      [
+        47,
+        36
+      ],
+      [
+        47,
+        37
+      ],
+      [
+        47,
+        40
+      ],
+      [
+        47,
+        41
+      ],
+      [
+        47,
+        42
+      ],
+      [
+        47,
+        43
+      ],
+      [
+        47,
+        44
+      ]
+    ]
+  },
+  "obstacles": [
+    [
+      0,
+      5
+    ],
+    [
+      0,
+      6
+    ],
+    [
+      0,
+      7
+    ],
+    [
+      0,
+      8
+    ],
+    [
+      0,
+      9
+    ],
+    [
+      0,
+      13
+    ],
+    [
+      0,
+      14
+    ],
+    [
+      0,
+      15
+    ],
+    [
+      0,
+      19
+    ],
+    [
+      0,
+      20
+    ],
+    [
+      0,
+      26
+    ],
+    [
+      0,
+      27
+    ],
+    [
+      0,
+      32
+    ],
+    [
+      0,
+      33
+    ],
+    [
+      0,
+      34
+    ],
+    [
+      0,
+      38
+    ],
+    [
+      0,
+      39
+    ],
+    [
+      0,
+      40
+    ],
+    [
+      0,
+      45
+    ],
+    [
+      0,
+      46
+    ],
+    [
+      0,
+      47
+    ],
+    [
+      1,
+      5
+    ],
+    [
+      1,
+      6
+    ],
+    [
+      1,
+      7
+    ],
+    [
+      1,
+      8
+    ],
+    [
+      1,
+      9
+    ],
+    [
+      1,
+      13
+    ],
+    [
+      1,
+      14
+    ],
+    [
+      1,
+      19
+    ],
+    [
+      1,
+      20
+    ],
+    [
+      1,
+      21
+    ],
+    [
+      1,
+      22
+    ],
+    [
+      1,
+      23
+    ],
+    [
+      1,
+      24
+    ],
+    [
+      1,
+      27
+    ],
+    [
+      1,
+      28
+    ],
+    [
+      1,
+      29
+    ],
+    [
+      1,
+      30
+    ],
+    [
+      1,
+      31
+    ],
+    [
+      1,
+      32
+    ],
+    [
+      1,
+      33
+    ],
+    [
+      1,
+      38
+    ],
+    [
+      1,
+      39
+    ],
+    [
+      1,
+      40
+    ],
+    [
+      1,
+      45
+    ],
+    [
+      1,
+      46
+    ],
+    [
+      1,
+      47
+    ],
+    [
+      2,
+      5
+    ],
+    [
+      2,
+      6
+    ],
+    [
+      2,
+      7
+    ],
+    [
+      2,
+      8
+    ],
+    [
+      2,
+      9
+    ],
+    [
+      2,
+      12
+    ],
+    [
+      2,
+      13
+    ],
+    [
+      2,
+      14
+    ],
+    [
+      2,
+      15
+    ],
+    [
+      2,
+      16
+    ],
+    [
+      2,
+      17
+    ],
+    [
+      2,
+      18
+    ],
+    [
+      2,
+      20
+    ],
+    [
+      2,
+      21
+    ],
+    [
+      2,
+      22
+    ],
+    [
+      2,
+      23
+    ],
+    [
+      2,
+      24
+    ],
+    [
+      2,
+      27
+    ],
+    [
+      2,
+      29
+    ],
+    [
+      2,
+      30
+    ],
+    [
+      2,
+      31
+    ],
+    [
+      2,
+      38
+    ],
+    [
+      2,
+      45
+    ],
+    [
+      2,
+      46
+    ],
+    [
+      2,
+      47
+    ],
+    [
+      3,
+      5
+    ],
+    [
+      3,
+      6
+    ],
+    [
+      3,
+      7
+    ],
+    [
+      3,
+      8
+    ],
+    [
+      3,
+      9
+    ],
+    [
+      3,
+      12
+    ],
+    [
+      3,
+      15
+    ],
+    [
+      3,
+      16
+    ],
+    [
+      3,
+      17
+    ],
+    [
+      3,
+      18
+    ],
+    [
+      3,
+      20
+    ],
+    [
+      3,
+      21
+    ],
+    [
+      3,
+      22
+    ],
+    [
+      3,
+      23
+    ],
+    [
+      3,
+      24
+    ],
+    [
+      3,
+      25
+    ],
+    [
+      3,
+      27
+    ],
+    [
+      3,
+      28
+    ],
+    [
+      3,
+      29
+    ],
+    [
+      3,
+      30
+    ],
+    [
+      3,
+      39
+    ],
+    [
+      3,
+      40
+    ],
+    [
+      3,
+      41
+    ],
+    [
+      3,
+      42
+    ],
+    [
+      4,
+      1
+    ],
+    [
+      4,
+      2
+    ],
+    [
+      4,
+      3
+    ],
+    [
+      4,
+      4
+    ],
+    [
+      4,
+      5
+    ],
+    [
+      4,
+      6
+    ],
+    [
+      4,
+      7
+    ],
+    [
+      4,
+      8
+    ],
+    [
+      4,
+      9
+    ],
+    [
+      4,
+      13
+    ],
+    [
+      4,
+      15
+    ],
+    [
+      4,
+      16
+    ],
+    [
+      4,
+      17
+    ],
+    [
+      4,
+      18
+    ],
+    [
+      4,
+      20
+    ],
+    [
+      4,
+      21
+    ],
+    [
+      4,
+      22
+    ],
+    [
+      4,
+      23
+    ],
+    [
+      4,
+      24
+    ],
+    [
+      4,
+      25
+    ],
+    [
+      4,
+      27
+    ],
+    [
+      4,
+      28
+    ],
+    [
+      4,
+      33
+    ],
+    [
+      4,
+      34
+    ],
+    [
+      4,
+      35
+    ],
+    [
+      4,
+      39
+    ],
+    [
+      4,
+      40
+    ],
+    [
+      4,
+      41
+    ],
+    [
+      4,
+      42
+    ],
+    [
+      5,
+      1
+    ],
+    [
+      5,
+      2
+    ],
+    [
+      5,
+      3
+    ],
+    [
+      5,
+      4
+    ],
+    [
+      5,
+      6
+    ],
+    [
+      5,
+      7
+    ],
+    [
+      5,
+      8
+    ],
+    [
+      5,
+      9
+    ],
+    [
+      5,
+      13
+    ],
+    [
+      5,
+      15
+    ],
+    [
+      5,
+      16
+    ],
+    [
+      5,
+      17
+    ],
+    [
+      5,
+      20
+    ],
+    [
+      5,
+      21
+    ],
+    [
+      5,
+      22
+    ],
+    [
+      5,
+      23
+    ],
+    [
+      5,
+      24
+    ],
+    [
+      5,
+      29
+    ],
+    [
+      5,
+      33
+    ],
+    [
+      5,
+      34
+    ],
+    [
+      5,
+      35
+    ],
+    [
+      5,
+      39
+    ],
+    [
+      5,
+      40
+    ],
+    [
+      5,
+      41
+    ],
+    [
+      5,
+      42
+    ],
+    [
+      6,
+      1
+    ],
+    [
+      6,
+      2
+    ],
+    [
+      6,
+      3
+    ],
+    [
+      6,
+      4
+    ],
+    [
+      6,
+      6
+    ],
+    [
+      6,
+      7
+    ],
+    [
+      6,
+      8
+    ],
+    [
+      6,
+      9
+    ],
+    [
+      6,
+      12
+    ],
+    [
+      6,
+      13
+    ],
+    [
+      6,
+      14
+    ],
+    [
+      6,
+      15
+    ],
+    [
+      6,
+      28
+    ],
+    [
+      6,
+      33
+    ],
+    [
+      6,
+      34
+    ],
+    [
+      6,
+      35
+    ],
+    [
+      6,
+      36
+    ],
+    [
+      6,
+      37
+    ],
+    [
+      6,
+      38
+    ],
+    [
+      6,
+      39
+    ],
+    [
+      6,
+      40
+    ],
+    [
+      6,
+      41
+    ],
+    [
+      7,
+      1
+    ],
+    [
+      7,
+      2
+    ],
+    [
+      7,
+      3
+    ],
+    [
+      7,
+      7
+    ],
+    [
+      7,
+      8
+    ],
+    [
+      7,
+      9
+    ],
+    [
+      7,
+      13
+    ],
+    [
+      7,
+      14
+    ],
+    [
+      7,
+      15
+    ],
+    [
+      7,
+      35
+    ],
+    [
+      7,
+      36
+    ],
+    [
+      7,
+      37
+    ],
+    [
+      7,
+      38
+    ],
+    [
+      8,
+      0
+    ],
+    [
+      8,
+      12
+    ],
+    [
+      8,
+      13
+    ],
+    [
+      8,
+      14
+    ],
+    [
+      8,
+      15
+    ],
+    [
+      8,
+      16
+    ],
+    [
+      8,
+      17
+    ],
+    [
+      8,
+      36
+    ],
+    [
+      8,
+      37
+    ],
+    [
+      8,
+      38
+    ],
+    [
+      8,
+      39
+    ],
+    [
+      9,
+      8
+    ],
+    [
+      9,
+      9
+    ],
+    [
+      9,
+      10
+    ],
+    [
+      9,
+      12
+    ],
+    [
+      9,
+      13
+    ],
+    [
+      9,
+      14
+    ],
+    [
+      9,
+      15
+    ],
+    [
+      9,
+      16
+    ],
+    [
+      9,
+      17
+    ],
+    [
+      9,
+      19
+    ],
+    [
+      9,
+      20
+    ],
+    [
+      9,
+      21
+    ],
+    [
+      9,
+      31
+    ],
+    [
+      9,
+      32
+    ],
+    [
+      9,
+      33
+    ],
+    [
+      9,
+      34
+    ],
+    [
+      9,
+      35
+    ],
+    [
+      9,
+      39
+    ],
+    [
+      10,
+      0
+    ],
+    [
+      10,
+      1
+    ],
+    [
+      10,
+      2
+    ],
+    [
+      10,
+      3
+    ],
+    [
+      10,
+      4
+    ],
+    [
+      10,
+      5
+    ],
+    [
+      10,
+      6
+    ],
+    [
+      10,
+      8
+    ],
+    [
+      10,
+      9
+    ],
+    [
+      10,
+      10
+    ],
+    [
+      10,
+      12
+    ],
+    [
+      10,
+      13
+    ],
+    [
+      10,
+      14
+    ],
+    [
+      10,
+      15
+    ],
+    [
+      10,
+      16
+    ],
+    [
+      10,
+      17
+    ],
+    [
+      10,
+      19
+    ],
+    [
+      10,
+      20
+    ],
+    [
+      10,
+      21
+    ],
+    [
+      10,
+      31
+    ],
+    [
+      10,
+      32
+    ],
+    [
+      10,
+      33
+    ],
+    [
+      10,
+      34
+    ],
+    [
+      10,
+      35
+    ],
+    [
+      10,
+      38
+    ],
+    [
+      11,
+      0
+    ],
+    [
+      11,
+      1
+    ],
+    [
+      11,
+      2
+    ],
+    [
+      11,
+      3
+    ],
+    [
+      11,
+      4
+    ],
+    [
+      11,
+      5
+    ],
+    [
+      11,
+      6
+    ],
+    [
+      11,
+      8
+    ],
+    [
+      11,
+      9
+    ],
+    [
+      11,
+      15
+    ],
+    [
+      11,
+      16
+    ],
+    [
+      11,
+      17
+    ],
+    [
+      11,
+      19
+    ],
+    [
+      11,
+      20
+    ],
+    [
+      11,
+      21
+    ],
+    [
+      11,
+      31
+    ],
+    [
+      11,
+      32
+    ],
+    [
+      11,
+      33
+    ],
+    [
+      11,
+      34
+    ],
+    [
+      11,
+      35
+    ],
+    [
+      11,
+      45
+    ],
+    [
+      12,
+      0
+    ],
+    [
+      12,
+      1
+    ],
+    [
+      12,
+      2
+    ],
+    [
+      12,
+      3
+    ],
+    [
+      12,
+      4
+    ],
+    [
+      12,
+      5
+    ],
+    [
+      12,
+      6
+    ],
+    [
+      12,
+      16
+    ],
+    [
+      12,
+      17
+    ],
+    [
+      12,
+      18
+    ],
+    [
+      12,
+      31
+    ],
+    [
+      12,
+      32
+    ],
+    [
+      12,
+      33
+    ],
+    [
+      12,
+      34
+    ],
+    [
+      12,
+      35
+    ],
+    [
+      12,
+      45
+    ],
+    [
+      12,
+      46
+    ],
+    [
+      12,
+      47
+    ],
+    [
+      13,
+      1
+    ],
+    [
+      13,
+      2
+    ],
+    [
+      13,
+      3
+    ],
+    [
+      13,
+      4
+    ],
+    [
+      13,
+      5
+    ],
+    [
+      13,
+      6
+    ],
+    [
+      13,
+      7
+    ],
+    [
+      13,
+      8
+    ],
+    [
+      13,
+      16
+    ],
+    [
+      13,
+      17
+    ],
+    [
+      13,
+      31
+    ],
+    [
+      13,
+      32
+    ],
+    [
+      13,
+      34
+    ],
+    [
+      13,
+      35
+    ],
+    [
+      13,
+      45
+    ],
+    [
+      13,
+      46
+    ],
+    [
+      13,
+      47
+    ],
+    [
+      14,
+      2
+    ],
+    [
+      14,
+      3
+    ],
+    [
+      14,
+      4
+    ],
+    [
+      14,
+      5
+    ],
+    [
+      14,
+      6
+    ],
+    [
+      14,
+      7
+    ],
+    [
+      14,
+      8
+    ],
+    [
+      14,
+      9
+    ],
+    [
+      14,
+      42
+    ],
+    [
+      14,
+      43
+    ],
+    [
+      14,
+      45
+    ],
+    [
+      14,
+      46
+    ],
+    [
+      14,
+      47
+    ],
+    [
+      15,
+      6
+    ],
+    [
+      15,
+      7
+    ],
+    [
+      15,
+      8
+    ],
+    [
+      15,
+      9
+    ],
+    [
+      15,
+      10
+    ],
+    [
+      15,
+      42
+    ],
+    [
+      15,
+      43
+    ],
+    [
+      16,
+      6
+    ],
+    [
+      16,
+      7
+    ],
+    [
+      16,
+      8
+    ],
+    [
+      16,
+      9
+    ],
+    [
+      16,
+      10
+    ],
+    [
+      16,
+      11
+    ],
+    [
+      16,
+      12
+    ],
+    [
+      16,
+      13
+    ],
+    [
+      16,
+      42
+    ],
+    [
+      16,
+      44
+    ],
+    [
+      16,
+      45
+    ],
+    [
+      16,
+      46
+    ],
+    [
+      17,
+      6
+    ],
+    [
+      17,
+      7
+    ],
+    [
+      17,
+      8
+    ],
+    [
+      17,
+      9
+    ],
+    [
+      17,
+      10
+    ],
+    [
+      17,
+      11
+    ],
+    [
+      17,
+      12
+    ],
+    [
+      17,
+      13
+    ],
+    [
+      17,
+      16
+    ],
+    [
+      17,
+      17
+    ],
+    [
+      17,
+      42
+    ],
+    [
+      17,
+      43
+    ],
+    [
+      17,
+      44
+    ],
+    [
+      17,
+      45
+    ],
+    [
+      17,
+      46
+    ],
+    [
+      18,
+      6
+    ],
+    [
+      18,
+      7
+    ],
+    [
+      18,
+      8
+    ],
+    [
+      18,
+      9
+    ],
+    [
+      18,
+      10
+    ],
+    [
+      18,
+      11
+    ],
+    [
+      18,
+      12
+    ],
+    [
+      18,
+      13
+    ],
+    [
+      18,
+      17
+    ],
+    [
+      18,
+      42
+    ],
+    [
+      18,
+      43
+    ],
+    [
+      18,
+      44
+    ],
+    [
+      18,
+      45
+    ],
+    [
+      19,
+      6
+    ],
+    [
+      19,
+      7
+    ],
+    [
+      19,
+      8
+    ],
+    [
+      19,
+      9
+    ],
+    [
+      19,
+      10
+    ],
+    [
+      19,
+      12
+    ],
+    [
+      19,
+      13
+    ],
+    [
+      19,
+      23
+    ],
+    [
+      19,
+      24
+    ],
+    [
+      19,
+      42
+    ],
+    [
+      19,
+      43
+    ],
+    [
+      19,
+      44
+    ],
+    [
+      20,
+      1
+    ],
+    [
+      20,
+      2
+    ],
+    [
+      20,
+      3
+    ],
+    [
+      20,
+      4
+    ],
+    [
+      20,
+      11
+    ],
+    [
+      20,
+      12
+    ],
+    [
+      20,
+      13
+    ],
+    [
+      20,
+      14
+    ],
+    [
+      20,
+      15
+    ],
+    [
+      20,
+      23
+    ],
+    [
+      20,
+      24
+    ],
+    [
+      20,
+      25
+    ],
+    [
+      21,
+      1
+    ],
+    [
+      21,
+      2
+    ],
+    [
+      21,
+      3
+    ],
+    [
+      21,
+      4
+    ],
+    [
+      21,
+      11
+    ],
+    [
+      21,
+      12
+    ],
+    [
+      21,
+      13
+    ],
+    [
+      21,
+      14
+    ],
+    [
+      21,
+      15
+    ],
+    [
+      21,
+      16
+    ],
+    [
+      21,
+      17
+    ],
+    [
+      21,
+      18
+    ],
+    [
+      21,
+      19
+    ],
+    [
+      21,
+      20
+    ],
+    [
+      21,
+      23
+    ],
+    [
+      21,
+      24
+    ],
+    [
+      21,
+      25
+    ],
+    [
+      21,
+      26
+    ],
+    [
+      21,
+      27
+    ],
+    [
+      21,
+      28
+    ],
+    [
+      21,
+      29
+    ],
+    [
+      21,
+      30
+    ],
+    [
+      21,
+      39
+    ],
+    [
+      21,
+      46
+    ],
+    [
+      21,
+      47
+    ],
+    [
+      22,
+      1
+    ],
+    [
+      22,
+      2
+    ],
+    [
+      22,
+      3
+    ],
+    [
+      22,
+      4
+    ],
+    [
+      22,
+      11
+    ],
+    [
+      22,
+      12
+    ],
+    [
+      22,
+      13
+    ],
+    [
+      22,
+      14
+    ],
+    [
+      22,
+      15
+    ],
+    [
+      22,
+      16
+    ],
+    [
+      22,
+      17
+    ],
+    [
+      22,
+      18
+    ],
+    [
+      22,
+      19
+    ],
+    [
+      22,
+      20
+    ],
+    [
+      22,
+      21
+    ],
+    [
+      22,
+      22
+    ],
+    [
+      22,
+      23
+    ],
+    [
+      22,
+      24
+    ],
+    [
+      22,
+      25
+    ],
+    [
+      22,
+      26
+    ],
+    [
+      22,
+      27
+    ],
+    [
+      22,
+      28
+    ],
+    [
+      22,
+      29
+    ],
+    [
+      22,
+      30
+    ],
+    [
+      22,
+      39
+    ],
+    [
+      22,
+      46
+    ],
+    [
+      22,
+      47
+    ],
+    [
+      23,
+      1
+    ],
+    [
+      23,
+      2
+    ],
+    [
+      23,
+      3
+    ],
+    [
+      23,
+      11
+    ],
+    [
+      23,
+      12
+    ],
+    [
+      23,
+      13
+    ],
+    [
+      23,
+      14
+    ],
+    [
+      23,
+      15
+    ],
+    [
+      23,
+      16
+    ],
+    [
+      23,
+      17
+    ],
+    [
+      23,
+      18
+    ],
+    [
+      23,
+      19
+    ],
+    [
+      23,
+      20
+    ],
+    [
+      23,
+      21
+    ],
+    [
+      23,
+      22
+    ],
+    [
+      23,
+      23
+    ],
+    [
+      23,
+      24
+    ],
+    [
+      23,
+      25
+    ],
+    [
+      23,
+      26
+    ],
+    [
+      23,
+      27
+    ],
+    [
+      23,
+      28
+    ],
+    [
+      23,
+      29
+    ],
+    [
+      23,
+      30
+    ],
+    [
+      23,
+      31
+    ],
+    [
+      23,
+      32
+    ],
+    [
+      23,
+      33
+    ],
+    [
+      23,
+      38
+    ],
+    [
+      23,
+      39
+    ],
+    [
+      23,
+      40
+    ],
+    [
+      23,
+      43
+    ],
+    [
+      23,
+      44
+    ],
+    [
+      23,
+      45
+    ],
+    [
+      23,
+      46
+    ],
+    [
+      23,
+      47
+    ],
+    [
+      24,
+      11
+    ],
+    [
+      24,
+      12
+    ],
+    [
+      24,
+      13
+    ],
+    [
+      24,
+      14
+    ],
+    [
+      24,
+      15
+    ],
+    [
+      24,
+      16
+    ],
+    [
+      24,
+      17
+    ],
+    [
+      24,
+      18
+    ],
+    [
+      24,
+      19
+    ],
+    [
+      24,
+      20
+    ],
+    [
+      24,
+      21
+    ],
+    [
+      24,
+      22
+    ],
+    [
+      24,
+      23
+    ],
+    [
+      24,
+      24
+    ],
+    [
+      24,
+      25
+    ],
+    [
+      24,
+      26
+    ],
+    [
+      24,
+      27
+    ],
+    [
+      24,
+      28
+    ],
+    [
+      24,
+      29
+    ],
+    [
+      24,
+      30
+    ],
+    [
+      24,
+      31
+    ],
+    [
+      24,
+      32
+    ],
+    [
+      24,
+      33
+    ],
+    [
+      24,
+      38
+    ],
+    [
+      24,
+      39
+    ],
+    [
+      24,
+      40
+    ],
+    [
+      24,
+      41
+    ],
+    [
+      24,
+      43
+    ],
+    [
+      24,
+      44
+    ],
+    [
+      24,
+      45
+    ],
+    [
+      25,
+      2
+    ],
+    [
+      25,
+      3
+    ],
+    [
+      25,
+      4
+    ],
+    [
+      25,
+      16
+    ],
+    [
+      25,
+      17
+    ],
+    [
+      25,
+      18
+    ],
+    [
+      25,
+      19
+    ],
+    [
+      25,
+      20
+    ],
+    [
+      25,
+      21
+    ],
+    [
+      25,
+      22
+    ],
+    [
+      25,
+      26
+    ],
+    [
+      25,
+      27
+    ],
+    [
+      25,
+      28
+    ],
+    [
+      25,
+      29
+    ],
+    [
+      25,
+      30
+    ],
+    [
+      25,
+      31
+    ],
+    [
+      25,
+      32
+    ],
+    [
+      25,
+      33
+    ],
+    [
+      25,
+      38
+    ],
+    [
+      25,
+      39
+    ],
+    [
+      25,
+      40
+    ],
+    [
+      25,
+      43
+    ],
+    [
+      25,
+      44
+    ],
+    [
+      25,
+      45
+    ],
+    [
+      26,
+      0
+    ],
+    [
+      26,
+      1
+    ],
+    [
+      26,
+      2
+    ],
+    [
+      26,
+      3
+    ],
+    [
+      26,
+      4
+    ],
+    [
+      26,
+      19
+    ],
+    [
+      26,
+      20
+    ],
+    [
+      26,
+      21
+    ],
+    [
+      26,
+      26
+    ],
+    [
+      26,
+      27
+    ],
+    [
+      26,
+      28
+    ],
+    [
+      26,
+      29
+    ],
+    [
+      26,
+      30
+    ],
+    [
+      26,
+      33
+    ],
+    [
+      26,
+      34
+    ],
+    [
+      26,
+      35
+    ],
+    [
+      27,
+      0
+    ],
+    [
+      27,
+      1
+    ],
+    [
+      27,
+      2
+    ],
+    [
+      27,
+      3
+    ],
+    [
+      27,
+      4
+    ],
+    [
+      27,
+      11
+    ],
+    [
+      27,
+      19
+    ],
+    [
+      27,
+      20
+    ],
+    [
+      27,
+      21
+    ],
+    [
+      27,
+      26
+    ],
+    [
+      27,
+      27
+    ],
+    [
+      27,
+      28
+    ],
+    [
+      27,
+      29
+    ],
+    [
+      27,
+      30
+    ],
+    [
+      27,
+      33
+    ],
+    [
+      27,
+      34
+    ],
+    [
+      27,
+      35
+    ],
+    [
+      27,
+      36
+    ],
+    [
+      27,
+      37
+    ],
+    [
+      27,
+      38
+    ],
+    [
+      28,
+      0
+    ],
+    [
+      28,
+      1
+    ],
+    [
+      28,
+      2
+    ],
+    [
+      28,
+      3
+    ],
+    [
+      28,
+      4
+    ],
+    [
+      28,
+      8
+    ],
+    [
+      28,
+      9
+    ],
+    [
+      28,
+      10
+    ],
+    [
+      28,
+      11
+    ],
+    [
+      28,
+      12
+    ],
+    [
+      28,
+      15
+    ],
+    [
+      28,
+      19
+    ],
+    [
+      28,
+      20
+    ],
+    [
+      28,
+      21
+    ],
+    [
+      28,
+      22
+    ],
+    [
+      28,
+      26
+    ],
+    [
+      28,
+      27
+    ],
+    [
+      28,
+      28
+    ],
+    [
+      28,
+      29
+    ],
+    [
+      28,
+      30
+    ],
+    [
+      28,
+      33
+    ],
+    [
+      28,
+      34
+    ],
+    [
+      28,
+      35
+    ],
+    [
+      28,
+      36
+    ],
+    [
+      28,
+      37
+    ],
+    [
+      28,
+      38
+    ],
+    [
+      29,
+      0
+    ],
+    [
+      29,
+      1
+    ],
+    [
+      29,
+      2
+    ],
+    [
+      29,
+      3
+    ],
+    [
+      29,
+      4
+    ],
+    [
+      29,
+      8
+    ],
+    [
+      29,
+      9
+    ],
+    [
+      29,
+      10
+    ],
+    [
+      29,
+      11
+    ],
+    [
+      29,
+      12
+    ],
+    [
+      29,
+      13
+    ],
+    [
+      29,
+      14
+    ],
+    [
+      29,
+      21
+    ],
+    [
+      29,
+      26
+    ],
+    [
+      29,
+      27
+    ],
+    [
+      29,
+      28
+    ],
+    [
+      29,
+      29
+    ],
+    [
+      29,
+      30
+    ],
+    [
+      29,
+      34
+    ],
+    [
+      29,
+      36
+    ],
+    [
+      29,
+      37
+    ],
+    [
+      29,
+      38
+    ],
+    [
+      29,
+      39
+    ],
+    [
+      29,
+      40
+    ],
+    [
+      29,
+      41
+    ],
+    [
+      29,
+      42
+    ],
+    [
+      29,
+      43
+    ],
+    [
+      29,
+      44
+    ],
+    [
+      30,
+      0
+    ],
+    [
+      30,
+      1
+    ],
+    [
+      30,
+      2
+    ],
+    [
+      30,
+      3
+    ],
+    [
+      30,
+      4
+    ],
+    [
+      30,
+      8
+    ],
+    [
+      30,
+      9
+    ],
+    [
+      30,
+      10
+    ],
+    [
+      30,
+      11
+    ],
+    [
+      30,
+      12
+    ],
+    [
+      30,
+      13
+    ],
+    [
+      30,
+      14
+    ],
+    [
+      30,
+      26
+    ],
+    [
+      30,
+      27
+    ],
+    [
+      30,
+      28
+    ],
+    [
+      30,
+      29
+    ],
+    [
+      30,
+      30
+    ],
+    [
+      30,
+      38
+    ],
+    [
+      30,
+      39
+    ],
+    [
+      30,
+      40
+    ],
+    [
+      30,
+      41
+    ],
+    [
+      30,
+      42
+    ],
+    [
+      30,
+      43
+    ],
+    [
+      30,
+      44
+    ],
+    [
+      31,
+      3
+    ],
+    [
+      31,
+      4
+    ],
+    [
+      31,
+      5
+    ],
+    [
+      31,
+      8
+    ],
+    [
+      31,
+      9
+    ],
+    [
+      31,
+      10
+    ],
+    [
+      31,
+      11
+    ],
+    [
+      31,
+      12
+    ],
+    [
+      31,
+      13
+    ],
+    [
+      31,
+      14
+    ],
+    [
+      31,
+      17
+    ],
+    [
+      31,
+      18
+    ],
+    [
+      31,
+      29
+    ],
+    [
+      31,
+      35
+    ],
+    [
+      31,
+      39
+    ],
+    [
+      31,
+      40
+    ],
+    [
+      31,
+      41
+    ],
+    [
+      31,
+      42
+    ],
+    [
+      31,
+      43
+    ],
+    [
+      31,
+      44
+    ],
+    [
+      32,
+      3
+    ],
+    [
+      32,
+      4
+    ],
+    [
+      32,
+      5
+    ],
+    [
+      32,
+      9
+    ],
+    [
+      32,
+      10
+    ],
+    [
+      32,
+      11
+    ],
+    [
+      32,
+      12
+    ],
+    [
+      32,
+      13
+    ],
+    [
+      32,
+      14
+    ],
+    [
+      32,
+      18
+    ],
+    [
+      32,
+      19
+    ],
+    [
+      32,
+      41
+    ],
+    [
+      32,
+      42
+    ],
+    [
+      33,
+      3
+    ],
+    [
+      33,
+      4
+    ],
+    [
+      33,
+      10
+    ],
+    [
+      33,
+      11
+    ],
+    [
+      33,
+      12
+    ],
+    [
+      33,
+      13
+    ],
+    [
+      33,
+      14
+    ],
+    [
+      33,
+      19
+    ],
+    [
+      33,
+      20
+    ],
+    [
+      33,
+      21
+    ],
+    [
+      33,
+      22
+    ],
+    [
+      33,
+      23
+    ],
+    [
+      33,
+      24
+    ],
+    [
+      33,
+      41
+    ],
+    [
+      33,
+      42
+    ],
+    [
+      33,
+      43
+    ],
+    [
+      34,
+      11
+    ],
+    [
+      34,
+      12
+    ],
+    [
+      34,
+      13
+    ],
+    [
+      34,
+      19
+    ],
+    [
+      34,
+      20
+    ],
+    [
+      34,
+      21
+    ],
+    [
+      34,
+      22
+    ],
+    [
+      34,
+      23
+    ],
+    [
+      34,
+      24
+    ],
+    [
+      35,
+      12
+    ],
+    [
+      35,
+      13
+    ],
+    [
+      35,
+      14
+    ],
+    [
+      35,
+      20
+    ],
+    [
+      35,
+      21
+    ],
+    [
+      35,
+      22
+    ],
+    [
+      35,
+      23
+    ],
+    [
+      35,
+      24
+    ],
+    [
+      36,
+      4
+    ],
+    [
+      36,
+      5
+    ],
+    [
+      36,
+      6
+    ],
+    [
+      36,
+      7
+    ],
+    [
+      36,
+      8
+    ],
+    [
+      36,
+      11
+    ],
+    [
+      36,
+      13
+    ],
+    [
+      36,
+      14
+    ],
+    [
+      36,
+      15
+    ],
+    [
+      36,
+      17
+    ],
+    [
+      36,
+      18
+    ],
+    [
+      36,
+      19
+    ],
+    [
+      36,
+      20
+    ],
+    [
+      36,
+      21
+    ],
+    [
+      36,
+      22
+    ],
+    [
+      36,
+      23
+    ],
+    [
+      36,
+      24
+    ],
+    [
+      36,
+      26
+    ],
+    [
+      36,
+      27
+    ],
+    [
+      36,
+      28
+    ],
+    [
+      36,
+      29
+    ],
+    [
+      36,
+      32
+    ],
+    [
+      36,
+      37
+    ],
+    [
+      36,
+      38
+    ],
+    [
+      36,
+      39
+    ],
+    [
+      36,
+      40
+    ],
+    [
+      36,
+      41
+    ],
+    [
+      36,
+      42
+    ],
+    [
+      37,
+      4
+    ],
+    [
+      37,
+      5
+    ],
+    [
+      37,
+      6
+    ],
+    [
+      37,
+      7
+    ],
+    [
+      37,
+      8
+    ],
+    [
+      37,
+      12
+    ],
+    [
+      37,
+      13
+    ],
+    [
+      37,
+      14
+    ],
+    [
+      37,
+      15
+    ],
+    [
+      37,
+      17
+    ],
+    [
+      37,
+      18
+    ],
+    [
+      37,
+      19
+    ],
+    [
+      37,
+      20
+    ],
+    [
+      37,
+      21
+    ],
+    [
+      37,
+      22
+    ],
+    [
+      37,
+      23
+    ],
+    [
+      37,
+      24
+    ],
+    [
+      37,
+      26
+    ],
+    [
+      37,
+      27
+    ],
+    [
+      37,
+      28
+    ],
+    [
+      37,
+      29
+    ],
+    [
+      37,
+      31
+    ],
+    [
+      37,
+      32
+    ],
+    [
+      37,
+      33
+    ],
+    [
+      37,
+      37
+    ],
+    [
+      37,
+      38
+    ],
+    [
+      37,
+      39
+    ],
+    [
+      37,
+      40
+    ],
+    [
+      37,
+      41
+    ],
+    [
+      37,
+      42
+    ],
+    [
+      38,
+      4
+    ],
+    [
+      38,
+      5
+    ],
+    [
+      38,
+      6
+    ],
+    [
+      38,
+      7
+    ],
+    [
+      38,
+      8
+    ],
+    [
+      38,
+      12
+    ],
+    [
+      38,
+      13
+    ],
+    [
+      38,
+      14
+    ],
+    [
+      38,
+      15
+    ],
+    [
+      38,
+      17
+    ],
+    [
+      38,
+      18
+    ],
+    [
+      38,
+      19
+    ],
+    [
+      38,
+      23
+    ],
+    [
+      38,
+      24
+    ],
+    [
+      38,
+      25
+    ],
+    [
+      38,
+      26
+    ],
+    [
+      38,
+      27
+    ],
+    [
+      38,
+      28
+    ],
+    [
+      38,
+      29
+    ],
+    [
+      38,
+      31
+    ],
+    [
+      38,
+      32
+    ],
+    [
+      38,
+      33
+    ],
+    [
+      38,
+      34
+    ],
+    [
+      38,
+      37
+    ],
+    [
+      38,
+      38
+    ],
+    [
+      38,
+      39
+    ],
+    [
+      38,
+      40
+    ],
+    [
+      38,
+      41
+    ],
+    [
+      38,
+      42
+    ],
+    [
+      39,
+      4
+    ],
+    [
+      39,
+      5
+    ],
+    [
+      39,
+      6
+    ],
+    [
+      39,
+      7
+    ],
+    [
+      39,
+      8
+    ],
+    [
+      39,
+      12
+    ],
+    [
+      39,
+      13
+    ],
+    [
+      39,
+      15
+    ],
+    [
+      39,
+      16
+    ],
+    [
+      39,
+      17
+    ],
+    [
+      39,
+      18
+    ],
+    [
+      39,
+      19
+    ],
+    [
+      39,
+      23
+    ],
+    [
+      39,
+      24
+    ],
+    [
+      39,
+      25
+    ],
+    [
+      39,
+      26
+    ],
+    [
+      39,
+      27
+    ],
+    [
+      39,
+      28
+    ],
+    [
+      39,
+      31
+    ],
+    [
+      39,
+      32
+    ],
+    [
+      39,
+      33
+    ],
+    [
+      39,
+      39
+    ],
+    [
+      39,
+      40
+    ],
+    [
+      39,
+      41
+    ],
+    [
+      40,
+      0
+    ],
+    [
+      40,
+      4
+    ],
+    [
+      40,
+      5
+    ],
+    [
+      40,
+      7
+    ],
+    [
+      40,
+      8
+    ],
+    [
+      40,
+      15
+    ],
+    [
+      40,
+      16
+    ],
+    [
+      40,
+      17
+    ],
+    [
+      40,
+      18
+    ],
+    [
+      40,
+      19
+    ],
+    [
+      40,
+      23
+    ],
+    [
+      40,
+      24
+    ],
+    [
+      40,
+      25
+    ],
+    [
+      40,
+      31
+    ],
+    [
+      40,
+      32
+    ],
+    [
+      40,
+      39
+    ],
+    [
+      40,
+      40
+    ],
+    [
+      40,
+      41
+    ],
+    [
+      41,
+      0
+    ],
+    [
+      41,
+      15
+    ],
+    [
+      41,
+      16
+    ],
+    [
+      41,
+      17
+    ],
+    [
+      41,
+      18
+    ],
+    [
+      41,
+      19
+    ],
+    [
+      41,
+      23
+    ],
+    [
+      41,
+      24
+    ],
+    [
+      41,
+      25
+    ],
+    [
+      41,
+      26
+    ],
+    [
+      41,
+      27
+    ],
+    [
+      41,
+      28
+    ],
+    [
+      41,
+      31
+    ],
+    [
+      41,
+      32
+    ],
+    [
+      41,
+      37
+    ],
+    [
+      41,
+      38
+    ],
+    [
+      41,
+      39
+    ],
+    [
+      41,
+      40
+    ],
+    [
+      42,
+      0
+    ],
+    [
+      42,
+      1
+    ],
+    [
+      42,
+      15
+    ],
+    [
+      42,
+      16
+    ],
+    [
+      42,
+      17
+    ],
+    [
+      42,
+      18
+    ],
+    [
+      42,
+      19
+    ],
+    [
+      42,
+      22
+    ],
+    [
+      42,
+      23
+    ],
+    [
+      42,
+      24
+    ],
+    [
+      42,
+      25
+    ],
+    [
+      42,
+      26
+    ],
+    [
+      42,
+      27
+    ],
+    [
+      42,
+      28
+    ],
+    [
+      42,
+      29
+    ],
+    [
+      42,
+      30
+    ],
+    [
+      42,
+      31
+    ],
+    [
+      42,
+      32
+    ],
+    [
+      42,
+      33
+    ],
+    [
+      42,
+      35
+    ],
+    [
+      42,
+      36
+    ],
+    [
+      42,
+      37
+    ],
+    [
+      42,
+      38
+    ],
+    [
+      42,
+      39
+    ],
+    [
+      43,
+      0
+    ],
+    [
+      43,
+      1
+    ],
+    [
+      43,
+      2
+    ],
+    [
+      43,
+      15
+    ],
+    [
+      43,
+      16
+    ],
+    [
+      43,
+      17
+    ],
+    [
+      43,
+      18
+    ],
+    [
+      43,
+      19
+    ],
+    [
+      43,
+      23
+    ],
+    [
+      43,
+      24
+    ],
+    [
+      43,
+      25
+    ],
+    [
+      43,
+      26
+    ],
+    [
+      43,
+      27
+    ],
+    [
+      43,
+      28
+    ],
+    [
+      43,
+      29
+    ],
+    [
+      43,
+      30
+    ],
+    [
+      43,
+      31
+    ],
+    [
+      43,
+      32
+    ],
+    [
+      43,
+      33
+    ],
+    [
+      43,
+      34
+    ],
+    [
+      43,
+      35
+    ],
+    [
+      43,
+      36
+    ],
+    [
+      43,
+      37
+    ],
+    [
+      43,
+      38
+    ],
+    [
+      43,
+      40
+    ],
+    [
+      43,
+      41
+    ],
+    [
+      43,
+      42
+    ],
+    [
+      43,
+      43
+    ],
+    [
+      44,
+      0
+    ],
+    [
+      44,
+      1
+    ],
+    [
+      44,
+      2
+    ],
+    [
+      44,
+      3
+    ],
+    [
+      44,
+      8
+    ],
+    [
+      44,
+      9
+    ],
+    [
+      44,
+      16
+    ],
+    [
+      44,
+      18
+    ],
+    [
+      44,
+      25
+    ],
+    [
+      44,
+      26
+    ],
+    [
+      44,
+      28
+    ],
+    [
+      44,
+      29
+    ],
+    [
+      44,
+      30
+    ],
+    [
+      44,
+      32
+    ],
+    [
+      44,
+      33
+    ],
+    [
+      44,
+      34
+    ],
+    [
+      44,
+      35
+    ],
+    [
+      44,
+      36
+    ],
+    [
+      44,
+      37
+    ],
+    [
+      44,
+      40
+    ],
+    [
+      44,
+      41
+    ],
+    [
+      44,
+      42
+    ],
+    [
+      44,
+      43
+    ],
+    [
+      45,
+      0
+    ],
+    [
+      45,
+      1
+    ],
+    [
+      45,
+      2
+    ],
+    [
+      45,
+      5
+    ],
+    [
+      45,
+      6
+    ],
+    [
+      45,
+      7
+    ],
+    [
+      45,
+      8
+    ],
+    [
+      45,
+      9
+    ],
+    [
+      45,
+      10
+    ],
+    [
+      45,
+      25
+    ],
+    [
+      45,
+      26
+    ],
+    [
+      45,
+      27
+    ],
+    [
+      45,
+      28
+    ],
+    [
+      45,
+      29
+    ],
+    [
+      45,
+      30
+    ],
+    [
+      45,
+      32
+    ],
+    [
+      45,
+      33
+    ],
+    [
+      45,
+      34
+    ],
+    [
+      45,
+      35
+    ],
+    [
+      45,
+      40
+    ],
+    [
+      45,
+      41
+    ],
+    [
+      45,
+      42
+    ],
+    [
+      45,
+      43
+    ],
+    [
+      46,
+      0
+    ],
+    [
+      46,
+      1
+    ],
+    [
+      46,
+      5
+    ],
+    [
+      46,
+      6
+    ],
+    [
+      46,
+      7
+    ],
+    [
+      46,
+      8
+    ],
+    [
+      46,
+      9
+    ],
+    [
+      46,
+      10
+    ],
+    [
+      46,
+      11
+    ],
+    [
+      46,
+      12
+    ],
+    [
+      46,
+      13
+    ],
+    [
+      46,
+      14
+    ],
+    [
+      46,
+      18
+    ],
+    [
+      46,
+      25
+    ],
+    [
+      46,
+      26
+    ],
+    [
+      46,
+      27
+    ],
+    [
+      46,
+      28
+    ],
+    [
+      46,
+      29
+    ],
+    [
+      46,
+      30
+    ],
+    [
+      46,
+      40
+    ],
+    [
+      46,
+      41
+    ],
+    [
+      46,
+      42
+    ],
+    [
+      47,
+      0
+    ],
+    [
+      47,
+      1
+    ],
+    [
+      47,
+      4
+    ],
+    [
+      47,
+      5
+    ],
+    [
+      47,
+      6
+    ],
+    [
+      47,
+      7
+    ],
+    [
+      47,
+      8
+    ],
+    [
+      47,
+      9
+    ],
+    [
+      47,
+      10
+    ],
+    [
+      47,
+      11
+    ],
+    [
+      47,
+      12
+    ],
+    [
+      47,
+      13
+    ],
+    [
+      47,
+      18
+    ],
+    [
+      47,
+      25
+    ],
+    [
+      47,
+      26
+    ],
+    [
+      47,
+      27
+    ]
+  ],
+  "gold_mines": [
+    [
+      0,
+      11
+    ],
+    [
+      7,
+      23
+    ],
+    [
+      18,
+      1
+    ],
+    [
+      33,
+      2
+    ],
+    [
+      41,
+      44
+    ]
+  ],
+  "mana": [
+    {
+      "position": [
+        38,
+        0
+      ],
+      "kind": "runes",
+      "name": "Мана рун"
+    },
+    {
+      "position": [
+        46,
+        38
+      ],
+      "kind": "runes",
+      "name": "Мана рун"
+    },
+    {
+      "position": [
+        45,
+        23
+      ],
+      "kind": "life",
+      "name": "Мана жизни"
+    },
+    {
+      "position": [
+        17,
+        32
+      ],
+      "kind": "life",
+      "name": "Мана жизни"
+    },
+    {
+      "position": [
+        33,
+        16
+      ],
+      "kind": "runes",
+      "name": "Мана рун"
+    },
+    {
+      "position": [
+        19,
+        19
+      ],
+      "kind": "death",
+      "name": "Мана смерти"
+    }
+  ],
+  "chests": [
+    {
+      "code": "X1",
+      "position": [
+        24,
+        0
+      ],
+      "items": [
+        "Air ward scroll"
+      ]
+    },
+    {
+      "code": "X2",
+      "position": [
+        47,
+        15
+      ],
+      "items": [
+        "Life Potion"
+      ]
+    },
+    {
+      "code": "X3",
+      "position": [
+        38,
+        20
+      ],
+      "items": [
+        "Sapphire (Valuable)"
+      ]
+    },
+    {
+      "code": "X4",
+      "position": [
+        26,
+        25
+      ],
+      "items": [
+        "Staff of Travelling"
+      ]
+    },
+    {
+      "code": "X5",
+      "position": [
+        44,
+        45
+      ],
+      "items": [
+        "Treebark Potion"
+      ]
+    },
+    {
+      "code": "X6",
+      "position": [
+        28,
+        40
+      ],
+      "items": [
+        "Potion of Vigor"
+      ]
+    },
+    {
+      "code": "X7",
+      "position": [
+        18,
+        16
+      ],
+      "items": [
+        "Holy Chalice (Artifact)"
+      ]
+    },
+    {
+      "code": "X8",
+      "position": [
+        8,
+        1
+      ],
+      "items": [
+        "Summon I: Roc scroll"
+      ]
+    },
+    {
+      "code": "X9",
+      "position": [
+        5,
+        10
+      ],
+      "items": [
+        "Life Potion"
+      ]
+    },
+    {
+      "code": "X10",
+      "position": [
+        5,
+        46
+      ],
+      "items": [
+        "Lightning scroll"
+      ]
+    },
+    {
+      "code": "X11",
+      "position": [
+        19,
+        25
+      ],
+      "items": [
+        "Potion of Healing"
+      ]
+    },
+    {
+      "code": "X12",
+      "position": [
+        2,
+        26
+      ],
+      "items": [
+        "Titan's Might Potion"
+      ]
+    },
+    {
+      "code": "X13",
+      "position": [
+        45,
+        45
+      ],
+      "items": [
+        "Potion of Restoration"
+      ]
+    },
+    {
+      "code": "X14",
+      "position": [
+        6,
+        32
+      ],
+      "items": [
+        "Potion of Accuracy"
+      ]
+    },
+    {
+      "code": "X15",
+      "position": [
+        35,
+        11
+      ],
+      "items": [
+        "Potion of Healing"
+      ]
+    },
+    {
+      "code": "X16",
+      "position": [
+        33,
+        17
+      ],
+      "items": [
+        "Potion of Protection"
+      ]
+    },
+    {
+      "code": "X17",
+      "position": [
+        46,
+        2
+      ],
+      "items": [
+        "Potion of Restoration"
+      ]
+    },
+    {
+      "code": "X18",
+      "position": [
+        27,
+        31
+      ],
+      "items": [
+        "Celerity scroll"
+      ]
+    },
+    {
+      "code": "X19",
+      "position": [
+        25,
+        25
+      ],
+      "items": [
+        "Life Potion"
+      ]
+    },
+    {
+      "code": "X20",
+      "position": [
+        20,
+        9
+      ],
+      "items": [
+        "Illudere terra scroll"
+      ]
+    },
+    {
+      "code": "X21",
+      "position": [
+        13,
+        0
+      ],
+      "items": [
+        "Potion of Restoration"
+      ]
+    },
+    {
+      "code": "X22",
+      "position": [
+        41,
+        33
+      ],
+      "items": [
+        "Blizzard scroll"
+      ]
+    },
+    {
+      "code": "X23",
+      "position": [
+        0,
+        1
+      ],
+      "items": [
+        "Life Potion"
+      ]
+    },
+    {
+      "code": "X24",
+      "position": [
+        37,
+        16
+      ],
+      "items": [
+        "Potion of Healing"
+      ]
+    }
+  ],
+  "ruins": [
+    {
+      "id": 1,
+      "title": "S117RU0000",
+      "ruin_pos": [
+        31,
+        3
+      ],
+      "marker_pos": [
+        33,
+        5
+      ],
+      "items": [
+        "Boots of Traveling"
+      ],
+      "gold": 195,
+      "source_ruin_pos": [
+        31,
+        3
+      ],
+      "source_marker_pos": [
+        33,
+        5
+      ],
+      "guardian_position": [
+        33,
+        5
+      ]
+    },
+    {
+      "id": 2,
+      "title": "S117RU0001",
+      "ruin_pos": [
+        9,
+        8
+      ],
+      "marker_pos": [
+        11,
+        10
+      ],
+      "items": [
+        "Tome of Air"
+      ],
+      "gold": 248,
+      "source_ruin_pos": [
+        9,
+        8
+      ],
+      "source_marker_pos": [
+        11,
+        10
+      ],
+      "guardian_position": [
+        11,
+        10
+      ]
+    },
+    {
+      "id": 3,
+      "title": "S117RU0002",
+      "ruin_pos": [
+        1,
+        29
+      ],
+      "marker_pos": [
+        3,
+        31
+      ],
+      "items": [
+        "Silver Ring (Valuable)"
+      ],
+      "gold": 56,
+      "source_ruin_pos": [
+        1,
+        29
+      ],
+      "source_marker_pos": [
+        3,
+        31
+      ],
+      "guardian_position": [
+        3,
+        31
+      ]
+    },
+    {
+      "id": 4,
+      "title": "S117RU0004",
+      "ruin_pos": [
+        16,
+        44
+      ],
+      "marker_pos": [
+        18,
+        46
+      ],
+      "items": [
+        "Ruby (Valuable)"
+      ],
+      "gold": 23,
+      "source_ruin_pos": [
+        16,
+        44
+      ],
+      "source_marker_pos": [
+        18,
+        46
+      ],
+      "guardian_position": [
+        18,
+        46
+      ]
+    }
+  ],
+  "notes": [
+    "Знак + у номера: на клетке несколько армий; все составы перечислены справа.",
+    "Стартовый отряд закреплён сценарием и сохраняется при отключённом боссовом ростере.",
+    "Скриптовый бот показан только как условие сценария; при снимке выключен."
+  ],
+  "conditional_assaults": []
+}

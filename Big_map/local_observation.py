@@ -7,6 +7,7 @@ from collections import deque
 import os
 
 import numpy as np
+from attack_damage_limits import effective_primary_amount
 from gymnasium import spaces
 
 
@@ -97,7 +98,7 @@ class LocalObservation:
                 team = [u for enemy_id in ids for u in e.enemy_team_states.get(enemy_id, ())
                         if not e._is_empty_enemy_unit(u) and self.health(u) > 0]
                 hp = sum(self.health(u) for u in team)
-                damage = sum(float(u.get('damage', 0) or 0) for u in team)
+                damage = sum(effective_primary_amount(u) for u in team)
                 maximum = sum(self.max_health(u) for u in team)
                 result[index, len(self.TILE_FEATURES):] = (
                     len(team) / 6.0, hp / (hp + 400.0),
@@ -137,7 +138,7 @@ class LocalObservation:
             if not 0 <= slot < 6 or self.max_health(u) <= 0:
                 continue
             hp = self.max_health(u)
-            damage = max(0.0, float(u.get('damage', 0) or 0))
+            damage = effective_primary_amount(u)
             armor = max(0.0, float(u.get('armor', 0) or 0))
             initiative = max(0.0, float(u.get('initiative', 0) or 0))
             result[slot] = (hp / (hp + 200.0), damage / (damage + 100.0),
