@@ -22,6 +22,14 @@ CAMPAIGN_OBSERVATION_VERSION=local5 python Big_map/train_campaign.py --map defau
 The agent is being trained for *Disciples II: Rise of the Elves*:
 [Disciples II: Rise of the Elves on Steam](https://store.steampowered.com/app/1630/Disciples_II_Rise_of_the_Elves/)
 
+## JAX prototype
+
+A JAX/GPU prototype is available in **[jax/](jax/README.md)**. It runs NumberGrid's 24 x 24 map, squad battles with five archers and one area-damage mage, and Stoix Anakin PPO entirely on the GPU. The current scope is movement, tactical squad combat, and clearing 24 enemy squads.
+
+The 20-million-step run achieved **84.08% full-map wins (861/1024)** with argmax actions and **82.03% (840/1024)** with sampled actions on its fixed map. The [training report](jax/LOCAL_RESULTS.md), [checkpoint and configuration](jax/results/number_grid-mage-20m-20261006/), and [W&B charts](https://wandb.ai/sergey3784/numbergrid/runs/7cddiev7) are included. Setup, training, replays, and interactive play are documented in the JAX README.
+
+The imported JAX project and vendored Stoa retain their [project license](jax/LICENSE) and [Stoa license](jax/stoa-src/LICENSE).
+
 ## Release notes
 
 **[v0.5](https://github.com/Alian3785/Disciples2-RL/releases/tag/v0.5.0)** — navigation observations in `main`, Mirrow match, all 16 map layouts, and combat and campaign fixes. [Detailed release notes](RELEASE_NOTES_v0.5.md).
