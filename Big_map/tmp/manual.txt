@@ -1,0 +1,2055 @@
+PAGE 1
+Introduction 3
+System Requirements 3
+Minimum Configuration: 3
+Recommended Configuration: 3
+Installing the Game  3
+Storyline   4
+The Empire  4
+The Mountain Clans  5
+The Legions of the Damned  6
+The Undead Hordes  7
+Main Menu 8
+The Single Player Menu 8
+Pre-War Preparations  8
+The Lord Selection Screen 8
+The Story Begins 10
+The Adventure Interface 12
+Map/Resources  13
+Objective  13
+Options  13
+Display Flags  14
+Cast Spell 14
+Diplomacy Screen  15
+Capital City  16
+Plant Rod  16
+Exchange Between Parties  16
+Guard  16
+End Turn  16
+Continue Move  16
+Use Staff or Scroll  16
+Select Next Leader  17
+The Capital City 17
+City Defenses  19
+Exploring the Land  20
+Paperdoll  20
+Movement and Terrain Type 22
+Resources 22
+Transforming the Land 22
+Planting and Removing Rods 23
+The Game Landscape 23
+Other Areas of Interest 25
+Combat 25
+The Thief 26
+Aftermath 27
+PAGE 2
+Disciples II : Dark Prophecy is a turn-based strategy game in which you guide the role of one
+of four races struggling for survival and dominance of your war-torn world. You will create
+armies to conquer and control territory, hire powerful Mages and Warriors, develop your
+fledgling cities, and lead your race to glory. Using a careful balance of diplomacy, resource
+management, magic, and military might, you will strive to etch your name in the long and
+bloody history of Nevendaar.
+Minimum Configuration:
+• Windows 95/98/2000/XP
+• Pentium II 233 MHz 
+• 32 Mb RAM
+• 200 Mb hard disk space
+• DirectX 7.1
+• 16-bit sound card
+• CD-ROM drive quad speed or more
+• V ideo Card with 8Mb RAM
+Recommended Configuration:
+• Windows 95/98/2000/XP
+• Pentium II 300 MHz 
+• 64 Mb RAM
+• 400 Mb hard disk space
+• DirectX 7.1
+• 16-bit sound card
+• CD-ROM drive quad speed or more
+• V ideo Card with 16Mb RAM
+Follow these steps to install Disciples II: Dark Prophecy :
+1. Launch Windows '95, '98, 2000 or XP.
+2. Insert the Disciples II: Dark Prophecy CD in your CD-ROM drive.
+3. The installation program should appear onscreen automatically. If it doesn't, double-click
+on the setup program on the CD-ROM.
+4. Choose the right configuration for your system and click OK. The higher the installation
+level, the more space the game will take up on your hard disk. However, you’ll enjoy
+quicker load times.
+5. When installation is complete, click Play. Next, select Disciples II: Dark Prophecy in the
+Windows Start Menu to launch the game.
+Experience 27
+Building Structures  28
+Leader Advancement  30
+Multiplayer 31
+Hotseat 31
+The Multiplayer Menu 31
+Host 31
+Join Quest 32
+Load Quest 32
+Appendix 1: Units Descriptions 33
+Appendix 2: Units Statistics 38
+The Empire 38
+The Mountain Clans 42
+The Legions of the Damned 47
+The Undead Hordes 51
+Appendix 3: Upgrades Descriptions 57
+Hot Keys 58
+Credits 59
+Troubleshooting and Technical Support 61
+LICENSE AGREEMENT AND LIMITED WARRANTY 62
+PAGE 3
+Living quietly atop the highest peaks of Nevendaar, the Mountain Clans had always kept to
+themselves. Not out of malice or ill-will. It was simply their nature not to meddle in the affairs
+of men. But with the discovery of new iron mines south of Timoric, the production of
+Dwarven crafts drastically increased. Supply must meet demand, and the lowland people
+demanded the quality of iron goods that only the Dwarves could produce. And the pride of
+the Dwarves would not allow the world to be deprived of their magnificent craftsmanship. 
+And then Memnor, that oldest and wisest of Dwarves, had a dream that boded ill for all of the
+Mountain Clans. The word went out, carried along the cold thin air of the Dwarven heights,
+that Memnor himself would announce his prophecy from the summit of the Griffin Heights.
+The mines stopped production, and the loud clanging of hammer and anvil was replaced by
+the weak but commanding voice of Memnor. Pale and trembling, his voice traveled easily over
+the cold thin mountain air. He spoke of the Ragnarok: the great destruction. The end of the
+world was coming, said Memnor. These words, so calmly spoken, would have created a
+frenzy of laughter among the skeptical Dwarves had any but Memnor uttered them. But there
+was only dreadful hush. Even the icy winds – those gusts that strike pride in the hearts of
+Dwarves – fell silent. 
+The salvation of the Mountain Clans resided in the knowledge of the runes, said Memnor. But
+all knew that the knowledge of the runes had been long-forgotten, and the scholars who
+might interpret them lay buried in their icy tombs… 
+From the abode of the dead they came forth – nameless, faceless, merciless horrors. Hastily
+assembled bands of heroes ventured into Hela’s forsaken realm in search of the Runes of
+Wisdom. What they encountered there no mortal can say; but what they discovered upon their
+return has already been carved in stone that future generations will never forget. The
+shambling corpse-men of the fleshless goddess Mortis had marched upon the Dwarven
+heights. Their once proud kingdom now lay barren and scorched before their sullen eyes.
+Valkyries saddled on their winged steeds descended from Wotan’s domain in search of the
+fallen. This was the Wolf-Age, for in these dire times gods were created and heroes were
+made; and the carrion wolves fed upon the weak. The King himself was slain, and with him
+many of his most courageous warriors.  
+Despairing but not defeated, the Mountain Clans moved deep into the underground city of
+Svatalfaheim. Here, it is said, they patiently wait for their fallen warriors to return.  
+“The gates of Hell have been sealed, and the four races have staggered, bloody but
+victorious, to their respective homes. They are greeted by ruins, for the war has savaged
+the land.”
+The History of Nevendaar 
+The little that is known of the terrible calamities of Nevendaar comes down to us in the
+writings of a poor but literate monk named Illuthen. His History and Songs, believed to be
+written during the period just prior to the events chronicled in Disciples II: Dark Prophecy ,
+are the only surviving history of this period. From his words, we have been able to assemble
+a vivid picture of that dark age. 
+An entire generation has been raised without knowledge of the Empire’s Golden Age, when
+their ancestors lived peacefully alongside the Mountain Clans, and there was harmony in
+every far-flung corner of the land. The Golden Age reached back long into the past, but for
+this generation, fed on fear, and lulled to an anxious sleep by the dire prophecies of the
+Elders, it is a mythical time. 
+“The accursed angel, riding his fiery steed, will curse the land, and the poisoned soil
+shall harvest beasts and demons.”
+For this generation, these words mark the beginning of the Empire’s history. Everything
+before is a fantasy. Shortly after the Elders pronounced that the time of the prophecy was
+nigh, an infernal rift ripped through the length of the Empire. The “beasts and demons” of
+the prophecy poured forth. The Great Wars had begun. No strategies or tactics, no heroes,
+no glorious tales of battle have come down to us. Perhaps there were none. As the survivors
+tell it, it was only be sheer force of the Soul and Arm that the Empire succeeded in sealing
+the gate to Hell. 
+N o w, ten long years have passed. Famine and plague ravage the once fastidiously tilled lands of
+the Empire. While the young people fashion new scabbards for their gleaming swords, the Elders
+merely look skyward, to the Highfather . Surely he would never allow such horrors to once again
+plague his favored land? But this favored land is now torn apart by internal strife. Petty nobles
+and brigand lords have established their own empires. Thousands of years in the making, the
+once proud and united Empire is but a distant memory. The King, having lost his consort and
+only son during the wars, languishes in self-imposed isolation in his castle’s highest tower. 
+What did the Highfather demand of his subjects? Blood, it seemed. For it is in these dire times
+that the unholy enemies of the Empire struck anew…
+PAGE 4
+Somewhere near the beginning of time, Mortis, that name which now causes even the most
+stout-hearted to tremble, was the goddess of Life. She ruled the elder race with her husband,
+Gallean, and they were as one being, such was their devotion to each other. But Wotan, god
+of the Mountain Clans, coveted the glorious lands of Mortis and Gallean. Certain that only by
+severing the bond between Mortis and her consort would he be able to wrest control of the
+lands, Wotan transformed himself into a wolf and tore out the heart of Gallean. With godly
+might, he hurled the still-beating heart into the sun, that it would never be recovered. But
+Mortis, in her grief, followed the heart, and was consumed by fire… 
+In the arid lands south of the realm there existed a prosperous civilization of mystics called
+the Alkmaar. With a mere wave of her skeletal hand, Mortis unleashed the plague on these
+quiet and unsuspecting people. Within weeks, thousands lay dead and dying. Other cities
+rapidly followed. Just as there had once been no limit to Mortis’s ability to create new life,
+there was now no end to the savage ways she devised to inflict suffering and death on others
+– the very creatures she had once created. The goddess of life had found a new purpose… 
+Engrossed in her own world of hatred and misery, Mortis set about creating a hideous army;
+her warriors were the desolate dead, many of them victims of Mortis’s own wicked hand.
+There would be no afterlife for these wretched souls; they marched ever onwards, fulfilling
+the vengeful fantasies of their dark mistress. Her shambling soldiers decimated the terrified
+Mountain Clan warriors, and Wotan could only shrink back in horror…
+When the High King Sturmir Thunderhammer lay dead on the field of battle, Mortis knew that
+she had avenged herself and her husband. She let loose her grip on the skeletal army that
+had served her so well, and exiled herself from the land of the living for many years. Love for
+Gallean still burned in Mortis’s foul heart, and she waited in solitude for the return of her
+husband.  
+For eons, the fleshless goddess wandered in torment through her own dark mind. Where was
+Gallean? She cried out his name, but she was answered only by her own distorted voice. At
+long last, Mortis found her way out of this maddening labyrinth. If Gallean would not come
+to her, it was because he could not come to her.
+To revive Gallean, divine blood was required. And when the spirits revealed the existence of
+a holy child, Mortis swore that, if need be, an ocean of blood would be spilled to reunite her
+with her beloved…
+Long ago, before evil sundered even the heavens, the Highfather looked upon the beauty of
+the angel Bethrezen and granted him the divine right to create the world, which was to be
+called Nevendaar. And Bethrezen did. His world was magnificent, and its inhabitants wanted
+for nothing. But rancor grew among the lesser angels who, in a pique of jealousy and rage,
+sowed disharmony and ill-will among the hitherto peaceful tribes of Nevendaar .
+When the Highfather looked down upon Nevendaar, he was aghast. Where was the harmony
+that Bethrezen had promised? Where were the endless green pastures? The Highfather saw
+only suffering and strife; the green pastures were scorched black by ceaseless wars.
+Nevendaar was to be the Highfather’s pride and joy, but Bethrezen had betrayed him. The
+Highfather’s fury shook the heavens. Bethrezen would be punished…
+After 6,000 years of imprisonment in chaos, Bethrezen’s earthly minions – the Legions of the
+Damned – created a breach in their master’s dungeon. All that remained was to perform the
+final ritual that would grant Bethrezen unbridled freedom. But the Highfather, in his infinite
+mercy, revealed the location of the abominable ritual to the Empire and the Mountain Clans.
+The Legions of the Damned were trapped in their mountain temple, and the secret rune
+wisdom inscribed on the door would ensure that they would remain there for ten years. 
+Now, that ten years has passed, and the Legions are free to perform the rites that will free
+Bethrezen once and for all… 
+PAGE 5
+• Warrior Lord: Dedicated to combat, the parties of these fierce fighters regenerate 15%
+of their damage per day. Although the Warrior Lord military knowledge in unsurpassed,
+he can nevertheless cast one of each spell per day, and as many different spells as his Mana
+reserve allows. However, his devotion to more traditional combat limits his knowledge of
+spells to those of the fourth level. 
+• Mage Lord: Well-versed in the mystic arts, Mage Lords can research all spells and cast
+two of each spell per day, using as many different spells as their Mana reserve allows. Mage
+Lords require half the Mana to research spells than other Lord types. In addition, the
+Magic Tower (where all spell research ocurs) is readily available at the beginning of the
+game. Mage Lord parties can only regenerate lost hit points in cities. 
+• Guildmaster Lord: Like the Warrior Lord, the Guildmaster Lord is fond of conventional
+combat techniques, though he employs more versatile (that is, deadly) Thieves in his
+arsenal.  In addition, the Guild – which is necessary to hire the Thief – is already erected
+at the start of the adventure. 
+All of the actions available to the Guildmaster Thief:
+Poison Party The thief poisons the enemy party, reducing the hit points of all the units
+Infiltrate Spy The thief places a spy that infiltrates the enemy  
+Steal Item The thief steals an item 
+Assassinate The thief will assassinate the weakest unit in the enemy party
+Counterfeit Orders The thief sends a false message to the enemy changing the battle positions 
+of the party
+Duel The thief engages the enemy leader in a duel
+Poison City The thief poisons the enemy city, reducing the hit points 
+Steal Spell The thief will steal spell knowledge owned by the enemy race
+Bribe Populace The thief offers gold for the allegience of the city
+Steal Gold The thief will steal gold from the city treasury
+Steal Item The thief will steal an item from the merchant
+Visit Ruin The thief will spy on the ruin, revealing information
+The Lord Selection screen also allows you to define the following: 
+• Lord Portrait: Click on the portrait in the center of the screen to select a different one. 
+• Difficulty Level: Click the crown to cycle through the various difficulty levels: Easy, Average,
+Hard, and Very Hard. The higher the level of difficulty the fewer resources you begin the
+game with and the tougher the computer opponents are. 
+• Lord Name: Accept the suggested name, or type the name of your new Lord in the box at
+the bottom of the screen. 
+When you have finished making your selections, click the Continue checkmark button to
+continue. 
+The Main Menu launches you into the mystical world of Nevendaar. Select one of the
+following options to begin the adventure:  
+• Single Player: Allows you to play against the computer. See Single Player Menu , below.
+• Multiplayer: Allows you to play against others on the Internet or a Local Area Network
+(LAN). See Multiplayer Menu , below.
+• Intro: Introduction to the explosive events of Disciples II: Dark Prophecy .
+• Credits: Find out who to blame should you be mercilessly pummeled.  
+• Options: Opens the Options menu.  See Options , below.
+• Quit: Exit Disciples II: Dark Prophecy .
+The Single Player Menu contains all the options you need to battle against computer -
+controlled foes: 
+• New Saga: Begin a new series of linked Quests.  
+• Load Saga: Load a previously saved Saga. 
+• New Quest : Begin a new adventure. A Quest is a self-contained adventure that, unlike
+quests within a saga, has no effect on subsequent quests. You must complete all of the
+objectives in order to win. When you select New Quest, a list of scenarios is displayed.
+Click on a scenario to view information about that Quest. The four boxes at the bottom of
+the screen display the races involved in the selected scenario. Click the checkmark icon
+to play the selected Quest. 
+• Load Quest: Load a previously saved adventure. 
+• Back: Return to the Main Menu. 
+• Custom Campaign: Access a series of interfaces that allow you to design your own
+adventuring world. See Designing Custom Campaigns and Scenarios , below.
+• Load Custom Campaign: Load a previously saved custom campaign. 
+Before you conquer the world, you must select the race that will aid you in carrying out your
+plans. Click the arrows on the Race Selection screen to view images of each of the four races.
+Each race has its strengths and weaknesses. When you have chosen the race you wish to play,
+click the checkmark button to continue. 
+The Lord Selection Screen
+Now that you have determined your race, it’s time to select a Lord. Click the sword and shield
+graphic to cycle through the Lord types. There are three types of Lord from which to choose:
+PAGE 6
+When you start any new adventure, the Beginning of Turn report is displayed: 
+This report also appears at the beginning of each turn. It indicates your current income from
+all possible resources during that turn only . For a report of your total resources, click the
+Map/Resources toggle in the upper right corner of the screen. 
+Click the checkmark icon to continue. 
+Now, enter a name for your first leader. Accept the suggested name, or type in any name that
+you wish. When you have selected a name, click the arrow icon. 
+You will now see a briefing of the Saga or Quest, as well as your first objective. Each time you
+complete part of a Saga, you will receive new directives for the next adventure. 
+Each race involved in a quest may have a specific objective to complete. The following is a
+partial list of the Quest/Saga objectives. You may need to perform a combination of them in
+order win the game: 
+• Destroy: Defeat a designated party in combat. 
+• Capture City: Capture a designated city.
+• Transform: Transform a designated percentage of land. Terrain adjacent to your Cities
+and Rods (see Transforming the Land, below) is automatically transformed each turn. Any
+terrain next to terrain of your type is also transformed. 
+• Loot: Occupy and collect all items in a designated ruin.
+• Item to Location: Bring an item to a location
+• Party to Location: Lead a Party to a designated location
+• Party to City: Lead a Party to a designated city
+Disciples II: Dark Prophecy is played in turns, where each turn represents one day. During
+each day you may do one or a combination of the following: 
+• Explore the landscape with your heroes 
+• Erect buildings in your capital
+• Upgrade non-capital cities 
+• Research new spells 
+• Recruit and manage new heroes and armies 
+• Buy and sell artifacts, scrolls, and potions 
+• Engage in combat 
+• Cast spells
+During any turn, it is a good idea to assess your position from all perspectives: military ,
+resource management, city management, etc. Even when all of your parties have exhausted
+their movement points, you can still erect a building in your capital, research or cast a spell,
+etc. Time is of the essence, and you can be sure that your enemies will be doing everything
+in their power to close in on you. Don’t sit back and wait. 
+Click the arrow in the bottom-right corner of the screen to start the adventure. 
+PAGE 7
+Map/Resources 
+Use the Map/Resources toggle to view an up-to-date summary of your resources, your
+location, and the status of your territorial struggle. When Map is toggled, the Worldview map
+is displayed, showing an aerial view of all areas that you have explored. Mines are indicated
+by crosses, squares indicate non-Capital cities under your control, and rectangles with a
+white stripe indicate your moving parties. Left-click on the Worldview map to center the map
+on the selected point. You can also drag the rectangle to the desired location to display that
+area in Landview (the main gameplay area). 
+When Resources is toggled, the Resource window displays the total resources that you own.
+Remember, this is different from the Beginning of Turn report, which only displays the
+resources acquired during a single turn. 
+Toggle again to view the percentage of land (in tiles) that you and your enemies have trans -
+formed. 
+Objective 
+Click to view the objective of your Quest. Click the button to replay the scenario brief-
+ing during the Saga’s. On the Landview map, a blue circle indicates the location of a scenario
+objective. For example, a blue circle surrounding a city indicates that this city plays an impor-
+tant role in completing the Quest.  
+Options 
+Use the arrow buttons and toggle switches on the Options menu to define a variety of game
+settings. The Options menu is divided into four main areas: 
+Game Settings 
+Unit Movement Set the speed of your units on the map as Normal, Fast, or Very Fast
+Opponent Unit Movement Set the speed of enemy units on the map as Normal, Fast, or Very Fast
+Scroll Speed Set the speed at which you scroll across the map as Slow , Normal, or
+Fast
+Battle Speed Set the speed at which combat unfolds as Slow, Normal, or Fast, 
+Instant (When set to Instant, no combat animations appear)
+Confirm End of Turn Display a prompt to confirm end of your turn
+The Adventure Interface is comprised of two sections. The left side of the screen, or
+Landview, shows your character’s immediate environment, including enemies, monsters, and
+treasures. This is the “game board” where you position your armies and plot your tactics. T o
+view information about any element on this screen, such as a building or monster, position
+your cursor over the element and right-click. An information panel is displayed. Keep in mind
+that some parties and buildings – notably the enemy Capital city – require a thief to spy on
+them to gather information. 
+Right-click on any element to view information
+The right side of the Adventure Interface contains the information and options you may need
+during any given turn. Take some time to become familiar with these controls before
+proceeding. 
+
+PAGE 8
+displayed. Click the tab representing the level of the spell you wish to cast, and then select a
+spell. Information about the selected spell is displayed on the right-hand page of the spell
+book. You must have researched the spell that you wish to cast. Click the Cast Spell button or
+double-click the spell icon to cast the spell. If you have sufficient Mana to cast the spell, the
+Landview map is displayed. Click on an eligible target to cast the spell. You will know that a
+target is eligible when the pointer appears charged with magical energy .
+There are three general types of spell: World spells affect all pre-selected targets or creatures
+on the entire map; Area Effect spells affect several targets in a location; Target spells affect a
+single target.  
+Diplomacy Screen 
+Click on any of the portraits on the Diplomacy screen to view that Lord’s current diplomatic
+status. You can use the Diplomacy screen to make and break alliances, and offer gifts of Gold
+and magic to allies and potentially powerful enemies. 
+Next to each Lord is a slider that shows that Lord’s diplomatic stance toward you. When the
+red bar is close to the crossed swords, the selected Lord is inclined to War. You can offer
+Gold to your enemy to change this state. When the Lord improves his diplomatic stance
+toward you, the slider appears closer to the clasped hands at the top of the slider .
+You can interact with the Lord by choosing one of the five Diplomatic Actions buttons: 
+• Sell Item: When you select an item to sell, you are asked how much you wish to charge
+for  the item. You may only sell items if you are at peace with the selected Lord. 
+• Sell Spell: When you select a spell from the spell menu, you are asked how much you
+wish to charge for the spell. You may only sell spells if you are at peace with the selected Lord. 
+• Give Gold: Giving Gold can entice opponents to have a more favorable view of your Lord. 
+Autosave Saves your current game after every turn
+Map Destination Highlight Displays a marker on the Landview map that shows the exact location
+of the cursor
+Allow Battles In Path When When a destination is selected for a party, the path selected will not 
+Moving a Party avoid combat 
+Graphics
+Extra Battle Animations Enables unit idle animations in battle
+Isometric Animations Enables motion in Landview animations, such as waterfalls
+Clouds Over Map Displays animated clouds in Landview 
+Sounds and Music
+Sound FX Volume Select Off, Low, Medium, or Loud volume
+Music Volume Select Off, Low, Medium, or Loud volume
+Unit Acknowledgements Select Off, Low, Medium, or Loud for unit acknowledgements based
+on Sound FX Volume
+Isometric Audio Environment Select Off, Low, Normal, or High to change the level of environment
+sounds that can be heard
+Performance
+Low Memory Video Card Enable for older video cards
+Alpha Blending Quality Select between High or Low to change the level of level in the 
+translucency effects.
+Scrolling Between Actions Display will scroll slowly to moving party 
+Smooth Scrolling During Enables higher refresh rate during party movement 
+Party Movement
+You can use the Low End and High End buttons to set quick default settings for your system.
+The following selections are also available on the Options menu: 
+• Load Game: Click on the previously saved game that you wish to load, and click the Load
+Game button. 
+• Save Game: Enter a name for your game in the text box, and click the Save Game button. 
+• Quit Game: Exits the current game and returns you to the Main Menu. 
+Click the arrow icon to exit the Options menu. 
+Display Flags 
+Sometimes your parties will be hidden behind buildings, trees, or other elements of the
+landscape. Click the Display Flags button to display large banners beside each party for
+easier recognition of your armies. 
+Cast Spell
+Click this button to cast a researched spell during your turn. The spell book menu is
+PAGE 9
+a Staff, the resource cost is deducted from the appropriate resource totals. Your leader must
+possess the Use Staff or Scroll ability to use this feature. 
+Select Next Leader 
+Automatically centers the Landview on the next leader and his or her party .
+Click the Capital City icon to display the Capital City menu. The Capital City menu
+allows you to do the following: 
+• Research Spells: Click the Research Spell icon to display the Spellbook.  The
+Spellbook contains all of the spells available in the Quest, by level. When you click on a
+Spell, information is displayed on the right-hand page, as shown below .
+Double-click on a spell to Research it, or click the Research Spell icon. Bear in mind that
+not all spells are available in all Quests.
+• Exit Leader: Click the Exit Leader icon to return to the Landview map with the
+leader and his party outside the City walls. You can now move your leader in Landview .
+• Manage Army: Click the Army Screen icon to display the Manage Army menu. 
+The section of the Manage Army screen shown below indicates the battle positions that the
+leader and his units occupy. The left column represents the back rank, and the right
+column represents the front rank. This section of the Manage Army screen shows your
+Moving Party; that is, the party that explores the terrain. The right side of the screen shows
+your City Defenses, which are described in detail below.
+• Offer Alliance: Before you can offer an alliance, you must first offer Gold to your
+prospective collaborator, and prove your mettle in combat. 
+Note that if you cast an Area Effect spell over an allied computer-controlled race, any treaty
+is instantly broken. If one of your allies casts an Area Effect spell over one of your parties,
+you have the option of breaking the alliance. 
+In multiplayer games, you may also chat with your opponents. See the Multiplayer section of
+this manual.  
+Capital City 
+The Capital City screen is the interface from which you hire parties, research spells, and build
+additional structures. For more information about these procedures, see The Capital City and
+Building Structures sections of this manual.  
+Plant Rod 
+You use rods to transform the land around you. Once transformed, the land belongs to your
+race, and all resources located in that area are immediately added to your resource totals.
+For more information about this important tactic, see Transforming the Land. 
+Exchange Between Parties 
+Units and items can be exchanged between adjacent parties. To exchange items, select a party,
+click the Exchange Between Parties button, and then select an adjacent party. The Exchange
+window appears. Drag the items or units to their new positions. The two parties must be your
+own. Additionally, both leaders must be alive. You may, however, exchange a Revive potion,
+revive a fallen leader with it, and then exchange party members. 
+Guard
+Removes a leader from the Next Leader rotation for the remainder of the turn. 
+End Turn 
+Click to end your turn and allow the next player to move. When another player is moving, an
+hour glass icon appears on screen. The turn number is displayed above the End Turn button. 
+Continue Move 
+Often, your party will not have the required movement points to reach your intended
+destination in a single turn, or your movement will be interrupted by an onscreen message.
+Click this icon to continue your party’s move as you previously defined it. 
+Use Staff or Scroll 
+Click the Use Staff or Scroll Spell button, and then select the Scroll or Spell you wish to use.
+Information about the item and your current available resources are displayed. Next, select
+the target. If you cast a spell from a Scroll, the Scroll is destroyed. If you cast the spell from
+PAGE 10
+Your City Defenses are displayed on the right side of the Manage Army screen. These units
+may never leave the City unless transferred to your Moving Party. The number of reserve units
+in a City is determined by the level of the city. You can move items from your City to your
+Moving Party by dragging and dropping an item into a vacant slot. You can also use a potion
+on a unit or leader by dropping it over the target. The number in the bottom right corner of
+each item box indicates the number of that item that you currently possess.  
+Each Capital City has a Guardian unit. The Guardian is a powerful entity that cannot leave the
+capital, but stands ready to assist in its defense. Remember that your enemy Capitals also have
+Guardians, and they are quite capable of annihilating an enemy with a single blow .
+You can perform the following additional functions from the Manage Army screen: 
+• Dismiss Unit: Click the Dismiss Unit icon to get rid of a selected unit. 
+When you click the Dismiss Unit icon, the cursor changes to . Position the cursor
+over the unit you wish to remove, and click. 
+• Heal Unit: Click the Heal Unit icon and then select a unit to restore Hit Points to
+that unit. It costs Gold to heal a unit; the amount will depend on how many Hit Points need
+to be restored to the unit. You must have the Temple built in your Capital City in order to
+heal a unit. 
+• Revive Unit: Click the Revive Unit icon to resurrect a dead unit. When you select
+the unit to be revived, a message box indicates the cost of the procedure. Revived units
+return to life with only one hit point. You may then use the Heal Unit feature to boost the
+u n i t ’s Hit Points. You must have the Temple built in your Capital City in order to revive a unit. 
+• Hire a Unit: To hire a new unit, click any unoccupied reserve position. Select the unit
+from the Hire a Unit panel, and then confirm your selection. The cost will be deducted
+from your Gold supply. To create a new party, click the blank window on the left side of
+the screen and then select from the list of available leader types. You can then add
+additional units. All costs will be deducted from your Gold supply. Note that in order to
+hire the Thief, you must construct the Guild in your Capital City .
+To reposition units within the battle formation, drag and drop them where you wish. It is
+a good idea to place units with the most hit points, and those who may attack only
+adjacent targets, in the front rank. When a unit has been selected, the spaces to which a
+unit can move are highlighted. 
+To equip a party with an item from the City’s vault (the items along the bottom of the right
+hand side of the screen), drag and drop an item into one of the vacant squares at the
+bottom of the left side of the screen. Use the Up and Down buttons to view your items if
+you have more than four stored at one time. Until you assign an item to a party, the item
+is inactive. To assign an item, simply drag the item onto the unit that you wish to equip. 
+
+PAGE 11
+Keep in mind that certain items require that the leader possess the ability to use them. For
+example, in order to use a banner, the leader must have the “Banner Bearer” ability .
+Paper Doll Interface
+Normal Items: These items can be equipped or used on units:
+• Banners: The leader must have the Banner Bearer ability to equip a Banner .
+• Artifacts: The leader must have the Artifact Lore ability to equip an Artifact.
+• Tomes: The leader must have the Arcane Lore ability to equip a Tome.
+• Potions: No ability is required to use Potions.
+• Boots: The leader must have the Boots ability to equip Boots.
+Battle Items: These items can be used only once per battle:
+• Potions: No ability is required to equip potions and use them in battle.
+• Orbs: The leader must have the Use Orb ability to equip an Orb.
+• Talismans: The leader must have the Use Talisman ability to equip a Talisman.
+Other: These items cannot be equipped:
+• Valuables: Valuables (such as a silver ring) can only be sold to merchants. Right-click on
+any valuable to view its worth in Gold. 
+• Special: These items, such as ancient runes, can be neither equipped nor sold and are
+used solely to complete quest objectives.
+There is a limit to the number of items that your leader can equip:
+To select one of your Leaders, position the pointer over the character until the pointer turns
+into a gauntlet.  Your Leader begins the quest at the entrance to his or her Capital City. When
+you click on the Leader, information about the Leader is displayed on the right side of the
+screen. Your Leader has a maximum number of movement points, as expressed by the
+second number after the slash. Different and more difficult terrains consume more
+movement points. When your current movement point level (indicated to the left of the slash)
+is reduced to zero, you cannot move that Leader again until the next turn. 
+To move the selected Leader, simply double-click on the location where you want the Leader
+to move. The Leader is automatically moved to that position. 
+When you click on the destination for a selected party, a series of flags are displayed. Blue
+flags mark the path the party will take. Red flags mark a path that will lead into a combat
+situation. If the destination is farther than the distance that a party can travel (that is, beyond
+the range of your movement points for that turn), white flags mark the portion that the party
+will be able to move in the next turn. To enter a City, double-click the front gate, which is
+identified by a moving arrow .
+Paperdoll 
+The Paperdoll interface can be reached by clicking on the paperdoll icon in the
+manage party, exchange units screen and the army screen. The Paperdoll interface displays
+the various locations where items with which your leader can be equipped. Each type of
+magical item has a specific slot where it can be equipped, and each slot is marked to
+indicate the type of magical item that can be inserted into it. Simply click and drag the item
+to the appropriate slot. To learn more about an item, right-click on it to view the encyclopedia.
+
+PAGE 12
+Each race has a distinctive terrain type and color. The Empire’s is green grass, the Mountain
+Clans’ is white snow, the Legions of the Damned spew red lava-rock, and the Undead Hordes
+scorch the ground black. 
+Land is transformed in three ways: 
+• Land adjacent to a City (including a Capital City) is transformed each turn into the type of
+land used by the race controlling the city. The amount of land that is transformed depends
+upon the level of the City. Higher level cities transform more land. To see how much land
+your race has transformed, click the Map/Resource toggle. The percentage of land (in
+tiles) transformed by each race is displayed.
+• Land adjacent to transformed land is transformed if not influenced by other factors such
+as enemy control or enemy Rods. 
+• Land adjacent to Rods is transformed each turn. 
+Planting and Removing Rods
+Each race has a unique leader unit who may plant Rods to transform the land: 
+Race Unit Name
+Empire Arch-Angel
+Mountain Clans: Dwarf Champion
+Legions of the Damned: Baroness
+Undead Hordes: Banshee
+To plant a Rod, select the special unit, click the Plant Rod button, select the area on the map
+where you wish to place the Rod, and click. Planting a Rod costs 150 Gold. Once the Rod is
+planted, the terrain surrounding it transforms into the color representative of your race. As
+long as your Rod remains untouched, the terrain beneath it will transform with each passing
+turn. You cannot plant a Rod on terrain occupied by mountains or water .
+You can also use your special unit to remove Rods. Simply move the appropriate unit beside
+the Rod and click the Place/Remove Rod button.  The land beneath the removed Rod can now
+be controlled by any race by planting a Rod on it. 
+The Game Landscape
+The game landscape is comprised of a number of elements: 
+Ruins: These locations, usually depicted by a crumbling structure, contain Gold or other
+beneficial items. They are often guarded by monsters. Right click on a ruin to see if it has
+been looted. A looted ruin contains nothing of value. 
+Gold Mines and Mana: Transforming the land under these resources into land indigenous
+to your race grants you control of the resource.
+• Only one (1) Banner can be equipped (Top position left).
+• Only one (1) Tome can be equipped (Top position right).
+• Only one (1) Boots can be equipped (Lowest center).
+• T wo (2) Artifacts can be equipped (Right and left center, below hands).
+• T wo (2) Battle items can be equipped (Right and left in / over hands).
+To leave an item for an ally, click the Drop Item button , and then select a location to
+drop the item. A bag is displayed to mark the location of the dropped item. The allied party
+needs only to pick up the item to add it to it’s inventory .
+Movement and Terrain Type
+Terrain type determines how far your party can move per turn. The following is a list of the
+number of movement points expended when traveling across different types of terrain: 
+• Roads: 1 movement point per square
+• Plains: 2 movement points per square
+• Forest: 4 movement points per square
+• Water: 6 movement points per square
+You can acquire special abilities, such as flying, that will modify the above movement rates in
+your favor.
+Resources
+There are two primary resources in Disciples II: Dark Prophecy . You use Gold to erect
+buildings, purchase items, and create armies. You use Mana to research and cast spells. 
+Each race depends primarily on a specific type of Mana: 
+• Empire: Life Mana (Blue)
+• Legions of the Damned: Infernal Mana (Red)
+• Mountain Clans: Runestone Mana (White)
+• Undead Hordes: Death Mana (Black)
+You may also find or buy spells that are indigenous to another race, in which case you will
+need to obtain the Mana of that race in order to cast the spell. 
+Note also that spells of Level Three and higher often require a combination of different Mana types. 
+Transforming the Land
+Mana sites and Gold mines – both of which are needed to bolster your economy – are not
+captured, but controlled. Both sites supply their resources to the Lord who owns the land on
+which they lie. 
+PAGE 13
+Other Areas of Interest
+You should also expect to encounter the following on your travels: 
+• Bags: Bags may contain magic items or other valuable objects. 
+• Rods: Your parties will encounter Rods planted by your enemies. Only leaders with the
+Plant/Remove ability can remove them. 
+• Mercenary Camps: Mercenary Camps are populated with soldiers who will offer to join
+your party for a price. Mercenary camps may offer unique units not normally available. 
+• Magic Towers: You may buy spells in Magic Towers. Some of these spells may come from
+another race's repertoire, requiring a different Mana type to cast them.  
+• Merchants: Here you can purchase and sell any number of items. Gold is accepted as
+payment in Merchant shops. During your travels, you can also find valuable items (such
+as rings) that may be exchanged for the Merchant’s goods. 
+• Training Camps: Training camps may be used to increase the skill level of your party and
+its leader. Simply click on the Training camp to enter it, click the Train Unit icon, and then
+select the unit you wish to train. A panel is displayed indicating the amount of experience
+that the unit has received. 
+To enter combat, position your cursor over a party in Landview. If the cursor changes to an
+arrowhead, then you may engage that target in combat. Eligible targets include Ruins, an
+enemy party, an enemy city, or a monster party. Double-click on the target party. Your unit
+moves to the enemy’s location, and the Combat screen is displayed. Keep in mind that
+initiating combat takes away half of the leader’s total movement allowance. 
+The Combat screen displays a close-up view of the combatants and the immediate vicinity .
+Also displayed are portraits of your units and all enemy units indicating the number of hit
+points remaining for each unit. 
+Combat is played in a series of rounds. During each round, the active combatant’s portrait is
+Enemies: These can include both computer or opponent controlled leaders and their par -
+ties. Moving to the enemy location (indicated with red flags) automatically initiates combat. 
+Monsters: Combat is automatically initiated when your party moves to a tile occupied by a
+monster. Monsters usually guard items of value. 
+Cities: Capturing Cities increases the amount of land your race transforms per day. Cities
+have their own guards, and may have one additional party present. 
+When you conquer an enemy city, it immediately falls under your control. The terrain under
+it is transformed, and will continue to transform with each passing turn. In addition, you may
+now recruit new armies from the city. Simply follow the procedure for recruiting an army in
+your Capital. Keep in mind that, although you now control the city, it can easily be retaken if
+you do not defend it. 
+Summoned creatures and Thieves cannot capture enemy cities. For example, if you cast
+Living Armor, and it defeats the enemies within the city, you will need to move one of your
+parties into the city in order to transform it.
+You can upgrade your non -Capital cities if you have enough Gold to make the improvement.
+Upgrading your cities has the following effects: 
+• Increases the number of units you may put in the City Defense party .
+• Increases the transformation rate of the land surrounding the city .
+• Enhances the armor value of the units inside the city .
+• Increases the rate at which the city rejuvenates units within its walls. 
+To upgrade a non-Capital city, click the Grow City button . Note that each upgrade costs
+an ever-increasing amount of Gold. The arrow keys located on either side of the grow city
+button allow you to toggle between controlled cities. 
+The following panel appears when you click the Grow City button: 
+
+PAGE 14
+When an opposing Thief successfully challenges you, a notification appears to inform you of
+his action: 
+When you enter into a combat situation with your Thief, a dialog box displays your options
+and your chances of succeeding. The Thief is the only unit in the game that does not gain
+experience. 
+As long as one member of a party survives the combat, the party continues to exist. However,
+if the entire party is destroyed, a tombstone marks its demise on the Landview map. A
+leaderless party is indicated by a pair of wounded warriors. The dead leader’s personal
+equipment is placed into the party’s inventory. The party’s movement allowance is halved until
+the leader is resurrected. In addition, parties with dead leaders are prohibited from
+capturing cities (even vacant cities), visiting ruins or Magic Towers, Mercenary Towers, and
+Trainers facilities. In other words, make sure that your leader survives every battle. 
+Your party will regenerate hit points each day until the maximum allowance is reached, or
+until you re-enter combat.
+The victor in combat is awarded experience points based on the experience point value of
+the enemies slain. This total is divided among the surviving members of the victorious party .
+Dead units never gain experience. If a dead unit is revived, that unit receives experience
+points for any units killed since the unit was resurrected.
+The number of experience points for each unit is displayed on the unit’s portrait. In addition,
+a cross will appear in the corner of a unit’s portrait to indicate that, in order to upgrade, the
+appropriate upgrade structure must be built.
+highlighted. Each unit may perform one of the following actions per round.
+• Assist your own party: Units with special abilities may use their turn to cast a spell that
+will benefit their own party. For example, you may have a unit who is able to heal injured
+comrades. Any eligible units are highlighted. Click on the unit(s) you wish to assist, and
+the spell is cast. 
+• Attack an enemy unit : Not all units can attack all targets. Some units can only attack
+adjacent units, although once the front line has been eliminated, rear enemy units become
+eligible targets. To attack an enemy unit, select that unit on the panel and click. The results
+of your attack are displayed. 
+• Retreat: Each enemy unit has one last attack on all retreating units. 
+• Autobattle: Click this icon to have the computer automatically play out a melee, click on
+it again to stop the feature. 
+• Wait: The unit will attack after every other unit has attacked.
+• Defend: When you select Defend, the unit takes only half damage during that turn. 
+• Toggle Displayed Party: Click this icon to view either your units or enemy units. 
+Combat continues until one side is eliminated, or until your party retreats. If the surviving
+side has a healer, that unit is allowed an extra turn in which to heal allied units. 
+The Thief is a unique leader who relies on subterfuge to overwhelm his enemies. The Thief
+must act alone. If he fails at any of the actions described below, he is promptly executed by
+the enemy. You can secure a more powerful Thief  - possessing additional thieving options -
+by choosing Guildmaster Lord at the beginning of the game. 
+The Thief may attempt any of the following actions: 
+• Poison: A successful poisoning reduces the hit points of all units in the targeted party .
+• Counterfeit Orders : A false message is dispatched to the enemy, thus changing the
+battle position of the targeted party. This can result in an enemy formation that positions
+close-range combatants in the back row, and archers in the front row.
+• Spy: If your Spy successfully infiltrates the enemy, right-click on enemy parties, cities, and
+ruins to display information about the target. Your Spy can continue to infiltrate these
+areas until he is caught. 
+• Assassinate: The Thief assassinates the weakest unit in the enemy party .
+• Duel: The Thief engages the enemy party leader in a duel to the death. 
+• Steal Item: The Thief robs an enemy party (or a Merchant) of a spell or item. 
+• Steal Gold: The Thief pilfers Gold from the City Treasury.
+• Steal Spell: The Thief steals spell knowledge from an enemy race. 
+• Bribe: The Thief offers Gold in return for a city’s allegiance.  
+PAGE 15
+The structures that are displayed depend upon which building class button that you have
+selected:
+Keep in mind that some buildings require that a prerequisite structure be built. This will be
+indicated on the right side of the Build Structure screen. 
+The various structures are highlighted or outlined according to their current status and
+availability: 
+• Red: The structure cannot be built. 
+• Gray: The structure is eliminated from the branch due to your branch choice. That is,
+once you commit to a building branch, you cannot construct buildings in another branch. 
+• Blue: The structure has already been built. 
+Any structure that is not highlighted or outlined can be immediately built. 
+Once you have selected the building that you wish to construct, click the Build Structure
+button. Once a structure has been built, the structure appears on the Capital City screen, and
+Right-click on the unit’s portrait to see which structure needs to be built.  
+In order for a unit to advance a level, the upgrade structure must already have been built. For
+example, if a Possessed unit gains 95 experience points, enough to advance to Berserker, he
+can only do so if the Unholy Portal has been built. If he gains the 95 points but the Unholy
+Portal has not been built he will remain a Possessed unit with 94 experience points until the
+Unholy Portal has been built and he has gotten into (and survived!) another battle to earn the
+last point of experience.  This idea of earning the final necessary experience point in battle
+is also true for training camps. 
+Also, if you’ve built the last possible upgrade structure in a branch (for example, the Idol of
+Bethrezen), you will upgrade automatically when you have gained enough experience. This
+is due to the fact that there are no additional upgrade structures to be built. However, the unit
+will continue to advance, becoming a Level 5 Infernal Knight, a Level 6 Infernal Knight, etc.,
+each time he earns 1725 experience points.  
+Click the Build Structure icon on the Capital City screen to display the City
+Development screen. You build new structures to allow non-leader units (depending on the
+type of structure that you build) to acquire new levels of expertise in their field. For
+example, if you build a Library, your Apprentice will be allowed to progress to the next level,
+Mage, when he has acquired enough Experience Points. There are a number of buildings
+available, depending on your race and the Saga or Quest that you are playing. The following
+image illustrates the Library example: 
+
+PAGE 16
+To display a detailed explanation of an ability, simply right click on it.  
+Click the Close button to return to the Capital City screen. 
+To start a Multiplayer game, select Multiplayer from the Main Menu. You have 5 options on
+the Connection Selection screen: 
+• Hotseat 
+• IPX Connection for Direct Play: takes you to the Multiplayer Menu
+• Internet TCP/IP Connection for Direct Play: takes you to the Multiplayer Menu
+• Modem Connection for Direct Play: takes you to the Multiplayer Menu
+• Serial Connection for Direct Play: takes you to the Multiplayer Menu
+Hotseat is a multiplayer feature that allows two to four players to play a multiplayer session
+on the same computer. When you use Hotseat, players act one after the other, not
+simultaneously. In Hotseat mode, you end your turn by clicking the End Turn button. 
+The Hotseat menu has the following options: 
+• New Skirmish: Starts a new game in hot-seat play
+• Load Skirmish: Loads a game already in progress
+• Back: Returns you to the Main Menu. 
+You set up the game in the same way as the other multiplayer games, except that everything
+is done on the same computer. See Multiplayer Menu, below.
+Regardless of your connection, each Multiplayer game starts with the Multiplayer Menu,
+which contains the following options: 
+Host
+There are four fields in the Host Game screen: 
+• GameName : You can change the name of the game, which is automatically selected when
+you choose a game type. 
+• Player Name: Enter the name by which you will be known in the game. 
+• Password: Enter the password which players will need to enter your game. 
+• Game Type: Select any of the games available in the list. A description appears at the
+any function associated with it is immediately active. You can only construct one structure per
+turn. 
+When your leader has attained enough Experience Points to reach a new level, some of his
+statistics automatically rise, and you are prompted to select a new skill on the following day:
+Not all abilities are available to all leaders. The following is a complete list of leader upgrade
+abilities: 
+Artifact Lore Allows the leader to equip Artifacts
+Arcane Knowledge Allows the leader to read magical Tomes
+Banner Bearer Allows the leader to equip Banners
+Pathfinding Increases the leader movement by 20%
+Arcane Lore Allows the leader to equip and use Orbs in battle
+Leadership Allows the leader to take one more unit in his party
+Travel Lore Allows the leader to wear magical Boots
+Might Adds 25% damage to the attack of the leader
+Natural Armor The leader will absorb 20% of all the damage he suffers
+Arcane Power Allows the leader to equip and use Talismans in battle
+Advanced Pathfinding Increases the leader movement by 25%
+Weapon Master All the units in the leader's party will gain 25% more experience in battle
+Accuracy Increases by  20% the chances to hit of the leader's attack
+Keen-Sight The leader will see further in the fog of war
+Natural Healing The leader will regenerate 15% of his hit points each day
+Toughness Adds 20% more hit points to the leader
+Incorruptible The leader becomes incorruptible to Thieves
+Water Ward Protects the leader against the first water based attack in battle
+Forestwalk The leader will suffer no move penalty in forests
+Earth Ward Protects the leader against the first earth based attack in battle
+First Strike Increases the initiative of the leader by 50%
+Fire Ward Protects the leader against the first fire based attack in battle
+Air Ward Protects the leader against the first air based attack in battle
+
+PAGE 17
+The Empire
+Squire The Squire nobly offers protection to his weaker compatriots in battle, fighting off
+all attackers with his sword.
+Knight The Knight uses his divine strength to guard the Empire against inequity .
+Imperial Knight The Imperial Knight's absolute faith propels him to defend the innocent, 
+making him a formidable adversary.
+Witch-Hunter The Witch-Hunter is immune to mind based attacks through his experience in 
+battling evil forces.
+Inquisitor Long devoted to the task of eradicating evil, the Inquisitor attacks with holy force 
+and is not affected by mind based attacks.
+Archer The Archer's attack is swift and far-reaching.  Thus making them effective 
+against magic-users that shield themselves behind their stronger comrades.
+Marksman The Marksman has great skill with the bow; their arrows fly far and a single hit 
+can mean death to their opponents.
+Apprentice The Apprentice unleashes lightning on all enemy units, he attacks with 
+vengeance from a distance.
+Mage Casting lightning with double the violence, the Mage shows no mercy to adversaries.
+Wizard The Wizard is a peerless spellcaster; he calls down mighty bolts of lightning from
+the heavens.
+Acolyte As a healer, the Acolyte comes to the aid of one unit at a time in combat.
+Priest Priests can substantially heal damaged units. He patiently attends to one soldier 
+at a time during battle.
+Imperial Priest The Imperial Priest is blessed with the ability to cure units; the wounded will 
+recover much of their health under his individual care.
+Angel An emissary of the Highfather, the Angel's holy sword smites all those who 
+threaten the Empire.
+Paladin The Paladin has been granted the best armor in the land to staunchly defend his 
+people against unholy forces.
+Cleric The Cleric brings down divine aid to heal all injured in his party .
+Matriarch The Matriarch's prayers miraculously heal all in her party.
+Titan The Titan is an immense, stalwart creature; she towers above enemy armies.
+Pegasus Knight The Pegasus Knight is a noble fighter whose wings carry him high above forests 
+and sea.
+Ranger Traveling quickly around the realm, the Ranger is often sent on scouting 
+missions by the King.
+Archmage Master of the arcane, an Archmage is the only Empire leader who can use staffs 
+and scrolls.
+Arch-Angel The Archangel claims land for the Empire by planting rods. The ground 
+surrounding her rods magically converts into Empire soil.
+Thief Thieves are adept at mischief, and can sneak behind enemy lines to secure 
+information important to the Empire's cause.
+Hierophant The Hierophant's devotion is such that he can revive dead warriors through 
+ceremony.
+Prophetess The Prophetess is able to commune directly with the Highfather, her illumined 
+word cures her comrades in battle.
+bottom of the screen indicating objectives and map size. 
+From the Lobby, you can do the following: 
+• In the Player Info section, view the players who have joined your game. 
+To eject a player from the game, click the Kick button next to the player’s name.
+• V iew Quest Information, which details the story and objectives for the selected game.
+• Chat with other players. Type your message in the field below the message window, and
+press Enter to send the message. Use the Up and Down arrows to scroll through the
+messages. 
+• Use the Up and Down arrows to set Options, as shown in the illustration below .
+Click the Continue checkmark icon to start the game. 
+Join Quest
+To join a game hosted by another player, select a game from the Game List, and then select a
+player from the Player List. Enter your name in the Player Name field, and then enter the
+password supplied by the game’s host. 
+To view the most recent games in progress, click the Refresh Quest List icon.
+Click the Continue checkmark icon to join the game. 
+Load Quest
+To load a game, select one of the games from the list of saved multiplayer games, and then
+enter the Game Name, your Player Name, and the password. Click the Continue checkmark
+icon to continue. 
+PAGE 18
+Dwarf Champion Chosen by Wotan to transform the land, the Dwarf Champion plants rods to 
+expand the High King's territory.
+Thief A Thief has many tricks at his disposal that he employs to further the High King's cause.
+Elder One The most ancient of Dwarven warriors are the Elder Ones; they have learned 
+well the art of war.
+Son of Ymir Descended from the greatest Dwarven warrior that ever lived, Sons of Ymir can 
+kill with a single blow.
+Archdruidess The Archdruidess administers tonics to her warriors, which allows them to smite 
+enemies with greater force.
+Alchemist Alchemists charm their allies so to grant them an extra attack during battle.
+Forge Guardian The forge Guardian crafts his own weapons with care; his crossbow bolts are 
+devastating.
+Hermit The Hermit blows the grim horn of war, gathering together the Clans 
+against invaders.
+Wolf Lord The Wolf Lord has dominion over the spirits of wolves, he can call upon 
+their powers in battle.
+Rune Master The Runemaster is a fearsome warrior; he imbues his sword with runic magic.
+Spirit of Fenrir When posessed by wolf spirits, the Wolf Lord becomes the fierce bearer of Fenrir's 
+battle traditions.
+The Legions of the Damned
+Possessed The Demon Lord enslaves these strong-bodied peasants to fight in his infernal 
+battles.
+Berzerker As humanity weakens in these possessed creatures, their violence becomes 
+uncontrollable.
+Anti-Paladin Demons have mastered the souls of these once holy warriors, their virtuous 
+past has long been forgotten.
+Gargoyle Those who obey blindly the orders of cruel leaders become stone demons in the 
+afterlife; They suffer in infernal fires, and turn slowly to stone.
+Marble Gargoyle Marble Gargoyles are the winged demons of the sixth plane of hell; they are 
+impervious to mind attacks and their bodies are too solid to be easily damaged.
+Devil This unclean being menaces the land for his dark Lord Bethrezen.
+Demon Demons inhabit the lower regions of Hell, they are more powerful than the 
+lesser devils.
+Moloch Molochs gain power and strength by devouring the souls of those they slay .
+Beast The great Beast the very form of maleficence, none can escape the reach of this 
+monstrosity.
+Demon Lord The Demon Lord is a sovereign of Hell; As such, they lead devilish armies 
+for Bethrezen.
+Cultist Humans that have an inborn affinity for evil; they call down fire on entire armies.
+Sorcerer Dark Sorcerers can summon fiery rain to consume enemy forces.
+White Wizard White Wizards use pure magic to help the highfather's followers.
+Elementalist Elementalists have mastered the winds so to summon forth Airy beasts in battle.
+Imperial Assassin The Imperial Assassin makes use of dark arts to kill its enemies.
+Holy Avenger The Holy Avenger is consumed by his earthly mission to fight evil.
+Defender of Faith The Defender of the Faith guards against the profane beings that would fight 
+the Highfather.
+Grand Inquisitor The Grand Inquisitor has withstood the fires and the terrors of Hell itself to 
+oust evil influences from the realm.
+The Mountain Clans
+Axe Thrower The Axe Thrower's great strength and ferocious fighting spirit allows it to reach 
+any unit during battle.
+Crossbowman Crossbowmen rain death upon their adversaries with each volley.
+Flame Caster Flinging fire-tipped arrows into the fray, the Flame Caster's attack reaches all 
+members of the enemy party.
+Hill Giant The Hill Giant possesses strength so great that it chooses an uprooted tree 
+as its weapon.
+Rock Giant The massive Rock Giant hurls giant boulders at its foe.
+Tempest Giant They descend from the skies to bring lightning storms down on all those who 
+offend the Dwarves.
+Ice Giant The Ice Giant is called from frigid mountain peaks to fight for the clan's cause.
+Tenderfoot The Tenderfoot's gentle arts increase the force of his allies in battle.
+Novice The magical potions of the Novice increase the damage of one unit in battle.
+Druidess The Druidess is an adept who cures her allies and can magically add to the 
+force of their weapon.
+Dwarf The Dwarf rushes valiantly into battle, knowing that Wotan protects the 
+brave of heart.
+Warrior The Warrior is always ready to battle for the glory of his God, Wotan.
+Veteran The Veteran has meted out justice to many. They desire to one day die with 
+honor in battle.
+Dwarf King Dwarves rewarded for unusual skill in battle by being named King of their 
+Clan. Dwarf Kings wear the finest dwarven armor.
+Venerable Warrior Dwarves who have seen many years of battle, Venerable Warriors fight with the 
+ferocity of one who has no fear of the world beyond.
+Mountaineer Well adapted to hostile climes, the Mountaineer showers entire armies with icy 
+shards culled from mountain glaciers.
+Yeti With a thick hide and icy breath, the Yeti has sent many an adventurer to an 
+early grave.
+King's Guard As warlike leaders, the King's Guards are sent to quell any danger that threatens 
+the dwarven lands.
+Engineer Engineers travel far and wide, keeping the High King informed of happenings in 
+the Dwarven Lands.
+Loremaster The Loremaster collects the ancestral wisdom of the Clans and has the ability to 
+use staffs and scrolls.
+PAGE 19
+Skeleton Champion Great fighting unit of the undead, the Skeleton Champion raises his 
+bony fists against the living.
+Templar The Templar subverts religious rites in order to honor Queen Mortis. They are
+impervious to the elements.
+Dark Lord Mortis grants the Dark Lords control over the elements as reward for their servitude.
+Werewolf The werewolf rampages by moonlight; He cannot be killed by any blade.
+Wyvern Sorcerers resurrect lifeless dragons, creating Wyverns to fight in their Undead armies.
+Doomdrake These awesome beasts breathed fire while living; now undead, they exhale 
+poisonous vapors on enemy troops.
+Deathdragon Deathdragons terrorize the land from beyond the grave; their poisonous 
+breath envelops entire armies during battle.
+Death Knight The Death Knight's ferocity in battle is unmatched. His high leadership and 
+flying ability are his greatest assets.
+Nosferat The Nosferats drain the life force of their enemies in battle, weakening his 
+opponents while feeding his own evil soul.
+Lich Queen Female Necromancers live after death as the dreadful Lich Queen. Their 
+unholy knowledge allows them to use staffs and scrolls.
+Banshee Banshees plant rods on living soil and create a barren wasteland.
+Thief A Thief is sent by the king to enemy cities, there he uses his craft to outwit the enemy.
+Shade The Shade's horrifying appearance inspires a paralyzing fear in all.
+Elder Vampire Elder Vampires cheat death by stealing the life essence of mortals.
+Archlich A sorcerer who prolongs his arcane studies far beyond his mortal lifetime 
+becomes an archlich.
+Death The avatar and messenger of death, gathering souls in the land of the living.
+Wight These traitorous warriors prey upon the living as dreadful Wights.
+Phantom Warrior Warriors who betrayed their comrades in battle are condemned to fight forevermore.
+Dreadwyrm The Dreadwyrm is summoned up to rain their poisonous malice upon the land.
+Dracolich This great undead dragon pours death down on its enemies.
+Demonologist The Demonologist creates a storm of Flames so powerful that no army can escape it.
+Incubus The Incubus turns men to stone with their horrible death cries.
+Pandemoneus The Pandemoneous controls infernal fires, incinerating entire armies at once.
+Witch Witches dwell in the depths of forests; if bothered they have been known to 
+retaliate by transforming the hated interlopers.
+Hag Hags have the ability to transform enemies into anything they desire.
+Fiend The goatman hides it's misshapen form within a labyrinthine lair. Few can 
+resist its furious attack.
+Duke The Duke's warlike spirit leads demons into battle, sword in hand.
+Counselor The Counselor leads the vanguard of the Legions forces; he travels at high 
+speed upon the lands.
+Arch-Devil The Archdevil is master of the arcane; he has knowledge of staffs and scrolls.
+Baroness Under the Baroness' control the realm transforms into a fiery wasteland.
+Thief The Thief is valued for his skill in subterfuge .
+Infernal Knight Knights that once fought for the Highfather; demons have corrupted their 
+souls to Bethezren's purpose.
+Onyx Gargoyle Hardened by the fires of hell, the Onyx Gargoyle is a threat to enemies of Bethrezen.
+Tiamath Attached to Bethrezen's hellish throne, Tiamath is only released during 
+Bethrezen's demented frenzies.
+Overlord Overlords control the most unruly inhabitants of hell; occasionally they are 
+needed aboveground.
+Abyssal Devil Abyssal Devils emerge from the depths of hell but rarely. Their appearance can 
+make cowards of the most experienced of warriors.
+Doppelganger A Doppelganger has the unnatural ability to shape its form, thereby confusing 
+his foe.
+Modeus Drawing strength from the fires of hell, Modeus wreaks fiery havoc on his enemies.
+Succubus The Succubus is a demon who clings still to pleasures of mortals. They can 
+transform their opponents into anything they so wish.
+The Undead Hordes
+Ghost Ghosts are spirits bound by evil to the earth; they join their undead brethren's crusade.
+Specter A Specter's forceful spirit makes his paralyzing attack stronger.
+Initiate Initiates have been trained to spread death and disease upon living armies.
+Warlock Warlocks become more effective over time in their quest to spread of pestilence 
+on the lands.
+Necromancer The Necromancer has perfected his craft; pestilence will engulf any army he 
+encounters.
+Vampire Men who have rejected the words of the Highfather become vampires. They 
+sustain themselves by draining the life force of innocents.
+Lich Those who cultivate arcane knowledge in life become Liches; they infect the 
+living with deadly plague winds.
+Wraith Wraiths pass over from the land of the undead to spread pestilence.
+Fighter These Fighters live again to crush the enemies of Mortis.
+Zombie Dead souls who have been transformed by ritual into mindless Zombies.
+Skeleton Warrior The Skeleton Warrior is compelled by the will of Mortis to fight alongside the Undead.
+PAGE 20
+Mage
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+2 65 0 5 55 550 Lightning 40 AIR DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+30
+Marksman
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+2 90 0 5 60 500 Arrow 60 Weapon DAMAGE ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+40 20
+Priest
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+2 75 0 5 60 475 Healing 10 LIFE HEAL ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+40
+Witch-Hunter
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+2 140 0 5 60 475 Sword 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+50 40
+Elementalist
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 95 0 5 200 1500 Summon 40 AIR SUMMON ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+Imperial Assassin
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 135 0 5 140 1100 Dagger 60 Weapon DAMAGE ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+60 Poison 60 DEATH POISON 75 ANY
+Imperial Knight
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 200 0 5 120 950 Lance 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+75 15
+Acolyte
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 50 0 5 20 80 Healing 10 LIFE HEAL ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+20 40
+Apprentice
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 35 0 5 15 75 Lightning 40 AIR DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+15 30
+Archer
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 45 0 5 20 70 Arrow 60 Weapon DAMAGE ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+25
+Squire
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 100 0 5 20 80 Sword 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+25
+Titan
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 250 0 5 120 475 Smash 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+60 20
+Cleric
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+2 75 0 5 55 425 Healing 10 LIFE HEAL ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+20
+Knight
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+2 150 0 5 60 475 Sword 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+50
+PAGE 21
+Paladin
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 175 30 5 200 1600 Long Sword 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+100 20
+Prophetess
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 125 0 5 305 2050 Healing 10 LIFE HEAL ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+70 Cure 10 LIFE CURE 100 ALL
+White Wizar d
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 125 0 5 210 2100 Lightning 40 AIR DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+60
+Defender of Faith
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+5 225 30 5 320 2100 Sword 70 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+125
+Holy Avenger
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+5 250 0 5 300 2000 Long Sword 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+75
+Leaders
+Arch-Angel
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 100 0 5 40 100 Healing 10 LIFE HEAL ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+40
+Archmage
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 65 0 5 60 150 Lightning 40 AIR DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+30
+Imperial Priest
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 100 0 5 160 1275 Healing 10 LIFE HEAL ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+80
+Inquisitor
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 180 0 5 115 950 Mace 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+75 50
+Matriarch
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 100 0 5 140 1125 Healing 10 LIFE HEAL ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+40 Cure 10 LIFE CURE 100 ALL
+Wizard
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 95 0 5 120 1200 Lightning 40 AIR DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+45
+Angel
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 225 0 5 225 1600 Holy Lance 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+125 30
+Grand Inquisitor
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 210 0 5 190 800 Holy Mace 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+100
+Hierophant
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 125 0 5 300 2000 Healing 10 LIFE HEAL ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+120 Revive 10 LIFE REVIVE 100 ANY
+PAGE 22
+Spirit of Fenrir
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 275 0 5 200 1975 Slash 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+90
+Tenderfoot
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 60 0 5 50 95 Boost 70 LIFE BOOST ANY
+Damage DAMAGE
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+Yeti
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 230 0 5 200 700 Ice Breath 40 WATER DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+30
+Crossbowman
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+2 110 0 5 70 550 Crossbow 40 Weapon DAMAGE ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+40
+Novice
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+2 90 0 5 70 325 Boost 70 LIFE BOOST ANY
+Damage DAMAGE
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+Rock Giant
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+2 310 0 5 225 1100 Punch 30 EARTH DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+90
+Warrior
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+2 200 0 5 90 600 Warhammer40 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+55
+Pegasus Knight
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 150 0 5 60 150 Long Sword 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+50
+Ranger
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 90 0 5 60 145 Falcon Arrow60 Weapon DAMAGE ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+40
+Thief
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 100 0 5 25 95 Daggers 60 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+30
+Axe Thrower
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 65 0 5 25 100 Throwing 40 Weapon DAMAGE ANY
+Axe
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+25
+Dwarf
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 150 0 5 35 130 Warhammer40 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+30
+Hill Giant
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 210 0 5 100 400 Tree Swipe 30 EARTH DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+60
+PAGE 23
+Veteran
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 250 0 5 160 1275 Warhammer40 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+80
+Archdruidess
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 150 0 5 120 1450 Boost 35 LIFE BOOST ANY
+Damage DAMAGE
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+Cure 35 LIFE CURE 100 ANY
+Elder One
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 400 0 5 895 3500 Lightning 20 AIR DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+80
+Hermit
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 250 0 5 385 1000 Ice Shards 40 WATER DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+55 Lower Initiative 40 WATER LOWER 33 ALL
+INITIATIVE
+Son of Ymir
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 500 0 5 610 3050 Ice Sword 50 WATER DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+150 Frostbite 50 WATER FROSTBITE 85 ADJACENT
+Venerable Warrior
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 275 0 5 220 1750 Great Axe 40 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+100
+Wolf Lord
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 225 0 5 250 2025 Ice Shards 40 WATER TRANSFORM ANY
+SELF
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+Frost Breath 40 WATER DAMAGE 80 ALL
+Alchemist
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 120 0 5 120 325 Give Attack 10 LIFE GIVE ATTACK ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+Druidess
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 120 0 5 95 850 Boost 70 LIFE BOOST ANY
+Damage DAMAGE
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+Cure 70 LIFE CURE 100 ANY
+Flame Caster
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 130 0 5 140 1100 Flame Burst 40 FIRE DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+35
+Forge Guardian
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 155 0 5 175 1100 Crossbow 40 Weapon DAMAGE ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+70
+Ice Giant
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 400 0 5 390 1950 Ice Shards 30 WATER DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+120
+Mountaineer
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 225 0 5 190 1500 Ice Shards 40 WATER DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+30
+Tempest Giant
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 350 0 5 490 2450 Call 20 AIR DAMAGE ALL
+Lightning
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+50
+PAGE 24
+Cultist
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 45 0 5 20 75 Fire rain 40 FIRE DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+15
+Devil
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 170 0 5 70 275 Slash 35 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+50
+Fiend
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 250 0 5 120 475 Slash 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+60 Poison 50 DEATH POISON 40 ADJACENT
+Gargoyle
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 90 40 5 100 400 Rock Shards 60 Weapon DAMAGE ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+40
+Possessed
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 120 0 5 25 95 Short Sword 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+25
+Berzerker
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+2 170 0 5 70 550 Battle Axes 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+50
+Demon
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+2 270 0 5 175 850 Slash 35 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+80
+Dwarf King
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+5 250 30 5 300 2500 Great Mace 20 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+100
+Rune Master
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+5 300 0 5 310 2500 Axe 40 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+65
+Leaders
+Dwarf Champion
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 150 0 5 50 120 Axe 30 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+40
+Engineer
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 135 0 5 85 175 Crossbow 50 Weapon DAMAGE ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+40
+King's Guar d
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 225 0 5 110 225 Battle Axe 40 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+60
+Loremaster
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 95 0 5 85 175 Earth fall 30 EARTH DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+30
+Thief
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 150 0 5 50 120 Daggers 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+40
+PAGE 25
+Moloch
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 370 0 5 325 2275 Clobber 35 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+110
+Onyx Gargoyle
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 170 65 5 810 2500 Onyx Shards60 Weapon DAMAGE ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+85
+Beast
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 420 0 5 825 3100 Slash 20 Weapon DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+70
+Demon Lord
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 470 0 5 525 2650 Axe 40 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+140
+Incubus
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 135 0 5 90 1125 Petrify 20 EARTH PETRIFY ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+Infernal Knight
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 270 0 20 215 1725 Infernal 50 Weapon DAMAGE ADJACENT
+Sword
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+100
+Pandemoneus
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 135 0 5 225 2250 Fire Storm 40 FIRE DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+60
+Marble Gargoyle
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+2 150 60 5 410 1650 Rock Shards 60 Weapon DAMAGE ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+65
+Sorcerer
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+2 75 0 5 65 500 Fire rain 40 FIRE DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+30
+Witch
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+2 75 0 5 70 600 Polymorph 20 MIND TRANSFORM ANY
+OTHER
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+Anti-Paladin
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 220 0 5 130 1050 Battle Axe 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+75
+Demonologist
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 105 0 5 130 1325 Fire rain 40 FIRE DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+45
+Doppelganger
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 120 0 5 120 500 Morph Self 80 MIND DOPPELGANGER ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+Slash 80 WEAPON DAMAGE 80 ADJACENT
+Hag
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 115 0 5 110 1400 Polymorph 20 MIND TRANSFORM ANY
+OTHER
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+PAGE 26
+Baroness
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 100 0 5 50 120 Fear 20 MIND FEAR ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+Counselor
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 90 0 5 60 145 Crossbow 60 Weapon DAMAGE ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+40
+Duke
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 150 0 5 60 150 Infernal 50 Weapon DAMAGE ADJACENT
+Sword
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+50
+Thief
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 100 0 5 25 95 Daggers 60 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+30
+Fighter
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 120 0 5 25 95 Sword 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+25
+Ghost
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 45 0 5 20 75 Paralyze 20 MIND PARALYZE ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+Initiate
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 45 0 5 20 75 Pestilence 40 Death DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+15
+Succubus
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 145 0 5 305 1500 Polymorph 20 MIND TRANSFORM ALL
+OTHER
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+Abyssal Devil
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+5 600 0 5 720 3600 Infernal 40 Weapon DAMAGE ADJACENT
+Blade
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+140 Petrify 40 MIND PETRIFY 40 ADJACENT
+Modeus
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+5 170 0 5 390 3100 Fire Storm 40 FIRE DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+75
+Overlord
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+5 570 0 5 775 3875 Infernal 40 Weapon DAMAGE ADJACENT
+Blade
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+170
+Tiamath
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+5 495 0 5 1385 5000 Slash 20 Weapon DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+100 Lower 20 MIND LOWER 80 ALL
+Damage DAMAGE
+Leaders
+Arch-Devil
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 65 0 5 60 150 Flame Burst 40 FIRE DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+30
+PAGE 27
+Dark Lord
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 200 0 5 145 600 Undead Blade50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+75
+Deathdragon
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 375 0 5 635 2550 Breath 35 Death DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+55
+Necromancer
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 105 0 5 145 1150 Pestilence 40 Death DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+45
+Shade
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 135 0 5 85 850 Paralyze 20 MIND PARALYZE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+Skeleton Warrior
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 220 0 5 145 1150 Long sword 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+75
+Wraith
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+3 75 0 5 115 900 Pestilence 60 Death DAMAGE ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+60
+Death
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 125 0 5 315 900 Death Touch60 Death DAMAGE ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+100 Poison 50 DEATH POISON 50 ADJACENT
+Werewolf
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 100 0 5 50 600 Slash 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+40
+Wyvern
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 225 0 5 160 500 Breath 35 Death DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+25
+Doomdrake
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+2 300 0 5 335 1100 Breath 35 Death DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+40
+Specter
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+2 90 0 5 40 700 Paralyze 20 MIND PARALYZE ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+Templar
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+2 160 0 5 75 600 Lance 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+50
+Warlock
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+2 75 0 5 65 500 Pestilence 40 Death DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+30
+Zombie
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+2 170 0 5 75 600 Slash 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+50
+PAGE 28
+Elder Vampire
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+5 210 0 5 580 3300 Drain Life 40 Death DRAIN ALL
+Overflow OVERFLOW
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+60
+Phantom Warrior
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+5 320 0 5 350 2100 Undead 50 Weapon DAMAGE ADJACENT
+Blade
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+125 Paralyze 50 MIND PARALYZE 50 ADJACENT
+Leaders
+Banshee
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 100 0 5 45 115 Paralyze 20 MIND PARALYZE ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+Death Knight
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 150 0 5 65 165 Undead 50 Weapon DAMAGE ADJACENT
+Blade
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+50
+Lich Queen
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 65 0 5 65 165 Fire Storm 40 FIRE DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+30
+Nosferat
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 90 0 5 40 100 Drain Life 50 Death DRAIN ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+10
+Dracolich
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 525 0 5 1215 3350 Pestilential 35 Death DAMAGE ALL
+Breath
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+75
+Dreadwyrm
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 450 0 5 900 3600 Plague 35 Death DAMAGE ALL
+Breath
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+65 Poison 35 DEATH POISON 40 ALL
+Lich
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 140 0 5 300 2425 Plague 40 Death DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+70
+Skeleton Champion
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 270 0 5 240 1600 Long sword 50 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+100
+Vampire
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 185 0 5 425 2300 Drain Life 40 Death DRAIN ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+50
+Wight
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+4 105 0 5 200 900 Death Touch50 Death DAMAGE ANY
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+75 Drain Level 50 DEATHDRAIN_LEVEL 80 ANY
+Archlich
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+5 170 0 5 470 3500 Plague 40 Death DAMAGE ALL
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+90
+PAGE 29
+Artifact Lore Allows the leader to equip Artifacts
+Arcane Knowledge Allows the leader to read magical Tomes
+Banner Bearer Allows the leader to equip Banners
+Pathfinding Increases the leader movement by 20%
+Arcane Lore Allows the leader to equip and use Orbs in battle
+Leadership Allows the leader to take one more unit in his party
+Travel Lore Allows the leader to wear magical Boots
+Might Adds 25% damage to the attack of the leader
+Natural Armor The leader will absorb 20% of all the damage he suffers
+Arcane Power Allows the leader to equip and use Talismans in battle
+Advanced Pathfinding Increases the leader movement by 25%
+Weapon Master All the units in the leader's party will gain 25% more experience in battle
+Accuracy Increases by  20% the chances to hit of the leader's attack
+Keen-Sight The leader will see further in the fog of war
+Natural Healing The leader will regenerate 15% of his hit points each day
+Toughness Adds 20% more hit points to the leader
+Incorruptible The leader becomes incorruptible to Thieves
+Water Ward Protects the leader against the first water based attack in battle
+Forestwalk The leader will suffer no move penalty in forests
+Earth Ward Protects the leader against the first earth based attack in battle
+First Strike Increases the initiative of the leader by 50%
+Fire Ward Protects the leader against the first fire based attack in battle
+Air Ward Protects the leader against the first air based attack in battle
+Thief
+LEVEL HP ARMOR REGEN XP XP WEAPON INIT SRC CLASS REACH
+KILL NEXT
+1 100 0 5 25 95 Daggers 60 Weapon DAMAGE ADJACENT
+HEAL DAM ATTACK 2 INIT SRC CLASS POWER REACH QTY_HEAL QTY_DAM
+30
+PAGE 30
+General :
+ESC : Close interface / Cancel
+ENTER : Close interface / Accepts
+SPACE : Close interface
+Iso :
+F5 : Toggle top palette (resources/map/land)
+B : Toggle banners
+A : Capital (Not C, because it's already used)
+P : Diplomacy (Not D, because it's already used)
+S : Cast spell
+X : Exchange
+G : Guard
+M : Continue move
+TAB : Next leader
+TAB+SHIFT : Previous leader
+SPACE : Enter of turn
+SHIFT : Show banner (while key pressed)
+C : Center on stack
+D : Center on stack's destination
+Q : Quick save
+Battle :
+A : Toggle auto battle
+D : Defend
+R : Retreat
+W : Wait
+Tab : Toggle displayed party
+Spell book/research :
+1...5 : Switch to level page
+Production
+Producer
+Prokopios Sotos
+Lead Designer/Project Leader
+Danny Bélanger
+Lead Artist - 2D Character Art
+Patrick Lambert
+Lead Programmer
+Frédéric Ferland
+Programming 
+Jean-François Marquis
+Environment Art
+Alexandre Rodrigue
+Art
+Raphaël Beaupré
+Carl Boulay
+Alex Gingras
+Thomas Giroux
+Vincent Lamontagne
+Sébastien Primeau
+Elie Rocray
+Production Assistants
+Eva Bunodière
+Emanuel Protopapas
+Erin Martel
+Emanuel Protopapas
+Cinematics
+Natalie Guimond
+Michel Therrien
+Raphaël Beaupré
+Elie Rocray
+Alex Gingras
+Writing/Manual
+Calvin Campbell
+Sound
+Voice Actors
+Doug Campbell
+Karl Gerhardt Graap
+Orla Johannes
+Kersti Kass
+Dave Lawson
+Will Licari
+Robert Saigec Taylor
+Sound Designer/Engineer
+Stéphane Brault
+Assistant Sound Engineer
+Simon Lamoureux
+Music Designer/Composer
+Philippe Charron
+Sound Director
+Paul Thibault
+Quality Assurance
+Quality Assurance Manager
+Phillip DeRosa
+Customer Support
+Michel Chouinard
+Nabil Yared
+Quality Assurance Team
+Yan Favreau Lippé
+Ethan Petty
+Ludovic Pinard
+Sylvain Schmidt
+Éric Tougas
+PAGE 31
+Before installing the game, make sure that you do the following:
+• Make sure all other applications are closed. 
+• V erify that your system meets the minimum requirements of the game. 
+• Keep all documentation that came with the game. 
+If you are having troubles starting the game you should do the following:
+• Get the latest drivers for your sound and video card. 
+• Reinstall Directx 8.0. 
+• Install any patches available for the game (if any). 
+• Make sure you remove any unnecessary icons on your taskbar (the area where the time
+is displayed), since unneeded items reduce system performance. 
+• Refer to the README file available with the game. 
+For further assistance you can reach Strategy First Customer Support staff by:
+Phone: (514) 844-2433 Mon to Friday from 9:00 – 18:00 EST
+Fax:  (514) 844-4337 Attn: support
+E-mail: support@strategyfirst.com
+For faster service, please have the following information available when you call:
+• Computer brand and processor speed. 
+• Memory available. 
+• T ype of operating system. 
+• T ype of video and sound card. 
+• V ersion of DirectX installed on your system. 
+Marketing
+Product Managers
+Prokopios Sotos
+Adam Phillips
+Director of Marketing
+Steve Milburn
+Director of Communications
+Christina Ginger
+Packaging and Design
+Kenneth Green
+Philippe Brindamour
+Web Designer
+Hugo Trépanier
+Serge Mongeau
+PR Associates
+Kelly Ekins
+Michèle Fortier
+Marketing Assistant
+Ryan Bastien
+President
+Don McFatridge
+Senior V.P.
+Brian Clarke
+V.P. Business Development
+Steve Wall
+V.P. Product Development
+Richard Therrien
+V.P. Systems
+Dave Hill
+Director of Product Development
+Jamie McNeely
+Executive Producer
+Paul Thibault
+Graphics Manager
+Natalie Guimond
+Distribution Infogrames Inc.
+V.P. Third Party/Value/Affiliates
+Ezra Chen 
+Senior Buyer
+Gardner Wong 
+Product Line Liaison
+Brian McCreary 
+Senior V.P.
+Wim Stocks
+PAGE 32
+PLEASE READ THIS LICENSE CAREFULL Y BEFORE USING THE SOFTW ARE. THIS DOCUMENT IS AN AGREEMENT BETWEEN YOU AND STRATEGY FIRST
+INC. (THE ìCOMPANYî). THE COMPANY IS WILLING TO LICENSE THE ENCLOSED SOFTWARE TO YOU ONL Y ON THE CONDITION THA T YOU ACCEPT ALL
+THE TERMS CONTAINED IN THIS AGREEMENT. BY USING THE SOFTWARE YOU ARE AGREEING TO BE BOUND BY THE TERMS OF THIS LICENSE.
+1. Ownership and License. This is a license agreement and NOT an agreement for sale. The software contained in this package (the ìSoftwareî) is the prop-
+erty of the Company and/or its Licensors. You own the disk/CD on which the Software is recorded, but the Company and/or its Licensors retain title to the
+Software and related documentation. Your rights to use the Software are specified in this Agreement, and the Company and/or its Licensors retain all rights
+not expressly granted to you in this Agreement.
+2. Permitted Uses. You are granted the following right to the Software :
+(a) Right to Install and Use. You may install and use the Software on a single computer. If you wish to use the Software on more than one computer, please
+contact the Company for information concerning an upgraded license allowing use of the Software with additional computers.
+(b) Right to Copy. You may make and maintain one copy of the Software for backup and archival purposes, provided that the original and each copy of the
+Software are kept in your possession.
+3. Prohibited Uses. The following uses of the Software are prohibited. If you wish to use the Software in a manner prohibited below, please contact the
+Company at the address, phone, or fax numbers listed above for information regarding a ìSpecial Use License. îOtherwise, you may NOT :
+(a) Make or distribute copies of the Software or documentation, or any portion thereof, except as expressly provided in this Agreement.
+(b) Use any backup or archival copy of the Software (or allow someone else to use such copy) for any purpose other than to replace the original copy in the
+event it is destroyed or becomes defective;
+(c) Alter, decompile, modify reverse engineer or disassemble the Software, create derivative works based upon the Software, or make any attempt to bypass,
+unlock or disable any protective or initialization system on the Software;
+(d) Rent, lease, sub-license, time-share, or transfer the Software or documentation, or your rights under this Agreement.
+(e) Remove or obscure any copyright or trademark notice(s) on the Software or documentation;
+(f) Upload or transmit the Software, or any portion thereof, to any electronic bulletin board, network, or other type of multi-use computer system regardless
+of purpose;
+(g) Include the Software in any commercial products intended for manufacture, distribution, or sale; or
+(h) Include the Software in any product containing immoral, scandalous, controversial, derogatory, obscene, or offensive works.
+4. Termination. This license is effective upon the first use, installation, loading or copying of the Software. You may terminate this Agreement at any time
+by destruction and disposal of the Software and all related documentation. This license will terminate automatically without notice from the Company if
+you fail to comply with any provisions of this license. Upon termination, you shall destroy all copies of the Software and any accompanying documentation. 
+All provisions of this Agreement as to warranties, limitation of liability, remedies or damages shall survive termination.
+5. Copyright Notice. The Company and/or our Licensors hold valid copyright of the Software. Nothing in this Agreement constitutes a waiver of any right
+under Canadian Copyright law or any other federal or provincial law. This program is protected by Canadian federal and international copyright laws.
+6. Miscellaneous. This Agreement shall be governed by the laws of Canada and the Province of Quebec. If any provision, or any portion, of this Agreement
+is found to be unlawful, void, or for any reason unenforceable, it shall be severed from, and shall in no way affect the validity or enforceability of the remain-
+ing provisions of the Agreement.
+7. Limited Warranty and Disclaimer of Wa r r a n t y. For a period of 90 days from the date on which you purchased the Software, the Company warrants that
+the media on which the Software is supplied will be free from defects in materials and workmanship under normal use. If the Software fails to conform to
+this warranty, you may, as your sole and exclusive remedy, obtain a replacement free of charge if you return the Software to us with a dated proof of pur-
+chase. The Company does not warrant that the Software or its operations or functions will meet your requirements, nor that the use thereof will be without
+interruption or error .
+EXCEPT FOR THE EXPRESS W ARRANTY SET FORTH ABOVE, THE COMPANY DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING AND
+WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. EXCEPT FOR THE EXPRESS
+WARRANTY SET FORTH ABOVE, THE COMPANY DOES NOT WA R R A N T, GUARANTEE OR MAKE ANY REPRESENTA TION REGARDING THE USE OR THE
+R E S U LTS OF THE USE OF THE SOFTWARE IN TERMS OF ITS CORRECTNESS, ACCURACY , RELIABILITY, CURRENTNESS OR OTHERW I S E .
+IN NO EVENT SHALL THE COMPANY OR ITS EMPLOYEES OR LICENSORS BE LIABLE FOR ANY INCIDENTAL, INDIRECT, SPECIAL, OR CONSEQUENTIAL
+DAMAGES ARISING OUT OF OR IN CONNECTION WITH THE LICENSE GRANTED UNDER THIS AGREEMENT INCLUDING AND WITHOUT LIMITAT I O N ,
+LOSS OF USE, LOSS OF DA TE, LOSS OF INCOME OR PROFIT, OR OTHER LOSS SUSTAINED AS A RESULT OF INJURY TO ANY PERSON, OR LOSS OF OR
+DAMAGE TO PROPERTY , OR CLAIMS OF THIRD PARTIES, EVEN IF THE COMPANY OR AN AUTHORIZED REPRESENTATIVE OF THE COMPANY HAS BEEN
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGES, IN NO EVENT SHALL LIABILITY OF THE COMPANY FOR DAMAGES WITH RESPECT TO THE SOFT-
+WARE EXCEED THE AMOUNTS ACTUALL Y PAID BY YOU, IF ANY, FOR THE SOFTWA R E .
+SOME JURISDICTIONS DO NOT ALLOW THE 
+L I M I TA TION OR EXCLUSION OF LIABILITY FOR INCIDENTAL OR CONSEQUENTIAL DAMAGES SO THE ABOVE LIMITATION OR EXCLUSION MAY NOT
+A P P LY TO YOU.
+A C K N O W L E D G E M E N T
+YOU ACKNOWLEDGE THAT YOU HAVE READ THIS AGREEMENT, UNDERSTAND IT AND AGREE TO BE BOUND BY ITS TERMS AND CONDITIONS. YOU
+ALSO AGREE THA T THIS AGREEMENT IS THE COMPLETE AND EXCLUSIVE STATEMENT OF THE AGREEMENT BETWEEN YOU AND THE COMPANY AND
+SUPERCEDES ALL PROPOSALS OR PRIOR ENDORSEMENTS, ORAL OR WRITTEN, AND ANY OTHER COMMUNICA TIONS BETWEEN YOU AND THE 
+C O M PANYOR ANY REPRESENTATIVE OF THE COMPANY RELATING TO THE SUBJECT MATTER OF THIS AGREEMENT.
+PAGE 33
+
