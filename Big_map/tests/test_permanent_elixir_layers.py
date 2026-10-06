@@ -60,15 +60,10 @@ def expected_permanent(base, spec, doses):
 
 
 @pytest.fixture
-def make_env():
-    environments = []
-
+def make_env(campaign_factory):
     def make(target="hero", *, cls=AllPotionScenario, map_name="default"):
-        env = cls(map_name=map_name, Realcapital=2, observation_version="local5",
-                  scripted_capital_bot_enabled=False, use_boss_starting_roster=False,
-                  log_enabled=False, detailed_step_info=True)
-        environments.append(env)
-        env.reset(seed=42)
+        env = campaign_factory(cls=cls, map_name=map_name, Realcapital=2,
+                               detailed_step_info=True)
         hero = env._resolve_travel_hero()
         hero["hero_abilities"] = list(set(hero.get("hero_abilities", [])) | {"banner_bearer"})
         if target == "hero":
@@ -84,9 +79,7 @@ def make_env():
         env._refresh_campaign_equipment_effects()
         return env, unit
 
-    yield make
-    for env in environments:
-        env.close()
+    return make
 
 
 def gear_names(env, spec, gear):

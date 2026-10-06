@@ -302,6 +302,16 @@ class GridWorldEnv(gym.Env):
                 reward += self.obstacle_penalty
                 info["blocked_by_obstacle"] = True
                 info["blocked_target"] = target_pos
+            elif self.get_enemy_at_position(target_pos) is not None:
+                # As in Disciples II, only a step onto a stack attacks it. The
+                # party fights from its current tile and never enters the enemy's;
+                # passing next to a stack is free.
+                enemy_id = self.get_enemy_at_position(target_pos)
+                self.current_enemy_encounter = enemy_id
+                info["battle_triggered"] = True
+                info["enemy_id"] = enemy_id
+                info["enemy_pos"] = self.enemy_positions.get(enemy_id)
+                info["battle_triggered_by"] = "attack"
             else:
                 self.agent_pos = target_pos
                 info["agent_pos"] = self.agent_pos
@@ -309,18 +319,6 @@ class GridWorldEnv(gym.Env):
                 if self.agent_pos not in self.visited_cells:
                     self.visited_cells.add(self.agent_pos)
                     reward += self.exploration_bonus
-
-                enemy_id = self.get_enemy_at_position(self.agent_pos)
-                battle_triggered_by = "same_tile" if enemy_id is not None else None
-                if enemy_id is None:
-                    enemy_id = self.get_adjacent_enemy_at_position(self.agent_pos)
-                    battle_triggered_by = "adjacent" if enemy_id is not None else None
-                if enemy_id is not None:
-                    self.current_enemy_encounter = enemy_id
-                    info["battle_triggered"] = True
-                    info["enemy_id"] = enemy_id
-                    info["enemy_pos"] = self.enemy_positions.get(enemy_id)
-                    info["battle_triggered_by"] = battle_triggered_by
 
         if self.step_count >= self.max_steps:
             truncated = True
@@ -382,21 +380,6 @@ class GridWorldEnv(gym.Env):
             if enemy_pos == pos and self.enemies_alive.get(enemy_id, False):
                 return enemy_id
         return None
-
-    def get_adjacent_enemy_at_position(self, pos: Tuple[int, int]) -> Optional[int]:
-        px, py = int(pos[0]), int(pos[1])
-        candidates = []
-        for enemy_id, enemy_pos in self.enemy_positions.items():
-            if not self.enemies_alive.get(enemy_id, False):
-                continue
-            ex, ey = int(enemy_pos[0]), int(enemy_pos[1])
-            dx = abs(px - ex)
-            dy = abs(py - ey)
-            if max(dx, dy) == 1:
-                candidates.append((int(enemy_id), ey, ex))
-        if not candidates:
-            return None
-        return min(candidates)[0]
 
     def compute_action_mask(self) -> np.ndarray:
         mask = np.zeros(self.action_space.n, dtype=bool)

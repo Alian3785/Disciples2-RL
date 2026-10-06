@@ -54,7 +54,7 @@ def kill(battle, unit):
 
 def assert_no_xp_state_leak(battle):
     for unit in [*battle.combined, *battle.escaped_units]:
-        assert "_battle_exp_earned" not in unit
+        assert battle_module.BATTLE_EXP_ELIGIBLE_FROM_KEY not in unit
 
 
 @pytest.mark.parametrize("losing_team", ["blue", "red"])
@@ -138,24 +138,91 @@ def test_old_corpse_revived_and_killed_again_still_awards_each_new_death(
 
 
 @pytest.mark.parametrize("winning_team", ["blue", "red"])
-def test_escape_and_recipient_revival_keep_existing_death_timing(winning_team):
+def test_xp_is_split_among_survivors_at_battle_end(winning_team):
     losing_team = "red" if winning_team == "blue" else "blue"
     battle = start([make_unit(winning_team), make_unit(winning_team, 1),
+                    make_unit(winning_team, 2), make_unit(winning_team, 3),
+                    make_unit(losing_team, xp=20), make_unit(losing_team, 1, xp=60),
+                    make_unit(losing_team, 2, xp=20)])
+    kill(battle, get(battle, losing_team))
+    kill(battle, get(battle, winning_team, 3))  # Dead units never gain XP.
+    kill(battle, get(battle, losing_team, 1))
+    kill(battle, get(battle, losing_team, 2))
+    battle._check_victory_after_hit()
+    assert battle.last_battle_exp == 100
+    # 100 / 3 survivors, regardless of who was alive at each kill.
+    assert [get(battle, winning_team, i)["exp_current"] for i in range(4)] == [33, 33, 33, 0]
+    assert_no_xp_state_leak(battle)
+
+
+def test_weapon_master_bonus_applies_to_the_end_of_battle_share():
+    battle = start([make_unit("blue"), make_unit("blue", 1), make_unit("blue", 2),
+                    make_unit("red", xp=50), make_unit("red", 1, xp=50)])
+    battle.exp_multiplier = 1.25
+    kill(battle, get(battle, "red"))
+    kill(battle, get(battle, "blue", 2))
+    kill(battle, get(battle, "red", 1))
+    battle._check_victory_after_hit()
+    assert battle.last_battle_exp == 125
+    assert [get(battle, "blue", i)["exp_current"] for i in range(3)] == [63, 63, 0]
+
+
+@pytest.mark.parametrize("winning_team", ["blue", "red"])
+def test_escaped_units_get_nothing_and_revived_units_share_only_later_kills(winning_team):
+    losing_team = "red" if winning_team == "blue" else "blue"
+    battle = start([make_unit(winning_team), make_unit(winning_team, 1),
+                    make_unit(winning_team, 2),
                     make_unit(losing_team, xp=60), make_unit(losing_team, 1, xp=90),
                     make_unit(losing_team, 2, xp=120),
                     make_unit(losing_team, 3, dead=True, xp=500)])
-    survivor = get(battle, winning_team, 1)
-    kill(battle, get(battle, losing_team))  # 30 each.
+    veteran = get(battle, winning_team, 1)
+    revived = get(battle, winning_team, 2)
+    kill(battle, get(battle, losing_team))  # 60: the veteran alone.
     battle._mark_unit_escaped(get(battle, winning_team))
-    kill(battle, get(battle, losing_team, 1))  # 90 for the remaining winner.
-    kill(battle, survivor)  # Loses the 120 earned before death.
-    assert battle._apply_hero_item_revive(survivor, 10) == 10
-    kill(battle, get(battle, losing_team, 2))  # 120 after revival.
+    kill(battle, revived)
+    kill(battle, get(battle, losing_team, 1))  # 90: the veteran alone.
+    assert battle._apply_hero_item_revive(revived, 10) == 10
+    kill(battle, get(battle, losing_team, 2))  # 120: shared after revival.
     battle._check_victory_after_hit()
     assert battle.last_battle_exp == 270
-    assert survivor["exp_current"] == 120
-    assert battle.escaped_units[0]["exp_current"] == 30
+    assert veteran["exp_current"] == 60 + 90 + 60
+    assert revived["exp_current"] == 60
+    assert battle.escaped_units[0]["exp_current"] == 0
     assert_no_xp_state_leak(battle)
+
+
+@pytest.mark.parametrize("reviver", ["item", "patriarch"])
+def test_old_corpse_revived_in_battle_shares_only_later_kills(reviver):
+    battle = start([make_unit("blue"), make_unit("blue", 1, dead=True),
+                    make_unit("red", xp=60), make_unit("red", 1, xp=40)])
+    corpse = get(battle, "blue", 1)
+    kill(battle, get(battle, "red"))
+    if reviver == "patriarch":
+        healer = make_unit("blue", 2, name="Патриарх")
+        assert battle._apply_patriach_support(healer, corpse) == "revive_success"
+    else:
+        assert battle._apply_hero_item_revive(corpse, 10) == 10
+    kill(battle, get(battle, "red", 1))
+    battle._check_victory_after_hit()
+    assert get(battle, "blue")["exp_current"] == 80
+    assert corpse["exp_current"] == 20
+
+
+def test_summoned_allies_take_no_share():
+    battle = start([make_unit("blue"), make_unit("blue", 3, name="Герцог"),
+                    make_unit("red", xp=100)])
+    hero = get(battle, "blue", 3)
+    summon_slot = get(battle, "blue", 1)
+    assert battle._apply_hero_item_summon(
+        source_unit=hero, target_team="blue", target_pos=summon_slot["position"],
+        target_unit=summon_slot, effect={"summon_unit_name": "Рыцарь"},
+    ) == 1
+    assert summon_slot["Summoned"]
+    kill(battle, get(battle, "red"))
+    battle._check_victory_after_hit()
+    assert get(battle, "blue")["exp_current"] == 50
+    assert hero["exp_current"] == 50
+    assert summon_slot["exp_current"] == 0
 
 
 @pytest.mark.parametrize("winning_team", ["blue", "red"])

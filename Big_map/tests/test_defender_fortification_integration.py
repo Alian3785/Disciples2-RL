@@ -74,8 +74,14 @@ def test_attack_wotan_enemy_capital_from_public_step(enemy_id, entry):
         e.moves = 100
         blue = expected_armors(e.blue_team_state)
         red = expected_armors(e.enemy_team_states[enemy_id])
+        if entry == 'adjacent':
+            # Walking up beside the capital is free; the next step attacks it.
+            result = e.step(2)
+            assert e.mode == e.MODE_GRID, result[4]
+            assert tuple(e.grid_env.agent_pos) == (target[0] + 1, target[1])
         result = e.step(2)
         assert e.mode == e.MODE_BATTLE, result[4]
+        assert tuple(e.grid_env.agent_pos) == (target[0] + 1, target[1])
         assert e.current_enemy_id == enemy_id
         assert not any(result[2:4])
         assert_team(e, 'blue', blue, 0)

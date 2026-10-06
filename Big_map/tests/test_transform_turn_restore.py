@@ -30,9 +30,11 @@ def fighter(name, team, position):
     return map_unit_to_battle(CATALOG[name], team, position)
 
 
-def scenario(team, route, *, initial=57, name="Рыцарь"):
+def scenario(team, route, *, initial=57, name="Рыцарь", position=None):
     other = "red" if team == "blue" else "blue"
-    target = fighter(name, team, 7 if team == "blue" else 1)
+    if position is None:
+        position = 7 if team == "blue" else 1
+    target = fighter(name, team, position)
     caster = fighter(route if route in CASTERS else "Герцог", other,
                      1 if team == "blue" else 7)
     battle = BattleEnv(log_enabled=False)
@@ -76,6 +78,24 @@ def test_catalog_covers_all_hostile_transform_casters():
               if map_unit_to_battle(row, "blue", 7)["unit_type"]
               in {"Witch", "Succub", "Wight"}}
     assert actual == set(CASTERS)
+
+
+@pytest.mark.parametrize("position", range(1, 13))
+@pytest.mark.parametrize("route", ["Сущий", "lycanthropy"])
+def test_transformation_and_restoration_preserve_formation_cell_and_row(position, route):
+    team = "red" if position <= 6 else "blue"
+    expected_row = "ahead" if position in (1, 2, 3, 7, 8, 9) else "behind"
+    battle, target, _ = scenario(team, route, position=position)
+    assert target["position"] == position
+    assert target["stand"] == expected_row
+    assert target["unit_type"] == "Warrior"
+    if route == "Сущий":
+        assert target["wight_form_name"] == "Скваер"
+    else:
+        assert target["name"] == "Оборотень"
+    restore(battle, target, "cleanse")
+    assert target["position"] == position
+    assert target["stand"] == expected_row
 
 
 @pytest.mark.parametrize("team", ["blue", "red"])

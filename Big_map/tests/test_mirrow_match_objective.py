@@ -56,8 +56,15 @@ def test_one_real_hero_army_victory_is_terminal(env, attacker):
 
 def test_movement_initiates_actual_bot_battle(env):
     place_bot(env)
+    start = tuple(env.grid_env.agent_pos)
+    # Walking up next to the bot is free; only the step onto it attacks.
+    _, _, done, timeout, info = env.step(env.grid_env.ACTION_RIGHT)
+    assert not done and not timeout and env.mode == env.MODE_GRID
+    beside = (start[0] + 1, start[1])
+    assert tuple(env.grid_env.agent_pos) == beside
     _, _, done, timeout, info = env.step(env.grid_env.ACTION_RIGHT)
     assert not done and not timeout
+    assert tuple(env.grid_env.agent_pos) == beside
     assert env.mode == env.MODE_BATTLE and env.current_enemy_id == -75
     assert env.current_battle_context["scripted_bot"]
     assert info["enemy_id"] == -75

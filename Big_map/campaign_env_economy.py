@@ -2228,7 +2228,7 @@ class CampaignEconomyMixin:
     def _can_hire_mercenary_unit_option(self, option: Optional[Dict[str, object]]) -> bool:
         """Проверить доступность найма конкретного наёмника на текущей клетке.
 
-        Для наёмников проверяются site на позиции героя, stock, leadership,
+        Для наёмников проверяются живой лидер, site на позиции героя, stock, leadership,
         наличие unit data, запрет big-юнитов, подходящий stand, золото и
         свободная позиция в нужном ряду.
         """
@@ -2241,7 +2241,7 @@ class CampaignEconomyMixin:
         if max(0, int(option.get("stock", 0) or 0)) <= 0:
             return False
 
-        hero = self._resolve_travel_hero()
+        hero = self._resolve_travel_hero(alive_only=True)
         if hero is None:
             return False
         if self._sync_hero_needaunit_from_party() <= 0:
@@ -2278,7 +2278,7 @@ class CampaignEconomyMixin:
         if not active_site_names:
             return tuple(False for _ in options)
 
-        hero = self._resolve_travel_hero()
+        hero = self._resolve_travel_hero(alive_only=True)
         if hero is None:
             return tuple(False for _ in options)
         if self._sync_hero_needaunit_from_party() <= 0:

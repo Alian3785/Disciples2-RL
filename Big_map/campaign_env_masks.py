@@ -158,7 +158,10 @@ class CampaignMaskMixin:
                         )
                         is not None
                     )
-            if self._spell_shop_sites_at_position(self.grid_env.agent_pos):
+            if (
+                self._spell_shop_sites_at_position(self.grid_env.agent_pos)
+                and self._resolve_travel_hero(alive_only=True) is not None
+            ):
                 for idx, spell_data in enumerate(self.SPELL_SHOP_BUY_SPELLS):
                     if self._is_spell_disabled(spell_data.get("spell_id", "")):
                         continue
@@ -470,98 +473,17 @@ class CampaignMaskMixin:
         spell_targetable_only: bool = False,
     ) -> Optional[Dict[str, object]]:
         """
-        Возвращает один ближайший вражеский отряд на карте кампании.
+        Выбирает ближайший отряд по координатам без учета препятствий.
 
-        Основной критерий - длина пути от from_pos или текущей позиции агента
-        до вражеской клетки с учетом препятствий на карте. При равенстве
-        кандидаты упорядочиваются детерминированно: сначала меньший enemy_id,
-        затем более верхняя и левая координата. Флаг only_alive отбрасывает
-        уничтоженные отряды, а spell_targetable_only оставляет только цели,
-        которые могут быть выбраны заклинаниями.
+        Маски, наблюдения и применение заклинаний используют один критерий:
+        Chebyshev-дистанцию max(abs(dx), abs(dy)) от from_pos или агента.
+        При равенстве выбирается меньший enemy_id, затем верхняя/левая клетка.
+        only_alive исключает уничтоженные отряды и отряды без живых бойцов;
+        spell_targetable_only сохраняет ограничения целей заклинаний.
 
-        Если ни один враг недостижим по построенному BFS-пути, используется
-        fallback по Chebyshev-дистанции без учета препятствий. Возвращаемый
-        словарь содержит enemy_id, позицию, дистанцию, признак достижимости,
-        состояние жизни и человекочитаемое описание врага.
-        """
-        enemy_positions = getattr(self.grid_env, "enemy_positions", {}) or {}
-        enemies_alive = getattr(self.grid_env, "enemies_alive", {}) or {}
-        if not enemy_positions:
-            return None
-
-        start_pos = tuple(from_pos) if from_pos is not None else tuple(self.grid_env.agent_pos)
-        start_tile = (
-            int(start_pos[0]),
-            int(start_pos[1]),
-        )
-        blocked_tiles = {
-            (int(pos[0]), int(pos[1]))
-            for pos in (getattr(self.grid_env, "obstacle_positions", set()) or set())
-        }
-        path_distances = self._build_territory_path_distances(
-            source_tile=start_tile,
-            blocked_tile_set=blocked_tiles,
-        )
-
-        reachable_candidates: List[Tuple[int, int, int, int]] = []
-        fallback_candidates: List[Tuple[int, int, int, int]] = []
-
-        for raw_enemy_id, raw_pos in enemy_positions.items():
-            enemy_id = int(raw_enemy_id)
-            if only_alive and not bool(enemies_alive.get(enemy_id, False)):
-                continue
-            if only_alive and not self._enemy_team_has_living_units(enemy_id):
-                continue
-            if spell_targetable_only and not self._is_enemy_stack_spell_targetable(enemy_id):
-                continue
-
-            ex = int(raw_pos[0])
-            ey = int(raw_pos[1])
-            enemy_tile = (ex, ey)
-
-            if enemy_tile in path_distances:
-                reachable_candidates.append((int(path_distances[enemy_tile]), enemy_id, ey, ex))
-
-            chebyshev_distance = max(abs(start_tile[0] - ex), abs(start_tile[1] - ey))
-            fallback_candidates.append((int(chebyshev_distance), enemy_id, ey, ex))
-
-        if not fallback_candidates:
-            return None
-
-        best_distance, best_enemy_id, best_y, best_x = min(
-            reachable_candidates or fallback_candidates
-        )
-        best_pos = (int(best_x), int(best_y))
-        is_reachable = bool(reachable_candidates)
-
-        return {
-            "enemy_id": int(best_enemy_id),
-            "position": best_pos,
-            "path_distance": int(best_distance) if is_reachable else None,
-            "fallback_distance": None if is_reachable else int(best_distance),
-            "reachable": is_reachable,
-            "is_alive": bool(enemies_alive.get(int(best_enemy_id), False)),
-            "description": self._enemy_descriptions.get(int(best_enemy_id), "Неизвестный враг"),
-        }
-    def _get_nearest_enemy_stack_for_mask(
-        self,
-        from_pos: Optional[Tuple[int, int]] = None,
-        *,
-        only_alive: bool = True,
-        spell_targetable_only: bool = False,
-    ) -> Optional[Dict[str, object]]:
-        """
-        Быстро выбирает ближайшего врага для легких grid-проверок.
-
-        В отличие от get_nearest_enemy_stack(), этот helper не строит BFS и не
-        оценивает реальную проходимость карты. Он фильтрует врагов по alive,
-        spell_targetable_only и наличию живых юнитов в стеке, затем выбирает
-        минимальную Chebyshev-дистанцию от from_pos или текущей позиции агента
-        с тем же детерминированным tie-break по enemy_id и координатам.
-
-        Такой приближенный результат достаточно точен для action mask и
-        spell-observation, где важна быстрая проверка возможности действия.
-        При реальном касте цель дополнительно выбирается более точным методом.
+        Поиск пути не выполняется. Для совместимости с прежним форматом
+        расстояние хранится в fallback_distance; path_distance=None и
+        reachable=False означают, что достижимость по пути не проверялась.
         """
         enemy_positions = getattr(self.grid_env, "enemy_positions", {}) or {}
         enemies_alive = getattr(self.grid_env, "enemies_alive", {}) or {}
@@ -579,7 +501,7 @@ class CampaignMaskMixin:
                 continue
             if spell_targetable_only and not self._is_enemy_stack_spell_targetable(enemy_id):
                 continue
-            if not self._enemy_team_has_living_units(enemy_id):
+            if only_alive and not self._enemy_team_has_living_units(enemy_id):
                 continue
 
             ex = int(raw_pos[0])
@@ -601,3 +523,16 @@ class CampaignMaskMixin:
             "is_alive": bool(enemies_alive.get(int(best_enemy_id), False)),
             "description": self._enemy_descriptions.get(int(best_enemy_id), "Неизвестный враг"),
         }
+    def _get_nearest_enemy_stack_for_mask(
+        self,
+        from_pos: Optional[Tuple[int, int]] = None,
+        *,
+        only_alive: bool = True,
+        spell_targetable_only: bool = False,
+    ) -> Optional[Dict[str, object]]:
+        """Использует тот же выбор цели, что и фактическое применение заклинания."""
+        return self.get_nearest_enemy_stack(
+            from_pos,
+            only_alive=only_alive,
+            spell_targetable_only=spell_targetable_only,
+        )

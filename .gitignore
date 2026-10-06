@@ -15,4 +15,5 @@ wandb/
 .DS_Store
 *.zip
 changes.md
+.local-runs/
 

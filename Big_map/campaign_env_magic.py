@@ -4,6 +4,10 @@
 from __future__ import annotations
 
 from campaign_env_data import *
+from battle_env import (
+    _apply_dynamic_unit_levelup, _apply_hero_levelup_bonuses,
+    _resolve_unit_hero_flag, _resolve_unit_level, _resolve_unit_next_level_exp,
+)
 
 
 class CampaignMagicMixin:
@@ -566,7 +570,24 @@ class CampaignMagicMixin:
             for unit in states.get(enemy_id, ()):
                 unit_name = str(unit.get("name", "") or "")
                 if unit_name in normalized_levels:
-                    unit["Level"] = int(normalized_levels[unit_name])
+                    target_level = normalized_levels[unit_name]
+                    current_level = _resolve_unit_level(unit)
+                    if target_level < current_level:
+                        raise ValueError(
+                            f"Enemy {enemy_id}: {unit_name} level override {target_level} "
+                            f"is below its template level {current_level}"
+                        )
+                    # Apply each real level increment on the copied roster.
+                    # Rebuilding from configs on reset must not stack growth.
+                    for next_level in range(current_level + 1, target_level + 1):
+                        required_exp = int(unit.get("exp_required", 0) or 0)
+                        if _resolve_unit_hero_flag(unit):
+                            unit["Level"] = next_level
+                            unit["exp_required"] = required_exp + _resolve_unit_next_level_exp(unit)
+                            unit["exp_current"] = 0
+                            _apply_hero_levelup_bonuses(unit)
+                        else:
+                            _apply_dynamic_unit_levelup(unit, required_exp)
         return states
     def _get_enemy_team_state(self, enemy_id: Optional[int]) -> List[Dict]:
         try:

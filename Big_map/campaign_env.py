@@ -1569,7 +1569,10 @@ class CampaignEnv(
                 f"Граница карты: переход {old_pos} -> {grid_info.get('blocked_target')} заблокирован"
             )
 
-        if 0 <= grid_action <= 7:
+        # Attacking a stack is not a move onto its tile: it costs only the
+        # battle-entry movement below and is not a stalled step.
+        attack_action = grid_info.get("battle_triggered_by") == "attack"
+        if 0 <= grid_action <= 7 and not attack_action:
             if not grid_info.get("blocked_by_obstacle", False):
                 stagnation_penalty = self._compute_stagnation_penalty(old_pos, new_pos)
             reward += stagnation_penalty
@@ -1629,7 +1632,7 @@ class CampaignEnv(
             "blocked_by_obstacle": grid_info.get("blocked_by_obstacle", False),
             "blocked_by_boundary": grid_info.get("blocked_by_boundary", False),
             "blocked_obstacle_pos": grid_info.get("blocked_target"),
-            "move_cost": int(grid_move_cost) if 0 <= grid_action <= 7 else 0,
+            "move_cost": int(grid_move_cost) if 0 <= grid_action <= 7 and not attack_action else 0,
             "move_points_spent": int(grid_move_spent),
             "target_terrain": str(target_terrain) if 0 <= grid_action <= 7 else "",
             "grid_reward_raw": float(_grid_reward),
@@ -1815,13 +1818,8 @@ class CampaignEnv(
         if grid_info.get("battle_triggered"):
             enemy_id = grid_info["enemy_id"]
             self.current_enemy_id = enemy_id
-            battle_origin_raw = (
-                new_pos if grid_info.get("battle_triggered_by") == "adjacent" else old_pos
-            )
-            self.battle_origin_pos = (
-                int(battle_origin_raw[0]),
-                int(battle_origin_raw[1]),
-            )
+            # The hero attacks from the tile it stands on and stays there.
+            self.battle_origin_pos = (int(new_pos[0]), int(new_pos[1]))
             self.current_battle_context = {"kind": "hero"}
             self.mode = self.MODE_BATTLE
 

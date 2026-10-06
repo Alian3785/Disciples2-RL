@@ -27,7 +27,9 @@ from attack_damage_limits import (
     ATTACK_FORM_ID_KEY, current_attack_unit_id, effective_attack_damage,
     effective_primary_amount,
 )
-from permanent_unit_stats import ensure_stat_sources, intrinsic_stat_mutation, rebuild_stat_layers
+from permanent_unit_stats import (
+    ensure_stat_sources, intrinsic_stat_mutation, persistent_values, rebuild_stat_layers,
+)
 from hero_level_abilities import apply_hero_level_stat_abilities
 from formation_occupancy import formation_footprint_is_free
 
@@ -188,6 +190,10 @@ MELEE_TYPES = frozenset(
 )
 SMART_MELEE_TARGET_TYPES = frozenset({"Betrezen", "Uter"})
 LONG_PARALYSIS_TYPES = frozenset({"Betrezen", "Uter", "Abyss Devil"})
+# Gattacks.INFINITE sets paralysis length per attack, not per engine type:
+# Mermaid's lasts one turn, Dark Elf Gast's is the long, recoverable one.
+FINITE_PARALYSIS_UNIT_IDS = frozenset({"g000uu5026", "g000uu5126"})
+INFINITE_PARALYSIS_UNIT_IDS = frozenset({"g000uu8044"})
 
 # Кого Двойнику нельзя копировать (стражи столиц и сюжетные боссы).
 DOPPELGANGER_FORBIDDEN_COPY_NAMES = frozenset(
@@ -667,6 +673,20 @@ def _apply_hero_level_milestone_bonuses(unit: Dict) -> None:
         unit["original_damage"] = strength_damage
 
 
+def _restore_full_health_after_levelup(unit: Dict) -> None:
+    """A new level fully heals a living unit, like an evolution does.
+
+    Growth helpers keep the wound ratio when the maximum changes; the heal is
+    applied afterwards, on the unit's final maximum.
+    """
+    if float(unit.get("health", unit.get("hp", 0)) or 0) <= 0:
+        return
+    max_health = unit.get("max_health", unit.get("maxhp", 0))
+    unit["health"] = max_health
+    if "hp" in unit:
+        unit["hp"] = max_health
+
+
 @intrinsic_stat_mutation
 def _apply_hero_levelup_bonuses(unit: Dict) -> None:
     if not apply_dynamic_stat_growth(unit, _resolve_unit_level(unit)):
@@ -857,6 +877,8 @@ SECOND_HERO_ITEM_ENEMY_ACTION_START: int = FIRST_HERO_ITEM_ENEMY_ACTION_START + 
 )
 DEFEND_DAMAGE_MULTIPLIER: float = 0.5
 WAIT_INIT_DIVISOR: int = 10
+# Battle-local: first death event index whose XP this unit may share.
+BATTLE_EXP_ELIGIBLE_FROM_KEY = "_battle_exp_eligible_from"
 TOTAL_AGENT_ACTIONS: int = SECOND_HERO_ITEM_ENEMY_ACTION_START + len(
     HERO_ITEM_TARGET_SLOTS
 )  # 39
@@ -1016,12 +1038,14 @@ class BattleEnv(gym.Env):
         self._linked_summons: List[Tuple[Dict, Dict]] = []
         # Опыт трупов, затёртых призывом в их клетку, — учитывается при подсчёте опыта за бой.
         self.overwritten_exp_kill: Dict[str, float] = {"red": 0.0, "blue": 0.0}
-        # XP is accumulated at each death because escaped and revived units are
-        # entitled only to kills that happened while they were on the field.
+        # Deaths are numbered so a unit revived mid-battle is credited only with
+        # kills made after its revival; the XP itself is shared at battle end.
         self._battle_exp_event_count: int = 0
         # Constructor-only direct callers may supply a legacy finished state.
         self._battle_exp_tracking_initialized: bool = False
         self._battle_defeated_exp: Dict[str, float] = {"red": 0.0, "blue": 0.0}
+        # Per losing team: (death event index, XP_KILLED) of every slain unit.
+        self._battle_exp_kills: Dict[str, List[Tuple[int, float]]] = {"red": [], "blue": []}
         self.step_count: int = 0
         self.equipped_hero_items: List[Optional[str]] = [None, None]
         self.equipped_hero_item_uses_left: List[Optional[int]] = [None, None]
@@ -1330,6 +1354,7 @@ class BattleEnv(gym.Env):
         target_unit["health"] = int(round(revive_hp))
         if "hp" in target_unit:
             target_unit["hp"] = int(round(revive_hp))
+        self._mark_unit_revived_for_exp(target_unit)
         target_unit["paralyzed"] = 0
         target_unit["long_paralyzed"] = 0
         target_unit["running_away"] = 0
@@ -1543,7 +1568,7 @@ class BattleEnv(gym.Env):
             old_initiative if int(old_initiative or 0) == 0 else target_unit["initiative_base"]
         )
         target_unit["unit_type"] = template.get("unit_type", target_unit.get("unit_type", ""))
-        target_unit["stand"] = template.get("stand", target_unit.get("stand", "ahead"))
+        # The form changes stats, not the row determined by the unit's cell.
         target_unit["armor"] = int(template.get("armor", 0) or 0)
         target_unit["immunity"] = list(template.get("immunity", []))
         self._clear_temporary_healer_wards(target_unit, include_snapshots=False)
@@ -1982,6 +2007,14 @@ class BattleEnv(gym.Env):
         attacker = units_by_pos.get(self.current_blue_attacker_pos)
         if attacker is None or not self._alive(attacker):
             return mask
+        if self.round_no == 0:
+            mask[:] = False
+            mask[DEFEND_ACTION_INDEX] = True
+            for i, pos in enumerate(TARGET_POSITIONS):
+                mask_targets[i] = self._can_copy_doppelganger_target(
+                    units_by_pos.get(pos), attacker
+                )
+            return mask
         if attacker.get("waited", 0) == 1:
             mask[WAIT_ACTION_INDEX] = False
 
@@ -2038,28 +2071,10 @@ class BattleEnv(gym.Env):
         atype = attacker.get("unit_type")
 
         if atype == "Doppelganger":
-            forbidden_names = DOPPELGANGER_FORBIDDEN_COPY_NAMES
-            attacker_pos = attacker.get("position")
             for i, pos in enumerate(TARGET_POSITIONS):
-                if pos == attacker_pos:
-                    mask_targets[i] = False
-                    continue
-
-                target_unit = units_by_pos.get(pos)
-                if target_unit is None or not self._alive(target_unit):
-                    mask_targets[i] = False
-                    continue
-
-                if target_unit.get("big", False):
-                    mask_targets[i] = False
-                    continue
-
-                if target_unit.get("name") in forbidden_names:
-                    mask_targets[i] = False
-                    continue
-
-                mask_targets[i] = True
-
+                mask_targets[i] = self._can_copy_doppelganger_target(
+                    units_by_pos.get(pos), attacker
+                )
             return mask
 
         if attacker.get("team") == "blue" and self._is_summoner_type(atype):
@@ -2177,16 +2192,17 @@ class BattleEnv(gym.Env):
             bank[team] += float(unit.get("exp_kill", 0) or 0)
 
     def _record_unit_defeat_for_exp(self, victim: Dict) -> None:
-        """Record one death and award its raw XP to units present at that moment."""
+        """Record one death; its XP is shared among survivors at battle end."""
         if not isinstance(victim, dict):
             return
         victim_team = str(victim.get("team", "") or "").lower()
         if victim_team not in {"red", "blue"}:
             return
 
-        # A dead unit loses everything earned earlier in this battle.  If it is
-        # revived, subsequent kills start filling this counter again from zero.
-        victim["_battle_exp_earned"] = 0.0
+        event_index = int(getattr(self, "_battle_exp_event_count", 0) or 0)
+        self._battle_exp_event_count = event_index + 1
+        # Dead units never gain XP; after a revival only later kills count.
+        victim[BATTLE_EXP_ELIGIBLE_FROM_KEY] = event_index + 1
 
         defeated_exp = max(0.0, float(victim.get("exp_kill", 0) or 0))
         defeated_by_team = getattr(self, "_battle_defeated_exp", None)
@@ -2196,50 +2212,62 @@ class BattleEnv(gym.Env):
         defeated_by_team[victim_team] = (
             float(defeated_by_team.get(victim_team, 0.0) or 0.0) + defeated_exp
         )
-        self._battle_exp_event_count = int(
-            getattr(self, "_battle_exp_event_count", 0) or 0
-        ) + 1
-
-        receiving_team = "red" if victim_team == "blue" else "blue"
-        recipients = [
-            unit
-            for unit in self.combined
-            if str(unit.get("team", "") or "").lower() == receiving_team
-            and self._alive(unit)
-            and not _is_thief_battle_unit(unit)
-        ]
-        if not recipients or defeated_exp <= 0.0:
+        if defeated_exp <= 0.0:
             return
+        kills = getattr(self, "_battle_exp_kills", None)
+        if not isinstance(kills, dict):
+            kills = {"red": [], "blue": []}
+            self._battle_exp_kills = kills
+        kills.setdefault(victim_team, []).append((event_index, defeated_exp))
 
-        share = defeated_exp / len(recipients)
-        for unit in recipients:
-            unit["_battle_exp_earned"] = max(
-                0.0,
-                float(unit.get("_battle_exp_earned", 0.0) or 0.0),
-            ) + share
+    def _mark_unit_revived_for_exp(self, unit: Dict) -> None:
+        """A revived unit earns XP only for kills made after its revival."""
+        unit[BATTLE_EXP_ELIGIBLE_FROM_KEY] = int(
+            getattr(self, "_battle_exp_event_count", 0) or 0
+        )
 
     def _team_alive(self, team: str) -> bool:
         return any(self._alive(u) and u["team"] == team for u in self.combined)
 
+    def _can_copy_doppelganger_target(self, unit, attacker=None) -> bool:
+        return bool(
+            unit is not None and unit is not attacker and self._alive(unit)
+            and not unit.get("big", False)
+            and unit.get("name") not in DOPPELGANGER_FORBIDDEN_COPY_NAMES
+            and unit.get("unit_type") != "Doppelganger"
+            and not (unit.get("name") == "Двойник" and not unit.get("doppel_copied"))
+        )
+
     def _has_transform_targets(self) -> bool:
-        forbidden = {
-            "Ашган",
-            "Ашкаэль",
-            "Видар",
-            "Мизраэль",
-            "Иллюмиэлль",
-            "Драллиаан",
-            "Лаклаан",
-        }
-        for unit in self.combined:
-            if not self._alive(unit):
-                continue
-            if unit.get("big", False):
-                continue
-            if unit.get("name") in forbidden:
-                continue
-            return True
-        return False
+        return any(self._can_copy_doppelganger_target(u) for u in self.combined)
+
+    def _initial_battle_round(self) -> int:
+        # The original game has a separate round 0 for shapeshifting only.
+        return 0 if any(
+            self._alive(u) and u.get("unit_type") == "Doppelganger"
+            for u in self.combined
+        ) and self._has_transform_targets() else 1
+
+    @staticmethod
+    def _doppelganger_form_stats(target: Dict) -> Dict:
+        # Source records belong to the original fighter, even while transformed.
+        # Read current forms separately; never mutate the target or copy its XP.
+        if target.get("transformed") or target.get("doppel_copied"):
+            view = {key: target.get(key, 0) for key in (
+                "damage", "damage_secondary", "accuracy", "accuracy_secondary",
+                "armor", "max_health", "initiative_base",
+            )}
+            view["damage"] = target.get("original_damage", view["damage"])
+            if target.get("shatter_original_unit_type") == target.get("unit_type"):
+                view["armor"] = target.get("shatter_original_armor", view["armor"])
+            if target.get("hermited"):
+                view["initiative_base"] = target.get(
+                    "hermit_original_initiative_base", view["initiative_base"]
+                )
+        else:
+            view = dict(target)
+        ensure_stat_sources(view)
+        return persistent_values(view)
 
     def _restore_default_doppelgangers(self, units=None) -> None:
         defaults = {
@@ -2301,20 +2329,16 @@ class BattleEnv(gym.Env):
 
         attacker[ATTACK_FORM_ID_KEY] = current_attack_unit_id(target_unit)
         attacker["unit_type"] = target_unit.get("unit_type", attacker["unit_type"])
-        attacker["initiative"] = target_unit.get("initiative", attacker["initiative"])
-        attacker["initiative_base"] = target_unit.get(
-            "initiative_base", attacker["initiative_base"]
-        )
-        attacker["damage"] = target_unit.get("damage", attacker["damage"])
-        attacker["damage_secondary"] = target_unit.get(
-            "damage_secondary", attacker.get("damage_secondary")
-        )
-        attacker["max_health"] = target_unit.get("max_health", attacker["max_health"])
-        attacker["armor"] = target_unit.get("armor", attacker["armor"])
-        attacker["accuracy"] = target_unit.get("accuracy", attacker["accuracy"])
-        attacker["accuracy_secondary"] = target_unit.get(
-            "accuracy_secondary", attacker.get("accuracy_secondary")
-        )
+        for key, value in self._doppelganger_form_stats(target_unit).items():
+            # Current initiative is also the spent-turn marker. Copying a form
+            # must never restore an action by copying the target's pending turn.
+            attacker["initiative_base" if key == "initiative" else key] = value
+        self._start_temporary_damage_form(attacker)
+        attacker["base_armor"] = attacker["armor"]
+        attacker["hermited"] = attacker["shattered_armor"] = 0
+        for key in ("hermit_original_initiative_base", "shatter_original_armor",
+                    "shatter_original_unit_type"):
+            attacker.pop(key, None)
         attacker["immunity"] = list(target_unit.get("immunity", []))
         self._clear_temporary_healer_wards(attacker)
         attacker["resistance"] = list(target_unit.get("resistance", []))
@@ -2660,11 +2684,13 @@ class BattleEnv(gym.Env):
     ) -> List[int]:
         assert attacker.get("unit_type") in MELEE_TYPES
         if attacker["stand"] == "behind":
+            # Any living ally occupying the front row blocks rear melee.
+            # Large allies occupy both rows even when anchored in the back.
             if any(
-                self._alive(u)
+                u is not attacker
+                and self._alive(u)
                 and u["team"] == attacker["team"]
-                and u.get("unit_type") in MELEE_TYPES
-                and u["stand"] == "ahead"
+                and (u["stand"] == "ahead" or u.get("big", False))
                 for u in self.combined
             ):
                 return []
@@ -2929,13 +2955,7 @@ class BattleEnv(gym.Env):
     ) -> Optional[int]:
         candidates: List[Tuple[int, int]] = []
         for unit in self.combined:
-            if not self._alive(unit):
-                continue
-            if bool(unit.get("big", False)):
-                continue
-            if exclude_unit is not None and unit is exclude_unit:
-                continue
-            if unit.get("name") in DOPPELGANGER_FORBIDDEN_COPY_NAMES:
+            if not self._can_copy_doppelganger_target(unit, exclude_unit):
                 continue
             candidates.append((int(unit.get("health", 0) or 0), unit["position"]))
         if not candidates:
@@ -3134,6 +3154,7 @@ class BattleEnv(gym.Env):
             self._patriach_recipient_key(recipient)
         )
         recipient["health"] = restored
+        self._mark_unit_revived_for_exp(recipient)
         recipient["initiative"] = 0
         recipient["paralyzed"] = 0
         recipient["long_paralyzed"] = 0
@@ -3585,14 +3606,15 @@ class BattleEnv(gym.Env):
             and self._alive(unit)
             and first_activation
         ):
-            if self.rng.random() < 0.5:
-                old_base = int(unit.get("initiative_base", 0) or 0)
-                self._restore_hermit_initiative(unit)
-                new_base = int(unit.get("initiative_base", 0) or 0)
-                self._log(
-                    f"Hermit slow fades: {unit['team'].upper()} {unit['name']}#{unit['position']} восстанавливает инициативу "
-                    f"{old_base}->{new_base}."
-                )
+            # Lower Initiative is finite (Gattacks.INFINITE=F): it delays exactly
+            # the next turn and ends when that turn begins.
+            old_base = int(unit.get("initiative_base", 0) or 0)
+            self._restore_hermit_initiative(unit)
+            new_base = int(unit.get("initiative_base", 0) or 0)
+            self._log(
+                f"Hermit slow fades: {unit['team'].upper()} {unit['name']}#{unit['position']} восстанавливает инициативу "
+                f"{old_base}->{new_base}."
+            )
 
         # ЯД
         if (
@@ -3794,8 +3816,8 @@ class BattleEnv(gym.Env):
             u.pop("wight_form_name", None)
             u.pop("transform_effect", None)
             u.pop("transform_recover_chance", None)
-            u["_battle_exp_earned"] = 0.0
-        self.round_no = 1
+            u.pop(BATTLE_EXP_ELIGIBLE_FROM_KEY, None)
+        self.round_no = self._initial_battle_round()
         self.winner = None
         self.last_battle_exp = 0.0
         self.last_levelups = []
@@ -3814,6 +3836,7 @@ class BattleEnv(gym.Env):
         self._battle_exp_event_count = 0
         self._battle_exp_tracking_initialized = True
         self._battle_defeated_exp = {"red": 0.0, "blue": 0.0}
+        self._battle_exp_kills = {"red": [], "blue": []}
         self._reset_recovery_combat_tracking()
         self.step_count = 0
         self.hero_item_slots_used_this_battle = [False] * len(self.equipped_hero_items)
@@ -3828,6 +3851,8 @@ class BattleEnv(gym.Env):
 
     def _pop_next(self):
         cand = self._candidates()
+        if self.round_no == 0:
+            cand = [u for u in cand if u.get("unit_type") == "Doppelganger"]
         if not cand:
             return None
         self.rng.shuffle(cand)
@@ -3859,7 +3884,6 @@ class BattleEnv(gym.Env):
                 "turns_into": [],
                 "capital": 0,
                 "is_neutral_unit": False,
-                "_battle_exp_earned": 0.0,
             }
         )
         return slot
@@ -4123,8 +4147,11 @@ class BattleEnv(gym.Env):
         )
         return True
 
-    def _apply_paralysis_effect(self, attacker: Dict, victim: Dict) -> bool:
-        if victim.get("paralyzed", 0):
+    def _apply_paralysis_effect(
+        self, attacker: Dict, victim: Dict, *, infinite: bool = False
+    ) -> bool:
+        flag = "long_paralyzed" if infinite else "paralyzed"
+        if victim.get(flag, 0):
             return False
 
         effect_type = attacker.get("attack_type_primary", "")
@@ -4149,9 +4176,10 @@ class BattleEnv(gym.Env):
                 )
                 return False
 
-        victim["paralyzed"] = 1
+        victim[flag] = 1
         self._log(
-            f"Паралич: {attacker['team'].upper()} {attacker['name']}#{attacker['position']} "
+            f"{'Долгий паралич' if infinite else 'Паралич'}: "
+            f"{attacker['team'].upper()} {attacker['name']}#{attacker['position']} "
             f"лишает хода {victim['team'].upper()} {victim['name']}#{victim['position']}"
         )
         return True
@@ -4253,7 +4281,7 @@ class BattleEnv(gym.Env):
         victim["initiative_base"] = int(lower_template.get("initiative_base", 0) or 0)
         victim["initiative"] = old_initiative if old_initiative == 0 else victim["initiative_base"]
         victim["unit_type"] = lower_template.get("unit_type", victim.get("unit_type", ""))
-        victim["stand"] = lower_template.get("stand", victim.get("stand", "ahead"))
+        # The form changes stats, not the row determined by the unit's cell.
         victim["armor"] = int(lower_template.get("armor", 0) or 0)
         victim["immunity"] = list(lower_template.get("immunity", []))
         self._clear_temporary_healer_wards(victim, include_snapshots=False)
@@ -4310,6 +4338,12 @@ class BattleEnv(gym.Env):
             self._log(
                 f"? Окаменение: {attacker['team'].upper()} {attacker['name']}#{attacker['position']} "
                 f"накладывает окаменение на {victim['team'].upper()} {victim['name']}#{victim['position']}"
+            )
+        elif current_attack_unit_id(attacker) in FINITE_PARALYSIS_UNIT_IDS:
+            victim["paralyzed"] = 1
+            self._log(
+                f"? Паралич: {attacker['team'].upper()} {attacker['name']}#{attacker['position']} "
+                f"лишает хода {victim['team'].upper()} {victim['name']}#{victim['position']}"
             )
         else:
             victim["long_paralyzed"] = 1
@@ -4815,15 +4849,8 @@ class BattleEnv(gym.Env):
 
                 # --- тип-специфичные AOE эффекты ---
                 if unit_type == "Teurg" and dmg > 0:
-                    acc2 = float(attacker.get("accuracy_secondary", 0) or 0)
-                    roll = self._roll_status(acc2)
-                    self._log(
-                        f"Шанс снижения брони {int(acc2)}% - "
-                        + ("успех" if roll else "неудача")
-                        + f" по {victim['team'].upper()} {victim['name']}#{victim['position']}."
-                    )
-                    if roll:
-                        self._apply_teurg_armor_shred(attacker, victim)
+                    # Shatter cannot miss in Disciples II: its POWER is ignored.
+                    self._apply_teurg_armor_shred(attacker, victim)
 
                 if (
                     unit_type == "Dead dragon"
@@ -5034,7 +5061,11 @@ class BattleEnv(gym.Env):
 
             if self._alive(victim):
                 if unit_type == "Ghost":
-                    self._apply_paralysis_effect(attacker, victim)
+                    self._apply_paralysis_effect(
+                        attacker,
+                        victim,
+                        infinite=current_attack_unit_id(attacker) in INFINITE_PARALYSIS_UNIT_IDS,
+                    )
 
                 if atk_name == "Ниддог":
                     self._apply_cached_poison(
@@ -5046,15 +5077,8 @@ class BattleEnv(gym.Env):
                     self._log("Baroness inspires fear.")
 
                 if unit_type == "Aleman" and dmg > 0:
-                    acc2 = float(attacker.get("accuracy_secondary", 0) or 0)
-                    roll = self._roll_status(acc2)
-                    self._log(
-                        f"Шанс снижения брони {int(acc2)}% - "
-                        + ("успех" if roll else "неудача")
-                        + f" по {victim['team'].upper()} {victim['name']}#{victim['position']}."
-                    )
-                    if roll:
-                        self._apply_teurg_armor_shred(attacker, victim)
+                    # Shatter cannot miss in Disciples II: its POWER is ignored.
+                    self._apply_teurg_armor_shred(attacker, victim)
 
                 if unit_type == "Witch":
                     forbiddenwitch_names = {
@@ -5803,6 +5827,7 @@ class BattleEnv(gym.Env):
                 unit,
                 exp_required=_to_int_or_default(req_value, default=0),
             )
+            _restore_full_health_after_levelup(unit)
         elif _resolve_unit_hero_flag(unit) and next_level_exp > 0:
             unit["Level"] = _to_int_or_default(unit.get("Level", 0), default=0) + 1
             unit["exp_required"] = (
@@ -5810,6 +5835,7 @@ class BattleEnv(gym.Env):
             )
             unit["exp_current"] = 0
             _apply_hero_levelup_bonuses(unit)
+            _restore_full_health_after_levelup(unit)
         else:
             unit["exp_current"] = max(0.0, req_value - 1)
         self._log(f"Уровень юнита {unit_name} повышен")
@@ -5817,7 +5843,7 @@ class BattleEnv(gym.Env):
         self.last_levelup_units.append(unit)
 
     def _apply_battle_exp(self, losing_team: str) -> None:
-        """Award XP with original-game timing for deaths, revivals and escapes."""
+        """Share slain enemies' XP among the winners alive at battle end."""
         escaped_units = [
             unit
             for unit in (getattr(self, "escaped_units", []) or [])
@@ -5873,40 +5899,42 @@ class BattleEnv(gym.Env):
         self.last_levelup_units = []
         self._log(f"Опыт за бой: {total_exp:g}")
 
+        # Only the victorious party's survivors share XP.  Escaped units are no
+        # longer in combined; summoned creatures vanish and take no share.
         current_winners = [
             unit
             for unit in self.combined
             if unit.get("team") == winning_team
             and self._alive(unit)
             and not _is_thief_battle_unit(unit)
+            and not bool(unit.get("Summoned"))
         ]
 
         if event_based:
-            # Escaped winners retain only XP earned before they actually left.
-            recipients = [
-                *current_winners,
-                *[
-                    unit
-                    for unit in escaped_units
-                    if unit.get("team") == winning_team
-                    and not _is_thief_battle_unit(unit)
-                ],
+            # Each kill is split equally among the survivors entitled to it:
+            # everyone, except that a unit revived in this battle shares only
+            # kills made after its (last) revival.
+            kills = getattr(self, "_battle_exp_kills", None)
+            kills = kills.get(losing_team, ()) if isinstance(kills, dict) else ()
+            eligible_from = [
+                int(unit.get(BATTLE_EXP_ELIGIBLE_FROM_KEY, 0) or 0)
+                for unit in current_winners
             ]
+            earned = [0.0] * len(current_winners)
+            for event_index, defeated_exp in kills:
+                sharers = [
+                    index
+                    for index, first_event in enumerate(eligible_from)
+                    if first_event <= int(event_index)
+                ]
+                if not sharers:
+                    continue
+                share = float(defeated_exp) / len(sharers)
+                for index in sharers:
+                    earned[index] += share
             awards = [
-                (
-                    unit,
-                    int(
-                        math.floor(
-                            max(
-                                0.0,
-                                float(unit.get("_battle_exp_earned", 0.0) or 0.0),
-                            )
-                            * winner_multiplier
-                            + 0.5
-                        )
-                    ),
-                )
-                for unit in recipients
+                (unit, int(math.floor(earned[index] * winner_multiplier + 0.5)))
+                for index, unit in enumerate(current_winners)
             ]
         else:
             # Legacy/direct-state battles have no timing information available.
@@ -5929,7 +5957,7 @@ class BattleEnv(gym.Env):
 
         # This field is battle-local and must never leak into campaign state.
         for unit in [*self.combined, *escaped_units]:
-            unit.pop("_battle_exp_earned", None)
+            unit.pop(BATTLE_EXP_ELIGIBLE_FROM_KEY, None)
 
     def _clear_dead_running_away_flags(self) -> None:
         for unit in self.combined:
@@ -6098,6 +6126,17 @@ class BattleEnv(gym.Env):
                 self._end_round_restore()
                 self.round_no += 1
                 self._log(f"— Начало раунда {self.round_no}.")
+                continue
+
+            if self.round_no == 0:
+                if nxt["team"] == "blue":
+                    self.current_blue_attacker_pos = nxt["position"]
+                    self.blue_attacks_left = 1
+                    self._log(f"Нулевой ход BLUE: Двойник#{nxt['position']}.")
+                    return True
+                nxt["initiative"] = 0
+                target_pos = self._pick_highest_hp_non_big(exclude_unit=nxt)
+                self._apply_doppelganger_copy(nxt, self._unit_by_position(target_pos))
                 continue
 
             if not self._apply_start_of_turn_effects(nxt):
@@ -6636,8 +6675,39 @@ class BattleEnv(gym.Env):
         reward = self.reward_win if terminated else self.reward_step
         return self._obs(), reward, terminated, False, info
 
+    def _step_doppelganger_zero(self, action):
+        attacker = self._unit_by_position(self.current_blue_attacker_pos)
+        action = int(action)
+        valid = 0 <= action < TOTAL_AGENT_ACTIONS and self.compute_action_mask()[action]
+        copied = False
+        if valid and action < len(TARGET_POSITIONS):
+            copied = self._apply_doppelganger_copy(
+                attacker, self._unit_by_position(TARGET_POSITIONS[action])
+            )
+        # Defend skips preparation, without granting defense or spending the
+        # first normal turn. Forced invalid actions also consume preparation.
+        attacker["initiative"] = 0
+        self.current_blue_attacker_pos = None
+        self.blue_attacks_left = 0
+        self.step_count += 1
+        self._advance_until_blue_turn()
+        terminated = self.winner is not None
+        reward = (self.reward_win if self.winner == "blue" else self.reward_loss) if terminated else self.reward_step
+        if not valid:
+            reward += self.penalty_invalid_target
+        return self._obs(), reward, terminated, False, {
+            "doppelganger_zero_turn": True,
+            "doppelganger_copied": bool(copied),
+            "doppelganger_invalid_action": not bool(valid),
+        }
+
     def step(self, action):
         assert self.winner is None, "Эпизод завершён — вызовите reset()."
+        if self.round_no == 0:
+            if self.current_blue_attacker_pos is None:
+                self._advance_until_blue_turn()
+            if self.round_no == 0:
+                return self._step_doppelganger_zero(action)
         if int(action) == RUN_AWAY_ACTION_INDEX and not self.retreat_enabled:
             return self._obs(), self.penalty_invalid_target, False, False, {
                 "battle_retreat_blocked": True,
@@ -6949,7 +7019,9 @@ class BattleEnv(gym.Env):
 
                     elif attacker.get("unit_type") == "Doppelganger":
                         target_unit = units_by_pos.get(target_pos)
-                        if not self._apply_doppelganger_copy(attacker, target_unit):
+                        if not self._can_copy_doppelganger_target(target_unit, attacker):
+                            step_shaping += self.penalty_invalid_target
+                        elif not self._apply_doppelganger_copy(attacker, target_unit):
                             self._log(f"Doppelganger выбор: pos{target_pos} → пусто")
                         self._check_victory_after_hit()
 
@@ -7130,10 +7202,10 @@ class BattleEnv(gym.Env):
             u.pop("wight_form_name", None)
             u.pop("transform_effect", None)
             u.pop("transform_recover_chance", None)
-            u["_battle_exp_earned"] = 0.0
+            u.pop(BATTLE_EXP_ELIGIBLE_FROM_KEY, None)
 
         # Сбрасываем глобальное состояние боя
-        self.round_no = 1
+        self.round_no = self._initial_battle_round()
         self.winner = None
         self.last_battle_exp = 0.0
         self.last_levelups = []
@@ -7152,6 +7224,7 @@ class BattleEnv(gym.Env):
         self._battle_exp_event_count = 0
         self._battle_exp_tracking_initialized = True
         self._battle_defeated_exp = {"red": 0.0, "blue": 0.0}
+        self._battle_exp_kills = {"red": [], "blue": []}
         self._reset_recovery_combat_tracking()
         self.step_count = 0
         self.hero_item_slots_used_this_battle = [False] * len(self.equipped_hero_items)
