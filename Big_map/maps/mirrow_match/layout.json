@@ -1,0 +1,2142 @@
+{
+  "schema_version": 1,
+  "map_id": "mirrow_match",
+  "title": "Mirrow match",
+  "grid_size": 48,
+  "source_grid_size": 48,
+  "seed": 0,
+  "observation_version": "local5",
+  "scripted_bot_enabled": false,
+  "boss_roster_enabled": false,
+  "objective": "scripted_bot",
+  "objective_enemy_id": -75,
+  "turn": 0,
+  "faction": "Легионы Проклятых",
+  "starting_gold": 0.0,
+  "starting_army": "2 × Одержимый + Герцог + Сектант",
+  "starting_roster_mode": "ordinary",
+  "hero": [
+    5,
+    5
+  ],
+  "capitals": [
+    {
+      "code": "A",
+      "name": "Столица: Легионы Проклятых",
+      "position": [
+        5,
+        5
+      ],
+      "color": "#b85869",
+      "footprint": [
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          1,
+          5
+        ],
+        [
+          1,
+          6
+        ],
+        [
+          1,
+          7
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          2,
+          5
+        ],
+        [
+          2,
+          6
+        ],
+        [
+          2,
+          7
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          3,
+          6
+        ],
+        [
+          3,
+          7
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          4,
+          6
+        ],
+        [
+          4,
+          7
+        ],
+        [
+          5,
+          3
+        ],
+        [
+          5,
+          4
+        ],
+        [
+          5,
+          5
+        ],
+        [
+          5,
+          6
+        ],
+        [
+          5,
+          7
+        ]
+      ]
+    },
+    {
+      "code": "B",
+      "name": "Вражеская столица: Империя",
+      "position": [
+        42,
+        42
+      ],
+      "color": "#598cd9",
+      "footprint": [
+        [
+          42,
+          40
+        ],
+        [
+          42,
+          41
+        ],
+        [
+          42,
+          42
+        ],
+        [
+          42,
+          43
+        ],
+        [
+          42,
+          44
+        ],
+        [
+          43,
+          40
+        ],
+        [
+          43,
+          41
+        ],
+        [
+          43,
+          42
+        ],
+        [
+          43,
+          43
+        ],
+        [
+          43,
+          44
+        ],
+        [
+          44,
+          40
+        ],
+        [
+          44,
+          41
+        ],
+        [
+          44,
+          42
+        ],
+        [
+          44,
+          43
+        ],
+        [
+          44,
+          44
+        ],
+        [
+          45,
+          40
+        ],
+        [
+          45,
+          41
+        ],
+        [
+          45,
+          42
+        ],
+        [
+          45,
+          43
+        ],
+        [
+          45,
+          44
+        ],
+        [
+          46,
+          40
+        ],
+        [
+          46,
+          41
+        ],
+        [
+          46,
+          42
+        ],
+        [
+          46,
+          43
+        ],
+        [
+          46,
+          44
+        ]
+      ]
+    }
+  ],
+  "cities": [],
+  "enemies": [
+    {
+      "id": 101,
+      "position": [
+        8,
+        8
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / agent / Гоблин, Гоблин, Гоблин",
+      "units": [
+        {
+          "name": "Гоблин",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5017"
+        },
+        {
+          "name": "Гоблин",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5017"
+        },
+        {
+          "name": "Гоблин",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5017"
+        }
+      ],
+      "summary": "3 × Гоблин",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": 1,
+      "formation_key": "goblins",
+      "region": "agent",
+      "wave": null,
+      "marker": "1"
+    },
+    {
+      "id": 102,
+      "position": [
+        14,
+        3
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / agent / Орк",
+      "units": [
+        {
+          "name": "Орк",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5013"
+        }
+      ],
+      "summary": "Орк",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": 2,
+      "formation_key": "orc",
+      "region": "agent",
+      "wave": null,
+      "marker": "2"
+    },
+    {
+      "id": 103,
+      "position": [
+        16,
+        9
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / agent / Орк, Гоблин лучник, Гоблин лучник",
+      "units": [
+        {
+          "name": "Орк",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5013"
+        },
+        {
+          "name": "Гоблин лучник",
+          "Level": 1,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu5018"
+        },
+        {
+          "name": "Гоблин лучник",
+          "Level": 1,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu5018"
+        }
+      ],
+      "summary": "Орк + 2 × Гоблин лучник",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": 3,
+      "formation_key": "orc_archers",
+      "region": "agent",
+      "wave": null,
+      "marker": "3"
+    },
+    {
+      "id": 104,
+      "position": [
+        13,
+        7
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / agent / Копейщик, Служка",
+      "units": [
+        {
+          "name": "Копейщик",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5003"
+        },
+        {
+          "name": "Служка",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0011"
+        }
+      ],
+      "summary": "Копейщик + Служка",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": 2,
+      "formation_key": "spearman_acolyte",
+      "region": "agent",
+      "wave": null,
+      "marker": "4"
+    },
+    {
+      "id": 105,
+      "position": [
+        5,
+        10
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / agent / Ополченец, Ополченец",
+      "units": [
+        {
+          "name": "Ополченец",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5002"
+        },
+        {
+          "name": "Ополченец",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5002"
+        }
+      ],
+      "summary": "2 × Ополченец",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": 1,
+      "formation_key": "militia",
+      "region": "agent",
+      "wave": null,
+      "marker": "5"
+    },
+    {
+      "id": 106,
+      "position": [
+        11,
+        9
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / agent / Разбойник, Головорез, Разбойник",
+      "units": [
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5030"
+        },
+        {
+          "name": "Головорез",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5031"
+        },
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5030"
+        }
+      ],
+      "summary": "2 × Разбойник + Головорез",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": 1,
+      "formation_key": "bandits",
+      "region": "agent",
+      "wave": null,
+      "marker": "6"
+    },
+    {
+      "id": 107,
+      "position": [
+        11,
+        4
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / agent / Скваер, Скваер, Скваер",
+      "units": [
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0001"
+        }
+      ],
+      "summary": "3 × Скваер",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": 1,
+      "formation_key": "squires",
+      "region": "agent",
+      "wave": null,
+      "marker": "7"
+    },
+    {
+      "id": 108,
+      "position": [
+        4,
+        15
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / agent / Оккультист",
+      "units": [
+        {
+          "name": "Оккультист",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu6013"
+        }
+      ],
+      "summary": "Оккультист",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": 2,
+      "formation_key": "occultist",
+      "region": "agent",
+      "wave": null,
+      "marker": "8"
+    },
+    {
+      "id": 109,
+      "position": [
+        17,
+        4
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / agent / Варвар",
+      "units": [
+        {
+          "name": "Варвар",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5040"
+        }
+      ],
+      "summary": "Варвар",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": 3,
+      "formation_key": "barbarian",
+      "region": "agent",
+      "wave": null,
+      "marker": "9"
+    },
+    {
+      "id": 110,
+      "position": [
+        6,
+        18
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / agent / Русалка",
+      "units": [
+        {
+          "name": "Русалка",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5026"
+        }
+      ],
+      "summary": "Русалка",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": 3,
+      "formation_key": "mermaid",
+      "region": "agent",
+      "wave": null,
+      "marker": "10"
+    },
+    {
+      "id": 111,
+      "position": [
+        18,
+        20
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / agent / Кракен",
+      "units": [
+        {
+          "name": "Кракен",
+          "Level": 1,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu5027"
+        }
+      ],
+      "summary": "Кракен",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": 4,
+      "formation_key": "kraken",
+      "region": "agent",
+      "wave": null,
+      "marker": "11"
+    },
+    {
+      "id": 112,
+      "position": [
+        20,
+        7
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / agent / Скальной гигант, Алхимик",
+      "units": [
+        {
+          "name": "Скальной гигант",
+          "Level": 2,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu0030"
+        },
+        {
+          "name": "Алхимик",
+          "Level": 3,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0161"
+        }
+      ],
+      "summary": "Скальной гигант (ур. 2) + Алхимик (ур. 3)",
+      "fighter_count": 2,
+      "formation_cells": 3,
+      "difficulty_tier": 4,
+      "formation_key": "giant_alchemist",
+      "region": "agent",
+      "wave": null,
+      "marker": "12"
+    },
+    {
+      "id": 113,
+      "position": [
+        21,
+        14
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / agent / Ангел, Ангел",
+      "units": [
+        {
+          "name": "Ангел",
+          "Level": 4,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0014"
+        },
+        {
+          "name": "Ангел",
+          "Level": 4,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0014"
+        }
+      ],
+      "summary": "2 × Ангел (ур. 4)",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": 4,
+      "formation_key": "angels",
+      "region": "agent",
+      "wave": null,
+      "marker": "13"
+    },
+    {
+      "id": 114,
+      "position": [
+        22,
+        21
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / agent / Мантикора",
+      "units": [
+        {
+          "name": "Мантикора",
+          "Level": 1,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu6016"
+        }
+      ],
+      "summary": "Мантикора",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": 5,
+      "formation_key": "manticore",
+      "region": "agent",
+      "wave": null,
+      "marker": "14"
+    },
+    {
+      "id": 115,
+      "position": [
+        8,
+        3
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / agent / Крестьянин, Крестьянин",
+      "units": [
+        {
+          "name": "Крестьянин",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5001"
+        },
+        {
+          "name": "Крестьянин",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5001"
+        }
+      ],
+      "summary": "2 × Крестьянин",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": 1,
+      "formation_key": "peasants",
+      "region": "agent",
+      "wave": null,
+      "marker": "15"
+    },
+    {
+      "id": 116,
+      "position": [
+        8,
+        13
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / agent / Скелет, Скелет",
+      "units": [
+        {
+          "name": "Скелет",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0101"
+        },
+        {
+          "name": "Скелет",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0101"
+        }
+      ],
+      "summary": "2 × Скелет",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": 2,
+      "formation_key": "skeletons",
+      "region": "agent",
+      "wave": null,
+      "marker": "16"
+    },
+    {
+      "id": 117,
+      "position": [
+        11,
+        15
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / agent / Волк",
+      "units": [
+        {
+          "name": "Волк",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5039"
+        }
+      ],
+      "summary": "Волк",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": 2,
+      "formation_key": "wolf",
+      "region": "agent",
+      "wave": null,
+      "marker": "17"
+    },
+    {
+      "id": 118,
+      "position": [
+        18,
+        13
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / agent / Гном воин, Арбалетчик",
+      "units": [
+        {
+          "name": "Гном воин",
+          "Level": 2,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0037"
+        },
+        {
+          "name": "Арбалетчик",
+          "Level": 2,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0027"
+        }
+      ],
+      "summary": "Гном воин (ур. 2) + Арбалетчик (ур. 2)",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": 3,
+      "formation_key": "dwarf_crossbowman",
+      "region": "agent",
+      "wave": null,
+      "marker": "18"
+    },
+    {
+      "id": 119,
+      "position": [
+        13,
+        20
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / agent / Йети",
+      "units": [
+        {
+          "name": "Йети",
+          "Level": 1,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu0043"
+        }
+      ],
+      "summary": "Йети",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": 4,
+      "formation_key": "yeti",
+      "region": "agent",
+      "wave": null,
+      "marker": "19"
+    },
+    {
+      "id": 201,
+      "position": [
+        39,
+        39
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / bot / Гоблин, Гоблин, Гоблин",
+      "units": [
+        {
+          "name": "Гоблин",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5017"
+        },
+        {
+          "name": "Гоблин",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5017"
+        },
+        {
+          "name": "Гоблин",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5017"
+        }
+      ],
+      "summary": "3 × Гоблин",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": 1,
+      "formation_key": "goblins",
+      "region": "bot",
+      "wave": null,
+      "marker": "1"
+    },
+    {
+      "id": 202,
+      "position": [
+        33,
+        44
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / bot / Орк",
+      "units": [
+        {
+          "name": "Орк",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5013"
+        }
+      ],
+      "summary": "Орк",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": 2,
+      "formation_key": "orc",
+      "region": "bot",
+      "wave": null,
+      "marker": "2"
+    },
+    {
+      "id": 203,
+      "position": [
+        31,
+        38
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / bot / Орк, Гоблин лучник, Гоблин лучник",
+      "units": [
+        {
+          "name": "Орк",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5013"
+        },
+        {
+          "name": "Гоблин лучник",
+          "Level": 1,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu5018"
+        },
+        {
+          "name": "Гоблин лучник",
+          "Level": 1,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu5018"
+        }
+      ],
+      "summary": "Орк + 2 × Гоблин лучник",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": 3,
+      "formation_key": "orc_archers",
+      "region": "bot",
+      "wave": null,
+      "marker": "3"
+    },
+    {
+      "id": 204,
+      "position": [
+        34,
+        40
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / bot / Копейщик, Служка",
+      "units": [
+        {
+          "name": "Копейщик",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5003"
+        },
+        {
+          "name": "Служка",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0011"
+        }
+      ],
+      "summary": "Копейщик + Служка",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": 2,
+      "formation_key": "spearman_acolyte",
+      "region": "bot",
+      "wave": null,
+      "marker": "4"
+    },
+    {
+      "id": 205,
+      "position": [
+        42,
+        37
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / bot / Ополченец, Ополченец",
+      "units": [
+        {
+          "name": "Ополченец",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5002"
+        },
+        {
+          "name": "Ополченец",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5002"
+        }
+      ],
+      "summary": "2 × Ополченец",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": 1,
+      "formation_key": "militia",
+      "region": "bot",
+      "wave": null,
+      "marker": "5"
+    },
+    {
+      "id": 206,
+      "position": [
+        36,
+        38
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / bot / Разбойник, Головорез, Разбойник",
+      "units": [
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5030"
+        },
+        {
+          "name": "Головорез",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5031"
+        },
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5030"
+        }
+      ],
+      "summary": "2 × Разбойник + Головорез",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": 1,
+      "formation_key": "bandits",
+      "region": "bot",
+      "wave": null,
+      "marker": "6"
+    },
+    {
+      "id": 207,
+      "position": [
+        36,
+        43
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / bot / Скваер, Скваер, Скваер",
+      "units": [
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0001"
+        }
+      ],
+      "summary": "3 × Скваер",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": 1,
+      "formation_key": "squires",
+      "region": "bot",
+      "wave": null,
+      "marker": "7"
+    },
+    {
+      "id": 208,
+      "position": [
+        43,
+        32
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / bot / Оккультист",
+      "units": [
+        {
+          "name": "Оккультист",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu6013"
+        }
+      ],
+      "summary": "Оккультист",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": 2,
+      "formation_key": "occultist",
+      "region": "bot",
+      "wave": null,
+      "marker": "8"
+    },
+    {
+      "id": 209,
+      "position": [
+        30,
+        43
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / bot / Варвар",
+      "units": [
+        {
+          "name": "Варвар",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5040"
+        }
+      ],
+      "summary": "Варвар",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": 3,
+      "formation_key": "barbarian",
+      "region": "bot",
+      "wave": null,
+      "marker": "9"
+    },
+    {
+      "id": 210,
+      "position": [
+        41,
+        29
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / bot / Русалка",
+      "units": [
+        {
+          "name": "Русалка",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5026"
+        }
+      ],
+      "summary": "Русалка",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": 3,
+      "formation_key": "mermaid",
+      "region": "bot",
+      "wave": null,
+      "marker": "10"
+    },
+    {
+      "id": 211,
+      "position": [
+        29,
+        27
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / bot / Кракен",
+      "units": [
+        {
+          "name": "Кракен",
+          "Level": 1,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu5027"
+        }
+      ],
+      "summary": "Кракен",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": 4,
+      "formation_key": "kraken",
+      "region": "bot",
+      "wave": null,
+      "marker": "11"
+    },
+    {
+      "id": 212,
+      "position": [
+        27,
+        40
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / bot / Скальной гигант, Алхимик",
+      "units": [
+        {
+          "name": "Скальной гигант",
+          "Level": 2,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu0030"
+        },
+        {
+          "name": "Алхимик",
+          "Level": 3,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0161"
+        }
+      ],
+      "summary": "Скальной гигант (ур. 2) + Алхимик (ур. 3)",
+      "fighter_count": 2,
+      "formation_cells": 3,
+      "difficulty_tier": 4,
+      "formation_key": "giant_alchemist",
+      "region": "bot",
+      "wave": null,
+      "marker": "12"
+    },
+    {
+      "id": 213,
+      "position": [
+        26,
+        33
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / bot / Ангел, Ангел",
+      "units": [
+        {
+          "name": "Ангел",
+          "Level": 4,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0014"
+        },
+        {
+          "name": "Ангел",
+          "Level": 4,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0014"
+        }
+      ],
+      "summary": "2 × Ангел (ур. 4)",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": 4,
+      "formation_key": "angels",
+      "region": "bot",
+      "wave": null,
+      "marker": "13"
+    },
+    {
+      "id": 214,
+      "position": [
+        25,
+        26
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / bot / Мантикора",
+      "units": [
+        {
+          "name": "Мантикора",
+          "Level": 1,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu6016"
+        }
+      ],
+      "summary": "Мантикора",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": 5,
+      "formation_key": "manticore",
+      "region": "bot",
+      "wave": null,
+      "marker": "14"
+    },
+    {
+      "id": 215,
+      "position": [
+        39,
+        44
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / bot / Крестьянин, Крестьянин",
+      "units": [
+        {
+          "name": "Крестьянин",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5001"
+        },
+        {
+          "name": "Крестьянин",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5001"
+        }
+      ],
+      "summary": "2 × Крестьянин",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": 1,
+      "formation_key": "peasants",
+      "region": "bot",
+      "wave": null,
+      "marker": "15"
+    },
+    {
+      "id": 216,
+      "position": [
+        39,
+        34
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / bot / Скелет, Скелет",
+      "units": [
+        {
+          "name": "Скелет",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0101"
+        },
+        {
+          "name": "Скелет",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0101"
+        }
+      ],
+      "summary": "2 × Скелет",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": 2,
+      "formation_key": "skeletons",
+      "region": "bot",
+      "wave": null,
+      "marker": "16"
+    },
+    {
+      "id": 217,
+      "position": [
+        36,
+        32
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / bot / Волк",
+      "units": [
+        {
+          "name": "Волк",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5039"
+        }
+      ],
+      "summary": "Волк",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": 2,
+      "formation_key": "wolf",
+      "region": "bot",
+      "wave": null,
+      "marker": "17"
+    },
+    {
+      "id": 218,
+      "position": [
+        29,
+        34
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / bot / Гном воин, Арбалетчик",
+      "units": [
+        {
+          "name": "Гном воин",
+          "Level": 2,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0037"
+        },
+        {
+          "name": "Арбалетчик",
+          "Level": 2,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0027"
+        }
+      ],
+      "summary": "Гном воин (ур. 2) + Арбалетчик (ур. 2)",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": 3,
+      "formation_key": "dwarf_crossbowman",
+      "region": "bot",
+      "wave": null,
+      "marker": "18"
+    },
+    {
+      "id": 219,
+      "position": [
+        34,
+        27
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Mirrow match / bot / Йети",
+      "units": [
+        {
+          "name": "Йети",
+          "Level": 1,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu0043"
+        }
+      ],
+      "summary": "Йети",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": 4,
+      "formation_key": "yeti",
+      "region": "bot",
+      "wave": null,
+      "marker": "19"
+    },
+    {
+      "id": 250,
+      "position": [
+        24,
+        24
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Центр Mirrow match: один Тиамат",
+      "units": [
+        {
+          "name": "Тиамат",
+          "Level": 5,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu0168"
+        }
+      ],
+      "summary": "Тиамат (ур. 5)",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": 6,
+      "formation_key": "tiamat",
+      "region": "center",
+      "wave": null,
+      "marker": "★"
+    }
+  ],
+  "sites": [],
+  "terrain": {
+    "water": [
+      [
+        3,
+        19
+      ],
+      [
+        3,
+        20
+      ],
+      [
+        3,
+        21
+      ],
+      [
+        4,
+        19
+      ],
+      [
+        4,
+        20
+      ],
+      [
+        4,
+        21
+      ],
+      [
+        5,
+        19
+      ],
+      [
+        5,
+        20
+      ],
+      [
+        5,
+        21
+      ],
+      [
+        16,
+        21
+      ],
+      [
+        16,
+        22
+      ],
+      [
+        17,
+        21
+      ],
+      [
+        17,
+        22
+      ],
+      [
+        30,
+        25
+      ],
+      [
+        30,
+        26
+      ],
+      [
+        31,
+        25
+      ],
+      [
+        31,
+        26
+      ],
+      [
+        42,
+        26
+      ],
+      [
+        42,
+        27
+      ],
+      [
+        42,
+        28
+      ],
+      [
+        43,
+        26
+      ],
+      [
+        43,
+        27
+      ],
+      [
+        43,
+        28
+      ],
+      [
+        44,
+        26
+      ],
+      [
+        44,
+        27
+      ],
+      [
+        44,
+        28
+      ]
+    ],
+    "forest": [
+      [
+        1,
+        15
+      ],
+      [
+        1,
+        16
+      ],
+      [
+        1,
+        17
+      ],
+      [
+        2,
+        15
+      ],
+      [
+        2,
+        16
+      ],
+      [
+        2,
+        17
+      ],
+      [
+        3,
+        15
+      ],
+      [
+        3,
+        16
+      ],
+      [
+        3,
+        17
+      ],
+      [
+        15,
+        2
+      ],
+      [
+        15,
+        3
+      ],
+      [
+        16,
+        2
+      ],
+      [
+        16,
+        3
+      ],
+      [
+        17,
+        2
+      ],
+      [
+        30,
+        45
+      ],
+      [
+        31,
+        44
+      ],
+      [
+        31,
+        45
+      ],
+      [
+        32,
+        44
+      ],
+      [
+        32,
+        45
+      ],
+      [
+        44,
+        30
+      ],
+      [
+        44,
+        31
+      ],
+      [
+        44,
+        32
+      ],
+      [
+        45,
+        30
+      ],
+      [
+        45,
+        31
+      ],
+      [
+        45,
+        32
+      ],
+      [
+        46,
+        30
+      ],
+      [
+        46,
+        31
+      ],
+      [
+        46,
+        32
+      ]
+    ],
+    "road": [
+      [
+        5,
+        5
+      ],
+      [
+        6,
+        5
+      ],
+      [
+        6,
+        6
+      ],
+      [
+        7,
+        5
+      ],
+      [
+        7,
+        6
+      ],
+      [
+        7,
+        7
+      ],
+      [
+        8,
+        8
+      ],
+      [
+        9,
+        9
+      ],
+      [
+        10,
+        10
+      ],
+      [
+        11,
+        11
+      ],
+      [
+        12,
+        12
+      ],
+      [
+        13,
+        13
+      ],
+      [
+        14,
+        14
+      ],
+      [
+        15,
+        15
+      ],
+      [
+        16,
+        16
+      ],
+      [
+        17,
+        17
+      ],
+      [
+        18,
+        18
+      ],
+      [
+        19,
+        19
+      ],
+      [
+        20,
+        20
+      ],
+      [
+        21,
+        21
+      ],
+      [
+        22,
+        22
+      ],
+      [
+        23,
+        23
+      ],
+      [
+        24,
+        24
+      ],
+      [
+        25,
+        25
+      ],
+      [
+        26,
+        26
+      ],
+      [
+        27,
+        27
+      ],
+      [
+        28,
+        28
+      ],
+      [
+        29,
+        29
+      ],
+      [
+        30,
+        30
+      ],
+      [
+        31,
+        31
+      ],
+      [
+        32,
+        32
+      ],
+      [
+        33,
+        33
+      ],
+      [
+        34,
+        34
+      ],
+      [
+        35,
+        35
+      ],
+      [
+        36,
+        36
+      ],
+      [
+        37,
+        37
+      ],
+      [
+        38,
+        38
+      ],
+      [
+        39,
+        39
+      ],
+      [
+        40,
+        40
+      ],
+      [
+        40,
+        41
+      ],
+      [
+        40,
+        42
+      ],
+      [
+        41,
+        41
+      ],
+      [
+        41,
+        42
+      ],
+      [
+        42,
+        42
+      ]
+    ]
+  },
+  "obstacles": [
+    [
+      1,
+      3
+    ],
+    [
+      1,
+      4
+    ],
+    [
+      1,
+      5
+    ],
+    [
+      1,
+      6
+    ],
+    [
+      1,
+      7
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      2,
+      4
+    ],
+    [
+      2,
+      5
+    ],
+    [
+      2,
+      6
+    ],
+    [
+      2,
+      7
+    ],
+    [
+      3,
+      3
+    ],
+    [
+      3,
+      4
+    ],
+    [
+      3,
+      5
+    ],
+    [
+      3,
+      6
+    ],
+    [
+      3,
+      7
+    ],
+    [
+      4,
+      3
+    ],
+    [
+      4,
+      4
+    ],
+    [
+      4,
+      5
+    ],
+    [
+      4,
+      6
+    ],
+    [
+      4,
+      7
+    ],
+    [
+      5,
+      3
+    ],
+    [
+      5,
+      4
+    ],
+    [
+      5,
+      6
+    ],
+    [
+      5,
+      7
+    ],
+    [
+      42,
+      40
+    ],
+    [
+      42,
+      41
+    ],
+    [
+      42,
+      43
+    ],
+    [
+      42,
+      44
+    ],
+    [
+      43,
+      40
+    ],
+    [
+      43,
+      41
+    ],
+    [
+      43,
+      42
+    ],
+    [
+      43,
+      43
+    ],
+    [
+      43,
+      44
+    ],
+    [
+      44,
+      40
+    ],
+    [
+      44,
+      41
+    ],
+    [
+      44,
+      42
+    ],
+    [
+      44,
+      43
+    ],
+    [
+      44,
+      44
+    ],
+    [
+      45,
+      40
+    ],
+    [
+      45,
+      41
+    ],
+    [
+      45,
+      42
+    ],
+    [
+      45,
+      43
+    ],
+    [
+      45,
+      44
+    ],
+    [
+      46,
+      40
+    ],
+    [
+      46,
+      41
+    ],
+    [
+      46,
+      42
+    ],
+    [
+      46,
+      43
+    ],
+    [
+      46,
+      44
+    ]
+  ],
+  "gold_mines": [
+    [
+      7,
+      5
+    ],
+    [
+      40,
+      42
+    ]
+  ],
+  "mana": [
+    {
+      "position": [
+        7,
+        6
+      ],
+      "kind": "infernal",
+      "name": "Мана преисподней"
+    },
+    {
+      "position": [
+        40,
+        41
+      ],
+      "kind": "life",
+      "name": "Мана жизни"
+    }
+  ],
+  "chests": [],
+  "ruins": [],
+  "notes": [
+    "19 зеркальных пар нейтральных отрядов и Тиамат в центре. Цвета: сложность 1–5 из конфигурации.",
+    "Скриптовый бот показан только как условие сценария; при снимке выключен."
+  ],
+  "conditional_assaults": []
+}

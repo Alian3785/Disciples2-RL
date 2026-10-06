@@ -1,5 +1,7 @@
 """Fixed late-game hero skills; effects match GmodifL, levels are training rules."""
 
+from permanent_unit_stats import intrinsic_stat_mutation
+
 # level, key, display name, stat, multiplier, flat bonus
 HERO_LEVEL_STAT_ABILITIES = (
     (13, 'first_strike', 'Первый удар (+50% инициативы)', 'initiative', 1.5, 0),
@@ -8,6 +10,7 @@ HERO_LEVEL_STAT_ABILITIES = (
 )
 
 
+@intrinsic_stat_mutation
 def apply_hero_level_stat_abilities(hero):
     """Grant each bonus once, including to heroes starting above its level.
 

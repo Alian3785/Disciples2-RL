@@ -1,0 +1,510 @@
+{
+  "schema_version": 1,
+  "map_id": "trade_train",
+  "title": "Trade · торговля",
+  "grid_size": 24,
+  "source_grid_size": 48,
+  "seed": 0,
+  "observation_version": "local5",
+  "scripted_bot_enabled": false,
+  "boss_roster_enabled": false,
+  "objective": "all_enemies",
+  "objective_enemy_id": null,
+  "turn": 0,
+  "faction": "Легионы Проклятых",
+  "starting_gold": 9000.0,
+  "starting_army": "Герцог",
+  "starting_roster_mode": "fixed",
+  "hero": [
+    2,
+    13
+  ],
+  "capitals": [
+    {
+      "code": "A",
+      "name": "Столица: Легионы Проклятых",
+      "position": [
+        2,
+        13
+      ],
+      "color": "#b85869",
+      "footprint": [
+        [
+          0,
+          12
+        ],
+        [
+          0,
+          13
+        ],
+        [
+          0,
+          13
+        ],
+        [
+          0,
+          14
+        ],
+        [
+          0,
+          14
+        ],
+        [
+          1,
+          12
+        ],
+        [
+          1,
+          12
+        ],
+        [
+          1,
+          13
+        ],
+        [
+          1,
+          13
+        ],
+        [
+          1,
+          13
+        ],
+        [
+          1,
+          13
+        ],
+        [
+          1,
+          14
+        ],
+        [
+          1,
+          14
+        ],
+        [
+          1,
+          14
+        ],
+        [
+          1,
+          14
+        ],
+        [
+          2,
+          12
+        ],
+        [
+          2,
+          12
+        ],
+        [
+          2,
+          13
+        ],
+        [
+          2,
+          13
+        ],
+        [
+          2,
+          13
+        ],
+        [
+          2,
+          13
+        ],
+        [
+          2,
+          14
+        ],
+        [
+          2,
+          14
+        ],
+        [
+          2,
+          14
+        ],
+        [
+          2,
+          14
+        ]
+      ]
+    }
+  ],
+  "cities": [],
+  "enemies": [
+    {
+      "id": 1,
+      "position": [
+        22,
+        3
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Имперский рыцарь и Рыцарь на пегасе впереди; Патриарх и Волшебник позади",
+      "units": [
+        {
+          "name": "Имперский рыцарь",
+          "Level": 3,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0003"
+        },
+        {
+          "name": "Рыцарь на пегасе",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0019"
+        },
+        {
+          "name": "Патриарх",
+          "Level": 4,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0150"
+        },
+        {
+          "name": "Волшебник",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0010"
+        }
+      ],
+      "summary": "Имперский рыцарь (ур. 3) + Рыцарь на пегасе + Патриарх (ур. 4) + Волшебник (ур. 3)",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "1"
+    },
+    {
+      "id": 2,
+      "position": [
+        22,
+        9
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Кентавр дикарь и Кентавр латник впереди; Солнечная танцовщица и Смотритель позади",
+      "units": [
+        {
+          "name": "Кентавр дикарь",
+          "Level": 3,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu8017"
+        },
+        {
+          "name": "Кентавр латник",
+          "Level": 2,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu8015"
+        },
+        {
+          "name": "Солнечная танцовщица",
+          "Level": 4,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu8034"
+        },
+        {
+          "name": "Смотритель",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu8023"
+        }
+      ],
+      "summary": "Кентавр дикарь (ур. 3) + Кентавр латник (ур. 2) + Солнечная танцовщица (ур. 4) + Смотритель (ур. 3)",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "2"
+    },
+    {
+      "id": 3,
+      "position": [
+        22,
+        15
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Скелет рыцарь и Лорд тьмы впереди; Архилич и Сущий позади",
+      "units": [
+        {
+          "name": "Скелет рыцарь",
+          "Level": 4,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0089"
+        },
+        {
+          "name": "Лорд тьмы",
+          "Level": 3,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0091"
+        },
+        {
+          "name": "Архилич",
+          "Level": 5,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0176"
+        },
+        {
+          "name": "Сущий",
+          "Level": 4,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0178"
+        }
+      ],
+      "summary": "Скелет рыцарь (ур. 4) + Лорд тьмы (ур. 3) + Архилич (ур. 5) + Сущий (ур. 4)",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "3"
+    },
+    {
+      "id": 4,
+      "position": [
+        22,
+        21
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Король гномов и Старый ветеран впереди; Архидруид и Огнеметчик позади",
+      "units": [
+        {
+          "name": "Король гномов",
+          "Level": 5,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0039"
+        },
+        {
+          "name": "Старый ветеран",
+          "Level": 4,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0040"
+        },
+        {
+          "name": "Архидруид",
+          "Level": 4,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0160"
+        },
+        {
+          "name": "Огнеметчик",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0028"
+        }
+      ],
+      "summary": "Король гномов (ур. 5) + Старый ветеран (ур. 4) + Архидруид (ур. 4) + Огнеметчик (ур. 3)",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "4"
+    },
+    {
+      "id": 5,
+      "position": [
+        19,
+        3
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Орочья королевская стража: Король орков",
+      "units": [
+        {
+          "name": "Король орков",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5014"
+        }
+      ],
+      "summary": "Король орков",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "5"
+    },
+    {
+      "id": 6,
+      "position": [
+        19,
+        21
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Орочий дозор: Орк впереди и Гоблин лучник позади",
+      "units": [
+        {
+          "name": "Орк",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5013"
+        },
+        {
+          "name": "Гоблин лучник",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5018"
+        }
+      ],
+      "summary": "Орк + Гоблин лучник",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "6"
+    }
+  ],
+  "sites": [
+    {
+      "code": "T1",
+      "kind": "merchant",
+      "name": "Лавка Алара",
+      "position": [
+        17,
+        5
+      ],
+      "interaction_tiles": [
+        [
+          18,
+          5
+        ],
+        [
+          18,
+          6
+        ],
+        [
+          17,
+          6
+        ]
+      ]
+    },
+    {
+      "code": "H1",
+      "kind": "mercenary",
+      "name": "Элитный лагерь наёмников",
+      "position": [
+        17,
+        11
+      ],
+      "interaction_tiles": [
+        [
+          18,
+          11
+        ],
+        [
+          18,
+          12
+        ],
+        [
+          17,
+          12
+        ]
+      ]
+    },
+    {
+      "code": "U1",
+      "kind": "trainer",
+      "name": "Тренировочный лагерь",
+      "position": [
+        17,
+        17
+      ],
+      "interaction_tiles": [
+        [
+          18,
+          17
+        ],
+        [
+          18,
+          18
+        ],
+        [
+          17,
+          18
+        ]
+      ]
+    }
+  ],
+  "terrain": {
+    "water": [],
+    "forest": [],
+    "road": []
+  },
+  "obstacles": [
+    [
+      0,
+      12
+    ],
+    [
+      0,
+      13
+    ],
+    [
+      0,
+      14
+    ],
+    [
+      1,
+      12
+    ],
+    [
+      1,
+      13
+    ],
+    [
+      1,
+      14
+    ],
+    [
+      2,
+      12
+    ],
+    [
+      2,
+      14
+    ]
+  ],
+  "gold_mines": [],
+  "mana": [],
+  "chests": [],
+  "ruins": [],
+  "notes": [
+    "Стартовый отряд закреплён сценарием и сохраняется при отключённом боссовом ростере.",
+    "Игровая сетка 24×24: координаты взяты после масштабирования и разрешения конфликтов."
+  ],
+  "conditional_assaults": []
+}

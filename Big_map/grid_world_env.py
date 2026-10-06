@@ -151,6 +151,8 @@ class GridWorldEnv(gym.Env):
                 for enemy_id, pos in enemy_positions.items()
             }
         self.num_enemies = len(self.enemy_positions)
+        # Dynamic actors participate in encounters, not fixed scenario ABI slots.
+        self.dynamic_enemy_ids: set[int] = set()
         self.obstacle_positions = self._resolve_obstacle_positions(obstacle_positions)
         self._grid_span = max(1, self.grid_size - 1)
         self._grid_span_inv = 1.0 / float(self._grid_span)
@@ -240,7 +242,8 @@ class GridWorldEnv(gym.Env):
         )
 
     def _refresh_enemy_cache(self) -> None:
-        enemy_ids = tuple(sorted(int(enemy_id) for enemy_id in self.enemy_positions.keys()))
+        enemy_ids = tuple(sorted(int(enemy_id) for enemy_id in self.enemy_positions
+                                 if enemy_id not in self.dynamic_enemy_ids))
         self._enemy_ids = enemy_ids
         self._enemy_coords = np.array(
             [self.enemy_positions[enemy_id] for enemy_id in enemy_ids],
@@ -371,7 +374,8 @@ class GridWorldEnv(gym.Env):
             self.current_enemy_encounter = None
 
     def all_enemies_defeated(self) -> bool:
-        return not any(self.enemies_alive.values())
+        return not any(alive for enemy_id, alive in self.enemies_alive.items()
+                       if enemy_id not in self.dynamic_enemy_ids)
 
     def get_enemy_at_position(self, pos: Tuple[int, int]) -> Optional[int]:
         for enemy_id, enemy_pos in self.enemy_positions.items():

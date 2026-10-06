@@ -295,6 +295,8 @@ class CampaignConstantsMixin:
     HIRE_BACK_POSITIONS = (10, 11, 12)
     HIRE_BIG_FRONT_POSITIONS = (7, 8, 9)
     HIRE_BASE_LEADERSHIP_CAPACITY = 3
+    GRID_DISMISS_UNIT_POSITIONS = (7, 8, 9, 10, 11, 12)
+    GRID_DISMISS_UNIT_ACTION_COUNT = len(GRID_DISMISS_UNIT_POSITIONS)
     HIRE_SMALL_UNIT_CAPACITY = 1
     HIRE_BIG_UNIT_CAPACITY = 2
     HIRE_BIG_UNIT_KIND = "faction_big"
@@ -394,6 +396,7 @@ class CampaignConstantsMixin:
         }
     )
     FINAL_OBJECTIVE_CITY_REWARD_MULTIPLIER = 5.0
+    CAMPAIGN_OBJECTIVE_CITY_DEFENCE = "city_defence"
     CAMPAIGN_OBJECTIVE_CITIES = "cities"
     CAMPAIGN_OBJECTIVE_DRAGON = "dragon"
     CAMPAIGN_OBJECTIVE_BLUE_DRAGON = "blue_dragon"
@@ -403,6 +406,7 @@ class CampaignConstantsMixin:
     CAMPAIGN_OBJECTIVE_TARGET_ENEMY = "target_enemy"
     CAMPAIGN_OBJECTIVE_WAVES = "waves"
     CAMPAIGN_OBJECTIVE_FULL_PARTY = "full_party"
+    CAMPAIGN_OBJECTIVE_SCRIPTED_BOT = "scripted_bot"
     GREEN_DRAGON_OBJECTIVE_ENEMY_ID = 31
     # Целевой враг «охотничьих» целей кампании (dragon/blue_dragon/orc).
     # Классовый дефолт — дракон; карта затеняет instance-атрибутом.

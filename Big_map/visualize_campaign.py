@@ -2851,10 +2851,14 @@ if __name__ == "__main__":
             "all_enemies",
             "target_enemy",
             "waves",
+            "scripted_bot",
         ],
         default=None,
         help="Campaign objective override; defaults to the selected map's objective",
     )
+    parser.add_argument("--scripted-bot", dest="no_scripted_bot",
+                        action="store_false", default=False,
+                        help="Explicitly enable the scripted capital bot")
     parser.add_argument(
         "--no-scripted-bot",
         action="store_true",

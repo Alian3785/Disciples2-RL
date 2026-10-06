@@ -21,9 +21,15 @@ from typing import Dict, List, Optional, Tuple
 from gymnasium import spaces
 from data_dicts_compact_lines import DATA as UNIT_DATA, placeholder_unit
 from grid import BLUE_TEAM_TEMPLATE
-from unit_dynamic_xp import dynamic_kill_xp_increment
+from unit_dynamic_xp import dynamic_kill_xp_increment, dynamic_unit_id
 from unit_dynamic_stats import apply_dynamic_stat_growth
+from attack_damage_limits import (
+    ATTACK_FORM_ID_KEY, current_attack_unit_id, effective_attack_damage,
+    effective_primary_amount,
+)
+from permanent_unit_stats import ensure_stat_sources, intrinsic_stat_mutation, rebuild_stat_layers
 from hero_level_abilities import apply_hero_level_stat_abilities
+from formation_occupancy import formation_footprint_is_free
 
 # Импорт действий юнитов (предполагается, что эти файлы лежат рядом)
 from summon_actions import (
@@ -109,6 +115,11 @@ THANATOS_BLADE_ARTIFACT_ITEM_NAME = "Thanatos Blade (Artifact)"
 SKULL_OF_THANATOS_ARTIFACT_ITEM_NAME = "Skull of Thanatos (Artifact)"
 HAGS_RING_ARTIFACT_ITEM_NAME = "Hag's Ring (Artifact)"
 WIGHT_BLADE_ARTIFACT_ITEM_NAME = "Wight Blade (Artifact)"
+
+# Original unit profile IDs, not mutable names, combat types or faction IDs.
+HAGS_RING_FORBIDDEN_UNIT_IDS = frozenset(
+    {"g000uu3001", "g000uu3002", "g000uu3003", "g000uu3004", "g000uu8040"}
+)
 
 HERO_COMBAT_ARTIFACT_ITEMS = frozenset(
     {
@@ -394,6 +405,7 @@ def _build_battle_template_by_name(unit_data: List[Dict]) -> Dict[str, Dict]:
             continue
         template = {
             "form_name": name,
+            "unit_id": dynamic_unit_id(entry),
             "initiative_base": _to_int_or_default(entry.get("инит", 0), default=0),
             "stand": _entry_stand(entry),
             "unit_type": str(entry.get("тип", "") or ""),
@@ -655,6 +667,7 @@ def _apply_hero_level_milestone_bonuses(unit: Dict) -> None:
         unit["original_damage"] = strength_damage
 
 
+@intrinsic_stat_mutation
 def _apply_hero_levelup_bonuses(unit: Dict) -> None:
     if not apply_dynamic_stat_growth(unit, _resolve_unit_level(unit)):
         _apply_ten_percent_levelup_stats(unit)
@@ -690,6 +703,7 @@ def _uses_dynamic_unit_levelup(unit: Dict) -> bool:
     return not _unit_has_available_evolution(unit)
 
 
+@intrinsic_stat_mutation
 def _apply_dynamic_unit_levelup(unit: Dict, exp_required: int) -> None:
     """Level a dynamic unit, optionally applying a scenario-specific XP curve."""
     unit["Level"] = _to_int_or_default(unit.get("Level", 0), default=0) + 1
@@ -949,6 +963,7 @@ class BattleEnv(gym.Env):
         penalty_unreachable_warrior: float = -0.20,
         log_enabled: bool = False,
         retreat_enabled: bool = True,
+        fear_paralysis_teams: Tuple[str, ...] = (),
     ):
         super().__init__()
         self.reward_win = float(reward_win)
@@ -956,6 +971,9 @@ class BattleEnv(gym.Env):
         self.reward_step = float(reward_step)
 
         self.retreat_enabled = bool(retreat_enabled)
+        # Campaign battle context, independent of voluntary-retreat eligibility.
+        # Team-level ownership survives transformations, copies and summons.
+        self.fear_paralysis_teams = frozenset(fear_paralysis_teams)
         self.penalty_invalid_target = float(penalty_invalid_target)
         self.penalty_unreachable_warrior = float(penalty_unreachable_warrior)
 
@@ -963,6 +981,9 @@ class BattleEnv(gym.Env):
         self._pretty_events: List[str] = []
         self.last_battle_exp: float = 0.0
         self.last_levelups: List[str] = []
+        # Exact XP recipients, parallel to the names retained for logs.
+        # References also identify escaped units outside combined.
+        self.last_levelup_units: List[Dict] = []
         self.exp_multiplier: float = 1.0
 
         # Action space = 12 targets + defend/wait/run + 24 hero item actions.
@@ -985,16 +1006,21 @@ class BattleEnv(gym.Env):
         self._post_victory_healer_positions: List[int] = []
         self.current_blue_attacker_pos: Optional[int] = None
         self.blue_attacks_left: int = 0
-        self._lord_applied_burn: Dict[int, bool] = {}
-        self._spider_applied_poison: Dict[int, bool] = {}
-        self._dregazul_applied_poison: Dict[int, bool] = {}
-        self._ismir_applied_uran: Dict[int, bool] = {}
+        self._lord_applied_burn: Dict[int, Tuple[Dict, Dict]] = {}
+        self._spider_applied_poison: Dict[int, Tuple[Dict, Dict]] = {}
+        self._dregazul_applied_poison: Dict[int, Tuple[Dict, Dict]] = {}
+        self._ismir_applied_uran: Dict[int, Tuple[Dict, Dict]] = {}
         self.escaped_units: List[Dict] = []
+        # Battle-local references preserve ownership through form changes and
+        # deepcopy/pickle without leaking identity metadata into campaign units.
+        self._linked_summons: List[Tuple[Dict, Dict]] = []
         # Опыт трупов, затёртых призывом в их клетку, — учитывается при подсчёте опыта за бой.
         self.overwritten_exp_kill: Dict[str, float] = {"red": 0.0, "blue": 0.0}
         # XP is accumulated at each death because escaped and revived units are
         # entitled only to kills that happened while they were on the field.
         self._battle_exp_event_count: int = 0
+        # Constructor-only direct callers may supply a legacy finished state.
+        self._battle_exp_tracking_initialized: bool = False
         self._battle_defeated_exp: Dict[str, float] = {"red": 0.0, "blue": 0.0}
         self.step_count: int = 0
         self.equipped_hero_items: List[Optional[str]] = [None, None]
@@ -1297,7 +1323,8 @@ class BattleEnv(gym.Env):
         max_health = float(
             target_unit.get("max_health", 0) or target_unit.get("health", 0) or 0
         )
-        if max_health <= 0 or current_health > 0:
+        if (max_health <= 0 or current_health > 0
+                or not self._revival_footprint_is_free(target_unit)):
             return 0.0
         revive_hp = min(max_health, max(1.0, float(amount or 0.0)))
         target_unit["health"] = int(round(revive_hp))
@@ -1393,6 +1420,7 @@ class BattleEnv(gym.Env):
 
         target_unit[turns_key] = self.rng.randint(1, max_turns)
         target_unit[damage_key] = int(round(amount))
+        self._release_cached_dot(target_unit, turns_key.removesuffix("_turns_left"))
         return float(amount)
 
     def _apply_hero_item_damage_buff(
@@ -1418,6 +1446,7 @@ class BattleEnv(gym.Env):
             return 0.0
         target_unit["damage"] = new_damage
         target_unit["powerup"] = 1
+        target_unit["_battle_damage_factors"] = [multiplier]
         return float(new_damage - base_damage)
 
     def _apply_hero_item_extra_turn(
@@ -1501,11 +1530,12 @@ class BattleEnv(gym.Env):
         old_initiative = target_unit.get("initiative", 0)
 
         target_unit["name"] = template.get("form_name", unit_name)
+        target_unit[ATTACK_FORM_ID_KEY] = template.get("unit_id", "")
         target_unit["accuracy"] = int(template.get("accuracy", 0) or 0)
         target_unit["accuracy_secondary"] = int(template.get("accuracy_secondary", 0) or 0)
         target_unit["damage"] = int(template.get("damage", 0) or 0)
         target_unit["damage_secondary"] = int(template.get("damage_secondary", 0) or 0)
-        target_unit["original_damage"] = target_unit["damage"]
+        self._start_temporary_damage_form(target_unit)
         target_unit["attack_type_primary"] = template.get("attack_type_primary", "Weapon")
         target_unit["attack_type_secondary"] = template.get("attack_type_secondary", "")
         target_unit["initiative_base"] = int(template.get("initiative_base", 0) or 0)
@@ -1516,6 +1546,7 @@ class BattleEnv(gym.Env):
         target_unit["stand"] = template.get("stand", target_unit.get("stand", "ahead"))
         target_unit["armor"] = int(template.get("armor", 0) or 0)
         target_unit["immunity"] = list(template.get("immunity", []))
+        self._clear_temporary_healer_wards(target_unit, include_snapshots=False)
         target_unit["resistance"] = list(template.get("resistance", []))
         target_unit["resilience_used_types"] = []
         target_unit["big"] = bool(template.get("big", False))
@@ -1557,6 +1588,8 @@ class BattleEnv(gym.Env):
             target_unit.get("unit_type", "") or ""
         )
         target_unit["teamated"] = 1
+        target_unit["_battle_lower_damage_factors"] = list(target_unit.get("_battle_damage_factors", []))
+        target_unit["_battle_damage_factors"] = [*target_unit["_battle_lower_damage_factors"], max(0.0, multiplier)]
         target_unit["damage"] = new_damage
         return float(max(0, current_damage - new_damage))
 
@@ -1647,9 +1680,18 @@ class BattleEnv(gym.Env):
         if int(target_pos) in (RED_BACK_POSITIONS + BLUE_BACK_POSITIONS) and self._is_position_behind_big(target_pos):
             return 0.0
 
+        # Preserve item summons' creation-time lifespan: ordinary heroes create
+        # independent units; the four native summoner types create dependents.
+        dependent = isinstance(source_unit, dict) and str(
+            source_unit.get("unit_type", "") or ""
+        ).lower() in {"summoner", "occultmaster", "laclaan", "lyf"}
         self._accumulate_overwritten_exp(target_unit)
+        self._release_cached_dot(target_unit, replacing_unit=True)
+        self._detach_summon_links(target_unit)
         target_unit.clear()
         target_unit.update(summon_unit)
+        if dependent:
+            self._register_linked_summon(source_unit, target_unit)
         return 1.0
 
     def _hero_item_effect_can_apply_to_target(
@@ -1666,7 +1708,8 @@ class BattleEnv(gym.Env):
             max_health = float(
                 target_unit.get("max_health", 0) or target_unit.get("health", 0) or 0
             )
-            return max_health > 0 and current_health <= 0
+            return (max_health > 0 and current_health <= 0
+                    and self._revival_footprint_is_free(target_unit))
         if effect_kind == "summon":
             target_pos = int(target_unit.get("position", 0) or 0)
             unit_name = str(effect.get("summon_unit_name", "") or "").strip()
@@ -2051,13 +2094,9 @@ class BattleEnv(gym.Env):
             for i, pos in enumerate(TARGET_POSITIONS):
                 mask_targets[i] = is_alive_red(pos) and (pos in allowed_reach)
 
-            # Страховка от пустой маски:
-            if not mask_targets.any():
-                live_idxs = [
-                    i for i, pos in enumerate(TARGET_POSITIONS) if is_alive_red(pos)
-                ]
-                if live_idxs:
-                    mask_targets[live_idxs] = True
+            # An empty target mask is valid for a blocked rear melee unit.
+            # Keep the same reachability as step(); the ordinary non-target
+            # actions above (defend/wait/retreat/items) retain their own rules.
 
         # AoE: формальная цель, запрещаем только мёртвые слоты
         elif atype in AOE_TYPES:
@@ -2087,7 +2126,8 @@ class BattleEnv(gym.Env):
                             )
                             and (
                                 self._alive(recipient)
-                                or not self._patriach_already_revived(recipient)
+                                or (not self._patriach_already_revived(recipient)
+                                    and self._revival_footprint_is_free(recipient))
                             )
                         )
                     else:
@@ -2201,7 +2241,7 @@ class BattleEnv(gym.Env):
             return True
         return False
 
-    def _restore_default_doppelgangers(self) -> None:
+    def _restore_default_doppelgangers(self, units=None) -> None:
         defaults = {
             "initiative": 80,
             "initiative_base": 80,
@@ -2218,10 +2258,13 @@ class BattleEnv(gym.Env):
             "attack_type_secondary": "",
         }
 
-        for unit in self.combined:
+        for unit in self.combined if units is None else units:
             if unit.get("name") != "Двойник":
                 continue
+            if not unit.get("doppel_copied"):
+                ensure_stat_sources(unit)
             unit["doppel_copied"] = 0
+            unit.pop(ATTACK_FORM_ID_KEY, None)
             if not self._alive(unit):
                 continue
 
@@ -2231,10 +2274,16 @@ class BattleEnv(gym.Env):
                 0.0 if prev_max <= 0 else max(0.0, min(1.0, current_health / prev_max))
             )
 
+            self._clear_temporary_healer_wards(unit)
             for key, value in defaults.items():
                 unit[key] = list(value) if isinstance(value, list) else value
 
-            unit["health"] = int(round(defaults["max_health"] * ratio))
+            # Return to the copier's own permanent growth and elixirs.
+            rebuild_stat_layers(unit)
+            # Returning to the default form must not round a survivor to death.
+            unit["health"] = max(1, int(round(unit["max_health"] * ratio)))
+            if "campaign_stat_sources" in unit:
+                unit["hp"] = unit["health"]
 
     def _apply_doppelganger_copy(
         self, attacker: Dict, target_unit: Optional[Dict]
@@ -2243,12 +2292,14 @@ class BattleEnv(gym.Env):
         if target_unit is None or not self._alive(target_unit):
             return False
 
+        ensure_stat_sources(attacker)
         current_health = float(attacker.get("health", 0) or 0)
         current_max_health = float(attacker.get("max_health", 1) or 1)
         attacker_ratio = (
             0.0 if current_max_health <= 0 else current_health / current_max_health
         )
 
+        attacker[ATTACK_FORM_ID_KEY] = current_attack_unit_id(target_unit)
         attacker["unit_type"] = target_unit.get("unit_type", attacker["unit_type"])
         attacker["initiative"] = target_unit.get("initiative", attacker["initiative"])
         attacker["initiative_base"] = target_unit.get(
@@ -2265,7 +2316,12 @@ class BattleEnv(gym.Env):
             "accuracy_secondary", attacker.get("accuracy_secondary")
         )
         attacker["immunity"] = list(target_unit.get("immunity", []))
+        self._clear_temporary_healer_wards(attacker)
         attacker["resistance"] = list(target_unit.get("resistance", []))
+        if target_unit.get("_temporary_healer_wards"):
+            attacker["_temporary_healer_wards"] = deepcopy(target_unit["_temporary_healer_wards"])
+            for element in attacker["_temporary_healer_wards"]:
+                attacker[element + "defence"] = 1
         attacker["attack_type_primary"] = target_unit.get(
             "attack_type_primary", attacker.get("attack_type_primary")
         )
@@ -2277,6 +2333,11 @@ class BattleEnv(gym.Env):
         attacker["health"] = int(
             round(target_health * max(0.0, min(1.0, attacker_ratio)))
         )
+        # Keep target wounds and the copier's HP ratio, but never round a
+        # living copy down to zero or above the copied form's maximum HP.
+        copied_max = max(0, int(round(attacker["max_health"])))
+        if current_health > 0 and copied_max > 0:
+            attacker["health"] = max(1, min(copied_max, attacker["health"]))
         attacker["doppel_copied"] = 1
         self._log(
             f"Doppelganger выбор: pos{target_unit['position']} → "
@@ -2297,6 +2358,20 @@ class BattleEnv(gym.Env):
         return [
             u["position"] for u in self.combined if u["team"] == team and self._alive(u)
         ]
+
+    def _revival_footprint_is_free(self, unit: Dict) -> bool:
+        # Revival cleanses transformations. Check the form that will actually
+        # stand up, without restoring a corpse or mutating an action mask.
+        revived_form = unit
+        if unit.get("transformed", 0):
+            _, snapshots = self._transform_snapshots_for_unit(unit)
+            if snapshots and isinstance(snapshots[0], dict):
+                revived_form = dict(
+                    unit, big=snapshots[0].get("big", unit.get("big", False))
+                )
+        return formation_footprint_is_free(
+            revived_form, (other for other in self.combined if self._alive(other))
+        )
 
     def _is_position_behind_big(self, pos: int) -> bool:
         if pos in RED_BACK_POSITIONS or pos in BLUE_BACK_POSITIONS:
@@ -2351,11 +2426,19 @@ class BattleEnv(gym.Env):
 
     def _transform_snapshot_keys(self, include_health_fields: bool = False) -> Tuple[str, ...]:
         keys = (
+            "name",
             "accuracy",
             "accuracy_secondary",
             "damage",
             "damage_secondary",
             "original_damage",
+            "powerup",
+            "teamated",
+            "lower_damage_original_damage",
+            "lower_damage_original_unit_type",
+            "_battle_damage_factors",
+            "_battle_lower_damage_factors",
+            ATTACK_FORM_ID_KEY,
             "attack_type_primary",
             "attack_type_secondary",
             "initiative",
@@ -2366,6 +2449,8 @@ class BattleEnv(gym.Env):
             "immunity",
             "resistance",
             "resilience_used_types",
+            "_temporary_healer_wards",
+            "Firedefence", "Airdefence", "Waterdefence", "Earthdefence",
             "big",
             "Level",
             "next_level_exp",
@@ -2390,6 +2475,12 @@ class BattleEnv(gym.Env):
             "initiative",
             deepcopy(unit.get("initiative_base", unit.get("initiative", 0))),
         )
+        snapshot.setdefault("original_damage", deepcopy(
+            unit.get("lower_damage_original_damage", unit.get("damage", 0))
+        ))
+        snapshot.setdefault("powerup", int(unit.get("powerup", 0) or 0))
+        snapshot.setdefault("teamated", int(unit.get("teamated", 0) or 0))
+        snapshot.setdefault(ATTACK_FORM_ID_KEY, current_attack_unit_id(unit))
         snapshot.setdefault("transformed", int(unit.get("transformed", 0) or 0))
         return snapshot
 
@@ -2416,7 +2507,16 @@ class BattleEnv(gym.Env):
         snapshot = snapshots[0]
         if isinstance(snapshot, dict):
             for key in self._transform_snapshot_keys(include_health_fields):
-                if key not in snapshot and key in unit:
+                # Temporary grants belong to the form at snapshot creation.
+                # Never backfill a later form's grant into the original form.
+                ward_key = key == "_temporary_healer_wards" or key in (
+                    "original_damage", "powerup", "teamated", "lower_damage_original_damage",
+                    "lower_damage_original_unit_type",
+                    "_battle_damage_factors", "_battle_lower_damage_factors",
+                    ATTACK_FORM_ID_KEY,
+                    "Firedefence", "Airdefence", "Waterdefence", "Earthdefence",
+                )
+                if key not in snapshot and key in unit and not ward_key:
                     snapshot[key] = deepcopy(unit[key])
             snapshot.setdefault(
                 "initiative",
@@ -2463,6 +2563,18 @@ class BattleEnv(gym.Env):
             return 1
         return max(0, min(target_max, scaled))
 
+    @staticmethod
+    def _start_temporary_damage_form(unit: Dict) -> None:
+        # Buffs belong to the form that received them. The original form's
+        # active buff is suspended in basestats, with the same turn lifetime.
+        # A temporary form starts at its own native damage, never the fighter's.
+        unit["original_damage"] = unit["damage"]
+        unit["powerup"] = 0
+        unit["teamated"] = 0
+        for key in ("_battle_damage_factors", "_battle_lower_damage_factors",
+                    "lower_damage_original_damage", "lower_damage_original_unit_type"):
+            unit.pop(key, None)
+
     def _restore_transformed_unit(self, unit: Optional[Dict]) -> bool:
         if not isinstance(unit, dict) or not unit.get("transformed", 0):
             return False
@@ -2470,18 +2582,46 @@ class BattleEnv(gym.Env):
         snapshot = snapshots[0] if snapshots else None
         if not isinstance(snapshot, dict):
             unit["transformed"] = 0
+            unit.pop(ATTACK_FORM_ID_KEY, None)
             unit.pop("wight_form_name", None)
             unit.pop("transform_effect", None)
             unit.pop("transform_recover_chance", None)
             return False
 
+        self._clear_temporary_healer_wards(unit, include_snapshots=False)
         current_health = unit.get("health", unit.get("hp", 0))
         current_max = unit.get("max_health", unit.get("maxhp", current_health))
         restored_max = snapshot.get("max_health", snapshot.get("maxhp"))
+        current_initiative = int(unit.get("initiative", 0) or 0)
 
         for key in self._transform_snapshot_keys(include_health_fields=False):
-            if key in snapshot:
+            # Initiative is also the live activation state, not just a form stat.
+            if key != "initiative" and key in snapshot:
                 unit[key] = deepcopy(snapshot[key])
+
+        # Older/default-mode snapshots may predate the baseline field. The
+        # fallback must come from the saved original, never the temporary form.
+        unit["original_damage"] = deepcopy(snapshot.get("original_damage",
+            snapshot.get("lower_damage_original_damage",
+                         snapshot.get("damage", unit.get("damage", 0)))))
+
+        # Never revive a spent activation from a pre-transformation snapshot.
+        # Conversely, an old zero must not cancel a new-round or Alchemist turn.
+        # A waiting unit keeps its already-reduced priority. All other live turn
+        # state (bonus turns, remaining strikes, retreat) is left untouched.
+        if current_initiative > 0 and not unit.get("waited", 0):
+            restored_initiative = int(snapshot.get("initiative", 0) or 0)
+            if restored_initiative <= 0:
+                restored_initiative = int(unit.get("initiative_base", 0) or 0)
+            unit["initiative"] = max(1, restored_initiative)
+
+        # Effects applied only to a temporary form must not become growth layers
+        # on the restored fighter when its original snapshot had none.
+        for key in ("powerup", "teamated", "lower_damage_original_damage",
+                    "lower_damage_original_unit_type", "_battle_damage_factors",
+                    "_battle_lower_damage_factors", ATTACK_FORM_ID_KEY):
+            if key not in snapshot:
+                unit.pop(key, None)
 
         if restored_max is not None:
             restored_health = self._scale_health_to_new_max(
@@ -2680,7 +2820,8 @@ class BattleEnv(gym.Env):
             )
             and (
                 self._alive(unit)
-                or not self._patriach_already_revived(unit)
+                or (not self._patriach_already_revived(unit)
+                    and self._revival_footprint_is_free(unit))
             )
         ]
 
@@ -2840,6 +2981,73 @@ class BattleEnv(gym.Env):
         )
         return True
 
+    @staticmethod
+    def _grant_temporary_healer_ward(healer: Dict, recipient: Dict, element: str) -> None:
+        """Refresh one shared block without replacing the underlying native ward."""
+        wards = recipient.setdefault("_temporary_healer_wards", {})
+        resistance = recipient.setdefault("resistance", [])
+        used = recipient.setdefault("resilience_used_types", [])
+        tag = element.lower()
+        native = any(str(value).lower() == tag for value in resistance)
+        consumed = any(str(value).lower() == tag for value in used)
+        ward = wards.setdefault(element, {
+            "native": native, "native_used": consumed, "sources": [],
+        })
+        # A recast must not forget a native ward consumed during an earlier cast.
+        ward["native_used"] = ward["native_used"] or (ward["native"] and consumed)
+        source = (healer.get("team"), healer.get("position"))
+        if source not in ward["sources"]:
+            ward["sources"].append(source)
+        if not native:
+            resistance.append(element)
+        recipient["resilience_used_types"] = [value for value in used if str(value).lower() != tag]
+        recipient[element + "defence"] = 1
+
+    @staticmethod
+    def _clear_temporary_healer_wards(unit: Dict, source=None, *, include_snapshots=True) -> None:
+        """Expire one caster's grants, or all grants at a battle boundary.
+
+        The resistance/used lists remain the shared one-hit projection used by
+        damage, status effects and observations. Native consumption is sticky.
+        """
+        states = [unit]
+        if include_snapshots:
+            basestats = unit.get("basestats")
+            groups = basestats.values() if isinstance(basestats, dict) else [basestats]
+            for group in groups:
+                if isinstance(group, list):
+                    states.extend(state for state in group if isinstance(state, dict))
+            if isinstance(unit.get("wolflord_base"), dict):
+                states.append(unit["wolflord_base"])
+        for state in states:
+            wards = state.get("_temporary_healer_wards", {})
+            for element, ward in list(wards.items()):
+                if source is not None:
+                    ward["sources"] = [caster for caster in ward["sources"] if tuple(caster) != source]
+                    if ward["sources"]:
+                        continue
+                tag = element.lower()
+                used = state.get("resilience_used_types") or []
+                consumed = any(str(value).lower() == tag for value in used)
+                if not ward["native"]:
+                    state["resistance"] = [value for value in state.get("resistance", [])
+                                           if str(value).lower() != tag]
+                    state["resilience_used_types"] = [value for value in used if str(value).lower() != tag]
+                elif ward["native_used"] and not consumed:
+                    state.setdefault("resilience_used_types", []).append(element)
+                state[element + "defence"] = 0
+                del wards[element]
+            if not wards:
+                state.pop("_temporary_healer_wards", None)
+                if source is None:
+                    for element in ("Fire", "Air", "Water", "Earth"):
+                        if element + "defence" in state:
+                            state[element + "defence"] = 0
+
+    def _clear_all_temporary_healer_wards(self) -> None:
+        for unit in [*self.combined, *self.escaped_units]:
+            self._clear_temporary_healer_wards(unit)
+
     def _apply_cliric_heal(self, healer: Dict, recipient: Optional[Dict]) -> bool:
         if recipient is None or not self._alive(recipient):
             return False
@@ -2852,49 +3060,22 @@ class BattleEnv(gym.Env):
             return False
 
         if healer.get("unit_type") == "Sundancer":
-            if "resistance" not in recipient:
-                recipient["resistance"] = []
-            if "Fire" not in recipient["resistance"]:
-                recipient["resistance"].append("Fire")
-            recipient.setdefault("resilience_used_types", [])
-            if "Fire" in recipient["resilience_used_types"]:
-                recipient["resilience_used_types"].remove("Fire")
-            recipient["Firedefence"] = 1
+            self._grant_temporary_healer_ward(healer, recipient, "Fire")
             self._log(
                 f"? Защита от огня: {healer['team'].upper()} {healer['name']}#{healer['position']} даёт огненную защиту "
                 f"для {recipient['team'].upper()} {recipient['name']}#{recipient['position']}"
             )
 
         elif healer.get("unit_type") == "Sylfid":
-            if "resistance" not in recipient:
-                recipient["resistance"] = []
-            if "Air" not in recipient["resistance"]:
-                recipient["resistance"].append("Air")
-            recipient.setdefault("resilience_used_types", [])
-            if "Air" in recipient["resilience_used_types"]:
-                recipient["resilience_used_types"].remove("Air")
-            recipient["Airdefence"] = 1
+            self._grant_temporary_healer_ward(healer, recipient, "Air")
             self._log(
                 f"? Защита от воздуха: {healer['team'].upper()} {healer['name']}#{healer['position']} даёт воздушную защиту "
                 f"для {recipient['team'].upper()} {recipient['name']}#{recipient['position']}"
             )
 
         elif healer.get("unit_type") == "Deva roshi":
-            if "resistance" not in recipient:
-                recipient["resistance"] = []
-            recipient.setdefault("resilience_used_types", [])
-            element_map = (
-                ("Fire", "Firedefence"),
-                ("Air", "Airdefence"),
-                ("Water", "Waterdefence"),
-                ("Earth", "Earthdefence"),
-            )
-            for element, field in element_map:
-                if element not in recipient["resistance"]:
-                    recipient["resistance"].append(element)
-                if element in recipient["resilience_used_types"]:
-                    recipient["resilience_used_types"].remove(element)
-                recipient[field] = 1
+            for element in ("Fire", "Air", "Water", "Earth"):
+                self._grant_temporary_healer_ward(healer, recipient, element)
             self._log(
                 f"? Четверная защита: {healer['team'].upper()} {healer['name']}#{healer['position']} усиливает защиту "
                 f"{recipient['team'].upper()} {recipient['name']}#{recipient['position']} от огня, воздуха, воды и земли."
@@ -2935,7 +3116,8 @@ class BattleEnv(gym.Env):
             healed = self._apply_cliric_heal(healer, recipient)
             return "heal_success" if healed else "heal_no_effect"
 
-        if self._patriach_already_revived(recipient):
+        if (self._patriach_already_revived(recipient)
+                or not self._revival_footprint_is_free(recipient)):
             return "invalid"
 
         health = float(recipient.get("health", 0) or 0)
@@ -2963,6 +3145,7 @@ class BattleEnv(gym.Env):
         recipient.setdefault("poison_damage_per_tick", 0)
         recipient.setdefault("burn_damage_per_tick", 0)
         recipient.setdefault("uran_damage_per_tick", 0)
+        self._release_cached_dot(recipient)
         recipient["poison_turns_left"] = 0
         recipient["burn_turns_left"] = 0
         recipient["uran_turns_left"] = 0
@@ -2983,9 +3166,6 @@ class BattleEnv(gym.Env):
             return False
 
         cleared = False
-        burn_cleared = False  # следим, что именно поджог снят
-        poison_cleared = False  # отметка для яда
-        uran_cleared = False  # отметка для «воды»
 
         # Сбрасываем периодический урон (яд/поджог/«вода») вместе с их счётчиками.
         for turns_key, dmg_key in (
@@ -2998,12 +3178,7 @@ class BattleEnv(gym.Env):
                 unit[turns_key] = 0
                 unit[dmg_key] = 0
                 cleared = True
-                if turns_key == "burn_turns_left":
-                    burn_cleared = True
-                elif turns_key == "poison_turns_left":
-                    poison_cleared = True
-                elif turns_key == "uran_turns_left":
-                    uran_cleared = True
+                self._release_cached_dot(unit, turns_key.removesuffix("_turns_left"))
 
         # Снимаем паралич и окаменение. Оба коротких эффекта хранятся
         # в paralyzed; длительный паралич — в long_paralyzed.
@@ -3019,14 +3194,8 @@ class BattleEnv(gym.Env):
             unit["running_away"] = 0
             cleared = True
 
-        # Hermit-замедление: возвращаем базовую инициативу и убираем флаг.
-        if unit.get("hermited", 0):
-            base_ini = int(unit.get("initiative_base", 0) or 0)
-            unit["initiative_base"] = base_ini * 2 if base_ini > 0 else base_ini
-            unit["initiative"] = max(
-                int(unit.get("initiative", 0) or 0), unit["initiative_base"]
-            )
-            unit["hermited"] = 0
+        # Hermit-замедление: возвращаем точное значение до атаки.
+        if self._restore_hermit_initiative(unit):
             cleared = True
 
         # Если юнит превращён ведьмой/суккубом/Сущим — откатываем сохранённые характеристики.
@@ -3047,6 +3216,7 @@ class BattleEnv(gym.Env):
                 or saved_unit_type == str(unit.get("unit_type", "") or "")
             ):
                 unit["damage"] = max(0, int(saved_damage))
+                unit["_battle_damage_factors"] = unit.pop("_battle_lower_damage_factors", [])
             unit["teamated"] = 0
             cleared = True
 
@@ -3071,43 +3241,35 @@ class BattleEnv(gym.Env):
             unit["shattered_armor"] = 0
             cleared = True
 
-        # Если убрали поджог – сбрасываем кэш Владыки так же, как poison/water-кэши.
-        if burn_cleared:
-            self._lord_applied_burn.clear()
-        if poison_cleared:
-            self._spider_applied_poison.clear()
-            self._dregazul_applied_poison.clear()
-        if uran_cleared:
-            self._ismir_applied_uran.clear()
-
         if cleared:
             self._log(
                 f"Очищение: {unit['team'].upper()} {unit['name']}#{unit['position']} избавляется от негативных эффектов."
             )
         return cleared
 
+    def _register_linked_summon(self, summoner: Dict, unit: Dict) -> None:
+        """Bind a dependent to the actual caster, not its mutable type or slot."""
+        self._linked_summons.append((summoner, unit))
+
+    def _detach_summon_links(self, unit: Dict) -> None:
+        """A reused formation dictionary must not inherit its former identity."""
+        self._linked_summons = [
+            (owner, summon) for owner, summon in self._linked_summons
+            if owner is not unit and summon is not unit
+        ]
+
     def _kill_linked_summons(self, summoner: Optional[Dict]) -> None:
-        """Kills all alive summons that are linked to the provided summoner."""
+        """Kill this caster's dependents, including dependent summon chains."""
         if not summoner:
             return
 
-        summoner_type = (summoner.get("unit_type") or "").lower()
-        if summoner_type not in {"summoner", "occultmaster", "laclaan", "lyf"}:
-            return
-
-        summoner_team = summoner.get("team")
         summoner_pos = summoner.get("position")
-        if summoner_team is None or summoner_pos is None:
-            return
-
-        for unit in self.combined:
-            if unit is summoner:
-                continue
-            if unit.get("team") != summoner_team:
+        for owner, unit in self._linked_summons:
+            if owner is not summoner or unit is summoner:
                 continue
             if not self._alive(unit):
                 continue
-            if unit.get("Summoned") != summoner_pos:
+            if not any(unit is current for current in self.combined):
                 continue
 
             before_hp = int(unit.get("health", 0) or 0)
@@ -3124,6 +3286,8 @@ class BattleEnv(gym.Env):
                 f"? {unit_team} {unit_name}#{unit_pos} гибнет вместе с призывателем "
                 f"{summoner_name}#{summoner_pos} ({before_hp}>0)."
             )
+            self._release_cached_dot(unit)
+            self._kill_linked_summons(unit)
 
     def _share_highvampire_leech(
         self, vampire: Dict, hp_pool: int
@@ -3245,8 +3409,57 @@ class BattleEnv(gym.Env):
                     f"Делёж крови: {atk_team} {attacker_name}#{attacker_pos} не нашёл, кому передать {leftover} HP."
                 )
 
+    def _release_cached_dot(
+        self, victim: Dict, effect: Optional[str] = None, *, replacing_unit: bool = False
+    ) -> None:
+        """Release target effects; also forget a caster when its slot is replaced."""
+        for kind, cache in (
+            ("poison", self._spider_applied_poison),
+            ("poison", self._dregazul_applied_poison),
+            ("burn", self._lord_applied_burn),
+            ("uran", self._ismir_applied_uran),
+        ):
+            if effect is not None and kind != effect:
+                continue
+            for source_id, (source, target) in list(cache.items()):
+                if target is victim or (replacing_unit and source is victim):
+                    del cache[source_id]
+
+    def _cached_dot_can_apply(
+        self,
+        attacker: Dict,
+        victim: Dict,
+        applied_cache: Dict[int, Tuple[Dict, Dict]],
+        effect: str,
+    ) -> bool:
+        """Keep one active native DoT per caster, bound to actual battle units.
+
+        Strong references prevent a replacement in the same formation slot from
+        inheriting a former unit's lock. Lazy pruning also covers units removed
+        from combat and death paths that do not deal ordinary attack damage.
+        A dead/revived caster remains bound while its original target has the DoT.
+        """
+        turns_key = f"{effect}_turns_left"
+        present = {id(unit) for unit in self.combined}
+        active = {
+            id(source): (source, target)
+            for source, target in applied_cache.values()
+            if id(source) in present
+            and id(target) in present
+            and self._alive(target)
+            and target.get(turns_key, 0) > 0
+        }
+        # Re-key references after deepcopy/unpickling an in-progress battle.
+        applied_cache.clear()
+        applied_cache.update(active)
+        return (
+            self._alive(victim)
+            and victim.get(turns_key, 0) <= 0
+            and id(attacker) not in applied_cache
+        )
+
     def _apply_cached_poison(
-        self, attacker: Dict, victim: Dict, applied_cache: Dict[int, bool]
+        self, attacker: Dict, victim: Dict, applied_cache: Dict[int, Tuple[Dict, Dict]]
     ) -> None:
         if not self._alive(victim):
             return
@@ -3254,7 +3467,7 @@ class BattleEnv(gym.Env):
         acc2 = float(attacker.get("accuracy_secondary", 0) or 0)
 
         pos = attacker.get("position")
-        if applied_cache.get(pos, False):
+        if not self._cached_dot_can_apply(attacker, victim, applied_cache, "poison"):
             return
 
         roll = self._roll_status(acc2)
@@ -3283,7 +3496,7 @@ class BattleEnv(gym.Env):
         turns = self.rng.randint(1, POISON_TURNS)
         victim["poison_turns_left"] = turns
         victim["poison_damage_per_tick"] = int(attacker.get("damage_secondary", 0) or 0)
-        applied_cache[pos] = True
+        applied_cache[id(attacker)] = (attacker, victim)
         self._log(
             f"? {atk_team} {attacker['name']}#{pos} накладывает яд "
             f"({victim['poison_damage_per_tick']} урона/ход) на "
@@ -3315,12 +3528,16 @@ class BattleEnv(gym.Env):
         elif healer.get("unit_type") == "Arhidruid":
             buffed_damage = int(round(stored_original * 2))
 
+        recipient["original_damage"] = stored_original
         recipient["damage"] = buffed_damage
         recipient["powerup"] = 1
+        recipient["_battle_damage_factors"] = [{
+            "Travnitsa": 1.25, "Novice": 1.5, "Dwarfdruid": 1.75, "Arhidruid": 2.0,
+        }[healer.get("unit_type")]]
 
         self._log(
             f"Усиление травницы: {healer['team'].upper()} {healer['name']}#{healer['position']} увеличивает урон "
-            f"{recipient['team'].upper()} {recipient['name']}#{recipient['position']} до {buffed_damage}."
+            f"{recipient['team'].upper()} {recipient['name']}#{recipient['position']} до {effective_primary_amount(recipient):g}."
         )
         return True
 
@@ -3358,86 +3575,10 @@ class BattleEnv(gym.Env):
                     "Двойник: цели появились — тип переключён на Doppelganger."
                 )
 
-        if unit.get("unit_type") == "Sundancer":
-            for ally in self.combined:
-                if ally.get("team") != unit.get("team"):
-                    continue
-                if ally.get("Firedefence", 0) == 1:
-                    ally["Firedefence"] = 0
-                    if "resistance" in ally:
-                        ally["resistance"] = [
-                            res for res in ally.get("resistance", []) if res != "Fire"
-                        ]
-                        if not ally["resistance"]:
-                            ally["resistance"] = []
-                    if (
-                        "resilience_used_types" in ally
-                        and ally["resilience_used_types"]
-                    ):
-                        ally["resilience_used_types"] = [
-                            res
-                            for res in ally["resilience_used_types"]
-                            if res != "Fire"
-                        ]
-                    self._log(
-                        f"? Солнечная защита рассеялась: {ally['team'].upper()} {ally['name']}#{ally['position']} лишается огненной стойкости."
-                    )
-
-        if unit.get("unit_type") == "Sylfid":
-            for ally in self.combined:
-                if ally.get("team") != unit.get("team"):
-                    continue
-                if ally.get("Airdefence", 0) == 1:
-                    ally["Airdefence"] = 0
-                    if "resistance" in ally:
-                        ally["resistance"] = [
-                            res for res in ally.get("resistance", []) if res != "Air"
-                        ]
-                        if not ally["resistance"]:
-                            ally["resistance"] = []
-                    if (
-                        "resilience_used_types" in ally
-                        and ally["resilience_used_types"]
-                    ):
-                        ally["resilience_used_types"] = [
-                            res for res in ally["resilience_used_types"] if res != "Air"
-                        ]
-                    self._log(
-                        f"? Воздушная защита рассеялась: {ally['team'].upper()} {ally['name']}#{ally['position']} лишается воздушной стойкости."
-                    )
-
-        if unit.get("unit_type") == "Deva roshi":
-            for ally in self.combined:
-                if ally.get("team") != unit.get("team"):
-                    continue
-                reset_map = (
-                    ("Firedefence", "Fire"),
-                    ("Airdefence", "Air"),
-                    ("Waterdefence", "Water"),
-                    ("Earthdefence", "Earth"),
-                )
-                cleared = []
-                for field, element in reset_map:
-                    if ally.get(field, 0) == 1:
-                        ally[field] = 0
-                        cleared.append(element)
-                if not cleared:
-                    continue
-                if "resistance" in ally:
-                    ally["resistance"] = [
-                        res for res in ally.get("resistance", []) if res not in cleared
-                    ]
-                    if not ally["resistance"]:
-                        ally["resistance"] = []
-                if "resilience_used_types" in ally and ally["resilience_used_types"]:
-                    ally["resilience_used_types"] = [
-                        res
-                        for res in ally["resilience_used_types"]
-                        if res not in cleared
-                    ]
-                self._log(
-                    f"? Защита Дэвы рассеялась: {ally['team'].upper()} {ally['name']}#{ally['position']} теряет стойкость против {', '.join(cleared)}."
-                )
+        # Ownership follows the caster's slot even if its current form changes.
+        source = (unit.get("team"), unit.get("position"))
+        for ally in self.combined:
+            self._clear_temporary_healer_wards(ally, source)
 
         if (
             unit.get("hermited", 0) == 1
@@ -3446,11 +3587,8 @@ class BattleEnv(gym.Env):
         ):
             if self.rng.random() < 0.5:
                 old_base = int(unit.get("initiative_base", 0) or 0)
-                new_base = old_base * 2
-                unit["hermited"] = 0
-                unit["initiative_base"] = new_base
-                current_ini = int(unit.get("initiative", 0) or 0)
-                unit["initiative"] = max(current_ini, new_base)
+                self._restore_hermit_initiative(unit)
+                new_base = int(unit.get("initiative_base", 0) or 0)
                 self._log(
                     f"Hermit slow fades: {unit['team'].upper()} {unit['name']}#{unit['position']} восстанавливает инициативу "
                     f"{old_base}->{new_base}."
@@ -3466,6 +3604,7 @@ class BattleEnv(gym.Env):
             if "poison" in immunities_lower:
                 unit["poison_turns_left"] = 0
                 unit["poison_damage_per_tick"] = 0
+                self._release_cached_dot(unit, "poison")
                 self._log(
                     f"Иммунитет к эффекту 'poison' — яд не действует на {unit['team'].upper()} {unit['name']}#{unit['position']}."
                 )
@@ -3490,9 +3629,7 @@ class BattleEnv(gym.Env):
                     unit["poison_turns_left"] -= 1
                 if unit["poison_turns_left"] <= 0:
                     unit["poison_damage_per_tick"] = 0
-                    # яд снят — пауки могут снова применить эффект
-                    self._spider_applied_poison.clear()
-                    self._dregazul_applied_poison.clear()
+                    self._release_cached_dot(unit, "poison")
 
         # ПОДЖОГ — теперь урон за тик берётся из burn_damage_per_tick (для Владыки = его урон2)
         if (
@@ -3505,6 +3642,7 @@ class BattleEnv(gym.Env):
             if "fire" in immunities_lower:
                 unit["burn_turns_left"] = 0
                 unit["burn_damage_per_tick"] = 0
+                self._release_cached_dot(unit, "burn")
                 self._log(
                     f"Иммунитет к эффекту 'Fire' — поджог не действует на {unit['team'].upper()} {unit['name']}#{unit['position']}."
                 )
@@ -3529,8 +3667,7 @@ class BattleEnv(gym.Env):
                     unit["burn_turns_left"] -= 1
                 if unit["burn_turns_left"] <= 0:
                     unit["burn_damage_per_tick"] = 0
-                    # поджог снят — Владыки могут снова применить эффект
-                    self._lord_applied_burn.clear()
+                    self._release_cached_dot(unit, "burn")
 
         # Вода — наносит периодический урон (для Сына Измира = его урон2)
         if (
@@ -3542,6 +3679,7 @@ class BattleEnv(gym.Env):
             if "water" in immunities_lower:
                 unit["uran_turns_left"] = 0
                 unit["uran_damage_per_tick"] = 0
+                self._release_cached_dot(unit, "uran")
                 self._log(
                     f"Иммунитет к эффекту 'Water' — вода не действует на {unit['team'].upper()} {unit['name']}#{unit['position']}."
                 )
@@ -3566,8 +3704,7 @@ class BattleEnv(gym.Env):
                     unit["uran_turns_left"] -= 1
                 if unit["uran_turns_left"] <= 0:
                     unit["uran_damage_per_tick"] = 0
-                    # вода снята — сын Имира может навесить повторно
-                    self._ismir_applied_uran.clear()
+                    self._release_cached_dot(unit, "uran")
 
         # Runaway check (unit flees before acting if running_away == 1)
         if unit.get("running_away", 0) == 1 and self._alive(unit):
@@ -3651,6 +3788,7 @@ class BattleEnv(gym.Env):
             u["resilience_used_types"] = []
             u["round_effects_done"] = 0
             u["doppel_copied"] = 0
+            u.pop(ATTACK_FORM_ID_KEY, None)
             u["transformed"] = 0
             u["basestats"] = {}
             u.pop("wight_form_name", None)
@@ -3659,6 +3797,9 @@ class BattleEnv(gym.Env):
             u["_battle_exp_earned"] = 0.0
         self.round_no = 1
         self.winner = None
+        self.last_battle_exp = 0.0
+        self.last_levelups = []
+        self.last_levelup_units = []
         self._post_victory_team = None
         self._post_victory_healer_positions = []
         self.current_blue_attacker_pos = None
@@ -3668,8 +3809,10 @@ class BattleEnv(gym.Env):
         self._dregazul_applied_poison = {}
         self._ismir_applied_uran = {}
         self.escaped_units = []
+        self._linked_summons = []
         self.overwritten_exp_kill = {"red": 0.0, "blue": 0.0}
         self._battle_exp_event_count = 0
+        self._battle_exp_tracking_initialized = True
         self._battle_defeated_exp = {"red": 0.0, "blue": 0.0}
         self._reset_recovery_combat_tracking()
         self.step_count = 0
@@ -3723,6 +3866,7 @@ class BattleEnv(gym.Env):
 
     def _mark_unit_escaped(self, unit: Dict) -> None:
         snapshot = deepcopy(unit)
+        self._clear_temporary_healer_wards(snapshot)
         snapshot["running_away"] = 0
         snapshot["feared"] = 0
         self.escaped_units.append(snapshot)
@@ -3731,6 +3875,8 @@ class BattleEnv(gym.Env):
             str(unit.get("team", "")),
             int(unit.get("position", 0) or 0),
         )
+        self._release_cached_dot(unit, replacing_unit=True)
+        self._detach_summon_links(unit)
         unit.clear()
         unit.update(empty_slot)
 
@@ -3752,11 +3898,17 @@ class BattleEnv(gym.Env):
         return atk1 in immunities
 
     def _is_immune_status(self, attacker: Dict, victim: Dict) -> bool:
-        atk2 = (attacker.get("attack_type_secondary", "") or "").lower()
-        if not atk2:
+        # Status-only attacks (e.g. Succub) use their primary source; secondary
+        # effects keep their own source even when the primary one is different.
+        effect_type = (
+            attacker.get("attack_type_secondary", "")
+            or attacker.get("attack_type_primary", "")
+            or ""
+        ).lower()
+        if not effect_type:
             return False
         immunities = [str(i).lower() for i in (victim.get("immunity") or [])]
-        return atk2 in immunities
+        return effect_type in immunities
 
     def _resilience_blocks(
         self, attacker: Dict, victim: Dict, custom_tag: Optional[str] = None
@@ -3795,17 +3947,42 @@ class BattleEnv(gym.Env):
     def _reset_powerup(self, unit: Optional[Dict]) -> None:
         if unit is None:
             return
-        if unit.get("powerup", 0) != 0:
-            unit["powerup"] = 0
-            if unit.get("original_damage", 0) > 0:
-                unit["damage"] = unit["original_damage"]
+        # A spent activation expires buffs on both the current form and the
+        # suspended original. Cleaning only the live form would revive a stale
+        # buff when the original snapshot is restored, even after battle.
+        _, snapshots = self._transform_snapshots_for_unit(unit)
+        for state in [unit, *snapshots]:
+            if not isinstance(state, dict) or not state.get("powerup", 0):
+                continue
+            state["powerup"] = 0
+            if state.get("original_damage", 0) > 0:
+                base_damage = state["original_damage"]
+                factors = list(state.get("_battle_damage_factors", []))
+                before_lower = list(state.get("_battle_lower_damage_factors", []))
+                # Preserve Lower Damage only if it is still layered over this
+                # buff. A later buff replaces that layer under existing rules.
+                remaining = (factors[len(before_lower):] if (
+                    state.get("teamated") and before_lower
+                    and factors[:len(before_lower)] == before_lower
+                ) else [])
+                state["damage"] = base_damage
+                for factor in remaining:
+                    state["damage"] = max(0, int(round(state["damage"] * factor)))
+                state["_battle_damage_factors"] = remaining
+                if state.get("teamated"):
+                    # Cure must not resurrect the expired buff from its own
+                    # pre-debuff snapshot either.
+                    state["lower_damage_original_damage"] = base_damage
+                    state["_battle_lower_damage_factors"] = []
 
     def _apply_damage_with_armor(self, attacker: Dict, base_dmg: float, victim: Dict) -> int:
         attacker_type = str(attacker.get("unit_type", "") or "")
         if attacker_type in ZERO_DAMAGE_NO_HP_UNIT_TYPES:
             return 0
 
-        raw_damage = float(base_dmg or 0)
+        # The cap is on the fully modified attack characteristic, not HP loss.
+        # Keep the existing +0..5 jitter and all mitigation after this boundary.
+        raw_damage = effective_attack_damage(attacker, base_dmg)
         if raw_damage <= 0:
             return 0
 
@@ -3856,6 +4033,7 @@ class BattleEnv(gym.Env):
         if "hp" in unit:
             unit["hp"] = after
         if before > 0 and after <= 0:
+            self._release_cached_dot(unit)
             self._record_unit_defeat_for_exp(unit)
         return before, after
 
@@ -3916,22 +4094,27 @@ class BattleEnv(gym.Env):
     def _apply_fear_effect(self, attacker: Dict, victim: Dict) -> bool:
         if victim.get("running_away", 0) == 1:
             return False
-        atk_type = attacker.get("attack_type_primary", "")
-        immun = set(victim.get("immunity") or [])
-        resist = set(victim.get("resistance") or [])
-        if atk_type and atk_type in immun:
+        effect_type = attacker.get("attack_type_secondary", "") or attacker.get(
+            "attack_type_primary", ""
+        )
+        if self._is_immune_status(attacker, victim):
             self._log(
-                f"Страх Баронессы не действует на {victim['team'].upper()} {victim['name']}#{victim['position']} — тип атаки '{atk_type}' поглощён."
+                f"Страх не действует на {victim['team'].upper()} {victim['name']}#{victim['position']} — тип атаки '{effect_type}' поглощён."
             )
             return False
-        if atk_type and atk_type in resist:
-            used = set(victim.get("resilience_used_types") or [])
-            if atk_type not in used:
-                victim.setdefault("resilience_used_types", []).append(atk_type)
-                self._log(
-                    f"Страх Баронессы не действует на {victim['team'].upper()} {victim['name']}#{victim['position']} — тип атаки '{atk_type}' поглощён."
-                )
+        if self._resilience_blocks(attacker, victim, custom_tag=effect_type):
+            return False
+        if victim.get("team") in self.fear_paralysis_teams:
+            if victim.get("paralyzed", 0):
                 return False
+            # Use the existing one-activation paralysis/cleanse lifecycle after
+            # Fear's own immunity and resilience checks, without a second save.
+            victim["paralyzed"] = 1
+            self._log(
+                f"{victim['team'].upper()} {victim['name']}#{victim['position']}: "
+                "страх внутри города, столицы или руин — пропуск одного хода."
+            )
+            return True
         victim["running_away"] = 1
         victim["feared"] = 1
         self._log(
@@ -3988,10 +4171,12 @@ class BattleEnv(gym.Env):
         form_template = BATTLE_TEMPLATE_BY_NAME[form_name]
         new_initiative = int(form_template["initiative_base"])
 
+        victim[ATTACK_FORM_ID_KEY] = form_template.get("unit_id", "")
         victim["accuracy"] = int(form_template["accuracy"])
         victim["accuracy_secondary"] = int(form_template["accuracy_secondary"])
         victim["damage"] = int(form_template["damage"])
         victim["damage_secondary"] = int(form_template["damage_secondary"])
+        self._start_temporary_damage_form(victim)
         victim["attack_type_primary"] = str(form_template["attack_type_primary"])
         victim["attack_type_secondary"] = str(form_template["attack_type_secondary"])
         victim["initiative_base"] = new_initiative
@@ -4002,12 +4187,13 @@ class BattleEnv(gym.Env):
         victim["unit_type"] = str(form_template["unit_type"])
         victim["armor"] = int(form_template["armor"])
         victim["immunity"] = list(form_template["immunity"])
+        self._clear_temporary_healer_wards(victim, include_snapshots=False)
         victim["resistance"] = list(form_template["resistance"])
         victim["resilience_used_types"] = []
         victim["transformed"] = 1
         self._log(
             f"Ведьма меняет характеристики {victim['team'].upper()} {victim['name']}#{victim['position']}: "
-            f"form={form_name}, accuracy={victim['accuracy']}, damage={victim['damage']}, "
+            f"form={form_name}, accuracy={victim['accuracy']}, damage={effective_primary_amount(victim):g}, "
             f"initiative={victim['initiative']}, armor={victim['armor']}"
         )
 
@@ -4041,13 +4227,14 @@ class BattleEnv(gym.Env):
 
         old_hp = victim.get("health", 0)
         old_max = victim.get("max_health", old_hp)
-        old_damage = victim.get("damage", 0)
+        old_damage = effective_primary_amount(victim)
         old_unit_type = victim.get("unit_type", "")
         old_initiative = victim.get("initiative", 0)
         new_max = int(lower_template.get("max_health", 0) or 0)
         new_health = self._scale_health_to_new_max(old_hp, old_max, new_max)
 
         victim["wight_form_name"] = lower_template.get("form_name", lower_form)
+        victim[ATTACK_FORM_ID_KEY] = lower_template.get("unit_id", "")
         victim["accuracy"] = int(lower_template.get("accuracy", 0) or 0)
         victim["accuracy_secondary"] = int(
             lower_template.get("accuracy_secondary", 0) or 0
@@ -4056,7 +4243,7 @@ class BattleEnv(gym.Env):
         victim["damage_secondary"] = int(
             lower_template.get("damage_secondary", 0) or 0
         )
-        victim["original_damage"] = victim["damage"]
+        self._start_temporary_damage_form(victim)
         victim["attack_type_primary"] = lower_template.get(
             "attack_type_primary", "Weapon"
         )
@@ -4069,6 +4256,7 @@ class BattleEnv(gym.Env):
         victim["stand"] = lower_template.get("stand", victim.get("stand", "ahead"))
         victim["armor"] = int(lower_template.get("armor", 0) or 0)
         victim["immunity"] = list(lower_template.get("immunity", []))
+        self._clear_temporary_healer_wards(victim, include_snapshots=False)
         victim["resistance"] = list(lower_template.get("resistance", []))
         victim["resilience_used_types"] = []
         victim["big"] = bool(lower_template.get("big", False))
@@ -4087,7 +4275,7 @@ class BattleEnv(gym.Env):
             f"? Wight drain: {attacker['team'].upper()} {attacker['name']}#{attacker['position']} "
             f"lowers {victim['team'].upper()} {victim['name']}#{victim['position']} "
             f"from {current_form} to {victim['wight_form_name']}: "
-            f"type {old_unit_type}->{victim['unit_type']}, damage {old_damage}->{victim['damage']}, "
+            f"type {old_unit_type}->{victim['unit_type']}, damage {old_damage:g}->{effective_primary_amount(victim):g}, "
             f"health {old_hp}/{old_max}->{victim['health']}/{victim['max_health']}."
         )
         return True
@@ -4229,6 +4417,8 @@ class BattleEnv(gym.Env):
         turns = self.rng.randint(1, POISON_TURNS)
         victim["poison_turns_left"] = turns
         victim["poison_damage_per_tick"] = int(damage_per_tick)
+        # A stronger artifact poison replaces the native effect, not its owner.
+        self._release_cached_dot(victim, "poison")
         self._log(
             f"Artifact {artifact_name}: applies poison "
             f"({int(damage_per_tick)} damage/turn) to "
@@ -4257,14 +4447,9 @@ class BattleEnv(gym.Env):
             )
             return False
 
-        forbiddenwitch_names = {
-            "\u00c0\u00f8\u00e3\u00e0\u00ed",
-            "\u00c0\u00f8\u00ea\u00e0\u00fd\u00eb\u00fc",
-            "\u00c2\u00e8\u00e4\u00e0\u00f0",
-            "\u00cc\u00e8\u00e7\u00f0\u00e0\u00fd\u00eb\u00fc",
-            "\u00c8\u00eb\u00eb\u00fe\u00ec\u00e8\u00fd\u00eb\u00eb\u00fc",
-        }
-        if victim.get("name") in forbiddenwitch_names:
+        # The profile ID survives temporary forms and display-name changes.
+        # The shared resolver also supports legacy units with only a name.
+        if dynamic_unit_id(victim) in HAGS_RING_FORBIDDEN_UNIT_IDS:
             self._log("Artifact Hag's Ring: capital guard cannot be transformed.")
             return False
 
@@ -4357,21 +4542,41 @@ class BattleEnv(gym.Env):
             victim.get("unit_type", "") or ""
         )
         victim["teamated"] = 1
+        victim["_battle_lower_damage_factors"] = list(victim.get("_battle_damage_factors", []))
+        victim["_battle_damage_factors"] = [*victim["_battle_lower_damage_factors"], 0.68]
         base_primary = int(victim.get("damage", 0) or 0)
+        displayed_primary = effective_primary_amount(victim)
         new_primary = max(0, int(round(base_primary * 0.68)))
 
         if new_primary == base_primary:
             self._log(
-                f"Tiamat debuff: damage of {victim['team'].upper()} {victim['name']}#{victim['position']} stays {base_primary}."
+                f"Tiamat debuff: damage of {victim['team'].upper()} {victim['name']}#{victim['position']} stays {effective_primary_amount(victim):g}."
             )
             return True
 
         victim["damage"] = new_primary
         self._log(
             f"Tiamat debuff: {attacker['team'].upper()} {attacker['name']}#{attacker['position']} lowers damage of "
-            f"{victim['team'].upper()} {victim['name']}#{victim['position']} from {base_primary} to {new_primary}."
+            f"{victim['team'].upper()} {victim['name']}#{victim['position']} from {displayed_primary:g} to {effective_primary_amount(victim):g}."
         )
 
+        return True
+
+    @staticmethod
+    def _restore_hermit_initiative(unit: Dict) -> bool:
+        """Restore the exact pre-slow initiative, including for dead campaign units."""
+        if not unit.get("hermited", 0):
+            return False
+        current_base = int(unit.get("initiative_base", 0) or 0)
+        # The fallback only supports older battle states without a saved value.
+        original_base = int(unit.pop("hermit_original_initiative_base", current_base * 2))
+        unit["initiative_base"] = original_base
+        # Current initiative also records whether an activation is still pending.
+        # Removing slow restores stats, but must not re-grant a spent activation.
+        current_initiative = int(unit.get("initiative", 0) or 0)
+        if current_initiative > 0:
+            unit["initiative"] = max(current_initiative, original_base)
+        unit["hermited"] = 0
         return True
 
     def _apply_hermit_initiative_slow(self, attacker: Dict, victim: Dict) -> bool:
@@ -4412,6 +4617,7 @@ class BattleEnv(gym.Env):
 
         base_ini = int(victim.get("initiative_base", 0) or 0)
         cur_ini = int(victim.get("initiative", 0) or 0)
+        victim["hermit_original_initiative_base"] = base_ini
 
         new_base = max(0, int(round(base_ini * 0.5)))
         new_cur = min(cur_ini, new_base)
@@ -5030,7 +5236,9 @@ class BattleEnv(gym.Env):
 
                     elif unit_type == "Lord":
                         pos = attacker["position"]
-                        if not self._lord_applied_burn.get(pos, False):
+                        if self._cached_dot_can_apply(
+                            attacker, victim, self._lord_applied_burn, "burn"
+                        ):
                             self._log(
                                 f"Шанс наложить поджог {int(acc2)}% — "
                                 + ("успех" if roll else "неудача")
@@ -5054,7 +5262,7 @@ class BattleEnv(gym.Env):
                                         victim["burn_damage_per_tick"] = int(
                                             attacker.get("damage_secondary", 0) or 0
                                         )
-                                        self._lord_applied_burn[pos] = True
+                                        self._lord_applied_burn[id(attacker)] = (attacker, victim)
                                         self._log(
                                             f"{atk_team.upper()} {attacker['name']}#{pos} накладывает поджог "
                                             f"({victim['burn_damage_per_tick']} урона/ход) на "
@@ -5063,7 +5271,9 @@ class BattleEnv(gym.Env):
 
                     elif unit_type == "Ismir son":
                         pos = attacker["position"]
-                        if not self._ismir_applied_uran.get(pos, False):
+                        if self._cached_dot_can_apply(
+                            attacker, victim, self._ismir_applied_uran, "uran"
+                        ):
                             self._log(
                                 f"Шанс наложить воду {int(acc2)}% — "
                                 + ("успех" if roll else "неудача")
@@ -5087,7 +5297,7 @@ class BattleEnv(gym.Env):
                                         victim["uran_damage_per_tick"] = int(
                                             attacker.get("damage_secondary", 0) or 0
                                         )
-                                        self._ismir_applied_uran[pos] = True
+                                        self._ismir_applied_uran[id(attacker)] = (attacker, victim)
                                         self._log(
                                             f"? {atk_team.upper()} {attacker['name']}#{pos} накладывает воду "
                                             f"({victim['uran_damage_per_tick']} урона/ход) на "
@@ -5100,7 +5310,7 @@ class BattleEnv(gym.Env):
                         )
 
                     elif unit_type == "Centaur Savage":
-                        extra_damage = float(attacker.get("damage", 0) or 0) * 0.05
+                        extra_damage = effective_attack_damage(attacker) * 0.05
                         extra_damage = round(extra_damage, 2)
                         if extra_damage > 0 and victim.get("health", 0) > 0:
                             before, after = self._subtract_health(victim, extra_damage)
@@ -5145,19 +5355,19 @@ class BattleEnv(gym.Env):
                     "Мизраэль",
                     "Иллюмиэлль",
                 }
-                # Иммунитет/стойкость к «превращению»
+                # Иммунитет и стойкость проверяют один и тот же источник эффекта.
+                status_tag = attacker.get("attack_type_secondary", "") or attacker.get(
+                    "attack_type_primary", ""
+                )
                 if self._is_immune_status(attacker, v):
                     self._log(
-                        f"Иммунитет к эффекту '{attacker.get('attack_type_secondary', '')}' — превращение НЕ накладывается "
+                        f"Иммунитет к эффекту '{status_tag}' — превращение НЕ накладывается "
                         f"на {v['team'].upper()} {v['name']}#{v['position']}."
                     )
                     return
                 elif v.get("name") in forbiddenwitch_names:
                     self._log("Это страж столицы")
                     return
-                status_tag = attacker.get("attack_type_secondary", "") or attacker.get(
-                    "attack_type_primary", ""
-                )
                 if self._resilience_blocks(attacker, v, custom_tag=status_tag):
                     return
                 self._apply_witch_effect(attacker, v)
@@ -5542,8 +5752,11 @@ class BattleEnv(gym.Env):
                 self.combined.append(spawn)
             else:
                 self._accumulate_overwritten_exp(slot)
+                self._release_cached_dot(slot, replacing_unit=True)
+                self._detach_summon_links(slot)
                 slot.clear()
                 slot.update(spawn)
+            self._register_linked_summon(attacker, spawn if slot is None else slot)
 
             self._log(
                 f"Призыв: {atk_team.upper()} {attacker['name']}#{attacker['position']} "
@@ -5560,7 +5773,13 @@ class BattleEnv(gym.Env):
             return _single_target()
 
     def _apply_exp_award_to_unit(self, unit: Dict, awarded_exp: int) -> None:
-        if awarded_exp <= 0 or _is_thief_battle_unit(unit):
+        if awarded_exp <= 0:
+            return
+        # XP belongs to the permanent fighter, including escaped copies/forms.
+        self._restore_transformed_unit(unit)
+        self._revert_fenrir_survivors((unit,))
+        self._restore_default_doppelgangers((unit,))
+        if _is_thief_battle_unit(unit):
             return
 
         current = float(unit.get("exp_current", 0) or 0)
@@ -5595,6 +5814,7 @@ class BattleEnv(gym.Env):
             unit["exp_current"] = max(0.0, req_value - 1)
         self._log(f"Уровень юнита {unit_name} повышен")
         self.last_levelups.append(unit_name)
+        self.last_levelup_units.append(unit)
 
     def _apply_battle_exp(self, losing_team: str) -> None:
         """Award XP with original-game timing for deaths, revivals and escapes."""
@@ -5607,7 +5827,11 @@ class BattleEnv(gym.Env):
             (str(unit.get("team", "")), int(unit.get("position", 0) or 0))
             for unit in escaped_units
         }
-        event_based = int(getattr(self, "_battle_exp_event_count", 0) or 0) > 0
+        # An initialized battle with no deaths has an authoritative zero total.
+        # Only legacy/direct-state callers without battle initialization fall back.
+        event_based = bool(getattr(self, "_battle_exp_tracking_initialized", False)) or (
+            int(getattr(self, "_battle_exp_event_count", 0) or 0) > 0
+        )
 
         if event_based:
             defeated_exp = getattr(self, "_battle_defeated_exp", {})
@@ -5646,6 +5870,7 @@ class BattleEnv(gym.Env):
 
         self.last_battle_exp = total_exp
         self.last_levelups = []
+        self.last_levelup_units = []
         self._log(f"Опыт за бой: {total_exp:g}")
 
         current_winners = [
@@ -5790,6 +6015,7 @@ class BattleEnv(gym.Env):
         self.winner = winner_team
         self._log(f"Победа {winner_team.upper()}!")
         self._apply_battle_exp(loser_team)
+        self._clear_all_temporary_healer_wards()
 
     def _activate_next_blue_post_victory_healer(self) -> None:
         while self._post_victory_healer_positions:
@@ -5812,9 +6038,9 @@ class BattleEnv(gym.Env):
         # Preserve the old victory cleanup ordering before selecting healers.
         # Restoring copied Doppelgangers also keeps them out of this phase.
         self._clear_dead_running_away_flags()
+        self._restore_all_transformed_units()
         self._revert_fenrir_survivors()
         self._restore_default_doppelgangers()
-        self._restore_all_transformed_units()
 
         healer_positions = sorted(
             int(unit.get("position", 0) or 0)
@@ -5993,112 +6219,40 @@ class BattleEnv(gym.Env):
                     else:
                         break
                 elif nxt_type in SUPPORT_TYPES:
-                    if nxt_type in POINT_HEAL_SUPPORT_TYPES:
-                        ally_pos = self._cliric_auto_target(nxt)
-                        if ally_pos is None:
-                            self._log(
-                                f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) не находит союзников для лечения."
-                            )
-                            nxt["defense"] = 1
-                            self._log(
-                                f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает половину урона."
-                            )
-                            break
-                        recipient = units_by_pos.get(ally_pos)
-                        if recipient is None:
-                            break
-                        self._log(
-                            f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) лечит союзника на pos{ally_pos}."
-                        )
-                        self._apply_cliric_heal(nxt, recipient)
-                        break
-                    if nxt_type in PATRIACH_SUPPORT_TYPES:
-                        ally_pos = self._patriach_auto_target(nxt)
-                        if ally_pos is None:
-                            self._log(
-                                f"RED ход: {nxt['name']}#{nxt['position']} (Patriach) не находит союзников для помощи."
-                            )
-                            nxt["defense"] = 1
-                            self._log(
-                                f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает половину урона."
-                            )
-                            break
-                        recipient = units_by_pos.get(ally_pos)
-                        result = self._apply_patriach_support(nxt, recipient)
-                        if result == "heal_success":
-                            self._log(
-                                f"RED ход: {nxt['name']}#{nxt['position']} (Patriach) лечит союзника на pos{ally_pos}."
-                            )
-                        elif result == "heal_no_effect":
-                            self._log(
-                                f"RED ход: {nxt['name']}#{nxt['position']} (Patriach) пытается лечить союзника на pos{ally_pos}, но тот полон сил."
-                            )
-                        elif result == "revive_success":
-                            self._log(
-                                f"RED ход: {nxt['name']}#{nxt['position']} (Patriach) воскрешает союзника на pos{ally_pos}."
-                            )
-                        else:
-                            self._log(
-                                f"RED ход: {nxt['name']}#{nxt['position']} (Patriach) не смог помочь союзнику на pos{ally_pos}."
-                            )
-                        break
-
+                    # Keep RED target selection, but execute the entire ability
+                    # through the same path as BLUE (including cure and wards).
                     if nxt_type in MASS_HEAL_TYPES:
-                        healed_any = False
-                        for ally in self.combined:
-                            if (
-                                ally.get("team") == nxt.get("team")
-                                and self._alive(ally)
-                                and ally is not nxt
-                            ):
-                                if self._apply_cliric_heal(nxt, ally):
-                                    healed_any = True
-                        if healed_any:
-                            self._log(
-                                f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) массово исцеляет союзников."
-                            )
-                        else:
-                            self._log(
-                                f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) не смог исцелить союзников."
-                            )
+                        self._attack(nxt, None)
                         break
-
-                    if nxt_type == "Alchemist":
-                        buff_pos = self._alchemist_auto_target(nxt)
+                    if nxt_type in POINT_HEAL_SUPPORT_TYPES:
+                        recipient_pos = self._cliric_auto_target(nxt)
+                    elif nxt_type in PATRIACH_SUPPORT_TYPES:
+                        recipient_pos = self._patriach_auto_target(nxt)
+                    elif nxt_type == "Alchemist":
+                        recipient_pos = self._alchemist_auto_target(nxt)
                     else:
-                        buff_pos = self._travnitsa_auto_target(nxt)
+                        recipient_pos = self._travnitsa_auto_target(nxt)
 
-                    if buff_pos is None:
+                    if recipient_pos is None:
                         self._log(
                             f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) не находит союзников для поддержки."
                         )
-                        if nxt_type == "Alchemist" and nxt.get("team") == "red":
+                        if (
+                            nxt_type in POINT_HEAL_SUPPORT_TYPES
+                            or nxt_type in PATRIACH_SUPPORT_TYPES
+                            or nxt_type == "Alchemist"
+                        ):
                             nxt["defense"] = 1
                             self._log(
                                 f"RED DEFENCE: {nxt['name']}#{nxt['position']} получает половину урона."
                             )
                         break
 
-                    recipient = units_by_pos.get(buff_pos)
-                    if recipient is None:
-                        break
-
-                    if nxt_type == "Alchemist":
-                        success = self._apply_alchemist_support(nxt, recipient)
-                        action_log = (
-                            f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) восстанавливает инициативу союзнику на pos{buff_pos}."
-                            if success
-                            else f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) не смог выполнить действие для союзника на pos{buff_pos}."
-                        )
-                    else:
-                        success = self._apply_travnitsa_buff(nxt, recipient)
-                        action_log = (
-                            f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) усиливает союзника на pos{buff_pos}."
-                            if success
-                            else f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) не смог выполнить действие для союзника на pos{buff_pos}."
-                        )
-
-                    self._log(action_log)
+                    selector = self._support_selector_for_recipient(nxt, recipient_pos)
+                    self._log(
+                        f"RED ход: {nxt['name']}#{nxt['position']} ({nxt_type}) помогает союзнику на pos{recipient_pos}."
+                    )
+                    self._attack(nxt, selector)
                     break
                 else:
                     if self._is_summoner_type(nxt_type):
@@ -6275,7 +6429,7 @@ class BattleEnv(gym.Env):
             )
             ini = _norm_positive(u.get("initiative", 0) or 0, INIT_CUR_NORM_MAX)
             ini_b = _norm_positive(u.get("initiative_base", 0) or 0, INIT_BASE_NORM_MAX)
-            dmg = _norm_positive(u.get("damage", 0) or 0, DMG_NORM_MAX)
+            dmg = _norm_positive(effective_primary_amount(u), DMG_NORM_MAX)
             dmg2 = _norm_positive(u.get("damage_secondary", 0) or 0, DMG2_NORM_MAX)
             team_v = 0.0 if u["team"] == "red" else 1.0
             pos_raw = float(u.get("position", pos) or pos)
@@ -6370,13 +6524,13 @@ class BattleEnv(gym.Env):
         self._advance_until_blue_turn()
         return self._obs(), {}
 
-    def _revert_fenrir_survivors(self) -> None:
+    def _revert_fenrir_survivors(self, units=None) -> None:
         """Возвращает всех выживших "Дух Фенрира" обратно в "Повелитель волков".
         Здоровье переносится по той же формуле (доля HP) в шкалу 225.
         Если на юните есть снапшот "wolflord_base", восстанавливаем характеристики из него,
         иначе используем каноничные статы Повелителя волков.
         """
-        for u in getattr(self, "combined", []):
+        for u in getattr(self, "combined", []) if units is None else units:
             if not isinstance(u, dict):
                 continue
             if u.get("name") != "Дух Фенрира":
@@ -6401,6 +6555,7 @@ class BattleEnv(gym.Env):
                 # Фолбэк: каноничные характеристики Повелителя волков
                 max_to = 225
                 u["unit_type"] = "Wolf Lord"
+                u.pop(ATTACK_FORM_ID_KEY, None)
                 u["damage"] = 40
                 u["damage_secondary"] = 0
                 u["initiative_base"] = 40
@@ -6736,8 +6891,11 @@ class BattleEnv(gym.Env):
                         )
                         # Снимем снапшот исходных характеристик Повелителя волков, чтобы вернуть их по окончании боя
                         if not attacker.get("wolflord_base"):
+                            ward_free_base = deepcopy(attacker)
+                            self._clear_temporary_healer_wards(ward_free_base)
                             attacker["wolflord_base"] = {
                                 "name": attacker.get("name"),
+                                ATTACK_FORM_ID_KEY: current_attack_unit_id(attacker),
                                 "unit_type": attacker.get("unit_type"),
                                 "damage": attacker.get("damage"),
                                 "damage_secondary": attacker.get("damage_secondary", 0),
@@ -6756,7 +6914,7 @@ class BattleEnv(gym.Env):
                                     "accuracy_secondary", 0
                                 ),
                                 "immunity": list(attacker.get("immunity", [])),
-                                "resistance": list(attacker.get("resistance", [])),
+                                "resistance": list(ward_free_base.get("resistance", [])),
                                 "big": bool(attacker.get("big", False)),
                             }
                         current_health = float(attacker.get("health", 0) or 0)
@@ -6774,6 +6932,7 @@ class BattleEnv(gym.Env):
                         attacker["max_health"] = 275
                         attacker["health"] = int(round(275 * health_ratio))
                         attacker["name"] = "Дух Фенрира"
+                        attacker[ATTACK_FORM_ID_KEY] = dynamic_unit_id({"name": "Дух Фенрира"})
                     else:
                         self._log(
                             f"BLUE действие: {attacker['name']}#{attacker['position']} > pos{target_pos}"
@@ -6817,7 +6976,10 @@ class BattleEnv(gym.Env):
                             step_shaping += self.penalty_invalid_target
                         self._check_victory_after_hit()
 
-        step_info = {"battle_hero_item_action": bool(is_hero_item_action)}
+        step_info = {
+            "battle_hero_item_action": bool(is_hero_item_action),
+            "battle_defend_applied": bool(is_defend_action and can_strike),
+        }
         if is_hero_item_action or self.log_enabled or bool(getattr(self, "debug_info", False)):
             step_info.update(
                 {
@@ -6895,6 +7057,7 @@ class BattleEnv(gym.Env):
             if self.step_count >= 1000:
                 truncated = True
                 self._clear_dead_running_away_flags()
+                self._clear_all_temporary_healer_wards()
                 self._log("? Лимит по шагам: бой остановлен на 1000 такте.")
         return self._obs(), reward, terminated, truncated, step_info
 
@@ -6912,6 +7075,8 @@ class BattleEnv(gym.Env):
         """
         self._patriach_revived_recipients: set[Tuple[str, int]] = set()
         self.combined = deepcopy(red_team + blue_team)
+        for unit in self.combined:
+            self._clear_temporary_healer_wards(unit)
         _apply_transformations_to_units(self.combined)
 
         # Применяем стандартную инициализацию к каждому юниту
@@ -6959,6 +7124,7 @@ class BattleEnv(gym.Env):
             u["resilience_used_types"] = []
             u["round_effects_done"] = 0
             u["doppel_copied"] = 0
+            u.pop(ATTACK_FORM_ID_KEY, None)
             u["transformed"] = 0
             u["basestats"] = {}
             u.pop("wight_form_name", None)
@@ -6969,6 +7135,9 @@ class BattleEnv(gym.Env):
         # Сбрасываем глобальное состояние боя
         self.round_no = 1
         self.winner = None
+        self.last_battle_exp = 0.0
+        self.last_levelups = []
+        self.last_levelup_units = []
         self._post_victory_team = None
         self._post_victory_healer_positions = []
         self.current_blue_attacker_pos = None
@@ -6978,8 +7147,10 @@ class BattleEnv(gym.Env):
         self._dregazul_applied_poison = {}
         self._ismir_applied_uran = {}
         self.escaped_units = []
+        self._linked_summons = []
         self.overwritten_exp_kill = {"red": 0.0, "blue": 0.0}
         self._battle_exp_event_count = 0
+        self._battle_exp_tracking_initialized = True
         self._battle_defeated_exp = {"red": 0.0, "blue": 0.0}
         self._reset_recovery_combat_tracking()
         self.step_count = 0

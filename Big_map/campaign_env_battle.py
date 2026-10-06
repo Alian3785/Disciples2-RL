@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from campaign_env_data import *
+from permanent_unit_stats import rebuild_stat_layers
 
 
 class CampaignBattleMixin:
@@ -253,6 +254,10 @@ class CampaignBattleMixin:
                 # Победа: помечаем врага побеждённым
                 self._log(f"=== ПОБЕДА В БОЮ ПРОТИВ ВРАГА {self.current_enemy_id}! ===")
                 self.grid_env.mark_enemy_defeated(self.current_enemy_id)
+                self.hero_defeated_enemy_ids.add(int(self.current_enemy_id))
+                reward = self._record_scripted_bot_combat_victory(
+                    self.current_enemy_id, battle_context_kind, reward, info
+                )
                 self._clear_enemy_map_spell_effects_for_enemy(self.current_enemy_id)
                 reward = self._apply_wave_defeat_reward_if_needed(
                     self.current_enemy_id,
@@ -331,6 +336,7 @@ class CampaignBattleMixin:
                     self.current_enemy_id,
                     reward,
                     info,
+                    defeat_source="hero_battle",
                 )
                 reward = self._apply_all_enemies_objective_reward_if_needed(reward, info)
                 reward = self._apply_target_enemy_objective_reward_if_needed(
@@ -363,6 +369,7 @@ class CampaignBattleMixin:
                     and not self._campaign_objective_is_target_enemy()
                     and not self._campaign_objective_is_waves()
                     and not self._campaign_objective_is_full_party()
+                    and not self._campaign_objective_is_scripted_bot()
                 ):
                     self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")
                     grid_obs = self._get_grid_obs()
@@ -659,21 +666,37 @@ class CampaignBattleMixin:
         bonus = 0
         source = ""
 
+        enemy_pos = self.grid_env.enemy_positions.get(normalized_enemy_id)
+        settlement_name = self.legions_settlement_territory_source_name_by_enemy_id.get(
+            normalized_enemy_id
+        )
+        settlement_tile = self.legions_settlement_source_tile_by_name.get(settlement_name)
         settlement_level = getattr(
             self,
             "SETTLEMENT_DEFENDER_LEVEL_BY_ENEMY_ID",
             SETTLEMENT_DEFENDER_LEVEL_BY_ENEMY_ID,
         ).get(normalized_enemy_id)
-        if settlement_level is not None:
+        # A configured city defender keeps the bonus only while defending that
+        # still-hostile/neutral city, not after moving out or losing ownership.
+        if (
+            settlement_level is not None
+            and settlement_tile is not None
+            and enemy_pos is not None
+            and tuple(enemy_pos) == tuple(settlement_tile)
+            and settlement_name not in self.legions_active_settlement_territory_capture_turn_by_name
+        ):
             bonus = int(SETTLEMENT_ARMOR_BONUS_BY_LEVEL.get(int(settlement_level), 0))
             source = f"settlement_level_{int(settlement_level)}"
 
-        enemy_pos = self.grid_env.enemy_positions.get(normalized_enemy_id)
-        capital_tiles = {tuple(self.CASTLE_POS)}
         empire_source_tile = tuple(getattr(self, "empire_territory_source_tile", ()))
-        if len(empire_source_tile) == 2:
-            capital_tiles.add(empire_source_tile)
-        if enemy_pos is not None and tuple(enemy_pos) in capital_tiles:
+        # Some maps use the player's capital as a fallback territory source;
+        # that does not make it an enemy-owned capital.
+        if (
+            len(empire_source_tile) == 2
+            and empire_source_tile != tuple(self.CASTLE_POS)
+            and enemy_pos is not None
+            and tuple(enemy_pos) == empire_source_tile
+        ):
             capital_bonus = int(CAPITAL_HEAL_TILE_ARMOR_BONUS)
             if capital_bonus >= bonus:
                 bonus = capital_bonus
@@ -695,6 +718,7 @@ class CampaignBattleMixin:
             if self._is_empty_enemy_unit(unit):
                 continue
             base_armor = self._normalize_armor_value(unit.get("armor", 0))
+            unit["campaign_settlement_base_armor"] = base_armor
             unit["armor"] = base_armor + bonus
             unit["settlement_armor_bonus"] = int(bonus)
             if source.startswith("settlement_level_"):
@@ -765,18 +789,61 @@ class CampaignBattleMixin:
             position = self.grid_env.agent_pos
         return tuple(position) in self.castle_heal_tiles
 
+    def _fear_paralysis_teams_for_battle(
+        self, enemy_id: Optional[int], *, attacker_team: str = "blue"
+    ) -> Tuple[str, ...]:
+        """Fear immobilizes only the army defending inside a site entrance.
+
+        Use resolved runtime entrances, not territory, visual footprints or
+        raw map coordinates. In particular, a BLUE attack's origin can still
+        be its capital even though that army has left to attack in the field.
+        """
+        site_tiles = {
+            tuple(self.CASTLE_POS),
+            tuple(self.empire_territory_source_tile),
+            *self.legions_settlement_source_name_by_tile,
+            *(
+                tuple(self._static_enemy_positions[ruin_id])
+                for ruin_id in self.RUIN_REWARD_BY_ENEMY_ID
+                if ruin_id in self._static_enemy_positions
+            ),
+        }
+        if attacker_team == "blue":
+            defender_team = "red"
+            position = self.grid_env.enemy_positions.get(enemy_id)
+        else:
+            if self.current_battle_context.get("kind") == "summon_spell":
+                # The remote summoned army is not the hero left at home.
+                return ()
+            defender_team = "blue"
+            position = self.battle_origin_pos
+            if position is None:
+                position = self.grid_env.agent_pos
+        if position is not None and tuple(position) in site_tiles:
+            return (defender_team,)
+        return ()
+
     def _init_battle(
         self,
         enemy_id: int,
         *,
         blue_team: Optional[List[Dict]] = None,
+        attacker_team: str = "blue",
     ):
         """Инициализирует BattleEnv с RED-командой врага и текущей BLUE-командой.
 
         RED берется из сохраненного состояния enemy_team_states, если оно есть,
         иначе из enemy configs выбранной карты. BLUE может быть передан явно для
         специальных боев (например, summon), либо собирается из persistent-состояния героя.
+        Hero movement and summon spells attack as BLUE; approaching waves attack
+        as RED. Fortification armor belongs exclusively to the defending side.
         """
+        if attacker_team not in {"blue", "red"}:
+            raise ValueError(f"Unknown attacking team: {attacker_team!r}")
+        self.current_battle_context.update(
+            attacker_team=attacker_team,
+            defender_team="red" if attacker_team == "blue" else "blue",
+        )
         red_team_state = self._get_enemy_team_state(enemy_id)
         if red_team_state:
             red_team = self._build_battle_team_with_placeholders("red", red_team_state)
@@ -786,7 +853,8 @@ class CampaignBattleMixin:
                 self._enemy_configs.get(enemy_id)
                 or next(iter(self._enemy_configs.values())),
             )
-        self._apply_settlement_defender_armor_bonus(enemy_id, red_team)
+        if attacker_team == "blue":
+            self._apply_settlement_defender_armor_bonus(enemy_id, red_team)
 
         # Для рекордной награды по дракону-цели: запоминаем суммарный max-HP RED.
         self._objective_dragon_max_hp = 0.0
@@ -811,7 +879,8 @@ class CampaignBattleMixin:
             )
             self._clear_equipped_banner_effects(prepared_blue_team)
             self._clear_equipped_artifact_effects(prepared_blue_team)
-            self._apply_hero_heal_tile_armor_bonus(prepared_blue_team)
+            if attacker_team == "red":
+                self._apply_hero_heal_tile_armor_bonus(prepared_blue_team)
             self._apply_active_blue_potion_effects(prepared_blue_team)
             self._apply_active_blue_support_spell_effects(prepared_blue_team)
             self._apply_equipped_book_battle_effects(prepared_blue_team)
@@ -829,7 +898,8 @@ class CampaignBattleMixin:
             )
             self._clear_equipped_banner_effects(prepared_blue_team)
             self._clear_equipped_artifact_effects(prepared_blue_team)
-            self._apply_hero_heal_tile_armor_bonus(prepared_blue_team)
+            if attacker_team == "red":
+                self._apply_hero_heal_tile_armor_bonus(prepared_blue_team)
             self._apply_active_blue_potion_effects(prepared_blue_team)
             self._apply_active_blue_support_spell_effects(prepared_blue_team)
             self._apply_equipped_book_battle_effects(prepared_blue_team)
@@ -842,11 +912,17 @@ class CampaignBattleMixin:
             self._log("Используется дефолтная BLUE команда")
 
         self.battle_env = BattleEnv(
+            fear_paralysis_teams=self._fear_paralysis_teams_for_battle(
+                enemy_id, attacker_team=attacker_team
+            ),
             retreat_enabled=not (
                 (self.map_name == "siege_train" and enemy_id == self._map.objective_enemy_id)
                 or self._hero_party_in_settlement_at_battle_start()
             ),
-            reward_win=self.battle_reward_win,
+            reward_win=(
+                0.0 if self.current_battle_context.get("kind") == "summon_spell"
+                else self.battle_reward_win
+            ),
             reward_loss=self.battle_reward_loss,
             reward_step=self.battle_reward_step,
             log_enabled=self.log_enabled,
@@ -968,9 +1044,8 @@ class CampaignBattleMixin:
                 or int(restored_unit.get("teamated", 0) or 0) != 0
             ) and original_damage > 0:
                 restored_unit["damage"] = original_damage
-            if int(restored_unit.get("hermited", 0) or 0) != 0:
-                base_ini = int(restored_unit.get("initiative_base", 0) or 0)
-                restored_unit["initiative_base"] = base_ini * 2 if base_ini > 0 else base_ini
+            BattleEnv._restore_hermit_initiative(restored_unit)
+            BattleEnv._clear_temporary_healer_wards(restored_unit)
             
             # СОХРАНЯЕМ ТЕКУЩЕЕ HP (не восстанавливаем!)
             current_hp = self._unit_current_hp(restored_unit)
@@ -985,6 +1060,7 @@ class CampaignBattleMixin:
             restored_unit["running_away"] = 0
             restored_unit["feared"] = 0
             restored_unit["transformed"] = 0
+            restored_unit.pop("_attack_form_unit_id", None)
             restored_unit["poison_turns_left"] = 0
             restored_unit["poison_damage_per_tick"] = 0
             restored_unit["burn_turns_left"] = 0
@@ -995,8 +1071,11 @@ class CampaignBattleMixin:
             restored_unit["powerup"] = 0
             restored_unit["bonusturn"] = 0
             restored_unit["resilience_used_types"] = []
+            restored_unit.pop("_battle_damage_factors", None)
+            restored_unit.pop("_battle_lower_damage_factors", None)
             restored_unit.pop("teamated", None)
             restored_unit.pop("hermited", None)
+            restored_unit.pop("hermit_original_initiative_base", None)
             restored_unit.pop("lower_damage_original_damage", None)
             restored_unit.pop("lower_damage_original_unit_type", None)
             restored_unit.pop("shattered_armor", None)
@@ -1281,6 +1360,15 @@ class CampaignBattleMixin:
             restored_unit.pop("settlement_armor_bonus", None)
             restored_unit.pop("settlement_level", None)
             
+            # Rebuild permanent stats after removing temporary combat layers.
+            for key in ("campaign_potion_armor_bonus",
+                        "campaign_map_spell_damage_multiplier",
+                        "campaign_map_spell_initiative_multiplier",
+                        "campaign_map_spell_accuracy_multiplier",
+                        "campaign_map_spell_armor_bonus"):
+                restored_unit.pop(key, None)
+            rebuild_stat_layers(restored_unit, layers=False)
+
             # Восстанавливаем initiative к базовому значению
             restored_unit["initiative"] = restored_unit.get("initiative_base", 0)
             restored_unit["needaunit"] = self._resolve_hero_needaunit(restored_unit)
@@ -1403,6 +1491,8 @@ class CampaignBattleMixin:
         if self.battle_env is None:
             return
 
+        from permanent_unit_stats import PROGRESSION_KEYS, SOURCE_KEY, has_stat_sources
+
         try:
             normalized_enemy_id = int(enemy_id)
         except (TypeError, ValueError):
@@ -1461,6 +1551,21 @@ class CampaignBattleMixin:
                 original_unit["needaunit"] = int(
                     battle_unit.get("needaunit", original_unit.get("needaunit", 0)) or 0
                 )
+                if has_stat_sources(battle_unit):
+                    # The old roster owns identity/map effects; the battle owns
+                    # earned intrinsic growth, elixirs and learned hero skills.
+                    original_unit[SOURCE_KEY] = deepcopy(battle_unit[SOURCE_KEY])
+                    for key in PROGRESSION_KEYS:
+                        if key in battle_unit:
+                            original_unit[key] = deepcopy(battle_unit[key])
+                    rebuild_stat_layers(original_unit, layers=False)
+                    # Map debuffs remain active after retreat. Their snapshots
+                    # must track the grown bare stats before they are replayed.
+                    for stat in ("armor", "damage", "damage_secondary",
+                                 "initiative_base", "accuracy", "accuracy_secondary"):
+                        base_key = self._enemy_map_spell_base_field(stat)
+                        if base_key in original_unit:
+                            original_unit[base_key] = original_unit[stat]
                 original_unit["initiative"] = (
                     int(original_unit.get("initiative_base", original_unit.get("initiative", 0)) or 0)
                     if current_hp > 0.0
@@ -1474,6 +1579,7 @@ class CampaignBattleMixin:
             original_unit["running_away"] = 0
             original_unit["feared"] = 0
             original_unit["transformed"] = 0
+            original_unit.pop("_attack_form_unit_id", None)
             original_unit["poison_turns_left"] = 0
             original_unit["poison_damage_per_tick"] = 0
             original_unit["burn_turns_left"] = 0
@@ -1486,6 +1592,7 @@ class CampaignBattleMixin:
             original_unit["bonusturn"] = 0
             original_unit.pop("teamated", None)
             original_unit.pop("hermited", None)
+            original_unit.pop("hermit_original_initiative_base", None)
             original_unit.pop("lower_damage_original_damage", None)
             original_unit.pop("lower_damage_original_unit_type", None)
             original_unit.pop("shattered_armor", None)
@@ -1637,99 +1744,70 @@ class CampaignBattleMixin:
         self._last_hero_levelup_reward += reward
         self._last_upgrade_reward += reward
 
-    def _log_turns_into_levelups(self) -> int:
-        """Применяет превращения BLUE-юнитов после level-up и возвращает их число.
+    def _build_built_unit_promotion(self, unit: Dict) -> Optional[Dict]:
+        """Build the first unlocked evolution, without changing either army.
 
-        BattleEnv только сообщает, какие имена получили уровень. CampaignEnv
-        дополнительно проверяет, построено ли здание, открывающее целевой юнит
-        из turns_into, и уже после этого заменяет боевую и persistent-запись.
+        Both the travelling party and city guards use the same faction
+        buildings, branch order, canonical target stats and permanent elixirs.
+        Persistence and reward bookkeeping belong to the caller.
         """
+        source_data = self._find_unit_data_by_name(unit.get("name"))
+        capital = source_data.get("столица") if source_data else None
+        buildings = self._get_buildings_for_capital(capital)
+        targets = unit.get("turns_into", [])
+        if not isinstance(targets, list):
+            targets = [targets]
+        for target in targets:
+            target_name = str(target).strip()
+            if not target_name:
+                continue
+            building = next((entry for entry in buildings.values()
+                             if isinstance(entry, dict)
+                             and entry.get("unit") == target_name), None)
+            if building is None or int(building.get("Build", building.get("built", 0)) or 0) != 1:
+                continue
+            data = self._find_unit_data_by_name(target_name)
+            if data is None:
+                return None
+            upgraded = self._build_unit_from_data(
+                data, unit.get("team", "blue"), unit.get("position"))
+            self._reapply_persistent_elixir_bonuses_to_promoted_unit(
+                source_unit=unit, upgraded_unit=upgraded)
+            return upgraded
+        return None
+
+    def _log_turns_into_levelups(self) -> int:
+        """Apply building-backed BLUE evolutions to the travelling party."""
         self._reset_last_upgrade_reward_tracking()
         if self.battle_env is None:
             return 0
-        levelup_names = getattr(self.battle_env, "last_levelups", []) or []
-        if not levelup_names:
-            return 0
-
-        name_to_units: Dict[str, List[Dict]] = {}
-        for unit in getattr(self.battle_env, "combined", []) or []:
-            if unit.get("team") != "blue":
-                continue
-            name = str(unit.get("name", "") or "").strip()
-            if not name:
-                continue
-            name_to_units.setdefault(name, []).append(unit)
-
         upgraded_count = 0
-        # Сумма и максимум тиров (уровней) юнитов, достигнутых апгрейдом — для бонуса и отчёта.
-        for name in levelup_names:
-            unit_data = self._find_unit_data_by_name(name)
-            capital_value = unit_data.get("\u0441\u0442\u043e\u043b\u0438\u0446\u0430") if unit_data else None
-            buildings = self._get_buildings_for_capital(capital_value)
-
-            units = name_to_units.get(name)
-            if not units:
+        for name, unit in zip(self.battle_env.last_levelups,
+                              self.battle_env.last_levelup_units):
+            # Names are for logging; identity comes from the XP recipient.
+            # Ignore opposing-team events and already-applied evolutions.
+            if unit.get("team") != "blue" or unit.get("name") != name:
                 continue
-            unit = units.pop(0)
-            pos = unit.get("position")
-            if pos is None:
-                unit_label = name
-            else:
-                unit_label = f"{name} (pos {pos})"
             self._record_hero_levelup_reward(unit)
-            turns_into = unit.get("turns_into", [])
-            if not isinstance(turns_into, list):
-                turns_into = [turns_into]
-
-            for target in turns_into:
-                target_name = str(target).strip()
-                if not target_name:
-                    continue
-                building = None
-                for entry in buildings.values():
-                    if not isinstance(entry, dict):
-                        continue
-                    if entry.get("unit") == target_name:
-                        building = entry
-                        break
-                if building is None:
-                    continue
-                built_flag = building.get("Build", building.get("built", 0))
-                if int(built_flag or 0) == 1:
-                    self._log(f'Unit "{unit_label}" upgraded to "{target_name}"')
-                    unit_data = self._find_unit_data_by_name(target_name)
-                    if unit_data is not None:
-                        upgraded_unit = self._build_unit_from_data(
-                            unit_data,
-                            unit.get("team", "blue"),
-                            unit.get("position", pos),
-                        )
-                        self._reapply_persistent_elixir_bonuses_to_promoted_unit(
-                            source_unit=unit,
-                            upgraded_unit=upgraded_unit,
-                        )
-                        unit.clear()
-                        unit.update(deepcopy(upgraded_unit))
-                        self._replace_blue_unit(upgraded_unit)
-                        upgraded_count += 1
-                        target_tier = int(
-                            float(
-                                unit_data.get("уровень", 0)
-                                or upgraded_unit.get("Level", 0)
-                                or 0
-                            )
-                        )
-                        self._last_upgrade_tier_sum += max(0, target_tier)
-                        self._last_upgrade_max_tier = max(
-                            self._last_upgrade_max_tier, target_tier
-                        )
-                        if target_tier == 3:
-                            self._last_upgrade_tier3_count += 1
-                        self._last_upgrade_reward += self._unit_upgrade_reward_for_tier(
-                            target_tier
-                        )
-                    break
-
+            upgraded_unit = self._build_built_unit_promotion(unit)
+            if upgraded_unit is None:
+                continue
+            pos = unit.get("position")
+            unit_label = name if pos is None else f"{name} (pos {pos})"
+            target_name = upgraded_unit["name"]
+            self._log(f'Unit "{unit_label}" upgraded to "{target_name}"')
+            unit_data = self._find_unit_data_by_name(target_name)
+            unit.clear()
+            unit.update(deepcopy(upgraded_unit))
+            self._replace_blue_unit(upgraded_unit)
+            upgraded_count += 1
+            target_tier = int(float(unit_data.get("уровень", 0)
+                                    or upgraded_unit.get("Level", 0) or 0))
+            self._last_upgrade_tier_sum += max(0, target_tier)
+            self._last_upgrade_max_tier = max(self._last_upgrade_max_tier, target_tier)
+            if target_tier == 3:
+                self._last_upgrade_tier3_count += 1
+            self._last_upgrade_reward += self._unit_upgrade_reward_for_tier(target_tier)
         return int(upgraded_count)
     def _heal_blue_team(self, heal_percent: float = 0.05, bonus_percent: float = 0.0) -> int:
         """
@@ -1802,8 +1880,12 @@ class CampaignBattleMixin:
             self._mark_equipment_dirty()
             self._sync_hero_progression_flags(self.blue_team_state)
             self._sync_moves_per_turn_with_hero(units=self.blue_team_state, refill=True)
-        else:
+        elif getattr(self, "_blue_state_sync_scope", None) is not True:
             self._sync_hero_progression_flags(self.blue_team_state)
+        if getattr(self, "_blue_state_sync_scope", None) is False:
+            # Внутри сборки маски отряд не меняется: первый вызов синхронизировал
+            # hero-флаги, остальные вызовы до конца сборки её пропускают.
+            self._blue_state_sync_scope = True
         return self.blue_team_state
     def _battle_grid_move_cost(self) -> int:
         """Возвращает стоимость входа в бой в очках перемещения по лимиту героя."""

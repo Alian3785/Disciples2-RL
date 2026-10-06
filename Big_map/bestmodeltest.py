@@ -158,6 +158,9 @@ def main() -> int:
         help="Which checkpoint to evaluate",
     )
     parser.add_argument("--deterministic", action="store_true")
+    parser.add_argument("--scripted-bot", dest="no_scripted_bot",
+                        action="store_false", default=False,
+                        help="Explicitly enable the scripted capital bot")
     parser.add_argument(
         "--no-scripted-bot",
         action="store_true",
@@ -182,6 +185,7 @@ def main() -> int:
             "all_enemies",
             "target_enemy",
             "waves",
+            "scripted_bot",
         ],
         default=None,
         help="Campaign objective; should match training. Defaults to the map's objective.",

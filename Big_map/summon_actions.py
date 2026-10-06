@@ -65,8 +65,13 @@ def _handle_row_summon_action(
             accumulate = getattr(battle, "_accumulate_overwritten_exp", None)
             if callable(accumulate):
                 accumulate(slot)
+            release_dot = getattr(battle, "_release_cached_dot", None)
+            if callable(release_dot):
+                release_dot(slot, replacing_unit=True)
+            battle._detach_summon_links(slot)
             slot.clear()
             slot.update(summoned)
+        battle._register_linked_summon(attacker, summoned if slot is None else slot)
 
         battle._log(f"{log_prefix}: призван {summoned['name']} на pos{position} ({summoned['stand']}).")
         spawned_any = True
