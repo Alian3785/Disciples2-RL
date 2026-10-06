@@ -1,0 +1,20 @@
+{
+  "number": 3,
+  "title": "Превращение и копирование",
+  "folder": "03_превращение_и_копирование",
+  "battles": 100,
+  "wins": {
+    "red": 50,
+    "blue": 50
+  },
+  "stalls": 0,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "event_counts": {
+    "превращения в беса": 118,
+    "параличи": 45
+  },
+  "mean_steps": 4.55,
+  "mean_rounds": 2.1
+}

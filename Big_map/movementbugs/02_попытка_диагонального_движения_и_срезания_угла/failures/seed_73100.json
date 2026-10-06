@@ -1,0 +1,32 @@
+{
+  "config": 2,
+  "seed": 73100,
+  "bugs": [
+    "Action mask разрешает диагональ между двумя препятствиями",
+    "Отряд прошёл диагонально между двумя препятствиями"
+  ],
+  "unsupported": [],
+  "checks": [],
+  "notes": [],
+  "state": {
+    "agent_pos": [
+      4,
+      4
+    ],
+    "obstacles": [
+      [
+        3,
+        4
+      ],
+      [
+        4,
+        3
+      ]
+    ],
+    "dynamic_blocked": [],
+    "moves": 0,
+    "mode": 0,
+    "bot_pos": []
+  },
+  "exception": null
+}

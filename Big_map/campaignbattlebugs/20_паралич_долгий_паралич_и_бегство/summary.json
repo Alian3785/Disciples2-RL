@@ -1,0 +1,12 @@
+{
+  "number": 20,
+  "title": "Паралич, долгий паралич и бегство",
+  "folder": "20_паралич_долгий_паралич_и_бегство",
+  "runs": 100,
+  "failed_runs": 0,
+  "successful_checks": 15800,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "seed_base": 42000
+}

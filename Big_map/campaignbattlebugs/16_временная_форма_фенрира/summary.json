@@ -1,0 +1,12 @@
+{
+  "number": 16,
+  "title": "Временная форма Фенрира",
+  "folder": "16_временная_форма_фенрира",
+  "runs": 100,
+  "failed_runs": 0,
+  "successful_checks": 16200,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "seed_base": 42000
+}

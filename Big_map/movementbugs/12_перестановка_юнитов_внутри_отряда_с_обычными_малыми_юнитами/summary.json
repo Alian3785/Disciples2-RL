@@ -1,0 +1,15 @@
+{
+  "number": 12,
+  "title": "Перестановка юнитов внутри отряда с обычными малыми юнитами",
+  "folder": "12_перестановка_юнитов_внутри_отряда_с_обычными_малыми_юнитами",
+  "runs": 100,
+  "failed_runs": 0,
+  "unsupported_runs": 0,
+  "successful_checks": 300,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "unsupported_types": {},
+  "notes": [],
+  "seed_base": 73000
+}

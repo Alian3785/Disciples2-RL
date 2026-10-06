@@ -1,0 +1,15 @@
+{
+  "number": 30,
+  "title": "Отряд с ровно нулём очков движения не может сделать дополнительный шаг",
+  "folder": "30_отряд_с_ровно_нулём_очков_движения_не_может_сделать_дополнительный_шаг",
+  "runs": 100,
+  "failed_runs": 0,
+  "unsupported_runs": 0,
+  "successful_checks": 200,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "unsupported_types": {},
+  "notes": [],
+  "seed_base": 73000
+}

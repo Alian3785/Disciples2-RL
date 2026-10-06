@@ -1,0 +1,12 @@
+{
+  "number": 8,
+  "title": "Воскрешённый в бою юнит",
+  "folder": "08_воскрешённый_в_бою_юнит",
+  "runs": 100,
+  "failed_runs": 0,
+  "successful_checks": 15900,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "seed_base": 42000
+}

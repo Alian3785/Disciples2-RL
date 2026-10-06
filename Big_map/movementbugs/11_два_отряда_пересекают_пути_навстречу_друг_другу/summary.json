@@ -1,0 +1,17 @@
+{
+  "number": 11,
+  "title": "Два отряда пересекают пути навстречу друг другу",
+  "folder": "11_два_отряда_пересекают_пути_навстречу_друг_другу",
+  "runs": 100,
+  "failed_runs": 0,
+  "unsupported_runs": 100,
+  "successful_checks": 0,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "unsupported_types": {
+    "CampaignEnv не имеет одновременного scheduler-а перемещений: player и scripted bot ходят последовательно, поэтому атомарное пересечение двух рёбер проверить нельзя.": 100
+  },
+  "notes": [],
+  "seed_base": 73000
+}

@@ -1,0 +1,18 @@
+{
+  "number": 2,
+  "title": "Попытка диагонального движения и срезания угла",
+  "folder": "02_попытка_диагонального_движения_и_срезания_угла",
+  "runs": 100,
+  "failed_runs": 100,
+  "unsupported_runs": 0,
+  "successful_checks": 0,
+  "bug_occurrences": 200,
+  "unique_bug_types": 2,
+  "bug_types": {
+    "Action mask разрешает диагональ между двумя препятствиями": 100,
+    "Отряд прошёл диагонально между двумя препятствиями": 100
+  },
+  "unsupported_types": {},
+  "notes": [],
+  "seed_base": 73000
+}

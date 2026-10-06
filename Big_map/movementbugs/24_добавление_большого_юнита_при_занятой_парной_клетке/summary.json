@@ -1,0 +1,15 @@
+{
+  "number": 24,
+  "title": "Добавление большого юнита при занятой парной клетке",
+  "folder": "24_добавление_большого_юнита_при_занятой_парной_клетке",
+  "runs": 100,
+  "failed_runs": 0,
+  "unsupported_runs": 0,
+  "successful_checks": 200,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "unsupported_types": {},
+  "notes": [],
+  "seed_base": 73000
+}

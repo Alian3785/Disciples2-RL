@@ -1,0 +1,20 @@
+{
+  "number": 14,
+  "title": "Массовое окаменение против иммунитетов",
+  "folder": "14_массовое_окаменение_против_иммунитетов",
+  "battles": 100,
+  "wins": {
+    "red": 50,
+    "blue": 50
+  },
+  "stalls": 0,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "event_counts": {
+    "превращения в беса": 54,
+    "параличи": 307
+  },
+  "mean_steps": 3.74,
+  "mean_rounds": 2.17
+}

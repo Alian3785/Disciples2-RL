@@ -1,0 +1,15 @@
+{
+  "number": 17,
+  "title": "Переход берег → вода → берег",
+  "folder": "17_переход_берег_вода_берег",
+  "runs": 100,
+  "failed_runs": 0,
+  "unsupported_runs": 0,
+  "successful_checks": 200,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "unsupported_types": {},
+  "notes": [],
+  "seed_base": 73000
+}

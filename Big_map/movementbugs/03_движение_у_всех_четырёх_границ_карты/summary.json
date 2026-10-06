@@ -1,0 +1,15 @@
+{
+  "number": 3,
+  "title": "Движение у всех четырёх границ карты",
+  "folder": "03_движение_у_всех_четырёх_границ_карты",
+  "runs": 100,
+  "failed_runs": 0,
+  "unsupported_runs": 0,
+  "successful_checks": 800,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "unsupported_types": {},
+  "notes": [],
+  "seed_base": 73000
+}

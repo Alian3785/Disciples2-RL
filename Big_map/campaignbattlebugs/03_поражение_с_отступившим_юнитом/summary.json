@@ -1,0 +1,12 @@
+{
+  "number": 3,
+  "title": "Поражение с отступившим юнитом",
+  "folder": "03_поражение_с_отступившим_юнитом",
+  "runs": 100,
+  "failed_runs": 0,
+  "successful_checks": 16200,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "seed_base": 42000
+}

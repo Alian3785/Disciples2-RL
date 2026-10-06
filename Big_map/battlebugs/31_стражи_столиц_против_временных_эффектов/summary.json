@@ -1,0 +1,20 @@
+{
+  "number": 31,
+  "title": "Стражи столиц против временных эффектов",
+  "folder": "31_стражи_столиц_против_временных_эффектов",
+  "battles": 100,
+  "wins": {
+    "red": 43,
+    "blue": 57
+  },
+  "stalls": 0,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "event_counts": {
+    "проверки разрушения брони": 648,
+    "параличи": 758
+  },
+  "mean_steps": 2.54,
+  "mean_rounds": 3.34
+}

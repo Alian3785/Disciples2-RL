@@ -1,0 +1,15 @@
+{
+  "number": 31,
+  "title": "При нехватке движения выполняется допустимая часть пути без телепортации",
+  "folder": "31_при_нехватке_движения_выполняется_допустимая_часть_пути_без_телепортации",
+  "runs": 100,
+  "failed_runs": 0,
+  "unsupported_runs": 0,
+  "successful_checks": 300,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "unsupported_types": {},
+  "notes": [],
+  "seed_base": 73000
+}

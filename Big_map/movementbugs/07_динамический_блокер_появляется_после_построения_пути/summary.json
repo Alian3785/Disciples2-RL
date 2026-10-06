@@ -1,0 +1,17 @@
+{
+  "number": 7,
+  "title": "Динамический блокер появляется после построения пути",
+  "folder": "07_динамический_блокер_появляется_после_построения_пути",
+  "runs": 100,
+  "failed_runs": 100,
+  "unsupported_runs": 0,
+  "successful_checks": 100,
+  "bug_occurrences": 100,
+  "unique_bug_types": 1,
+  "bug_types": {
+    "Scripted-отряд вошёл в динамически заблокированную клетку из устаревшего пути": 100
+  },
+  "unsupported_types": {},
+  "notes": [],
+  "seed_base": 73000
+}

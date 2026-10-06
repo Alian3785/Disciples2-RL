@@ -1,0 +1,17 @@
+{
+  "number": 22,
+  "title": "Перенос юнита между отрядом и гарнизоном",
+  "folder": "22_перенос_юнита_между_отрядом_и_гарнизоном",
+  "runs": 100,
+  "failed_runs": 0,
+  "unsupported_runs": 100,
+  "successful_checks": 0,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "unsupported_types": {
+    "Внутренние гарнизоны представлены статическими enemy team specs; API переноса BLUE-юнита между отрядом и гарнизоном отсутствует.": 100
+  },
+  "notes": [],
+  "seed_base": 73000
+}
