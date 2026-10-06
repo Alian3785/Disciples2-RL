@@ -23,7 +23,7 @@ from data_dicts_compact_lines import DATA, map_unit_to_battle, placeholder_unit
 UNITS = {unit["кто"]: unit for unit in DATA}
 MELEE_NAMES = sorted(name for name, unit in UNITS.items() if unit["тип"] in MELEE_TYPES)
 SMALL_MELEE_NAMES = [name for name in MELEE_NAMES if not UNITS[name]["размер"]]
-BIG_MELEE_NAMES = [name for name in MELEE_NAMES if UNITS[name]["размер"]]
+BIG_NAMES = sorted(name for name, unit in UNITS.items() if unit["размер"])
 
 
 def unit(name, team, position, *, initiative=50):
@@ -69,11 +69,12 @@ def assert_advertised_attacks_execute(battle):
 @pytest.mark.parametrize("back_pos", [10, 11, 12])
 @pytest.mark.parametrize("front_pos", [7, 8, 9])
 @pytest.mark.parametrize("blocker_state", ["alive", "dead", "empty"])
-def test_rear_knight_live_dead_or_empty_front(back_pos, front_pos, blocker_state):
+@pytest.mark.parametrize("front_name", ["Рыцарь", "Лучник", "Ученик", "Служка", "Сущий"])
+def test_rear_knight_live_dead_or_empty_front(back_pos, front_pos, blocker_state, front_name):
     attacker = unit("Рыцарь", "blue", back_pos, initiative=100)
     blue = [attacker]
     if blocker_state != "empty":
-        blocker = unit("Рыцарь", "blue", front_pos, initiative=90)
+        blocker = unit(front_name, "blue", front_pos, initiative=90)
         if blocker_state == "dead":
             blocker["health"] = 0
         blue.append(blocker)
@@ -91,7 +92,7 @@ def test_every_small_melee_unit_is_masked_when_blocked(name):
     # The complete data catalog includes all five factions and neutral units.
     battle = make_battle([
         unit(name, "blue", 10, initiative=100),
-        unit("Рыцарь", "blue", 7, initiative=90),
+        unit("Сущий", "blue", 7, initiative=90),
     ])
     assert not battle.compute_action_mask()[:len(TARGET_POSITIONS)].any()
     assert_advertised_attacks_execute(battle)
@@ -127,16 +128,18 @@ def test_live_enemy_front_blocks_enemy_back(attacker_pos, expected):
     assert_advertised_attacks_execute(battle)
 
 
-@pytest.mark.parametrize("name", BIG_MELEE_NAMES)
-def test_large_front_ally_blocks_rear_without_overlapping_cells(name):
-    # A large fighter at pos8 reserves pos11; the rear attacker is at pos10.
+@pytest.mark.parametrize("name", BIG_NAMES)
+@pytest.mark.parametrize("anchor", [8, 11])
+def test_large_ally_blocks_rear_without_overlapping_cells(name, anchor):
+    # Both anchors occupy pos8 and pos11; the rear attacker is at pos10.
     battle = make_battle([
         unit("Рыцарь", "blue", 10, initiative=100),
-        unit(name, "blue", 8, initiative=90),
+        unit(name, "blue", anchor, initiative=90),
     ])
     assert not battle.compute_action_mask()[:len(TARGET_POSITIONS)].any()
-    assert battle._unit_by_position(11)["health"] == 0
-    battle._unit_by_position(8)["health"] = 0
+    assert battle._unit_by_position(19 - anchor)["health"] == 0
+    battle._unit_by_position(anchor)["health"] = 0
+    assert battle.compute_action_mask()[:len(TARGET_POSITIONS)].any()
     assert_advertised_attacks_execute(battle)
 
 
@@ -169,18 +172,52 @@ def test_blocked_unit_preserves_other_action_rules(retreat_enabled, waited):
     assert reward == battle.reward_step
 
 
-def test_forced_unreachable_action_keeps_existing_execution_penalty():
+@pytest.mark.parametrize("front_name", ["Рыцарь", "Сущий", "Тиамат", "Драколич"])
+def test_forced_unreachable_action_keeps_existing_execution_penalty(front_name):
     battle = make_battle([
-        unit("Рыцарь", "blue", 10, initiative=100),
-        unit("Рыцарь", "blue", 7, initiative=90),
-    ])
+        unit("Имперский рыцарь", "blue", 10, initiative=100),
+        unit(front_name, "blue", 8, initiative=90),
+    ], [unit("Астерот", "red", 1)])
     hp_before = battle._unit_by_position(1)["health"]
-    assert not battle.compute_action_mask()[0]
+    assert not battle.compute_action_mask()[:len(TARGET_POSITIONS)].any()
     _, reward, _, _, _ = battle.step(0)
     assert reward == battle.reward_step + battle.penalty_unreachable_warrior
     assert battle._unit_by_position(1)["health"] == hp_before
     assert battle._unit_by_position(10)["initiative"] == 0
-    assert battle.current_blue_attacker_pos == 7
+    assert battle.current_blue_attacker_pos == 8
+
+
+@pytest.mark.parametrize("route", ["wight", "lycanthropy"])
+@pytest.mark.parametrize("front_pos", [7, 8, 9])
+@pytest.mark.parametrize("back_pos", [10, 11, 12])
+def test_transformed_rear_knight_stays_masked_behind_living_squire(route, front_pos, back_pos):
+    battle = make_battle([
+        unit("Рыцарь", "blue", back_pos, initiative=100),
+        unit("Скваер", "blue", front_pos, initiative=90),
+    ], [unit("Астерот", "red", 2), unit("Сущий", "red", 1)])
+    target = battle._unit_by_position(back_pos)
+    caster = battle._unit_by_position(1)
+    if route == "wight":
+        assert battle._apply_wight_decay_effect(caster, target)
+    else:
+        assert battle._apply_hero_item_lycanthropy(
+            source_unit=caster, target_unit=target,
+            effect={"transform_unit_name": "Оборотень"},
+        ) == 1
+    assert target["position"] == back_pos
+    assert target["stand"] == "behind"
+    assert battle.current_blue_attacker_pos == back_pos
+    mask = battle.compute_action_mask()
+    assert not mask[:len(TARGET_POSITIONS)].any()
+    assert mask[DEFEND_ACTION_INDEX] and mask[WAIT_ACTION_INDEX]
+    trial = deepcopy(battle)
+    hp_before = trial._unit_by_position(2)["health"]
+    _, reward, _, _, _ = trial.step(TARGET_POSITIONS.index(2))
+    assert reward == trial.reward_step + trial.penalty_unreachable_warrior
+    assert trial._unit_by_position(2)["health"] == hp_before
+    assert any("не может достать" in event for event in trial.pop_pretty_events())
+    battle._unit_by_position(front_pos)["health"] = 0
+    assert battle.compute_action_mask()[TARGET_POSITIONS.index(2)]
 
 
 @pytest.mark.parametrize("name", ["Лучник", "Ученик", "Служка"])
@@ -225,10 +262,11 @@ def test_double_strike_recomputes_targets_and_preserves_second_strike_rules(name
 
 
 @pytest.mark.parametrize("name", ["Рыцарь", "Мастер клинка", "Скелет призрак"])
-def test_red_auto_melee_also_respects_blocked_rear(name):
+@pytest.mark.parametrize("front_name", ["Рыцарь", "Сущий", "Тиамат"])
+def test_red_auto_melee_also_respects_blocked_rear(name, front_name):
     battle = make_battle([unit("Рыцарь", "blue", 7, initiative=200)], [
         unit(name, "red", 4, initiative=150),
-        unit("Рыцарь", "red", 1, initiative=100),
+        unit(front_name, "red", 2, initiative=100),
     ])
     rear = battle._unit_by_position(4)
     assert battle._warrior_allowed_targets(rear) == []
@@ -239,12 +277,37 @@ def test_red_auto_melee_also_respects_blocked_rear(name):
     assert not any(f"{name}#4" in event and "> цель" in event for event in events)
 
 
-def test_front_ranged_ally_does_not_change_existing_melee_reachability():
+@pytest.mark.parametrize("front_name", sorted(UNITS))
+def test_every_living_front_unit_masks_rear_melee_attacks(front_name):
     battle = make_battle([
-        unit("Рыцарь", "blue", 10, initiative=100),
-        unit("Лучник", "blue", 7, initiative=90),
+        unit("Имперский рыцарь", "blue", 10, initiative=100),
+        unit(front_name, "blue", 8, initiative=90),
     ])
-    assert battle.compute_action_mask()[0]
+    if battle.round_no == 0:
+        # This checks the knight's normal turn, after Doppelganger preparation.
+        battle.step(DEFEND_ACTION_INDEX)
+    assert battle.current_blue_attacker_pos == 10
+    mask = battle.compute_action_mask()
+    assert not mask[:len(TARGET_POSITIONS)].any()
+    assert mask[DEFEND_ACTION_INDEX] and mask[WAIT_ACTION_INDEX]
+    battle._unit_by_position(8)["health"] = 0
+    assert battle.compute_action_mask()[:len(TARGET_POSITIONS)].any()
+    assert_advertised_attacks_execute(battle)
+
+
+@pytest.mark.parametrize("rear_name", ["Рыцарь", "Сущий"])
+def test_small_rear_ally_does_not_block_rear_melee(rear_name):
+    battle = make_battle([
+        unit("Имперский рыцарь", "blue", 10, initiative=100),
+        unit(rear_name, "blue", 11, initiative=90),
+    ])
+    assert battle.compute_action_mask()[:len(TARGET_POSITIONS)].any()
+    assert_advertised_attacks_execute(battle)
+
+
+def test_large_rear_anchored_attacker_does_not_block_itself():
+    battle = make_battle([unit("Астерот", "blue", 11, initiative=100)])
+    assert battle.compute_action_mask()[:len(TARGET_POSITIONS)].any()
     assert_advertised_attacks_execute(battle)
 
 

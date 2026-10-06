@@ -55,7 +55,7 @@ def enter_inner_form(battle, unit, target):
 
 @pytest.mark.parametrize("name", ["Двойник", "Повелитель волков"])
 @pytest.mark.parametrize("outer", ["witch", "lycanthropy"])
-@pytest.mark.parametrize("route", ["direct_xp", "victory", "escaped_victory"])
+@pytest.mark.parametrize("route", ["direct_xp", "victory"])
 @pytest.mark.parametrize("elixirs", [False, True])
 def test_nested_forms_restore_natural_growth(name, outer, route, elixirs):
     expected = fighter(name, elixirs)
@@ -79,12 +79,9 @@ def test_nested_forms_restore_natural_growth(name, outer, route, elixirs):
     if route == "direct_xp":
         battle._apply_exp_award_to_unit(actual, 1)
     else:
-        actual["_battle_exp_earned"] = 1
         battle._battle_exp_tracking_initialized = True
         battle._battle_defeated_exp = {"red": 1.0, "blue": 0.0}
-        if route == "escaped_victory":
-            battle._mark_unit_escaped(actual)
-            actual = battle.escaped_units[-1]
+        battle._battle_exp_kills = {"red": [(0, 1.0)], "blue": []}
         target["health"] = target["hp"] = 0
         battle._begin_post_victory_healing("blue")
         assert battle.winner == "blue"

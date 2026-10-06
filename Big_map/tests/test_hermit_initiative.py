@@ -26,7 +26,7 @@ class HermitInitiativeTests(unittest.TestCase):
                 with self.subTest(team=team, initiative=initiative):
                     unit = self.victim(initiative, team)
                     self.assertTrue(self.battle._apply_hermit_initiative_slow(self.hermit, unit))
-                    self.battle.rng.seed(1)  # First recovery roll succeeds.
+                    # The finite slow always ends when the next turn begins.
                     self.battle._apply_start_of_turn_effects(unit)
                     self.assertEqual(unit["initiative_base"], initiative)
                     self.assertEqual(unit["hermited"], 0)
@@ -44,14 +44,19 @@ class HermitInitiativeTests(unittest.TestCase):
                 self.assertFalse(self.battle._restore_hermit_initiative(unit))
                 self.assertNotIn("hermit_original_initiative_base", unit)
 
-    def test_failed_recovery_preserves_original_value(self):
+    def test_slow_lasts_until_the_next_turn_begins(self):
         unit = self.victim(35)
         self.battle._apply_hermit_initiative_slow(self.hermit, unit)
-        self.battle.rng.seed(0)  # First recovery roll fails.
+        # A repeated activation in the same round (after Wait) is not a new turn.
+        unit["round_effects_done"] = 1
         self.battle._apply_start_of_turn_effects(unit)
         self.assertEqual(unit["initiative_base"], 18)
         self.assertEqual(unit["hermit_original_initiative_base"], 35)
         self.assertEqual(unit["hermited"], 1)
+        unit["round_effects_done"] = 0
+        self.battle._apply_start_of_turn_effects(unit)
+        self.assertEqual(unit["initiative_base"], 35)
+        self.assertEqual(unit["hermited"], 0)
 
     def test_immunity_and_ward_do_not_create_saved_value(self):
         for field in ("immunity", "resistance"):

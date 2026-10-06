@@ -492,8 +492,14 @@ class CampaignMapSitesMixin:
         not_at_spell_shop = not bool(site_names)
         out_of_stock = bool(site_names) and not bool(site_name)
         added_to_spellbook = False
+        no_living_leader = self._resolve_travel_hero(alive_only=True) is None
 
-        if site_name is not None and spell_name and not self._is_spell_disabled(spell_id):
+        if (
+            not no_living_leader
+            and site_name is not None
+            and spell_name
+            and not self._is_spell_disabled(spell_id)
+        ):
             if already_owned:
                 pass
             elif float(self.gold or 0.0) < spell_price:
@@ -530,6 +536,7 @@ class CampaignMapSitesMixin:
             "spell_shop_buy_not_at_spell_shop": not_at_spell_shop,
             "spell_shop_buy_out_of_stock": out_of_stock,
             "spell_shop_buy_insufficient_gold": insufficient_gold,
+            "spell_shop_buy_no_living_leader": no_living_leader,
             "turns": self.turns,
             "gold": self.gold,
             "moves": self.moves,
@@ -714,6 +721,7 @@ class CampaignMapSitesMixin:
             "trainer_unit_name": unit_name,
             "trainer_trainable": bool(can_train_here),
             "trainer_not_at_camp": not bool(site_names),
+            "trainer_no_living_leader": self._resolve_travel_hero(alive_only=True) is None,
             "trainer_missing_unit": bool(preview_before.get("missing_unit", False)),
             "trainer_dead_or_empty": bool(preview_before.get("dead_or_empty", False)),
             "trainer_already_capped": bool(preview_before.get("already_capped", False)),
@@ -1254,7 +1262,9 @@ class CampaignMapSitesMixin:
             "exp_after": 0,
         }
 
-        for unit in self._get_blue_state():
+        # Reuse the synchronized roster for the leader check below.
+        state = self._get_blue_state()
+        for unit in state:
             if int(unit.get("position", -1) or -1) != normalized_position:
                 continue
             preview["unit"] = unit
@@ -1300,7 +1310,10 @@ class CampaignMapSitesMixin:
             preview["gold_spent"] = float(affordable_xp) * gold_per_xp
             preview["exp_after"] = exp_before + int(affordable_xp)
             preview["insufficient_gold"] = affordable_xp <= 0
-            preview["trainable"] = bool(affordable_xp > 0)
+            preview["trainable"] = bool(
+                affordable_xp > 0
+                and self._resolve_travel_hero(units=state, alive_only=True) is not None
+            )
             return preview
 
         return preview

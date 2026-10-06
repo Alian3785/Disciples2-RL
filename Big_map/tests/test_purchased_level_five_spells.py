@@ -9,33 +9,25 @@ import pickle
 
 import pytest
 
-from campaign_env import CampaignEnv
-
 SHOP_SPELLS = ("emp_d2_s022", "lod_d2_s021")
 
 
 @pytest.fixture
-def make_env():
-    opened = []
-
+def make_env(campaign_factory):
     def create(capital=1, lord=1):
-        env = CampaignEnv(
+        env = campaign_factory(
             map_name="default", Realcapital=capital, typeoflord=lord,
             observation_version="local5", scripted_capital_bot_enabled=False,
             use_boss_starting_roster=False, log_enabled=False,
         )
-        env.reset(seed=42)
         assert (env.Realcapital, env.typeoflord) == (capital, lord)
         env.gold = 5000.0
         for attr in env.MANA_ATTR_BY_KIND.values():
             setattr(env, attr, 10000.0)
         env.grid_env.agent_pos = env.spell_shop_interaction_tiles[0]
-        opened.append(env)
         return env
 
-    yield create
-    for env in opened:
-        env.close()
+    return create
 
 
 def buy_action(env, key):

@@ -93,3 +93,18 @@ Each command uses the map's default objective, `local5` observations, ordinary s
 - Default, Small, and Wotan use city-capture objectives. Green Dragon Minimal already uses its dragon objective, so no additional goal flag is needed.
 - Keep each model paired with its own saved normalization statistics and the same map, observation, objective, roster, and bot settings for evaluation and replays. The trainer creates run-specific artifact directories; use `--n-envs` and `--total-steps` to adjust resource use and budget.
 - Map links include layouts, army compositions, interaction coordinates, and wave diagrams where applicable. Authentic maps remain adaptations: original visuals and scripted story events are not reproduced.
+
+## Tests
+
+With `Big_map/requirements.txt` installed, run from `Big_map`:
+
+| Check | Command |
+| --- | --- |
+| Regression suite (`tests/`) | `python run_tests.py` |
+| One affected test file | `python run_tests.py -n 0 tests/test_doppelganger_zero_turn.py` |
+| Serial run for debugging | `python run_tests.py -n 0` |
+| Slowest checks | `python run_tests.py --durations=20` |
+
+The runner uses two [pytest-xdist workers](https://pytest-xdist.readthedocs.io/en/stable/distribution.html), forwards pytest options, and disables battle dump files. `-n 0` runs without workers; `-n 4` explicitly requests four. Normal `python -m pytest tests` still works.
+
+The permanent-elixir and purchased-spell tests reuse in-memory snapshots of initialized campaigns. Every call receives independent mutable state and random generators. Tests of map construction and reset still perform real initialization. After a small change, run the affected files first; reserve the complete suite for changes spanning several subsystems or final validation.

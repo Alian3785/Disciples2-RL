@@ -97,7 +97,7 @@ def assert_canonical(env, actual, target, *, exp=0):
     assert actual["exp_current"] == exp
     assert actual["base_armor"] == expected["armor"]
     assert "garrison_base_armor" not in actual
-    assert "_battle_exp_earned" not in actual
+    assert "_battle_exp_eligible_from" not in actual
 
 
 @pytest.mark.parametrize("source,target,position", [
