@@ -7,6 +7,16 @@ from campaign_env_data import *
 
 
 class CampaignMagicMixin:
+    # Keep action slots stable for existing models; disable these spells in
+    # masks and execution, including the corresponding scroll spell IDs.
+    DISABLED_ILLUSION_SPELL_IDS = frozenset({
+        "lod_d2_s002", "lod_d2_s007", "g000ss0042", "g000ss0047",
+    })
+
+    @classmethod
+    def _is_spell_disabled(cls, spell_key: str) -> bool:
+        return str(spell_key or "") in cls.DISABLED_ILLUSION_SPELL_IDS
+
     @classmethod
     def _empty_mana_dict(cls, value: float = 0.0) -> Dict[str, float]:
         return {
@@ -302,6 +312,14 @@ class CampaignMagicMixin:
                 ]
             )
         )
+    def _is_spell_research_supported(self, spell_key: str) -> bool:
+        """Keep research slots stable, but require an implemented faction cast action."""
+        normalized_spell_key = str(spell_key or "")
+        return (
+            not self._is_spell_disabled(normalized_spell_key)
+            and normalized_spell_key in self._map_castable_spell_ids_for_capital(self.Realcapital)
+        )
+
     @classmethod
     @lru_cache(maxsize=1)
     def _all_spell_entries_by_id(cls) -> Dict[str, Dict[str, object]]:
@@ -428,6 +446,8 @@ class CampaignMagicMixin:
         nearest_targetable_enemy: Optional[Dict[str, object]] = None,
         nearest_any_enemy: Optional[Dict[str, object]] = None,
     ) -> bool:
+        if self._is_spell_disabled((slot_entry or {}).get("spell_id", (slot_entry or {}).get("id", ""))):
+            return False
         if not bool(self.scroll_magic_unlocked):
             return False
         if not isinstance(slot_entry, dict):
@@ -484,7 +504,8 @@ class CampaignMagicMixin:
     def _scroll_offensive_spell_specs_by_id(cls) -> Dict[str, Dict[str, object]]:
         offensive_kinds = {"damage", "debuff", "summon_battle"}
         return {
-            str(entry.get("spell_id", "") or ""): dict(entry)
+            # Effect summaries consume the same canonical kind as book spells.
+            str(entry.get("spell_id", "") or ""): dict(entry, kind=entry["spell_kind"])
             for entry in SCROLL_ITEM_DEFINITIONS
             if bool(entry.get("supported", False))
             and str(entry.get("spell_kind", "") or "") in offensive_kinds
@@ -493,7 +514,8 @@ class CampaignMagicMixin:
     @lru_cache(maxsize=1)
     def _scroll_support_spell_specs_by_id(cls) -> Dict[str, Dict[str, object]]:
         return {
-            str(entry.get("spell_id", "") or ""): dict(entry)
+            # Effect summaries consume the same canonical kind as book spells.
+            str(entry.get("spell_id", "") or ""): dict(entry, kind=entry["spell_kind"])
             for entry in SCROLL_ITEM_DEFINITIONS
             if bool(entry.get("supported", False))
             and str(entry.get("spell_kind", "") or "")
@@ -705,12 +727,28 @@ class CampaignMagicMixin:
         return normalized_level >= 5 and int(self.typeoflord) != 2
     def _is_spell_blocked_by_typeoflord(self, spell: Optional[Dict[str, object]]) -> bool:
         return self._is_spell_level_masked_by_typeoflord(self._spell_level_from_entry(spell))
+    def _is_spellbook_spell_blocked_by_typeoflord(self, spell_key: str) -> bool:
+        """Purchases bypass the ruler's level limit for casting, never research.
+
+        Use purchase provenance rather than the learned/owned flag: that flag
+        also represents researched spells and does not establish acquisition.
+        The existing purchase set is part of the copied campaign state and
+        is cleared with the spellbook on reset.
+        """
+        normalized_spell_key = str(spell_key or "")
+        if normalized_spell_key in self.spell_shop_purchased_spell_ids:
+            return False
+        return self._is_spell_blocked_by_typeoflord(
+            self.active_spells.get(normalized_spell_key)
+        )
     def _can_cast_legion_damage_spell(
         self,
         spell_key: str,
         *,
         nearest_enemy: Optional[Dict[str, object]] = None,
     ) -> bool:
+        if self._is_spell_disabled(spell_key):
+            return False
         normalized_spell_key = str(spell_key or "")
         current_spell_ids = self._map_offensive_spell_ids_for_capital(self.Realcapital)
         if not current_spell_ids:
@@ -723,7 +761,7 @@ class CampaignMagicMixin:
         if not isinstance(spell, dict):
             return False
         spell_spec = self._map_offensive_spell_spec(normalized_spell_key)
-        if self._is_spell_blocked_by_typeoflord(spell):
+        if self._is_spellbook_spell_blocked_by_typeoflord(spell_key):
             return False
         if not self._is_spell_learned(normalized_spell_key):
             return False
@@ -743,6 +781,8 @@ class CampaignMagicMixin:
             return False
         return self._has_mana_for_costs(self._get_spell_use_costs(spell))
     def _can_cast_support_spell(self, spell_key: str) -> bool:
+        if self._is_spell_disabled(spell_key):
+            return False
         normalized_spell_key = str(spell_key or "")
         current_spell_ids = self._map_support_spell_ids_for_capital(self.Realcapital)
         if not current_spell_ids:
@@ -754,7 +794,7 @@ class CampaignMagicMixin:
         spell = self.active_spells.get(normalized_spell_key)
         if not isinstance(spell, dict):
             return False
-        if self._is_spell_blocked_by_typeoflord(spell):
+        if self._is_spellbook_spell_blocked_by_typeoflord(spell_key):
             return False
         if not self._is_spell_learned(normalized_spell_key):
             return False
@@ -769,6 +809,8 @@ class CampaignMagicMixin:
         nearest_targetable_enemy: Optional[Dict[str, object]] = None,
         nearest_any_enemy: Optional[Dict[str, object]] = None,
     ) -> bool:
+        if self._is_spell_disabled(spell_key):
+            return False
         normalized_spell_key = str(spell_key or "")
         if not normalized_spell_key:
             return False
@@ -852,6 +894,8 @@ class CampaignMagicMixin:
         nearest_targetable_enemy: Optional[Dict[str, object]] = None,
         nearest_any_enemy: Optional[Dict[str, object]] = None,
     ) -> bool:
+        if self._is_spell_disabled((slot_entry or {}).get("spell_id", (slot_entry or {}).get("id", ""))):
+            return False
         if not bool(self.scroll_magic_unlocked):
             return False
         if not isinstance(slot_entry, dict):
@@ -956,6 +1000,9 @@ class CampaignMagicMixin:
             ),
             "reward": 0.0,
         }
+        if self._is_spell_disabled(normalized_spell_key):
+            result["spell_disabled"] = True
+            return result
         if self._spell_kind_is_support(spell_kind) and not self._support_spell_spec_would_apply(
             normalized_spell_key,
             spell_spec,
@@ -1129,17 +1176,16 @@ class CampaignMagicMixin:
             and not self._enemy_team_has_living_units(target_enemy_id)
         ):
             result["spell_enemy_defeated"] = True
-            result["enemy_defeat_reward"] = self._compute_enemy_defeat_reward(target_enemy_id)
-            result["enemy_defeat_reward_base"] = float(self.reward_defeat_enemy)
+            result["enemy_defeat_reward"] = self._compute_enemy_defeat_reward(target_enemy_id, magic=True)
+            result["enemy_defeat_reward_base"] = self._magic_enemy_defeat_reward_value()
             result["ruin_clear_bonus_reward"] = (
-                float(self.reward_ruin_clear_bonus)
+                float(self.reward_ruin_clear_bonus) * self.reward_magic_enemy_defeat_multiplier
                 if int(target_enemy_id or -1) in self.RUIN_REWARD_BY_ENEMY_ID
                 else 0.0
             )
             result["reward"] = (
                 float(result["reward"])
                 + float(result["enemy_defeat_reward"])
-                + float(result["ruin_clear_bonus_reward"])
             )
             self.grid_env.mark_enemy_defeated(target_enemy_id)
             self._clear_enemy_map_spell_effects_for_enemy(target_enemy_id)
@@ -1149,6 +1195,7 @@ class CampaignMagicMixin:
                 target_enemy_id,
                 float(result["reward"]),
                 result,
+                defeat_source="map_spell",
             )
 
 
@@ -1210,6 +1257,7 @@ class CampaignMagicMixin:
             "spell_cast_applied": spell_cast_applied,
             "spell_cast_executed": spell_cast_executed,
             "spell_cast_reward": spell_cast_reward,
+            "scroll_item_consumed": bool(cast_result.get("scroll_item_consumed", False)),
             "spell_enemy_defeated": spell_enemy_defeated,
             "target_enemy_id": target_enemy_id,
             "insufficient_mana": insufficient_mana,
@@ -1219,6 +1267,10 @@ class CampaignMagicMixin:
         }
         if minimal_extra:
             info.update(minimal_extra)
+        if "objective_reward_eligible" in cast_result:
+            for key in ("objective_reward_eligible", "objective_defeat_source",
+                        "final_objective_reward", "green_dragon_objective_reward"):
+                info[key] = cast_result[key]
         if not self._include_detailed_step_info():
             return info
 
@@ -1314,7 +1366,7 @@ class CampaignMagicMixin:
                 ),
                 "enemy_defeat_reward": enemy_defeat_reward,
                 "enemy_defeat_reward_base": (
-                    float(self.reward_defeat_enemy) if spell_enemy_defeated else 0.0
+                    _result_float("enemy_defeat_reward_base") if spell_enemy_defeated else 0.0
                 ),
                 "blue_exp_reward": 0.0,
                 "blue_exp_raw": 0.0,
@@ -1384,6 +1436,7 @@ class CampaignMagicMixin:
                 )
                 info["campaign_objective"] = self.campaign_objective
 
+            reward = self._apply_all_enemies_objective_reward_if_needed(reward, info)
             campaign_objective_reason = self._campaign_objective_completion_reason(
                 target_enemy_id
             )
@@ -1405,6 +1458,7 @@ class CampaignMagicMixin:
                 and not self._campaign_objective_is_cities()
                 and not self._campaign_objective_is_waves()
                 and not self._campaign_objective_is_full_party()
+                and not self._campaign_objective_is_scripted_bot()
             ):
                 self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")
                 grid_obs = self._get_grid_obs()
@@ -1525,6 +1579,9 @@ class CampaignMagicMixin:
             unit["initiative_base"] = base_initiative
             unit["accuracy"] = base_accuracy
             unit["accuracy_secondary"] = base_accuracy_secondary
+            for kind in ("damage", "initiative", "accuracy"):
+                unit.pop("campaign_map_spell_" + kind + "_multiplier", None)
+            unit.pop("campaign_map_spell_armor_bonus", None)
 
             current_hp = float(unit.get("health", 0) or unit.get("hp", 0) or 0.0)
             max_hp = float(unit.get("max_health", 0) or unit.get("maxhp", 0) or 0.0)
@@ -1619,6 +1676,9 @@ class CampaignMagicMixin:
                 )
             )
 
+            for kind in ("damage", "initiative", "accuracy"):
+                unit["campaign_map_spell_" + kind + "_multiplier"] = float(summary[kind + "_multiplier"])
+            unit["campaign_map_spell_armor_bonus"] = int(summary["armor_delta"])
             unit["armor"] = self._normalize_armor_value(
                 float(base_armor) + float(summary["armor_delta"])
             )
@@ -1907,12 +1967,15 @@ class CampaignMagicMixin:
         healed_units = 0
         healed_total = 0.0
 
-        # Полная регенерация привязана к драконьему стеку id 31. В режиме
+        # Полная регенерация — только для дракона в стеке id 31. В режиме
         # blue_dragon этот же стек содержит Синего дракона вместо Зелёного,
         # поэтому оба варианта полностью восстанавливаются каждый новый ход.
         # Остальные целевые враги (например, орк из orc_duel) лечатся обычной долей.
         dragon_enemy_id = int(self.GREEN_DRAGON_OBJECTIVE_ENEMY_ID)
         for enemy_id, is_alive in self.grid_env.enemies_alive.items():
+            # The mobile bot retains its own return-home/rest recovery cycle.
+            if enemy_id in self.grid_env.dynamic_enemy_ids:
+                continue
             if not bool(is_alive):
                 continue
             is_dragon = int(enemy_id) == dragon_enemy_id
@@ -1927,7 +1990,7 @@ class CampaignMagicMixin:
                 max_hp = float(unit.get("max_health", 0) or unit.get("maxhp", 0) or 0.0)
                 if max_hp <= 0.0 or current_hp <= 0.0 or current_hp >= max_hp:
                     continue
-                if is_dragon:
+                if is_dragon and unit.get("name") in ("Зелёный дракон", "Синий дракон"):
                     new_hp = max_hp
                 else:
                     heal_amount = max(1.0, max_hp * float(heal_fraction))
@@ -1969,7 +2032,7 @@ class CampaignMagicMixin:
         if 0 <= idx < len(self.spell_keys):
             spell_key = self.spell_keys[idx]
             spell = self.active_spells.get(spell_key)
-            if isinstance(spell, dict):
+            if isinstance(spell, dict) and self._is_spell_research_supported(spell_key):
                 spell_description = str(spell.get("description", "") or "").strip()
                 try:
                     spell_level = int(spell.get("level", 0) or 0)
@@ -2008,6 +2071,8 @@ class CampaignMagicMixin:
             "spell_key": spell_key,
             "spell_description": spell_description,
             "spell_level": spell_level,
+            "spell_disabled": self._is_spell_disabled(spell_key),
+            "spell_research_supported": self._is_spell_research_supported(spell_key),
             "spell_learned": spell_learned,
             "spell_already_learned": spell_already_learned,
             "spell_learning_locked": spell_learning_locked,
@@ -2059,7 +2124,7 @@ class CampaignMagicMixin:
         spell_used_this_turn = bool(spell_key) and self._spell_cast_limit_reached_this_turn(
             str(spell_key)
         )
-        blocked_by_typeoflord = self._is_spell_blocked_by_typeoflord(spell)
+        blocked_by_typeoflord = self._is_spellbook_spell_blocked_by_typeoflord(spell_key)
         nearest_enemy = (
             self._get_map_offensive_spell_target(str(spell_key))
             if spell_key
@@ -2169,7 +2234,7 @@ class CampaignMagicMixin:
         spell_used_this_turn = bool(spell_key) and self._spell_cast_limit_reached_this_turn(
             str(spell_key)
         )
-        blocked_by_typeoflord = self._is_spell_blocked_by_typeoflord(spell)
+        blocked_by_typeoflord = self._is_spellbook_spell_blocked_by_typeoflord(spell_key)
         can_cast = (
             bool(spell_key)
             and isinstance(spell, dict)
@@ -2574,12 +2639,12 @@ class CampaignMagicMixin:
                 self.summon_hero_battle_bonus_pending = bool(
                     self.summon_hero_battle_bonus_enemy_ids_this_turn
                 )
-            enemy_reward = self._compute_enemy_defeat_reward(enemy_id)
+            enemy_reward = self._compute_enemy_defeat_reward(enemy_id, magic=True)
             reward += enemy_reward
             info["enemy_defeat_reward"] = float(enemy_reward)
-            info["enemy_defeat_reward_base"] = float(self.reward_defeat_enemy)
+            info["enemy_defeat_reward_base"] = self._magic_enemy_defeat_reward_value()
             if int(enemy_id or -1) in self.RUIN_REWARD_BY_ENEMY_ID:
-                info["ruin_clear_bonus_reward"] = float(self.reward_ruin_clear_bonus)
+                info["ruin_clear_bonus_reward"] = float(self.reward_ruin_clear_bonus) * self.reward_magic_enemy_defeat_multiplier
 
             self._log(
                 f"=== ПРИЗВАННЫЙ ЮНИТ ПОБЕДИЛ В БОЮ ПРОТИВ ВРАГА {enemy_id}! ==="
@@ -2599,6 +2664,7 @@ class CampaignMagicMixin:
                 enemy_id,
                 reward,
                 info,
+                defeat_source="summon_battle",
             )
             self.mode = self.MODE_GRID
             self.battle_env = None
@@ -2608,6 +2674,7 @@ class CampaignMagicMixin:
             info["agent_pos"] = self._restore_agent_to_battle_origin()
             info["enemies_alive"] = dict(self.grid_env.enemies_alive)
 
+            reward = self._apply_all_enemies_objective_reward_if_needed(reward, info)
             campaign_objective_reason = self._campaign_objective_completion_reason(enemy_id)
             if campaign_objective_reason is not None:
                 self._log("=== ЗАХВАЧЕНЫ ВСЕ ЦЕЛЕВЫЕ ГОРОДА: ПОБЕДА В КАМПАНИИ ===")
@@ -2627,6 +2694,7 @@ class CampaignMagicMixin:
                 and not self._campaign_objective_is_cities()
                 and not self._campaign_objective_is_waves()
                 and not self._campaign_objective_is_full_party()
+                and not self._campaign_objective_is_scripted_bot()
             ):
                 self._log("=== ВСЕ ВРАГИ ПОБЕЖДЕНЫ! ПОБЕДА В КАМПАНИИ! ===")
                 grid_obs = self._get_grid_obs()

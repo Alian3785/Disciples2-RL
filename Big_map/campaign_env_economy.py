@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from campaign_env_data import *
+from permanent_unit_stats import MUTATING_KEY, mutate_intrinsic
 from unit_revive_costs import known_unit_revive_gold_cost
 
 
@@ -581,6 +582,9 @@ class CampaignEconomyMixin:
         """
         if not isinstance(hero, dict) or not self._is_hero_unit(hero):
             return False
+
+        if not hero.get(MUTATING_KEY):
+            return mutate_intrinsic(hero, self._apply_lord_replacement_might_bonus)
 
         might_level = self._lord_replacement_might_level()
         if might_level is None:
@@ -1487,6 +1491,82 @@ class CampaignEconomyMixin:
             truncated=False,
             info=info,
         )
+    def _dismiss_blue_unit_target(self, position: int) -> Optional[Dict]:
+        """Resolve either occupied cell of a companion; never dismiss a hero."""
+        if self.mode != self.MODE_GRID or position not in self.GRID_DISMISS_UNIT_POSITIONS:
+            return None
+        if self._resolve_travel_hero(alive_only=True) is None:
+            return None
+        unit = self._blue_swap_endpoint(position)["unit"]
+        if self._is_empty_blue_unit(unit) or self._is_hero_unit(unit):
+            return None
+        return unit
+
+    def _step_dismiss_blue_unit(self, action: int):
+        """Remove a living or dead companion and release its slots and leadership."""
+        offset = int(action) - int(self.GRID_DISMISS_UNIT_ACTION_START)
+        position = (
+            self.GRID_DISMISS_UNIT_POSITIONS[offset]
+            if 0 <= offset < self.GRID_DISMISS_UNIT_ACTION_COUNT else None
+        )
+        unit = self._dismiss_blue_unit_target(position) if position is not None else None
+        info = {
+            "mode": "grid",
+            "agent_pos": self.grid_env.agent_pos,
+            "enemies_alive": dict(self.grid_env.enemies_alive),
+            "battle_triggered": False,
+            "dismiss_unit_action": True,
+            "dismiss_target_pos": position,
+            "dismissed": unit is not None,
+            "dismissed_unit_name": None,
+            "dismissed_positions": (),
+            "dismissed_was_alive": False,
+            "dismissed_leadership": 0,
+        }
+        if unit is not None:
+            unit_position = int(unit["position"])
+            positions = (
+                self._blue_column_positions_for_position(unit_position)
+                if self._is_big_blue_unit(unit) else (unit_position,)
+            )
+            info.update(
+                dismissed_unit_name=str(unit.get("name", "")),
+                dismissed_positions=tuple(positions),
+                dismissed_was_alive=self._is_travel_unit_alive(unit),
+                dismissed_leadership=len(positions),
+            )
+            self.blue_team_state = [
+                placeholder_unit("blue", int(entry["position"]))
+                if entry is unit or int(entry.get("position", -1)) in positions else entry
+                for entry in self._get_blue_state()
+            ]
+            effect_sets = [
+                self.active_invulnerability_potion_positions,
+                self.active_strength_potion_positions,
+                self.active_energy_elixir_positions,
+                self.active_haste_elixir_positions,
+                self.active_fire_ward_positions,
+                self.active_earth_ward_positions,
+                self.active_water_ward_positions,
+                self.active_air_ward_positions,
+                *self.active_potion_effect_positions.values(),
+            ]
+            for active_positions in effect_sets:
+                active_positions.difference_update(positions)
+            self._mark_equipment_dirty()
+            self._sync_hero_progression_flags(self.blue_team_state)
+            self._sync_moves_per_turn_with_hero(units=self.blue_team_state)
+            self._log(
+                f'Увольнение: {info["dismissed_unit_name"]}, позиции {tuple(positions)}, '
+                f'освобождено лидерства: {len(positions)}'
+            )
+        else:
+            info["dismiss_invalid_reason"] = "masked_or_missing_unit"
+        return self._finalize_grid_step_result(
+            grid_obs=self._get_grid_obs(), reward=0.0,
+            terminated=False, truncated=False, info=info,
+        )
+
     def _hire_option(self, action_idx: int) -> Optional[Dict[str, object]]:
         """Вернуть копию фракционной hire-option по индексу action layout.
 
@@ -1647,12 +1727,15 @@ class CampaignEconomyMixin:
     def _party_hire_composition(
         self,
         units: Optional[List[Dict]] = None,
+        *,
+        living_only: bool = False,
     ) -> Dict[str, int]:
         """Посчитать занятые и свободные пункты лидерства героя.
 
         Герой начинает с тремя пунктами вместимости и получает ещё по одному
         на 3-м и 6-м уровнях. Малый юнит занимает один пункт, большой — два.
-        Мёртвые юниты и placeholder-записи не занимают вместимость.
+        Мёртвые юниты занимают вместимость до увольнения. Placeholder-записи
+        не учитываются. living_only используется для цели «полный живой отряд».
         """
         roster = units if units is not None else (getattr(self, "blue_team_state", None) or [])
         small_units = 0
@@ -1661,7 +1744,9 @@ class CampaignEconomyMixin:
         for unit in roster:
             if not isinstance(unit, dict):
                 continue
-            if self._is_empty_blue_unit(unit) or not self._is_travel_unit_alive(unit):
+            if self._is_empty_blue_unit(unit):
+                continue
+            if living_only and not self._is_travel_unit_alive(unit):
                 continue
             if self._is_hero_unit(unit):
                 continue
@@ -1720,7 +1805,7 @@ class CampaignEconomyMixin:
         )
 
     def _reset_full_party_objective_tracking(self) -> None:
-        composition = self._party_hire_composition(units=self.blue_team_state)
+        composition = self._party_hire_composition(units=self.blue_team_state, living_only=True)
         occupied = int(composition["occupied_capacity"])
         capacity = int(composition["leadership_capacity"])
         hero_slots = self._full_party_hero_slots(units=self.blue_team_state)
@@ -1749,7 +1834,7 @@ class CampaignEconomyMixin:
         if not self._campaign_objective_is_full_party():
             return float(reward), bool(terminated), bool(truncated)
 
-        composition = self._party_hire_composition(units=self.blue_team_state)
+        composition = self._party_hire_composition(units=self.blue_team_state, living_only=True)
         occupied = int(composition["occupied_capacity"])
         capacity = int(composition["leadership_capacity"])
         hero_slots = self._full_party_hero_slots(units=self.blue_team_state)
@@ -2556,7 +2641,8 @@ class CampaignEconomyMixin:
                 continue
             hp = float(unit.get("hp", 0) or unit.get("health", 0))
             max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
-            if max_hp <= 0 or hp > 0:
+            if (max_hp <= 0 or hp > 0
+                    or not self._revival_footprint_is_free(unit, state)):
                 return 0.0
             return float(self._castle_revive_gold_cost(unit))
         return 0.0
@@ -2572,7 +2658,8 @@ class CampaignEconomyMixin:
 
             hp = float(unit.get("hp", 0) or unit.get("health", 0))
             max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
-            if max_hp <= 0 or hp > 0:
+            if (max_hp <= 0 or hp > 0
+                    or not self._revival_footprint_is_free(unit, state)):
                 return False, None, 0.0
 
             revive_cost = float(self._castle_revive_gold_cost(unit))
@@ -3515,7 +3602,8 @@ class CampaignEconomyMixin:
         """Пересобрать все динамические диапазоны grid actions.
 
         Размер action space зависит от сценарных зелий, hire options, зданий,
-        заклинаний, книг, боевых предметов, staff/scroll actions и swap layout.
+        заклинаний, книг, боевых предметов, staff/scroll actions и swap layout;
+        в конце добавлены шесть действий увольнения.
         Функция должна вызываться после изменения сценарных списков или состава,
         чтобы action mask, step dispatch и observation использовали одинаковые
         стартовые индексы.
@@ -3647,6 +3735,9 @@ class CampaignEconomyMixin:
         )
         self.GRID_SWAP_UNIT_ACTION_COUNT = len(self.GRID_SWAP_UNIT_PAIRS)
         self._refresh_book_observation_layout()
+        self.GRID_DISMISS_UNIT_ACTION_START = (
+            self.GRID_SWAP_UNIT_ACTION_START + self.GRID_SWAP_UNIT_ACTION_COUNT
+        )
     def _spend_moves(self, spent_moves: int) -> None:
         """Списывает очки перемещения в grid-режиме."""
         if spent_moves <= 0:

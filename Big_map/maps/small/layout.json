@@ -1,0 +1,5195 @@
+{
+  "schema_version": 1,
+  "map_id": "small",
+  "title": "Small · уменьшенная карта",
+  "grid_size": 24,
+  "source_grid_size": 48,
+  "seed": 0,
+  "observation_version": "local5",
+  "scripted_bot_enabled": false,
+  "boss_roster_enabled": false,
+  "objective": "cities",
+  "objective_enemy_id": 31,
+  "turn": 0,
+  "faction": "Империя",
+  "starting_gold": 0.0,
+  "starting_army": "2 × Скваер + Рыцарь на пегасе + Служка",
+  "starting_roster_mode": "ordinary",
+  "hero": [
+    2,
+    13
+  ],
+  "capitals": [
+    {
+      "code": "A",
+      "name": "Столица: Империя",
+      "position": [
+        2,
+        13
+      ],
+      "color": "#b85869",
+      "footprint": [
+        [
+          0,
+          12
+        ],
+        [
+          0,
+          13
+        ],
+        [
+          0,
+          13
+        ],
+        [
+          0,
+          14
+        ],
+        [
+          0,
+          14
+        ],
+        [
+          1,
+          12
+        ],
+        [
+          1,
+          12
+        ],
+        [
+          1,
+          13
+        ],
+        [
+          1,
+          13
+        ],
+        [
+          1,
+          13
+        ],
+        [
+          1,
+          13
+        ],
+        [
+          1,
+          14
+        ],
+        [
+          1,
+          14
+        ],
+        [
+          1,
+          14
+        ],
+        [
+          1,
+          14
+        ],
+        [
+          2,
+          12
+        ],
+        [
+          2,
+          12
+        ],
+        [
+          2,
+          13
+        ],
+        [
+          2,
+          13
+        ],
+        [
+          2,
+          13
+        ],
+        [
+          2,
+          13
+        ],
+        [
+          2,
+          14
+        ],
+        [
+          2,
+          14
+        ],
+        [
+          2,
+          14
+        ],
+        [
+          2,
+          14
+        ]
+      ]
+    },
+    {
+      "code": "B",
+      "name": "Вражеская столица: Империя",
+      "position": [
+        13,
+        5
+      ],
+      "color": "#598cd9",
+      "footprint": [
+        [
+          11,
+          4
+        ],
+        [
+          11,
+          4
+        ],
+        [
+          11,
+          4
+        ],
+        [
+          11,
+          4
+        ],
+        [
+          11,
+          5
+        ],
+        [
+          11,
+          5
+        ],
+        [
+          11,
+          5
+        ],
+        [
+          11,
+          5
+        ],
+        [
+          11,
+          6
+        ],
+        [
+          11,
+          6
+        ],
+        [
+          12,
+          4
+        ],
+        [
+          12,
+          4
+        ],
+        [
+          12,
+          4
+        ],
+        [
+          12,
+          4
+        ],
+        [
+          12,
+          5
+        ],
+        [
+          12,
+          5
+        ],
+        [
+          12,
+          5
+        ],
+        [
+          12,
+          5
+        ],
+        [
+          12,
+          6
+        ],
+        [
+          12,
+          6
+        ],
+        [
+          13,
+          4
+        ],
+        [
+          13,
+          4
+        ],
+        [
+          13,
+          5
+        ],
+        [
+          13,
+          5
+        ],
+        [
+          13,
+          6
+        ]
+      ]
+    }
+  ],
+  "cities": [
+    {
+      "code": "C1",
+      "name": "Порт Полонис",
+      "position": [
+        14,
+        16
+      ],
+      "enemy_ids": [
+        34,
+        68
+      ],
+      "level": 2,
+      "objective": true,
+      "owned": false,
+      "footprint": [
+        [
+          12,
+          15
+        ],
+        [
+          12,
+          15
+        ],
+        [
+          12,
+          16
+        ],
+        [
+          12,
+          16
+        ],
+        [
+          13,
+          15
+        ],
+        [
+          13,
+          15
+        ],
+        [
+          13,
+          15
+        ],
+        [
+          13,
+          15
+        ],
+        [
+          13,
+          16
+        ],
+        [
+          13,
+          16
+        ],
+        [
+          13,
+          16
+        ],
+        [
+          13,
+          16
+        ],
+        [
+          14,
+          15
+        ],
+        [
+          14,
+          15
+        ],
+        [
+          14,
+          16
+        ],
+        [
+          14,
+          16
+        ]
+      ]
+    },
+    {
+      "code": "C2",
+      "name": "Соругирилла",
+      "position": [
+        20,
+        12
+      ],
+      "enemy_ids": [
+        35,
+        69
+      ],
+      "level": 2,
+      "objective": true,
+      "owned": false,
+      "footprint": [
+        [
+          18,
+          11
+        ],
+        [
+          18,
+          11
+        ],
+        [
+          18,
+          12
+        ],
+        [
+          18,
+          12
+        ],
+        [
+          19,
+          11
+        ],
+        [
+          19,
+          11
+        ],
+        [
+          19,
+          11
+        ],
+        [
+          19,
+          11
+        ],
+        [
+          19,
+          12
+        ],
+        [
+          19,
+          12
+        ],
+        [
+          19,
+          12
+        ],
+        [
+          19,
+          12
+        ],
+        [
+          20,
+          11
+        ],
+        [
+          20,
+          11
+        ],
+        [
+          20,
+          12
+        ],
+        [
+          20,
+          12
+        ]
+      ]
+    }
+  ],
+  "enemies": [
+    {
+      "id": 1,
+      "position": [
+        4,
+        3
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: волк на передней линии",
+      "units": [
+        {
+          "name": "Волк",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5039"
+        }
+      ],
+      "summary": "Волк",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "1"
+    },
+    {
+      "id": 3,
+      "position": [
+        7,
+        7
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: орк чемпион на передней линии",
+      "units": [
+        {
+          "name": "Орк чемпион",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5012"
+        }
+      ],
+      "summary": "Орк чемпион",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "3"
+    },
+    {
+      "id": 5,
+      "position": [
+        9,
+        8
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: орк чемпион на передней линии",
+      "units": [
+        {
+          "name": "Орк чемпион",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5012"
+        }
+      ],
+      "summary": "Орк чемпион",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "5"
+    },
+    {
+      "id": 7,
+      "position": [
+        3,
+        11
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: воин + привидение спереди, колдун + призрак + привидение сзади",
+      "units": [
+        {
+          "name": "Воин",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0086"
+        },
+        {
+          "name": "Привидение",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0078"
+        },
+        {
+          "name": "Колдун",
+          "Level": 2,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0063"
+        },
+        {
+          "name": "Призрак",
+          "Level": 2,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0079"
+        },
+        {
+          "name": "Привидение",
+          "Level": 1,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0078"
+        }
+      ],
+      "summary": "Воин + 2 × Привидение + Колдун (ур. 2) + Призрак (ур. 2)",
+      "fighter_count": 5,
+      "formation_cells": 5,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "7"
+    },
+    {
+      "id": 9,
+      "position": [
+        12,
+        11
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: тамплиер спереди, колдун и призрак сзади",
+      "units": [
+        {
+          "name": "Тамплиер",
+          "Level": 2,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0090"
+        },
+        {
+          "name": "Колдун",
+          "Level": 2,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0063"
+        },
+        {
+          "name": "Призрак",
+          "Level": 2,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0079"
+        }
+      ],
+      "summary": "Тамплиер (ур. 2) + Колдун (ур. 2) + Призрак (ур. 2)",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "9"
+    },
+    {
+      "id": 11,
+      "position": [
+        17,
+        12
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: оборотень спереди и тень сзади",
+      "units": [
+        {
+          "name": "Оборотень",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0092"
+        },
+        {
+          "name": "Тень",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0174"
+        }
+      ],
+      "summary": "Оборотень + Тень (ур. 3)",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "11"
+    },
+    {
+      "id": 13,
+      "position": [
+        15,
+        13
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: 2 зомби спереди и привидение сзади",
+      "units": [
+        {
+          "name": "Зомби",
+          "Level": 2,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0087"
+        },
+        {
+          "name": "Зомби",
+          "Level": 2,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0087"
+        },
+        {
+          "name": "Привидение",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0078"
+        }
+      ],
+      "summary": "2 × Зомби (ур. 2) + Привидение",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "13"
+    },
+    {
+      "id": 15,
+      "position": [
+        11,
+        14
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: 2 привидения спереди, вампир сзади",
+      "units": [
+        {
+          "name": "Привидение",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0078"
+        },
+        {
+          "name": "Привидение",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0078"
+        },
+        {
+          "name": "Вампир",
+          "Level": 4,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0083"
+        }
+      ],
+      "summary": "2 × Привидение + Вампир (ур. 4)",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "15"
+    },
+    {
+      "id": 17,
+      "position": [
+        11,
+        15
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: воин спереди, 2 призрака и привидение сзади",
+      "units": [
+        {
+          "name": "Воин",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0086"
+        },
+        {
+          "name": "Призрак",
+          "Level": 2,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0079"
+        },
+        {
+          "name": "Привидение",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0078"
+        },
+        {
+          "name": "Призрак",
+          "Level": 2,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0079"
+        }
+      ],
+      "summary": "Воин + 2 × Призрак (ур. 2) + Привидение",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "17"
+    },
+    {
+      "id": 19,
+      "position": [
+        22,
+        16
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: зомби спереди, привидение сзади",
+      "units": [
+        {
+          "name": "Зомби",
+          "Level": 2,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0087"
+        },
+        {
+          "name": "Привидение",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0078"
+        }
+      ],
+      "summary": "Зомби (ур. 2) + Привидение",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "19"
+    },
+    {
+      "id": 21,
+      "position": [
+        12,
+        17
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: зомби спереди, привидение сзади",
+      "units": [
+        {
+          "name": "Зомби",
+          "Level": 2,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0087"
+        },
+        {
+          "name": "Привидение",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0078"
+        }
+      ],
+      "summary": "Зомби (ур. 2) + Привидение",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "21"
+    },
+    {
+      "id": 23,
+      "position": [
+        5,
+        18
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: волк на передней линии",
+      "units": [
+        {
+          "name": "Волк",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5039"
+        }
+      ],
+      "summary": "Волк",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "23"
+    },
+    {
+      "id": 25,
+      "position": [
+        5,
+        20
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: копейщик спереди и служка сзади",
+      "units": [
+        {
+          "name": "Копейщик",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5003"
+        },
+        {
+          "name": "Служка",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0011"
+        }
+      ],
+      "summary": "Копейщик + Служка",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "25"
+    },
+    {
+      "id": 27,
+      "position": [
+        4,
+        20
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: скваер в центре и 2 крестьянина на передней линии",
+      "units": [
+        {
+          "name": "Крестьянин",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5001"
+        },
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Крестьянин",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5001"
+        }
+      ],
+      "summary": "2 × Крестьянин + Скваер",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "27"
+    },
+    {
+      "id": 29,
+      "position": [
+        3,
+        21
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: 3 скваера на передней линии",
+      "units": [
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0001"
+        }
+      ],
+      "summary": "3 × Скваер",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "29"
+    },
+    {
+      "id": 31,
+      "position": [
+        15,
+        23
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: зеленый дракон",
+      "units": [
+        {
+          "name": "Зелёный дракон",
+          "Level": 1,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu5023"
+        }
+      ],
+      "summary": "Зелёный дракон",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "31"
+    },
+    {
+      "id": 34,
+      "position": [
+        14,
+        16
+      ],
+      "alive": true,
+      "kind": "city",
+      "description": "Отряд Порта Полонис: Воин спереди, Колдун, Нигош (Носферату) и Привидение сзади",
+      "units": [
+        {
+          "name": "Воин",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0086"
+        },
+        {
+          "name": "Колдун",
+          "Level": 2,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0063"
+        },
+        {
+          "name": "Носферату",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0097"
+        },
+        {
+          "name": "Привидение",
+          "Level": 1,
+          "big": false,
+          "position": 6,
+          "unit_id": "g000uu0078"
+        }
+      ],
+      "summary": "Воин + Колдун (ур. 2) + Носферату + Привидение",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "34"
+    },
+    {
+      "id": 35,
+      "position": [
+        20,
+        12
+      ],
+      "alive": true,
+      "kind": "city",
+      "description": "Отряд Соругириллы: Унфегра (Королева личей), Виверна",
+      "units": [
+        {
+          "name": "Виверна",
+          "Level": 1,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu0093"
+        },
+        {
+          "name": "Королева лич",
+          "Level": 1,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0098"
+        }
+      ],
+      "summary": "Виверна + Королева лич",
+      "fighter_count": 2,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "35"
+    },
+    {
+      "id": 68,
+      "position": [
+        14,
+        16
+      ],
+      "alive": true,
+      "kind": "city",
+      "description": "Внутренний гарнизон Порта Полонис: Зомби, Воин",
+      "units": [
+        {
+          "name": "Зомби",
+          "Level": 2,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0087"
+        },
+        {
+          "name": "Воин",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0086"
+        }
+      ],
+      "summary": "Зомби (ур. 2) + Воин",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "68"
+    },
+    {
+      "id": 69,
+      "position": [
+        20,
+        12
+      ],
+      "alive": true,
+      "kind": "city",
+      "description": "Внутренний гарнизон Соругириллы: Зомби, Воин",
+      "units": [
+        {
+          "name": "Зомби",
+          "Level": 2,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0087"
+        },
+        {
+          "name": "Воин",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0086"
+        }
+      ],
+      "summary": "Зомби (ур. 2) + Воин",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "69"
+    },
+    {
+      "id": 75,
+      "position": [
+        13,
+        5
+      ],
+      "alive": true,
+      "kind": "capital",
+      "description": "Страж столицы Империи: Мизраэль",
+      "units": [
+        {
+          "name": "Мизраэль",
+          "Level": 0,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu3001"
+        }
+      ],
+      "summary": "Мизраэль",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "75"
+    },
+    {
+      "id": 70,
+      "position": [
+        8,
+        5
+      ],
+      "alive": true,
+      "kind": "ruin",
+      "description": "Руины (15, 9): Орк, Гоблин, Гоблин",
+      "units": [
+        {
+          "name": "Орк",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5013"
+        },
+        {
+          "name": "Гоблин",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5017"
+        },
+        {
+          "name": "Гоблин",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5017"
+        }
+      ],
+      "summary": "Орк + 2 × Гоблин",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "70"
+    },
+    {
+      "id": 74,
+      "position": [
+        22,
+        18
+      ],
+      "alive": true,
+      "kind": "ruin",
+      "description": "Руины (43, 34): Лорд Тьмы, Лич",
+      "units": [
+        {
+          "name": "Лорд тьмы",
+          "Level": 3,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0091"
+        },
+        {
+          "name": "Лич",
+          "Level": 4,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0084"
+        }
+      ],
+      "summary": "Лорд тьмы (ур. 3) + Лич (ур. 4)",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "74"
+    },
+    {
+      "id": 37,
+      "position": [
+        9,
+        1
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: Гном, Травница, Алхимик",
+      "units": [
+        {
+          "name": "Гном",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0036"
+        },
+        {
+          "name": "Травница",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0033"
+        },
+        {
+          "name": "Алхимик",
+          "Level": 3,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0161"
+        }
+      ],
+      "summary": "Гном + Травница + Алхимик (ур. 3)",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "37"
+    },
+    {
+      "id": 39,
+      "position": [
+        1,
+        2
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: Волк, Варвар",
+      "units": [
+        {
+          "name": "Волк",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5039"
+        },
+        {
+          "name": "Варвар",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5040"
+        }
+      ],
+      "summary": "Волк + Варвар",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "39"
+    },
+    {
+      "id": 41,
+      "position": [
+        8,
+        2
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: Гном, Метатель топоров",
+      "units": [
+        {
+          "name": "Гном",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0036"
+        },
+        {
+          "name": "Метатель топоров",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0026"
+        }
+      ],
+      "summary": "Гном + Метатель топоров",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "41"
+    },
+    {
+      "id": 43,
+      "position": [
+        22,
+        2
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: Призрак, Тамплиер",
+      "units": [
+        {
+          "name": "Призрак",
+          "Level": 2,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0079"
+        },
+        {
+          "name": "Тамплиер",
+          "Level": 2,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0090"
+        }
+      ],
+      "summary": "Призрак (ур. 2) + Тамплиер (ур. 2)",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "43"
+    },
+    {
+      "id": 45,
+      "position": [
+        14,
+        4
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: Головорез",
+      "units": [
+        {
+          "name": "Головорез",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5031"
+        }
+      ],
+      "summary": "Головорез",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "45"
+    },
+    {
+      "id": 47,
+      "position": [
+        20,
+        5
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: Призрак, Привидение, Привидение, Воин",
+      "units": [
+        {
+          "name": "Призрак",
+          "Level": 2,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0079"
+        },
+        {
+          "name": "Привидение",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0078"
+        },
+        {
+          "name": "Привидение",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0078"
+        },
+        {
+          "name": "Воин",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0086"
+        }
+      ],
+      "summary": "Призрак (ур. 2) + 2 × Привидение + Воин",
+      "fighter_count": 4,
+      "formation_cells": 4,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "47"
+    },
+    {
+      "id": 49,
+      "position": [
+        9,
+        6
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: Гном",
+      "units": [
+        {
+          "name": "Гном",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0036"
+        }
+      ],
+      "summary": "Гном",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "49"
+    },
+    {
+      "id": 51,
+      "position": [
+        14,
+        7
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: Крестьянин, Крестьянин, Крестьянин",
+      "units": [
+        {
+          "name": "Крестьянин",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5001"
+        },
+        {
+          "name": "Крестьянин",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5001"
+        },
+        {
+          "name": "Крестьянин",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5001"
+        }
+      ],
+      "summary": "3 × Крестьянин",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "51"
+    },
+    {
+      "id": 53,
+      "position": [
+        14,
+        8
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: Скваер, Ополченец",
+      "units": [
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Ополченец",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5002"
+        }
+      ],
+      "summary": "Скваер + Ополченец",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "53"
+    },
+    {
+      "id": 57,
+      "position": [
+        17,
+        14
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: Призрак, Привидение, Воин",
+      "units": [
+        {
+          "name": "Призрак",
+          "Level": 2,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0079"
+        },
+        {
+          "name": "Привидение",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0078"
+        },
+        {
+          "name": "Воин",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0086"
+        }
+      ],
+      "summary": "Призрак (ур. 2) + Привидение + Воин",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "57"
+    },
+    {
+      "id": 59,
+      "position": [
+        15,
+        16
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: Зомби",
+      "units": [
+        {
+          "name": "Зомби",
+          "Level": 2,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0087"
+        }
+      ],
+      "summary": "Зомби (ур. 2)",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "59"
+    },
+    {
+      "id": 61,
+      "position": [
+        16,
+        18
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: Зомби, Призрак",
+      "units": [
+        {
+          "name": "Зомби",
+          "Level": 2,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0087"
+        },
+        {
+          "name": "Призрак",
+          "Level": 2,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0079"
+        }
+      ],
+      "summary": "Зомби (ур. 2) + Призрак (ур. 2)",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "61"
+    },
+    {
+      "id": 63,
+      "position": [
+        2,
+        20
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: Разбойник",
+      "units": [
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5030"
+        }
+      ],
+      "summary": "Разбойник",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "63"
+    },
+    {
+      "id": 65,
+      "position": [
+        15,
+        20
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Отряд: Кентавр копейщик, Рейнджер",
+      "units": [
+        {
+          "name": "Кентавр копейщик",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu8014"
+        },
+        {
+          "name": "Рейнджер",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu8018"
+        }
+      ],
+      "summary": "Кентавр копейщик + Рейнджер",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "65"
+    }
+  ],
+  "sites": [
+    {
+      "code": "T1",
+      "kind": "merchant",
+      "name": "Лавка Алара",
+      "position": [
+        10,
+        17
+      ],
+      "interaction_tiles": [
+        [
+          12,
+          17
+        ],
+        [
+          12,
+          18
+        ]
+      ]
+    },
+    {
+      "code": "M1",
+      "kind": "spell_shop",
+      "name": "Лавка заклинаний Маллавиена",
+      "position": [
+        21,
+        1
+      ],
+      "interaction_tiles": [
+        [
+          22,
+          2
+        ],
+        [
+          21,
+          2
+        ]
+      ]
+    },
+    {
+      "code": "H1",
+      "kind": "mercenary",
+      "name": "Лагерь северных варваров",
+      "position": [
+        4,
+        21
+      ],
+      "interaction_tiles": [
+        [
+          6,
+          21
+        ],
+        [
+          6,
+          22
+        ]
+      ]
+    },
+    {
+      "code": "U1",
+      "kind": "trainer",
+      "name": "Тренировочный лагерь",
+      "position": [
+        19,
+        15
+      ],
+      "interaction_tiles": []
+    }
+  ],
+  "terrain": {
+    "water": [
+      [
+        0,
+        16
+      ],
+      [
+        0,
+        16
+      ],
+      [
+        0,
+        16
+      ],
+      [
+        0,
+        17
+      ],
+      [
+        0,
+        17
+      ],
+      [
+        0,
+        17
+      ],
+      [
+        1,
+        16
+      ],
+      [
+        1,
+        17
+      ],
+      [
+        1,
+        17
+      ],
+      [
+        1,
+        17
+      ],
+      [
+        1,
+        17
+      ],
+      [
+        1,
+        18
+      ],
+      [
+        2,
+        16
+      ],
+      [
+        2,
+        16
+      ],
+      [
+        2,
+        17
+      ],
+      [
+        2,
+        17
+      ],
+      [
+        2,
+        18
+      ],
+      [
+        3,
+        13
+      ],
+      [
+        3,
+        17
+      ],
+      [
+        3,
+        17
+      ],
+      [
+        3,
+        18
+      ],
+      [
+        3,
+        18
+      ],
+      [
+        3,
+        18
+      ],
+      [
+        3,
+        18
+      ],
+      [
+        3,
+        19
+      ],
+      [
+        3,
+        19
+      ],
+      [
+        4,
+        0
+      ],
+      [
+        4,
+        0
+      ],
+      [
+        4,
+        12
+      ],
+      [
+        4,
+        12
+      ],
+      [
+        4,
+        13
+      ],
+      [
+        4,
+        13
+      ],
+      [
+        4,
+        13
+      ],
+      [
+        4,
+        13
+      ],
+      [
+        4,
+        14
+      ],
+      [
+        4,
+        18
+      ],
+      [
+        4,
+        18
+      ],
+      [
+        4,
+        18
+      ],
+      [
+        4,
+        19
+      ],
+      [
+        4,
+        19
+      ],
+      [
+        4,
+        19
+      ],
+      [
+        4,
+        19
+      ],
+      [
+        4,
+        20
+      ],
+      [
+        5,
+        0
+      ],
+      [
+        5,
+        0
+      ],
+      [
+        5,
+        0
+      ],
+      [
+        5,
+        1
+      ],
+      [
+        5,
+        12
+      ],
+      [
+        5,
+        13
+      ],
+      [
+        5,
+        13
+      ],
+      [
+        5,
+        13
+      ],
+      [
+        5,
+        13
+      ],
+      [
+        5,
+        18
+      ],
+      [
+        5,
+        19
+      ],
+      [
+        5,
+        19
+      ],
+      [
+        5,
+        19
+      ],
+      [
+        5,
+        19
+      ],
+      [
+        6,
+        0
+      ],
+      [
+        6,
+        0
+      ],
+      [
+        6,
+        0
+      ],
+      [
+        6,
+        1
+      ],
+      [
+        6,
+        1
+      ],
+      [
+        6,
+        1
+      ],
+      [
+        6,
+        1
+      ],
+      [
+        6,
+        2
+      ],
+      [
+        6,
+        2
+      ],
+      [
+        6,
+        2
+      ],
+      [
+        6,
+        3
+      ],
+      [
+        6,
+        13
+      ],
+      [
+        6,
+        13
+      ],
+      [
+        6,
+        13
+      ],
+      [
+        6,
+        13
+      ],
+      [
+        6,
+        14
+      ],
+      [
+        6,
+        14
+      ],
+      [
+        6,
+        14
+      ],
+      [
+        6,
+        14
+      ],
+      [
+        6,
+        15
+      ],
+      [
+        6,
+        15
+      ],
+      [
+        6,
+        18
+      ],
+      [
+        6,
+        19
+      ],
+      [
+        6,
+        19
+      ],
+      [
+        6,
+        19
+      ],
+      [
+        6,
+        20
+      ],
+      [
+        6,
+        20
+      ],
+      [
+        6,
+        20
+      ],
+      [
+        6,
+        21
+      ],
+      [
+        6,
+        21
+      ],
+      [
+        6,
+        23
+      ],
+      [
+        7,
+        1
+      ],
+      [
+        7,
+        2
+      ],
+      [
+        7,
+        2
+      ],
+      [
+        7,
+        2
+      ],
+      [
+        7,
+        3
+      ],
+      [
+        7,
+        3
+      ],
+      [
+        7,
+        3
+      ],
+      [
+        7,
+        6
+      ],
+      [
+        7,
+        6
+      ],
+      [
+        7,
+        6
+      ],
+      [
+        7,
+        6
+      ],
+      [
+        7,
+        7
+      ],
+      [
+        7,
+        7
+      ],
+      [
+        7,
+        13
+      ],
+      [
+        7,
+        14
+      ],
+      [
+        7,
+        14
+      ],
+      [
+        7,
+        15
+      ],
+      [
+        7,
+        15
+      ],
+      [
+        7,
+        15
+      ],
+      [
+        7,
+        15
+      ],
+      [
+        7,
+        16
+      ],
+      [
+        7,
+        20
+      ],
+      [
+        7,
+        20
+      ],
+      [
+        7,
+        21
+      ],
+      [
+        7,
+        21
+      ],
+      [
+        7,
+        21
+      ],
+      [
+        7,
+        22
+      ],
+      [
+        7,
+        22
+      ],
+      [
+        7,
+        22
+      ],
+      [
+        7,
+        23
+      ],
+      [
+        7,
+        23
+      ],
+      [
+        7,
+        23
+      ],
+      [
+        7,
+        23
+      ],
+      [
+        8,
+        2
+      ],
+      [
+        8,
+        3
+      ],
+      [
+        8,
+        3
+      ],
+      [
+        8,
+        3
+      ],
+      [
+        8,
+        3
+      ],
+      [
+        8,
+        4
+      ],
+      [
+        8,
+        6
+      ],
+      [
+        8,
+        6
+      ],
+      [
+        8,
+        7
+      ],
+      [
+        8,
+        7
+      ],
+      [
+        8,
+        7
+      ],
+      [
+        8,
+        7
+      ],
+      [
+        8,
+        15
+      ],
+      [
+        8,
+        16
+      ],
+      [
+        8,
+        16
+      ],
+      [
+        8,
+        16
+      ],
+      [
+        8,
+        17
+      ],
+      [
+        8,
+        17
+      ],
+      [
+        8,
+        17
+      ],
+      [
+        8,
+        19
+      ],
+      [
+        8,
+        19
+      ],
+      [
+        8,
+        20
+      ],
+      [
+        8,
+        20
+      ],
+      [
+        8,
+        20
+      ],
+      [
+        8,
+        20
+      ],
+      [
+        8,
+        21
+      ],
+      [
+        8,
+        21
+      ],
+      [
+        8,
+        21
+      ],
+      [
+        8,
+        22
+      ],
+      [
+        8,
+        22
+      ],
+      [
+        9,
+        2
+      ],
+      [
+        9,
+        3
+      ],
+      [
+        9,
+        3
+      ],
+      [
+        9,
+        6
+      ],
+      [
+        9,
+        7
+      ],
+      [
+        9,
+        7
+      ],
+      [
+        9,
+        7
+      ],
+      [
+        9,
+        7
+      ],
+      [
+        9,
+        8
+      ],
+      [
+        9,
+        8
+      ],
+      [
+        9,
+        18
+      ],
+      [
+        9,
+        18
+      ],
+      [
+        9,
+        19
+      ],
+      [
+        9,
+        19
+      ],
+      [
+        9,
+        19
+      ],
+      [
+        9,
+        19
+      ],
+      [
+        9,
+        20
+      ],
+      [
+        9,
+        20
+      ],
+      [
+        10,
+        7
+      ],
+      [
+        10,
+        7
+      ],
+      [
+        10,
+        7
+      ],
+      [
+        10,
+        8
+      ],
+      [
+        10,
+        8
+      ],
+      [
+        10,
+        8
+      ],
+      [
+        10,
+        8
+      ],
+      [
+        10,
+        19
+      ],
+      [
+        11,
+        7
+      ],
+      [
+        11,
+        8
+      ],
+      [
+        11,
+        8
+      ],
+      [
+        11,
+        19
+      ],
+      [
+        11,
+        19
+      ],
+      [
+        12,
+        18
+      ],
+      [
+        12,
+        19
+      ],
+      [
+        12,
+        19
+      ],
+      [
+        12,
+        19
+      ],
+      [
+        13,
+        17
+      ],
+      [
+        13,
+        18
+      ],
+      [
+        13,
+        18
+      ],
+      [
+        13,
+        18
+      ],
+      [
+        13,
+        18
+      ],
+      [
+        13,
+        19
+      ],
+      [
+        13,
+        19
+      ],
+      [
+        14,
+        0
+      ],
+      [
+        14,
+        1
+      ],
+      [
+        14,
+        1
+      ],
+      [
+        14,
+        2
+      ],
+      [
+        14,
+        2
+      ],
+      [
+        14,
+        17
+      ],
+      [
+        14,
+        18
+      ],
+      [
+        14,
+        18
+      ],
+      [
+        14,
+        18
+      ],
+      [
+        14,
+        18
+      ],
+      [
+        15,
+        0
+      ],
+      [
+        15,
+        1
+      ],
+      [
+        15,
+        1
+      ],
+      [
+        15,
+        2
+      ],
+      [
+        15,
+        2
+      ],
+      [
+        15,
+        2
+      ],
+      [
+        15,
+        3
+      ],
+      [
+        15,
+        3
+      ],
+      [
+        15,
+        3
+      ],
+      [
+        15,
+        4
+      ],
+      [
+        15,
+        4
+      ],
+      [
+        15,
+        15
+      ],
+      [
+        15,
+        15
+      ],
+      [
+        15,
+        15
+      ],
+      [
+        15,
+        15
+      ],
+      [
+        15,
+        16
+      ],
+      [
+        15,
+        16
+      ],
+      [
+        15,
+        18
+      ],
+      [
+        15,
+        18
+      ],
+      [
+        15,
+        18
+      ],
+      [
+        15,
+        18
+      ],
+      [
+        15,
+        19
+      ],
+      [
+        15,
+        19
+      ],
+      [
+        16,
+        3
+      ],
+      [
+        16,
+        3
+      ],
+      [
+        16,
+        4
+      ],
+      [
+        16,
+        4
+      ],
+      [
+        16,
+        4
+      ],
+      [
+        16,
+        4
+      ],
+      [
+        16,
+        5
+      ],
+      [
+        16,
+        5
+      ],
+      [
+        16,
+        5
+      ],
+      [
+        16,
+        14
+      ],
+      [
+        16,
+        14
+      ],
+      [
+        16,
+        15
+      ],
+      [
+        16,
+        15
+      ],
+      [
+        16,
+        15
+      ],
+      [
+        16,
+        15
+      ],
+      [
+        16,
+        16
+      ],
+      [
+        16,
+        16
+      ],
+      [
+        16,
+        16
+      ],
+      [
+        16,
+        16
+      ],
+      [
+        16,
+        17
+      ],
+      [
+        16,
+        17
+      ],
+      [
+        16,
+        18
+      ],
+      [
+        16,
+        18
+      ],
+      [
+        16,
+        19
+      ],
+      [
+        16,
+        19
+      ],
+      [
+        16,
+        19
+      ],
+      [
+        17,
+        4
+      ],
+      [
+        17,
+        4
+      ],
+      [
+        17,
+        5
+      ],
+      [
+        17,
+        5
+      ],
+      [
+        17,
+        5
+      ],
+      [
+        17,
+        5
+      ],
+      [
+        17,
+        6
+      ],
+      [
+        17,
+        6
+      ],
+      [
+        17,
+        6
+      ],
+      [
+        17,
+        6
+      ],
+      [
+        17,
+        7
+      ],
+      [
+        17,
+        15
+      ],
+      [
+        17,
+        15
+      ],
+      [
+        17,
+        15
+      ],
+      [
+        17,
+        15
+      ],
+      [
+        17,
+        16
+      ],
+      [
+        17,
+        16
+      ],
+      [
+        17,
+        16
+      ],
+      [
+        17,
+        16
+      ],
+      [
+        17,
+        17
+      ],
+      [
+        17,
+        17
+      ],
+      [
+        17,
+        17
+      ],
+      [
+        17,
+        17
+      ],
+      [
+        17,
+        18
+      ],
+      [
+        17,
+        18
+      ],
+      [
+        17,
+        18
+      ],
+      [
+        17,
+        18
+      ],
+      [
+        17,
+        19
+      ],
+      [
+        17,
+        19
+      ],
+      [
+        17,
+        19
+      ],
+      [
+        17,
+        19
+      ],
+      [
+        18,
+        6
+      ],
+      [
+        18,
+        6
+      ],
+      [
+        18,
+        7
+      ],
+      [
+        18,
+        7
+      ],
+      [
+        18,
+        15
+      ],
+      [
+        18,
+        16
+      ],
+      [
+        18,
+        16
+      ],
+      [
+        18,
+        16
+      ],
+      [
+        18,
+        16
+      ],
+      [
+        18,
+        17
+      ],
+      [
+        18,
+        17
+      ],
+      [
+        18,
+        17
+      ],
+      [
+        18,
+        17
+      ],
+      [
+        18,
+        18
+      ],
+      [
+        18,
+        18
+      ],
+      [
+        18,
+        18
+      ],
+      [
+        18,
+        18
+      ],
+      [
+        18,
+        19
+      ],
+      [
+        18,
+        19
+      ],
+      [
+        18,
+        19
+      ],
+      [
+        18,
+        19
+      ],
+      [
+        19,
+        6
+      ],
+      [
+        19,
+        6
+      ],
+      [
+        19,
+        7
+      ],
+      [
+        19,
+        7
+      ],
+      [
+        19,
+        7
+      ],
+      [
+        19,
+        8
+      ],
+      [
+        19,
+        8
+      ],
+      [
+        19,
+        17
+      ],
+      [
+        19,
+        17
+      ],
+      [
+        19,
+        17
+      ],
+      [
+        19,
+        18
+      ],
+      [
+        19,
+        18
+      ],
+      [
+        19,
+        18
+      ],
+      [
+        19,
+        19
+      ],
+      [
+        19,
+        19
+      ],
+      [
+        20,
+        7
+      ],
+      [
+        20,
+        7
+      ],
+      [
+        20,
+        8
+      ],
+      [
+        20,
+        8
+      ],
+      [
+        20,
+        8
+      ],
+      [
+        20,
+        8
+      ],
+      [
+        20,
+        9
+      ],
+      [
+        20,
+        9
+      ],
+      [
+        20,
+        9
+      ],
+      [
+        20,
+        17
+      ],
+      [
+        20,
+        18
+      ],
+      [
+        21,
+        8
+      ],
+      [
+        21,
+        8
+      ],
+      [
+        21,
+        8
+      ],
+      [
+        21,
+        9
+      ],
+      [
+        21,
+        9
+      ],
+      [
+        21,
+        9
+      ],
+      [
+        21,
+        9
+      ],
+      [
+        21,
+        10
+      ],
+      [
+        22,
+        8
+      ],
+      [
+        22,
+        8
+      ],
+      [
+        22,
+        8
+      ],
+      [
+        22,
+        9
+      ],
+      [
+        22,
+        9
+      ],
+      [
+        22,
+        9
+      ],
+      [
+        22,
+        9
+      ],
+      [
+        23,
+        8
+      ],
+      [
+        23,
+        8
+      ],
+      [
+        23,
+        8
+      ],
+      [
+        23,
+        8
+      ],
+      [
+        23,
+        9
+      ],
+      [
+        23,
+        9
+      ],
+      [
+        23,
+        9
+      ],
+      [
+        23,
+        9
+      ],
+      [
+        23,
+        10
+      ],
+      [
+        23,
+        10
+      ]
+    ],
+    "forest": [
+      [
+        0,
+        1
+      ],
+      [
+        0,
+        1
+      ],
+      [
+        0,
+        1
+      ],
+      [
+        0,
+        1
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        0,
+        3
+      ],
+      [
+        0,
+        3
+      ],
+      [
+        0,
+        17
+      ],
+      [
+        0,
+        18
+      ],
+      [
+        0,
+        18
+      ],
+      [
+        0,
+        19
+      ],
+      [
+        0,
+        19
+      ],
+      [
+        0,
+        20
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        1,
+        1
+      ],
+      [
+        1,
+        3
+      ],
+      [
+        1,
+        6
+      ],
+      [
+        1,
+        16
+      ],
+      [
+        1,
+        20
+      ],
+      [
+        1,
+        20
+      ],
+      [
+        1,
+        21
+      ],
+      [
+        1,
+        21
+      ],
+      [
+        2,
+        6
+      ],
+      [
+        2,
+        17
+      ],
+      [
+        2,
+        21
+      ],
+      [
+        2,
+        23
+      ],
+      [
+        3,
+        14
+      ],
+      [
+        3,
+        15
+      ],
+      [
+        3,
+        17
+      ],
+      [
+        3,
+        17
+      ],
+      [
+        3,
+        21
+      ],
+      [
+        3,
+        23
+      ],
+      [
+        3,
+        23
+      ],
+      [
+        4,
+        0
+      ],
+      [
+        4,
+        1
+      ],
+      [
+        4,
+        1
+      ],
+      [
+        4,
+        2
+      ],
+      [
+        4,
+        5
+      ],
+      [
+        4,
+        14
+      ],
+      [
+        4,
+        14
+      ],
+      [
+        4,
+        15
+      ],
+      [
+        4,
+        15
+      ],
+      [
+        4,
+        15
+      ],
+      [
+        4,
+        15
+      ],
+      [
+        4,
+        17
+      ],
+      [
+        4,
+        17
+      ],
+      [
+        4,
+        17
+      ],
+      [
+        4,
+        17
+      ],
+      [
+        4,
+        18
+      ],
+      [
+        4,
+        20
+      ],
+      [
+        4,
+        23
+      ],
+      [
+        4,
+        23
+      ],
+      [
+        5,
+        0
+      ],
+      [
+        5,
+        1
+      ],
+      [
+        5,
+        1
+      ],
+      [
+        5,
+        1
+      ],
+      [
+        5,
+        2
+      ],
+      [
+        5,
+        5
+      ],
+      [
+        5,
+        7
+      ],
+      [
+        5,
+        7
+      ],
+      [
+        5,
+        8
+      ],
+      [
+        5,
+        8
+      ],
+      [
+        5,
+        9
+      ],
+      [
+        5,
+        10
+      ],
+      [
+        5,
+        10
+      ],
+      [
+        5,
+        12
+      ],
+      [
+        5,
+        12
+      ],
+      [
+        5,
+        20
+      ],
+      [
+        5,
+        20
+      ],
+      [
+        5,
+        20
+      ],
+      [
+        5,
+        22
+      ],
+      [
+        5,
+        22
+      ],
+      [
+        5,
+        23
+      ],
+      [
+        5,
+        23
+      ],
+      [
+        6,
+        5
+      ],
+      [
+        6,
+        5
+      ],
+      [
+        6,
+        5
+      ],
+      [
+        6,
+        7
+      ],
+      [
+        6,
+        7
+      ],
+      [
+        6,
+        7
+      ],
+      [
+        6,
+        9
+      ],
+      [
+        6,
+        9
+      ],
+      [
+        6,
+        9
+      ],
+      [
+        6,
+        9
+      ],
+      [
+        6,
+        11
+      ],
+      [
+        6,
+        11
+      ],
+      [
+        6,
+        12
+      ],
+      [
+        6,
+        18
+      ],
+      [
+        6,
+        20
+      ],
+      [
+        6,
+        21
+      ],
+      [
+        6,
+        22
+      ],
+      [
+        6,
+        22
+      ],
+      [
+        6,
+        23
+      ],
+      [
+        7,
+        4
+      ],
+      [
+        7,
+        4
+      ],
+      [
+        7,
+        7
+      ],
+      [
+        7,
+        12
+      ],
+      [
+        7,
+        13
+      ],
+      [
+        7,
+        22
+      ],
+      [
+        8,
+        2
+      ],
+      [
+        8,
+        4
+      ],
+      [
+        8,
+        17
+      ],
+      [
+        8,
+        18
+      ],
+      [
+        8,
+        19
+      ],
+      [
+        8,
+        19
+      ],
+      [
+        9,
+        0
+      ],
+      [
+        9,
+        1
+      ],
+      [
+        9,
+        1
+      ],
+      [
+        9,
+        2
+      ],
+      [
+        9,
+        2
+      ],
+      [
+        9,
+        4
+      ],
+      [
+        9,
+        6
+      ],
+      [
+        9,
+        13
+      ],
+      [
+        9,
+        21
+      ],
+      [
+        9,
+        22
+      ],
+      [
+        9,
+        22
+      ],
+      [
+        9,
+        22
+      ],
+      [
+        9,
+        23
+      ],
+      [
+        9,
+        23
+      ],
+      [
+        9,
+        23
+      ],
+      [
+        10,
+        11
+      ],
+      [
+        10,
+        13
+      ],
+      [
+        10,
+        14
+      ],
+      [
+        10,
+        16
+      ],
+      [
+        10,
+        21
+      ],
+      [
+        11,
+        7
+      ],
+      [
+        11,
+        11
+      ],
+      [
+        11,
+        11
+      ],
+      [
+        11,
+        11
+      ],
+      [
+        11,
+        11
+      ],
+      [
+        11,
+        12
+      ],
+      [
+        11,
+        14
+      ],
+      [
+        11,
+        16
+      ],
+      [
+        11,
+        18
+      ],
+      [
+        11,
+        18
+      ],
+      [
+        11,
+        20
+      ],
+      [
+        11,
+        20
+      ],
+      [
+        12,
+        3
+      ],
+      [
+        12,
+        3
+      ],
+      [
+        12,
+        3
+      ],
+      [
+        12,
+        7
+      ],
+      [
+        12,
+        10
+      ],
+      [
+        12,
+        12
+      ],
+      [
+        12,
+        17
+      ],
+      [
+        12,
+        17
+      ],
+      [
+        13,
+        3
+      ],
+      [
+        13,
+        3
+      ],
+      [
+        13,
+        3
+      ],
+      [
+        13,
+        4
+      ],
+      [
+        13,
+        8
+      ],
+      [
+        13,
+        9
+      ],
+      [
+        13,
+        9
+      ],
+      [
+        13,
+        12
+      ],
+      [
+        13,
+        13
+      ],
+      [
+        13,
+        17
+      ],
+      [
+        13,
+        17
+      ],
+      [
+        13,
+        17
+      ],
+      [
+        13,
+        23
+      ],
+      [
+        13,
+        23
+      ],
+      [
+        14,
+        2
+      ],
+      [
+        14,
+        3
+      ],
+      [
+        14,
+        4
+      ],
+      [
+        14,
+        8
+      ],
+      [
+        14,
+        8
+      ],
+      [
+        14,
+        13
+      ],
+      [
+        14,
+        15
+      ],
+      [
+        14,
+        16
+      ],
+      [
+        14,
+        20
+      ],
+      [
+        14,
+        20
+      ],
+      [
+        14,
+        21
+      ],
+      [
+        14,
+        22
+      ],
+      [
+        14,
+        22
+      ],
+      [
+        14,
+        22
+      ],
+      [
+        14,
+        23
+      ],
+      [
+        14,
+        23
+      ],
+      [
+        15,
+        4
+      ],
+      [
+        15,
+        6
+      ],
+      [
+        15,
+        6
+      ],
+      [
+        15,
+        8
+      ],
+      [
+        15,
+        9
+      ],
+      [
+        15,
+        12
+      ],
+      [
+        15,
+        13
+      ],
+      [
+        15,
+        17
+      ],
+      [
+        15,
+        23
+      ],
+      [
+        16,
+        7
+      ],
+      [
+        16,
+        7
+      ],
+      [
+        16,
+        11
+      ],
+      [
+        16,
+        13
+      ],
+      [
+        16,
+        13
+      ],
+      [
+        16,
+        13
+      ],
+      [
+        16,
+        14
+      ],
+      [
+        16,
+        17
+      ],
+      [
+        16,
+        18
+      ],
+      [
+        16,
+        22
+      ],
+      [
+        16,
+        23
+      ],
+      [
+        17,
+        9
+      ],
+      [
+        17,
+        11
+      ],
+      [
+        17,
+        11
+      ],
+      [
+        17,
+        12
+      ],
+      [
+        18,
+        0
+      ],
+      [
+        18,
+        0
+      ],
+      [
+        18,
+        2
+      ],
+      [
+        18,
+        2
+      ],
+      [
+        18,
+        2
+      ],
+      [
+        18,
+        9
+      ],
+      [
+        18,
+        9
+      ],
+      [
+        18,
+        11
+      ],
+      [
+        18,
+        12
+      ],
+      [
+        18,
+        13
+      ],
+      [
+        19,
+        2
+      ],
+      [
+        19,
+        5
+      ],
+      [
+        19,
+        10
+      ],
+      [
+        19,
+        10
+      ],
+      [
+        19,
+        16
+      ],
+      [
+        20,
+        2
+      ],
+      [
+        20,
+        4
+      ],
+      [
+        20,
+        6
+      ],
+      [
+        20,
+        6
+      ],
+      [
+        20,
+        9
+      ],
+      [
+        20,
+        15
+      ],
+      [
+        20,
+        17
+      ],
+      [
+        20,
+        17
+      ],
+      [
+        20,
+        18
+      ],
+      [
+        20,
+        23
+      ],
+      [
+        21,
+        0
+      ],
+      [
+        21,
+        0
+      ],
+      [
+        21,
+        2
+      ],
+      [
+        21,
+        4
+      ],
+      [
+        21,
+        6
+      ],
+      [
+        21,
+        13
+      ],
+      [
+        21,
+        13
+      ],
+      [
+        21,
+        14
+      ],
+      [
+        21,
+        16
+      ],
+      [
+        21,
+        18
+      ],
+      [
+        21,
+        21
+      ],
+      [
+        21,
+        23
+      ],
+      [
+        22,
+        1
+      ],
+      [
+        22,
+        3
+      ],
+      [
+        22,
+        12
+      ],
+      [
+        22,
+        12
+      ],
+      [
+        22,
+        13
+      ],
+      [
+        23,
+        3
+      ],
+      [
+        23,
+        3
+      ],
+      [
+        23,
+        4
+      ],
+      [
+        23,
+        4
+      ],
+      [
+        23,
+        6
+      ],
+      [
+        23,
+        6
+      ],
+      [
+        23,
+        16
+      ],
+      [
+        23,
+        17
+      ]
+    ],
+    "road": [
+      [
+        3,
+        2
+      ],
+      [
+        3,
+        2
+      ],
+      [
+        4,
+        2
+      ],
+      [
+        4,
+        2
+      ],
+      [
+        4,
+        3
+      ],
+      [
+        5,
+        3
+      ],
+      [
+        5,
+        3
+      ],
+      [
+        6,
+        3
+      ],
+      [
+        11,
+        8
+      ],
+      [
+        12,
+        7
+      ],
+      [
+        12,
+        7
+      ],
+      [
+        12,
+        8
+      ],
+      [
+        13,
+        6
+      ],
+      [
+        13,
+        7
+      ],
+      [
+        13,
+        7
+      ],
+      [
+        13,
+        7
+      ],
+      [
+        14,
+        6
+      ],
+      [
+        14,
+        6
+      ],
+      [
+        14,
+        7
+      ],
+      [
+        15,
+        7
+      ],
+      [
+        15,
+        7
+      ],
+      [
+        16,
+        6
+      ],
+      [
+        16,
+        6
+      ],
+      [
+        16,
+        7
+      ]
+    ]
+  },
+  "obstacles": [
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      3
+    ],
+    [
+      0,
+      4
+    ],
+    [
+      0,
+      9
+    ],
+    [
+      0,
+      10
+    ],
+    [
+      0,
+      11
+    ],
+    [
+      0,
+      12
+    ],
+    [
+      0,
+      13
+    ],
+    [
+      0,
+      14
+    ],
+    [
+      0,
+      20
+    ],
+    [
+      0,
+      21
+    ],
+    [
+      1,
+      0
+    ],
+    [
+      1,
+      1
+    ],
+    [
+      1,
+      3
+    ],
+    [
+      1,
+      4
+    ],
+    [
+      1,
+      9
+    ],
+    [
+      1,
+      10
+    ],
+    [
+      1,
+      11
+    ],
+    [
+      1,
+      12
+    ],
+    [
+      1,
+      13
+    ],
+    [
+      1,
+      14
+    ],
+    [
+      2,
+      0
+    ],
+    [
+      2,
+      1
+    ],
+    [
+      2,
+      2
+    ],
+    [
+      2,
+      9
+    ],
+    [
+      2,
+      10
+    ],
+    [
+      2,
+      11
+    ],
+    [
+      2,
+      12
+    ],
+    [
+      2,
+      14
+    ],
+    [
+      3,
+      0
+    ],
+    [
+      3,
+      3
+    ],
+    [
+      3,
+      4
+    ],
+    [
+      3,
+      6
+    ],
+    [
+      3,
+      7
+    ],
+    [
+      4,
+      4
+    ],
+    [
+      4,
+      5
+    ],
+    [
+      4,
+      6
+    ],
+    [
+      4,
+      7
+    ],
+    [
+      4,
+      8
+    ],
+    [
+      4,
+      21
+    ],
+    [
+      4,
+      22
+    ],
+    [
+      5,
+      4
+    ],
+    [
+      5,
+      5
+    ],
+    [
+      5,
+      6
+    ],
+    [
+      5,
+      7
+    ],
+    [
+      5,
+      9
+    ],
+    [
+      5,
+      21
+    ],
+    [
+      5,
+      22
+    ],
+    [
+      6,
+      6
+    ],
+    [
+      8,
+      9
+    ],
+    [
+      8,
+      10
+    ],
+    [
+      8,
+      11
+    ],
+    [
+      8,
+      12
+    ],
+    [
+      9,
+      5
+    ],
+    [
+      9,
+      9
+    ],
+    [
+      9,
+      10
+    ],
+    [
+      9,
+      11
+    ],
+    [
+      9,
+      12
+    ],
+    [
+      10,
+      1
+    ],
+    [
+      10,
+      2
+    ],
+    [
+      10,
+      5
+    ],
+    [
+      10,
+      6
+    ],
+    [
+      10,
+      17
+    ],
+    [
+      10,
+      18
+    ],
+    [
+      10,
+      19
+    ],
+    [
+      11,
+      4
+    ],
+    [
+      11,
+      5
+    ],
+    [
+      11,
+      6
+    ],
+    [
+      11,
+      9
+    ],
+    [
+      11,
+      10
+    ],
+    [
+      11,
+      17
+    ],
+    [
+      11,
+      18
+    ],
+    [
+      11,
+      19
+    ],
+    [
+      12,
+      4
+    ],
+    [
+      12,
+      5
+    ],
+    [
+      12,
+      6
+    ],
+    [
+      12,
+      9
+    ],
+    [
+      12,
+      10
+    ],
+    [
+      12,
+      15
+    ],
+    [
+      12,
+      16
+    ],
+    [
+      13,
+      0
+    ],
+    [
+      13,
+      4
+    ],
+    [
+      13,
+      6
+    ],
+    [
+      13,
+      9
+    ],
+    [
+      13,
+      10
+    ],
+    [
+      13,
+      11
+    ],
+    [
+      13,
+      12
+    ],
+    [
+      13,
+      15
+    ],
+    [
+      13,
+      16
+    ],
+    [
+      14,
+      9
+    ],
+    [
+      14,
+      10
+    ],
+    [
+      14,
+      11
+    ],
+    [
+      14,
+      12
+    ],
+    [
+      14,
+      13
+    ],
+    [
+      14,
+      14
+    ],
+    [
+      14,
+      15
+    ],
+    [
+      15,
+      0
+    ],
+    [
+      15,
+      1
+    ],
+    [
+      15,
+      2
+    ],
+    [
+      15,
+      6
+    ],
+    [
+      15,
+      14
+    ],
+    [
+      16,
+      0
+    ],
+    [
+      16,
+      1
+    ],
+    [
+      16,
+      2
+    ],
+    [
+      16,
+      3
+    ],
+    [
+      16,
+      23
+    ],
+    [
+      17,
+      0
+    ],
+    [
+      17,
+      1
+    ],
+    [
+      17,
+      2
+    ],
+    [
+      17,
+      3
+    ],
+    [
+      17,
+      4
+    ],
+    [
+      17,
+      7
+    ],
+    [
+      17,
+      8
+    ],
+    [
+      17,
+      21
+    ],
+    [
+      17,
+      22
+    ],
+    [
+      17,
+      23
+    ],
+    [
+      18,
+      3
+    ],
+    [
+      18,
+      4
+    ],
+    [
+      18,
+      7
+    ],
+    [
+      18,
+      8
+    ],
+    [
+      18,
+      11
+    ],
+    [
+      18,
+      12
+    ],
+    [
+      18,
+      20
+    ],
+    [
+      18,
+      21
+    ],
+    [
+      18,
+      22
+    ],
+    [
+      18,
+      23
+    ],
+    [
+      19,
+      3
+    ],
+    [
+      19,
+      4
+    ],
+    [
+      19,
+      11
+    ],
+    [
+      19,
+      12
+    ],
+    [
+      19,
+      14
+    ],
+    [
+      19,
+      15
+    ],
+    [
+      19,
+      16
+    ],
+    [
+      19,
+      18
+    ],
+    [
+      19,
+      19
+    ],
+    [
+      19,
+      20
+    ],
+    [
+      19,
+      21
+    ],
+    [
+      19,
+      22
+    ],
+    [
+      19,
+      23
+    ],
+    [
+      20,
+      3
+    ],
+    [
+      20,
+      4
+    ],
+    [
+      20,
+      11
+    ],
+    [
+      20,
+      15
+    ],
+    [
+      20,
+      16
+    ],
+    [
+      20,
+      18
+    ],
+    [
+      20,
+      19
+    ],
+    [
+      20,
+      20
+    ],
+    [
+      21,
+      7
+    ],
+    [
+      21,
+      8
+    ],
+    [
+      21,
+      15
+    ],
+    [
+      21,
+      17
+    ],
+    [
+      21,
+      18
+    ],
+    [
+      22,
+      0
+    ],
+    [
+      22,
+      1
+    ],
+    [
+      22,
+      7
+    ],
+    [
+      22,
+      8
+    ],
+    [
+      22,
+      14
+    ],
+    [
+      22,
+      15
+    ],
+    [
+      22,
+      17
+    ],
+    [
+      23,
+      0
+    ],
+    [
+      23,
+      1
+    ],
+    [
+      23,
+      12
+    ],
+    [
+      23,
+      13
+    ],
+    [
+      23,
+      14
+    ],
+    [
+      23,
+      15
+    ],
+    [
+      23,
+      16
+    ]
+  ],
+  "gold_mines": [
+    [
+      1,
+      15
+    ],
+    [
+      12,
+      2
+    ],
+    [
+      14,
+      23
+    ],
+    [
+      20,
+      23
+    ]
+  ],
+  "mana": [
+    {
+      "position": [
+        3,
+        8
+      ],
+      "kind": "infernal",
+      "name": "Мана преисподней"
+    },
+    {
+      "position": [
+        3,
+        5
+      ],
+      "kind": "life",
+      "name": "Мана жизни"
+    },
+    {
+      "position": [
+        3,
+        20
+      ],
+      "kind": "death",
+      "name": "Мана смерти"
+    },
+    {
+      "position": [
+        0,
+        2
+      ],
+      "kind": "runes",
+      "name": "Мана рун"
+    }
+  ],
+  "chests": [
+    {
+      "code": "X1",
+      "position": [
+        14,
+        23
+      ],
+      "items": [
+        "Banner of War"
+      ]
+    },
+    {
+      "code": "X2",
+      "position": [
+        9,
+        0
+      ],
+      "items": [
+        "Potion of Healing",
+        "Life Potion"
+      ]
+    },
+    {
+      "code": "X3",
+      "position": [
+        10,
+        10
+      ],
+      "items": [
+        "Potion of Invulnerability"
+      ]
+    },
+    {
+      "code": "X4",
+      "position": [
+        2,
+        8
+      ],
+      "items": [
+        "Tome of Arcanum"
+      ]
+    },
+    {
+      "code": "X5",
+      "position": [
+        23,
+        3
+      ],
+      "items": [
+        "Orb of Life"
+      ]
+    },
+    {
+      "code": "X6",
+      "position": [
+        17,
+        11
+      ],
+      "items": [
+        "Zombie Talisman"
+      ]
+    },
+    {
+      "code": "X7",
+      "position": [
+        6,
+        9
+      ],
+      "items": [
+        "Ruby (Valuable)"
+      ]
+    },
+    {
+      "code": "X8",
+      "position": [
+        0,
+        16
+      ],
+      "items": [
+        "Mind ward scroll"
+      ]
+    },
+    {
+      "code": "X9",
+      "position": [
+        17,
+        5
+      ],
+      "items": [
+        "Potion of Healing",
+        "Bronze Ring (Valuable)"
+      ]
+    }
+  ],
+  "ruins": [
+    {
+      "id": 70,
+      "title": "Замок орка",
+      "ruin_pos": [
+        7,
+        4
+      ],
+      "marker_pos": [
+        8,
+        5
+      ],
+      "item": "Эликсир Силы титана",
+      "gold": 200,
+      "source_ruin_pos": [
+        15,
+        9
+      ],
+      "source_marker_pos": [
+        17,
+        11
+      ],
+      "guardian_position": [
+        8,
+        5
+      ]
+    },
+    {
+      "id": 74,
+      "title": "Замок Ху'Ларша",
+      "ruin_pos": [
+        21,
+        17
+      ],
+      "marker_pos": [
+        22,
+        18
+      ],
+      "item": "Кольцо веков (Артефакт)",
+      "gold": 400,
+      "source_ruin_pos": [
+        43,
+        34
+      ],
+      "source_marker_pos": [
+        45,
+        36
+      ],
+      "guardian_position": [
+        22,
+        18
+      ]
+    }
+  ],
+  "notes": [
+    "Знак + у номера: на клетке несколько армий; все составы перечислены справа.",
+    "Скриптовый бот показан только как условие сценария; при снимке выключен.",
+    "Игровая сетка 24×24: координаты взяты после масштабирования и разрешения конфликтов."
+  ],
+  "conditional_assaults": []
+}

@@ -375,6 +375,7 @@ class MapConfig:
     # Abilities granted to the map's travel hero after normal level-1 progression sync.
     starting_hero_abilities: Tuple[str, ...] = ()
     # Optional fixed faction/lord identity for scenario-specific starting parties.
+    default_capital_id: int = 1
     starting_capital_id: Optional[int] = None
     starting_lord_type: Optional[int] = None
     # Buildings already standing in the capital at episode start, by display name
@@ -385,6 +386,14 @@ class MapConfig:
     leadership_step_penalty: Optional[float] = None
     # Optional override for the REST/end-turn campaign penalty.
     turn_penalty: Optional[float] = None
+    # Focused-map reward overrides, applied consistently in training and evaluation.
+    spell_cast_reward: Optional[float] = None
+    new_cell_reward: Optional[float] = None
+    rest_with_moves_penalty: Optional[float] = None
+    # Also applies when the training/evaluation action cap ends an episode.
+    timeout_reward: Optional[float] = None
+    magic_enemy_defeat_reward: Optional[float] = None
+    all_enemies_reward: Optional[float] = None
     # Some focused training maps intentionally disable all passive turn mana income.
     passive_mana_income_enabled: bool = True
     # Optional per-enemy unit level overrides: enemy id -> unit name -> level.

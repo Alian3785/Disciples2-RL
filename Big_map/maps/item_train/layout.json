@@ -1,0 +1,303 @@
+{
+  "schema_version": 1,
+  "map_id": "item_train",
+  "title": "Item · предметы",
+  "grid_size": 24,
+  "source_grid_size": 48,
+  "seed": 0,
+  "observation_version": "local5",
+  "scripted_bot_enabled": false,
+  "boss_roster_enabled": false,
+  "objective": "all_enemies",
+  "objective_enemy_id": null,
+  "turn": 0,
+  "faction": "Легионы Проклятых",
+  "starting_gold": 0.0,
+  "starting_army": "2 × Одержимый + Архидьявол + Сектант",
+  "starting_roster_mode": "fixed",
+  "hero": [
+    2,
+    12
+  ],
+  "capitals": [
+    {
+      "code": "A",
+      "name": "Столица: Легионы Проклятых",
+      "position": [
+        2,
+        12
+      ],
+      "color": "#b85869",
+      "footprint": [
+        [
+          0,
+          11
+        ],
+        [
+          0,
+          11
+        ],
+        [
+          0,
+          11
+        ],
+        [
+          0,
+          11
+        ],
+        [
+          0,
+          12
+        ],
+        [
+          0,
+          12
+        ],
+        [
+          0,
+          12
+        ],
+        [
+          0,
+          12
+        ],
+        [
+          0,
+          13
+        ],
+        [
+          0,
+          13
+        ],
+        [
+          1,
+          11
+        ],
+        [
+          1,
+          11
+        ],
+        [
+          1,
+          11
+        ],
+        [
+          1,
+          11
+        ],
+        [
+          1,
+          12
+        ],
+        [
+          1,
+          12
+        ],
+        [
+          1,
+          12
+        ],
+        [
+          1,
+          12
+        ],
+        [
+          1,
+          13
+        ],
+        [
+          1,
+          13
+        ],
+        [
+          2,
+          11
+        ],
+        [
+          2,
+          11
+        ],
+        [
+          2,
+          12
+        ],
+        [
+          2,
+          12
+        ],
+        [
+          2,
+          13
+        ]
+      ]
+    }
+  ],
+  "cities": [],
+  "enemies": [
+    {
+      "id": 1,
+      "position": [
+        20,
+        10
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Король гномов впереди и Арбалетчик позади",
+      "units": [
+        {
+          "name": "Король гномов",
+          "Level": 5,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0039"
+        },
+        {
+          "name": "Арбалетчик",
+          "Level": 2,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0027"
+        }
+      ],
+      "summary": "Король гномов (ур. 5) + Арбалетчик (ур. 2)",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "1"
+    },
+    {
+      "id": 2,
+      "position": [
+        21,
+        12
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Оживший доспех",
+      "units": [
+        {
+          "name": "Оживший доспех",
+          "Level": 1,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu0024"
+        }
+      ],
+      "summary": "Оживший доспех",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "2"
+    },
+    {
+      "id": 3,
+      "position": [
+        20,
+        14
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Два диких кентавра",
+      "units": [
+        {
+          "name": "Кентавр дикарь",
+          "Level": 3,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu8017"
+        },
+        {
+          "name": "Кентавр дикарь",
+          "Level": 3,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu8017"
+        }
+      ],
+      "summary": "2 × Кентавр дикарь (ур. 3)",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "3"
+    }
+  ],
+  "sites": [],
+  "terrain": {
+    "water": [],
+    "forest": [],
+    "road": []
+  },
+  "obstacles": [
+    [
+      0,
+      11
+    ],
+    [
+      0,
+      12
+    ],
+    [
+      0,
+      13
+    ],
+    [
+      1,
+      11
+    ],
+    [
+      1,
+      12
+    ],
+    [
+      1,
+      13
+    ],
+    [
+      2,
+      11
+    ],
+    [
+      2,
+      13
+    ]
+  ],
+  "gold_mines": [],
+  "mana": [],
+  "chests": [
+    {
+      "code": "X1",
+      "position": [
+        9,
+        7
+      ],
+      "items": [
+        "Angel Orb"
+      ]
+    },
+    {
+      "code": "X2",
+      "position": [
+        9,
+        17
+      ],
+      "items": [
+        "Elder Vampire Talisman"
+      ]
+    }
+  ],
+  "ruins": [],
+  "notes": [
+    "Стартовый отряд закреплён сценарием и сохраняется при отключённом боссовом ростере.",
+    "Игровая сетка 24×24: координаты взяты после масштабирования и разрешения конфликтов."
+  ],
+  "conditional_assaults": []
+}

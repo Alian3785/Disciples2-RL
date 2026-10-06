@@ -10,7 +10,7 @@ from maps import available_maps
 
 @pytest.fixture
 def env():
-    e = CampaignEnv(Realcapital=2,
+    e = CampaignEnv(Realcapital=2, observation_version='local5',
                     scripted_capital_bot_enabled=False,
                     use_boss_starting_roster=False, log_enabled=False)
     e.reset(seed=42)
@@ -135,7 +135,7 @@ def test_seeded_random_positions_and_all_front_slots(env):
 
 @pytest.mark.parametrize('capital', range(1, 6))
 def test_five_faction_rosters(capital):
-    env = CampaignEnv(Realcapital=capital,
+    env = CampaignEnv(Realcapital=capital, observation_version='local5',
                       scripted_capital_bot_enabled=False, use_boss_starting_roster=False, log_enabled=False)
     env.reset(seed=42)
     city = capture(env)
@@ -275,7 +275,7 @@ def test_reset_clears_reserves_ownership_and_pending_defence(env):
 
 @pytest.mark.parametrize('map_name', available_maps())
 def test_map_layout_and_reset(map_name):
-    e = CampaignEnv(map_name=map_name,
+    e = CampaignEnv(map_name=map_name, observation_version='local5',
                     scripted_capital_bot_enabled=False, use_boss_starting_roster=False, log_enabled=False)
     try:
         shape, actions = e.observation_space.shape, e.action_space.n
@@ -364,10 +364,12 @@ def test_regeneration_excludes_terrain_and_hero_equipment(env):
     guard = wounded_guard(env, city)
     env.typeoflord = 3
     tile = env.legions_settlement_source_tile_by_name[city]
-    env.legions_territory_tile_set.add(tile)
+    env._paint_territory_owner(env.TERRITORY_AGENT, (tile,))
+    env._refresh_territory_ownership_caches()
     env.equipped_banner_items = ['Banner of Regeneration']
     assert env._garrison_regeneration_fraction(city, guard) == pytest.approx(.15)
-    env.legions_territory_tile_set.discard(tile)
+    env._paint_territory_owner(env.TERRITORY_NEUTRAL, (tile,))
+    env._refresh_territory_ownership_caches()
     assert env._garrison_regeneration_fraction(city, guard) == pytest.approx(.15)
 
 

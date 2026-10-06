@@ -48,5 +48,6 @@ MAP = MapConfig(
     empire_territory_source_enemy_id=None,
     empire_territory_source_tile=None,
     scripted_capital_bot_supported=False,
+    boss_starting_roster_default=False,    # Одержимые, Герцог, Сектант
     # Terrain-провайдеры по умолчанию пустые: чистая равнина.
 )

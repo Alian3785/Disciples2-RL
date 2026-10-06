@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from campaign_env_data import *
+from permanent_unit_stats import add_permanent_effect, ensure_stat_sources, rebuild_stat_layers
 
 
 class _TrackedInventoryList(list):
@@ -462,6 +463,12 @@ class CampaignInventoryMixin:
         return self.BATTLE_EQUIPPABLE_ITEM_NAMES
 
     def _hire_reward_value(self) -> float:
+        # Reward new party capacity, not repeated dismiss/rehire cycles.
+        occupied = self._party_hire_composition()["occupied_capacity"]
+        previous = int(getattr(self, "_hire_rewarded_capacity", 0))
+        self._hire_rewarded_capacity = max(previous, occupied)
+        if occupied <= previous:
+            return 0.0
         reward = max(0.0, 3.0 * float(self.reward_defeat_enemy))
         if self._campaign_objective_is_full_party():
             reward *= float(getattr(self, "reward_full_party_hire_multiplier", 1.0))
@@ -2513,64 +2520,8 @@ class CampaignInventoryMixin:
         increment_uses: bool = True,
     ) -> None:
         effect = dict(definition.get("effect", {}) or {})
-        effect_kind = str(effect.get("kind", "") or "")
         canonical_name = str(definition.get("name", "") or "")
-        if effect_kind == "damage":
-            multiplier = max(0.0, float(effect.get("multiplier", 1.0) or 1.0))
-            base_damage = self._normalize_damage_value(unit.get("damage", 0))
-            base_damage_secondary = self._normalize_damage_value(
-                unit.get("damage_secondary", 0)
-            )
-            unit["damage"] = self._normalize_damage_value(float(base_damage) * multiplier)
-            unit["damage_secondary"] = self._normalize_damage_value(
-                float(base_damage_secondary) * multiplier
-            )
-            unit["original_damage"] = int(unit["damage"])
-        elif effect_kind == "health":
-            hp = float(unit.get("hp", 0) or unit.get("health", 0) or 0)
-            max_hp = float(unit.get("maxhp", 0) or unit.get("max_health", 0) or 0)
-            multiplier = max(0.0, float(effect.get("multiplier", 1.0) or 1.0))
-            new_max_hp = self._normalize_health_value(float(max_hp) * multiplier)
-            if new_max_hp <= int(round(max_hp)):
-                new_max_hp = int(round(max_hp)) + 1
-            new_hp = min(
-                new_max_hp,
-                self._normalize_health_value(float(hp) * multiplier),
-            )
-            unit["maxhp"] = int(new_max_hp)
-            unit["max_health"] = int(new_max_hp)
-            unit["hp"] = int(new_hp)
-            unit["health"] = int(new_hp)
-        elif effect_kind == "armor":
-            bonus = max(0, int(effect.get("armor_bonus", 0) or 0))
-            unit["armor"] = self._normalize_armor_value(unit.get("armor", 0)) + bonus
-            unit["base_armor"] = int(unit["armor"])
-            # Equipment refresh restores these snapshots; retain the permanent bonus.
-            for key in ("campaign_artifact_base_armor", "campaign_banner_base_armor"):
-                if key in unit:
-                    unit[key] = self._normalize_armor_value(unit[key]) + bonus
-        elif effect_kind == "accuracy":
-            multiplier = max(0.0, float(effect.get("multiplier", 1.0) or 1.0))
-            base_accuracy = self._normalize_accuracy_value(unit.get("accuracy", 0))
-            base_accuracy_secondary = self._normalize_accuracy_value(
-                unit.get("accuracy_secondary", 0)
-            )
-            unit["accuracy"] = self._normalize_accuracy_value(
-                float(base_accuracy) * multiplier
-            )
-            unit["accuracy_secondary"] = self._normalize_accuracy_value(
-                float(base_accuracy_secondary) * multiplier
-            )
-        elif effect_kind == "initiative":
-            multiplier = max(0.0, float(effect.get("multiplier", 1.0) or 1.0))
-            base_initiative = int(
-                unit.get("initiative_base", unit.get("initiative", 0)) or 0
-            )
-            boosted_initiative = self._normalize_damage_value(
-                float(base_initiative) * multiplier
-            )
-            unit["initiative_base"] = int(boosted_initiative)
-            unit["initiative"] = int(boosted_initiative)
+        add_permanent_effect(unit, effect)
 
         if increment_uses:
             counter_key = str(definition.get("permanent_counter_key", "") or "")
@@ -2674,7 +2625,7 @@ class CampaignInventoryMixin:
                     self._append_hero_item(str(item_name or ""))
                     consumed = False
                 if applied and duration == "temporary":
-                    reward = self._combat_potion_reward_value()
+                    reward = 0.5 * self._combat_potion_reward_value()
                     self.combat_potion_battle_bonus_pending = True
 
         info = {
@@ -2884,6 +2835,7 @@ class CampaignInventoryMixin:
             if armor_bonus:
                 base_armor = self._normalize_armor_value(unit.get("armor", 0))
                 unit["campaign_potion_base_armor"] = base_armor
+                unit["campaign_potion_armor_bonus"] = int(armor_bonus)
                 unit["armor"] = base_armor + armor_bonus
                 unit["base_armor"] = int(unit["armor"])
 
@@ -2928,6 +2880,7 @@ class CampaignInventoryMixin:
             if armor_delta != 0:
                 base_armor = self._normalize_armor_value(unit.get("armor", 0))
                 unit["campaign_map_spell_base_armor"] = int(base_armor)
+                unit["campaign_map_spell_armor_bonus"] = float(armor_delta)
                 unit["armor"] = self._normalize_armor_value(float(base_armor) + float(armor_delta))
                 buffed_armor.append(position)
 
@@ -2936,6 +2889,7 @@ class CampaignInventoryMixin:
                 base_damage = self._normalize_damage_value(unit.get("damage", 0))
                 base_damage_secondary = self._normalize_damage_value(unit.get("damage_secondary", 0))
                 unit["campaign_map_spell_base_damage"] = int(base_damage)
+                unit["campaign_map_spell_damage_multiplier"] = float(damage_multiplier)
                 unit["campaign_map_spell_base_damage_secondary"] = int(base_damage_secondary)
                 unit["damage"] = self._normalize_damage_value(
                     float(base_damage) * float(damage_multiplier)
@@ -2949,6 +2903,7 @@ class CampaignInventoryMixin:
             if abs(initiative_multiplier - 1.0) > 1e-9:
                 base_initiative = int(unit.get("initiative_base", unit.get("initiative", 0)) or 0)
                 unit["campaign_map_spell_base_initiative"] = int(base_initiative)
+                unit["campaign_map_spell_initiative_multiplier"] = float(initiative_multiplier)
                 boosted_initiative = self._normalize_damage_value(
                     float(base_initiative) * float(initiative_multiplier)
                 )
@@ -2963,6 +2918,7 @@ class CampaignInventoryMixin:
                     unit.get("accuracy_secondary", 0)
                 )
                 unit["campaign_map_spell_base_accuracy"] = int(base_accuracy)
+                unit["campaign_map_spell_accuracy_multiplier"] = float(accuracy_multiplier)
                 unit["campaign_map_spell_base_accuracy_secondary"] = int(base_accuracy_secondary)
                 unit["accuracy"] = self._normalize_accuracy_value(
                     float(base_accuracy) * float(accuracy_multiplier)
@@ -3045,6 +3001,11 @@ class CampaignInventoryMixin:
         ):
             return
         self._clear_equipped_banner_effects(self.blue_team_state)
+        self._clear_equipped_artifact_effects(self.blue_team_state)
+        for unit in self.blue_team_state:
+            if unit.get("campaign_permanent_potions") and "campaign_stat_sources" not in unit:
+                ensure_stat_sources(unit)
+            rebuild_stat_layers(unit)
         self._apply_equipped_artifact_effects(self.blue_team_state, log=log)
         self._apply_equipped_banner_effects(self.blue_team_state, log=log)
         self._equipment_refresh_signature = self._equipment_state_signature(
@@ -3351,8 +3312,14 @@ class CampaignInventoryMixin:
                 f"(урон x{damage_multiplier:.3g}, инициатива x{initiative_multiplier:.3g}, "
                 f"броня +{int(armor_bonus)})."
             )
-    def _compute_enemy_defeat_reward(self, enemy_id: Optional[int]) -> float:
-        """Enemy defeat reward including ruin bonus."""
+    def _magic_enemy_defeat_reward_value(self) -> float:
+        override = self._map.magic_enemy_defeat_reward
+        if override is not None:
+            return max(0.0, float(override))
+        return float(self.reward_defeat_enemy) * self.reward_magic_enemy_defeat_multiplier
+
+    def _compute_enemy_defeat_reward(self, enemy_id: Optional[int], *, magic: bool = False) -> float:
+        """Enemy defeat reward including ruin bonus; discount spell/summon kills."""
         reward = float(self.reward_defeat_enemy)
         try:
             normalized_enemy_id = int(enemy_id)
@@ -3360,4 +3327,9 @@ class CampaignInventoryMixin:
             normalized_enemy_id = -1
         if normalized_enemy_id in self.RUIN_REWARD_BY_ENEMY_ID:
             reward += float(self.reward_ruin_clear_bonus)
+        if magic:
+            ruin_bonus = reward - float(self.reward_defeat_enemy)
+            reward = self._magic_enemy_defeat_reward_value() + (
+                ruin_bonus * self.reward_magic_enemy_defeat_multiplier
+            )
         return reward

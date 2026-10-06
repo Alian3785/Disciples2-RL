@@ -118,6 +118,11 @@ REWARD_CONFIG = {
     "reward_repeat_position_penalty_cap": 0.08,
     "reward_backtrack_penalty": 0.03,
     "reward_no_movement_penalty": 0.02,
+    "reward_movement": 0.01,
+    "reward_new_cell": 0.08,
+    "reward_nonempty_cell": 0.05,
+    "reward_new_nonempty_cell": 0.10,
+    "reward_rest_with_moves_penalty": 0.20,
     "exp_reward_norm_k": 100.0,
     "reward_exp_weight": 0.2,
     "reward_survival_alive_weight": 0.4,
@@ -140,8 +145,10 @@ REWARD_CONFIG = {
     "reward_battle_item_use": 0.05,
     "reward_sell_junk_item": 0.05,
     "reward_unit_swap_penalty": 0.004,
-    "reward_spell_learn": 2.0,
+    "reward_spell_learn": 1.0,
     "reward_spell_cast": 0.005,
+    "reward_magic_enemy_defeat_multiplier": 0.0,
+    "reward_first_uses": (0.0, 0.0, 0.0),
 }
 
 REQUIRED_COMET_VERSION = (3, 57, 0)
@@ -186,6 +193,9 @@ def _init_comet_experiment(
 ):
     normalized_workspace = _normalize_optional_name(workspace)
     api_key = os.getenv("COMET_API_KEY", "").strip() or None
+    if api_key is None:
+        # Fallback: ключ из ~/.comet.config (стандартный конфиг comet_ml).
+        api_key = str(comet_ml.config.get_config("comet.api_key") or "").strip() or None
     common_kwargs = {
         "project_name": project,
         "workspace": normalized_workspace,
@@ -255,6 +265,14 @@ class EvalStepCapWrapper(gym.Wrapper):
             info["campaign_result"] = "eval_timeout"
             info["eval_step_cap_hit"] = True
             info["eval_step_cap"] = self.max_steps
+            # Other maps retain their existing cap behavior. Never charge twice
+            # when the underlying environment already ended the episode.
+            base = self.env.unwrapped
+            if base._map.timeout_reward is not None:
+                penalty = float(base.reward_timeout)
+                reward += penalty
+                info["step_cap_timeout_reward"] = penalty
+                info["reward"] = float(reward)
 
         return obs, reward, terminated, truncated, info
 
@@ -1066,6 +1084,8 @@ class CampaignMetricsCallback(BaseCallback):
         if self.story_path is not None:
             self.story_path.parent.mkdir(parents=True, exist_ok=True)
 
+        self.recent_enemy_squads_defeated = deque(maxlen=100)
+        self._episode_defeated_enemy_ids: list[set[int]] = []
         self.episode_rewards: list[float] = []
         self.episode_lengths: list[int] = []
         self.recent_episode_rewards = deque(maxlen=self.episode_window)
@@ -1191,6 +1211,7 @@ class CampaignMetricsCallback(BaseCallback):
         if env_count <= len(self._episode_castle_heal_uses):
             return
         missing = env_count - len(self._episode_castle_heal_uses)
+        self._episode_defeated_enemy_ids.extend(set() for _ in range(missing))
         self._episode_castle_heal_uses.extend([0] * missing)
         self._episode_castle_heal_flags.extend([False] * missing)
         self._episode_castle_healed_hp.extend([0.0] * missing)
@@ -1516,8 +1537,27 @@ class CampaignMetricsCallback(BaseCallback):
 
         self._episode_unit_swaps[env_index] = 0
 
+    def _consume_enemy_squad_victories(self, info: dict[str, Any], env_index: int) -> None:
+        # Track unique defeated stacks per environment before finalizing a
+        # terminal step, so its final victory belongs to the completed episode.
+        defeated = self._episode_defeated_enemy_ids[env_index]
+        if info.get("battle_result") == "victory" or info.get("spell_enemy_defeated"):
+            raw_id = info.get("enemy_id")
+            if raw_id is None:
+                raw_id = info.get("target_enemy_id")
+            try:
+                enemy_id = int(raw_id)
+            except (TypeError, ValueError):
+                enemy_id = -1
+            if enemy_id >= 0:
+                defeated.add(enemy_id)
+        if isinstance(info.get("episode"), dict):
+            self.recent_enemy_squads_defeated.append(len(defeated))
+            defeated.clear()
+
     def _consume_info(self, info: dict[str, Any], env_index: int | None = None) -> None:
         if env_index is not None:
+            self._consume_enemy_squad_victories(info, env_index)
             self._consume_castle_heal(info, env_index)
             self._consume_chests(info, env_index)
             self._consume_buildings(info, env_index)
@@ -1798,6 +1838,12 @@ class CampaignMetricsCallback(BaseCallback):
                 self.window_battle_counter.get("victory", 0),
                 window_battles,
             ),
+            "campaign/window/enemy_squads_defeated_mean_100": _safe_mean(
+                self.recent_enemy_squads_defeated
+            ),
+            "campaign/window/enemy_squads_defeated_sample_count": float(
+                len(self.recent_enemy_squads_defeated)
+            ),
             "campaign/window/chests_collected_mean": _safe_mean(self.recent_chests_collected),
             "campaign/window/buildings_built_mean": _safe_mean(self.recent_buildings_built),
             "campaign/window/ruins_cleared_mean": _safe_mean(self.recent_ruins_cleared),
@@ -1834,6 +1880,7 @@ class CampaignMetricsCallback(BaseCallback):
             for enemy_key in sorted(terminal_defeat_detail_keys)
         }
         recent_activity = {
+            "enemy_squads_defeated_mean_100": _safe_mean(self.recent_enemy_squads_defeated),
             "magic_spell_casts_mean": float(payload.get("campaign/window/spell_casts_mean", 0.0)),
             "summons_mean": _safe_mean(self.recent_summoned_units),
             "hires_mean": float(payload.get("campaign/window/hired_units_mean", 0.0)),
@@ -2538,6 +2585,9 @@ if __name__ == "__main__":
         action="store_true",
         help="Recompute dynamic action layout on every reset instead of freezing it for this run",
     )
+    parser.add_argument("--scripted-bot", dest="no_scripted_bot",
+                        action="store_false", default=False,
+                        help="Explicitly enable the scripted capital bot")
     parser.add_argument(
         "--no-scripted-bot",
         action="store_true",
@@ -2886,7 +2936,9 @@ if __name__ == "__main__":
             "grid_size": DEFAULT_GRID_SIZE,
             "num_enemies": len(test_env.grid_env.enemy_positions),
             "persist_blue_hp": True,
-            **REWARD_CONFIG,
+            **{key: getattr(test_env, key, value) for key, value in REWARD_CONFIG.items()},
+            "reward_magic_enemy_defeat": test_env._magic_enemy_defeat_reward_value(),
+            "observation_version": test_env.observation_version,
             "vecnormalize_norm_obs": VECNORM_NORM_OBS,
             "vecnormalize_norm_reward": VECNORM_NORM_REWARD,
             "vecnormalize_clip_reward": VECNORM_CLIP_REWARD,
@@ -3229,7 +3281,8 @@ if __name__ == "__main__":
             description = str(details.get("description", "") or "").strip()
             suffix = f" — {description}" if description else ""
             print(f"    {enemy_key}: {count}{suffix}")
-    total = metrics_cb.victories + metrics_cb.defeats + metrics_cb.timeouts
+    # Include every recorded outcome, including episodes ended by the step cap.
+    total = int(sum(metrics_cb.result_counter.values()))
     if total > 0:
         print(f"  Winrate: {100 * metrics_cb.victories / total:.1f}%")
     print(f"{'='*60}")

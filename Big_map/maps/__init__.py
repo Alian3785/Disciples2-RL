@@ -13,6 +13,7 @@ from functools import lru_cache
 from maps.base import MapConfig
 
 _REGISTRY = {
+    "city_defence_train": "maps.city_defence_train",
     "builder": "maps.builder",
     "default": "maps.default",
     "formation_train": "maps.formation_train",
@@ -20,6 +21,7 @@ _REGISTRY = {
     "hire_train": "maps.hire_train",
     "item_train": "maps.item_train",
     "magic_train": "maps.magic_train",
+    "mirrow_match": "maps.mirrow_match",
     "orc_duel": "maps.orc_duel",
     "scroll_train": "maps.scroll_train",
     "siege_train": "maps.siege_train",

@@ -1,0 +1,1488 @@
+{
+  "schema_version": 1,
+  "map_id": "green_dragon_minimal",
+  "title": "Green Dragon Minimal",
+  "grid_size": 32,
+  "source_grid_size": 48,
+  "seed": 0,
+  "observation_version": "local5",
+  "scripted_bot_enabled": false,
+  "boss_roster_enabled": false,
+  "objective": "dragon",
+  "objective_enemy_id": 31,
+  "turn": 0,
+  "faction": "Легионы Проклятых",
+  "starting_gold": 0.0,
+  "starting_army": "2 × Одержимый + Герцог + Сектант",
+  "starting_roster_mode": "fixed",
+  "hero": [
+    3,
+    16
+  ],
+  "capitals": [
+    {
+      "code": "A",
+      "name": "Столица: Легионы Проклятых",
+      "position": [
+        3,
+        16
+      ],
+      "color": "#b85869",
+      "footprint": [
+        [
+          0,
+          15
+        ],
+        [
+          0,
+          15
+        ],
+        [
+          0,
+          16
+        ],
+        [
+          0,
+          16
+        ],
+        [
+          0,
+          17
+        ],
+        [
+          1,
+          15
+        ],
+        [
+          1,
+          15
+        ],
+        [
+          1,
+          15
+        ],
+        [
+          1,
+          15
+        ],
+        [
+          1,
+          16
+        ],
+        [
+          1,
+          16
+        ],
+        [
+          1,
+          16
+        ],
+        [
+          1,
+          16
+        ],
+        [
+          1,
+          17
+        ],
+        [
+          1,
+          17
+        ],
+        [
+          2,
+          15
+        ],
+        [
+          2,
+          15
+        ],
+        [
+          2,
+          16
+        ],
+        [
+          2,
+          16
+        ],
+        [
+          2,
+          17
+        ],
+        [
+          3,
+          15
+        ],
+        [
+          3,
+          15
+        ],
+        [
+          3,
+          16
+        ],
+        [
+          3,
+          16
+        ],
+        [
+          3,
+          17
+        ]
+      ]
+    }
+  ],
+  "cities": [
+    {
+      "code": "C1",
+      "name": "Форпост Пепла",
+      "position": [
+        20,
+        3
+      ],
+      "enemy_ids": [
+        40
+      ],
+      "level": 2,
+      "objective": false,
+      "owned": false,
+      "footprint": [
+        [
+          18,
+          1
+        ],
+        [
+          18,
+          1
+        ],
+        [
+          18,
+          1
+        ],
+        [
+          18,
+          1
+        ],
+        [
+          18,
+          2
+        ],
+        [
+          18,
+          2
+        ],
+        [
+          18,
+          3
+        ],
+        [
+          18,
+          3
+        ],
+        [
+          19,
+          1
+        ],
+        [
+          19,
+          1
+        ],
+        [
+          19,
+          2
+        ],
+        [
+          19,
+          3
+        ],
+        [
+          20,
+          1
+        ],
+        [
+          20,
+          1
+        ],
+        [
+          20,
+          2
+        ],
+        [
+          20,
+          3
+        ]
+      ]
+    },
+    {
+      "code": "C2",
+      "name": "Цитадель Рассвета",
+      "position": [
+        23,
+        29
+      ],
+      "enemy_ids": [
+        41
+      ],
+      "level": 3,
+      "objective": false,
+      "owned": false,
+      "footprint": [
+        [
+          21,
+          27
+        ],
+        [
+          21,
+          28
+        ],
+        [
+          21,
+          28
+        ],
+        [
+          21,
+          29
+        ],
+        [
+          22,
+          27
+        ],
+        [
+          22,
+          27
+        ],
+        [
+          22,
+          28
+        ],
+        [
+          22,
+          28
+        ],
+        [
+          22,
+          28
+        ],
+        [
+          22,
+          28
+        ],
+        [
+          22,
+          29
+        ],
+        [
+          22,
+          29
+        ],
+        [
+          23,
+          27
+        ],
+        [
+          23,
+          28
+        ],
+        [
+          23,
+          28
+        ],
+        [
+          23,
+          29
+        ]
+      ]
+    }
+  ],
+  "enemies": [
+    {
+      "id": 1,
+      "position": [
+        9,
+        16
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Один Орк",
+      "units": [
+        {
+          "name": "Орк",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5013"
+        }
+      ],
+      "summary": "Орк",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "1"
+    },
+    {
+      "id": 2,
+      "position": [
+        5,
+        15
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Два Гоблина и Гоблин лучник",
+      "units": [
+        {
+          "name": "Гоблин",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5017"
+        },
+        {
+          "name": "Гоблин",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5017"
+        },
+        {
+          "name": "Гоблин лучник",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5018"
+        }
+      ],
+      "summary": "2 × Гоблин + Гоблин лучник",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "2"
+    },
+    {
+      "id": 3,
+      "position": [
+        6,
+        18
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Два Ополченца и Лучник",
+      "units": [
+        {
+          "name": "Ополченец",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5002"
+        },
+        {
+          "name": "Ополченец",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5002"
+        },
+        {
+          "name": "Лучник",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0006"
+        }
+      ],
+      "summary": "2 × Ополченец + Лучник",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "3"
+    },
+    {
+      "id": 4,
+      "position": [
+        7,
+        19
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Копейщик и Служка",
+      "units": [
+        {
+          "name": "Копейщик",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu5003"
+        },
+        {
+          "name": "Служка",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0011"
+        }
+      ],
+      "summary": "Копейщик + Служка",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "4"
+    },
+    {
+      "id": 5,
+      "position": [
+        7,
+        13
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Три Скваера",
+      "units": [
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0001"
+        }
+      ],
+      "summary": "3 × Скваер",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "5"
+    },
+    {
+      "id": 6,
+      "position": [
+        16,
+        11
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Демон и Одержимый",
+      "units": [
+        {
+          "name": "Демон",
+          "Level": 2,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu0058"
+        },
+        {
+          "name": "Одержимый",
+          "Level": 1,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0052"
+        }
+      ],
+      "summary": "Демон (ур. 2) + Одержимый",
+      "fighter_count": 2,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "6"
+    },
+    {
+      "id": 7,
+      "position": [
+        8,
+        11
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Скелет и Призрак",
+      "units": [
+        {
+          "name": "Скелет",
+          "Level": 1,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0101"
+        },
+        {
+          "name": "Призрак",
+          "Level": 2,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0079"
+        }
+      ],
+      "summary": "Скелет + Призрак (ур. 2)",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "7"
+    },
+    {
+      "id": 8,
+      "position": [
+        10,
+        10
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Два Крестьянина и Инкуб",
+      "units": [
+        {
+          "name": "Крестьянин",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5001"
+        },
+        {
+          "name": "Крестьянин",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5001"
+        },
+        {
+          "name": "Инкуб",
+          "Level": 4,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0065"
+        }
+      ],
+      "summary": "2 × Крестьянин + Инкуб (ур. 4)",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "8"
+    },
+    {
+      "id": 9,
+      "position": [
+        12,
+        22
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Два Одержимых и Колдунья",
+      "units": [
+        {
+          "name": "Одержимый",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0052"
+        },
+        {
+          "name": "Одержимый",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0052"
+        },
+        {
+          "name": "Колдунья",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0068"
+        }
+      ],
+      "summary": "2 × Одержимый + Колдунья (ур. 3)",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "9"
+    },
+    {
+      "id": 10,
+      "position": [
+        9,
+        20
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Один Оккультист",
+      "units": [
+        {
+          "name": "Оккультист",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu6013"
+        }
+      ],
+      "summary": "Оккультист",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "10"
+    },
+    {
+      "id": 11,
+      "position": [
+        19,
+        28
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Кракен в озере",
+      "units": [
+        {
+          "name": "Кракен",
+          "Level": 1,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu5027"
+        }
+      ],
+      "summary": "Кракен",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "11"
+    },
+    {
+      "id": 12,
+      "position": [
+        11,
+        9
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Рыцарь смерти и Зомби",
+      "units": [
+        {
+          "name": "Рыцарь смерти",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0096"
+        },
+        {
+          "name": "Зомби",
+          "Level": 2,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0087"
+        }
+      ],
+      "summary": "Рыцарь смерти + Зомби (ур. 2)",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "12"
+    },
+    {
+      "id": 13,
+      "position": [
+        15,
+        25
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Два Орка",
+      "units": [
+        {
+          "name": "Орк",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5013"
+        },
+        {
+          "name": "Орк",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5013"
+        }
+      ],
+      "summary": "2 × Орк",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "13"
+    },
+    {
+      "id": 14,
+      "position": [
+        20,
+        9
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Два Тёмных эльфа мясника и Призрак",
+      "units": [
+        {
+          "name": "Тёмный эльф мясник",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu8041"
+        },
+        {
+          "name": "Тёмный эльф мясник",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu8041"
+        },
+        {
+          "name": "Призрак",
+          "Level": 2,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0079"
+        }
+      ],
+      "summary": "2 × Тёмный эльф мясник + Призрак (ур. 2)",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "14"
+    },
+    {
+      "id": 15,
+      "position": [
+        17,
+        21
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Два Гнома воина и Алхимик",
+      "units": [
+        {
+          "name": "Гном воин",
+          "Level": 2,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0037"
+        },
+        {
+          "name": "Гном воин",
+          "Level": 2,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0037"
+        },
+        {
+          "name": "Алхимик",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0161"
+        }
+      ],
+      "summary": "2 × Гном воин (ур. 2) + Алхимик (ур. 3)",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "15"
+    },
+    {
+      "id": 16,
+      "position": [
+        13,
+        6
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Два Берсеркера и Сектант",
+      "units": [
+        {
+          "name": "Берсерк",
+          "Level": 2,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0053"
+        },
+        {
+          "name": "Берсерк",
+          "Level": 2,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0053"
+        },
+        {
+          "name": "Сектант",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0062"
+        }
+      ],
+      "summary": "2 × Берсерк (ур. 2) + Сектант",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "16"
+    },
+    {
+      "id": 17,
+      "position": [
+        11,
+        23
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Оборотень и Зомби",
+      "units": [
+        {
+          "name": "Оборотень",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0092"
+        },
+        {
+          "name": "Зомби",
+          "Level": 2,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0087"
+        }
+      ],
+      "summary": "Оборотень + Зомби (ур. 2)",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "17"
+    },
+    {
+      "id": 18,
+      "position": [
+        14,
+        15
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Дикий кентавр",
+      "units": [
+        {
+          "name": "Кентавр дикарь",
+          "Level": 3,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu8017"
+        }
+      ],
+      "summary": "Кентавр дикарь (ур. 3)",
+      "fighter_count": 1,
+      "formation_cells": 1,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "18"
+    },
+    {
+      "id": 19,
+      "position": [
+        26,
+        5
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Мантикора",
+      "units": [
+        {
+          "name": "Мантикора",
+          "Level": 1,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu6016"
+        }
+      ],
+      "summary": "Мантикора",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "19"
+    },
+    {
+      "id": 21,
+      "position": [
+        27,
+        11
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Два Адских рыцаря, Толстый бес и Колдунья",
+      "units": [
+        {
+          "name": "Толстый бес",
+          "Level": 1,
+          "big": true,
+          "position": 1,
+          "unit_id": "g000uu6004"
+        },
+        {
+          "name": "Адский рыцарь",
+          "Level": 4,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0166"
+        },
+        {
+          "name": "Адский рыцарь",
+          "Level": 4,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu0166"
+        },
+        {
+          "name": "Колдунья",
+          "Level": 3,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0068"
+        }
+      ],
+      "summary": "Толстый бес + 2 × Адский рыцарь (ур. 4) + Колдунья (ур. 3)",
+      "fighter_count": 4,
+      "formation_cells": 5,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "21"
+    },
+    {
+      "id": 20,
+      "position": [
+        28,
+        24
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Тиамат",
+      "units": [
+        {
+          "name": "Тиамат",
+          "Level": 5,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu0168"
+        }
+      ],
+      "summary": "Тиамат (ур. 5)",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "20"
+    },
+    {
+      "id": 31,
+      "position": [
+        31,
+        16
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Зелёный дракон — цель карты",
+      "units": [
+        {
+          "name": "Зелёный дракон",
+          "Level": 1,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu5023"
+        }
+      ],
+      "summary": "Зелёный дракон",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "31"
+    },
+    {
+      "id": 40,
+      "position": [
+        20,
+        3
+      ],
+      "alive": true,
+      "kind": "city",
+      "description": "Гарнизон города II уровня: Молох и Сектант",
+      "units": [
+        {
+          "name": "Молох",
+          "Level": 3,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu0059"
+        },
+        {
+          "name": "Сектант",
+          "Level": 1,
+          "big": false,
+          "position": 4,
+          "unit_id": "g000uu0062"
+        }
+      ],
+      "summary": "Молох (ур. 3) + Сектант",
+      "fighter_count": 2,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "40"
+    },
+    {
+      "id": 41,
+      "position": [
+        23,
+        29
+      ],
+      "alive": true,
+      "kind": "city",
+      "description": "Гарнизон города III уровня: Имперский рыцарь и Патриарх",
+      "units": [
+        {
+          "name": "Имперский рыцарь",
+          "Level": 3,
+          "big": false,
+          "position": 2,
+          "unit_id": "g000uu0003"
+        },
+        {
+          "name": "Патриарх",
+          "Level": 4,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0150"
+        }
+      ],
+      "summary": "Имперский рыцарь (ур. 3) + Патриарх (ур. 4)",
+      "fighter_count": 2,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "41"
+    },
+    {
+      "id": 42,
+      "position": [
+        16,
+        3
+      ],
+      "alive": true,
+      "kind": "ruin",
+      "description": "Руины: Людоед",
+      "units": [
+        {
+          "name": "Людоед",
+          "Level": 1,
+          "big": true,
+          "position": 2,
+          "unit_id": "g000uu5115"
+        }
+      ],
+      "summary": "Людоед",
+      "fighter_count": 1,
+      "formation_cells": 2,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "42"
+    }
+  ],
+  "sites": [
+    {
+      "code": "T1",
+      "kind": "merchant",
+      "name": "Лавка странствующего алхимика",
+      "position": [
+        9,
+        27
+      ],
+      "interaction_tiles": [
+        [
+          8,
+          26
+        ],
+        [
+          9,
+          26
+        ],
+        [
+          10,
+          26
+        ],
+        [
+          8,
+          27
+        ],
+        [
+          10,
+          27
+        ]
+      ]
+    }
+  ],
+  "terrain": {
+    "water": [
+      [
+        18,
+        28
+      ],
+      [
+        19,
+        27
+      ],
+      [
+        19,
+        28
+      ],
+      [
+        19,
+        29
+      ],
+      [
+        20,
+        28
+      ]
+    ],
+    "forest": [
+      [
+        13,
+        14
+      ],
+      [
+        13,
+        15
+      ],
+      [
+        13,
+        16
+      ],
+      [
+        14,
+        14
+      ],
+      [
+        14,
+        15
+      ],
+      [
+        14,
+        16
+      ],
+      [
+        15,
+        14
+      ],
+      [
+        15,
+        15
+      ],
+      [
+        15,
+        16
+      ]
+    ],
+    "road": []
+  },
+  "obstacles": [
+    [
+      0,
+      15
+    ],
+    [
+      0,
+      16
+    ],
+    [
+      0,
+      17
+    ],
+    [
+      1,
+      15
+    ],
+    [
+      1,
+      16
+    ],
+    [
+      1,
+      17
+    ],
+    [
+      2,
+      15
+    ],
+    [
+      2,
+      16
+    ],
+    [
+      2,
+      17
+    ],
+    [
+      3,
+      15
+    ],
+    [
+      3,
+      17
+    ],
+    [
+      11,
+      16
+    ],
+    [
+      15,
+      18
+    ],
+    [
+      18,
+      1
+    ],
+    [
+      18,
+      2
+    ],
+    [
+      18,
+      3
+    ],
+    [
+      19,
+      1
+    ],
+    [
+      19,
+      2
+    ],
+    [
+      19,
+      3
+    ],
+    [
+      20,
+      1
+    ],
+    [
+      20,
+      2
+    ],
+    [
+      21,
+      13
+    ],
+    [
+      21,
+      27
+    ],
+    [
+      21,
+      28
+    ],
+    [
+      21,
+      29
+    ],
+    [
+      22,
+      27
+    ],
+    [
+      22,
+      28
+    ],
+    [
+      22,
+      29
+    ],
+    [
+      23,
+      27
+    ],
+    [
+      23,
+      28
+    ],
+    [
+      24,
+      20
+    ],
+    [
+      29,
+      13
+    ]
+  ],
+  "gold_mines": [
+    [
+      23,
+      30
+    ]
+  ],
+  "mana": [
+    {
+      "position": [
+        20,
+        4
+      ],
+      "kind": "life",
+      "name": "Мана жизни"
+    },
+    {
+      "position": [
+        24,
+        29
+      ],
+      "kind": "death",
+      "name": "Мана смерти"
+    }
+  ],
+  "chests": [
+    {
+      "code": "X1",
+      "position": [
+        5,
+        22
+      ],
+      "items": [
+        "Эликсир инициативы (+10%)"
+      ]
+    },
+    {
+      "code": "X2",
+      "position": [
+        12,
+        2
+      ],
+      "items": [
+        "Зелье точности (+30%)"
+      ]
+    },
+    {
+      "code": "X3",
+      "position": [
+        18,
+        18
+      ],
+      "items": [
+        "Runestone (Artifact)"
+      ]
+    },
+    {
+      "code": "X4",
+      "position": [
+        26,
+        12
+      ],
+      "items": [
+        "Angel Orb"
+      ]
+    }
+  ],
+  "ruins": [
+    {
+      "id": 42,
+      "title": "Руины старого тракта",
+      "ruin_pos": [
+        16,
+        2
+      ],
+      "marker_pos": [
+        16,
+        3
+      ],
+      "item": "Emerald (Valuable)",
+      "gold": 0,
+      "source_ruin_pos": [
+        24,
+        3
+      ],
+      "source_marker_pos": [
+        25,
+        4
+      ],
+      "guardian_position": [
+        16,
+        3
+      ]
+    }
+  ],
+  "notes": [
+    "Стартовый отряд закреплён сценарием и сохраняется при отключённом боссовом ростере.",
+    "Игровая сетка 32×32: координаты взяты после масштабирования и разрешения конфликтов."
+  ],
+  "conditional_assaults": []
+}

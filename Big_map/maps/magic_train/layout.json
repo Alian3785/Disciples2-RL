@@ -1,0 +1,429 @@
+{
+  "schema_version": 1,
+  "map_id": "magic_train",
+  "title": "Magic · магия",
+  "grid_size": 48,
+  "source_grid_size": 48,
+  "seed": 0,
+  "observation_version": "local5",
+  "scripted_bot_enabled": false,
+  "boss_roster_enabled": false,
+  "objective": "all_enemies",
+  "objective_enemy_id": null,
+  "turn": 0,
+  "faction": "Легионы Проклятых",
+  "starting_gold": 200.0,
+  "starting_army": "2 × Одержимый + Архидьявол + Сектант",
+  "starting_roster_mode": "fixed",
+  "hero": [
+    5,
+    27
+  ],
+  "capitals": [
+    {
+      "code": "A",
+      "name": "Столица: Легионы Проклятых",
+      "position": [
+        5,
+        27
+      ],
+      "color": "#b85869",
+      "footprint": [
+        [
+          1,
+          25
+        ],
+        [
+          1,
+          26
+        ],
+        [
+          1,
+          27
+        ],
+        [
+          1,
+          28
+        ],
+        [
+          1,
+          29
+        ],
+        [
+          2,
+          25
+        ],
+        [
+          2,
+          26
+        ],
+        [
+          2,
+          27
+        ],
+        [
+          2,
+          28
+        ],
+        [
+          2,
+          29
+        ],
+        [
+          3,
+          25
+        ],
+        [
+          3,
+          26
+        ],
+        [
+          3,
+          27
+        ],
+        [
+          3,
+          28
+        ],
+        [
+          3,
+          29
+        ],
+        [
+          4,
+          25
+        ],
+        [
+          4,
+          26
+        ],
+        [
+          4,
+          27
+        ],
+        [
+          4,
+          28
+        ],
+        [
+          4,
+          29
+        ],
+        [
+          5,
+          25
+        ],
+        [
+          5,
+          26
+        ],
+        [
+          5,
+          27
+        ],
+        [
+          5,
+          28
+        ],
+        [
+          5,
+          29
+        ]
+      ]
+    }
+  ],
+  "cities": [],
+  "enemies": [
+    {
+      "id": 1,
+      "position": [
+        30,
+        14
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Орк и Ополченец впереди; Гоблин лучник позади",
+      "units": [
+        {
+          "name": "Орк",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu5013"
+        },
+        {
+          "name": "Ополченец",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5002"
+        },
+        {
+          "name": "Гоблин лучник",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu5018"
+        }
+      ],
+      "summary": "Орк + Ополченец + Гоблин лучник",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "1"
+    },
+    {
+      "id": 2,
+      "position": [
+        38,
+        35
+      ],
+      "alive": true,
+      "kind": "field",
+      "description": "Скваер и Разбойник впереди; Ученик позади",
+      "units": [
+        {
+          "name": "Скваер",
+          "Level": 1,
+          "big": false,
+          "position": 1,
+          "unit_id": "g000uu0001"
+        },
+        {
+          "name": "Разбойник",
+          "Level": 1,
+          "big": false,
+          "position": 3,
+          "unit_id": "g000uu5030"
+        },
+        {
+          "name": "Ученик",
+          "Level": 1,
+          "big": false,
+          "position": 5,
+          "unit_id": "g000uu0008"
+        }
+      ],
+      "summary": "Скваер + Разбойник + Ученик",
+      "fighter_count": 3,
+      "formation_cells": 3,
+      "difficulty_tier": null,
+      "formation_key": null,
+      "region": null,
+      "wave": null,
+      "marker": "2"
+    }
+  ],
+  "sites": [],
+  "terrain": {
+    "water": [],
+    "forest": [],
+    "road": []
+  },
+  "obstacles": [
+    [
+      1,
+      25
+    ],
+    [
+      1,
+      26
+    ],
+    [
+      1,
+      27
+    ],
+    [
+      1,
+      28
+    ],
+    [
+      1,
+      29
+    ],
+    [
+      2,
+      25
+    ],
+    [
+      2,
+      26
+    ],
+    [
+      2,
+      27
+    ],
+    [
+      2,
+      28
+    ],
+    [
+      2,
+      29
+    ],
+    [
+      3,
+      25
+    ],
+    [
+      3,
+      26
+    ],
+    [
+      3,
+      27
+    ],
+    [
+      3,
+      28
+    ],
+    [
+      3,
+      29
+    ],
+    [
+      4,
+      25
+    ],
+    [
+      4,
+      26
+    ],
+    [
+      4,
+      27
+    ],
+    [
+      4,
+      28
+    ],
+    [
+      4,
+      29
+    ],
+    [
+      5,
+      25
+    ],
+    [
+      5,
+      26
+    ],
+    [
+      5,
+      28
+    ],
+    [
+      5,
+      29
+    ],
+    [
+      29,
+      13
+    ],
+    [
+      29,
+      14
+    ],
+    [
+      29,
+      15
+    ],
+    [
+      30,
+      13
+    ],
+    [
+      30,
+      15
+    ],
+    [
+      31,
+      13
+    ],
+    [
+      31,
+      14
+    ],
+    [
+      31,
+      15
+    ],
+    [
+      37,
+      34
+    ],
+    [
+      37,
+      35
+    ],
+    [
+      37,
+      36
+    ],
+    [
+      38,
+      34
+    ],
+    [
+      38,
+      36
+    ],
+    [
+      39,
+      34
+    ],
+    [
+      39,
+      35
+    ],
+    [
+      39,
+      36
+    ]
+  ],
+  "gold_mines": [],
+  "mana": [
+    {
+      "position": [
+        6,
+        26
+      ],
+      "kind": "life",
+      "name": "Мана жизни"
+    },
+    {
+      "position": [
+        6,
+        27
+      ],
+      "kind": "runes",
+      "name": "Мана рун"
+    },
+    {
+      "position": [
+        6,
+        28
+      ],
+      "kind": "infernal",
+      "name": "Мана преисподней"
+    },
+    {
+      "position": [
+        7,
+        27
+      ],
+      "kind": "death",
+      "name": "Мана смерти"
+    }
+  ],
+  "chests": [],
+  "ruins": [],
+  "notes": [
+    "Стартовый отряд закреплён сценарием и сохраняется при отключённом боссовом ростере."
+  ],
+  "conditional_assaults": []
+}

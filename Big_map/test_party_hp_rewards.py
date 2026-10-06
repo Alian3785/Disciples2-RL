@@ -93,7 +93,10 @@ class PartyHpRewardsTests(unittest.TestCase):
                 for building in env.active_buildings.values():
                     if isinstance(building, dict) and building.get('unit') == target:
                         building['Build'] = 1
-                env.battle_env = SimpleNamespace(combined=[deepcopy(unit)], last_levelups=[source])
+                battle_unit = deepcopy(unit)
+                env.battle_env = SimpleNamespace(
+                    combined=[battle_unit], last_levelups=[source],
+                    last_levelup_units=[battle_unit])
                 env.mode = env.MODE_BATTLE
 
                 def finish_battle(action):
