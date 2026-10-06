@@ -1,0 +1,30 @@
+name: JAX Ruff
+
+on:
+  pull_request:
+    paths:
+      - 'jax/**'
+      - '.github/workflows/jax-ruff.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ruff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout JAX project
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: jax
+          persist-credentials: false
+
+      - name: Install Ruff
+        run: |
+          python3 -m venv "$RUNNER_TEMP/jax-ruff"
+          "$RUNNER_TEMP/jax-ruff/bin/python" -m pip install --disable-pip-version-check ruff==0.16.10
+
+      - name: Check JAX Python code
+        run: '"$RUNNER_TEMP/jax-ruff/bin/ruff" check --config jax/pyproject.toml jax'

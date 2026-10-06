@@ -1,0 +1,173 @@
+[tool.black]
+line-length = 100
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+python_version = "3.10"
+namespace_packages = true
+incremental = false
+cache_dir = ""
+warn_redundant_casts = true
+warn_return_any = true
+warn_unused_configs = true
+warn_unused_ignores = false
+allow_redefinition = true
+disallow_untyped_calls = false
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = false
+strict_optional = true
+strict_equality = true
+explicit_package_bases = true
+follow_imports = "skip"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "matplotlib.*",
+    "mpl_toolkits.*",
+    "gym.*",
+    "pytest_mock.*",
+    "numpy.*",
+    "dm_env.*",
+    "tree.*",
+    "pytest.*",
+    "IPython.*",
+    "optax.*",
+    "tqdm.*",
+    "rlax.*",
+    "neptune.*",
+    "tensorboardX.*",
+    "scipy.*",
+    "hydra.*",
+    "omegaconf.*",
+]
+
+[tool.flake8]
+select = ["A","B","C","D","E","F","G","I","N","T","W"]  # Specify list of error codes to report.
+exclude = [
+    ".tox",
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    "proto/*",
+    "*.pyc",
+    "*.egg-info",
+    ".cache",
+    ".eggs",
+]
+max-line-length=120
+max-cognitive-complexity=20
+import-order-style = "google"
+application-import-names = "stoa"
+doctests = true
+docstring-convention = "google"
+per-file-ignores = "__init__.py:F401"
+
+ignore = [
+    "A002",  # Argument shadowing a Python builtin.
+    "A003",  # Class attribute shadowing a Python builtin.
+    "D107",  # Do not require docstrings for __init__.
+    "E266",  # Do not require block comments to only have a single leading #.
+    "E731",  # Do not assign a lambda expression, use a def.
+    "W503",  # Line break before binary operator (not compatible with black).
+    "B017",  # assertRaises(Exception): or pytest.raises(Exception) should be considered evil.
+    "E203",  # black and flake8 disagree on whitespace before ':'.
+    "B009",  # Do not call getattr with a constant attribute value, it is not any safer than normal property access.
+]
+
+
+[tool.uv]
+package = true
+
+[tool.setuptools.packages.find]
+include = ['stoa*']
+
+[tool.setuptools.dynamic]
+version = {attr = "stoa.__version__"}
+
+[tool.uv.sources]
+xminigrid = { git = "https://github.com/corl-team/xland-minigrid.git", rev = "main" }
+gymnax = { git = " git+https://github.com/RobertTLange/gymnax.git", rev = "main" }
+
+[project]
+name = "stoa-env"
+readme = "README.md"
+description = "Single-Agent Reinforcement Learning with JAX"
+authors = [
+    {name = "Edan Toledo"},
+  ]
+dynamic = ["version"]
+license = {file = "LICENSE"}
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+    "chex>=0.1.89",
+    "flax>=0.10.5",
+    "jax>=0.4.25",
+    "jaxlib>=0.5.3",
+    "numpy>=1.26.4",
+]
+
+[project.optional-dependencies]
+brax = ["brax>=0.9.0"]
+gymnax = ["gymnax>=0.0.6", "gymnasium>=1.1.1"]
+jumanji = ["jumanji>=1.1.1"]
+kinetix = ["kinetix-env"]
+navix = ["navix>=0.7.0"]
+pgx = ["pgx>=2.6.0"]
+xminigrid = ["xminigrid"]
+all = [
+    "stoa-env[brax]",
+    "stoa-env[gymnax]",
+    "stoa-env[jumanji]",
+    "stoa-env[kinetix]",
+    "stoa-env[navix]",
+    "stoa-env[pgx]",
+    "stoa-env[xminigrid]",
+]
+dev = [
+    "black",
+    "coverage",
+    "flake8",
+    "importlib-metadata",
+    "isort",
+    "livereload",
+    "mkdocs",
+    "mkdocs-git-revision-date-plugin",
+    "mkdocs-include-markdown-plugin",
+    "mkdocs-material",
+    "mkdocs-mermaid2-plugin",
+    "mkdocstrings",
+    "mknotebooks",
+    "mypy",
+    "nbmake",
+    "pre-commit",
+    "promise",
+    "pymdown-extensions",
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+    "pytest-parallel",
+    "pytest-xdist",
+    "pytype",
+    "testfixtures",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/EdanToledo/Stoa"
+"Bug Tracker" = "https://github.com/EdanToledo/Stoa/issues"

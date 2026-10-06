@@ -1,0 +1,43 @@
+# ---MLP Actor Critic Networks---
+actor_network:
+  pre_torso:
+    _target_: stoix.networks.torso.MLPTorso
+    layer_sizes: [256, 256]
+    use_layer_norm: False
+    activation: silu
+  action_head:
+    _target_: stoix.networks.heads.NormalAffineTanhDistributionHead
+
+critic_network:
+  pre_torso:
+    _target_: stoix.networks.torso.MLPTorso
+    layer_sizes: [256, 256]
+    use_layer_norm: False
+    activation: silu
+  critic_head:
+    _target_: stoix.networks.heads.CategoricalCriticHead
+
+wm_network:
+  _target_: stoix.networks.model_based.RewardBasedWorldModel
+
+  obs_encoder: # Encoder for the observation. This can be seen as the representation network.
+    _target_: stoix.networks.torso.MLPTorso
+    layer_sizes: [256, 256]
+    use_layer_norm: False
+    activation: silu
+
+  # This can be seen as the dynamics network.
+  rnn_size: 256
+  num_stacked_rnn_layers: 2
+
+  # This can be seen as the reward network.
+  reward_torso:
+    _target_: stoix.networks.torso.MLPTorso
+    layer_sizes: [256, 256]
+    use_layer_norm: False
+    activation: silu
+  reward_head:
+    _target_: stoix.networks.heads.CategoricalCriticHead
+    vmin: ${system.reward_vmin}
+    vmax: ${system.reward_vmax}
+    num_atoms: ${system.reward_num_atoms}

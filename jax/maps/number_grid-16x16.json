@@ -1,0 +1,10 @@
+{
+  "name": "NumberGrid-16x16-reconstructed-v1",
+  "size": 16,
+  "agent_position": [2, 2],
+  "agent_number": 1,
+  "opponent_positions": [[3, 8], [10, 4], [13, 13]],
+  "opponent_numbers": [0, 1, 2],
+  "max_steps": 2000,
+  "reconstruction_note": "Coordinates were not published. This fixed layout is reconstructed with the user's permission; it is not a recovered original map."
+}

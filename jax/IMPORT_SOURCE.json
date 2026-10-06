@@ -1,0 +1,22 @@
+{
+  "source_repository": "https://github.com/Alian3785/jaxrep",
+  "source_commit": "146b11a4bf7b10aa8f395d722f77e31382c17654",
+  "source_branch": "codex/hero-mage",
+  "copied_tracked_files": 386,
+  "working_tree_updates_included": [
+    "LOCAL_RESULTS.md",
+    "viewer.html"
+  ],
+  "documentation_adjustments": [
+    "README.md: commands run from jax/ and latest measured run"
+  ],
+  "excluded": [
+    ".github/ workflow and issue templates",
+    "untracked local files",
+    "Python reference clone",
+    "local environments",
+    "W&B local cache"
+  ],
+  "included_run": "results/number_grid-mage-20m-20261006",
+  "source_checkpoint_sha256": "2c44c882c34f427829433212a4d23e6118d5e5adec3ec7d4f27db21fb5002d60"
+}

@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jaxrep-numbergrid"
+version = "1.0.0"
+description = "Reconstructed NumberGrid with Stoix feedforward PPO for a local NVIDIA GPU"
+requires-python = ">=3.12"
+readme = "README.md"
+license = "Apache-2.0"
+dynamic = ["dependencies"]
+
+[project.optional-dependencies]
+dev = ["ruff==0.16.10"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["numbergrid-runtime.txt"]}
+
+[tool.setuptools.packages.find]
+include = ["stoix*"]
+
+[tool.pytest.ini_options]
+testpaths = ["stoix/tests/number_grid_test.py", "stoix/tests/number_grid_mask_test.py", "stoix/tests/number_grid_battle_test.py", "stoix/tests/number_grid_tracking_test.py"]
+addopts = "-p no:cacheprovider"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["F821", "F823", "F601", "B006", "B023"]
