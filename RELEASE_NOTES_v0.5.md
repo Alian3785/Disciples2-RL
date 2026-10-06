@@ -2,7 +2,7 @@
 
 Version 0.5 brings together the changes made after v0.4: the Mirrow match scenario, configurable navigation windows, complete map-layout documentation, and fixes across combat, progression, spell use, settlement defence, and scripted opponents.
 
-The `v0.5.0` tag and standard source archives use **`obs/navigation-v2`**, including the accumulated fixes merged in [PR #54](https://github.com/Alian3785/Disciples2-RL/pull/54). This differs from v0.4, whose archives used `main` and linked experimental branches separately. The navigation features already described in v0.4 are now included in the release archive; they are not all new features of v0.5. `main`, `local5`, and `obs/rosters-v3` are not automatically updated by this release.
+The `v0.5.0` tag and standard source archives use **`main`**, whose gameplay and map content were replaced with `obs/navigation-v2`, including the accumulated fixes merged in [PR #54](https://github.com/Alian3785/Disciples2-RL/pull/54). This differs from v0.4, whose archives used the earlier `main` and linked experimental branches separately. The navigation features already described in v0.4 are now included in the main release archive; they are not all new features of v0.5. `local5` and `obs/rosters-v3` remain separate experimental branches.
 
 ## New features
 
@@ -11,7 +11,7 @@ The `v0.5.0` tag and standard source archives use **`obs/navigation-v2`**, inclu
 - The scripted opponent now pursues the hero when it has no other reachable enemy target. Its existing return-home and recovery behavior remains available.
 - Navigation observations support **5 x 5, 7 x 7, and 10 x 10 local windows**, with matching bounds and observation construction. The API mode is still named `local5`; checkpoints must use the same window and observation implementation as training.
 - Added runtime-derived layouts for **all 16 maps**, with PNG diagrams, JSON legends, army compositions, resources, items, and interaction cells. City Defence Training, Siege Training, and Super Last Stand also have separate wave sheets. A generator and regression tests keep the diagrams tied to the implemented maps.
-- Added an English **Maps** table to the root README: all 16 maps, an approximate difficulty progression, Training / Realistic / Authentic categories, and a working training command for each map. Default and Wotan's Vengeance are classified as Authentic.
+- Added an English **Maps** table to the root README: all 16 maps, an approximate difficulty progression, Training / Realistic / Authentic categories, and short `train_map` commands with shared Bash and PowerShell setup. Default and Wotan's Vengeance are classified as Authentic. The shortcuts preserve `local5`, ordinary rosters, the 2,000,000-step default, and disabled Comet logging; City Defence Training and Mirrow match explicitly enable the scripted bot.
 
 ## Bug fixes
 
@@ -42,6 +42,8 @@ The `v0.5.0` tag and standard source archives use **`obs/navigation-v2`**, inclu
 
 ## Other changes
 
+- Promoted the complete `obs/navigation-v2` content to `main`, preserving the previous history and a backup branch. The workflow that automatically closed pull requests based on the triggering account is disabled, so contributors can submit PRs to `main`.
+
 - Rebalanced Siege Training's early patrols and mana access. The map has 32 static armies and a pursuing siege army that appears on turn 27; its scheduled attacker is separate from the optional scripted capital bot.
 - Added rolling statistics for unique defeated squads over the last 100 episodes, with deduplication and resets per environment. Auxiliary combat counts remain separate from campaign-objective completion.
 - Preserved the nine-variant Wotan observation comparison and city-objective diagnostics. The recorded experiment totals 53,000,000 training steps, 107,726 completed training episodes, and 5,300 evaluation episodes, with **zero campaign victories**. The navigation variant's higher auxiliary reward is not evidence that it learned to complete the scenario.
@@ -51,6 +53,6 @@ The `v0.5.0` tag and standard source archives use **`obs/navigation-v2`**, inclu
 - Map, objective, observation-window, roster, and scripted-bot settings must match the saved model and normalization statistics. New maps and changed observation sizes require compatible checkpoints or retraining; weights are not interchangeable merely because the API mode is called `local5`.
 - Wotan remains a static scenario adaptation. Its original story-event execution, including Uther's appearance and the giant's change of allegiance, is not implemented. The release does not claim complete parity with the original game or successful mastery of the campaigns.
 
-Full tagged history: [v0.4.0 to v0.5.0](https://github.com/Alian3785/Disciples2-RL/compare/v0.4.0...v0.5.0). Because the releases use different branches, this comparison also includes the navigation work already documented in v0.4.
+Full tagged history: [v0.4.0 to v0.5.0](https://github.com/Alian3785/Disciples2-RL/compare/v0.4.0...v0.5.0). Because v0.5 promotes the navigation branch into `main`, this comparison also includes the navigation work already documented in v0.4.
 
 Changes since the navigation snapshot linked by v0.4: [8c9fa0b to v0.5.0](https://github.com/Alian3785/Disciples2-RL/compare/8c9fa0bb270ac8ae6fbdfff844d602d298064505...v0.5.0).
