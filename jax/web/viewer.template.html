@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NumberGrid · Лаборатория агента</title>
+<style>/*__CSS__*/</style></head><body>
+<header><a class="brand" href="#"><span class="brand-mark">N<span id="map-size-badge"></span></span> NUMBERGRID</a><span class="local-badge"><i></i> Работает офлайн</span></header>
+<main>
+  <section class="intro"><div><div class="eyebrow">ЛАБОРАТОРИЯ АГЕНТА</div><h1>Сначала слабее.<br><em>Потом сильнее.</em></h1><p>Начните с числа <span id="initial-number"></span>. Забирайте меньшие числа,<br class="desktop"> растите и очистите поле за меньшее число ходов.</p></div><div class="intro-note"><span id="map-size"></span><small>одно поле · восемь направлений</small></div></section>
+  <div class="workspace">
+    <section class="board-panel" aria-label="Игровая карта">
+      <div class="board-top"><div class="tabs" role="tablist" aria-label="Режим"><button id="replay-tab" role="tab" aria-selected="true">Запись PPO</button><button id="manual-tab" role="tab" aria-selected="false">Играть самому</button></div><span id="mode-label" class="mini-label">ОБУЧЕННЫЙ АГЕНТ</span></div>
+      <div class="canvas-wrap"><canvas id="board" tabindex="0" aria-label="Поле NumberGrid. В ручной игре используйте W A D X, Q E Z C или экранные стрелки."></canvas></div>
+      <div class="board-bottom"><span><i class="legend-agent"></i> Вы</span><span><i class="legend-opponent"></i> Оппоненты</span><span class="board-status" id="board-status" role="status">Готов к старту</span></div>
+      <div id="replay-controls" class="controls"><div class="transport"><button id="play" class="primary" aria-label="Воспроизвести запись">▶ Смотреть</button><button id="next" class="secondary">Один ход →</button><button id="restart" class="icon-button" aria-label="Начать запись заново">↺</button><select id="speed" aria-label="Скорость воспроизведения"><option value="600">Медленно</option><option value="260" selected>Обычно</option><option value="90">Быстро</option></select></div><div class="timeline"><input id="scrubber" type="range" min="0" max="1" value="0" aria-label="Ход записи"><span id="frame-count">0 / 0</span></div><label class="record-label" for="record">Запись агента</label><select id="record"></select></div>
+      <div id="manual-controls" class="controls manual-controls" hidden><div><strong>Ваш ход.</strong><p>W A D X — прямо<br>Q E Z C — по диагонали<br>Стрелки — по прямой · R — сначала</p><button id="reset-manual" class="secondary">↺ Новая игра</button></div><div class="dpad" aria-label="Направление движения"><button data-action="7" aria-label="Северо-запад">↖</button><button data-action="0" aria-label="Север">↑</button><button data-action="1" aria-label="Северо-восток">↗</button><button data-action="6" aria-label="Запад">←</button><span>ВЫ</span><button data-action="2" aria-label="Восток">→</button><button data-action="5" aria-label="Юго-запад">↙</button><button data-action="4" aria-label="Юг">↓</button><button data-action="3" aria-label="Юго-восток">↘</button></div></div>
+    </section>
+    <aside>
+      <section class="scorecard"><div class="eyebrow">СЕЙЧАС НА ПОЛЕ</div><div class="power"><span id="power">—</span><div>ваше число<small>Растёт при захвате</small></div></div><div class="stats"><div><span id="moves">0</span><small>ходов</small></div><div><span id="reward">0</span><small>награда</small></div><div><span id="remaining">—</span><small>осталось</small></div></div><div id="message" class="message" role="status">Ищите число меньше вашего.</div></section>
+      <section class="rules"><h2>Меньше — можно забрать</h2><ol><li><b>Подойдите к соседу.</b> Контакт срабатывает в восьми соседних клетках, в том числе по диагонали.</li><li><b>Слабый исчезает.</b> Ваше число и награда растут на 1. Равный или сильнее — поражение и −1.</li><li><b>Соберите всех <span id="enemy-count"></span>.</b> За победу ещё +3. За всех врагов и победу — <span id="max-reward"></span>, отдельно от награды за исследование и штрафа за ходы.</li><li><b>Исследуйте поле.</b> За первое посещение клетки +<span id="exploration-bonus"></span>. Повторные посещения, начальная клетка и ход с поражением бонуса не дают. Посещённые клетки отмечены зелёным; новая игра сбрасывает историю.</li></ol><p class="rule-note">Если рядом одновременно слабый и сильный, поражение имеет приоритет. <span id="wall-rule"></span> За каждый ход −<span id="step-cost"></span> награды, включая попытки пройти в занятую клетку. Лимит — <span id="episode-limit"></span> ходов.</p></section>
+      <section class="run-card"><div class="eyebrow">ЛОКАЛЬНОЕ ОБУЧЕНИЕ</div><h2>PPO <span>без памяти</span></h2><dl><div><dt>Видеокарта</dt><dd id="gpu">—</dd></div><div><dt>Переходов</dt><dd id="steps">—</dd></div><div><dt>Средняя скорость</dt><dd id="throughput">—</dd></div><div><dt>Оценка argmax</dt><dd id="evaluation">—</dd></div></dl><p>На фиксированной карте. Записи получены из сохранённых весов; в браузере воспроизводятся готовые ходы.</p></section>
+    </aside>
+  </div>
+  <footer><span id="map-version"></span><span id="optimal-note"></span></footer>
+</main>
+<script id="run-data" type="application/json">__DATA__</script>
+<script>/*__ENGINE__*/</script><script>/*__APP__*/</script>
+</body></html>

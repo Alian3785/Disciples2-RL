@@ -1,0 +1,69 @@
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /home/minigrid/.netrc.
+wandb: Currently logged in as: sergey3784 to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run 7cddiev7
+wandb: Tracking run with wandb version 0.30.0
+wandb: Run data is saved locally in /mnt/c/jaxjax/results/number_grid-mage-20m-20261006/wandb/run-20261006_154421-7cddiev7
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run mage-24-squads-20m-20261006
+wandb: ⭐️ View project at https://wandb.ai/sergey3784/numbergrid
+wandb: 🚀 View run at https://wandb.ai/sergey3784/numbergrid/runs/7cddiev7
+[35m[1mEnvpool not installed. Please install it if you want to use the Envpool factory[0m
+W&B charts: https://wandb.ai/sergey3784/numbergrid/runs/7cddiev7
+{"phase": "initializing", "device": "cuda:0", "total_timesteps": 20000000}
+[33m[1mCreated environments for Suite: number_grid - Scenario: NumberGrid-24x24[0m
+{"phase": "compiling", "initial_evaluation": {"episodes": 64, "successes": 0, "success_rate": 0.0, "mean_return": -4.969822406768799, "mean_length": 5000.0, "min_length": 5000, "max_length": 5000, "action_selection": "argmax", "seed": 1042}}
+{"phase": "training", "training_steps": 1000000, "total_timesteps": 20000000, "mean_steps_per_second": 420615.8507968408, "mean_episode_return": 20.63222838258817, "episode_success_rate": 0.5749613601236476, "mean_episode_length": 1224.2241161882969, "episodes": 647, "episode_wins": 372}
+{"phase": "training", "training_steps": 2000000, "total_timesteps": 20000000, "mean_steps_per_second": 427300.8216509727, "mean_episode_return": 24.852263489897425, "episode_success_rate": 0.7497360084477297, "mean_episode_length": 1127.2365333371831, "episodes": 947, "episode_wins": 710}
+{"phase": "training", "training_steps": 3000000, "total_timesteps": 20000000, "mean_steps_per_second": 435332.08333682816, "mean_episode_return": 24.989513265983057, "episode_success_rate": 0.7641950567802271, "mean_episode_length": 700.0955417508194, "episodes": 1497, "episode_wins": 1144}
+{"phase": "training", "training_steps": 4000000, "total_timesteps": 20000000, "mean_steps_per_second": 441161.3257791735, "mean_episode_return": 25.04256715415412, "episode_success_rate": 0.7757322175732217, "mean_episode_length": 433.5845192498243, "episodes": 2390, "episode_wins": 1854}
+{"phase": "training", "training_steps": 5000000, "total_timesteps": 20000000, "mean_steps_per_second": 443310.7143334122, "mean_episode_return": 25.042378268727436, "episode_success_rate": 0.7900037299515106, "mean_episode_length": 375.23797940941097, "episodes": 2681, "episode_wins": 2118}
+{"phase": "training", "training_steps": 6000000, "total_timesteps": 20000000, "mean_steps_per_second": 445556.7240982968, "mean_episode_return": 25.4293261280005, "episode_success_rate": 0.8060344827586207, "mean_episode_length": 360.825789067937, "episodes": 2784, "episode_wins": 2244}
+{"phase": "training", "training_steps": 7000000, "total_timesteps": 20000000, "mean_steps_per_second": 446801.05641853256, "mean_episode_return": 25.475514910511617, "episode_success_rate": 0.8066712049012934, "mean_episode_length": 341.52451409118527, "episodes": 2938, "episode_wins": 2370}
+{"phase": "training", "training_steps": 8000000, "total_timesteps": 20000000, "mean_steps_per_second": 447303.37577002833, "mean_episode_return": 25.66552202423106, "episode_success_rate": 0.8078088185796028, "mean_episode_length": 336.42915330371324, "episodes": 2971, "episode_wins": 2400}
+{"phase": "training", "training_steps": 9000000, "total_timesteps": 20000000, "mean_steps_per_second": 448425.1070332424, "mean_episode_return": 25.680135328691083, "episode_success_rate": 0.8015513897866839, "mean_episode_length": 323.77344951370725, "episodes": 3094, "episode_wins": 2480}
+{"phase": "training", "training_steps": 10000000, "total_timesteps": 20000000, "mean_steps_per_second": 449416.3617430162, "mean_episode_return": 25.79524995545489, "episode_success_rate": 0.8178033941722702, "mean_episode_length": 319.21645801555184, "episodes": 3123, "episode_wins": 2554}
+{"phase": "training", "training_steps": 11000000, "total_timesteps": 20000000, "mean_steps_per_second": 450245.7071334871, "mean_episode_return": 25.900186858908103, "episode_success_rate": 0.8251348778165661, "mean_episode_length": 316.00189778465045, "episodes": 3151, "episode_wins": 2600}
+{"phase": "training", "training_steps": 12000000, "total_timesteps": 20000000, "mean_steps_per_second": 450942.15723688144, "mean_episode_return": 25.743742408070176, "episode_success_rate": 0.8098525258864135, "mean_episode_length": 314.1449636190634, "episodes": 3187, "episode_wins": 2581}
+{"phase": "training", "training_steps": 13000000, "total_timesteps": 20000000, "mean_steps_per_second": 451966.50663530413, "mean_episode_return": 25.83983310337467, "episode_success_rate": 0.8177262762292515, "mean_episode_length": 314.32225927872, "episodes": 3193, "episode_wins": 2611}
+{"phase": "training", "training_steps": 14000000, "total_timesteps": 20000000, "mean_steps_per_second": 451911.9039144787, "mean_episode_return": 25.92498618037607, "episode_success_rate": 0.8340043357076494, "mean_episode_length": 309.04428155402275, "episodes": 3229, "episode_wins": 2693}
+{"phase": "training", "training_steps": 15000000, "total_timesteps": 20000000, "mean_steps_per_second": 452382.05545055657, "mean_episode_return": 25.8462927639301, "episode_success_rate": 0.8187692307692308, "mean_episode_length": 308.19477123084437, "episodes": 3250, "episode_wins": 2661}
+{"phase": "training", "training_steps": 16000000, "total_timesteps": 20000000, "mean_steps_per_second": 452894.87386373477, "mean_episode_return": 25.858794188744056, "episode_success_rate": 0.8289076644538322, "mean_episode_length": 303.4770820355228, "episodes": 3314, "episode_wins": 2747}
+{"phase": "training", "training_steps": 17000000, "total_timesteps": 20000000, "mean_steps_per_second": 453258.18781538605, "mean_episode_return": 25.875565161325486, "episode_success_rate": 0.8333333333333334, "mean_episode_length": 299.3892941523426, "episodes": 3342, "episode_wins": 2785}
+{"phase": "training", "training_steps": 18000000, "total_timesteps": 20000000, "mean_steps_per_second": 453772.1543283041, "mean_episode_return": 25.835378430570874, "episode_success_rate": 0.8270833333333333, "mean_episode_length": 297.796134349278, "episodes": 3360, "episode_wins": 2779}
+{"phase": "training", "training_steps": 19000000, "total_timesteps": 20000000, "mean_steps_per_second": 453512.7856003666, "mean_episode_return": 25.697141566667216, "episode_success_rate": 0.8151434486838214, "mean_episode_length": 294.83526310755707, "episodes": 3381, "episode_wins": 2756}
+{"phase": "training", "training_steps": 20000000, "total_timesteps": 20000000, "mean_steps_per_second": 453610.5298307693, "mean_episode_return": 25.804936710813795, "episode_success_rate": 0.8292682926829268, "mean_episode_length": 296.0098257615125, "episodes": 3362, "episode_wins": 2788}
+{"phase": "evaluating", "training_seconds": 44.090687241015985}
+{"phase": "complete", "environment": "NumberGrid-24x24-v8-mage-24-squads", "algorithm": "Stoix Anakin feedforward PPO", "recurrent": false, "device": "NVIDIA GeForce GTX 1660 Ti", "backend": "gpu", "jax": "0.11.2", "cuda_runtime": "13.4.92", "python": "3.12.3", "training_steps": 20000000, "ppo_updates": 800, "actor_optimizer_updates": 32000, "critic_optimizer_updates": 32000, "seed": 42, "training_seconds": 44.090687241015985, "mean_steps_per_second": 453610.5298307693, "ppo_compile_seconds": 10.710069328999452, "training_loop_seconds": 44.43843026800096, "training_loop_steps_per_second": 450060.9017776561, "wandb_logging_seconds": 0.020993710993934656, "wandb_init_seconds": 5.056094202000168, "completed_training_episodes": 55841, "won_training_episodes": 45247, "wandb": {"requested_mode": "online", "mode": "online", "status": "running", "summary_interval": 1000000, "id": "7cddiev7", "project": "numbergrid", "directory": "/mnt/c/jaxjax/results/number_grid-mage-20m-20261006/wandb/run-20261006_154421-7cddiev7", "url": "https://wandb.ai/sergey3784/numbergrid/runs/7cddiev7", "wandb_version": "0.30.0", "init_seconds": 5.056094202000168}, "initial_evaluation": {"episodes": 64, "successes": 0, "success_rate": 0.0, "mean_return": -4.969822406768799, "mean_length": 5000.0, "min_length": 5000, "max_length": 5000, "action_selection": "argmax", "seed": 1042}, "final_evaluation": {"episodes": 1024, "successes": 861, "success_rate": 0.8408203125, "mean_return": 25.973447799682617, "mean_length": 287.4794921875, "min_length": 57, "max_length": 349, "action_selection": "argmax", "seed": 1042}, "sampled_evaluation": {"episodes": 1024, "successes": 840, "success_rate": 0.8203125, "mean_return": 25.79169464111328, "mean_length": 295.78125, "min_length": 78, "max_length": 586, "action_selection": "sample", "seed": 1042}, "parameter_count": 81299, "num_envs": 250, "rollout_length": 100, "observation_size": 178, "weights_changed": true, "checkpoint_roundtrip_verified": true, "checkpoint_sha256": "2c44c882c34f427829433212a4d23e6118d5e5adec3ec7d4f27db21fb5002d60", "learner_source_sha256": "6f147922521be6bfc2c78bfd4f12b30d881db4c85e2fc515e9f6ff22b29482a1", "total_runner_seconds": 81.00777719500002, "timing": "Sum of synchronized learner calls, including rollout and PPO updates; excludes compilation, evaluation, host logging and saving.", "reconstruction": "Fixed map and observation encoding recreated from README; remote weights and results were not recovered.", "combat_counts": {"battle_transition": 10587285, "player_battle_transition": 7194051, "enemy_battle_transition": 3390761, "battle_victory": 1260619}, "transition_definition": "One map move or one unit turn; includes scripted enemy turns and completed retreats.", "source_hashes": {"benchmark_number_grid.py": "407bab5faba11493c1b5ce5d8a1e9d7cc7ee238c4ad1819939c3283e79379f37", "numbergrid_config.py": "ea1b00f763e1eb8cc81ce0801156220f016751929f5cc20f4ba72c83cd86ec2b", "numbergrid_tracking.py": "bca2a0517cda4546d4e037c345b6da232f840d27d29ea9999bd187621b5e0836", "stoix/envs/number_grid.py": "823c038fd2c1ab81b21a79ff6cde29e4cd15b337e090ca24efc7845dc0145156", "stoix/envs/number_grid_legacy.py": "975105ab1647a8a5ca2ed71ca6c5163239ddb23748a0dbd7ef59e0d1bf8f9412", "stoix/utils/make_env.py": "37840f25554349de585ab5f605a5662fecf95aa4b653eaab37582b83cead764b", "stoix/wrappers/number_grid_metrics.py": "9c5fe0045f5aae195f46e37d0355635424deadffd4835bb2fec8292a00d8c3fa", "stoix/wrappers/number_grid_reset.py": "c8d5467f81f51f1c02dc8d68a2573e464c79632a2b768b28467dbdc30583bf70", "stoix/systems/ppo/anakin/ff_ppo.py": "6f147922521be6bfc2c78bfd4f12b30d881db4c85e2fc515e9f6ff22b29482a1"}}
+wandb: updating run metadata
+wandb: uploading wandb-summary.json; uploading config.yaml
+wandb: 
+wandb: Run history:
+wandb: battles/transition_fraction ▁▁▃▅▆▆▇▇▇▇▇▇▇███████
+wandb:                battles/wins ▁▁▃▅▆▆▇▇▇▇▇▇▇███████
+wandb:          battles/wins_total ▁▁▁▂▂▂▃▃▃▄▄▅▅▅▆▆▇▇██
+wandb:          episodes/completed ▁▂▃▅▆▆▇▇▇▇▇█████████
+wandb:    episodes/completed_total ▁▁▁▂▂▂▃▃▃▄▄▅▅▅▆▆▇▇██
+wandb:        episodes/length_mean █▇▄▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:        episodes/return_mean ▁▇▇▇▇▇▇█████████████
+wandb:           episodes/win_rate ▁▆▆▆▇▇▇▇▇██▇██████▇█
+wandb:     episodes/win_rate_total ▁▄▅▆▆▇▇▇▇▇██████████
+wandb:               episodes/wins ▁▂▃▅▆▆▇▇▇▇▇▇▇███████
+wandb:                         +22 ...
+wandb: 
+wandb: Run summary:
+wandb:       actor_optimizer_updates 32000
+wandb:                     algorithm Stoix Anakin feedfor...
+wandb:                       backend gpu
+wandb:   battles/transition_fraction 0.63293
+wandb:                  battles/wins 76686
+wandb:            battles/wins_total 1260619
+wandb: checkpoint_roundtrip_verified True
+wandb:             checkpoint_sha256 2c44c882c34f42782943...
+wandb:   completed_training_episodes 55841
+wandb:      critic_optimizer_updates 32000
+wandb:                           +60 ...
+wandb: 
+wandb: 🚀 View run mage-24-squads-20m-20261006 at: https://wandb.ai/sergey3784/numbergrid/runs/7cddiev7
+wandb: ⭐️ View project at: https://wandb.ai/sergey3784/numbergrid
+wandb: Synced 4 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./results/number_grid-mage-20m-20261006/wandb/run-20261006_154421-7cddiev7/logs

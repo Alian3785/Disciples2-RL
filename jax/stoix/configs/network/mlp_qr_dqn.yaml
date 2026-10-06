@@ -1,0 +1,10 @@
+# ---MLP QR-DQN Networks---
+actor_network:
+  pre_torso:
+    _target_: stoix.networks.torso.MLPTorso
+    layer_sizes: [256, 256]
+    use_layer_norm: False
+    activation: silu
+  action_head:
+    _target_: stoix.networks.heads.QuantileDiscreteQNetwork
+    num_quantiles: ${system.num_quantiles}

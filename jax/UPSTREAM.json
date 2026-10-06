@@ -1,0 +1,21 @@
+{
+  "description": {
+    "url": "https://github.com/Alian3785/jaxrep",
+    "commit": "74c76b1da6fd41fe004991c31bdab5663d213a69",
+    "published_files": ["README.md"]
+  },
+  "stoix": {
+    "url": "https://github.com/EdanToledo/Stoix",
+    "commit": "8fff19c94a478c1e1ff75fbf10396d488aa25d70",
+    "learner_file": "stoix/systems/ppo/anakin/ff_ppo.py",
+    "learner_sha256": "6f147922521be6bfc2c78bfd4f12b30d881db4c85e2fc515e9f6ff22b29482a1",
+    "learner_modified": false
+  },
+  "stoa": {
+    "url": "https://github.com/EdanToledo/Stoa",
+    "commit": "b3a084ed05893c301e079a8f527de90513896d7e",
+    "directory": "stoa-src"
+  },
+  "local_scope": "NumberGrid only; no Navix/Craftax runtime or runs",
+  "reconstructed": ["NumberGrid map coordinates", "full-state observation encoding", "environment", "benchmark profile", "checkpoints trained locally", "offline viewer"]
+}
