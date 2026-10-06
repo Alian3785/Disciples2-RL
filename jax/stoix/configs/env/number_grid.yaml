@@ -1,0 +1,5 @@
+env_name: number_grid
+scenario:
+  name: NumberGrid-24x24
+kwargs: {}
+use_cached_auto_reset: true
