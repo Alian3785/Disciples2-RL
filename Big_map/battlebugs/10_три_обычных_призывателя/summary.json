@@ -1,0 +1,21 @@
+{
+  "number": 10,
+  "title": "Три обычных призывателя",
+  "folder": "10_три_обычных_призывателя",
+  "battles": 100,
+  "wins": {
+    "red": 82,
+    "blue": 18
+  },
+  "stalls": 0,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "event_counts": {
+    "призывы": 724,
+    "поджоги": 42,
+    "гибель связанных призывов": 55
+  },
+  "mean_steps": 18,
+  "mean_rounds": 6.16
+}

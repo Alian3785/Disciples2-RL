@@ -1,0 +1,12 @@
+{
+  "number": 31,
+  "title": "Раненый вражеский отряд между боями",
+  "folder": "31_раненый_вражеский_отряд_между_боями",
+  "runs": 100,
+  "failed_runs": 0,
+  "successful_checks": 15900,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "seed_base": 42000
+}

@@ -1,0 +1,21 @@
+{
+  "number": 24,
+  "title": "Death-иммунитет против Life и Death",
+  "folder": "24_death_иммунитет_против_life_и_death",
+  "battles": 100,
+  "wins": {
+    "red": 89,
+    "blue": 11
+  },
+  "stalls": 0,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "event_counts": {
+    "эффекты воды": 25,
+    "отравления": 16,
+    "проверки разрушения брони": 4
+  },
+  "mean_steps": 1.58,
+  "mean_rounds": 1.18
+}

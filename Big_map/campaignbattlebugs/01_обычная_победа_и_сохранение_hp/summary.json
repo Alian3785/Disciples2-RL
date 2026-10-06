@@ -1,0 +1,12 @@
+{
+  "number": 1,
+  "title": "Обычная победа и сохранение HP",
+  "folder": "01_обычная_победа_и_сохранение_hp",
+  "runs": 100,
+  "failed_runs": 0,
+  "successful_checks": 16200,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "seed_base": 42000
+}

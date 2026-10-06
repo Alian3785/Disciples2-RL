@@ -1,0 +1,12 @@
+{
+  "number": 10,
+  "title": "Постоянный призыв до боя",
+  "folder": "10_постоянный_призыв_до_боя",
+  "runs": 100,
+  "failed_runs": 0,
+  "successful_checks": 16000,
+  "bug_occurrences": 0,
+  "unique_bug_types": 0,
+  "bug_types": {},
+  "seed_base": 42000
+}
