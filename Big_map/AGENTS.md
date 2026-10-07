@@ -30,6 +30,10 @@
 - Paralysis, petrification and slow lengths follow each attack's `Gattacks.INFINITE`, not the engine `unit_type`: finite effects cost the target exactly its next turn; infinite paralysis is the long, recoverable one. Mermaid's paralysis is finite and Dark Elf Gast's is infinite although their types share the opposite default (see `FINITE_PARALYSIS_UNIT_IDS`/`INFINITE_PARALYSIS_UNIT_IDS`). Hermit's slow ends when the target's next turn begins.
 - Unit reach and immunities follow `Gattacks.REACH` and `Gimmu`/`Gimmuc` (`L_ALWAYS` is an immunity, `L_ONCE` a one-time ward): Dark Elf Lyf is immune to Mind and Water, Beliarh is melee (adjacent), Verdant hits all enemies.
 
+# Orbs and talismans
+
+- Battle items follow their `GItem`/`Gattacks` attack. Fire, Inferno, Lightning, Earth, Stone Rain, Water, Icefall, Nosferat, Vampire and Elder Vampires hit every living enemy (`scope: party`); Thunder hits one. Their strikes carry `accuracy: 80` (POWER): each target rolls the normal hit check and takes damage through the standard pipeline (+0..5, armor, Defend). Vigor and Strength boost every living ally. Life revives with `revive_health_percent: 50` (QTY_HEAL). Drain orbs, like Vampire units, sum the damage dealt to all targets and heal half of it (`drainAttackHeal`/`drainOverflowHeal` = 50); Elder Vampires share the excess with wounded allies. Talismans copy their orb's effect. Effects without `accuracy` keep dealing their exact amount.
+
 # Armor shatter
 
 - Shatter (Theurgist, Sir Allemon secondary attack) cannot miss, as in Disciples II: its own accuracy is ignored, and it lands on every target that the main attack hit and damaged and that is still alive. Immunity and wards to its source still block it.

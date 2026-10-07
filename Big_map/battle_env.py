@@ -1342,7 +1342,9 @@ class BattleEnv(gym.Env):
             target_unit["hp"] = int(round(new_health))
         return healed
 
-    def _apply_hero_item_revive(self, target_unit: Dict, amount: float) -> float:
+    def _apply_hero_item_revive(
+        self, target_unit: Dict, amount: float, *, health_percent: Optional[float] = None
+    ) -> float:
         current_health = float(target_unit.get("health", 0) or 0)
         max_health = float(
             target_unit.get("max_health", 0) or target_unit.get("health", 0) or 0
@@ -1350,6 +1352,9 @@ class BattleEnv(gym.Env):
         if (max_health <= 0 or current_health > 0
                 or not self._revival_footprint_is_free(target_unit)):
             return 0.0
+        if health_percent is not None:
+            # Orb/Talisman of Life: Gattacks QTY_HEAL is a share of maximum HP.
+            amount = round(max_health * float(health_percent) / 100.0)
         revive_hp = min(max_health, max(1.0, float(amount or 0.0)))
         target_unit["health"] = int(round(revive_hp))
         if "hp" in target_unit:
@@ -1373,6 +1378,16 @@ class BattleEnv(gym.Env):
         current_health = float(target_unit.get("health", 0) or 0)
         if effect_amount <= 0 or current_health <= 0:
             return 0.0
+        # Orbs and talismans carry their Gattacks POWER: such a strike rolls
+        # the normal hit check and is reduced by armor and Defend. Explicit
+        # effects without an accuracy keep dealing their exact amount.
+        accuracy = effect.get("accuracy")
+        if accuracy is not None and not self._roll_accuracy(float(accuracy)):
+            self._log(
+                f"Hero item misses {target_unit.get('team', '').upper()} "
+                f"{target_unit.get('name')}#{target_unit.get('position')}."
+            )
+            return 0.0
         if self._hero_item_type_effect_blocked(
             source_unit=source_unit,
             target_unit=target_unit,
@@ -1380,6 +1395,12 @@ class BattleEnv(gym.Env):
             primary_damage=True,
         ):
             return 0.0
+        if accuracy is not None:
+            effect_amount = float(self._apply_damage_with_armor(
+                {"unit_type": "Hero item"}, effect_amount, target_unit
+            ))
+            if effect_amount <= 0:
+                return 0.0
         damage = min(current_health, effect_amount)
         new_health = max(0.0, current_health - damage)
         self._record_recovery_damage(target_unit, current_health, int(round(new_health)))
@@ -1392,25 +1413,23 @@ class BattleEnv(gym.Env):
             self._kill_linked_summons(target_unit)
         return damage
 
-    def _apply_hero_item_drain(
+    def _apply_hero_item_drain_heal(
         self,
-        *,
         source_unit: Optional[Dict],
-        target_unit: Dict,
+        drained_total: float,
         effect: Dict[str, object],
-    ) -> float:
-        damage = self._apply_hero_item_damage(
-            source_unit=source_unit,
-            target_unit=target_unit,
-            effect=effect,
-        )
-        if damage > 0 and isinstance(source_unit, dict):
+    ) -> None:
+        """Heal half of all damage the item drained, like Vampire units.
+
+        L_DRAIN and L_DRAIN_OVERFLOW heal 50% of the damage dealt in Disciples II
+        (D2ModdingToolset drainAttackHeal/drainOverflowHeal defaults).
+        """
+        if drained_total > 0 and isinstance(source_unit, dict):
             self._apply_vampiric_heal(
                 source_unit,
-                int(round(damage)),
+                int(drained_total) // 2,
                 share_leftover=bool(effect.get("share_leftover", False)),
             )
-        return damage
 
     def _apply_hero_item_dot(
         self,
@@ -1876,6 +1895,7 @@ class BattleEnv(gym.Env):
             return False, None, 0.0
 
         total_value = 0.0
+        drained_total = 0.0
         for target in targets:
             if effect_kind == "heal":
                 value = self._apply_hero_item_heal(
@@ -1886,6 +1906,7 @@ class BattleEnv(gym.Env):
                 value = self._apply_hero_item_revive(
                     target,
                     self._hero_item_effect_amount(effect),
+                    health_percent=effect.get("revive_health_percent"),
                 )
             elif effect_kind == "damage":
                 value = self._apply_hero_item_damage(
@@ -1894,11 +1915,12 @@ class BattleEnv(gym.Env):
                     effect=effect,
                 )
             elif effect_kind == "drain":
-                value = self._apply_hero_item_drain(
+                value = self._apply_hero_item_damage(
                     source_unit=source_unit,
                     target_unit=target,
                     effect=effect,
                 )
+                drained_total += value
             elif effect_kind == "dot":
                 value = self._apply_hero_item_dot(
                     source_unit=source_unit,
@@ -1957,6 +1979,8 @@ class BattleEnv(gym.Env):
                 value = 0.0
             total_value += max(0.0, float(value or 0.0))
 
+        if effect_kind == "drain":
+            self._apply_hero_item_drain_heal(source_unit, drained_total, effect)
         return True, effect_kind, total_value
 
     def compute_action_mask(self) -> np.ndarray:
@@ -4728,8 +4752,8 @@ class BattleEnv(gym.Env):
         - Alchemist: доп. ход союзнику (через противоположную клетку).
         - Profit / Sundancer / Sylfid: массовое лечение (всем союзникам).
         - Mage / Dead dragon / Gumtic / Uter Demon / Tiamat / Teurg / Hermit / Vampire / Highvampire: AOE-урон + спецэффекты.
-        * Vampire суммирует реальный нанесённый урон и лечится на эту сумму (не выше max_health).
-        * Highvampire делится излишком: сперва лечит себя, затем равномерно распределяет остаток между ранеными союзниками.
+        * Vampire суммирует реальный нанесённый урон (без оверкилла) и лечится на половину этой суммы (не выше max_health).
+        * Highvampire так же высасывает половину суммы: сперва лечит себя, затем равномерно распределяет остаток между ранеными союзниками.
         * Bone Lord атакует одиночную цель как Warrior, затем высасывает до половины нанесённого урона: сперва лечит себя, остаток раздаёт союзникам как Highvampire.
         * Dregazul бьёт как Bone Lord, но лечит только себя (как Vampire) и после высасывания крови пытается отравить цель, как Spider.
         - summoner: призывает союзного юнита на свободную клетку своей стороны (см. правила ниже).

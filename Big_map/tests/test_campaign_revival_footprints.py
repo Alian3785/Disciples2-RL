@@ -192,7 +192,8 @@ def test_campaign_real_equipment_summon_and_orb_revival(env, big):
         assert env.action_masks()[revive]
         assert env.step(revive)[4]['battle_hero_item_applied']
         assert env._count_hero_item('Orb of Life') == 0
-        assert battle._unit_by_position(7)['health'] == 1
+        revived = battle._unit_by_position(7)
+        assert revived['health'] == round(revived['max_health'] / 2)  # Orb of Life: 50%.
     cells = [cell for unit in battle.combined if unit['team'] == 'blue' and battle._alive(unit)
              for cell in formation_footprint(unit)]
     assert len(cells) == len(set(cells)) <= 6
