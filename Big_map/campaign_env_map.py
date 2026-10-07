@@ -7,6 +7,28 @@ from campaign_env_data import *
 
 
 class CampaignMapSitesMixin:
+    def _init_map_site_metadata(self) -> None:
+        """Resolve scenario sites onto the same scaled tiles as their armies."""
+        sites = {tuple(tile): "settlement"
+                 for tile in self.legions_settlement_source_name_by_tile}
+        sites[tuple(self.CASTLE_POS)] = "capital"
+        if (self._map.empire_territory_source_enemy_id is not None
+                or self._map.empire_territory_source_tile is not None):
+            sites[tuple(self.empire_territory_source_tile)] = "capital"
+        for enemy_id, kind in self._map.enemy_location_kinds().items():
+            if kind in {"settlement", "capital", "ruin"} and enemy_id in self._static_enemy_positions:
+                sites[tuple(self._static_enemy_positions[enemy_id])] = kind
+        self._map_site_kind_by_tile = sites
+
+    def _enemy_stack_location_kind(self, enemy_id: int) -> str:
+        """A moved or replaced army gains/loses protection with its location."""
+        position = self.grid_env.enemy_positions.get(enemy_id)
+        return self._map_site_kind_by_tile.get(tuple(position), "field") if position is not None else "field"
+
+    def _grid_move_requires_living_leader(self, action: int) -> bool:
+        target = self._grid_move_target_for_action(action)
+        return target is not None and self._map_site_kind_by_tile.get(target) == "ruin"
+
     @classmethod
     def _mercenary_stand_for_unit_data(cls, unit_data: Optional[Dict]) -> Optional[str]:
         """Возвращает предпочтительную линию построения для наемника."""

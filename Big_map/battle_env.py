@@ -2317,14 +2317,9 @@ class BattleEnv(gym.Env):
                 ensure_stat_sources(unit)
             unit["doppel_copied"] = 0
             unit.pop(ATTACK_FORM_ID_KEY, None)
-            if not self._alive(unit):
-                continue
 
             prev_max = float(unit.get("max_health", 0) or 0)
             current_health = float(unit.get("health", 0) or 0)
-            ratio = (
-                0.0 if prev_max <= 0 else max(0.0, min(1.0, current_health / prev_max))
-            )
 
             self._clear_temporary_healer_wards(unit)
             for key, value in defaults.items():
@@ -2332,9 +2327,11 @@ class BattleEnv(gym.Env):
 
             # Return to the copier's own permanent growth and elixirs.
             rebuild_stat_layers(unit)
-            # Returning to the default form must not round a survivor to death.
-            unit["health"] = max(1, int(round(unit["max_health"] * ratio)))
-            if "campaign_stat_sources" in unit:
+            # Preserve deaths as well as survivors with only a fraction of HP.
+            unit["health"] = self._scale_health_to_new_max(
+                current_health, prev_max, unit["max_health"]
+            )
+            if "hp" in unit or "campaign_stat_sources" in unit:
                 unit["hp"] = unit["health"]
 
     def _apply_doppelganger_copy(
@@ -2699,6 +2696,21 @@ class BattleEnv(gym.Env):
     def _restore_all_transformed_units(self) -> None:
         for unit in self.combined:
             self._restore_transformed_unit(unit)
+
+    def _restore_persistent_forms(self, units=None) -> None:
+        """Unwind battle forms before XP or persistence, including dead/escaped units.
+
+        Generic transformations can wrap Fenrir or a copied Doppelganger; Fenrir
+        can itself belong to a Doppelganger. Restore in that order. Explicit
+        units let campaign saves normalize copies without changing a live fight.
+        """
+        if units is None:
+            units = [*self.combined, *self.escaped_units]
+        for unit in units:
+            self._restore_transformed_unit(unit)
+            self._revert_fenrir_survivors((unit,))
+            self._restore_default_doppelgangers((unit,))
+            unit.pop(ATTACK_FORM_ID_KEY, None)
 
     def _warrior_allowed_targets(
         self,
@@ -5697,10 +5709,11 @@ class BattleEnv(gym.Env):
 
             # Шаблон призываемого юнита (Зомби), с адаптацией под команду/позицию/ряд
 
-            summoner_name = (attacker.get("name") or "").strip().lower()
+            # Display name and permanent unit_id remain the Doppelganger's own.
+            summoner_form_id = current_attack_unit_id(attacker)
             position_of_summoner = attacker.get("position")
 
-            if "оккульт" in summoner_name:
+            if summoner_form_id in ("g000uu6013", "g000uu6113"):  # Occultist
                 spawn_template = {
                     "name": "Зомби",
                     "initiative": 0,
@@ -5720,7 +5733,7 @@ class BattleEnv(gym.Env):
                     "big": False,
                     "Summoned": position_of_summoner,
                 }
-            elif "элементалист" in summoner_name:
+            elif summoner_form_id == "g000uu0153":  # Elementalist
                 spawn_template = {
                     "name": "Элементаль Воздуха",
                     "initiative": 0,
@@ -5740,7 +5753,7 @@ class BattleEnv(gym.Env):
                     "big": False,
                     "Summoned": position_of_summoner,
                 }
-            elif "мудрец" in summoner_name:
+            elif summoner_form_id == "g000uu8012":  # Sage
                 spawn_template = {
                     "name": "Малый энт",
                     "initiative": 0,
@@ -5824,9 +5837,7 @@ class BattleEnv(gym.Env):
         if awarded_exp <= 0:
             return
         # XP belongs to the permanent fighter, including escaped copies/forms.
-        self._restore_transformed_unit(unit)
-        self._revert_fenrir_survivors((unit,))
-        self._restore_default_doppelgangers((unit,))
+        self._restore_persistent_forms((unit,))
         if _is_thief_battle_unit(unit):
             return
 
@@ -6059,6 +6070,7 @@ class BattleEnv(gym.Env):
         return max(0.0, after_hp - before_hp)
 
     def _finalize_victory(self, winner_team: str) -> None:
+        self._restore_persistent_forms()
         loser_team = "red" if winner_team == "blue" else "blue"
         self._post_victory_team = None
         self._post_victory_healer_positions = []
@@ -6090,9 +6102,7 @@ class BattleEnv(gym.Env):
         # Preserve the old victory cleanup ordering before selecting healers.
         # Restoring copied Doppelgangers also keeps them out of this phase.
         self._clear_dead_running_away_flags()
-        self._restore_all_transformed_units()
-        self._revert_fenrir_survivors()
-        self._restore_default_doppelgangers()
+        self._restore_persistent_forms()
 
         healer_positions = sorted(
             int(unit.get("position", 0) or 0)
@@ -6588,23 +6598,16 @@ class BattleEnv(gym.Env):
         return self._obs(), {}
 
     def _revert_fenrir_survivors(self, units=None) -> None:
-        """Возвращает всех выживших "Дух Фенрира" обратно в "Повелитель волков".
-        Здоровье переносится по той же формуле (доля HP) в шкалу 225.
-        Если на юните есть снапшот "wolflord_base", восстанавливаем характеристики из него,
-        иначе используем каноничные статы Повелителя волков.
-        """
+        """Restore Fenrir's original form, including corpses; retain the HP ratio."""
         for u in getattr(self, "combined", []) if units is None else units:
             if not isinstance(u, dict):
                 continue
             if u.get("name") != "Дух Фенрира":
                 continue
-            if not self._alive(u):
-                continue
-
             cur_hp = float(u.get("health", 0) or 0)
             cur_max = float(u.get("max_health", 0) or 0)
-            ratio = 0.0 if cur_max <= 0 else (cur_hp / cur_max)
 
+            self._clear_temporary_healer_wards(u)
             base = u.get("wolflord_base")
             if isinstance(base, dict) and base:
                 # Восстанавливаем все сохранённые поля, кроме HP — его зададим по доле
@@ -6614,12 +6617,16 @@ class BattleEnv(gym.Env):
                     # глубокая копия для списков/словарей
                     u[k] = deepcopy(v) if isinstance(v, (list, dict)) else v
                 max_to = int(base.get("max_health", 225) or 225)
+                u["name"] = base.get("name") or "Повелитель волков"
+                u["original_damage"] = base.get("original_damage", u["damage"])
             else:
                 # Фолбэк: каноничные характеристики Повелителя волков
                 max_to = 225
+                u["name"] = "Повелитель волков"
                 u["unit_type"] = "Wolf Lord"
                 u.pop(ATTACK_FORM_ID_KEY, None)
                 u["damage"] = 40
+                u["original_damage"] = 40
                 u["damage_secondary"] = 0
                 u["initiative_base"] = 40
                 u["initiative"] = 40
@@ -6633,16 +6640,13 @@ class BattleEnv(gym.Env):
                 u["big"] = False
 
             u["max_health"] = max_to
-            u["health"] = int(round(max_to * ratio))
-            u["name"] = "Повелитель волков"
+            u["maxhp"] = max_to
+            u["health"] = u["hp"] = self._scale_health_to_new_max(cur_hp, cur_max, max_to)
+            u["base_armor"] = u["armor"]
             # Инициативу приводим к базовой
-            u["initiative"] = u.get("initiative_base", u.get("initiative", 0))
+            u["initiative"] = u.get("initiative_base", 0) if u["health"] > 0 else 0
             # Чистим снапшот
-            if "wolflord_base" in u:
-                try:
-                    del u["wolflord_base"]
-                except Exception:
-                    pass
+            u.pop("wolflord_base", None)
 
     def _step_post_victory_blue_heal(self, action):
         """Consume one BLUE healer's single action after combat is decided."""
@@ -7153,6 +7157,7 @@ class BattleEnv(gym.Env):
             if self.step_count >= 1000:
                 truncated = True
                 self._clear_dead_running_away_flags()
+                self._restore_persistent_forms()
                 self._clear_all_temporary_healer_wards()
                 self._log("? Лимит по шагам: бой остановлен на 1000 такте.")
         return self._obs(), reward, terminated, truncated, step_info

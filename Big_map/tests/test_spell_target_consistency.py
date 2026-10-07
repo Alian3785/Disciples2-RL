@@ -1,5 +1,6 @@
 """Map spell masks and effects must select the same enemy across obstacles."""
 
+from copy import deepcopy
 from types import SimpleNamespace
 
 import pytest
@@ -150,11 +151,29 @@ def test_mask_and_public_cast_damage_the_same_enemy_across_wall(make_env, source
 def test_resolver_fallback_preserves_spell_target_restrictions(make_env, kind, allow_protected, expected):
     env = make_env("learned")
     env.grid_env.obstacle_positions = {(2, y) for y in range(7)}
-    protected = next(iter(env._spell_untargetable_enemy_ids()))
-    env.grid_env.enemy_positions[protected] = env.grid_env.enemy_positions.pop(1)
-    env.grid_env.enemies_alive[protected] = env.grid_env.enemies_alive.pop(1)
-    env.enemy_team_states[protected] = env.enemy_team_states[1]
+    # Protection belongs to the current site, not a globally blacklisted ID.
+    protected = 1
+    cx, cy = env.CASTLE_POS
+    env.grid_env.agent_pos = (cx - 1, cy)
+    env.grid_env.enemy_positions[protected] = (cx, cy)
+    env.grid_env.enemy_positions[2] = (cx + 4, cy)
     target = env._resolve_spell_target_enemy("test", {"kind": kind})
     mask_target = env._get_nearest_enemy_stack_for_mask(spell_targetable_only=not allow_protected)
     assert target == mask_target
     assert target["enemy_id"] == (protected if expected == 1 else 2)
+
+
+@pytest.mark.parametrize("source", ("learned", "purchased", "scroll", "staff"))
+def test_protected_site_blocks_all_spell_sources_without_consuming_resources(make_env, source):
+    env = make_env(source)
+    env.grid_env.enemy_positions = {1: tuple(env.CASTLE_POS)}
+    env.grid_env.enemies_alive = {1: True}
+    action, key = cast_action(env, source)
+    assert env._get_map_offensive_spell_target(key, for_mask=True) is None
+    assert not env.compute_action_mask()[action]
+    before = deepcopy((env.enemy_team_states, env._current_mana_totals(),
+                       env.heroitems, env.spell_cast_counts_by_id_this_turn))
+    info = env.step(action)[-1]
+    assert not info.get("spell_cast_executed")
+    assert (env.enemy_team_states, env._current_mana_totals(),
+            env.heroitems, env.spell_cast_counts_by_id_this_turn) == before
