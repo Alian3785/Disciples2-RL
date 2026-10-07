@@ -11,11 +11,7 @@
 .\train-local.cmd --map orc_duel
 ```
 
-Из родительского проекта `C:\jaxjax`:
-
-```powershell
-& ".\Disciples 2 python reference\train-local.cmd" --map orc_duel
-```
+Проект лежит отдельно в `C:\Disciples 2 python reference` и не зависит от JAX-проекта `C:\jaxjax`.
 
 Для другой карты замените `orc_duel`, например на `default`. Доступные карты описаны в [README](README.md#maps). Бюджет по умолчанию — 2 000 000 шагов, число параллельных сред — 12. Их можно изменить через `--total-steps` и `--n-envs`. Обучение PPO заканчивает целый блок сбора данных, поэтому фактическое число шагов может превышать заданный бюджет.
 
@@ -37,4 +33,4 @@
 
 [Полные параметры и результат](.local-runs/startup-check-20261006/result.json) · [Журнал обучения](.local-runs/startup-check-20261006/train.log) · [Модель](.local-runs/startup-check-20261006/models/final_model.zip) · [Нормализация](.local-runs/startup-check-20261006/models/vecnormalize.pkl)
 
-Локальные файлы запуска, эта инструкция и результаты проверки добавлены поверх копии репозитория и не отправлялись на GitHub.
+Обёртки запуска и эта инструкция хранятся в репозитории. Результаты проверок в `.local-runs/` остаются локальными и исключены из git.

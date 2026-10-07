@@ -128,7 +128,7 @@ def test_public_lich_orb_blocks_large_revival_until_rear_cell_is_free(release):
     assert battle.compute_action_mask()[revive]
     info = battle.step(revive)[4]
     assert info["battle_hero_item_applied"] and info["battle_hero_item_consumed"]
-    assert corpse["health"] == 1
+    assert corpse["health"] == round(corpse["max_health"] / 2)  # Orb of Life: 50%.
     assert battle.equipped_hero_items[1] is None
     assert assert_legal_living_formation(battle, "blue") == 6
 
@@ -140,7 +140,8 @@ def test_public_small_front_revival_remains_legal_beside_rear_lich():
     assert battle.compute_action_mask()[action]
     info = battle.step(action)[4]
     assert info["battle_hero_item_applied"] and info["battle_hero_item_consumed"]
-    assert battle._unit_by_position(7)["health"] == 1
+    revived = battle._unit_by_position(7)
+    assert revived["health"] == round(revived["max_health"] / 2)  # Orb of Life: 50%.
     assert battle._alive(lich)
     assert assert_legal_living_formation(battle, "blue") == 6
 
