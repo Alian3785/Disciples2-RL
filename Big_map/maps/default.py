@@ -451,10 +451,10 @@ ADDITIONAL_MAP_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
 )
 
 ALL_MAP_STACK_OVERRIDES: tuple[dict[str, object], ...] = (
-    VILLAGE_LINKED_STACK_OVERRIDES
-    + VILLAGE_INTERNAL_GARRISON_OVERRIDES
-    + CAPITAL_INTERNAL_STACK_OVERRIDES
-    + RUIN_STACK_OVERRIDES
+    tuple({**row, "location_kind": "settlement"} for row in (
+        VILLAGE_LINKED_STACK_OVERRIDES + VILLAGE_INTERNAL_GARRISON_OVERRIDES))
+    + tuple({**row, "location_kind": "capital"} for row in CAPITAL_INTERNAL_STACK_OVERRIDES)
+    + tuple({**row, "location_kind": "ruin"} for row in RUIN_STACK_OVERRIDES)
     + ADDITIONAL_MAP_STACK_OVERRIDES
 )
 

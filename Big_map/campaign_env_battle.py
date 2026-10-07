@@ -971,20 +971,19 @@ class CampaignBattleMixin:
             if self._is_empty_blue_unit(unit)
         }
         escaped_by_position: Dict[int, Dict] = {}
-        if getattr(self.battle_env, "winner", None) in ("blue", "red"):
-            for escaped_unit in getattr(self.battle_env, "escaped_units", []) or []:
-                if not isinstance(escaped_unit, dict):
-                    continue
-                if escaped_unit.get("team") != "blue" or bool(escaped_unit.get("Summoned")):
-                    continue
-                try:
-                    escaped_pos = int(escaped_unit.get("position", -1) or -1)
-                except (TypeError, ValueError):
-                    continue
-                if escaped_pos in base_positions and escaped_pos not in start_empty_positions:
-                    restored_escape = deepcopy(escaped_unit)
-                    restored_escape["running_away"] = 0
-                    escaped_by_position.setdefault(escaped_pos, restored_escape)
+        for escaped_unit in getattr(self.battle_env, "escaped_units", []) or []:
+            if not isinstance(escaped_unit, dict):
+                continue
+            if escaped_unit.get("team") != "blue" or bool(escaped_unit.get("Summoned")):
+                continue
+            try:
+                escaped_pos = int(escaped_unit.get("position", -1) or -1)
+            except (TypeError, ValueError):
+                continue
+            if escaped_pos in base_positions and escaped_pos not in start_empty_positions:
+                restored_escape = deepcopy(escaped_unit)
+                restored_escape["running_away"] = 0
+                escaped_by_position.setdefault(escaped_pos, restored_escape)
         saved_by_position: Dict[int, Dict] = {}
 
         for u in self.battle_env.combined:
@@ -1015,13 +1014,13 @@ class CampaignBattleMixin:
                     saved_by_position[pos] = original_unit
                 continue
 
-            # Сохраняем юнита в текущей форме (после улучшений)
+            # Keep permanent upgrades, but unwind all temporary battle forms.
             restored_unit = deepcopy(u)
-            restore_transformed = getattr(
-                self.battle_env, "_restore_transformed_unit", None
+            restore_forms = getattr(
+                self.battle_env, "_restore_persistent_forms", None
             )
-            if callable(restore_transformed):
-                restore_transformed(restored_unit)
+            if callable(restore_forms):
+                restore_forms((restored_unit,))
             if escaped_unit is not None:
                 cleanse_negative_effects = getattr(
                     self.battle_env,
@@ -1508,17 +1507,17 @@ class CampaignBattleMixin:
         }
         battle_by_position = {
             int(unit.get("position", -1) or -1): deepcopy(unit)
-            for unit in self.battle_env.combined
+            for unit in [*self.battle_env.combined,
+                         *(getattr(self.battle_env, "escaped_units", []) or [])]
             if unit.get("team") == "red"
             and not bool(unit.get("Summoned"))
             and 1 <= int(unit.get("position", -1) or -1) <= 6
         }
-        restore_transformed = getattr(
-            self.battle_env, "_restore_transformed_unit", None
+        restore_forms = getattr(
+            self.battle_env, "_restore_persistent_forms", None
         )
-        if callable(restore_transformed):
-            for battle_unit in battle_by_position.values():
-                restore_transformed(battle_unit)
+        if callable(restore_forms):
+            restore_forms(battle_by_position.values())
 
         saved_team: List[Dict] = []
         for position in range(1, 7):

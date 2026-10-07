@@ -131,6 +131,10 @@ class CampaignMaskMixin:
             # REST (8) позволяет завершить ход на месте даже при полном здоровье.
             grid_mask = self.grid_env.compute_action_mask()
             mask[:8] = bool(self.moves > 0) & grid_mask[:8]
+            if self._resolve_travel_hero(alive_only=True) is None:
+                for action in range(8):
+                    if mask[action] and self._grid_move_requires_living_leader(action):
+                        mask[action] = False
             mask[8] = bool(grid_mask[8])
             potion_mask_values = self._grid_potion_action_mask_values()
             for potion_idx, item_name in enumerate(self.scenario_potion_item_names):

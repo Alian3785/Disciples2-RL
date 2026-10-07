@@ -1501,28 +1501,18 @@ class CampaignMagicMixin:
             truncated=False,
             info=info,
         )
-    @classmethod
-    def _spell_untargetable_enemy_ids(cls) -> frozenset[int]:
-        blocked_ids: set[int] = set()
-        for override_group in (
-            VILLAGE_LINKED_STACK_OVERRIDES,
-            VILLAGE_INTERNAL_GARRISON_OVERRIDES,
-            CAPITAL_INTERNAL_STACK_OVERRIDES,
-            RUIN_STACK_OVERRIDES,
-        ):
-            for entry in override_group:
-                try:
-                    blocked_ids.add(int(entry.get("enemy_id", -1)))
-                except (TypeError, ValueError, AttributeError):
-                    continue
-        return frozenset(enemy_id for enemy_id in blocked_ids if enemy_id >= 0)
-    @classmethod
-    def _is_enemy_stack_spell_targetable(cls, enemy_id: Optional[int]) -> bool:
+    def _spell_untargetable_enemy_ids(self) -> frozenset[int]:
+        """Current occupants of protected scenario sites, for callers/diagnostics."""
+        return frozenset(
+            int(enemy_id) for enemy_id in self.grid_env.enemy_positions
+            if not self._is_enemy_stack_spell_targetable(enemy_id)
+        )
+    def _is_enemy_stack_spell_targetable(self, enemy_id: Optional[int]) -> bool:
         try:
             normalized_enemy_id = int(enemy_id)
         except (TypeError, ValueError):
             return False
-        return normalized_enemy_id not in cls._spell_untargetable_enemy_ids()
+        return self._enemy_stack_location_kind(normalized_enemy_id) == "field"
     def _enemy_team_has_living_units(self, enemy_id: Optional[int]) -> bool:
         for unit in self._get_enemy_team_state(enemy_id):
             if self._is_empty_enemy_unit(unit):

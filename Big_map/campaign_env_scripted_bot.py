@@ -886,7 +886,7 @@ class CampaignScriptedBotMixin:
                 ),
                 placeholder_unit("blue", position),
             )
-            battle_env._restore_transformed_unit(battle_unit)
+            battle_env._restore_persistent_forms((battle_unit,))
             battle_env._cleanse_negative_effects(battle_unit)
             battle_env._reset_powerup(battle_unit)
             saved_team.append(self._normalize_scripted_bot_saved_unit(battle_unit))

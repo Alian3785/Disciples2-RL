@@ -35,6 +35,10 @@ def _tile(raw: Iterable[int]) -> tuple[int, int]:
 SETTLEMENTS_BY_ID = {
     str(row["source_id"]): row for row in SOURCE_SNAPSHOT["settlements"]
 }
+SITE_KINDS_BY_SOURCE_ID = {
+    **{source_id: str(row["kind"]) for source_id, row in SETTLEMENTS_BY_ID.items()},
+    **{str(row["source_id"]): "ruin" for row in SOURCE_SNAPSHOT["ruins"]},
+}
 
 
 def _enemy_ids_inside(source_id: str) -> tuple[int, ...]:
@@ -155,6 +159,7 @@ def _build_enemy_stack(row: dict) -> dict[str, object]:
     return {
         "enemy_id": int(row["enemy_id"]),
         "position": _tile(row["position"]),
+        "location_kind": SITE_KINDS_BY_SOURCE_ID.get(str(row.get("inside", "")), "field"),
         "description": f"{row['kind']} {row['source_id']}: " + ", ".join(
             name for name in slots if name
         ),

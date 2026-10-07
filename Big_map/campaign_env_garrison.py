@@ -337,7 +337,7 @@ class CampaignGarrisonMixin:
             if raw.get('team') != team or raw.get('Summoned'):
                 continue
             unit = deepcopy(raw)
-            self.battle_env._restore_transformed_unit(unit)
+            self.battle_env._restore_persistent_forms((unit,))
             self.battle_env._cleanse_negative_effects(unit)
             if team == 'red':
                 unit['position'] = int(unit['position']) + 6

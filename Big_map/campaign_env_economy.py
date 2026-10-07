@@ -6,6 +6,7 @@ from __future__ import annotations
 from campaign_env_data import *
 from permanent_unit_stats import MUTATING_KEY, mutate_intrinsic
 from unit_revive_costs import known_unit_revive_gold_cost
+from unit_service_costs import known_unit_service_gold_costs
 
 
 class CampaignEconomyMixin:
@@ -20,10 +21,12 @@ class CampaignEconomyMixin:
     def _castle_heal_gold_per_hp(unit: Dict) -> float:
         """Вернуть цену восстановления одного HP для юнита на клетке лечения.
 
-        Фракционные юниты тарифицируются по уровню, потому что их сила уже
-        привязана к ветке прокачки. Нейтралы не всегда имеют корректный Level,
-        поэтому для них используется bucket по максимальному здоровью.
+        Известные юниты используют Gunits.HEAL_C с прибавками GDynUpgr.
+        Шкалы уровня/HP остаются резервом для неизвестных пользовательских юнитов.
         """
+        original_costs = known_unit_service_gold_costs(unit)
+        if original_costs is not None:
+            return float(original_costs[0])
         is_neutral_unit = bool(unit.get("is_neutral_unit", False))
         if not is_neutral_unit:
             capital_raw = unit.get("capital", None)
@@ -116,13 +119,15 @@ class CampaignEconomyMixin:
     def _trainer_gold_per_xp(cls, unit: Dict) -> float:
         """Вернуть цену одного очка опыта у тренера для выбранного юнита.
 
-        Герои и нейтралы получают фиксированный дорогой тариф. Обычные
-        фракционные юниты масштабируются по текущему уровню, чтобы покупка
-        опыта становилась дороже вместе с ростом силы отряда.
+        Известные юниты используют Gunits.TRAINING_C с прибавками GDynUpgr.
+        Прежняя шкала остаётся резервом для неизвестных пользовательских юнитов.
         """
         if not isinstance(unit, dict):
             return 0.0
 
+        original_costs = known_unit_service_gold_costs(unit)
+        if original_costs is not None:
+            return float(original_costs[1])
         is_neutral_unit = bool(unit.get("is_neutral_unit", False))
         if not is_neutral_unit:
             capital_raw = unit.get("capital", None)
@@ -2444,7 +2449,7 @@ class CampaignEconomyMixin:
         elif int(self.moves) > new_cap:
             self.moves = new_cap
     def _heal_unit_to_full_at_position(self, position: int) -> Tuple[float, Optional[str]]:
-        """Лечит одного юнита BLUE на позиции в пределах золота с тарифом по Level."""
+        """Лечит одного юнита BLUE на позиции в пределах золота по цене HEAL_C."""
         state = self._get_blue_state()
         for unit in state:
             if int(unit.get("position", -1)) != position:
@@ -2530,7 +2535,7 @@ class CampaignEconomyMixin:
         }
 
     def _step_heal_in_castle(self, action: int):
-        """Лечит выбранного юнита BLUE на клетках лечения с ценой за HP по Level."""
+        """Лечит выбранного юнита BLUE на клетках лечения по цене HEAL_C за HP."""
         idx = action - self.GRID_CASTLE_HEAL_ACTION_START
         target_pos = (
             self.CASTLE_HEAL_POSITIONS[idx]

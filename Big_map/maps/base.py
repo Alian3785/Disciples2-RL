@@ -438,6 +438,29 @@ class MapConfig:
             positions[int(row["enemy_id"])] = tuple(row["position"])
         return positions
 
+    def enemy_location_kinds(self) -> Dict[int, str]:
+        """Initial sites belong to this scenario, never to globally reserved IDs.
+
+        Imported stacks can identify their site explicitly with location_kind.
+        Hand-built maps can also use their existing ruin/settlement metadata.
+        Runtime protection must still check where the army is now.
+        """
+        locations: Dict[int, str] = {}
+        for row in self.enemy_stacks:
+            enemy_id = int(row["enemy_id"])
+            kind = row.get("location_kind")
+            if kind is None:
+                if enemy_id in self.ruin_rewards:
+                    kind = "ruin"
+                elif enemy_id in self.settlement_defender_heal_tile_by_enemy_id:
+                    kind = "settlement"
+                elif enemy_id == self.empire_territory_source_enemy_id:
+                    kind = "capital"
+                else:
+                    kind = "field"
+            locations[enemy_id] = str(kind)
+        return locations
+
     def enemy_team_specs(self) -> Dict[int, Dict[str, object]]:
         """enemy_id -> нормализованный состав отряда (как grid.ENEMY_TEAM_SPECS)."""
         specs: Dict[int, Dict[str, object]] = {}

@@ -633,6 +633,7 @@ class CampaignEnv(
         self.empire_territory_source_tile: Tuple[int, int] = tuple(
             int(coord) for coord in empire_source_tile
         )
+        self._init_map_site_metadata()
         self.legions_territory_forbidden_tiles: Tuple[Tuple[int, int], ...] = (
             self._build_legions_territory_forbidden_tiles()
         )
@@ -1475,6 +1476,19 @@ class CampaignEnv(
             return self._step_heal_in_castle(action)
         if action >= self.GRID_POTION_USE_ACTION_START:
             return self._step_use_potion(action)
+
+        if (self._grid_move_requires_living_leader(action)
+                and self._resolve_travel_hero(alive_only=True) is None):
+            return self._finalize_grid_step_result(
+                grid_obs=self._get_grid_obs(), reward=0.0,
+                terminated=False, truncated=False,
+                info={
+                    "mode": "grid", "agent_pos": tuple(self.grid_env.agent_pos),
+                    "battle_triggered": False, "blocked_by_dead_leader": True,
+                    "blocked_target": self._grid_move_target_for_action(action),
+                    "move_points_spent": 0,
+                },
+            )
 
         grid_move_cost = self._grid_move_cost_for_action(action)
 
