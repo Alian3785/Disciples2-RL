@@ -10,5 +10,5 @@ pytest==9.1.1
 pytest-xdist==3.8.0
 ruff==0.15.22
 tensorboard==2.21.0
-comet_ml==3.58.4
+comet_ml==3.58.7
 imageio-ffmpeg==0.6.0
