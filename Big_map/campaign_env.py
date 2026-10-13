@@ -652,6 +652,9 @@ class CampaignEnv(
         self.legions_territory_order: Tuple[Tuple[int, int], ...] = (
             self._build_legions_territory_order()
         )
+        self.legions_settlement_territory_path_distances_by_name: Dict[str, Dict[Tuple[int, int], int]] = (
+            self._build_legions_settlement_territory_path_distances_by_name()
+        )
         self.legions_settlement_territory_orders_by_name: Dict[str, Tuple[Tuple[int, int], ...]] = (
             self._build_legions_settlement_territory_orders_by_name()
         )

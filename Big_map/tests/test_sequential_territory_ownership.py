@@ -1,4 +1,4 @@
-"""W7: exclusive last-paint ownership with agent-then-bot daily growth.
+"""W7: exclusive ownership; a tile both sides reach goes to the source nearer by path.
 
 Public REST regressions use ordinary parties, local5, and no scripted army.
 Other tests isolate source reach, city ownership, and publication of caches.
@@ -16,7 +16,8 @@ from maps import available_maps, get_map
 # Like default, small keeps both capitals' land apart; ruin 70's building closes
 # the only corridor. These overlap tests reopen it so both territories meet:
 # overlap from day 9, the rune source (0, 2) from day 10, the agent's mine
-# (1, 15) from day 16 and all 182 tiles from day 19.
+# (1, 15) from day 16 and all 182 tiles from day 19. The agent's capital is
+# nearer to 97 of them, the Empire's to 85, and none is a tie.
 RUIN_70_BUILDING = (15, 9, 3, 3)
 
 
@@ -106,6 +107,15 @@ def capital_reach(env):
             set(env.empire_territory_order[:bot_count]) if env.empire_territory_enabled else set())
 
 
+def capital_split(env):
+    """Each reached tile goes to the capital nearer by path; small has no ties."""
+    agent, bot = capital_reach(env)
+    agent_distance = env.legions_territory_path_distances
+    bot_distance = env.empire_territory_path_distances
+    return ({t for t in agent if t not in bot or agent_distance[t] < bot_distance[t]},
+            {t for t in bot if t not in agent or bot_distance[t] < agent_distance[t]})
+
+
 def test_owner_grid_and_compatibility_sets_are_safe_snapshots(make_env):
     env = make_env()
     assert_ownership_consistent(env)
@@ -146,8 +156,8 @@ def test_invalid_paint_does_not_partially_mutate_ownership(make_env, owner, tile
 
 
 @pytest.mark.parametrize("start_day,overlap", [(0, 0), (9, 21)])
-def test_completed_turn_paints_full_agent_area_then_full_bot_area(make_env, monkeypatch,
-                                                                 start_day, overlap):
+def test_completed_turn_paints_the_tiles_each_side_wins(make_env, monkeypatch,
+                                                       start_day, overlap):
     env = make_env()
     env._advance_turns(start_day)
     before = env.territory_owner_grid.copy()
@@ -162,23 +172,26 @@ def test_completed_turn_paints_full_agent_area_then_full_bot_area(make_env, monk
     monkeypatch.setattr(env, "_apply_territory_growth_phase", observe_phase)
     env._advance_turns(1)
     agent, bot = capital_reach(env)
+    agent_won, bot_won = capital_split(env)
     assert len(agent & bot) == overlap
+    assert agent_won | bot_won == agent | bot and not agent_won & bot_won
     assert [p[0] for p in phases] == [env.TERRITORY_AGENT, env.TERRITORY_BOT]
-    assert phases[0][1] == agent and phases[1][1] == bot
-    paint_expected(before, env.TERRITORY_AGENT, agent)
+    assert phases[0][1] == agent_won and phases[1][1] == bot_won
+    paint_expected(before, env.TERRITORY_AGENT, agent_won)
     np.testing.assert_array_equal(phases[0][2], before)
-    assert all(phases[0][2][y, x] == env.TERRITORY_AGENT for x, y in agent & bot)
-    paint_expected(before, env.TERRITORY_BOT, bot)
+    paint_expected(before, env.TERRITORY_BOT, bot_won)
     np.testing.assert_array_equal(phases[1][2], before)
     np.testing.assert_array_equal(env.territory_owner_grid, before)
     assert_ownership_consistent(env)
 
 
-def test_old_overlap_is_repainted_every_turn_even_after_saturation(make_env, monkeypatch):
+def test_saturated_overlap_keeps_the_nearer_owner_every_turn(make_env, monkeypatch):
     env = make_env()
     env._advance_turns(19)
     agent, bot = capital_reach(env)
     assert agent == bot and len(agent) == 182
+    agent_won, bot_won = capital_split(env)
+    assert (len(agent_won), len(bot_won)) == (97, 85)
     phases = []
     original = env._apply_territory_growth_phase
 
@@ -190,15 +203,15 @@ def test_old_overlap_is_repainted_every_turn_even_after_saturation(make_env, mon
     monkeypatch.setattr(env, "_apply_territory_growth_phase", observe_phase)
     env._advance_turns(2)
     assert [p[0] for p in phases] == [env.TERRITORY_AGENT, env.TERRITORY_BOT] * 2
-    for owner, tiles, grid in phases:
-        assert tiles == agent
-        assert all(grid[y, x] == owner for x, y in agent)
-    assert not env.legions_territory_tile_set
-    assert env.empire_territory_tile_set == bot
+    for (owner, tiles, grid), won in zip(phases, (agent_won, bot_won) * 2):
+        assert tiles == won
+        assert all(grid[y, x] == owner for x, y in won)
+    assert env.legions_territory_tile_set == agent_won
+    assert env.empire_territory_tile_set == bot_won
     assert_ownership_consistent(env)
 
 
-def test_public_rest_small_day_10_16_19_income_and_final_owner(make_env):
+def test_public_rest_small_overlap_keeps_home_mine_and_runes(make_env):
     env = make_env()
     assert not env.scripted_capital_bot_config_enabled
     assert env.empire_territory_enabled
@@ -211,27 +224,28 @@ def test_public_rest_small_day_10_16_19_income_and_final_owner(make_env):
         assert env.observation_space.contains(observation)
         assert_ownership_consistent(env)
         agent, bot = capital_reach(env)
-        assert env.legions_territory_tile_set == agent - bot
-        assert env.empire_territory_tile_set == bot
+        agent_won, bot_won = capital_split(env)
+        assert env.legions_territory_tile_set == agent_won
+        assert env.empire_territory_tile_set == bot_won
         assert not set(info["legions_territory_tiles"]) & set(info["empire_territory_tiles"])
         assert env.gold - old_gold == env._legions_gold_income_per_turn()
         for kind, income in env._compute_mana_income_per_turn().items():
             assert env._current_mana_totals()[kind] - old_mana[kind] == income
+        # Both capitals reach the agent's runes and mine, but the agent's is nearer.
         if day == 10:
             assert len(agent & bot) == 21
             assert (0, 2) in agent & bot
-            assert env.territory_owner_grid[2, 0] == env.TERRITORY_BOT
-            assert env.mana_income_per_turn["runes"] == 0
-            assert env._current_mana_totals()["runes"] - old_mana["runes"] == 0
+            assert env.territory_owner_grid[2, 0] == env.TERRITORY_AGENT
+            assert env.mana_income_per_turn["runes"] > 0
         if day == 16:
             assert len(agent & bot) == 140
             assert (1, 15) in agent & bot
-            assert env.territory_owner_grid[15, 1] == env.TERRITORY_BOT
-            assert env.gold - old_gold == env.GOLD_PER_TURN == 100
+            assert env.territory_owner_grid[15, 1] == env.TERRITORY_AGENT
+            assert env.gold - old_gold == env.GOLD_PER_TURN + env.LEGIONS_GOLD_MINE_GOLD_PER_TURN
         if day >= 19:
             assert len(agent & bot) == 182
-            assert not env.legions_territory_tile_set
-            assert env.gold - old_gold == 100
+            assert len(env.legions_territory_tile_set) == 97
+            assert len(env.empire_territory_tile_set) == 85
 
 
 def test_income_is_evaluated_only_after_both_growth_phases(make_env, monkeypatch):
@@ -248,13 +262,13 @@ def test_income_is_evaluated_only_after_both_growth_phases(make_env, monkeypatch
 
     def gold():
         assert events[:2] == [env.TERRITORY_AGENT, env.TERRITORY_BOT]
-        assert env.territory_owner_grid[15, 1] == env.TERRITORY_BOT
+        assert env.territory_owner_grid[15, 1] == env.TERRITORY_AGENT
         events.append("gold")
         return original_gold()
 
     def mana():
         assert events[:2] == [env.TERRITORY_AGENT, env.TERRITORY_BOT]
-        assert env.territory_owner_grid[2, 0] == env.TERRITORY_BOT
+        assert env.territory_owner_grid[2, 0] == env.TERRITORY_AGENT
         events.append("mana")
         return original_mana()
 
@@ -369,6 +383,26 @@ def test_default_capital_geometry_and_growth_rates_are_unchanged(make_env):
         assert_ownership_consistent(env)
 
 
+
+def test_city_land_meeting_the_empire_goes_to_the_nearer_source(make_env):
+    env = make_env("wotans_retribution")
+    # The agent holds every city from day 0, so its city land meets the Empire's.
+    for name in env.legions_settlement_territory_source_by_name:
+        env.legions_active_settlement_territory_capture_turn_by_name[name] = 0
+    env._advance_turns(80)
+    agent_reach, bot_reach = env._territory_reach_distances()
+    contested = agent_reach.keys() & bot_reach.keys()
+    assert contested
+    grid = env.territory_owner_grid
+    for x, y in contested:
+        if agent_reach[(x, y)] < bot_reach[(x, y)]:
+            assert grid[y, x] == env.TERRITORY_AGENT
+        elif bot_reach[(x, y)] < agent_reach[(x, y)]:
+            assert grid[y, x] == env.TERRITORY_BOT
+    # Painting order alone used to hand the Empire two of these mines.
+    assert env.legions_captured_gold_mine_count == len(env.gold_mine_tiles) == 5
+    assert_ownership_consistent(env)
+
 @pytest.mark.parametrize("empire,scripted", [(False, False), (False, True),
                                            (True, False), (True, True)])
 def test_capital_territory_flag_is_independent_of_scripted_army(make_env, monkeypatch,
@@ -379,10 +413,10 @@ def test_capital_territory_flag_is_independent_of_scripted_army(make_env, monkey
     # Exercise territory wiring without starting a scripted army encounter.
     monkeypatch.setattr(env, "_advance_scripted_capital_bot_one_turn", lambda: {})
     env._advance_turns(10)
-    agent, bot = capital_reach(env)
-    assert env.legions_territory_tile_set == agent - bot
-    assert env.empire_territory_tile_set == bot
-    assert bool(bot) is empire
+    agent_won, bot_won = capital_split(env)
+    assert env.legions_territory_tile_set == agent_won
+    assert env.empire_territory_tile_set == bot_won
+    assert bool(bot_won) is empire
     assert_ownership_consistent(env)
 
 
