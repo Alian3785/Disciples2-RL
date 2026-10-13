@@ -1,6 +1,6 @@
-# Mirrow match
+# Mirror match
 
-Новая тренировочная карта `mirrow_match`: 48 × 48 клеток. Написание **Mirrow match** сохранено по запросу.
+Новая тренировочная карта `mirror_match`: 48 × 48 клеток.
 
 ## Карта и армии
 
@@ -32,14 +32,14 @@
 Linux/macOS:
 
 ```sh
-CAMPAIGN_OBSERVATION_VERSION=local5 python Big_map/train_campaign.py --map mirrow_match --scripted-bot --no-boss-roster
+CAMPAIGN_OBSERVATION_VERSION=local5 python Big_map/train_campaign.py --map mirror_match --scripted-bot --no-boss-roster
 ```
 
 PowerShell:
 
 ```powershell
 $env:CAMPAIGN_OBSERVATION_VERSION = "local5"
-python Big_map/train_campaign.py --map mirrow_match --scripted-bot --no-boss-roster
+python Big_map/train_campaign.py --map mirror_match --scripted-bot --no-boss-roster
 ```
 
 `--total-steps`, `--n-envs`, `--run-id` и другие параметры остаются обычными параметрами тренера. Сохраняйте эту карту в отдельном каталоге эксперимента. Не используйте старые веса и VecNormalize как готовый результат обучения для новой задачи. Скриптовый бот и территория Империи должны быть включены; не добавляйте `--no-scripted-bot` или `--no-empire-territory` к тренировочному запуску этой карты. Явное отключение бота в API оставлено для диагностики; без него цель недостижима.
@@ -47,13 +47,13 @@ python Big_map/train_campaign.py --map mirrow_match --scripted-bot --no-boss-ros
 Оценка после обучения (из `Big_map`, замените `RUN_ID`):
 
 ```sh
-CAMPAIGN_OBSERVATION_VERSION=local5 python bestmodeltest.py --map mirrow_match --objective scripted_bot --scripted-bot --run-id RUN_ID --episodes 20
+CAMPAIGN_OBSERVATION_VERSION=local5 python bestmodeltest.py --map mirror_match --objective scripted_bot --scripted-bot --run-id RUN_ID --episodes 20
 ```
 
 Визуализация сохранённой модели с её нормализацией:
 
 ```sh
-CAMPAIGN_OBSERVATION_VERSION=local5 python Big_map/visualize_campaign.py --map mirrow_match --objective scripted_bot --scripted-bot --no-boss-roster --model PATH_TO_MODEL.zip --vecnormalize PATH_TO_VECNORMALIZE.pkl
+CAMPAIGN_OBSERVATION_VERSION=local5 python Big_map/visualize_campaign.py --map mirror_match --objective scripted_bot --scripted-bot --no-boss-roster --model PATH_TO_MODEL.zip --vecnormalize PATH_TO_VECNORMALIZE.pkl
 ```
 
 Для программного доступа:
@@ -62,7 +62,7 @@ CAMPAIGN_OBSERVATION_VERSION=local5 python Big_map/visualize_campaign.py --map m
 from campaign_env import CampaignEnv
 
 env = CampaignEnv(
-    map_name="mirrow_match",
+    map_name="mirror_match",
     observation_version="local5",
     scripted_capital_bot_enabled=True,
     use_boss_starting_roster=False,
@@ -75,7 +75,7 @@ obs, info = env.reset(seed=42)
 Из `Big_map`:
 
 ```sh
-python -m pytest -q tests/test_mirrow_match_layout.py tests/test_mirrow_bot_lifecycle.py tests/test_mirrow_match_objective.py
+python -m pytest -q tests/test_mirror_match_layout.py tests/test_mirror_bot_lifecycle.py tests/test_mirror_match_objective.py
 python -m pytest -q tests/test_wotan_enemy_import.py tests/test_map_army_integrity.py
 python -m pytest -q
 ```

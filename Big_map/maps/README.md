@@ -21,7 +21,7 @@
 - [Hire](hire_train/README.md)
 - [Item](item_train/README.md)
 - [Magic](magic_train/README.md)
-- [Mirrow match](mirrow_match/README.md)
+- [Mirror match](mirror_match/README.md)
 - [Orc Duel](orc_duel/README.md)
 - [Scroll](scroll_train/README.md)
 - [Siege](siege_train/README.md)
@@ -36,7 +36,7 @@
 
 ```sh
 python tools/generate_map_layouts.py
-python tools/generate_map_layouts.py --map mirrow_match
+python tools/generate_map_layouts.py --map mirror_match
 python -m pytest -q tests/test_map_layout_documentation.py
 ```
 
