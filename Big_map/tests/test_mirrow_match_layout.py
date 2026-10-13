@@ -269,12 +269,19 @@ def test_both_capitals_spread_territory_without_an_extra_home_guardian(env, monk
     np.testing.assert_array_equal(phases[-1][2], env.territory_owner_grid)
 
 
-def test_w7_repaints_the_whole_shared_reach_agent_then_bot_each_late_turn(env, monkeypatch):
+def test_w7_saturated_shared_reach_splits_into_mirrored_halves(env, monkeypatch):
     monkeypatch.setattr(env, "_advance_scripted_capital_bot_one_turn", lambda: {})
     common_reach = set(env.legions_territory_order)
     assert common_reach == set(env.empire_territory_order)
+    agent_distance = env.legions_territory_path_distances
+    bot_distance = env.empire_territory_path_distances
+    agent_won = {t for t in common_reach if agent_distance[t] < bot_distance[t]}
+    bot_won = {t for t in common_reach if bot_distance[t] < agent_distance[t]}
+    ties = common_reach - agent_won - bot_won
+    assert bot_won == {mirror_tile(t) for t in agent_won}
+    assert ties == {mirror_tile(t) for t in ties}
     # Advance the day counter to saturated reach without replaying hundreds
-    # of unrelated economy ticks; the next two normal ticks must repaint all.
+    # of unrelated economy ticks; the next two normal ticks split it.
     env.turns = max(len(env.legions_territory_order), len(env.empire_territory_order))
     phases = []
     original = env._apply_territory_growth_phase
@@ -287,11 +294,21 @@ def test_w7_repaints_the_whole_shared_reach_agent_then_bot_each_late_turn(env, m
     monkeypatch.setattr(env, "_apply_territory_growth_phase", observe)
     env._advance_turns(2)
     assert [p[0] for p in phases] == [env.TERRITORY_AGENT, env.TERRITORY_BOT] * 2
-    for owner, painted, grid in phases:
-        assert painted == common_reach
-        assert all(grid[y, x] == owner for x, y in common_reach)
-    assert not env.legions_territory_tile_set
-    assert env.empire_territory_tile_set == common_reach
+    for (owner, painted, grid), won in zip(phases, (agent_won, bot_won) * 2):
+        assert painted == won
+        assert all(grid[y, x] == owner for x, y in won)
+    # Equidistant tiles are painted by neither side and stay neutral.
+    assert env.legions_territory_tile_set == agent_won
+    assert env.empire_territory_tile_set == bot_won
+    assert all(env.territory_owner_grid[y, x] == env.TERRITORY_NEUTRAL for x, y in ties)
+    assert AGENT_GOLD_MINE_TILE in agent_won and BOT_GOLD_MINE_TILE in bot_won
+    # A tie keeps whoever already holds it.
+    agent_tie, bot_tie = sorted(ties)[:2]
+    env._paint_territory_owner(env.TERRITORY_AGENT, (agent_tie,))
+    env._paint_territory_owner(env.TERRITORY_BOT, (bot_tie,))
+    env._advance_turns(1)
+    assert env.territory_owner_grid[agent_tie[1], agent_tie[0]] == env.TERRITORY_AGENT
+    assert env.territory_owner_grid[bot_tie[1], bot_tie[0]] == env.TERRITORY_BOT
 
 
 def test_default_parties_are_ordinary_legions_against_ordinary_empire(env):
