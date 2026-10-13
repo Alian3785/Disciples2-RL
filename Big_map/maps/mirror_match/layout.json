@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "map_id": "mirrow_match",
-  "title": "Mirrow match",
+  "map_id": "mirror_match",
+  "title": "Mirror match",
   "grid_size": 48,
   "source_grid_size": 48,
   "seed": 0,
@@ -253,7 +253,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / agent / Гоблин, Гоблин, Гоблин",
+      "description": "Mirror match / agent / Гоблин, Гоблин, Гоблин",
       "units": [
         {
           "name": "Гоблин",
@@ -294,7 +294,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / agent / Орк",
+      "description": "Mirror match / agent / Орк",
       "units": [
         {
           "name": "Орк",
@@ -321,7 +321,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / agent / Орк, Гоблин лучник, Гоблин лучник",
+      "description": "Mirror match / agent / Орк, Гоблин лучник, Гоблин лучник",
       "units": [
         {
           "name": "Орк",
@@ -362,7 +362,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / agent / Копейщик, Служка",
+      "description": "Mirror match / agent / Копейщик, Служка",
       "units": [
         {
           "name": "Копейщик",
@@ -396,7 +396,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / agent / Ополченец, Ополченец",
+      "description": "Mirror match / agent / Ополченец, Ополченец",
       "units": [
         {
           "name": "Ополченец",
@@ -430,7 +430,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / agent / Разбойник, Головорез, Разбойник",
+      "description": "Mirror match / agent / Разбойник, Головорез, Разбойник",
       "units": [
         {
           "name": "Разбойник",
@@ -471,7 +471,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / agent / Скваер, Скваер, Скваер",
+      "description": "Mirror match / agent / Скваер, Скваер, Скваер",
       "units": [
         {
           "name": "Скваер",
@@ -512,7 +512,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / agent / Оккультист",
+      "description": "Mirror match / agent / Оккультист",
       "units": [
         {
           "name": "Оккультист",
@@ -539,7 +539,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / agent / Варвар",
+      "description": "Mirror match / agent / Варвар",
       "units": [
         {
           "name": "Варвар",
@@ -566,7 +566,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / agent / Русалка",
+      "description": "Mirror match / agent / Русалка",
       "units": [
         {
           "name": "Русалка",
@@ -593,7 +593,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / agent / Кракен",
+      "description": "Mirror match / agent / Кракен",
       "units": [
         {
           "name": "Кракен",
@@ -620,7 +620,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / agent / Скальной гигант, Алхимик",
+      "description": "Mirror match / agent / Скальной гигант, Алхимик",
       "units": [
         {
           "name": "Скальной гигант",
@@ -654,7 +654,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / agent / Ангел, Ангел",
+      "description": "Mirror match / agent / Ангел, Ангел",
       "units": [
         {
           "name": "Ангел",
@@ -688,7 +688,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / agent / Мантикора",
+      "description": "Mirror match / agent / Мантикора",
       "units": [
         {
           "name": "Мантикора",
@@ -715,7 +715,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / agent / Крестьянин, Крестьянин",
+      "description": "Mirror match / agent / Крестьянин, Крестьянин",
       "units": [
         {
           "name": "Крестьянин",
@@ -749,7 +749,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / agent / Скелет, Скелет",
+      "description": "Mirror match / agent / Скелет, Скелет",
       "units": [
         {
           "name": "Скелет",
@@ -783,7 +783,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / agent / Волк",
+      "description": "Mirror match / agent / Волк",
       "units": [
         {
           "name": "Волк",
@@ -810,7 +810,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / agent / Гном воин, Арбалетчик",
+      "description": "Mirror match / agent / Гном воин, Арбалетчик",
       "units": [
         {
           "name": "Гном воин",
@@ -844,7 +844,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / agent / Йети",
+      "description": "Mirror match / agent / Йети",
       "units": [
         {
           "name": "Йети",
@@ -871,7 +871,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / bot / Гоблин, Гоблин, Гоблин",
+      "description": "Mirror match / bot / Гоблин, Гоблин, Гоблин",
       "units": [
         {
           "name": "Гоблин",
@@ -912,7 +912,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / bot / Орк",
+      "description": "Mirror match / bot / Орк",
       "units": [
         {
           "name": "Орк",
@@ -939,7 +939,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / bot / Орк, Гоблин лучник, Гоблин лучник",
+      "description": "Mirror match / bot / Орк, Гоблин лучник, Гоблин лучник",
       "units": [
         {
           "name": "Орк",
@@ -980,7 +980,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / bot / Копейщик, Служка",
+      "description": "Mirror match / bot / Копейщик, Служка",
       "units": [
         {
           "name": "Копейщик",
@@ -1014,7 +1014,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / bot / Ополченец, Ополченец",
+      "description": "Mirror match / bot / Ополченец, Ополченец",
       "units": [
         {
           "name": "Ополченец",
@@ -1048,7 +1048,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / bot / Разбойник, Головорез, Разбойник",
+      "description": "Mirror match / bot / Разбойник, Головорез, Разбойник",
       "units": [
         {
           "name": "Разбойник",
@@ -1089,7 +1089,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / bot / Скваер, Скваер, Скваер",
+      "description": "Mirror match / bot / Скваер, Скваер, Скваер",
       "units": [
         {
           "name": "Скваер",
@@ -1130,7 +1130,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / bot / Оккультист",
+      "description": "Mirror match / bot / Оккультист",
       "units": [
         {
           "name": "Оккультист",
@@ -1157,7 +1157,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / bot / Варвар",
+      "description": "Mirror match / bot / Варвар",
       "units": [
         {
           "name": "Варвар",
@@ -1184,7 +1184,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / bot / Русалка",
+      "description": "Mirror match / bot / Русалка",
       "units": [
         {
           "name": "Русалка",
@@ -1211,7 +1211,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / bot / Кракен",
+      "description": "Mirror match / bot / Кракен",
       "units": [
         {
           "name": "Кракен",
@@ -1238,7 +1238,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / bot / Скальной гигант, Алхимик",
+      "description": "Mirror match / bot / Скальной гигант, Алхимик",
       "units": [
         {
           "name": "Скальной гигант",
@@ -1272,7 +1272,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / bot / Ангел, Ангел",
+      "description": "Mirror match / bot / Ангел, Ангел",
       "units": [
         {
           "name": "Ангел",
@@ -1306,7 +1306,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / bot / Мантикора",
+      "description": "Mirror match / bot / Мантикора",
       "units": [
         {
           "name": "Мантикора",
@@ -1333,7 +1333,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / bot / Крестьянин, Крестьянин",
+      "description": "Mirror match / bot / Крестьянин, Крестьянин",
       "units": [
         {
           "name": "Крестьянин",
@@ -1367,7 +1367,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / bot / Скелет, Скелет",
+      "description": "Mirror match / bot / Скелет, Скелет",
       "units": [
         {
           "name": "Скелет",
@@ -1401,7 +1401,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / bot / Волк",
+      "description": "Mirror match / bot / Волк",
       "units": [
         {
           "name": "Волк",
@@ -1428,7 +1428,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / bot / Гном воин, Арбалетчик",
+      "description": "Mirror match / bot / Гном воин, Арбалетчик",
       "units": [
         {
           "name": "Гном воин",
@@ -1462,7 +1462,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Mirrow match / bot / Йети",
+      "description": "Mirror match / bot / Йети",
       "units": [
         {
           "name": "Йети",
@@ -1489,7 +1489,7 @@
       ],
       "alive": true,
       "kind": "field",
-      "description": "Центр Mirrow match: один Тиамат",
+      "description": "Центр Mirror match: один Тиамат",
       "units": [
         {
           "name": "Тиамат",

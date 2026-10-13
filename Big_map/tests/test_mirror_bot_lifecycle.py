@@ -243,7 +243,7 @@ def test_dead_bot_unit_is_not_revived_by_stale_hp_alias(env):
     assert saved["initiative"] == 0
 
 
-@pytest.mark.parametrize("map_name", ["default", "small", "wotans_retribution", "mirrow_match"])
+@pytest.mark.parametrize("map_name", ["default", "small", "wotans_retribution", "mirror_match"])
 def test_end_turn_pursuit_opens_agent_controlled_battle(map_name, monkeypatch):
     e = make_env(map_name)
     try:

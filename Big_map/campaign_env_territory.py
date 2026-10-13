@@ -56,7 +56,7 @@ class CampaignTerritoryMixin:
             "full_roster": cls.CAMPAIGN_OBJECTIVE_FULL_PARTY,
             "party": cls.CAMPAIGN_OBJECTIVE_FULL_PARTY,
             "scripted_bot": cls.CAMPAIGN_OBJECTIVE_SCRIPTED_BOT,
-            "mirrow_match": cls.CAMPAIGN_OBJECTIVE_SCRIPTED_BOT,
+            "mirror_match": cls.CAMPAIGN_OBJECTIVE_SCRIPTED_BOT,
         }
         if raw in aliases:
             return aliases[raw]

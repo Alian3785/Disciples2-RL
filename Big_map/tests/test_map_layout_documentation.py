@@ -28,8 +28,8 @@ def test_map_layout_matches_runtime(name):
             im.verify()
 
 
-def test_mirrow_legend_covers_both_halves_and_tiamat():
-    data = extract('mirrow_match')
+def test_mirror_legend_covers_both_halves_and_tiamat():
+    data = extract('mirror_match')
     assert len(data['enemies']) == 39
     assert len(roster_entries(data)) == 20
     assert sum(e['marker'] == '★' for e in data['enemies']) == 1
