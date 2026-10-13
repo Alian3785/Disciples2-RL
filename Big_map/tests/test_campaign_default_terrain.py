@@ -18,9 +18,8 @@ from scenario_map_data import parse_map_size, parse_water_cells
 GOLD_MINES = {(2, 31), (24, 4), (29, 46), (41, 46)}
 
 
-@pytest.mark.parametrize("map_name", ["default", "small"])
-def test_maps_load_the_original_scenario_layers(map_name):
-    config = get_map(map_name)
+def test_maps_load_the_original_scenario_layers():
+    config = get_map("default")
     assert len(config.water_tiles_provider()) == 355
     assert len(config.forest_tiles_provider()) == 251
     assert len(config.road_tiles_provider()) == 24
@@ -30,6 +29,17 @@ def test_maps_load_the_original_scenario_layers(map_name):
     # Resource/chest interaction cells are deliberately exempt from this mask.
     assert {(0, 32), (0, 33), (0, 34)} <= forbidden
     assert not GOLD_MINES & forbidden
+
+
+def test_small_shrinks_the_original_scenario_layers():
+    default, small = get_map("default"), get_map("small")
+    # Area layers keep only cells they cover at least by half after shrinking.
+    for layer in ("water", "forest", "territory_forbidden"):
+        kept = set(getattr(small, f"{layer}_tiles_provider")())
+        assert kept < set(getattr(default, f"{layer}_tiles_provider")()), layer
+    # Narrow roads and gold mines shrink unchanged.
+    assert small.road_tiles_provider() == default.road_tiles_provider()
+    assert set(small.gold_mine_tiles_provider()) == GOLD_MINES
 
 
 def test_scenario_loads_in_a_snapshot_without_tools_or_site_packages(tmp_path):
