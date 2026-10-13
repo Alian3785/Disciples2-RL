@@ -37,6 +37,7 @@ from grid import (
     resolve_mana_sources,
     resolve_obstacle_tiles,
     resolve_heal_tiles,
+    scale_site_interaction_tiles,
     scale_static_tiles,
     scale_enemy_positions,
     VILLAGE_INTERNAL_GARRISON_OVERRIDES,

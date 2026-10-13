@@ -3,18 +3,36 @@
 Public REST regressions use ordinary parties, local5, and no scripted army.
 Other tests isolate source reach, city ownership, and publication of caches.
 """
+import dataclasses
 from copy import deepcopy
 
 import numpy as np
 import pytest
 
+import campaign_env
 from campaign_env import CampaignEnv
 from maps import available_maps, get_map
 
+# Like default, small keeps both capitals' land apart; ruin 70's building closes
+# the only corridor. These overlap tests reopen it so both territories meet:
+# overlap from day 9, the rune source (0, 2) from day 10, the agent's mine
+# (1, 15) from day 16 and all 182 tiles from day 19.
+RUIN_70_BUILDING = (15, 9, 3, 3)
+
+
+def overlapping_small():
+    small = get_map("small")
+    return dataclasses.replace(small, obstacle_blocks=tuple(
+        block for block in small.obstacle_blocks if block != RUIN_70_BUILDING))
+
 
 @pytest.fixture
-def make_env():
+def make_env(monkeypatch):
     environments = []
+    real_get_map = campaign_env.get_map
+    small = overlapping_small()
+    monkeypatch.setattr(campaign_env, "get_map",
+                        lambda name="default": small if name == "small" else real_get_map(name))
 
     def create(map_name="small", **kwargs):
         options = dict(map_name=map_name, Realcapital=2, observation_version="local5",
@@ -127,7 +145,7 @@ def test_invalid_paint_does_not_partially_mutate_ownership(make_env, owner, tile
     np.testing.assert_array_equal(env.territory_owner_grid, before)
 
 
-@pytest.mark.parametrize("start_day,overlap", [(0, 0), (7, 13)])
+@pytest.mark.parametrize("start_day,overlap", [(0, 0), (9, 21)])
 def test_completed_turn_paints_full_agent_area_then_full_bot_area(make_env, monkeypatch,
                                                                  start_day, overlap):
     env = make_env()
@@ -158,9 +176,9 @@ def test_completed_turn_paints_full_agent_area_then_full_bot_area(make_env, monk
 
 def test_old_overlap_is_repainted_every_turn_even_after_saturation(make_env, monkeypatch):
     env = make_env()
-    env._advance_turns(15)
+    env._advance_turns(19)
     agent, bot = capital_reach(env)
-    assert agent == bot and len(agent) == 149
+    assert agent == bot and len(agent) == 182
     phases = []
     original = env._apply_territory_growth_phase
 
@@ -180,12 +198,12 @@ def test_old_overlap_is_repainted_every_turn_even_after_saturation(make_env, mon
     assert_ownership_consistent(env)
 
 
-def test_public_rest_small_day_8_14_15_income_and_final_owner(make_env):
+def test_public_rest_small_day_10_16_19_income_and_final_owner(make_env):
     env = make_env()
     assert not env.scripted_capital_bot_config_enabled
     assert env.empire_territory_enabled
     assert not env.use_boss_starting_roster
-    for day in range(1, 17):
+    for day in range(1, 21):
         old_gold, old_mana = env.gold, env._current_mana_totals()
         observation, _, terminated, truncated, info = env.step(8)
         assert env.turns == day
@@ -199,26 +217,26 @@ def test_public_rest_small_day_8_14_15_income_and_final_owner(make_env):
         assert env.gold - old_gold == env._legions_gold_income_per_turn()
         for kind, income in env._compute_mana_income_per_turn().items():
             assert env._current_mana_totals()[kind] - old_mana[kind] == income
-        if day == 8:
-            assert len(agent & bot) == 13
+        if day == 10:
+            assert len(agent & bot) == 21
             assert (0, 2) in agent & bot
             assert env.territory_owner_grid[2, 0] == env.TERRITORY_BOT
             assert env.mana_income_per_turn["runes"] == 0
             assert env._current_mana_totals()["runes"] - old_mana["runes"] == 0
-        if day == 14:
-            assert len(agent & bot) == 133
+        if day == 16:
+            assert len(agent & bot) == 140
             assert (1, 15) in agent & bot
             assert env.territory_owner_grid[15, 1] == env.TERRITORY_BOT
             assert env.gold - old_gold == env.GOLD_PER_TURN == 100
-        if day >= 15:
-            assert len(agent & bot) == 149
+        if day >= 19:
+            assert len(agent & bot) == 182
             assert not env.legions_territory_tile_set
             assert env.gold - old_gold == 100
 
 
 def test_income_is_evaluated_only_after_both_growth_phases(make_env, monkeypatch):
     env = make_env()
-    env._advance_turns(13)
+    env._advance_turns(15)
     events = []
     original_phase = env._apply_territory_growth_phase
     original_gold = env._legions_gold_income_per_turn
@@ -250,7 +268,7 @@ def test_income_is_evaluated_only_after_both_growth_phases(make_env, monkeypatch
 @pytest.mark.parametrize("owner", [0, 1, 2])
 def test_healing_local_and_global_observations_use_final_owner(make_env, owner):
     env = make_env()
-    env._advance_turns(8)
+    env._advance_turns(10)
     tile = (0, 2)  # Reached by both sources, away from a settlement/capital.
     env._paint_territory_owner(owner, (tile,))
     env._refresh_territory_ownership_caches()
@@ -306,7 +324,7 @@ def test_actual_enemy_regeneration_uses_final_owner_without_repainting(make_env,
 
 def test_cache_and_read_queries_never_replay_growth(make_env, monkeypatch):
     env = make_env()
-    env._advance_turns(8)
+    env._advance_turns(10)
     tile = (0, 2)
     env._paint_territory_owner(env.TERRITORY_AGENT, (tile,))
     before = env.territory_owner_grid
@@ -360,7 +378,7 @@ def test_capital_territory_flag_is_independent_of_scripted_army(make_env, monkey
     assert env.scripted_capital_bot_config_enabled is scripted
     # Exercise territory wiring without starting a scripted army encounter.
     monkeypatch.setattr(env, "_advance_scripted_capital_bot_one_turn", lambda: {})
-    env._advance_turns(8)
+    env._advance_turns(10)
     agent, bot = capital_reach(env)
     assert env.legions_territory_tile_set == agent - bot
     assert env.empire_territory_tile_set == bot
@@ -507,7 +525,7 @@ def test_reset_clears_far_land_and_city_sources_without_affecting_another_env(ma
 
 def test_deepcopy_owns_an_independent_grid_and_preserves_growth(make_env):
     env = make_env()
-    env._advance_turns(8)
+    env._advance_turns(9)
     clone = deepcopy(env)
     try:
         assert not np.shares_memory(env._territory_owner_grid, clone._territory_owner_grid)

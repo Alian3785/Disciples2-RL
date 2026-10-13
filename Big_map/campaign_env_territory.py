@@ -1581,6 +1581,12 @@ class CampaignTerritoryMixin:
             for pos in (self._static_enemy_positions or {}).values()
         }
         forbidden_tiles.difference_update(enemy_tiles)
+        # Шахту всегда можно захватить: при уменьшении карты на её клетку
+        # может округлиться соседняя запрещённая клетка базовой карты.
+        forbidden_tiles.difference_update(
+            tuple(int(coord) for coord in tile)
+            for tile in (getattr(self, "gold_mine_tiles", ()) or ())
+        )
         claimable_tiles = {
             tuple(int(coord) for coord in tuple(source_tile))
         }
