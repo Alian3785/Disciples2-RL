@@ -1501,7 +1501,7 @@ class CampaignTerritoryMixin:
         scheduled_enemy_turn_infos = []
         for _ in range(int(delta_turns)):
             self.turns += 1
-            # End-turn phases repaint agent first, bot second; income uses the final owner.
+            # End-turn growth gives each contested tile to the nearer source; income uses the final owner.
             self._refresh_faction_territories()
             self._clear_all_enemy_map_spell_effects()
             self._clear_all_blue_map_spell_effects()
@@ -1758,20 +1758,29 @@ class CampaignTerritoryMixin:
             path_distances=self.legions_territory_path_distances,
             sort_key=self._legions_territory_sort_key,
         )
+    def _build_legions_settlement_territory_path_distances_by_name(
+        self,
+    ) -> Dict[str, Dict[Tuple[int, int], int]]:
+        """BFS distance от каждого захватываемого поселения: порядок роста и спорные клетки."""
+        distances_by_name: Dict[str, Dict[Tuple[int, int], int]] = {}
+        for source_data in self._static_legions_settlement_territory_sources:
+            settlement_name = str(source_data.get("name", "") or "")
+            source_tile = tuple(source_data.get("source_tile", (0, 0)))
+            path_blocked_tiles = self._build_territory_path_blocked_tiles(source_tile=source_tile)
+            distances_by_name[settlement_name] = self._build_territory_path_distances(
+                source_tile=source_tile,
+                blocked_tile_set=set(path_blocked_tiles),
+            )
+        return distances_by_name
     def _build_legions_settlement_territory_orders_by_name(self) -> Dict[str, Tuple[Tuple[int, int], ...]]:
         """Предрасчитывает порядок роста для каждого захватываемого поселения Легионов."""
         orders_by_name: Dict[str, Tuple[Tuple[int, int], ...]] = {}
         for source_data in self._static_legions_settlement_territory_sources:
             settlement_name = str(source_data.get("name", "") or "")
             source_tile = tuple(source_data.get("source_tile", (0, 0)))
-            path_blocked_tiles = self._build_territory_path_blocked_tiles(source_tile=source_tile)
-            path_distances = self._build_territory_path_distances(
-                source_tile=source_tile,
-                blocked_tile_set=set(path_blocked_tiles),
-            )
             orders_by_name[settlement_name] = self._build_territory_order(
                 forbidden_tile_set=self.legions_territory_forbidden_tile_set,
-                path_distances=path_distances,
+                path_distances=self.legions_settlement_territory_path_distances_by_name[settlement_name],
                 sort_key=lambda tile, origin_tile=source_tile: self._territory_sort_key(origin_tile, tile),
             )
         return orders_by_name
@@ -1871,17 +1880,25 @@ class CampaignTerritoryMixin:
         for x, y in normalized:
             self._territory_owner_grid[y, x] = owner
 
-    def _territory_reached_tiles(self):
-        """Compute source reach, without reading or modifying current ownership.
+    def _territory_reach_distances(self):
+        """Map each side's reached tile to its path distance from the nearest reaching source.
 
-        Losing a tile does not rewind a source's growth. Each phase reclaims its
-        full reached area, including old tiles and tiles painted by the opponent.
+        Reach never reads or modifies current ownership. Losing a tile does not
+        rewind a source's growth: the reach keeps old tiles and tiles painted by
+        the opponent.
         """
-        agent_tiles = list(self._claim_territory_tiles(
+        def add(reach, tiles, distances):
+            for tile in tiles:
+                distance = int(distances[tile])
+                if distance < reach.get(tile, distance + 1):
+                    reach[tile] = distance
+
+        agent_reach: Dict[Tuple[int, int], int] = {}
+        add(agent_reach, self._claim_territory_tiles(
             self.legions_territory_order,
             self._territory_claim_count(len(self.legions_territory_order),
                                         self.LEGIONS_TERRITORY_EXPANSION_PER_TURN, self.turns),
-        ))
+        ), self.legions_territory_path_distances)
         for source_data in self._static_legions_settlement_territory_sources:
             name = str(source_data.get("name", "") or "")
             order = self.legions_settlement_territory_orders_by_name.get(name, ())
@@ -1889,14 +1906,14 @@ class CampaignTerritoryMixin:
                 order, self._current_settlement_territory_claim_count(name, len(order)))
             # This legacy per-source diagnostic stores REACH, not ownership.
             self.legions_settlement_territory_tiles_by_name[name] = tiles
-            agent_tiles.extend(tiles)
-        bot_tiles = []
+            add(agent_reach, tiles, self.legions_settlement_territory_path_distances_by_name[name])
+        bot_reach: Dict[Tuple[int, int], int] = {}
         if bool(getattr(self, "empire_territory_enabled", True)):
-            bot_tiles.extend(self._claim_territory_tiles(
+            add(bot_reach, self._claim_territory_tiles(
                 self.empire_territory_order,
                 self._territory_claim_count(len(self.empire_territory_order),
                                             self.EMPIRE_TERRITORY_EXPANSION_PER_TURN, self.turns),
-            ))
+            ), self.empire_territory_path_distances)
         # Captured cities retain their existing independent growth behavior,
         # including when the optional Empire capital territory is disabled.
         for city, captured_turn in self.bot_city_capture_turns.items():
@@ -1904,12 +1921,24 @@ class CampaignTerritoryMixin:
             count = self._territory_claim_count(
                 len(order), self._settlement_expansion_per_turn(city),
                 max(0, self.turns - captured_turn))
-            bot_tiles.extend(self.bot_city_initial_tiles.get(city, ()))
-            bot_tiles.extend(self._claim_territory_tiles(order, count))
-        return tuple(dict.fromkeys(agent_tiles)), tuple(dict.fromkeys(bot_tiles))
+            distances = self.legions_settlement_territory_path_distances_by_name[city]
+            add(bot_reach, self.bot_city_initial_tiles.get(city, ()), distances)
+            add(bot_reach, self._claim_territory_tiles(order, count), distances)
+        return agent_reach, bot_reach
+
+    def _territory_reached_tiles(self):
+        """Compute source reach, without reading or modifying current ownership."""
+        agent_reach, bot_reach = self._territory_reach_distances()
+        return tuple(agent_reach), tuple(bot_reach)
+
+    @staticmethod
+    def _territory_won_tiles(reach, opponent_reach):
+        """Reached tiles whose source is strictly nearer than every opponent source reaching them."""
+        return tuple(tile for tile, distance in reach.items()
+                     if distance < opponent_reach.get(tile, distance + 1))
 
     def _apply_territory_growth_phase(self, owner: int, reached_tiles) -> None:
-        """One faction repaints its complete reached area, even at saturation."""
+        """One faction repaints the reached tiles it wins, even at saturation."""
         self._paint_territory_owner(owner, reached_tiles)
 
     def _refresh_faction_territories(self) -> None:
@@ -1919,11 +1948,15 @@ class CampaignTerritoryMixin:
         ownership query, or cache getter. Captures publish their own atomic
         transfer instead. Terrain keeps its last owner until repainted.
         """
-        agent_tiles, bot_tiles = self._territory_reached_tiles()
-        self._territory_agent_reached_tiles = agent_tiles
-        self._territory_bot_reached_tiles = bot_tiles
-        self._apply_territory_growth_phase(self.TERRITORY_AGENT, agent_tiles)
-        self._apply_territory_growth_phase(self.TERRITORY_BOT, bot_tiles)
+        agent_reach, bot_reach = self._territory_reach_distances()
+        self._territory_agent_reached_tiles = tuple(agent_reach)
+        self._territory_bot_reached_tiles = tuple(bot_reach)
+        # A tile both sides reach goes to the source nearer by path. On a tie
+        # neither side paints it, so it keeps its owner or stays neutral.
+        self._apply_territory_growth_phase(
+            self.TERRITORY_AGENT, self._territory_won_tiles(agent_reach, bot_reach))
+        self._apply_territory_growth_phase(
+            self.TERRITORY_BOT, self._territory_won_tiles(bot_reach, agent_reach))
         self._refresh_territory_ownership_caches()
 
     def _refresh_territory_ownership_caches(self) -> None:
