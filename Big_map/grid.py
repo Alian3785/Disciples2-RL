@@ -312,6 +312,10 @@ def clamp_grid_pos(pos: Tuple[int, int], grid_size: int) -> Tuple[int, int]:
     )
 
 
+# Merchants, spell shops, mercenary camps and trainers occupy 3x3 tiles.
+SITE_FOOTPRINT_SIZE: Tuple[int, int] = (3, 3)
+
+
 def scale_enemy_positions(
     target_grid_size: int,
     *,
@@ -385,6 +389,61 @@ def scale_static_tiles(
         )
 
     return tuple(scaled_tiles)
+
+
+def scale_site_interaction_tiles(
+    target_grid_size: int,
+    anchor: Tuple[int, int],
+    interaction_tiles: Tuple[Tuple[int, int], ...],
+    *,
+    obstacle_tiles: Tuple[Tuple[int, int], ...] | set[Tuple[int, int]] = (),
+    footprint_size: Tuple[int, int] = SITE_FOOTPRINT_SIZE,
+    base_grid_size: int = BASE_GRID_SIZE,
+) -> Tuple[Tuple[int, int], ...]:
+    """Scale a map site's interaction tiles so they stay outside its building.
+
+    При уменьшении карты клетка входа может округлиться на непроходимую клетку
+    сжатого здания, где фильтр препятствий её отбросит, и объект станет
+    недоступен. Такая клетка выносится сразу за сжатое здание с той же стороны,
+    где вход был на базовой карте. Вход, вынесенный за край карты, отбрасывается.
+    Входы на проходимых клетках не меняются.
+    """
+    width, height = (int(value) for value in footprint_size)
+    anchor_x, anchor_y = (int(value) for value in anchor)
+    footprint = scale_static_tiles(
+        target_grid_size,
+        tuple(
+            (anchor_x + dx, anchor_y + dy)
+            for dx in range(width)
+            for dy in range(height)
+        ),
+        base_grid_size=base_grid_size,
+    )
+    min_x = min(x for x, _ in footprint)
+    max_x = max(x for x, _ in footprint)
+    min_y = min(y for _, y in footprint)
+    max_y = max(y for _, y in footprint)
+    scaled_tiles = scale_static_tiles(
+        target_grid_size,
+        tuple(interaction_tiles),
+        base_grid_size=base_grid_size,
+    )
+
+    blocked_tiles = {(int(x), int(y)) for x, y in obstacle_tiles}
+    resolved: list[Tuple[int, int]] = []
+    for (base_x, base_y), (x, y) in zip(interaction_tiles, scaled_tiles):
+        if (x, y) in blocked_tiles and min_x <= x <= max_x and min_y <= y <= max_y:
+            if base_x >= anchor_x + width:
+                x = max_x + 1
+            elif base_x < anchor_x:
+                x = min_x - 1
+            if base_y >= anchor_y + height:
+                y = max_y + 1
+            elif base_y < anchor_y:
+                y = min_y - 1
+        if 0 <= x < int(target_grid_size) and 0 <= y < int(target_grid_size):
+            resolved.append((x, y))
+    return tuple(resolved)
 
 
 def _expand_static_blocks(

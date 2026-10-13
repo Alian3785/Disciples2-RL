@@ -788,9 +788,11 @@ class CampaignMapSitesMixin:
                 self.grid_size,
                 (tuple(site_data["anchor"]),),
             )[0]
-            scaled_tiles = scale_static_tiles(
+            scaled_tiles = scale_site_interaction_tiles(
                 self.grid_size,
+                tuple(site_data["anchor"]),
                 tuple(site_data["interaction_tiles"]),
+                obstacle_tiles=obstacle_tiles,
             )
 
             site_tiles: List[Tuple[int, int]] = []
@@ -828,9 +830,11 @@ class CampaignMapSitesMixin:
                 self.grid_size,
                 (tuple(site_data["anchor"]),),
             )[0]
-            scaled_tiles = scale_static_tiles(
+            scaled_tiles = scale_site_interaction_tiles(
                 self.grid_size,
+                tuple(site_data["anchor"]),
                 tuple(site_data["interaction_tiles"]),
+                obstacle_tiles=obstacle_tiles,
             )
 
             site_tiles: List[Tuple[int, int]] = []
@@ -868,9 +872,11 @@ class CampaignMapSitesMixin:
                 self.grid_size,
                 (tuple(site_data["anchor"]),),
             )[0]
-            scaled_tiles = scale_static_tiles(
+            scaled_tiles = scale_site_interaction_tiles(
                 self.grid_size,
+                tuple(site_data["anchor"]),
                 tuple(site_data["interaction_tiles"]),
+                obstacle_tiles=obstacle_tiles,
             )
 
             site_tiles: List[Tuple[int, int]] = []
@@ -908,9 +914,11 @@ class CampaignMapSitesMixin:
                 self.grid_size,
                 (tuple(site_data["anchor"]),),
             )[0]
-            scaled_tiles = scale_static_tiles(
+            scaled_tiles = scale_site_interaction_tiles(
                 self.grid_size,
+                tuple(site_data["anchor"]),
                 tuple(site_data["interaction_tiles"]),
+                obstacle_tiles=obstacle_tiles,
             )
 
             site_tiles: List[Tuple[int, int]] = []
