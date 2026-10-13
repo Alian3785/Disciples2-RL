@@ -32,7 +32,7 @@ The imported JAX project and vendored Stoa retain their [project license](jax/LI
 
 ## Release notes
 
-**[v0.5](https://github.com/Alian3785/Disciples2-RL/releases/tag/v0.5.0)** — navigation observations in `main`, Mirrow match, all 16 map layouts, and combat and campaign fixes. [Detailed release notes](RELEASE_NOTES_v0.5.md).
+**[v0.5](https://github.com/Alian3785/Disciples2-RL/releases/tag/v0.5.0)** — navigation observations in `main`, Mirror match, all 16 map layouts, and combat and campaign fixes. [Detailed release notes](RELEASE_NOTES_v0.5.md).
 
 ## Maps
 
@@ -83,13 +83,13 @@ Each command uses the map's default objective, `local5` observations, ordinary s
 | [Green Dragon Minimal](Big_map/maps/green_dragon_minimal/README.md) (`green_dragon_minimal`) | Realistic | `train_map green_dragon_minimal` |
 | [Siege Training](Big_map/maps/siege_train/README.md) (`siege_train`) | Realistic | `train_map siege_train` |
 | [Small](Big_map/maps/small/README.md) (`small`) | Realistic | `train_map small` |
-| [Mirrow match](Big_map/maps/mirrow_match/README.md) (`mirrow_match`) | Realistic | `train_map mirrow_match --scripted-bot` |
+| [Mirror match](Big_map/maps/mirror_match/README.md) (`mirror_match`) | Realistic | `train_map mirror_match --scripted-bot` |
 | [Super Last Stand](Big_map/maps/super_last_stand/README.md) (`super_last_stand`) | Realistic | `train_map super_last_stand` |
 | [Default: A Return to Simpler Times](Big_map/maps/default/README.md) (`default`) | Authentic | `train_map default` |
 | [Wotan's Vengeance](Big_map/maps/wotans_retribution/README.md) (`wotans_retribution`) | Authentic | `train_map wotans_retribution` |
 
-- City Defence Training and Mirrow match explicitly enable the scripted bot because their victory conditions require it. Siege Training and Super Last Stand use separate scheduled attackers, which remain active with `--no-scripted-bot`.
-- Wotan's Vengeance uses the existing map ID `wotans_retribution`; its detailed map documentation also calls it Wotan's Retribution. The project spelling `mirrow_match` is intentional.
+- City Defence Training and Mirror match explicitly enable the scripted bot because their victory conditions require it. Siege Training and Super Last Stand use separate scheduled attackers, which remain active with `--no-scripted-bot`.
+- Wotan's Vengeance uses the existing map ID `wotans_retribution`; its detailed map documentation also calls it Wotan's Retribution.
 - Default, Small, and Wotan use city-capture objectives. Green Dragon Minimal already uses its dragon objective, so no additional goal flag is needed.
 - Keep each model paired with its own saved normalization statistics and the same map, observation, objective, roster, and bot settings for evaluation and replays. The trainer creates run-specific artifact directories; use `--n-envs` and `--total-steps` to adjust resource use and budget.
 - Map links include layouts, army compositions, interaction coordinates, and wave diagrams where applicable. Authentic maps remain adaptations: original visuals and scripted story events are not reproduced.
