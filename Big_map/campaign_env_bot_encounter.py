@@ -171,7 +171,7 @@ class CampaignBotEncounterMixin:
         if info.get("battle_result") == "victory":
             if self._scripted_bot_is_present():
                 # Summoned armies use their own completion route and cannot win
-                # Mirrow match. A city reserve likewise is not the hero army.
+                # Mirror match. A city reserve likewise is not the hero army.
                 self._mark_scripted_capital_bot_defeated()
         elif self._scripted_bot_is_present():
             # The normal bridge may already have cleared battle_env. Preserve

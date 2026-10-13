@@ -1,4 +1,4 @@
-"""Mirrow match layout, resources and one-fighter/two-cell army invariants."""
+"""Mirror match layout, resources and one-fighter/two-cell army invariants."""
 
 from collections import Counter, deque
 from copy import deepcopy
@@ -11,7 +11,7 @@ from data_dicts_compact_lines import DATA
 from enemy_configs import build_enemy_configs
 from maps import get_map
 from maps.base import footprint_tiles
-from maps.mirrow_match import (
+from maps.mirror_match import (
     ADDITIONAL_FORMATIONS,
     AGENT_CAPITAL_BLOCK,
     AGENT_GOLD_MINE_TILE,
@@ -72,7 +72,7 @@ def _reachable(start, blocked):
 def env():
     # The requested map objective requires its ordinary scripted opponent.
     environment = CampaignEnv(
-        map_name="mirrow_match", observation_version="local5",
+        map_name="mirror_match", observation_version="local5",
         scripted_capital_bot_enabled=True, use_boss_starting_roster=False,
         log_enabled=False,
     )
@@ -82,7 +82,7 @@ def env():
 
 
 def test_map_has_full_mirrored_roster_and_one_central_tiamat():
-    config = get_map("mirrow_match")
+    config = get_map("mirror_match")
     assert config.grid_size == GRID_SIZE == 48
     assert config.hero_start == HERO_START == (5, 5)
     assert config.scripted_capital_bot_home_tile == BOT_HOME == (42, 42)
@@ -119,7 +119,7 @@ def test_map_has_full_mirrored_roster_and_one_central_tiamat():
 
 
 def test_all_five_difficulty_tiers_move_outward_from_each_capital():
-    config = get_map("mirrow_match")
+    config = get_map("mirror_match")
     for region, home in (("agent", HERO_START), ("bot", BOT_HOME)):
         tiers = {}
         for row in config.enemy_stacks:

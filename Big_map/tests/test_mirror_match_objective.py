@@ -1,4 +1,4 @@
-"""Only a travelling hero army can complete Mirrow match's bot objective."""
+"""Only a travelling hero army can complete Mirror match's bot objective."""
 from copy import deepcopy
 
 import pytest
@@ -9,7 +9,7 @@ from maps import available_maps
 
 @pytest.fixture
 def env():
-    instance = CampaignEnv(map_name="mirrow_match", observation_version="local5",
+    instance = CampaignEnv(map_name="mirror_match", observation_version="local5",
                            scripted_capital_bot_enabled=True,
                            use_boss_starting_roster=False, log_enabled=False)
     instance.reset(seed=7)

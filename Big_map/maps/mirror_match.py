@@ -1,4 +1,4 @@
-"""Mirrow match: symmetric corner economies and a shared central Tiamat.
+"""Mirror match: symmetric corner economies and a shared central Tiamat.
 
 The two capital entrances, neutral regions and terrain are rotated by 180
 degrees. The bot capital therefore opens to the west, towards the board,
@@ -10,7 +10,7 @@ from __future__ import annotations
 from maps.base import MapConfig, capital_footprint_block
 
 GRID_SIZE = 48
-DISPLAY_NAME = "Mirrow match"
+DISPLAY_NAME = "Mirror match"
 HERO_START = (5, 5)
 BOT_HOME = (42, 42)
 TIAMAT_TILE = (24, 24)
@@ -113,7 +113,7 @@ def _region_stacks(*, mirrored: bool) -> tuple[dict[str, object], ...]:
         stacks.append({
             "enemy_id": id_base + offset,
             "position": mirror_tile(tile) if mirrored else tile,
-            "description": f"Mirrow match / {region} / {', '.join(names)}",
+            "description": f"Mirror match / {region} / {', '.join(names)}",
             "front": list(front),
             "back": list(back),
             "formation_key": key,
@@ -126,7 +126,7 @@ def _region_stacks(*, mirrored: bool) -> tuple[dict[str, object], ...]:
 TIAMAT_STACK = {
     "enemy_id": TIAMAT_ENEMY_ID,
     "position": TIAMAT_TILE,
-    "description": "Центр Mirrow match: один Тиамат",
+    "description": "Центр Mirror match: один Тиамат",
     "front": [None, "Тиамат", None],
     "back": [None, None, None],
     "formation_key": "tiamat",
@@ -139,7 +139,7 @@ BOT_ENEMY_STACKS = _region_stacks(mirrored=True)
 ENEMY_STACKS = (*AGENT_ENEMY_STACKS, *BOT_ENEMY_STACKS, TIAMAT_STACK)
 
 MAP = MapConfig(
-    name="mirrow_match",
+    name="mirror_match",
     grid_size=GRID_SIZE,
     hero_start=HERO_START,
     obstacle_blocks=OBSTACLE_BLOCKS,

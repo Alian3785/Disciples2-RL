@@ -38,7 +38,7 @@ TITLES = {'default':'A Return to Simpler Times', 'small':'Small · уменьш�
  'builder':'Builder · строительство', 'city_defence_train':'City Defence · оборона города',
  'formation_train':'Formation · построение', 'green_dragon_minimal':'Green Dragon Minimal',
  'hire_train':'Hire · найм', 'item_train':'Item · предметы', 'magic_train':'Magic · магия',
- 'mirrow_match':'Mirrow match', 'orc_duel':'Orc Duel · дуэль с орком',
+ 'mirror_match':'Mirror match', 'orc_duel':'Orc Duel · дуэль с орком',
  'scroll_train':'Scroll · свитки', 'siege_train':'Siege · осада',
  'super_last_stand':'Super Last Stand', 'trade_train':'Trade · торговля',
  'wotans_retribution':"Wotan’s Retribution"}
@@ -148,7 +148,7 @@ def extract(name):
                     ruin['source_'+key]=list(ruin[key])
                     ruin[key]=list(scale_static_tiles(env.grid_size,(tuple(ruin[key]),),base_grid_size=m.grid_size)[0])
             ruin['guardian_position']=list(env.grid_env.enemy_positions[ruin['id']])
-        if name=='mirrow_match':
+        if name=='mirror_match':
             keys={r[0]:i for i,r in enumerate(module.FORMATIONS,1)}
             for e in enemies:e['marker']='★' if e['region']=='center' else str(keys[e['formation_key']])
             data['notes'].append('19 зеркальных пар нейтральных отрядов и Тиамат в центре. Цвета: сложность 1–5 из конфигурации.')
@@ -199,7 +199,7 @@ def roster_entries(data):
     seen=set()
     for e in data['enemies']:
         if e['kind']=='future':continue
-        if data['map_id']=='mirrow_match':
+        if data['map_id']=='mirror_match':
             if e['marker'] in seen:continue
             seen.add(e['marker'])
         suffix = ' · руины' if e['kind']=='ruin' else ' · гарнизон' if e['kind'] in ('city','capital') else ''
@@ -363,7 +363,7 @@ def draw(data, destination):
         for line in info_lines:text(sidebar_x,yy,line,small,MUTED);yy+=30
     yy+=36
     for line in notes_lines:text(sidebar_x,yy,line,small,MUTED);yy+=30
-    if data['map_id']=='mirrow_match':
+    if data['map_id']=='mirror_match':
         yy+=30;text(sidebar_x,yy,'Крупное существо: 2 клетки, 1 боец.',small,MUTED)
     im.save(destination,optimize=True)
     return im
@@ -407,7 +407,7 @@ def write_readme(data,path):
          '- Точки возле магазина показывают все действующие клетки взаимодействия.',
          '- X: сундук; ромб: шахта. П/Ж/С/Р/Л: преисподняя/жизнь/смерть/руны/роща.',
          '- Круг: отряд. Зелёный: полевой; оранжевый: город; фиолетовый: руины; красный: столица.',
-         '- Для Mirrow match цвета — заданные уровни сложности; номер общий для зеркальной пары.',
+         '- Для Mirror match цвета — заданные уровни сложности; номер общий для зеркальной пары.',
          '- W: место будущего появления; S: условный штурм. Знак + после номера: несколько армий на одной клетке.',
          '- Большое существо занимает 2 клетки, но считается одним бойцом.', '', '## Города и объекты']
     for c in data['capitals']:out.append(f"- {c['code']}: {c['name']}, {coord(c['position'])}")
