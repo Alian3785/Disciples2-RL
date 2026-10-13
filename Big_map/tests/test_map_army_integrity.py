@@ -111,7 +111,10 @@ def test_default_and_small_match_unique_source_fighter_counts(map_name, default_
 
     config = get_map(map_name)
     teams = build_enemy_configs(config.enemy_team_specs())
-    for enemy_id, position in config.enemy_positions().items():
+    # Small moves a few stacks off shrunken mountains; their sources stay at default positions.
+    source_positions = get_map("default").enemy_positions()
+    for enemy_id in config.enemy_positions():
+        position = source_positions[enemy_id]
         if enemy_id == 75:
             # These maps explicitly retain only Mizrael from the Empire capital.
             assert [u["name"] for u in fighters(teams[enemy_id])] == ["Мизраэль"]
