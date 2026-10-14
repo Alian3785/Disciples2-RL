@@ -3,7 +3,7 @@ gymnasium==1.4.0
 stable-baselines3==2.9.0
 sb3-contrib==2.9.0
 torch==2.14.1
-numpy==2.5.3
+numpy==2.5.4
 pandas==3.0.6
 matplotlib==3.11.2
 pytest==9.1.1
