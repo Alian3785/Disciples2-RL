@@ -8,7 +8,7 @@ import pytest
 
 from stoix.envs.number_grid import SHOOT
 from stoix.envs.number_grid_combat import ACCURACY, accuracy_hits
-from stoix.envs.number_grid_effects import DISABLE, disable_attack_accuracy
+from stoix.envs.number_grid_effects import DISABLE, disable_attack_accuracy, disable_attack_allowed
 from stoix.tests.number_grid_fixtures import compiled_method, hero_roster_state, enemy_roster_state
 
 
@@ -20,7 +20,10 @@ def require_gpu():
 def duel(game, caster, red=False):
     env, initial, _, _ = game
     state = compiled_method(env, '_begin_battle')(initial.replace(enemy=jnp.int32(0)))
-    state = hero_roster_state(env, state, ['archer' if red else caster, 'duke', None, None, None, None])
+    # RED chooses its own target. Put the highest-damage hero in slot 0 so
+    # both ordinary targeting and long-paralysis targeting select that slot.
+    hero = ['duke', 'archer'] if red else [caster, 'duke']
+    state = hero_roster_state(env, state, [*hero, None, None, None, None])
     state = enemy_roster_state(env, state, [caster if red else 'archer', 'archer', None, None, None, None])
     actor, target = (6, 0) if red else (0, 6)
     return env, state.replace(actor=jnp.int32(actor), round=jnp.int32(40),
@@ -35,16 +38,21 @@ def strike(env, state, target):
         state.battle_key, jnp.zeros(env.random_size))[0]
 
 
-def test_zero_accuracy_always_misses_even_zero_random_draws():
+@pytest.mark.core
+def test_round_limit_is_separate_from_zero_accuracy_roll():
     rounds = jnp.array([1, 39, 40, 41, 75, 1000])
     limit = jax.jit(disable_attack_accuracy)
     accuracy = limit(jnp.float32(150), jnp.bool_(True), rounds)
     assert accuracy.tolist() == [150., 150., 150., 0., 0., 0.]
-    assert jax.jit(accuracy_hits)(accuracy, jnp.zeros(6), jnp.zeros(6)).tolist() == [True]*3+[False]*3
+    hits = jax.jit(accuracy_hits)(accuracy, jnp.zeros(6), jnp.zeros(6))
+    assert hits.tolist() == [True]*6
+    allowed = jax.jit(disable_attack_allowed)(jnp.bool_(True), rounds)
+    assert (hits & allowed).tolist() == [True]*3+[False]*3
     assert jnp.all(limit(jnp.float32(95), jnp.bool_(False), rounds) == 95)
 
 
-@pytest.mark.parametrize('caster', ['ghost', 'shadow', 'incubus', 'medusa'])
+@pytest.mark.parametrize('caster', [pytest.param('ghost', marks=pytest.mark.core),
+                                  'shadow', 'incubus', pytest.param('medusa', marks=pytest.mark.core)])
 @pytest.mark.parametrize('red', [False, True])
 def test_primary_paralyze_and_petrify_for_both_sides(current_game, caster, red):
     env, before, actor, target = duel(current_game, caster, red)
@@ -59,7 +67,7 @@ def test_primary_paralyze_and_petrify_for_both_sides(current_game, caster, red):
     assert not jnp.any(missed.paralyzed | missed.long_paralyzed)
     assert jnp.array_equal(missed.hp, before.hp)
     assert stats(late.replace(in_battle=jnp.bool_(False), actor=jnp.int32(0)))[0, ACCURACY] > 0
-    # Accuracy zero is a miss before ward handling, not a spent ward.
+    # The explicit round ban rejects even (0, 0) before spending a ward.
     source = compiled_method(env, '_combat_traits')(before)[actor, 1]
     ward = jnp.left_shift(jnp.uint32(1), source-1)
     protected = late.replace(potion_wards=late.potion_wards.at[target].set(ward))
@@ -69,7 +77,7 @@ def test_primary_paralyze_and_petrify_for_both_sides(current_game, caster, red):
         assert compiled_method(env, 'action_mask')(late)[SHOOT + target % 6]
 
 
-@pytest.mark.parametrize('caster', ['ghoul', 'mermaid', 'abyss_devil'])
+@pytest.mark.parametrize('caster', [pytest.param('ghoul', marks=pytest.mark.core), 'mermaid', 'abyss_devil'])
 @pytest.mark.parametrize('red', [False, True])
 def test_secondary_disable_stops_but_primary_damage_remains(current_game, caster, red):
     # Zero random draws hit any positive accuracy; potions no longer raise secondary accuracy.

@@ -71,7 +71,9 @@ class TargetRewardRules:
         active = state.in_battle & (self.indices == state.enemy)
         fractions = jnp.where(active[:, None], live_fraction, fractions)
         fractions = jnp.clip(fractions, 0., 1.)
-        progress = 1. - jnp.sum(self.weights * fractions, axis=1) / self.totals
+        # Sum lost HP fractions directly: subtracting a rounded near-one ratio
+        # produces a spurious positive reward for completely healthy targets.
+        progress = jnp.sum(self.weights * (1.-fractions), axis=1) / self.totals
         progress = jnp.where(state.alive[self.indices], progress, 1.)
         return jnp.where(state.won | state.lost, 0., self.progress_scale * jnp.sum(progress))
 

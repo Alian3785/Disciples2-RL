@@ -1,0 +1,67 @@
+{
+  "date": "2026-10-20",
+  "branch": "codex/original-hit-boundary",
+  "backend": "cuda",
+  "device": "NVIDIA GeForce GTX 1660 Ti",
+  "jax": "0.11.2",
+  "python": "3.12.3",
+  "source": {
+    "executable_sha256": "115d4629ef35041187dea53700901eff47eb33d1f7270cc9dd3c2c72870a194a",
+    "procedure": "0x625F3F",
+    "saved_disassembly": "results/source-research/audit-20261020/accuracy-actual-exe.asm",
+    "hit_condition": "floor((a + b) / 2) <= accuracy; independent integer a,b in 0..99",
+    "original_game_or_ida_launched": false
+  },
+  "core": {
+    "command": "scripts/test_gpu.ps1 -Output results/gpu-tests/original-hit-boundary-complete-20261020",
+    "cuda_runner": "bash scripts/run_gpu.sh scripts/test_gpu.py",
+    "passed": 227,
+    "failed": 0,
+    "deselected": 394,
+    "pytest_seconds": 181.36,
+    "wall_seconds_including_wsl": 203.10002326965332,
+    "wall_limit_seconds": 600,
+    "persistent_compilation_cache": true,
+    "test_results_reused": false,
+    "compilation_included_in_wall_time": true,
+    "compilation_seconds_separately_measured": false,
+    "artifacts": "results/gpu-tests/original-hit-boundary-complete-20261020"
+  },
+  "earlier_attempts": [
+    {
+      "artifacts": "results/gpu-tests/original-hit-boundary-20261020",
+      "result": "76 passed, then reward assertion failed",
+      "resolution": "Ultimately fixed cancellation error in target progress; strict reward assertions restored."
+    },
+    {
+      "artifacts": "results/gpu-tests/original-hit-boundary-final-20261020",
+      "result": "77 passed, then another reward assertion failed",
+      "resolution": "Sum weighted lost-health fractions directly; add existing target reward core tests to testpaths."
+    },
+    {
+      "artifacts": "results/gpu-tests/original-hit-boundary-verified-20261020",
+      "result": "179 passed, then item damage fixture failed",
+      "resolution": "Use orb_of_vampire (damage), not vampire_orb (summon), in the shared full-catalog item fixture."
+    }
+  ],
+  "targeted_checks": [
+    {
+      "artifact": "results/gpu-tests/original-hit-boundary-final-20261020/targeted.xml",
+      "result": "16 passed, 1 failed",
+      "resolution": "Correct enemy-paralysis fixture: AI targets the strongest attacker, so place the hero in the asserted slot."
+    },
+    {
+      "artifact": "results/gpu-tests/original-hit-boundary-final-20261020/disable-targeted.xml",
+      "result": "7 passed"
+    },
+    {
+      "artifact": "results/gpu-tests/original-hit-boundary-verified-20261020/targeted.xml",
+      "result": "45 passed, 3 item-fixture failures"
+    },
+    {
+      "artifact": "results/gpu-tests/original-hit-boundary-verified-20261020/item-targeted.xml",
+      "result": "3 passed"
+    }
+  ],
+  "scope": "Core regressions only. Training and its compilation/timing are recorded separately."
+}
