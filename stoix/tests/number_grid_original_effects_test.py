@@ -4,7 +4,8 @@ import jax.numpy as jnp
 import pytest
 
 from stoix.envs.number_grid import DEFEND, WAIT, SHOOT
-from stoix.envs.number_grid_effects import effect_breaks, advance_periodic_queue, LONG, SHORT
+from stoix.envs.number_grid_effects import effect_breaks, advance_poison_queue, advance_periodic_queue, LONG, SHORT
+from stoix.envs.number_grid_summoning import advance_linked_queue
 from stoix.tests.number_grid_fixtures import compiled_method, hero_roster_state, enemy_roster_state
 
 pytestmark = pytest.mark.core
@@ -44,6 +45,35 @@ def test_periodic_order_damage_before_recovery_and_wait_guard():
     assert not jnp.any(run(*short)[5])
 
 
+@pytest.mark.parametrize('queue_kind', ['poison', 'periodic', 'linked'])
+@pytest.mark.parametrize('lethal', [False, True])
+def test_periodic_queues_preserve_wait_fifo_after_a_normal_turn(queue_kind, lethal):
+    """Zero-initiative normal turns precede waiters, including after a DOT death."""
+    hp = jnp.zeros(12,jnp.int32).at[0:2].set(100).at[6].set(10).at[7].set(100)
+    phases = jnp.full(12,2,jnp.int32).at[0:2].set(1).at[6].set(0)
+    priority = jnp.zeros(12).at[0].set(-1.).at[1].set(-2.)
+    activated = jnp.ones(12,bool).at[6].set(False)
+    modes = jnp.zeros(12,jnp.int32).at[0:2].set(LONG).at[6].set(LONG)
+    damage = jnp.zeros(12,jnp.int32).at[0:2].set(10).at[6].set(10 if lethal else 0)
+    source = jnp.zeros(12,jnp.int32)
+    common = (hp,jnp.zeros(12,bool),phases,priority,jnp.int32(1),activated)
+    tail = (jnp.zeros(12,jnp.uint32),jnp.ones(12),jnp.int32(6),jnp.bool_(False),jnp.int32(75))
+    if queue_kind == 'poison':
+        out = jax.jit(advance_poison_queue)(*common,modes,damage,source,*tail,
+            jnp.ones(12,jnp.int32),jnp.zeros((2,12)))
+    else:
+        def matrix(column):
+            return jnp.zeros((12,3),jnp.int32).at[:,0].set(column)
+        args = (*common,matrix(modes),matrix(damage),matrix(source),*tail,
+            jnp.array([16,8,4],jnp.uint32),jnp.zeros(3,jnp.int32),
+            jnp.ones((12,3),jnp.int32),jnp.zeros((2,12,3)))
+        out = (jax.jit(advance_linked_queue)(*args,jnp.full(12,-1,jnp.int32))
+               if queue_kind == 'linked' else jax.jit(advance_periodic_queue)(*args))
+    assert out[8] == (0 if lethal else 6)
+    assert out[3] == 1  # no new round while a waiter remains
+    assert jnp.array_equal(out[0][:2],hp[:2])  # WAIT does not tick poison twice
+
+
 def battle(current_game):
     env, initial, _, attack = current_game
     state = compiled_method(env,'_begin_battle')(initial.replace(enemy=jnp.int32(11)))
@@ -73,7 +103,7 @@ def test_hostile_transform_uses_round_age_but_drain_level_never_rolls(current_ga
     env,state,_ = battle(current_game)
     state = state.replace(imp=state.imp.at[0].set(True),transform_long=state.transform_long.at[0].set(True),
         effect_rounds=state.effect_rounds.at[0,4].set(2),activation_done=state.activation_done.at[0].set(True),
-        turn_phase=state.turn_phase.at[0].set(1))
+        turn_phase=state.turn_phase.at[0].set(1),priority=state.priority.at[0].set(-1.))
     prepare = compiled_method(env,'_start_activation')
     assert not prepare(state,jnp.float32(.795),jnp.bool_(True)).imp[0]  # also on resumed Wait
     assert prepare(state,jnp.float32(.785),jnp.bool_(True)).imp[0]

@@ -6,6 +6,7 @@ from stoix.envs.number_grid_effects import source_protection, disable_attack_acc
 
 
 def transform_imp(env,state,used,slots,selected,long=True):
+    """Apply an imp form without moving an attack already deferred by Wait."""
     first=selected & ~state.imp[slots] & (state.decay_form[slots]==0)
     mask=jnp.zeros(12,bool).at[slots].set(selected)
     first_mask=jnp.zeros(12,bool).at[slots].set(first)
@@ -15,7 +16,7 @@ def transform_imp(env,state,used,slots,selected,long=True):
     saved=jnp.where(first,used[slots],state.imp_wards[slots])
     sizes=(env.progression.sizes[env._effective_ids(state)] if env.progression_enabled
            else env.size_table[state.enemy])
-    priority=jnp.where(selected & (state.turn_phase[slots]<2),
+    priority=jnp.where(selected & (state.turn_phase[slots]==0),
                        jnp.where(sizes[slots]==2,50.,30.),state.priority[slots])
     state=_suspend_weakening(state,slots,selected,first)
     state=env._record_effect(state,slots,selected,4)
@@ -53,7 +54,7 @@ def transform_form(env,state,hp,used,slots,selected,forms):
         decay_shreds=state.decay_shreds.at[slots].set(jnp.where(selected,0,state.decay_shreds[slots])),
         imp=state.imp.at[slots].set(state.imp[slots]&~selected),
         imp_wards=state.imp_wards.at[slots].set(saved),
-        priority=state.priority.at[slots].set(jnp.where(selected & (state.turn_phase[slots]<2),native[:,INITIATIVE],state.priority[slots])))
+        priority=state.priority.at[slots].set(jnp.where(selected & (state.turn_phase[slots]==0),native[:,INITIATIVE],state.priority[slots])))
     return state,hp,used.at[slots].set(jnp.where(selected,jnp.uint32(0),used[slots])),selected
 
 

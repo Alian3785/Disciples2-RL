@@ -218,7 +218,7 @@ def test_witch_small_and_large_forms_zero_damage_recovery_and_wait(current_game)
     restored = recover(fresh, jnp.float32(.895))
     stayed = recover(fresh, jnp.float32(.885))
     assert not restored.imp[7] and stayed.imp[7]
-    waited = stayed.replace(turn_phase=stayed.turn_phase.at[7].set(1))
+    waited = stayed.replace(turn_phase=stayed.turn_phase.at[7].set(1),priority=stayed.priority.at[7].set(-1.))
     assert recover(waited, jnp.float32(0)).imp[7]
     next_round = waited.replace(activation_done=waited.activation_done.at[7].set(False))
     assert not recover(next_round, jnp.float32(.995)).imp[7]
@@ -350,7 +350,8 @@ def test_demon_two_strikes_retarget_and_consume_one_activation(current_game):
     assert waited.turn_phase[0] == 1 and not waited.second_strike
     resumed = waited.replace(actor=jnp.int32(0))
     waiting_first, _ = attack(resumed, jnp.int32(SHOOT), resumed.battle_key, rolls)
-    assert waiting_first.second_strike and waiting_first.actor == 0
+    assert not waiting_first.second_strike and waiting_first.turn_phase[0] == 2
+    assert waiting_first.actor != 0 and waiting_first.hp[6] == 0
     guarded, _ = attack(state, jnp.int32(DEFEND), state.battle_key, rolls)
     assert guarded.defended[0] and guarded.turn_phase[0] == 2 and not guarded.second_strike
     imp, _ = attack(state.replace(imp=state.imp.at[0].set(True)), jnp.int32(SHOOT), state.battle_key, rolls)
@@ -477,7 +478,7 @@ def test_wight_secondary_roll_devolution_recovery_and_battle_cleanup():
     failed = recover(base,jnp.float32(.01))
     assert restored.decay_form[9] == base.decay_form[9] and restored.hp[9] == base.hp[9]
     assert failed.decay_form[9] != 0
-    waited = recover(base.replace(turn_phase=base.turn_phase.at[9].set(1),
+    waited = recover(base.replace(turn_phase=base.turn_phase.at[9].set(1),priority=base.priority.at[9].set(-1.),
         activation_done=base.activation_done.at[9].set(True)),jnp.float32(0))
     assert waited.decay_form[9] != 0
     # A hostile Witch overlay still uses its own round-age recovery.
@@ -1267,6 +1268,7 @@ def test_sundancer_heals_full_hp_grants_shared_weapon_block_and_expires_on_wait_
     assert blocked.healer_wards[0,0] == 8
     # Returning after WAIT expires the caster's grants even after first activation.
     waiting = granted.replace(actor=jnp.int32(4),turn_phase=jnp.full(12,2,jnp.int32).at[3].set(1),
+        priority=granted.priority.at[3].set(-1.),
         activation_done=jnp.ones(12,bool),paralyzed=granted.paralyzed.at[3].set(True))
     expired,_ = attack(waiting,jnp.int32(DEFEND),waiting.battle_key,rolls)
     assert expired.actor == 3 and not jnp.any(expired.healer_wards)
@@ -1517,10 +1519,12 @@ def test_alchemist_extra_turn_preserves_wait_and_round_effects(current_game):
     chex.assert_trees_all_equal(invalid.battle_key,extra.battle_key)
     # A granted turn still permits two consecutive strikes from a dual attacker.
     dual = hero_roster_state(env,start,['blade_master','duke','possessed','alchemist','cultist',None])
-    dual = dual.replace(poison_mode=jnp.zeros(12,jnp.int32),waited=jnp.zeros(12,bool))
+    # Spending WAIT earlier does not reduce the attack count of a newly granted turn.
+    dual = dual.replace(poison_mode=jnp.zeros(12,jnp.int32))
     granted,_ = attack(dual,jnp.int32(SHOOT),dual.battle_key,rolls)
     first,_ = attack(granted,jnp.int32(SHOOT),granted.battle_key,rolls)
     assert first.second_strike and first.actor == 0
+    assert granted.waited[0] and not compiled_method(env,'action_mask')(granted)[WAIT]
 
 
 def test_alchemist_rejects_self_other_alchemist_retreat_and_ai_selects_spent_damage(current_game):

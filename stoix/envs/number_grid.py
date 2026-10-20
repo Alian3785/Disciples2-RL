@@ -332,7 +332,7 @@ class BattleState(NumberGridState):
     wards_used: jax.Array  # source bits consumed per unit during this battle
     last_immune: jax.Array  # bit set of unit slots blocked by immunity
     last_ward: jax.Array  # bit set of unit slots blocked by a one-hit ward
-    priority: jax.Array
+    priority: jax.Array  # normal initiative, or negative FIFO position after WAIT
     turn_phase: jax.Array  # 0: normal turn, 1: waiting, 2: finished
     defended: jax.Array
     retreating: jax.Array
@@ -1716,8 +1716,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
                                state.enemy_positions[:,1] / (self.size-1), state.alive,
                                self.enemy_counts / 6, self.enemy_health / self.hero_hp),axis=1)
             active = (state.hp > 0) & ~state.escaped
-            queue = jnp.where(active & (state.turn_phase == 0), state.priority,
-                             jnp.where(active & (state.turn_phase == 1), -state.priority, 0.))
+            queue = jnp.where(active & (state.turn_phase < 2), state.priority, 0.)
             hp_scale = (jnp.maximum(self.max_hp(state), 1) if self.observation_version in (3, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45)
                         else self.hero_hp)
             if self.basic_combat:
@@ -2806,10 +2805,17 @@ class NumberGrid(Summoning, NumericNumberGrid):
             state = state.replace(fenrir=state.fenrir.at[actor].set(state.fenrir[actor] | transformed),
                 weakened=state.weakened.at[actor].set(state.weakened[actor] & ~transformed),
                 item_weakened=state.item_weakened.at[actor].set(state.item_weakened[actor] & ~transformed))
-        another_strike = attack & self._actor_double_strike(state) & ~state.second_strike & ~escaping
+        # Wait inserts one attack into the original turnsOrder. A separate
+        # Alchemist activation restores phase 0 even if WAIT was already spent.
+        another_strike = (attack & self._actor_double_strike(state) & ~state.second_strike & ~escaping
+                          & (state.turn_phase[actor] == 0))
         if self.has_linked_summons:
             hp = self._linked_summon_hp(state,hp)
-        state = state.replace(waited=state.waited.at[actor].set(state.waited[actor] | (action == WAIT)))
+        # Append behind existing waiters, independent of initiative or slot ties.
+        # Normal priorities are nonnegative; -1, -2, ... retain actual wait order.
+        wait_priority = jnp.min(jnp.where(state.turn_phase == 1, state.priority, 0.)) - 1.
+        state = state.replace(waited=state.waited.at[actor].set(state.waited[actor] | (action == WAIT)),
+            priority=state.priority.at[actor].set(jnp.where(action == WAIT, wait_priority, state.priority[actor])))
         state = self._expire_powerups(state,(self.slots == actor) & ~another_strike & (action != WAIT))
         phases = state.turn_phase.at[actor].set(jnp.where(another_strike, state.turn_phase[actor], jnp.where(action == WAIT, 1, 2)))
         # Orb of Rage on the hero: the bonus activation follows the spent one.
@@ -2829,8 +2835,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
         phases = jnp.where(new_round, jnp.zeros(12, jnp.int32), phases)
         priority = jnp.where(new_round, self._round_priority(random_values, state.enemy, state), state.priority)
         round_number = state.round + new_round.astype(jnp.int32)
-        scores = jnp.where(active & (phases == 0), priority,
-                            jnp.where(active & (phases == 1), -priority, -1e9 if self.basic_combat else -100))
+        scores = jnp.where(active & (phases < 2), priority, -1e9 if self.basic_combat else -100)
         next_actor = jnp.where(another_strike, actor, jnp.argmax(scores)).astype(jnp.int32)
         defended = defended.at[next_actor].set(False)
         state = state.replace(activation_done=jnp.where(new_round, False, state.activation_done),
@@ -2880,7 +2885,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             hp = self._linked_summon_hp(state,hp)
             active = (hp > 0) & ~escaped
             next_actor = jnp.where(active[next_actor],next_actor,jnp.argmax(jnp.where(
-                active & (phases == 0),priority,jnp.where(active & (phases == 1),-priority,-1e9)))).astype(jnp.int32)
+                active & (phases < 2),priority,-1e9))).astype(jnp.int32)
         state = state.replace(waited=jnp.where(round_number != state.round,False,state.waited))
         party_defeated = ~jnp.any((hp[:6] > 0) | (state.summon_saved_hp[:6] > 0))
         lost = party_defeated
