@@ -40,6 +40,7 @@ def slots(env, state, *keys):
 @pytest.mark.core
 @pytest.mark.parametrize('armor,defended,expected', [(50, False, 38), (0, True, 38), (90, True, 8)])
 def test_item_damage_subtracts_integer_absorbed_part(effects, armor, defended, expected):
+    """Damage items subtract truncated armor absorption and cap Defend at 90."""
     from stoix.envs.number_grid_combat import ARMOR
     env, base, *_, apply = effects
     state = enemy_roster_state(env, base, ['goblin']*6)
@@ -522,6 +523,7 @@ def effects(default_game):
 
 
 def test_reference_item_effects(effects):
+    """Check catalogued item effects against their expected combat-state changes."""
     env, base, keys, valid, after, hp, info, _ = effects
     row = {key: i for i, key in enumerate(keys)}
     rules, ids = env.battle_item_rules, env.progression.ids

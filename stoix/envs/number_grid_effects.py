@@ -12,7 +12,7 @@ DISABLE_ALLOWED_ROUND_MAX = 40
 
 def disable_attack_allowed(disabling, round_number):
     """Keep the round limit separate from the inclusive accuracy roll."""
-    return ~disabling | (round_number <= DISABLE_ALLOWED_ROUND_MAX)
+    return jnp.logical_not(disabling) | (round_number <= DISABLE_ALLOWED_ROUND_MAX)
 
 
 def disable_attack_accuracy(accuracy, disabling, round_number):

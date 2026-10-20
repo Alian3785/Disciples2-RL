@@ -15,6 +15,7 @@ def cleared_city(env, state, index=0):
 
 @pytest.mark.core
 def test_growth_income_acquisition_and_obstacles(current_game):
+    """Daily land growth acquires mine income without crossing blocked cells."""
     env,s,step,_ = current_game
     rules = env.territory
     assert s.territory_claims.tolist() == [1,0,0] and s.mana.tolist() == [0]*5
@@ -62,6 +63,7 @@ def test_faction_native_mana_and_lord_data(current_game,faction,mana):
 
 @pytest.mark.core
 def test_two_city_armies_capture_live_hero_and_no_remote_capture(current_game):
+    """Only entering a cleared city with a living original hero captures it."""
     env,s,step,fight = current_game
     city = env.territory.positions[0]
     s = s.replace(position=city+jnp.array([1,0]))
@@ -155,6 +157,7 @@ def capture_land_case(env,initial,contested=False,island=False):
 
 @pytest.mark.parametrize('contested', [False,True])
 def test_capture_connects_mine_immediately_without_income_or_other_source_growth(current_game,contested):
+    """Capture claims nearby mines immediately but pays their income the next day."""
     env,initial,_,_ = current_game
     rules,before,water = capture_land_case(env,initial,contested)
     capture = compiled_method(rules,'capture')
@@ -182,6 +185,7 @@ def test_capture_connects_mine_immediately_without_income_or_other_source_growth
 
 
 def test_capture_growth_is_clamped_to_reachable_land(current_game):
+    """A city on an island cannot spend its capture budget across water."""
     env,initial,_,_ = current_game
     rules,before,water = capture_land_case(env,initial,island=True)
     before = before.replace(city_levels=jnp.array([5],jnp.int32))

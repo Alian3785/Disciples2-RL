@@ -87,6 +87,7 @@ def test_two_roll_accuracy_matches_exhaustive_discrete_distribution(chance, coun
 
 @pytest.mark.core
 def test_accuracy_includes_equal_and_half_integer_boundaries():
+    """Truncated averages at the accuracy boundary hit; the next integer misses."""
     pairs = jnp.array([[60, 99], [80, 80], [61, 99], [80, 81], [62, 99],
                        [81, 81], [63, 99], [99, 99]], jnp.float32)
     draws = (pairs+.25)/100

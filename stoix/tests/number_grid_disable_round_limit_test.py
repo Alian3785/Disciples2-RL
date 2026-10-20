@@ -1,4 +1,4 @@
-"""Extended GPU contracts for the round-40 disable limit; see ORIGINAL_EFFECTS.md.
+"""Core and extended GPU contracts for the round-40 limit; see ORIGINAL_EFFECTS.md.
 
 User request 2026-10-16; run only when explicitly requested, via scripts/run_gpu.sh.
 """
@@ -18,6 +18,7 @@ def require_gpu():
 
 
 def duel(game, caster, red=False):
+    """Prepare a round-40 duel with a predictable target for either side."""
     env, initial, _, _ = game
     state = compiled_method(env, '_begin_battle')(initial.replace(enemy=jnp.int32(0)))
     # RED chooses its own target. Put the highest-damage hero in slot 0 so
@@ -39,7 +40,19 @@ def strike(env, state, target):
 
 
 @pytest.mark.core
+@pytest.mark.parametrize('disabling,round_number,expected', [
+    (True, 40, True), (True, 41, False),
+    (False, 40, True), (False, 41, True),
+])
+def test_round_limit_accepts_python_bools_without_jit(disabling, round_number, expected):
+    """Direct Python-bool calls obey the same round boundary as JAX arrays."""
+    assert bool(disable_attack_allowed(disabling, round_number)) is expected
+    assert float(disable_attack_accuracy(80., disabling, round_number)) == (80. if expected else 0.)
+
+
+@pytest.mark.core
 def test_round_limit_is_separate_from_zero_accuracy_roll():
+    """Even a successful zero-accuracy roll cannot bypass the round limit."""
     rounds = jnp.array([1, 39, 40, 41, 75, 1000])
     limit = jax.jit(disable_attack_accuracy)
     accuracy = limit(jnp.float32(150), jnp.bool_(True), rounds)
@@ -55,6 +68,7 @@ def test_round_limit_is_separate_from_zero_accuracy_roll():
                                   'shadow', 'incubus', pytest.param('medusa', marks=pytest.mark.core)])
 @pytest.mark.parametrize('red', [False, True])
 def test_primary_paralyze_and_petrify_for_both_sides(current_game, caster, red):
+    """Late primary disables fail for both sides without spending target wards."""
     env, before, actor, target = duel(current_game, caster, red)
     before = before.replace(potion_temporary=before.potion_temporary.at[actor, ACCURACY].set(200.))
     stats = compiled_method(env, 'unit_stats')
