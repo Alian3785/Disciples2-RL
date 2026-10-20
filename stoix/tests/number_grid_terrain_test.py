@@ -5,7 +5,7 @@ import jax.numpy as jnp
 import pytest
 from stoix.envs.number_grid import MAP, REST
 from stoix.envs.number_grid_items import ItemRules
-from stoix.envs.number_grid_terrain import TerrainRules, FLYING_HERO_IDS
+from stoix.envs.number_grid_terrain import TerrainRules
 from stoix.tests.number_grid_fixtures import compiled_method, hero_roster_state
 
 
@@ -34,10 +34,10 @@ def test_lake_connected_empty_and_terrain_validated(current_game):
 
 
 def test_living_flying_heroes_and_dead_leader_prices(current_game):
+    """Keep explicit leader cases so an omitted flyer cannot disappear from coverage."""
     env, initial, _, _ = current_game
     cases, expected = [], []
-    keys = ['duke'] + [k for k in env.progression.ids if k in FLYING_HERO_IDS]
-    assert len(keys) == 5
+    keys = ['duke', 'g000uu0019', 'g000uu0022', 'g000uu0072', 'g000uu0096', 'g000uu0099']
     for key in keys:
         living = hero_roster_state(env,initial,['possessed',key,None,'cultist',None,None])
         cases += [living,living.replace(hp=living.hp.at[1].set(0))]
@@ -51,12 +51,15 @@ def test_living_flying_heroes_and_dead_leader_prices(current_game):
     assert compiled_method(env,'travel_costs')(no_hero).tolist() == [2,1,4,6]
 
 
-@pytest.mark.parametrize('compare_batch', [
-    pytest.param(False, id='scalar', marks=pytest.mark.core), pytest.param(True, id='full-batch'),
+@pytest.mark.parametrize('leader_key,compare_batch', [
+    pytest.param('duke', False, id='scalar', marks=pytest.mark.core),
+    pytest.param('g000uu0096', False, id='death-knight', marks=pytest.mark.core),
+    pytest.param('duke', True, id='full-batch'),
 ])
-def test_actual_step_mask_quotes_and_last_partial_move(current_game, compare_batch):
+def test_actual_step_mask_quotes_and_last_partial_move(current_game, leader_key, compare_batch):
     """Check terrain costs and partial final moves against masks, quotes, and actual transitions."""
     env, initial, _, _ = current_game
+    initial = hero_roster_state(env,initial,['possessed',leader_key,'possessed','cultist',None,None])
     cases, actions, expected, destinations = [], [], [], []
     for position, action, cost in (([2,2],2,1),([2,3],2,2),([4,16],3,4),([12,4],4,6)):
         for dead in (False,True):
@@ -66,7 +69,8 @@ def test_actual_step_mask_quotes_and_last_partial_move(current_game, compare_bat
                     s = s.replace(hp=s.hp.at[1].set(0))
                 cases.append(s)
                 actions.append(action)
-                expected.append(min(points,cost*(2 if dead else 1)))
+                price = cost*2 if dead else (2 if leader_key=='g000uu0096' else cost)
+                expected.append(min(points,price))
                 destinations.append(jnp.array(position)+env.directions[action]*(points>0))
     if not compare_batch:
         # Reuse scalar programs. Stacking every leaf of 24 whole campaign states
@@ -107,8 +111,11 @@ def test_terrain_boots_require_living_leader_and_flight_stays_two(current_game):
         assert costs(flyer).tolist() == [2]*4
 
 
-def test_death_revival_and_rest_restore_correct_movement(current_game):
+@pytest.mark.parametrize('leader_key', ['duke', 'g000uu0096'])
+def test_death_revival_and_rest_restore_correct_movement(current_game, leader_key):
+    """A revived Death Knight recovers flight and movement equipment together."""
     env, initial, advance, _ = current_game
+    initial = hero_roster_state(env,initial,['possessed',leader_key,'possessed','cultist',None,None])
     boot = env.item_rules.keys.index('boots_speed')
     equipped = compiled_method(env,'_refresh_equipment')(initial.replace(item_inventory=initial.item_inventory.at[0].set(boot)))
     dead = compiled_method(env,'_refresh_equipment')(equipped.replace(hp=equipped.hp.at[1].set(0)))
@@ -120,7 +127,8 @@ def test_death_revival_and_rest_restore_correct_movement(current_game):
     revived,_ = advance(rested,jnp.int32(revive))
     assert revived.hp[1] == 1 and revived.equipped[4] == boot
     assert env.movement_cap(revived) == 24
-    assert compiled_method(env,'travel_costs')(revived).tolist() == [2,1,4,6]
+    expected = [2]*4 if leader_key=='g000uu0096' else [2,1,4,6]
+    assert compiled_method(env,'travel_costs')(revived).tolist() == expected
 
 
 @pytest.mark.core

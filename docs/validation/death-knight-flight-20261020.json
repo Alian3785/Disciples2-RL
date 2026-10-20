@@ -1,0 +1,123 @@
+{
+  "date": "2026-10-20",
+  "mechanic": "Death Knight (g000uu0096) is a flying leader in Disciples II: Rise of the Elves.",
+  "edition": "Installed Steam Disciples II: Rise of the Elves",
+  "method": "Read installed DBF records directly with scripts/inspect_unit_sources.py::dbf; no game or disassembler launched.",
+  "sources": [
+    {
+      "path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Disciples II Rise of the Elves\\Globals\\Gunits.dbf",
+      "sha256": "c663448bc47c08a40863d0efe4ae1476478ccf082af095a612416f181f7721db",
+      "rows": [
+        {
+          "UNIT_ID": "g000uu0019",
+          "NAME_TXT": "x000tg2019",
+          "DESC_TXT": "x000tg2519",
+          "MOVE": "20",
+          "LEADER_CAT": "1"
+        },
+        {
+          "UNIT_ID": "g000uu0096",
+          "NAME_TXT": "x000tg2096",
+          "DESC_TXT": "x000tg2596",
+          "MOVE": "20",
+          "LEADER_CAT": "1"
+        }
+      ]
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Disciples II Rise of the Elves\\Globals\\GMabi.dbf",
+      "sha256": "796523528c8f57cba2e99776ad7160006f99dd50102837653c7a3ba346dde047",
+      "rows": [
+        {
+          "UNIT_ID": "g000uu0019",
+          "M_ABILITY": "0"
+        },
+        {
+          "UNIT_ID": "g000uu0019",
+          "M_ABILITY": "1"
+        },
+        {
+          "UNIT_ID": "g000uu0019",
+          "M_ABILITY": "3"
+        },
+        {
+          "UNIT_ID": "g000uu0096",
+          "M_ABILITY": "0"
+        },
+        {
+          "UNIT_ID": "g000uu0096",
+          "M_ABILITY": "1"
+        },
+        {
+          "UNIT_ID": "g000uu0096",
+          "M_ABILITY": "3"
+        }
+      ]
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Disciples II Rise of the Elves\\Globals\\Lground.DBF",
+      "sha256": "b3a019bea7a824784b1e7c3096f89e7d8b5585127f3a112d35bcb02b201b12a8",
+      "rows": [
+        {
+          "ID": "0",
+          "TEXT": "L_PLAIN"
+        },
+        {
+          "ID": "1",
+          "TEXT": "L_FOREST"
+        },
+        {
+          "ID": "4",
+          "TEXT": "L_MOUNTAIN"
+        },
+        {
+          "ID": "3",
+          "TEXT": "L_WATER"
+        }
+      ]
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Disciples II Rise of the Elves\\Globals\\Tglobal.dbf",
+      "sha256": "5da65f5cb78f714e1814f97d301b43ae54e1b7bf086e61c8f3f93abdfc9e12ce",
+      "rows": [
+        {
+          "TXT_ID": "x000tg2096",
+          "TEXT": "Death Knight",
+          "VERIFIED": "F",
+          "CONTEXT": ""
+        },
+        {
+          "TXT_ID": "x000tg2596",
+          "TEXT": "The Death Knight's ferocity in battle is unmatched. His great strength and flying ability are his greatest assets.",
+          "VERIFIED": "F",
+          "CONTEXT": ""
+        }
+      ]
+    }
+  ],
+  "corroborating_manual_url": "https://manuals.plus/m/ac61986f73b2b5016fec8ab1d17d7874a84463082bbb10d7dd6c1c3d3a0557a9.pdf",
+  "finding": "Gmabi.dbf assigns Death Knight the same M_ABILITY 0, 1, 3 as Pegasus Knight. Lground.dbf maps them to plain, forest, water. Tglobal description x000tg2596 explicitly names his flying ability.",
+  "change": "Add Death Knight to the existing JAX flying-leader classification. The shared movement rules then charge 2 on plain, road, forest and water while alive; death disables flight and resurrection restores it.",
+  "scope_note": "Other leader classifications are unchanged. The inherited Banshee entry (g000uu0099) has no Gmabi rows in this installation and requires a separate correction/review.",
+  "regression_tests": [
+    "stoix/tests/number_grid_terrain_test.py::test_living_flying_heroes_and_dead_leader_prices",
+    "stoix/tests/number_grid_terrain_test.py::test_actual_step_mask_quotes_and_last_partial_move[death-knight]",
+    "stoix/tests/number_grid_terrain_test.py::test_death_revival_and_rest_restore_correct_movement[g000uu0096]"
+  ],
+  "coverage": [
+    "Explicit Death Knight travel costs independent of the implementation ID set",
+    "Mask, command quote and actual step for all four terrain types",
+    "Alive and dead leader with 20, 1 or 0 movement points",
+    "Resurrection restores flight and equipped movement bonus"
+  ],
+  "static_checks": [
+    "Ruff passed for both changed Python files",
+    "Python AST parsing passed for both changed Python files",
+    "Source JSON parsed successfully",
+    "git diff --check passed"
+  ],
+  "tests_run": false,
+  "training_or_benchmarks_run": false,
+  "original_game_launched": false,
+  "disassembler_launched": false
+}
