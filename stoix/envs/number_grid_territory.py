@@ -17,6 +17,7 @@ RESOURCE_NAMES = ('Золото', 'Мана преисподней', 'Мана �
 CITY_CAPTURED, CITY_UPGRADED, OBSTACLE = 43, 44, 45
 CAPITAL_ARMOR, CAPITAL_REGENERATION = 50, 35  # GVars PROT_CAP and the capital REGEN bonus
 CITY_GROWTH = (0, 15, 15, 20, 20, 25)
+CITY_CAPTURE_PERCENT = 100  # Installed GVars T_CAPTURE; see docs/TERRITORY_CITIES.md.
 CITY_BONUS = (0, 10, 15, 20, 25, 30)
 CITY_COST = (0, 150, 250, 500, 750, 0)
 
@@ -207,6 +208,7 @@ class TerritoryRules:
             mines=self.mines, resource_kinds=RESOURCE_KINDS, resource_names=RESOURCE_NAMES,
             mine_income=50,base_income=self.base_income.tolist(),capital_growth=10,
             city_growth=CITY_GROWTH,city_bonus=CITY_BONUS,city_costs=self.costs.tolist(),
+            city_capture_percent=CITY_CAPTURE_PERCENT,
             capital_regeneration=35,capital_armor=50,own_land_regeneration=10,
             lord_type=self.lord,lord_regeneration=self.lord_regen,obstacles=game_map.get('obstacles',[]),
             enemy_capitals=self.enemy_capitals,capital_guard_armor=CAPITAL_ARMOR,
@@ -302,17 +304,26 @@ class TerritoryRules:
         return state.replace(gold=add_resource(state.gold,income[0]),mana=add_resource(state.mana,income[1:]))
 
     def capture(self,state,entered):
-        """Capture an entered, cleared city only when a living original hero is present."""
+        """Capture with a living original hero and immediately spread the city's land."""
         hero = jnp.any(self.heroes[state.unit_ids[:6]] & (state.hp[:6]>0) & (state.summon_owner[:6]<0) & ~state.copied[:6])
         cleared = self.remaining_defenders(state)==0
         captured = entered & ~state.city_owned & self.city_at(state) & cleared & hero
-        claims = state.territory_claims.at[1:].set(jnp.where(captured,1,state.territory_claims[1:]))
+        # Discipl2.exe sub_4343DA divides T_CAPTURE by 100 before multiplying
+        # by T_CITY[level]. In this grid model, add that one-off budget to the
+        # city's own cell; later days keep using the normal independent growth.
+        initial = jnp.minimum(1+(CITY_CAPTURE_PERCENT//100)*self.growth[state.city_levels],
+                              self.reachable_counts[1:])
+        claims = state.territory_claims.at[1:].set(jnp.where(captured,initial,state.territory_claims[1:]))
+        state = state.replace(city_owned=state.city_owned|captured,territory_claims=claims,
+            last_captured_cities=captured,last_event=jnp.where(jnp.any(captured),CITY_CAPTURED,state.last_event))
         if self.contested and self.count:
             cells = self._cells(self.positions)
             state = state.replace(territory_owners=state.territory_owners.at[cells].set(
                 jnp.where(captured, 1, state.territory_owners[cells])))
-        return state.replace(city_owned=state.city_owned|captured,territory_claims=claims,last_captured_cities=captured,
-            last_event=jnp.where(jnp.any(captured),CITY_CAPTURED,state.last_event))
+            # Reconcile the newly reached border now, without a day tick or
+            # advancing either faction's other sources. Failed entry is a no-op.
+            state = jax.lax.cond(jnp.any(captured),self.repaint,lambda value:value,state)
+        return state
 
     def goals_captured(self,state):
         return jnp.all(state.city_owned | ~self.goal_cities)

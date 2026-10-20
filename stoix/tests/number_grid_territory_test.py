@@ -1,4 +1,4 @@
-"""Territory/city contracts from the Python reference and installed game DBFs."""
+"""Territory/city contracts from the reference and installed game DBFs/EXE."""
 import chex
 import jax
 import jax.numpy as jnp
@@ -20,7 +20,7 @@ def test_growth_income_acquisition_and_obstacles(current_game):
     assert s.territory_claims.tolist() == [1,0,0] and s.mana.tolist() == [0]*5
     assert rules.income(s).tolist() == [100,25,0,0,0,0]
     assert len(rules.mines) == 6 and len(set(m['kind'] for m in rules.mines)) == 6
-    turn = jax.jit(rules.next_turn)
+    turn = compiled_method(rules,'next_turn')
     s = turn(s)
     assert s.territory_claims.tolist() == [11,0,0] and s.gold == 100
     assert s.mana.tolist() == [25,0,0,0,0]
@@ -81,8 +81,11 @@ def test_two_city_armies_capture_live_hero_and_no_remote_capture(current_game):
         s = s.replace(movement_points=jnp.int32(20))
     entered,_ = step(s,jnp.int32(0))
     assert entered.city_owned.tolist() == [True,False]
-    assert entered.territory_claims.tolist() == [1,1,0]
+    assert entered.territory_claims.tolist() == [1,16,0]
     assert entered.last_event == CITY_CAPTURED and entered.position.tolist() == city.tolist()
+    assert env.territory.owned(entered,city+jnp.array([1,0]))
+    assert entered.day == s.day and entered.gold == s.gold
+    chex.assert_trees_all_equal(entered.mana,s.mana)
     # A dead leader cannot capture; resurrection/rest on the tile is not entry.
     dead = s.replace(hp=s.hp.at[1].set(0))
     inside,_ = step(dead,jnp.int32(0))
@@ -93,12 +96,100 @@ def test_two_city_armies_capture_live_hero_and_no_remote_capture(current_game):
     outside,_ = step(rested,jnp.int32(4))
     captured,_ = step(outside,jnp.int32(0))
     assert captured.city_owned[0]
-    capture = jax.jit(env.territory.capture)
+    capture = compiled_method(env.territory,'capture')
     for bad in (revived.replace(unit_ids=revived.unit_ids.at[1].set(0)),
                 revived.replace(summon_owner=revived.summon_owner.at[1].set(0)),
                 revived.replace(copied=revived.copied.at[1].set(True)),
                 revived.replace(alive=revived.alive.at[42].set(True))):
-        assert not capture(bad,True).city_owned[0]
+        rejected = capture(bad,True)
+        assert not rejected.city_owned[0]
+        chex.assert_trees_all_equal(rejected.territory_claims,bad.territory_claims)
+
+
+@pytest.mark.core
+@pytest.mark.parametrize('level,budget', [(1,15),(2,15),(3,20),(4,20),(5,25)])
+def test_city_capture_spreads_once_before_the_next_day(current_game,level,budget):
+    """EXE sub_4343DA: trunc(T_CAPTURE/100) * T_CITY[level] on capture."""
+    env,initial,_,_ = current_game
+    rules = env.territory
+    before = cleared_city(env,initial).replace(position=rules.positions[0],
+        city_levels=initial.city_levels.at[0].set(level),gold=jnp.int32(173),
+        mana=jnp.arange(5,dtype=jnp.int32))
+    capture = compiled_method(rules,'capture')
+    captured = capture(before,jnp.bool_(True))
+    # The reference grid counts the city's own cell separately from the budget.
+    assert captured.territory_claims.tolist() == [1,1+budget,0]
+    assert rules.owned(captured,rules.positions[0]+jnp.array([1,0]))
+    assert captured.last_captured_cities.tolist() == [True,False]
+    for name in ('gold','mana','day','movement_points','opponent_claims','hp'):
+        chex.assert_trees_all_equal(getattr(captured,name),getattr(before,name))
+    repeated = capture(captured,jnp.bool_(True))
+    chex.assert_trees_all_equal(repeated.territory_claims,captured.territory_claims)
+    assert not jnp.any(repeated.last_captured_cities)
+    # Daily growth remains an additional budget, not a delayed capture bonus.
+    tomorrow = compiled_method(rules,'next_turn')(repeated)
+    assert tomorrow.territory_claims.tolist() == [11,1+2*budget,0]
+
+
+def capture_land_case(env,initial,contested=False,island=False):
+    """Small territory-only fixture; reuse the real unit catalogue and hero."""
+    city, mine = [4,4], [4,3]
+    water = ([[r,c] for r in range(3,6) for c in range(2,6) if [r,c] not in (city,mine)]
+             if island else [[3,4]])
+    config = dict(size=9,capital_position=[1,1],agent_position=[1,1],
+        faction='legions',lord_type='warrior',cities=[dict(position=city,level=1)],
+        mines=[dict(position=mine,kind='gold')],opponent_positions=[[6,6]],
+        obstacles=[] if island else [[3,3]],terrain=dict(water=water),
+        enemy_territory_sources=[dict(position=[4,6],growth=10)] if contested else [])
+    rules = TerritoryRules(config,env.progression,193)
+    state = initial.replace(position=jnp.array(city),alive=jnp.ones(1,bool),
+        city_owned=jnp.zeros(1,bool),city_levels=rules.initial_levels,
+        territory_claims=rules.initial_claims,last_captured_cities=jnp.zeros(1,bool),
+        territory_owners=rules.initial_owners,
+        opponent_claims=rules.opponent_counts if contested else jnp.zeros(0,jnp.int32),
+        gold=jnp.int32(173),mana=jnp.arange(5,dtype=jnp.int32))
+    if contested:
+        state = compiled_method(rules,'repaint')(state)
+    return rules,state,jnp.array(water)
+
+
+@pytest.mark.parametrize('contested', [False,True])
+def test_capture_connects_mine_immediately_without_income_or_other_source_growth(current_game,contested):
+    env,initial,_,_ = current_game
+    rules,before,water = capture_land_case(env,initial,contested)
+    capture = compiled_method(rules,'capture')
+    assert not rules.mine_ownership(before)[0] and rules.income(before)[0] == 100
+    rejected = capture(before,jnp.bool_(False))
+    for name in ('territory_claims','territory_owners','opponent_claims'):
+        chex.assert_trees_all_equal(getattr(rejected,name),getattr(before,name))
+    after = capture(before,jnp.bool_(True))
+    assert after.territory_claims.tolist() == [1,16]
+    assert rules.mine_ownership(after)[0] and rules.income(after)[0] == 150
+    assert not jnp.any(rules.owned(after,water))
+    assert not rules.owned(after,jnp.array([3,3]))  # obstacle
+    assert not rules.owned(after,jnp.array([0,4]))  # outer border
+    for name in ('gold','mana','day','movement_points','opponent_claims'):
+        chex.assert_trees_all_equal(getattr(after,name),getattr(before,name))
+    if contested:
+        # A closer new city source wins immediately; equal distances retain
+        # the existing owner, and the opposing source itself is not repainted.
+        assert rules.owner(before,jnp.array([4,3])) == 2
+        assert rules.owner(after,jnp.array([4,4])) == 1
+        assert rules.owner(after,jnp.array([4,5])) == 2
+        assert rules.owner(after,jnp.array([4,6])) == 2
+    tomorrow = compiled_method(rules,'next_turn')(after)
+    assert tomorrow.gold == after.gold+150
+
+
+def test_capture_growth_is_clamped_to_reachable_land(current_game):
+    env,initial,_,_ = current_game
+    rules,before,water = capture_land_case(env,initial,island=True)
+    before = before.replace(city_levels=jnp.array([5],jnp.int32))
+    after = compiled_method(rules,'capture')(before,jnp.bool_(True))
+    assert rules.reachable_counts[1] == 2 and after.territory_claims.tolist() == [1,2]
+    assert rules.mine_ownership(after)[0] and not jnp.any(rules.owned(after,water))
+    tomorrow = compiled_method(rules,'next_turn')(after)
+    assert tomorrow.territory_claims[1] == 2
 
 
 def test_city_upgrade_remote_costs_growth_history_and_masks(current_game):
