@@ -47,7 +47,7 @@ from stoix.envs.number_grid_bot import ScriptedBotRules
 from stoix.envs.number_grid_target_rewards import TargetRewardRules
 from stoix.envs import number_grid_reference_rewards as reference_rewards
 from stoix.envs.number_grid_effects import effect_tables, effect_breaks, POISON, FROSTBITE, BLISTER, DISABLE, TRANSFORM, SHORT, LONG, armor_after_shreds, source_protection, advance_poison_queue, advance_periodic_queue, vampiric_heal
-from stoix.envs.number_grid_effects import disable_attack_accuracy
+from stoix.envs.number_grid_effects import disable_attack_accuracy, disable_attack_allowed
 from stoix.envs.number_grid_buildings import (
     BuildingRules, BUILD_START, BUILD_SLOTS, DAILY_GOLD,
 )
@@ -2525,6 +2525,9 @@ class NumberGrid(Summoning, NumericNumberGrid):
                                    damage_after_armor(stats[actor,DAMAGE]+bonuses, armor), 0)
             connected = attack & ~healer & targets & hits
             ghost_mode = self._actor_ghost_mode(state)
+            # Accuracy zero can pass the original roll; the round-40 ban must
+            # reject the attack explicitly, before spending a target's ward.
+            connected &= disable_attack_allowed(ghost_mode > 0, state.round)
             # AOE status-only attacks reject an existing matching flag before
             # checking wards; single Ghost attacks keep their primary hit path.
             already = jnp.where(ghost_mode == 2,state.long_paralyzed[target_slots],state.paralyzed[target_slots])
@@ -2663,7 +2666,9 @@ class NumberGrid(Summoning, NumericNumberGrid):
                         secondary_fear = (self.progression.secondary_fear[effective_ids[actor]] if self.progression_enabled else self.secondary_fear[state.enemy,actor]) & ~state.imp[actor]
                         eligible |= secondary_fear & (secondary_stats[1] > 0) & connected_status & ~state.retreating[target_slots]
                     if self.has_secondary_paralysis:
-                        eligible |= (paralysis_mode > 0) & (secondary_stats[1] > 0) & connected_status & ~state.long_paralyzed[target_slots]
+                        eligible |= ((paralysis_mode > 0) & connected_status
+                                     & disable_attack_allowed(paralysis_mode > 0, state.round)
+                                     & ~state.long_paralyzed[target_slots])
                     if self.has_wights:
                         wight = self.progression.wights[effective_ids[actor]] & ~state.imp[actor]
                         eligible |= wight & connected_status & ~self.progression.neutrals[state.unit_ids[target_slots]]

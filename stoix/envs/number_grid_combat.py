@@ -217,7 +217,11 @@ def build_combat_tables(game_map):
 
 
 def accuracy_hits(accuracy, first, second):
-    """Python reference: average two independent integer draws from 0..99."""
+    """Steam EXE 0x625F3F: truncate the mean of two 0..99 rolls, then <=.
+
+    Zero accuracy still accepts (0, 0), (0, 1), and (1, 0). Explicit attack
+    prohibitions, such as disabling after round 40, belong at the call site.
+    """
     a = jnp.clip(jnp.floor(first*100), 0, 99)
     b = jnp.clip(jnp.floor(second*100), 0, 99)
-    return a+b < 2*accuracy
+    return jnp.floor((a+b)/2) <= accuracy

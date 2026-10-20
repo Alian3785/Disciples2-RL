@@ -39,21 +39,21 @@ def slots(env, state, *keys):
 
 @pytest.mark.core
 @pytest.mark.parametrize('armor,defended,expected', [(50, False, 38), (0, True, 38), (90, True, 8)])
-def test_item_damage_subtracts_integer_absorbed_part(default_game, armor, defended, expected):
+def test_item_damage_subtracts_integer_absorbed_part(effects, armor, defended, expected):
+    """Damage items subtract truncated armor absorption and cap Defend at 90."""
     from stoix.envs.number_grid_combat import ARMOR
-    env, initial, _, _ = default_game
-    state = compiled_method(env, '_begin_battle')(initial.replace(enemy=jnp.int32(11)))
-    state = enemy_roster_state(env, state, ['goblin']*6)
-    state = slots(env, owned(env, state, 'vampire_orb'), 'vampire_orb', None)
+    env, base, *_, apply = effects
+    state = enemy_roster_state(env, base, ['goblin']*6)
+    # orb_of_vampire drains 75 HP; vampire_orb summons a Vampire instead.
+    state = slots(env, owned(env, state, 'orb_of_vampire'), 'orb_of_vampire', None)
     state = state.replace(actor=jnp.int32(1), unit_levels=state.unit_levels.at[1].set(10),
         hp=state.hp.at[6:].set(1000), potion_bonus=state.potion_bonus.at[6:, ARMOR].set(armor),
         defended=state.defended.at[6:].set(defended))
     action = jnp.int32(env.battle_item_rules.use_start+12)
-    assert compiled_method(env, 'action_mask')(state)[action]
-    after, _ = compiled_method(env, '_battle_step')(
-        state, action, state.battle_key, jnp.zeros(env.random_size))
-    assert after.hp[6] == 1000-expected and after.last_damage == expected*6
-    assert after.battle_items[0] == -1
+    valid, after, hp, info = apply(jax.tree.map(lambda x: x[None], state), action[None])
+    assert valid[0]
+    assert jnp.all(hp[0, 6:] == 1000-expected) and jnp.sum(info['credit'][0]) == expected*6
+    assert after.battle_items[0, 0] == -1
 
 
 def allowed(mask, start, end):
@@ -519,11 +519,12 @@ def effects(default_game):
 
     valid, after, hp, info = apply(batch, actions)
     keys = [key for key, *_ in CASES]
-    return env, base, keys, valid, after, hp, info
+    return env, base, keys, valid, after, hp, info, apply
 
 
 def test_reference_item_effects(effects):
-    env, base, keys, valid, after, hp, info = effects
+    """Check catalogued item effects against their expected combat-state changes."""
+    env, base, keys, valid, after, hp, info, _ = effects
     row = {key: i for i, key in enumerate(keys)}
     rules, ids = env.battle_item_rules, env.progression.ids
     assert bool(jnp.all(valid))

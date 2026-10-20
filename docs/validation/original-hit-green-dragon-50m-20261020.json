@@ -1,0 +1,90 @@
+{
+  "date": "2026-10-20",
+  "code_commit": "81eb6d3",
+  "branch": "codex/original-hit-boundary",
+  "map": "default-green-dragon",
+  "environment": "NumberGrid-50x50-default-green-dragon",
+  "authorization": "Explicit user request for 50 million transitions and a speed measurement.",
+  "training_steps": 50000000,
+  "initial_training_steps": 0,
+  "seed": 42,
+  "device": "NVIDIA GeForce GTX 1660 Ti",
+  "backend": "gpu",
+  "jax": "0.11.2",
+  "cuda_runtime": "13.4.92",
+  "python": "3.12.3",
+  "num_envs": 250,
+  "rollout_length": 100,
+  "ppo_updates": 2000,
+  "epochs": 4,
+  "num_minibatches": 10,
+  "actor_optimizer_updates": 80000,
+  "critic_optimizer_updates": 80000,
+  "network_hidden_layers": [128, 128],
+  "parameter_count": 736024,
+  "observation_size": 2604,
+  "actions": 279,
+  "learner": {
+    "seconds": 1361.0850829040007,
+    "transitions_per_second": 36735.39635988103,
+    "timing": "Sum of GPU-synchronized learner calls, including rollout and PPO updates.",
+    "baseline_comparison": false,
+    "concurrent_gpu_jobs": false
+  },
+  "other_timings": {
+    "ppo_compilation_seconds": 62.233774141000026,
+    "training_loop_including_reports_seconds": 1685.66008612,
+    "training_loop_transitions_per_second": 29661.970649781742,
+    "episode_report_seconds": 322.5707619760035,
+    "tracking_logging_seconds": 0.2566000789993268,
+    "tracking_initialization_seconds": 7.523137883999993,
+    "tracking_finish_seconds": 11.4054534779998,
+    "checkpoint_seconds": 0.6832932500001334,
+    "runner_seconds": 1814.1358403070003,
+    "whole_windows_process_seconds": 1932.5699171
+  },
+  "checks": {
+    "core_passed": 227,
+    "core_wall_seconds": 203.10002326965332,
+    "map_structural_preflight": "passed",
+    "finite_learner_metric_rows": 200,
+    "verified_source_hashes": 46,
+    "source_hash_mismatches": 0,
+    "weights_changed": true,
+    "checkpoint_roundtrip_verified": true,
+    "exit_code": 0,
+    "evaluation": "not_requested",
+    "best_checkpoint_selection": "not_requested"
+  },
+  "manual_viewer": {
+    "url": "http://127.0.0.1:8769/viewer.html",
+    "http_status": 200,
+    "map": "default-green-dragon",
+    "backend": "gpu",
+    "agent_loaded": false
+  },
+  "training_episodes": {
+    "completed": 84561,
+    "won": 56664,
+    "last_million_completed": 1649,
+    "last_million_won": 1467,
+    "last_million_win_rate": 0.8896300788356579,
+    "note": "Training statistics, not a separate evaluation of the final policy."
+  },
+  "checkpoint_sha256": "c5837f70d020c4cb447c3c0137f168ce844ee367466b15ef4b4bf81afd8b1198",
+  "tracking": {
+    "service": "comet",
+    "mode": "online",
+    "status": "finished",
+    "wandb_fallback_reason": "HTTP 403",
+    "url": "https://www.comet.com/lentix/numbergrid/b947b2c15db64586b8b8b93746592bf8?viewId=dq511avba7siEjSzmZt8uSXL0"
+  },
+  "artifacts": {
+    "run": "results/original-hit-green-dragon-50m-20261020",
+    "process": "results/jobs/original-hit-green-dragon-50m-20261020.process.json",
+    "preflight": "results/jobs/original-hit-green-dragon-50m-20261020.preflight.json",
+    "stdout": "results/jobs/original-hit-green-dragon-50m-20261020.stdout.log",
+    "stderr": "results/jobs/original-hit-green-dragon-50m-20261020.stderr.log",
+    "launcher": "results/jobs/original-hit-green-dragon-50m-20261020.ps1"
+  }
+}

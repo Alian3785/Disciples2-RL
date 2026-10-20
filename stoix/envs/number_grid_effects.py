@@ -10,13 +10,18 @@ ABSENT, SHORT, LONG = range(3)
 DISABLE_ALLOWED_ROUND_MAX = 40
 
 
+def disable_attack_allowed(disabling, round_number):
+    """Keep the round limit separate from the inclusive accuracy roll."""
+    return jnp.logical_not(disabling) | (round_number <= DISABLE_ALLOWED_ROUND_MAX)
+
+
 def disable_attack_accuracy(accuracy, disabling, round_number):
     """Paralyze/petrify cannot hit after round 40, even with accuracy bonuses.
 
     D2ModdingToolset baseSettings/getAttackPowerHooked; see ORIGINAL_EFFECTS.md.
     This affects new attacks, not recovery from an already applied effect.
     """
-    return jnp.where(disabling & (round_number > DISABLE_ALLOWED_ROUND_MAX), 0., accuracy)
+    return jnp.where(disable_attack_allowed(disabling, round_number), accuracy, 0.)
 
 
 def effect_breaks(round_number, applied_round, uniform):

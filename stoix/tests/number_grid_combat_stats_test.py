@@ -72,13 +72,28 @@ def test_non_progression_recognizes_russian_unit_names():
 
 
 @pytest.mark.core
-@pytest.mark.parametrize('chance,count', [(0, 0), (50, 5050), (80, 9220), (100, 10000)])
+@pytest.mark.parametrize('chance,count', [
+    (0, 3), (10, 253), (25, 1378), (50, 5247), (60, 6997),
+    (70, 8347), (80, 9297), (90, 9847), (98, 9999), (99, 10000), (100, 10000),
+])
 def test_two_roll_accuracy_matches_exhaustive_discrete_distribution(chance, count):
+    """Installed EXE 0x625F3F; independent discrete counts in BASIC_COMBAT.md."""
     values = (jnp.arange(100) + .25) / 100
     hits = jax.jit(accuracy_hits)(chance, values[:, None], values[None, :])
     assert int(jnp.sum(hits)) == count
-    expected = (np.arange(100)[:, None] + np.arange(100)[None, :]) / 2 < chance
+    expected = (np.arange(100)[:, None] + np.arange(100)[None, :]) // 2 <= chance
     np.testing.assert_array_equal(hits, expected)
+
+
+@pytest.mark.core
+def test_accuracy_includes_equal_and_half_integer_boundaries():
+    """Truncated averages at the accuracy boundary hit; the next integer misses."""
+    pairs = jnp.array([[60, 99], [80, 80], [61, 99], [80, 81], [62, 99],
+                       [81, 81], [63, 99], [99, 99]], jnp.float32)
+    draws = (pairs+.25)/100
+    hit = jax.jit(accuracy_hits)
+    assert hit(80, draws[:, 0], draws[:, 1]).tolist() == [True]*5+[False]*3
+    assert bool(hit(99, jnp.float32(.9925), jnp.float32(.9925)))
 
 
 @pytest.mark.core
