@@ -14,8 +14,37 @@ ATTACK_LABELS = ('Оружие', 'Земля', 'Огонь', 'Вода', 'Яд',
 EMPTY, MELEE, RANGED, AREA, HEALER = range(5)
 ROLES = {'melee': MELEE, 'ranged': RANGED, 'area': AREA, 'healer': HEALER}
 UNITS = json.loads((Path(__file__).parent / 'data/units.json').read_text(encoding='utf-8'))
+DEFEND_BONUS = 50  # Installed GVars.dbf: DFENDBONUS; see docs/ARCHER_BATTLES.md.
 PROFILE_FIELDS = set(STAT_NAMES) | {'size', 'role', 'attack_type', 'immunities', 'protections', 'exp_kill', 'exp_required', 'exp_current', 'hero',
                                   'secondary_attack_type', 'secondary_accuracy', 'secondary_damage'}
+
+
+def armor_with_defend(armor, defended):
+    """Original Defend adds a truncated fraction of missing armor, capped at 90."""
+    bonus = jnp.trunc((100-armor)*DEFEND_BONUS/100)
+    return jnp.where(defended, jnp.minimum(MAX_ARMOR, armor+bonus), armor)
+
+
+def capped_damage_bonus(damage, bonus, cap):
+    """Limit the random addition so capped power plus bonus cannot exceed cap."""
+    return jnp.minimum(bonus, jnp.maximum(cap-damage, 0)).astype(jnp.int32)
+
+
+def damage_after_armor(damage, armor):
+    """Subtract the integer absorbed part, as in Discipl2.exe sub_65C047."""
+    damage = damage.astype(jnp.int32)
+    return damage - jnp.trunc(damage*armor/100).astype(jnp.int32)
+
+
+def build_damage_rolls(damages, armors):
+    """Build armor reductions before JIT; callers cap power and the random bonus."""
+    # Scalar equivalent of armor_with_defend; no device operations inside these
+    # construction loops. The learner only indexes the resulting device table.
+    effective = [(armor, min(MAX_ARMOR, armor+int((100-armor)*DEFEND_BONUS/100)))
+                 for armor in armors]
+    return jnp.asarray([[[[damage+bonus-int((damage+bonus)*armor/100) if damage else 0
+                          for bonus in range(6)] for armor in pair]
+                        for pair in effective] for damage in damages], jnp.int32)
 
 
 def can_revive(state, slots):
@@ -145,6 +174,7 @@ def build_combat_tables(game_map):
                     raise ValueError('Invalid combat '+field)
             immune, wards = _protection_mask(values['immunities']), _protection_mask(values['protections'])
             profiles.append(dict(name=values['name'], level=values['level'], size=size, role=values['role'],
+                                 damage_cap=400 if values.get('hero') else 300,
                                  unit_type=values.get('unit_type', ''), game_data=values.get('game_data', {}),
                                  secondary_source=secondary_source,
                                  secondary_accuracy=values.get('secondary_accuracy', 0),
@@ -172,10 +202,7 @@ def build_combat_tables(game_map):
     armors = sorted(original_armors | {max(0, int(a)-15*k) for a in original_armors for k in range(1,7)})
     damage_ids = [[damages.index(s[DAMAGE]) for s in squad] for squad in squads]
     armor_ids = [[armors.index(s[ARMOR]) for s in squad] for squad in squads]
-    # Preserve Python float/round semantics, including half-integer edge cases.
-    rolls = [[[[int(round((d+b)*(1.-a/100.)*(.5 if defend else 1.)))
-                if d > 0 else 0 for b in range(6)] for defend in (False, True)]
-              for a in armors] for d in damages]
+    rolls = build_damage_rolls(damages, armors)
     metadata = dict(heroes=hero_names, enemies=enemies, fenrir_damage_id=damages.index(90),
                     imp_damage_ids=[damages.index(20), damages.index(30)],
                     _shatter_armor_ids=[[[armors.index(s[ARMOR] if k == 0 else max(0, int(s[ARMOR])-15*k))
@@ -183,7 +210,7 @@ def build_combat_tables(game_map):
                     attack_types=[dict(key=key, name=label, bit=1 << i)
                                   for i, (key, label) in enumerate(zip(ATTACK_TYPES, ATTACK_LABELS))])
     return (jnp.asarray(squads, jnp.float32), jnp.asarray(damage_ids, jnp.int32),
-            jnp.asarray(armor_ids, jnp.int32), jnp.asarray(rolls, jnp.int32),
+            jnp.asarray(armor_ids, jnp.int32), rolls,
             max(s[INITIATIVE] for squad in squads for s in squad)+10.,
             jnp.asarray(traits, jnp.uint32), metadata,
             any(t[2] or t[3] for squad in traits for t in squad))

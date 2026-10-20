@@ -132,7 +132,8 @@ class RecruitmentRules:
         big_front = self.progression.sizes[ids[:3]] == 2
         empty = (ids == 0) & ~jnp.concatenate((jnp.zeros(3, bool), big_front))
         slots = jnp.arange(6)
-        small = jnp.where(self.front[:, None], (slots == 0) | (slots == 2), slots >= 3) & empty
+        # The hero may stand in either row; no front slot is reserved for them.
+        small = jnp.where(self.front[:, None], slots < 3, slots >= 3) & empty
         big = jnp.concatenate((empty[:3] & empty[3:], jnp.zeros(3, bool)))
         valid = jnp.where((self.sizes == 2)[:, None], big, small)
         return jnp.where(jnp.any(valid, axis=1), jnp.argmax(valid, axis=1), -1)

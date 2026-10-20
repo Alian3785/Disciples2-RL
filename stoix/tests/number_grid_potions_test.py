@@ -225,7 +225,7 @@ def test_armor_and_elemental_wards_affect_actual_attacks(current_game):
         b=compiled_method(env,'_begin_battle')(s.replace(enemy=jnp.int32(0))).replace(actor=jnp.int32(6))
         out,_=attack(b,jnp.int32(SHOOT),b.battle_key,jnp.zeros(env.random_size))
         outcomes.append(int(b.hp[0]-out.hp[0]))
-    assert outcomes==[25,12]
+    assert outcomes==[25,13]
     ward=use(env,state,'fire_ward')
     b=compiled_method(env,'_begin_battle')(ward.replace(enemy=jnp.int32(0))).replace(actor=jnp.int32(6))
     b=b.replace(unit_ids=b.unit_ids.at[6].set(env.progression.ids['cultist']))

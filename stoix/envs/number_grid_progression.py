@@ -11,7 +11,8 @@ from stoix.envs.number_grid_limits import MAX_LEVEL, MAX_HP, MAX_INITIATIVE, MAX
 
 from stoix.envs.number_grid_combat import (
     UNITS, ROLES, HP, DAMAGE, ARMOR, STAT_NAMES,
-    _validated_stats, _source, _protection_mask, uses_aoe_accuracy_falloff,
+    _validated_stats, _source, _protection_mask, uses_aoe_accuracy_falloff, build_damage_rolls,
+    capped_damage_bonus,
 )
 from stoix.envs.number_grid_buildings import CATALOG
 from stoix.envs.number_grid_effects import CAPITAL_GUARDS
@@ -29,9 +30,7 @@ BLOCKED_XP_FEATURES = 6
 @lru_cache(maxsize=8)
 def _damage_rolls(armors):
     """Immutable device lookup shared by scenarios with the same armor values."""
-    return jnp.array([[[[int(round((damage+bonus)*(1-armor/100)*(.5 if defend else 1)))
-        if damage else 0 for bonus in range(6)] for defend in (False,True)]
-        for armor in armors] for damage in range(401)],jnp.int32)
+    return build_damage_rolls(range(401), armors)
 
 
 class ProgressionRules:
@@ -330,7 +329,7 @@ class ProgressionRules:
             and r['faction'] == construction.faction and not r.get('hero')
             and all(building_levels.get(UNITS[k]['name'], 0) > tier_limit for k in r['upgrades'])
             for r in rows])
-        # Preserve Python float/round for every possible damage (400 for heroes, 300 for other units).
+        # Precompute integer absorbed damage for all supported primary powers.
         # Integer armour growth reaches its cap within this lookup. The first
         # ten levels use the early increment, all later levels the late one.
         armor_rows = []
@@ -433,6 +432,10 @@ class ProgressionRules:
     def damage(self, state, actor, targets, guarded, bonuses, damage_value=None, armor_shreds=None, imps=None, armor_values=None):
         if damage_value is None:
             damage_value = self.stats(state.unit_ids, state.unit_levels)[actor, DAMAGE]
+        cap = self.stat_caps[state.unit_ids[actor], DAMAGE]
+        cap = jnp.where(state.imp[actor] | state.fenrir[actor], 300., cap)
+        damage_value = jnp.minimum(damage_value, cap)
+        bonuses = capped_damage_bonus(damage_value, bonuses, cap)
         levels, ids = jnp.minimum(state.unit_levels[targets], min(MAX_LEVEL, self.armor_max_level)), state.unit_ids[targets]
         armor_ids = (self.armor_ids[levels, ids] if armor_shreds is None
                      else self.shatter_armor_ids[levels, ids, jnp.minimum(armor_shreds[targets], 6)])

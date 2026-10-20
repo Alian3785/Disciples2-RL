@@ -463,8 +463,8 @@ class BattleItemRules:
                 ward |= drain_ward
             immune |= blocked
             warded |= ward
-            # Reference _apply_damage_with_armor: (POWER+0..5)*(1-armor/100), Defend halves;
-            # the same Python-rounded table as unit attacks.
+            # Same integer armor subtraction as unit attacks, including Defend.
+            # Item powers are fixed (at most 100), below the 300 damage limit.
             bonus = jnp.minimum((random_values[24:30]*6).astype(jnp.int32), 5)
             armor = jnp.clip(stats[target_slots, ARMOR], 0, 90).astype(jnp.int32)
             damage = env.progression.damage_rolls[amount, armor, state.defended[target_slots].astype(jnp.int32), bonus]
