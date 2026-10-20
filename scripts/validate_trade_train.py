@@ -14,6 +14,7 @@ import jax
 import jax.numpy as jnp
 
 from stoix.envs.number_grid import CONTINUE, DEFEND, REST, SHOOT, NumberGrid, action_names, load_map
+from stoix.envs.number_grid_limits import MAX_RESOURCE
 
 
 class Walkthrough:
@@ -146,13 +147,20 @@ class Walkthrough:
         for slot in slots:
             if not self.host.unit_ids[slot]:
                 continue
-            # Earn normal capital income; no state injection or free resources.
-            quote = jax.device_get(self.training_quotes(self.state))[slot]
-            cost = int(quote[0]*quote[2])
-            self.earn(cost)
             action = self.names.index(f'train_{slot}')
-            if self.mask[action]:
+            # Pay in batches within the resource cap, using normal capital
+            # income and legal trainer actions; never inject state or resources.
+            while True:
+                quote = jax.device_get(self.training_quotes(self.state))[slot]
+                cost = int(quote[0]*quote[2])
+                if cost <= 0:
+                    break
+                self.earn(min(cost, MAX_RESOURCE))
+                if not self.mask[action]:
+                    break
+                previous_xp = int(self.host.unit_xp[slot])
                 self.act(action)
+                assert int(self.host.unit_xp[slot]) > previous_xp, 'Training made no progress'
         self.event('trained')
 
     def earn(self, target):
