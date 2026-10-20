@@ -1,0 +1,100 @@
+{
+  "branch": "codex/preserve-summon-battle-items",
+  "base_revision": "b199be4d44d56604a5693395e9d62ea249b8adc1",
+  "change": "Map summons preserve the stashed hero party battle slots; stock validation and real leader death rules remain active.",
+  "reference": [
+    "Big_map/campaign_env_battle.py::_build_summoned_blue_team",
+    "Big_map/campaign_env_inventory.py::_equipment_roster"
+  ],
+  "regressions": [
+    "Summon victory and defeat preserve potion/orb slots and two partial talismans with distinct charges.",
+    "Summoned units cannot use the hero battle items; next map rest preserves them.",
+    "Real leader death clears both slots; same-battle revival keeps them; inventory/access loss still clears slots."
+  ],
+  "core": {
+    "seconds": 188.66588669300108,
+    "wall_seconds": 189.36679816246033,
+    "execution_limit": 413.28510189056396,
+    "wall_limit": 420,
+    "parent_started_at": 1791840014.146,
+    "backend": "cuda",
+    "groups": {
+      "suite": {
+        "exit_code": 0,
+        "seconds": 188.6643484909946,
+        "log": "/mnt/c/jaxjax/results/gpu-tests/summon-battle-items-20261013/suite.log"
+      }
+    },
+    "compilation_cache": "/mnt/c/jaxjax/results/gpu-tests/compilation-cache",
+    "cold_cache": false,
+    "isolated_cache": false,
+    "selection": "core",
+    "durations": "/mnt/c/jaxjax/results/gpu-tests/summon-battle-items-20261013/durations.jsonl",
+    "passed": true,
+    "tests": 149,
+    "pytest_seconds": 182.075
+  },
+  "targeted": {
+    "tests": 10,
+    "pytest_seconds": 50.12,
+    "durations": "results/summon-battle-items-20261013/targeted-durations.jsonl"
+  },
+  "benchmark": {
+    "command": "bash scripts/run_gpu.sh benchmark_number_grid.py --test-run --map default --total-timesteps 1000000 --seed 42 --tracking disabled --output results/summon-battle-items-20261013/{before,after}",
+    "config_equal": true,
+    "map_equal": true,
+    "packages_equal": true,
+    "learner_source_equal": true,
+    "viewer_paused": true,
+    "before": {
+      "device": "NVIDIA GeForce GTX 1660 Ti",
+      "jax": "0.11.2",
+      "cuda_runtime": "13.4.92",
+      "python": "3.12.3",
+      "training_steps": 1000000,
+      "seed": 42,
+      "num_envs": 250,
+      "rollout_length": 100,
+      "training_seconds": 31.39373358299781,
+      "mean_steps_per_second": 31853.490676928566,
+      "ppo_compile_seconds": 70.77019827999902,
+      "initial_evaluation_seconds": 44.101632006997534,
+      "final_evaluation_seconds": 63.852623630999005,
+      "sampled_evaluation_seconds": 62.62188717599929,
+      "checkpoint_seconds": 0.6261836429985124,
+      "tracking_logging_seconds": 0.017721958996844478,
+      "total_runner_seconds": 319.4768665349984
+    },
+    "after": {
+      "device": "NVIDIA GeForce GTX 1660 Ti",
+      "jax": "0.11.2",
+      "cuda_runtime": "13.4.92",
+      "python": "3.12.3",
+      "training_steps": 1000000,
+      "seed": 42,
+      "num_envs": 250,
+      "rollout_length": 100,
+      "training_seconds": 29.53222775401082,
+      "mean_steps_per_second": 33861.31274381048,
+      "ppo_compile_seconds": 71.87627500699455,
+      "initial_evaluation_seconds": 44.35630726400268,
+      "final_evaluation_seconds": 64.61232465899957,
+      "sampled_evaluation_seconds": 60.049851099996886,
+      "checkpoint_seconds": 0.5037071680053486,
+      "tracking_logging_seconds": 0.01343549999728566,
+      "total_runner_seconds": 317.69562126899837
+    },
+    "speed_change_percent": 6.303303104975466
+  },
+  "source_sha256_before": {
+    "stoix/envs/number_grid_battle_items.py": "b495c7c72ff0acd2b4d2e9d4c674f93c729553be0ed709170b8c94870eb77b16"
+  },
+  "source_sha256_after": {
+    "stoix/envs/number_grid_battle_items.py": "fc0e9bcf3ac1236ade66f6eb75a5951d4360c545f0dfc662197e5b54efd6d655",
+    "stoix/tests/number_grid_battle_items_test.py": "87a46825d166b7de14217a0e90bbcd1af36508b103af2c3711336dc1d68cb630"
+  },
+  "static_checks": [
+    "Ruff passed",
+    "git diff --check passed"
+  ]
+}

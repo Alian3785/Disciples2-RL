@@ -1,0 +1,95 @@
+{
+  "date": "2026-10-10",
+  "method": "Synchronized full learner; unchanged PPO and seed 42, 250 environments, rollout 100, 40 updates, 1,000,000 aggregate training transitions. No concurrent GPU jobs. Compilation/evaluation/logging/checkpointing reported separately.",
+  "baseline_note": "Reused the measured v78 baseline whose source hashes match the pre-change snapshots of every modified runtime module. Prior accepted slowdown for territory is not attributed to this change.",
+  "before": {
+    "path": "results/territory-cities-20261010/lookup-1m",
+    "metrics": {
+      "training_steps": 1000000,
+      "seed": 42,
+      "device": "NVIDIA GeForce GTX 1660 Ti",
+      "jax": "0.11.2",
+      "cuda_runtime": "13.4.92",
+      "mean_steps_per_second": 101657.73667663327,
+      "training_seconds": 9.836929610000425,
+      "ppo_compile_seconds": 64.99905420200002,
+      "initial_evaluation_seconds": 51.51714505200016,
+      "final_evaluation_seconds": 64.34038791700004,
+      "sampled_evaluation_seconds": 65.36493700500023,
+      "wandb_logging_seconds": 0.012330278999797883,
+      "checkpoint_seconds": 0.34851838900021903,
+      "total_runner_seconds": 301.2238792339999,
+      "observation_size": 1432,
+      "parameter_count": 424124,
+      "num_envs": 250,
+      "rollout_length": 100,
+      "ppo_updates": 40,
+      "learner_source_sha256": "6f147922521be6bfc2c78bfd4f12b30d881db4c85e2fc515e9f6ff22b29482a1",
+      "checkpoint_roundtrip_verified": true,
+      "weights_changed": true
+    }
+  },
+  "after": {
+    "path": "results/mercenary-camp-20261010/after-offline-1m",
+    "metrics": {
+      "training_steps": 1000000,
+      "seed": 42,
+      "device": "NVIDIA GeForce GTX 1660 Ti",
+      "jax": "0.11.2",
+      "cuda_runtime": "13.4.92",
+      "mean_steps_per_second": 101696.08548315964,
+      "training_seconds": 9.833220179999898,
+      "ppo_compile_seconds": 65.98179905500001,
+      "initial_evaluation_seconds": 56.70847094999999,
+      "final_evaluation_seconds": 69.486064919,
+      "sampled_evaluation_seconds": 58.44856660400001,
+      "wandb_logging_seconds": 0.006176412000058917,
+      "checkpoint_seconds": 0.3868766130001404,
+      "total_runner_seconds": 306.1028188099999,
+      "observation_size": 1443,
+      "parameter_count": 427198,
+      "num_envs": 250,
+      "rollout_length": 100,
+      "ppo_updates": 40,
+      "learner_source_sha256": "6f147922521be6bfc2c78bfd4f12b30d881db4c85e2fc515e9f6ff22b29482a1",
+      "checkpoint_roundtrip_verified": true,
+      "weights_changed": true
+    }
+  },
+  "percent_change": 0.03772345104273711,
+  "same_config_except_map": true,
+  "same_packages": true,
+  "baseline_source_matches": [
+    {
+      "file": "stoix/envs/number_grid.py",
+      "matches": true
+    },
+    {
+      "file": "stoix/envs/number_grid_recruitment.py",
+      "matches": true
+    },
+    {
+      "file": "stoix/envs/number_grid_sites.py",
+      "matches": true
+    },
+    {
+      "file": "stoix/envs/number_grid_territory.py",
+      "matches": true
+    }
+  ],
+  "wandb": {
+    "requested_mode": "offline",
+    "mode": "offline",
+    "status": "finished",
+    "summary_interval": 1000000,
+    "id": "py7vuvma",
+    "project": "numbergrid",
+    "directory": "/mnt/c/jaxjax/results/mercenary-camp-20261010/after-offline-1m/wandb/offline-run-20261010_024627-py7vuvma",
+    "url": null,
+    "wandb_version": "0.30.0",
+    "init_seconds": 2.6303436600001078,
+    "finish_seconds": 0.03520380700001624,
+    "logging_seconds": 0.006176412000058917
+  },
+  "online_attempt": "HTTP 403 before training; retained logs under results/mercenary-camp-20261010/after-1m. Actual benchmark completed offline."
+}

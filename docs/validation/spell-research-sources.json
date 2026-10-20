@@ -1,0 +1,106 @@
+{
+  "edition": "Disciples II: Rise of the Elves (installed Steam edition)",
+  "date": "2026-10-10",
+  "reference_root": "C:/Disciples 2 python reference/Big_map/",
+  "game_root": "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/",
+  "catalog_sha256": "d2db18839d3b84e990aaa771b398869a4d4a6e9cda1d655b9d0ec656b483e309",
+  "source_hashes": {
+    "C:/Disciples 2 python reference/Big_map/spells.py": "e83bb18524ca9a6dca901834084b8189f78cc3a1693ce6347314aa17deb721b5",
+    "C:/Disciples 2 python reference/Big_map/scroll_spell_data.py": "d8b55162297d74a40bfc875d1a1b456b7bc10098863781ec253cdac930abd931",
+    "C:/Disciples 2 python reference/Big_map/campaign_env_data.py": "d070eefeb994e6fe0f7cde0b41beed3a32049e0246a95753141d6adfd2bb1282",
+    "C:/Disciples 2 python reference/Big_map/campaign_env_magic.py": "84b0f1ed97b8b7d3924ff4b4c2b422e6097deafaaa29487f23b253c0adfc407f",
+    "C:/Disciples 2 python reference/Big_map/campaign_env_economy.py": "16b05b7e579a1ade852ef735bda01d35f99cb23006e03f2229cfe879c09ef802",
+    "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals/Gspells.dbf": "4ae108be0679ee6473c2ef5d5ea351e53e9a28512c2f74b2d5af9f8f0a2d97b5",
+    "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals/GspellR.dbf": "63a05c89da94cb4adc4f44c965b53d59375db76864c5721dd1512f0c579e8d5a",
+    "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals/Tglobal.dbf": "5da65f5cb78f714e1814f97d301b43ae54e1b7bf086e61c8f3f93abdfc9e12ce",
+    "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/DII Manual.pdf": "51b5bc825bb77744b0141bc935aca1ae1803e70950599d8e0c793d5c4258114e",
+    "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/DII Manual Addendum.pdf": "e52da98b6e15d035a49f9483bf6dab70b9d21cde4060bcfde2c27c86f2cb63a4"
+  },
+  "counts": {
+    "empire": 22,
+    "mountain_clans": 22,
+    "legions": 17,
+    "undead_hordes": 20,
+    "elves": 20
+  },
+  "total": 101,
+  "missing_supported": [],
+  "unexpected": [],
+  "excluded_reference_spells": [
+    "emp_d2_s009",
+    "emp_d2_s020",
+    "mcl_d2_s010",
+    "mcl_d2_s022",
+    "und_d2_s008",
+    "und_d2_s014",
+    "und_d2_s019",
+    "und_d2_s020",
+    "lod_d2_s002",
+    "lod_d2_s007",
+    "lod_d2_s011",
+    "lod_d2_s012",
+    "lod_d2_s013",
+    "lod_d2_s022",
+    "lod_d2_s024",
+    "elf_d2_s003",
+    "elf_d2_s011",
+    "elf_d2_s023",
+    "elf_d2_s024"
+  ],
+  "price_differences": [
+    {
+      "id": "g000ss0091",
+      "reference_id": "lod_d2_s020",
+      "original": [
+        1200,
+        0,
+        600,
+        600,
+        0
+      ],
+      "reference": [
+        1200,
+        600,
+        600,
+        0,
+        0
+      ],
+      "decision": "Use installed original game GspellR.dbf"
+    }
+  ],
+  "mechanics": [
+    {
+      "rule": "Own-faction supported subset; no 19 unsupported entries",
+      "source": "C:/Disciples 2 python reference/Big_map/campaign_env_magic.py:319",
+      "test": "test_catalog_is_exact_supported_reference_subset_and_preserves_original_text"
+    },
+    {
+      "rule": "Tower + unlearned + every mana pool + one research per day; reward +1",
+      "source": "C:/Disciples 2 python reference/Big_map/campaign_env_magic.py:2024-2107",
+      "test": "test_every_spell_exact_mana_all_gates_and_compact_faction_actions"
+    },
+    {
+      "rule": "Mage half research price, level V, free Tower; Guildmaster free Guild; Warrior +15 percentage points daily regeneration",
+      "source": [
+        "C:/Disciples 2 python reference/Big_map/campaign_env_data.py:206-209",
+        "C:/Disciples 2 python reference/Big_map/campaign_env_economy.py:3481-3503",
+        "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/DII Manual.pdf:Lord Selection (printed page 5)"
+      ],
+      "test": "test_lords_free_buildings_regeneration_city_prices_and_reset"
+    },
+    {
+      "rule": "Guildmaster city upgrades cost half",
+      "source": "C:/Disciples 2 python reference/Big_map/campaign_env_data.py:208",
+      "test": "test_lords_free_buildings_regeneration_city_prices_and_reset"
+    },
+    {
+      "rule": "No location/MP/live hero/lower level prerequisite; independent construction limit",
+      "source": "C:/Disciples 2 python reference/Big_map/campaign_env_magic.py:2059-2071",
+      "test": "test_research_full_step_daily_reset_independent_build_limit_and_observation"
+    },
+    {
+      "rule": "No casts, thief operations or diplomacy added in this stage",
+      "source": "User scope: research first, effects later; existing JAX mechanics"
+    }
+  ]
+}

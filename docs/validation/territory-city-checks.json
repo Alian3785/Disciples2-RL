@@ -1,0 +1,111 @@
+{
+  "date": "2026-10-10",
+  "branch": "codex/territory-mines-cities",
+  "contract": {
+    "map": "v78",
+    "observation_version": 34,
+    "observations": 1432,
+    "actions": 187,
+    "enemy_armies": 45,
+    "cities": 2,
+    "resource_sources": 6
+  },
+  "gpu_backend": "cuda",
+  "initial_full": {
+    "path": "results/gpu-tests/territory-cities-20261010",
+    "seconds": 883.358236434,
+    "wall_seconds": 892.940548658371,
+    "execution_limit": 887.8110074996948,
+    "wall_limit": 900,
+    "parent_started_at": 1791583999.408,
+    "backend": "cuda",
+    "groups": {
+      "suite": {
+        "exit_code": 1,
+        "seconds": 883.3436508470002,
+        "log": "/mnt/c/jaxjax/results/gpu-tests/territory-cities-20261010/suite.log"
+      }
+    },
+    "compilation_cache": "/mnt/c/jaxjax/results/gpu-tests/compilation-cache",
+    "cold_cache": false,
+    "isolated_cache": false,
+    "passed": false,
+    "pytest_passed": 363,
+    "pytest_failed": 2,
+    "failures": [
+      "test_terminal_form_growth_and_regeneration_use_new_maximum",
+      "test_duke_levelups_need_no_building_heal_once_and_raise_threshold"
+    ],
+    "resolution": "Updated obsolete fixed 10% healing expectations to installed native unit + warrior lord + capital regeneration. Targeted rerun: 2 passed in 29.44s."
+  },
+  "targeted_runs": [
+    {
+      "log": "results/territory-cities-20261010/focused.log",
+      "passed": 26,
+      "pytest_seconds": 137.45
+    },
+    {
+      "log": "results/territory-cities-20261010/lookup-tests.log",
+      "passed": 19,
+      "pytest_seconds": 172.35
+    },
+    {
+      "log": "results/territory-cities-20261010/rank-tests.log",
+      "passed": 13,
+      "pytest_seconds": 67,
+      "variant": "Cell-major ranks, later reverted for no speed gain"
+    }
+  ],
+  "static": {
+    "ruff_project": "passed",
+    "ruff_export_and_test_followup": "passed",
+    "javascript_syntax": "passed",
+    "git_diff_check": "passed"
+  },
+  "performance_report": "docs/validation/territory-city-performance.json",
+  "source_hashes": {
+    "number_grid_map.json": "1203ddf26584baa5e120025b1239f4c2ff07cc0c80c997ec072e4f784d5ad341",
+    "stoix/envs/number_grid.py": "ec4946e1d70b234ab96574e16b625ad56d1935f5687daf4f77dedf5f0f41ec67",
+    "stoix/envs/number_grid_territory.py": "b91a7c3eab726501b5a8b7e7a5f80c3d82cf3d833cf9000d08cbc0cbed4aa4bf",
+    "stoix/envs/number_grid_capital.py": "b09b965433e7da792cd23055d8c0b3ae3706413633fcbb3d1d29b65d2fcd8c62",
+    "stoix/envs/number_grid_recruitment.py": "b55ec5fdd8f93fec00f046fc906c2b107a2bb4931c3623fc5680dce32cadd5c7",
+    "serve_number_grid.py": "df4d1a93a174fe5c39da16af85dc4dd241168f61bd62c1d2fa6b9104925723bb",
+    "export_battle_viewer.py": "3ba4582057d7e72f8e2b9acafe7c8f68515bb7dd247294c67d0cb70d08d92d1f",
+    "web/battle_app.js": "9f64d1b321d27fc9daab3785a10f9a2bb1eadd00de8c5950e8e20834debe5e59",
+    "web/battle.css": "8aa207ef145bae739c7a5c615e826367b6d6f5bda00ed8aa2cbf96d03fbfa946",
+    "web/battle.template.html": "744e61bfb99ddffef5a1b4c922cd36cdd1861fd2051ce409ff54b64bb59e6160",
+    "stoix/tests/number_grid_territory_test.py": "a53a30d354ee23e822735178fd75e4151b47f53abb802760a790d741865d0631",
+    "viewer.html": "1194a1977dc52b921858854daa5f2e8d2b2af1ef72eed823945db3e0bf15a269"
+  },
+  "final_full": {
+    "path": "results/gpu-tests/territory-cities-final-20261010",
+    "seconds": 793.3998946830002,
+    "wall_seconds": 793.6199109554291,
+    "execution_limit": 893.7722022533417,
+    "wall_limit": 900,
+    "parent_started_at": 1791586553.134,
+    "backend": "cuda",
+    "groups": {
+      "suite": {
+        "exit_code": 0,
+        "seconds": 793.39807569,
+        "log": "/mnt/c/jaxjax/results/gpu-tests/territory-cities-final-20261010/suite.log"
+      }
+    },
+    "compilation_cache": "/mnt/c/jaxjax/results/gpu-tests/compilation-cache",
+    "cold_cache": false,
+    "isolated_cache": false,
+    "passed": true,
+    "pytest_passed": 366,
+    "pytest_seconds": 782.66
+  },
+  "ui": "docs/validation/territory-city-ui.json",
+  "performance_approval": {
+    "status": "accepted",
+    "date": "2026-10-10",
+    "user_reply": "Принять текущую скорость",
+    "selected_run": "results/territory-cities-20261010/lookup-1m",
+    "mean_steps_per_second": 101657.73667663327,
+    "slowdown_percent": 11.092629329067849
+  }
+}

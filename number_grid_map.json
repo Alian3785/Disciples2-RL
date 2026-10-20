@@ -1,0 +1,1555 @@
+{
+  "name": "NumberGrid-48x48-v89-three-target-rewards",
+  "size": 48,
+  "agent_position": [
+    2,
+    2
+  ],
+  "agent_number": 2,
+  "opponent_positions": [
+    [
+      3,
+      8
+    ],
+    [
+      20,
+      8
+    ],
+    [
+      26,
+      26
+    ],
+    [
+      6,
+      28
+    ],
+    [
+      6,
+      40
+    ],
+    [
+      16,
+      20
+    ],
+    [
+      16,
+      36
+    ],
+    [
+      28,
+      8
+    ],
+    [
+      30,
+      40
+    ],
+    [
+      40,
+      10
+    ],
+    [
+      40,
+      24
+    ],
+    [
+      40,
+      40
+    ],
+    [
+      12,
+      8
+    ],
+    [
+      12,
+      28
+    ],
+    [
+      12,
+      42
+    ],
+    [
+      22,
+      16
+    ],
+    [
+      22,
+      34
+    ],
+    [
+      22,
+      42
+    ],
+    [
+      32,
+      16
+    ],
+    [
+      32,
+      28
+    ],
+    [
+      36,
+      4
+    ],
+    [
+      38,
+      32
+    ],
+    [
+      44,
+      16
+    ],
+    [
+      44,
+      34
+    ],
+    [
+      10,
+      20
+    ],
+    [
+      24,
+      12
+    ],
+    [
+      36,
+      36
+    ],
+    [
+      19,
+      27
+    ],
+    [
+      3,
+      21
+    ],
+    [
+      43,
+      3
+    ],
+    [
+      32,
+      22
+    ],
+    [
+      28,
+      34
+    ],
+    [
+      16,
+      14
+    ],
+    [
+      38,
+      18
+    ],
+    [
+      10,
+      14
+    ],
+    [
+      10,
+      34
+    ],
+    [
+      34,
+      10
+    ],
+    [
+      4,
+      15
+    ],
+    [
+      4,
+      34
+    ],
+    [
+      24,
+      21
+    ],
+    [
+      24,
+      3
+    ],
+    [
+      14,
+      16
+    ],
+    [
+      14,
+      16
+    ],
+    [
+      32,
+      36
+    ],
+    [
+      32,
+      36
+    ],
+    [
+      9,
+      25
+    ],
+    [
+      17,
+      1
+    ],
+    [
+      30,
+      1
+    ],
+    [
+      1,
+      46
+    ],
+    [
+      37,
+      46
+    ],
+    [
+      43,
+      46
+    ]
+  ],
+  "opponent_numbers": [
+    1,
+    1,
+    4,
+    3,
+    9,
+    9,
+    11,
+    2,
+    6,
+    1,
+    3,
+    12,
+    1,
+    1,
+    4,
+    3,
+    9,
+    9,
+    11,
+    2,
+    6,
+    1,
+    3,
+    12,
+    2,
+    3,
+    4,
+    1,
+    1,
+    4,
+    3,
+    9,
+    9,
+    11,
+    2,
+    6,
+    3,
+    12,
+    3,
+    11,
+    12,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "max_steps": 5000,
+  "step_cost": 0.001,
+  "exploration_bonus": 0.01,
+  "mask_walls": true,
+  "map_seed": 42,
+  "number_generation": "Historical labels retained and copied with added squads. Numbers do not affect battles.",
+  "reconstruction_note": "48x48: 41 field armies plus two cities, each with a guard and garrison on its entrance tile. Static obstacles leave accessible approaches. Five mana types and one gold mine use territorial ownership. One 3x3 ruin at [7,23] holds Troll and Goblin Archer and grants one Potion of Strength; cleared ruins remain blocked. Terrain: 26 road cells, 32 forest cells, and one connected empty 50-cell lake at rows 13-18 / columns 2-11. Living flight costs 2 everywhere; dead leaders double terrain costs. v88: armies 47-51 add Doppelganger, Summoner, Occultmaster, Lyf and Dark Laclaan; Laclaan is optional for victory; the default ruler is a Legions mage. See scripts/add_current_map_unit_types.py.",
+  "battle_mode": true,
+  "hero_hp": 120,
+  "battle_max_rounds": 75,
+  "battle_round_limit_penalty": 1.0,
+  "enemy_units": [
+    1,
+    1,
+    2,
+    3,
+    3,
+    3,
+    4,
+    5,
+    5,
+    5,
+    6,
+    6,
+    1,
+    2,
+    1,
+    3,
+    3,
+    3,
+    4,
+    5,
+    5,
+    4,
+    6,
+    6,
+    2,
+    3,
+    4,
+    1,
+    1,
+    2,
+    3,
+    3,
+    3,
+    4,
+    5,
+    5,
+    6,
+    6,
+    3,
+    4,
+    6,
+    2,
+    1,
+    3,
+    3,
+    2,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "enemy_hp": [
+    100,
+    250,
+    100,
+    100,
+    100,
+    250,
+    100,
+    100,
+    100,
+    250,
+    100,
+    100,
+    100,
+    100,
+    250,
+    100,
+    100,
+    250,
+    100,
+    100,
+    100,
+    250,
+    100,
+    100,
+    200,
+    200,
+    50,
+    100,
+    250,
+    100,
+    100,
+    100,
+    250,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    75,
+    120,
+    250,
+    310,
+    2000
+  ],
+  "battle_recovery": "Living units regenerate by native unit + lord + either fort or own-land bonus, rounded up once. City/capital recovery and recruitment require ownership; paid healing/revival still require the capital temple. Victory preserves wounds. Entry with a living hero captures cities only after both defenders are defeated.",
+  "battle_observation_version": 44,
+  "combat_rules_version": 2,
+  "faction": "legions",
+  "building_reward": 0.05,
+  "blocked_buildings": [],
+  "max_building_level": 5,
+  "rest_penalty_per_point": 0.001,
+  "enemy_rosters": [
+    [
+      "squire",
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      "titan",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "goblin_archer",
+      "squire",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      "squire",
+      null,
+      "apprentice",
+      "acolyte",
+      null
+    ],
+    [
+      "squire",
+      "squire",
+      null,
+      null,
+      "wolf_lord",
+      null
+    ],
+    [
+      null,
+      "abyss_devil",
+      null,
+      "archer",
+      null,
+      "acolyte"
+    ],
+    [
+      "teurg",
+      "squire",
+      "archer",
+      "archer",
+      null,
+      null
+    ],
+    [
+      "squire",
+      "squire",
+      "archer",
+      "acolyte",
+      "witch",
+      null
+    ],
+    [
+      "peasant",
+      "squire",
+      "archer",
+      "archer",
+      "archer",
+      null
+    ],
+    [
+      "squire",
+      "titan",
+      "centaur_savage",
+      "acolyte",
+      null,
+      "archer"
+    ],
+    [
+      "blade_master",
+      "squire",
+      "archer",
+      "archer",
+      "archer",
+      "archer"
+    ],
+    [
+      "archer",
+      "squire",
+      "archer",
+      "archer",
+      "archer",
+      "archer"
+    ],
+    [
+      "death",
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "wight",
+      "squire",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "lord",
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "squire",
+      "squire",
+      null,
+      null,
+      "acolyte",
+      null
+    ],
+    [
+      "sentry",
+      "squire",
+      "archer",
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      "titan",
+      null,
+      "watcher",
+      null,
+      "archer"
+    ],
+    [
+      "bone_lord",
+      "archer",
+      null,
+      "archer",
+      "acolyte",
+      null
+    ],
+    [
+      "dregazul",
+      "squire",
+      "archer",
+      "archer",
+      "archer",
+      null
+    ],
+    [
+      "ghost",
+      "squire",
+      "archer",
+      "archer",
+      "alchemist",
+      null
+    ],
+    [
+      "dead_dragon",
+      "squire",
+      "gumtic",
+      null,
+      "acolyte",
+      null
+    ],
+    [
+      "archer",
+      "squire",
+      "archer",
+      "shadow",
+      "dwarfdruid",
+      "archer"
+    ],
+    [
+      "squire",
+      "squire",
+      "archer",
+      "archer",
+      "archdruid",
+      "succubus"
+    ],
+    [
+      "orc",
+      "orc",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "goblin",
+      "orc",
+      "goblin",
+      null,
+      null,
+      null
+    ],
+    [
+      "goblin",
+      "goblin",
+      "goblin",
+      null,
+      "goblin_archer",
+      null
+    ],
+    [
+      "uter_betrezen",
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      "ismir_son",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "ghoul",
+      "mermaid",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      "squire",
+      null,
+      "baroness",
+      "acolyte",
+      null
+    ],
+    [
+      "hermit",
+      "squire",
+      null,
+      null,
+      "medusa",
+      null
+    ],
+    [
+      null,
+      "tiamat",
+      null,
+      "archer",
+      null,
+      "acolyte"
+    ],
+    [
+      "nosferatu",
+      "squire",
+      "archer",
+      "medium",
+      null,
+      null
+    ],
+    [
+      "squire",
+      "squire",
+      "archer",
+      "cleric",
+      "highvampire",
+      null
+    ],
+    [
+      "thug",
+      "squire",
+      "archer",
+      "archer",
+      "sundancer",
+      null
+    ],
+    [
+      "drulliaan",
+      "squire",
+      "archer",
+      "archer",
+      "archer",
+      "sylfid"
+    ],
+    [
+      "elf_bandit",
+      "squire",
+      "archer",
+      "archer",
+      "travnitsa",
+      "archer"
+    ],
+    [
+      "shamanka",
+      "squire",
+      null,
+      null,
+      "deva_roshi",
+      null
+    ],
+    [
+      "aleman",
+      "archer",
+      null,
+      "archer",
+      "patriarch",
+      null
+    ],
+    [
+      "squire",
+      "squire",
+      "archer",
+      "archer",
+      "novice",
+      "archer"
+    ],
+    [
+      "squire",
+      null,
+      null,
+      "archer",
+      null,
+      null
+    ],
+    [
+      null,
+      "squire",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "knight",
+      "squire",
+      null,
+      "acolyte",
+      null,
+      null
+    ],
+    [
+      "squire",
+      "squire",
+      null,
+      "archer",
+      null,
+      null
+    ],
+    [
+      null,
+      "g000uu5016",
+      null,
+      "goblin_archer",
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      "occultist",
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      "doppelganger",
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      "lyf",
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      "occultmaster",
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      "laclaan",
+      null
+    ]
+  ],
+  "unit_progression": true,
+  "capital_services": true,
+  "initial_potions": {
+    "healing": 5,
+    "restoration": 5,
+    "ointment": 5,
+    "life": 10
+  },
+  "battle_engagement": "A directional command targeting a living enemy stack starts combat from the current tile. Passing beside a stack is safe. Entry costs ceil(half the full movement allowance), capped at remaining points; zero points forbids attack. Victory and retreat keep the attacker on its original tile.",
+  "chests": [
+    {
+      "position": [
+        5,
+        4
+      ],
+      "potions": {
+        "ointment": 2,
+        "life": 1,
+        "might": 1,
+        "celerity": 1
+      },
+      "items": {
+        "runestone": 1,
+        "boots_speed": 1,
+        "tome_air": 1
+      }
+    },
+    {
+      "position": [
+        10,
+        26
+      ],
+      "potions": {
+        "invulnerability": 1,
+        "accuracy": 1,
+        "highfather": 1,
+        "titan": 1,
+        "iron_skin": 1
+      },
+      "items": {
+        "dwarven_bracer": 1,
+        "banner_protection": 1,
+        "bronze_ring": 1
+      }
+    },
+    {
+      "position": [
+        25,
+        12
+      ],
+      "potions": {
+        "fire_ward": 1,
+        "water_ward": 1,
+        "earth_ward": 1,
+        "air_ward": 1,
+        "life": 1
+      },
+      "items": {
+        "ring_of_strength": 1,
+        "boots_traveling": 1,
+        "tome_war": 1
+      }
+    },
+    {
+      "position": [
+        31,
+        43
+      ],
+      "potions": {
+        "highfather": 1,
+        "titan": 1,
+        "fortune": 1,
+        "quicksilver": 1,
+        "ointment": 1
+      },
+      "items": {
+        "skull_bracers": 1,
+        "banner_might": 1,
+        "unholy_dagger": 1
+      }
+    },
+    {
+      "position": [
+        43,
+        27
+      ],
+      "potions": {
+        "invulnerability": 1,
+        "accuracy": 1,
+        "celerity": 1,
+        "might": 1,
+        "life": 1
+      },
+      "items": {
+        "ring_of_ages": 1,
+        "banner_war": 1,
+        "boots_seven_leagues": 1
+      }
+    }
+  ],
+  "initial_items": {},
+  "equipment_auto_equip": "price",
+  "equipment_requires_skills": false,
+  "merchant": {
+    "name": "Торговец",
+    "position": [
+      8,
+      3
+    ],
+    "potions": {
+      "invulnerability": 1,
+      "healing": 10,
+      "life": 10
+    }
+  },
+  "trainer": {
+    "name": "Тренировочный лагерь",
+    "position": [
+      5,
+      10
+    ]
+  },
+  "faction_recruitment": true,
+  "territory": true,
+  "lord_type": "mage",
+  "cities": [
+    {
+      "name": "Пепельный дозор",
+      "position": [
+        14,
+        16
+      ],
+      "level": 1
+    },
+    {
+      "name": "Каменная застава",
+      "position": [
+        32,
+        36
+      ],
+      "level": 3
+    }
+  ],
+  "mines": [
+    {
+      "kind": "gold",
+      "position": [
+        5,
+        3
+      ]
+    },
+    {
+      "kind": "infernal",
+      "position": [
+        4,
+        6
+      ]
+    },
+    {
+      "kind": "life",
+      "position": [
+        14,
+        19
+      ]
+    },
+    {
+      "kind": "death",
+      "position": [
+        17,
+        14
+      ]
+    },
+    {
+      "kind": "runes",
+      "position": [
+        32,
+        39
+      ]
+    },
+    {
+      "kind": "elves",
+      "position": [
+        35,
+        34
+      ]
+    }
+  ],
+  "obstacles": [
+    [
+      1,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      1,
+      3
+    ],
+    [
+      1,
+      4
+    ],
+    [
+      2,
+      1
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      4,
+      1
+    ],
+    [
+      4,
+      2
+    ],
+    [
+      4,
+      4
+    ],
+    [
+      13,
+      15
+    ],
+    [
+      13,
+      16
+    ],
+    [
+      13,
+      17
+    ],
+    [
+      14,
+      15
+    ],
+    [
+      14,
+      17
+    ],
+    [
+      31,
+      35
+    ],
+    [
+      31,
+      36
+    ],
+    [
+      31,
+      37
+    ],
+    [
+      32,
+      35
+    ],
+    [
+      32,
+      37
+    ]
+  ],
+  "city_defender_roles": {
+    "41": "guard",
+    "42": "garrison",
+    "43": "guard",
+    "44": "garrison"
+  },
+  "mercenary": {
+    "name": "Лагерь наёмников",
+    "position": [
+      6,
+      6
+    ],
+    "roster": [
+      {
+        "unit": "g000uu5040",
+        "stock": 1
+      },
+      {
+        "unit": "goblin_archer",
+        "stock": 1
+      }
+    ]
+  },
+  "ruins": [
+    {
+      "name": "Забытые руины",
+      "position": [
+        7,
+        23
+      ],
+      "potions": {
+        "strength": 1
+      },
+      "gold": 0
+    }
+  ],
+  "terrain": {
+    "road": [
+      [
+        2,
+        3
+      ],
+      [
+        3,
+        3
+      ],
+      [
+        4,
+        3
+      ],
+      [
+        5,
+        4
+      ],
+      [
+        5,
+        5
+      ],
+      [
+        4,
+        6
+      ],
+      [
+        3,
+        7
+      ],
+      [
+        2,
+        8
+      ],
+      [
+        3,
+        9
+      ],
+      [
+        4,
+        10
+      ],
+      [
+        4,
+        11
+      ],
+      [
+        4,
+        12
+      ],
+      [
+        4,
+        13
+      ],
+      [
+        5,
+        14
+      ],
+      [
+        6,
+        14
+      ],
+      [
+        7,
+        14
+      ],
+      [
+        8,
+        14
+      ],
+      [
+        9,
+        15
+      ],
+      [
+        10,
+        16
+      ],
+      [
+        11,
+        17
+      ],
+      [
+        12,
+        18
+      ],
+      [
+        13,
+        18
+      ],
+      [
+        14,
+        18
+      ],
+      [
+        15,
+        17
+      ],
+      [
+        15,
+        16
+      ],
+      [
+        14,
+        16
+      ]
+    ],
+    "forest": [
+      [
+        5,
+        16
+      ],
+      [
+        5,
+        17
+      ],
+      [
+        5,
+        18
+      ],
+      [
+        5,
+        19
+      ],
+      [
+        6,
+        16
+      ],
+      [
+        6,
+        17
+      ],
+      [
+        6,
+        18
+      ],
+      [
+        6,
+        19
+      ],
+      [
+        7,
+        16
+      ],
+      [
+        7,
+        17
+      ],
+      [
+        7,
+        18
+      ],
+      [
+        7,
+        19
+      ],
+      [
+        23,
+        39
+      ],
+      [
+        23,
+        40
+      ],
+      [
+        23,
+        41
+      ],
+      [
+        23,
+        42
+      ],
+      [
+        24,
+        39
+      ],
+      [
+        24,
+        40
+      ],
+      [
+        24,
+        41
+      ],
+      [
+        24,
+        42
+      ],
+      [
+        25,
+        39
+      ],
+      [
+        25,
+        40
+      ],
+      [
+        25,
+        41
+      ],
+      [
+        25,
+        42
+      ],
+      [
+        26,
+        39
+      ],
+      [
+        26,
+        40
+      ],
+      [
+        26,
+        41
+      ],
+      [
+        26,
+        42
+      ],
+      [
+        27,
+        39
+      ],
+      [
+        27,
+        40
+      ],
+      [
+        27,
+        41
+      ],
+      [
+        27,
+        42
+      ]
+    ],
+    "water": [
+      [
+        13,
+        4
+      ],
+      [
+        13,
+        5
+      ],
+      [
+        13,
+        6
+      ],
+      [
+        13,
+        7
+      ],
+      [
+        13,
+        8
+      ],
+      [
+        13,
+        9
+      ],
+      [
+        14,
+        3
+      ],
+      [
+        14,
+        4
+      ],
+      [
+        14,
+        5
+      ],
+      [
+        14,
+        6
+      ],
+      [
+        14,
+        7
+      ],
+      [
+        14,
+        8
+      ],
+      [
+        14,
+        9
+      ],
+      [
+        14,
+        10
+      ],
+      [
+        15,
+        2
+      ],
+      [
+        15,
+        3
+      ],
+      [
+        15,
+        4
+      ],
+      [
+        15,
+        5
+      ],
+      [
+        15,
+        6
+      ],
+      [
+        15,
+        7
+      ],
+      [
+        15,
+        8
+      ],
+      [
+        15,
+        9
+      ],
+      [
+        15,
+        10
+      ],
+      [
+        15,
+        11
+      ],
+      [
+        16,
+        2
+      ],
+      [
+        16,
+        3
+      ],
+      [
+        16,
+        4
+      ],
+      [
+        16,
+        5
+      ],
+      [
+        16,
+        6
+      ],
+      [
+        16,
+        7
+      ],
+      [
+        16,
+        8
+      ],
+      [
+        16,
+        9
+      ],
+      [
+        16,
+        10
+      ],
+      [
+        16,
+        11
+      ],
+      [
+        17,
+        2
+      ],
+      [
+        17,
+        3
+      ],
+      [
+        17,
+        4
+      ],
+      [
+        17,
+        5
+      ],
+      [
+        17,
+        6
+      ],
+      [
+        17,
+        7
+      ],
+      [
+        17,
+        8
+      ],
+      [
+        17,
+        9
+      ],
+      [
+        17,
+        10
+      ],
+      [
+        17,
+        11
+      ],
+      [
+        18,
+        4
+      ],
+      [
+        18,
+        5
+      ],
+      [
+        18,
+        6
+      ],
+      [
+        18,
+        7
+      ],
+      [
+        18,
+        8
+      ],
+      [
+        18,
+        9
+      ]
+    ]
+  },
+  "spell_research": true,
+  "spell_casting": true,
+  "unit_swaps": true,
+  "optional_enemies": [],
+  "target_rewards": {
+    "enemies": [21, 36, 50],
+    "victory": 20.0,
+    "completion": 30.0,
+    "progress_scale": 5.0,
+    "gamma": 0.99
+  }
+}

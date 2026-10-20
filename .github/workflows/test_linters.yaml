@@ -1,0 +1,40 @@
+name: Ruff
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Ruff
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv and set the python version
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: '3.12'
+          cache-dependency-glob: |
+            pyproject.toml
+
+      - name: Install lint dependencies
+        run: |
+          test -x .venv/bin/python || uv venv --python 3.12
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+          import tomllib
+          dev = tomllib.loads(Path('pyproject.toml').read_text())['project']['optional-dependencies']['dev']
+          subprocess.run(['uv', 'pip', 'install', '--python', '.venv/bin/python', *dev], check=True)
+          PY
+
+      - name: Run Ruff
+        run: .venv/bin/python -m ruff check .

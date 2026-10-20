@@ -1,0 +1,21 @@
+{
+  "date": "2026-10-11",
+  "gpu": "GTX 1660 Ti 6 GB, WSL2, the same machine as default-map-performance.json",
+  "method": "benchmark_number_grid.py --test-run --tracking disabled, 1,000,000 transitions per run, seed 42; base and new checkouts run alternately, one GPU process at a time; the idle game server on :8769 stayed running and held GPU memory. One before/after pair per map (user rule); the second round below was stopped early.",
+  "base": {"commit": "b871632"},
+  "new": {"commit": "20f79e0", "default_map": {"observation": 2452, "actions": 261}},
+  "round_1": {
+    "current_map": {"learner_sps": {"base": 88340, "new": 87853}, "change_percent": -0.55,
+                    "ppo_compile_seconds": {"base": 79.3, "new": 78.3}, "observation": 1678},
+    "default_map": {"learner_sps": {"base": 86415, "new": 83024}, "change_percent": -3.92,
+                    "ppo_compile_seconds": {"base": 58.8, "new": 64.0}, "observation": {"base": 2432, "new": 2452}}
+  },
+  "round_2_partial": {
+    "current_map": {"learner_sps": {"base": 88584, "new": 88788}, "change_percent": 0.23,
+                    "ppo_compile_seconds": {"base": 80.9, "new": 79.6}},
+    "default_map": {"learner_sps": {"base": 92124}, "ppo_compile_seconds": {"base": 54.7},
+                    "note": "new run stopped before finishing"}
+  },
+  "conclusion": "No slowdown of 7% or more on either map in the paired comparison. The Default base varied 6.6% between rounds, larger than the -3.9% change.",
+  "results": "WSL ~/jaxrep-battle-items/results/bench-battle-items and ~/jaxrep-battle-items-base/results/bench-battle-items on the user's PC"
+}

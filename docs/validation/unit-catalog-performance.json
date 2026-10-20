@@ -1,0 +1,3740 @@
+{
+  "sequential_gpu_processes": true,
+  "runs": {
+    "after-10m": {
+      "results": {
+        "environment": "NumberGrid-48x48-v72-complete-unit-catalog",
+        "algorithm": "Stoix Anakin feedforward PPO",
+        "recurrent": false,
+        "device": "NVIDIA GeForce GTX 1660 Ti",
+        "backend": "gpu",
+        "jax": "0.11.2",
+        "cuda_runtime": "13.4.92",
+        "python": "3.12.3",
+        "training_steps": 10000000,
+        "ppo_updates": 400,
+        "actor_optimizer_updates": 16000,
+        "critic_optimizer_updates": 16000,
+        "seed": 42,
+        "training_seconds": 64.14388930000064,
+        "mean_steps_per_second": 155899.49579187584,
+        "ppo_compile_seconds": 40.7176898109999,
+        "training_loop_seconds": 64.32902859199999,
+        "training_loop_steps_per_second": 155450.81620031814,
+        "wandb_logging_seconds": 0.011410460000433886,
+        "wandb_init_seconds": 2.4897399280000627,
+        "completed_training_episodes": 6793,
+        "won_training_episodes": 0,
+        "wandb": {
+          "requested_mode": "offline",
+          "mode": "offline",
+          "status": "finished",
+          "summary_interval": 1000000,
+          "id": "dza0zqeg",
+          "project": "numbergrid",
+          "directory": "/mnt/c/jaxjax/results/unit-catalog/after-10m/wandb/offline-run-20261009_170151-dza0zqeg",
+          "url": null,
+          "wandb_version": "0.30.0",
+          "init_seconds": 2.4897399280000627,
+          "finish_seconds": 0.03838394999979755,
+          "logging_seconds": 0.011410460000433886
+        },
+        "initial_evaluation": {
+          "episodes": 64,
+          "successes": 0,
+          "success_rate": 0.0,
+          "mean_return": -12.105623245239258,
+          "mean_length": 5000.0,
+          "min_length": 5000,
+          "max_length": 5000,
+          "action_selection": "argmax",
+          "seed": 1042
+        },
+        "final_evaluation": {
+          "episodes": 1024,
+          "successes": 0,
+          "success_rate": 0.0,
+          "mean_return": -0.39863264560699463,
+          "mean_length": 63.6328125,
+          "min_length": 62,
+          "max_length": 72,
+          "action_selection": "argmax",
+          "seed": 1042
+        },
+        "sampled_evaluation": {
+          "episodes": 1024,
+          "successes": 0,
+          "success_rate": 0.0,
+          "mean_return": 14.510807991027832,
+          "mean_length": 1369.9052734375,
+          "min_length": 52,
+          "max_length": 5000,
+          "action_selection": "sample",
+          "seed": 1042
+        },
+        "parameter_count": 308568,
+        "num_envs": 250,
+        "rollout_length": 100,
+        "observation_size": 1031,
+        "weights_changed": true,
+        "checkpoint_roundtrip_verified": true,
+        "checkpoint_sha256": "a12fe9ba8b3d8e1f8f74cb96055d3f277b2939fac14592723113358f77825265",
+        "learner_source_sha256": "6f147922521be6bfc2c78bfd4f12b30d881db4c85e2fc515e9f6ff22b29482a1",
+        "total_runner_seconds": 226.65562095400014,
+        "timing": "Sum of synchronized learner calls, including rollout and PPO updates; excludes compilation, evaluation, host logging and saving.",
+        "reconstruction": "Fixed map and observation encoding recreated from README; remote weights and results were not recovered.",
+        "combat_counts": {
+          "battle_transition": 1103975,
+          "player_battle_transition": 495203,
+          "enemy_battle_transition": 511309,
+          "battle_victory": 21183
+        },
+        "construction_count": 80112,
+        "rest_count": 799204,
+        "rest_penalty_total": 242.14401486236602,
+        "transition_definition": "One map move, rest, construction, paid capital service, potion use or unit turn; includes scripted enemy turns and completed retreats.",
+        "source_hashes": {
+          "benchmark_number_grid.py": "d6cfaf27a5f37d3626c44947a4558ef44db8e473caf21a1eaf49af3f3f7c4a20",
+          "numbergrid_config.py": "ea1b00f763e1eb8cc81ce0801156220f016751929f5cc20f4ba72c83cd86ec2b",
+          "numbergrid_tracking.py": "5d276c58507c182d350828dd41593fd22c03e29c74d8a7b2276ccafbb2b1a573",
+          "stoix/envs/number_grid_buildings.py": "46420077250790475aab68abe5611665b2410f618993e98b55a0646c967cf429",
+          "stoix/envs/data/buildings.json": "cc7ed172e0370b7811a340d9774db2d79996a49ebfee0b4260e0065fa02d78e3",
+          "stoix/envs/data/units.json": "c33db57e857f8aec4a5bfa7c449223acdb66388d6dd574c9b5e6dd85b603e994",
+          "stoix/envs/number_grid_effects.py": "910a1fbc69fb7255769d8a3e9d68666a97fd4b7ddd3f3c1816e131a7035d1928",
+          "stoix/envs/number_grid_wards.py": "7e1de4536ececd72d22f15df45026cb5ede44224f4ffda8abfdbd7be563b99db",
+          "stoix/envs/number_grid_summoning.py": "487bc89d89b25e618755481f56acc9a7303a4a5e0843c283122b95015b4c49eb",
+          "stoix/envs/number_grid.py": "9d0315eee955d18fddf48507ac362b97f939045b3ebb123f529b4061c89c5531",
+          "stoix/envs/number_grid_combat.py": "7589b6640225dbf0ca4cd049f7dd45c9c648d26ce005cfab448cf86ccecaecd5",
+          "stoix/envs/number_grid_progression.py": "3e82f7574a8cbe8d5299ae55fe88ca772178af96b3327d173a5349b15e305285",
+          "stoix/envs/number_grid_capital.py": "4a668a2720ab869407c2f4894c419247c83573da7c16148c8ae8580cbd07e288",
+          "stoix/envs/number_grid_potions.py": "deb6ae6732876de0168697738570f96b9d16f0c61724f166d5501611e0172ad4",
+          "stoix/envs/number_grid_chests.py": "c788ceb704a49617def9b7aef61ba2fb9a2bc4e756b76a2feeafe05f50e99c60",
+          "stoix/envs/number_grid_legacy.py": "975105ab1647a8a5ca2ed71ca6c5163239ddb23748a0dbd7ef59e0d1bf8f9412",
+          "stoix/utils/make_env.py": "37840f25554349de585ab5f605a5662fecf95aa4b653eaab37582b83cead764b",
+          "stoix/wrappers/number_grid_metrics.py": "35e93e45b581af4845f6da116964b20356b9f6c9c8b7b6504d5624caf66257d2",
+          "stoix/wrappers/number_grid_reset.py": "0832394ca8f244a6177e9ff0f7adc8977722a8bdf8ae6baaf51872fdb90f0f06",
+          "stoix/systems/ppo/anakin/ff_ppo.py": "6f147922521be6bfc2c78bfd4f12b30d881db4c85e2fc515e9f6ff22b29482a1"
+        }
+      },
+      "config": {
+        "arch": {
+          "seed": 42,
+          "num_envs": 250,
+          "update_batch_size": 1,
+          "num_updates_per_eval": 10,
+          "num_updates": 400,
+          "total_timesteps": 10000000,
+          "total_num_envs": 250
+        },
+        "env": {
+          "env_name": "number_grid",
+          "scenario": {
+            "name": "NumberGrid-48x48"
+          },
+          "kwargs": {
+            "map_config": {
+              "name": "NumberGrid-48x48-v72-complete-unit-catalog",
+              "size": 48,
+              "agent_position": [
+                2,
+                2
+              ],
+              "agent_number": 2,
+              "opponent_positions": [
+                [
+                  3,
+                  8
+                ],
+                [
+                  20,
+                  8
+                ],
+                [
+                  26,
+                  26
+                ],
+                [
+                  6,
+                  28
+                ],
+                [
+                  6,
+                  40
+                ],
+                [
+                  16,
+                  20
+                ],
+                [
+                  16,
+                  36
+                ],
+                [
+                  28,
+                  8
+                ],
+                [
+                  30,
+                  40
+                ],
+                [
+                  40,
+                  10
+                ],
+                [
+                  40,
+                  24
+                ],
+                [
+                  40,
+                  40
+                ],
+                [
+                  12,
+                  8
+                ],
+                [
+                  12,
+                  28
+                ],
+                [
+                  12,
+                  42
+                ],
+                [
+                  22,
+                  16
+                ],
+                [
+                  22,
+                  34
+                ],
+                [
+                  22,
+                  42
+                ],
+                [
+                  32,
+                  16
+                ],
+                [
+                  32,
+                  28
+                ],
+                [
+                  36,
+                  4
+                ],
+                [
+                  38,
+                  32
+                ],
+                [
+                  44,
+                  16
+                ],
+                [
+                  44,
+                  34
+                ],
+                [
+                  10,
+                  20
+                ],
+                [
+                  24,
+                  12
+                ],
+                [
+                  36,
+                  36
+                ],
+                [
+                  19,
+                  27
+                ],
+                [
+                  3,
+                  21
+                ],
+                [
+                  43,
+                  3
+                ],
+                [
+                  32,
+                  22
+                ],
+                [
+                  28,
+                  34
+                ],
+                [
+                  16,
+                  14
+                ],
+                [
+                  38,
+                  18
+                ],
+                [
+                  10,
+                  14
+                ],
+                [
+                  10,
+                  34
+                ],
+                [
+                  34,
+                  10
+                ],
+                [
+                  4,
+                  15
+                ],
+                [
+                  4,
+                  34
+                ],
+                [
+                  24,
+                  21
+                ],
+                [
+                  24,
+                  3
+                ]
+              ],
+              "opponent_numbers": [
+                1,
+                1,
+                4,
+                3,
+                9,
+                9,
+                11,
+                2,
+                6,
+                1,
+                3,
+                12,
+                1,
+                1,
+                4,
+                3,
+                9,
+                9,
+                11,
+                2,
+                6,
+                1,
+                3,
+                12,
+                2,
+                3,
+                4,
+                1,
+                1,
+                4,
+                3,
+                9,
+                9,
+                11,
+                2,
+                6,
+                3,
+                12,
+                3,
+                11,
+                12
+              ],
+              "max_steps": 5000,
+              "step_cost": 0.001,
+              "exploration_bonus": 0.01,
+              "mask_walls": true,
+              "map_seed": 42,
+              "number_generation": "Historical labels retained and copied with added squads. Numbers do not affect battles.",
+              "reconstruction_note": "48x48 map with 41 squads (27 × 1.5 rounded up). Starting capital and first nearby Squire retained; other original positions scaled by two. Fourteen additional human squads spread into the largest gaps, reusing existing compositions. The original three Orc/Goblin groups are unchanged. Titans occupy both slots of their formation line.",
+              "battle_mode": true,
+              "hero_units": 5,
+              "hero_hp": 120,
+              "battle_max_rounds": 75,
+              "enemy_units": [
+                1,
+                1,
+                2,
+                3,
+                3,
+                3,
+                4,
+                5,
+                5,
+                5,
+                6,
+                6,
+                1,
+                2,
+                1,
+                3,
+                3,
+                3,
+                4,
+                5,
+                5,
+                4,
+                6,
+                6,
+                2,
+                3,
+                4,
+                1,
+                1,
+                2,
+                3,
+                3,
+                3,
+                4,
+                5,
+                5,
+                6,
+                6,
+                3,
+                4,
+                6
+              ],
+              "enemy_hp": [
+                100,
+                250,
+                100,
+                100,
+                100,
+                250,
+                100,
+                100,
+                100,
+                250,
+                100,
+                100,
+                100,
+                100,
+                250,
+                100,
+                100,
+                250,
+                100,
+                100,
+                100,
+                250,
+                100,
+                100,
+                200,
+                200,
+                50,
+                100,
+                250,
+                100,
+                100,
+                100,
+                250,
+                100,
+                100,
+                100,
+                100,
+                100,
+                100,
+                100,
+                100
+              ],
+              "battle_recovery": "Victory or retreat preserves all hero HP, including dead units at 0 HP. Full defeat ends the episode. Enemies reset after retreat. Rest heals living heroes by ceil(10% max HP). Paid healing and revival to 1 HP require the temple and exact starting cell (capital).",
+              "battle_observation_version": 28,
+              "combat_rules_version": 2,
+              "faction": "legions",
+              "building_reward": 0.05,
+              "blocked_buildings": [],
+              "max_building_level": 5,
+              "rest_penalty_per_point": 0.001,
+              "hero_roster": [
+                "possessed",
+                "duke",
+                "possessed",
+                "cultist",
+                "cultist",
+                null
+              ],
+              "enemy_rosters": [
+                [
+                  "squire",
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  null,
+                  "titan",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "goblin_archer",
+                  "squire",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  null,
+                  "squire",
+                  null,
+                  "apprentice",
+                  "acolyte",
+                  null
+                ],
+                [
+                  "squire",
+                  "squire",
+                  null,
+                  null,
+                  "wolf_lord",
+                  null
+                ],
+                [
+                  null,
+                  "abyss_devil",
+                  null,
+                  "archer",
+                  null,
+                  "acolyte"
+                ],
+                [
+                  "teurg",
+                  "squire",
+                  "archer",
+                  "archer",
+                  null,
+                  null
+                ],
+                [
+                  "squire",
+                  "squire",
+                  "archer",
+                  "acolyte",
+                  "witch",
+                  null
+                ],
+                [
+                  "peasant",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archer",
+                  null
+                ],
+                [
+                  "squire",
+                  "titan",
+                  "centaur_savage",
+                  "acolyte",
+                  null,
+                  "archer"
+                ],
+                [
+                  "blade_master",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archer",
+                  "archer"
+                ],
+                [
+                  "archer",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archer",
+                  "archer"
+                ],
+                [
+                  "death",
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "wight",
+                  "squire",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "lord",
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "squire",
+                  "squire",
+                  null,
+                  null,
+                  "acolyte",
+                  null
+                ],
+                [
+                  "sentry",
+                  "squire",
+                  "archer",
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  null,
+                  "titan",
+                  null,
+                  "watcher",
+                  null,
+                  "archer"
+                ],
+                [
+                  "bone_lord",
+                  "archer",
+                  null,
+                  "archer",
+                  "acolyte",
+                  null
+                ],
+                [
+                  "dregazul",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archer",
+                  null
+                ],
+                [
+                  "ghost",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "alchemist",
+                  null
+                ],
+                [
+                  "dead_dragon",
+                  "squire",
+                  "gumtic",
+                  null,
+                  "acolyte",
+                  null
+                ],
+                [
+                  "archer",
+                  "squire",
+                  "archer",
+                  "shadow",
+                  "dwarfdruid",
+                  "archer"
+                ],
+                [
+                  "squire",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archdruid",
+                  "succubus"
+                ],
+                [
+                  "orc",
+                  "orc",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "goblin",
+                  "orc",
+                  "goblin",
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "goblin",
+                  "goblin",
+                  "goblin",
+                  null,
+                  "goblin_archer",
+                  null
+                ],
+                [
+                  "uter_betrezen",
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  null,
+                  "ismir_son",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "ghoul",
+                  "mermaid",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  null,
+                  "squire",
+                  null,
+                  "baroness",
+                  "acolyte",
+                  null
+                ],
+                [
+                  "hermit",
+                  "squire",
+                  null,
+                  null,
+                  "medusa",
+                  null
+                ],
+                [
+                  null,
+                  "tiamat",
+                  null,
+                  "archer",
+                  null,
+                  "acolyte"
+                ],
+                [
+                  "nosferatu",
+                  "squire",
+                  "archer",
+                  "medium",
+                  null,
+                  null
+                ],
+                [
+                  "squire",
+                  "squire",
+                  "archer",
+                  "cleric",
+                  "highvampire",
+                  null
+                ],
+                [
+                  "thug",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "sundancer",
+                  null
+                ],
+                [
+                  "drulliaan",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archer",
+                  "sylfid"
+                ],
+                [
+                  "elf_bandit",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "travnitsa",
+                  "archer"
+                ],
+                [
+                  "shamanka",
+                  "squire",
+                  null,
+                  null,
+                  "deva_roshi",
+                  null
+                ],
+                [
+                  "aleman",
+                  "archer",
+                  null,
+                  "archer",
+                  "patriarch",
+                  null
+                ],
+                [
+                  "squire",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "novice",
+                  "archer"
+                ]
+              ],
+              "unit_progression": true,
+              "capital_services": true,
+              "initial_potions": [
+                5,
+                5,
+                5,
+                10
+              ],
+              "battle_engagement": "A directional command targeting a living enemy stack starts combat from the current tile. Passing beside a stack is safe. Entry costs ceil(half the full movement allowance), capped at remaining points; zero points forbids attack. Victory and retreat keep the attacker on its original tile.",
+              "chests": [
+                {
+                  "position": [
+                    5,
+                    4
+                  ],
+                  "potions": [
+                    1,
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                {
+                  "position": [
+                    10,
+                    26
+                  ],
+                  "potions": [
+                    0,
+                    1,
+                    0,
+                    0
+                  ]
+                },
+                {
+                  "position": [
+                    25,
+                    12
+                  ],
+                  "potions": [
+                    0,
+                    0,
+                    1,
+                    0
+                  ]
+                },
+                {
+                  "position": [
+                    31,
+                    43
+                  ],
+                  "potions": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                },
+                {
+                  "position": [
+                    43,
+                    27
+                  ],
+                  "potions": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                }
+              ]
+            }
+          },
+          "use_cached_auto_reset": true
+        },
+        "logger": {
+          "checkpointing": {
+            "load_model": false
+          }
+        },
+        "system": {
+          "system_name": "ff_ppo",
+          "actor_lr": 0.0003,
+          "critic_lr": 0.0003,
+          "rollout_length": 100,
+          "epochs": 4,
+          "num_minibatches": 10,
+          "gamma": 0.99,
+          "gae_lambda": 0.95,
+          "clip_eps": 0.2,
+          "ent_coef": 0.01,
+          "vf_coef": 0.5,
+          "max_grad_norm": 0.5,
+          "decay_learning_rates": true,
+          "reward_scale": 1.0,
+          "standardize_advantages": true,
+          "kl_penalty_coef": 3.0,
+          "normalize_observations": false,
+          "obs_norm_warmup_steps": 128
+        },
+        "network": {
+          "actor_network": {
+            "pre_torso": {
+              "_target_": "stoix.networks.torso.MLPTorso",
+              "layer_sizes": [
+                128,
+                128
+              ],
+              "use_layer_norm": false,
+              "activation": "tanh"
+            },
+            "action_head": {
+              "_target_": "stoix.networks.heads.CategoricalHead"
+            }
+          },
+          "critic_network": {
+            "pre_torso": {
+              "_target_": "stoix.networks.torso.MLPTorso",
+              "layer_sizes": [
+                128,
+                128
+              ],
+              "use_layer_norm": false,
+              "activation": "tanh"
+            },
+            "critic_head": {
+              "_target_": "stoix.networks.heads.ScalarCriticHead"
+            }
+          }
+        }
+      }
+    },
+    "after-opt-10m": {
+      "results": {
+        "environment": "NumberGrid-48x48-v72-complete-unit-catalog",
+        "algorithm": "Stoix Anakin feedforward PPO",
+        "recurrent": false,
+        "device": "NVIDIA GeForce GTX 1660 Ti",
+        "backend": "gpu",
+        "jax": "0.11.2",
+        "cuda_runtime": "13.4.92",
+        "python": "3.12.3",
+        "training_steps": 10000000,
+        "ppo_updates": 400,
+        "actor_optimizer_updates": 16000,
+        "critic_optimizer_updates": 16000,
+        "seed": 42,
+        "training_seconds": 64.2138362009996,
+        "mean_steps_per_second": 155729.67745920672,
+        "ppo_compile_seconds": 41.35138392099998,
+        "training_loop_seconds": 64.39603362099979,
+        "training_loop_steps_per_second": 155289.06731825424,
+        "wandb_logging_seconds": 0.01411763800024346,
+        "wandb_init_seconds": 2.306609578000007,
+        "completed_training_episodes": 7042,
+        "won_training_episodes": 0,
+        "wandb": {
+          "requested_mode": "offline",
+          "mode": "offline",
+          "status": "finished",
+          "summary_interval": 1000000,
+          "id": "84oky51s",
+          "project": "numbergrid",
+          "directory": "/mnt/c/jaxjax/results/unit-catalog/after-opt-10m/wandb/offline-run-20261009_172233-84oky51s",
+          "url": null,
+          "wandb_version": "0.30.0",
+          "init_seconds": 2.306609578000007,
+          "finish_seconds": 0.03675595100003193,
+          "logging_seconds": 0.01411763800024346
+        },
+        "initial_evaluation": {
+          "episodes": 64,
+          "successes": 0,
+          "success_rate": 0.0,
+          "mean_return": -12.105623245239258,
+          "mean_length": 5000.0,
+          "min_length": 5000,
+          "max_length": 5000,
+          "action_selection": "argmax",
+          "seed": 1042
+        },
+        "final_evaluation": {
+          "episodes": 1024,
+          "successes": 0,
+          "success_rate": 0.0,
+          "mean_return": 20.329734802246094,
+          "mean_length": 1489.1953125,
+          "min_length": 210,
+          "max_length": 5000,
+          "action_selection": "argmax",
+          "seed": 1042
+        },
+        "sampled_evaluation": {
+          "episodes": 1024,
+          "successes": 0,
+          "success_rate": 0.0,
+          "mean_return": 20.36115264892578,
+          "mean_length": 1520.3671875,
+          "min_length": 53,
+          "max_length": 5000,
+          "action_selection": "sample",
+          "seed": 1042
+        },
+        "parameter_count": 308568,
+        "num_envs": 250,
+        "rollout_length": 100,
+        "observation_size": 1031,
+        "weights_changed": true,
+        "checkpoint_roundtrip_verified": true,
+        "checkpoint_sha256": "997c8cb0b6c8218dcda9f67d671175f59945f7c6f07c02f8e34c85c6766e9713",
+        "learner_source_sha256": "6f147922521be6bfc2c78bfd4f12b30d881db4c85e2fc515e9f6ff22b29482a1",
+        "total_runner_seconds": 235.97373600499986,
+        "timing": "Sum of synchronized learner calls, including rollout and PPO updates; excludes compilation, evaluation, host logging and saving.",
+        "reconstruction": "Fixed map and observation encoding recreated from README; remote weights and results were not recovered.",
+        "combat_counts": {
+          "battle_transition": 1215029,
+          "player_battle_transition": 576034,
+          "enemy_battle_transition": 540625,
+          "battle_victory": 26077
+        },
+        "construction_count": 85258,
+        "rest_count": 791547,
+        "rest_penalty_total": 351.4740155339241,
+        "transition_definition": "One map move, rest, construction, paid capital service, potion use or unit turn; includes scripted enemy turns and completed retreats.",
+        "source_hashes": {
+          "benchmark_number_grid.py": "d6cfaf27a5f37d3626c44947a4558ef44db8e473caf21a1eaf49af3f3f7c4a20",
+          "numbergrid_config.py": "ea1b00f763e1eb8cc81ce0801156220f016751929f5cc20f4ba72c83cd86ec2b",
+          "numbergrid_tracking.py": "5d276c58507c182d350828dd41593fd22c03e29c74d8a7b2276ccafbb2b1a573",
+          "stoix/envs/number_grid_buildings.py": "46420077250790475aab68abe5611665b2410f618993e98b55a0646c967cf429",
+          "stoix/envs/data/buildings.json": "cc7ed172e0370b7811a340d9774db2d79996a49ebfee0b4260e0065fa02d78e3",
+          "stoix/envs/data/units.json": "021bcddaab9bb590f72a49cc956a4456c2fc82ee572146a901fff0a8bec4b19c",
+          "stoix/envs/number_grid_effects.py": "910a1fbc69fb7255769d8a3e9d68666a97fd4b7ddd3f3c1816e131a7035d1928",
+          "stoix/envs/number_grid_wards.py": "7e1de4536ececd72d22f15df45026cb5ede44224f4ffda8abfdbd7be563b99db",
+          "stoix/envs/number_grid_summoning.py": "ec8be92e58574eb5d93226d1c310c0fe7ad6b8e0e7b080a41b55731b4c299732",
+          "stoix/envs/number_grid.py": "9d0315eee955d18fddf48507ac362b97f939045b3ebb123f529b4061c89c5531",
+          "stoix/envs/number_grid_combat.py": "7589b6640225dbf0ca4cd049f7dd45c9c648d26ce005cfab448cf86ccecaecd5",
+          "stoix/envs/number_grid_progression.py": "3e82f7574a8cbe8d5299ae55fe88ca772178af96b3327d173a5349b15e305285",
+          "stoix/envs/number_grid_capital.py": "4a668a2720ab869407c2f4894c419247c83573da7c16148c8ae8580cbd07e288",
+          "stoix/envs/number_grid_potions.py": "deb6ae6732876de0168697738570f96b9d16f0c61724f166d5501611e0172ad4",
+          "stoix/envs/number_grid_chests.py": "c788ceb704a49617def9b7aef61ba2fb9a2bc4e756b76a2feeafe05f50e99c60",
+          "stoix/envs/number_grid_legacy.py": "975105ab1647a8a5ca2ed71ca6c5163239ddb23748a0dbd7ef59e0d1bf8f9412",
+          "stoix/utils/make_env.py": "37840f25554349de585ab5f605a5662fecf95aa4b653eaab37582b83cead764b",
+          "stoix/wrappers/number_grid_metrics.py": "35e93e45b581af4845f6da116964b20356b9f6c9c8b7b6504d5624caf66257d2",
+          "stoix/wrappers/number_grid_reset.py": "0832394ca8f244a6177e9ff0f7adc8977722a8bdf8ae6baaf51872fdb90f0f06",
+          "stoix/systems/ppo/anakin/ff_ppo.py": "6f147922521be6bfc2c78bfd4f12b30d881db4c85e2fc515e9f6ff22b29482a1"
+        }
+      },
+      "config": {
+        "arch": {
+          "seed": 42,
+          "num_envs": 250,
+          "update_batch_size": 1,
+          "num_updates_per_eval": 10,
+          "num_updates": 400,
+          "total_timesteps": 10000000,
+          "total_num_envs": 250
+        },
+        "env": {
+          "env_name": "number_grid",
+          "scenario": {
+            "name": "NumberGrid-48x48"
+          },
+          "kwargs": {
+            "map_config": {
+              "name": "NumberGrid-48x48-v72-complete-unit-catalog",
+              "size": 48,
+              "agent_position": [
+                2,
+                2
+              ],
+              "agent_number": 2,
+              "opponent_positions": [
+                [
+                  3,
+                  8
+                ],
+                [
+                  20,
+                  8
+                ],
+                [
+                  26,
+                  26
+                ],
+                [
+                  6,
+                  28
+                ],
+                [
+                  6,
+                  40
+                ],
+                [
+                  16,
+                  20
+                ],
+                [
+                  16,
+                  36
+                ],
+                [
+                  28,
+                  8
+                ],
+                [
+                  30,
+                  40
+                ],
+                [
+                  40,
+                  10
+                ],
+                [
+                  40,
+                  24
+                ],
+                [
+                  40,
+                  40
+                ],
+                [
+                  12,
+                  8
+                ],
+                [
+                  12,
+                  28
+                ],
+                [
+                  12,
+                  42
+                ],
+                [
+                  22,
+                  16
+                ],
+                [
+                  22,
+                  34
+                ],
+                [
+                  22,
+                  42
+                ],
+                [
+                  32,
+                  16
+                ],
+                [
+                  32,
+                  28
+                ],
+                [
+                  36,
+                  4
+                ],
+                [
+                  38,
+                  32
+                ],
+                [
+                  44,
+                  16
+                ],
+                [
+                  44,
+                  34
+                ],
+                [
+                  10,
+                  20
+                ],
+                [
+                  24,
+                  12
+                ],
+                [
+                  36,
+                  36
+                ],
+                [
+                  19,
+                  27
+                ],
+                [
+                  3,
+                  21
+                ],
+                [
+                  43,
+                  3
+                ],
+                [
+                  32,
+                  22
+                ],
+                [
+                  28,
+                  34
+                ],
+                [
+                  16,
+                  14
+                ],
+                [
+                  38,
+                  18
+                ],
+                [
+                  10,
+                  14
+                ],
+                [
+                  10,
+                  34
+                ],
+                [
+                  34,
+                  10
+                ],
+                [
+                  4,
+                  15
+                ],
+                [
+                  4,
+                  34
+                ],
+                [
+                  24,
+                  21
+                ],
+                [
+                  24,
+                  3
+                ]
+              ],
+              "opponent_numbers": [
+                1,
+                1,
+                4,
+                3,
+                9,
+                9,
+                11,
+                2,
+                6,
+                1,
+                3,
+                12,
+                1,
+                1,
+                4,
+                3,
+                9,
+                9,
+                11,
+                2,
+                6,
+                1,
+                3,
+                12,
+                2,
+                3,
+                4,
+                1,
+                1,
+                4,
+                3,
+                9,
+                9,
+                11,
+                2,
+                6,
+                3,
+                12,
+                3,
+                11,
+                12
+              ],
+              "max_steps": 5000,
+              "step_cost": 0.001,
+              "exploration_bonus": 0.01,
+              "mask_walls": true,
+              "map_seed": 42,
+              "number_generation": "Historical labels retained and copied with added squads. Numbers do not affect battles.",
+              "reconstruction_note": "48x48 map with 41 squads (27 × 1.5 rounded up). Starting capital and first nearby Squire retained; other original positions scaled by two. Fourteen additional human squads spread into the largest gaps, reusing existing compositions. The original three Orc/Goblin groups are unchanged. Titans occupy both slots of their formation line.",
+              "battle_mode": true,
+              "hero_units": 5,
+              "hero_hp": 120,
+              "battle_max_rounds": 75,
+              "enemy_units": [
+                1,
+                1,
+                2,
+                3,
+                3,
+                3,
+                4,
+                5,
+                5,
+                5,
+                6,
+                6,
+                1,
+                2,
+                1,
+                3,
+                3,
+                3,
+                4,
+                5,
+                5,
+                4,
+                6,
+                6,
+                2,
+                3,
+                4,
+                1,
+                1,
+                2,
+                3,
+                3,
+                3,
+                4,
+                5,
+                5,
+                6,
+                6,
+                3,
+                4,
+                6
+              ],
+              "enemy_hp": [
+                100,
+                250,
+                100,
+                100,
+                100,
+                250,
+                100,
+                100,
+                100,
+                250,
+                100,
+                100,
+                100,
+                100,
+                250,
+                100,
+                100,
+                250,
+                100,
+                100,
+                100,
+                250,
+                100,
+                100,
+                200,
+                200,
+                50,
+                100,
+                250,
+                100,
+                100,
+                100,
+                250,
+                100,
+                100,
+                100,
+                100,
+                100,
+                100,
+                100,
+                100
+              ],
+              "battle_recovery": "Victory or retreat preserves all hero HP, including dead units at 0 HP. Full defeat ends the episode. Enemies reset after retreat. Rest heals living heroes by ceil(10% max HP). Paid healing and revival to 1 HP require the temple and exact starting cell (capital).",
+              "battle_observation_version": 28,
+              "combat_rules_version": 2,
+              "faction": "legions",
+              "building_reward": 0.05,
+              "blocked_buildings": [],
+              "max_building_level": 5,
+              "rest_penalty_per_point": 0.001,
+              "hero_roster": [
+                "possessed",
+                "duke",
+                "possessed",
+                "cultist",
+                "cultist",
+                null
+              ],
+              "enemy_rosters": [
+                [
+                  "squire",
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  null,
+                  "titan",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "goblin_archer",
+                  "squire",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  null,
+                  "squire",
+                  null,
+                  "apprentice",
+                  "acolyte",
+                  null
+                ],
+                [
+                  "squire",
+                  "squire",
+                  null,
+                  null,
+                  "wolf_lord",
+                  null
+                ],
+                [
+                  null,
+                  "abyss_devil",
+                  null,
+                  "archer",
+                  null,
+                  "acolyte"
+                ],
+                [
+                  "teurg",
+                  "squire",
+                  "archer",
+                  "archer",
+                  null,
+                  null
+                ],
+                [
+                  "squire",
+                  "squire",
+                  "archer",
+                  "acolyte",
+                  "witch",
+                  null
+                ],
+                [
+                  "peasant",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archer",
+                  null
+                ],
+                [
+                  "squire",
+                  "titan",
+                  "centaur_savage",
+                  "acolyte",
+                  null,
+                  "archer"
+                ],
+                [
+                  "blade_master",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archer",
+                  "archer"
+                ],
+                [
+                  "archer",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archer",
+                  "archer"
+                ],
+                [
+                  "death",
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "wight",
+                  "squire",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "lord",
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "squire",
+                  "squire",
+                  null,
+                  null,
+                  "acolyte",
+                  null
+                ],
+                [
+                  "sentry",
+                  "squire",
+                  "archer",
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  null,
+                  "titan",
+                  null,
+                  "watcher",
+                  null,
+                  "archer"
+                ],
+                [
+                  "bone_lord",
+                  "archer",
+                  null,
+                  "archer",
+                  "acolyte",
+                  null
+                ],
+                [
+                  "dregazul",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archer",
+                  null
+                ],
+                [
+                  "ghost",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "alchemist",
+                  null
+                ],
+                [
+                  "dead_dragon",
+                  "squire",
+                  "gumtic",
+                  null,
+                  "acolyte",
+                  null
+                ],
+                [
+                  "archer",
+                  "squire",
+                  "archer",
+                  "shadow",
+                  "dwarfdruid",
+                  "archer"
+                ],
+                [
+                  "squire",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archdruid",
+                  "succubus"
+                ],
+                [
+                  "orc",
+                  "orc",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "goblin",
+                  "orc",
+                  "goblin",
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "goblin",
+                  "goblin",
+                  "goblin",
+                  null,
+                  "goblin_archer",
+                  null
+                ],
+                [
+                  "uter_betrezen",
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  null,
+                  "ismir_son",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "ghoul",
+                  "mermaid",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  null,
+                  "squire",
+                  null,
+                  "baroness",
+                  "acolyte",
+                  null
+                ],
+                [
+                  "hermit",
+                  "squire",
+                  null,
+                  null,
+                  "medusa",
+                  null
+                ],
+                [
+                  null,
+                  "tiamat",
+                  null,
+                  "archer",
+                  null,
+                  "acolyte"
+                ],
+                [
+                  "nosferatu",
+                  "squire",
+                  "archer",
+                  "medium",
+                  null,
+                  null
+                ],
+                [
+                  "squire",
+                  "squire",
+                  "archer",
+                  "cleric",
+                  "highvampire",
+                  null
+                ],
+                [
+                  "thug",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "sundancer",
+                  null
+                ],
+                [
+                  "drulliaan",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archer",
+                  "sylfid"
+                ],
+                [
+                  "elf_bandit",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "travnitsa",
+                  "archer"
+                ],
+                [
+                  "shamanka",
+                  "squire",
+                  null,
+                  null,
+                  "deva_roshi",
+                  null
+                ],
+                [
+                  "aleman",
+                  "archer",
+                  null,
+                  "archer",
+                  "patriarch",
+                  null
+                ],
+                [
+                  "squire",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "novice",
+                  "archer"
+                ]
+              ],
+              "unit_progression": true,
+              "capital_services": true,
+              "initial_potions": [
+                5,
+                5,
+                5,
+                10
+              ],
+              "battle_engagement": "A directional command targeting a living enemy stack starts combat from the current tile. Passing beside a stack is safe. Entry costs ceil(half the full movement allowance), capped at remaining points; zero points forbids attack. Victory and retreat keep the attacker on its original tile.",
+              "chests": [
+                {
+                  "position": [
+                    5,
+                    4
+                  ],
+                  "potions": [
+                    1,
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                {
+                  "position": [
+                    10,
+                    26
+                  ],
+                  "potions": [
+                    0,
+                    1,
+                    0,
+                    0
+                  ]
+                },
+                {
+                  "position": [
+                    25,
+                    12
+                  ],
+                  "potions": [
+                    0,
+                    0,
+                    1,
+                    0
+                  ]
+                },
+                {
+                  "position": [
+                    31,
+                    43
+                  ],
+                  "potions": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                },
+                {
+                  "position": [
+                    43,
+                    27
+                  ],
+                  "potions": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                }
+              ]
+            }
+          },
+          "use_cached_auto_reset": true
+        },
+        "logger": {
+          "checkpointing": {
+            "load_model": false
+          }
+        },
+        "system": {
+          "system_name": "ff_ppo",
+          "actor_lr": 0.0003,
+          "critic_lr": 0.0003,
+          "rollout_length": 100,
+          "epochs": 4,
+          "num_minibatches": 10,
+          "gamma": 0.99,
+          "gae_lambda": 0.95,
+          "clip_eps": 0.2,
+          "ent_coef": 0.01,
+          "vf_coef": 0.5,
+          "max_grad_norm": 0.5,
+          "decay_learning_rates": true,
+          "reward_scale": 1.0,
+          "standardize_advantages": true,
+          "kl_penalty_coef": 3.0,
+          "normalize_observations": false,
+          "obs_norm_warmup_steps": 128
+        },
+        "network": {
+          "actor_network": {
+            "pre_torso": {
+              "_target_": "stoix.networks.torso.MLPTorso",
+              "layer_sizes": [
+                128,
+                128
+              ],
+              "use_layer_norm": false,
+              "activation": "tanh"
+            },
+            "action_head": {
+              "_target_": "stoix.networks.heads.CategoricalHead"
+            }
+          },
+          "critic_network": {
+            "pre_torso": {
+              "_target_": "stoix.networks.torso.MLPTorso",
+              "layer_sizes": [
+                128,
+                128
+              ],
+              "use_layer_norm": false,
+              "activation": "tanh"
+            },
+            "critic_head": {
+              "_target_": "stoix.networks.heads.ScalarCriticHead"
+            }
+          }
+        }
+      }
+    },
+    "before-10m": {
+      "results": {
+        "environment": "NumberGrid-48x48-v71-reference-aleman",
+        "algorithm": "Stoix Anakin feedforward PPO",
+        "recurrent": false,
+        "device": "NVIDIA GeForce GTX 1660 Ti",
+        "backend": "gpu",
+        "jax": "0.11.2",
+        "cuda_runtime": "13.4.92",
+        "python": "3.12.3",
+        "training_steps": 10000000,
+        "ppo_updates": 400,
+        "actor_optimizer_updates": 16000,
+        "critic_optimizer_updates": 16000,
+        "seed": 42,
+        "training_seconds": 55.46849981399987,
+        "mean_steps_per_second": 180282.50328623576,
+        "ppo_compile_seconds": 30.441200509000055,
+        "training_loop_seconds": 55.65110417599999,
+        "training_loop_steps_per_second": 179690.95399031785,
+        "wandb_logging_seconds": 0.011190061999741374,
+        "wandb_init_seconds": 2.5430042230000254,
+        "completed_training_episodes": 6997,
+        "won_training_episodes": 0,
+        "wandb": {
+          "requested_mode": "offline",
+          "mode": "offline",
+          "status": "finished",
+          "summary_interval": 1000000,
+          "id": "n2v0bidb",
+          "project": "numbergrid",
+          "directory": "/mnt/c/jaxjax/results/unit-catalog/before-10m/wandb/offline-run-20261009_165730-n2v0bidb",
+          "url": null,
+          "wandb_version": "0.30.0",
+          "init_seconds": 2.5430042230000254,
+          "finish_seconds": 0.04397479099998236,
+          "logging_seconds": 0.011190061999741374
+        },
+        "initial_evaluation": {
+          "episodes": 64,
+          "successes": 0,
+          "success_rate": 0.0,
+          "mean_return": -9.512495994567871,
+          "mean_length": 5000.0,
+          "min_length": 5000,
+          "max_length": 5000,
+          "action_selection": "argmax",
+          "seed": 1042
+        },
+        "final_evaluation": {
+          "episodes": 1024,
+          "successes": 0,
+          "success_rate": 0.0,
+          "mean_return": 15.46395492553711,
+          "mean_length": 2379.900390625,
+          "min_length": 137,
+          "max_length": 5000,
+          "action_selection": "argmax",
+          "seed": 1042
+        },
+        "sampled_evaluation": {
+          "episodes": 1024,
+          "successes": 0,
+          "success_rate": 0.0,
+          "mean_return": 18.118995666503906,
+          "mean_length": 1434.0673828125,
+          "min_length": 51,
+          "max_length": 5000,
+          "action_selection": "sample",
+          "seed": 1042
+        },
+        "parameter_count": 295506,
+        "num_envs": 250,
+        "rollout_length": 100,
+        "observation_size": 983,
+        "weights_changed": true,
+        "checkpoint_roundtrip_verified": true,
+        "checkpoint_sha256": "532f0db17db7f0bf9e0329154f60bb447709d1d1dd0a6f6f817e879cea462486",
+        "learner_source_sha256": "6f147922521be6bfc2c78bfd4f12b30d881db4c85e2fc515e9f6ff22b29482a1",
+        "total_runner_seconds": 183.9535598110001,
+        "timing": "Sum of synchronized learner calls, including rollout and PPO updates; excludes compilation, evaluation, host logging and saving.",
+        "reconstruction": "Fixed map and observation encoding recreated from README; remote weights and results were not recovered.",
+        "combat_counts": {
+          "battle_transition": 1157118,
+          "player_battle_transition": 513786,
+          "enemy_battle_transition": 536635,
+          "battle_victory": 21116
+        },
+        "construction_count": 84491,
+        "rest_count": 791145,
+        "rest_penalty_total": 225.45402306877077,
+        "transition_definition": "One map move, rest, construction, paid capital service, potion use or unit turn; includes scripted enemy turns and completed retreats.",
+        "source_hashes": {
+          "benchmark_number_grid.py": "a758bc58fce494d631c45b6f4c40bd36a32933c29788a37276639c7cec78e5a4",
+          "numbergrid_config.py": "ea1b00f763e1eb8cc81ce0801156220f016751929f5cc20f4ba72c83cd86ec2b",
+          "numbergrid_tracking.py": "a0d9520ca00cf0ee0776b5ae51d1654c5928774c90c78aac522d4dbde9fdc4fc",
+          "stoix/envs/number_grid_buildings.py": "9c6c645a0d16f911011d43aa61d671453df9c36768ae7891f67502df35c1aa76",
+          "stoix/envs/data/buildings.json": "cc68ef8177d8d1403b05e0201cdff04c5ea0e48d3a42388ceb869b38c71011fa",
+          "stoix/envs/data/units.json": "67185526f78e6f98ee30e628bb5989a961fa1a3c4dc15d5a28c971575c56fec8",
+          "stoix/envs/number_grid_effects.py": "6c7f7eb66ffc795cf30f97327449a92322105b41e6f0926fff32d4809f46c7d1",
+          "stoix/envs/number_grid_wards.py": "bcbd1dd0a2261815da5dd33c869e64f59e1553e4c317292e1b84cb736ec67981",
+          "stoix/envs/number_grid.py": "168bd933df382d857cf31fa1e1fb79647aebe6b64ebb178d5d6f7f4c39034a3b",
+          "stoix/envs/number_grid_combat.py": "c448e4ebefdcab173c66713e16ae9d8e57301a788de59dad59419a29d6e9b248",
+          "stoix/envs/number_grid_progression.py": "1010e7866bc37110aff0f720b8da419d041b27d797abcbfd4d8c61b9a73482b4",
+          "stoix/envs/number_grid_capital.py": "5cfb6500108274d2f99b7665acd3b768b55413e42f31491538737180fe59b317",
+          "stoix/envs/number_grid_potions.py": "0d0c16f259f98b4df74bf1fdf9e54782ffc3cec1a840f56371ef479d8303f450",
+          "stoix/envs/number_grid_chests.py": "2c161f5b47c49f7810cd8eebde0c7a73145bf92a71ecac4e83fa43c2205141a8",
+          "stoix/envs/number_grid_legacy.py": "975105ab1647a8a5ca2ed71ca6c5163239ddb23748a0dbd7ef59e0d1bf8f9412",
+          "stoix/utils/make_env.py": "37840f25554349de585ab5f605a5662fecf95aa4b653eaab37582b83cead764b",
+          "stoix/wrappers/number_grid_metrics.py": "35e93e45b581af4845f6da116964b20356b9f6c9c8b7b6504d5624caf66257d2",
+          "stoix/wrappers/number_grid_reset.py": "0832394ca8f244a6177e9ff0f7adc8977722a8bdf8ae6baaf51872fdb90f0f06",
+          "stoix/systems/ppo/anakin/ff_ppo.py": "6f147922521be6bfc2c78bfd4f12b30d881db4c85e2fc515e9f6ff22b29482a1"
+        }
+      },
+      "config": {
+        "arch": {
+          "seed": 42,
+          "num_envs": 250,
+          "update_batch_size": 1,
+          "num_updates_per_eval": 10,
+          "num_updates": 400,
+          "total_timesteps": 10000000,
+          "total_num_envs": 250
+        },
+        "env": {
+          "env_name": "number_grid",
+          "scenario": {
+            "name": "NumberGrid-48x48"
+          },
+          "kwargs": {
+            "map_config": {
+              "name": "NumberGrid-48x48-v71-reference-aleman",
+              "size": 48,
+              "agent_position": [
+                2,
+                2
+              ],
+              "agent_number": 2,
+              "opponent_positions": [
+                [
+                  3,
+                  8
+                ],
+                [
+                  20,
+                  8
+                ],
+                [
+                  26,
+                  26
+                ],
+                [
+                  6,
+                  28
+                ],
+                [
+                  6,
+                  40
+                ],
+                [
+                  16,
+                  20
+                ],
+                [
+                  16,
+                  36
+                ],
+                [
+                  28,
+                  8
+                ],
+                [
+                  30,
+                  40
+                ],
+                [
+                  40,
+                  10
+                ],
+                [
+                  40,
+                  24
+                ],
+                [
+                  40,
+                  40
+                ],
+                [
+                  12,
+                  8
+                ],
+                [
+                  12,
+                  28
+                ],
+                [
+                  12,
+                  42
+                ],
+                [
+                  22,
+                  16
+                ],
+                [
+                  22,
+                  34
+                ],
+                [
+                  22,
+                  42
+                ],
+                [
+                  32,
+                  16
+                ],
+                [
+                  32,
+                  28
+                ],
+                [
+                  36,
+                  4
+                ],
+                [
+                  38,
+                  32
+                ],
+                [
+                  44,
+                  16
+                ],
+                [
+                  44,
+                  34
+                ],
+                [
+                  10,
+                  20
+                ],
+                [
+                  24,
+                  12
+                ],
+                [
+                  36,
+                  36
+                ],
+                [
+                  19,
+                  27
+                ],
+                [
+                  3,
+                  21
+                ],
+                [
+                  43,
+                  3
+                ],
+                [
+                  32,
+                  22
+                ],
+                [
+                  28,
+                  34
+                ],
+                [
+                  16,
+                  14
+                ],
+                [
+                  38,
+                  18
+                ],
+                [
+                  10,
+                  14
+                ],
+                [
+                  10,
+                  34
+                ],
+                [
+                  34,
+                  10
+                ],
+                [
+                  4,
+                  15
+                ],
+                [
+                  4,
+                  34
+                ],
+                [
+                  24,
+                  21
+                ],
+                [
+                  24,
+                  3
+                ]
+              ],
+              "opponent_numbers": [
+                1,
+                1,
+                4,
+                3,
+                9,
+                9,
+                11,
+                2,
+                6,
+                1,
+                3,
+                12,
+                1,
+                1,
+                4,
+                3,
+                9,
+                9,
+                11,
+                2,
+                6,
+                1,
+                3,
+                12,
+                2,
+                3,
+                4,
+                1,
+                1,
+                4,
+                3,
+                9,
+                9,
+                11,
+                2,
+                6,
+                3,
+                12,
+                3,
+                11,
+                12
+              ],
+              "max_steps": 5000,
+              "step_cost": 0.001,
+              "exploration_bonus": 0.01,
+              "mask_walls": true,
+              "map_seed": 42,
+              "number_generation": "Historical labels retained and copied with added squads. Numbers do not affect battles.",
+              "reconstruction_note": "48x48 map with 41 squads (27 × 1.5 rounded up). Starting capital and first nearby Squire retained; other original positions scaled by two. Fourteen additional human squads spread into the largest gaps, reusing existing compositions. The original three Orc/Goblin groups are unchanged. Titans occupy both slots of their formation line.",
+              "battle_mode": true,
+              "hero_units": 5,
+              "hero_hp": 120,
+              "battle_max_rounds": 75,
+              "enemy_units": [
+                1,
+                1,
+                2,
+                3,
+                3,
+                3,
+                4,
+                5,
+                5,
+                5,
+                6,
+                6,
+                1,
+                2,
+                1,
+                3,
+                3,
+                3,
+                4,
+                5,
+                5,
+                4,
+                6,
+                6,
+                2,
+                3,
+                4,
+                1,
+                1,
+                2,
+                3,
+                3,
+                3,
+                4,
+                5,
+                5,
+                6,
+                6,
+                3,
+                4,
+                6
+              ],
+              "enemy_hp": [
+                100,
+                250,
+                100,
+                100,
+                100,
+                250,
+                100,
+                100,
+                100,
+                250,
+                100,
+                100,
+                100,
+                100,
+                250,
+                100,
+                100,
+                250,
+                100,
+                100,
+                100,
+                250,
+                100,
+                100,
+                200,
+                200,
+                50,
+                100,
+                250,
+                100,
+                100,
+                100,
+                250,
+                100,
+                100,
+                100,
+                100,
+                100,
+                100,
+                100,
+                100
+              ],
+              "battle_recovery": "Victory or retreat preserves all hero HP, including dead units at 0 HP. Full defeat ends the episode. Enemies reset after retreat. Rest heals living heroes by ceil(10% max HP). Paid healing and revival to 1 HP require the temple and exact starting cell (capital).",
+              "battle_observation_version": 27,
+              "combat_rules_version": 2,
+              "faction": "legions",
+              "building_reward": 0.05,
+              "blocked_buildings": [],
+              "max_building_level": 5,
+              "rest_penalty_per_point": 0.001,
+              "hero_roster": [
+                "possessed",
+                "duke",
+                "possessed",
+                "cultist",
+                "cultist",
+                null
+              ],
+              "enemy_rosters": [
+                [
+                  "squire",
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  null,
+                  "titan",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "goblin_archer",
+                  "squire",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  null,
+                  "squire",
+                  null,
+                  "apprentice",
+                  "acolyte",
+                  null
+                ],
+                [
+                  "squire",
+                  "squire",
+                  null,
+                  null,
+                  "wolf_lord",
+                  null
+                ],
+                [
+                  null,
+                  "abyss_devil",
+                  null,
+                  "archer",
+                  null,
+                  "acolyte"
+                ],
+                [
+                  "teurg",
+                  "squire",
+                  "archer",
+                  "archer",
+                  null,
+                  null
+                ],
+                [
+                  "squire",
+                  "squire",
+                  "archer",
+                  "acolyte",
+                  "witch",
+                  null
+                ],
+                [
+                  "peasant",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archer",
+                  null
+                ],
+                [
+                  "squire",
+                  "titan",
+                  "centaur_savage",
+                  "acolyte",
+                  null,
+                  "archer"
+                ],
+                [
+                  "blade_master",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archer",
+                  "archer"
+                ],
+                [
+                  "archer",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archer",
+                  "archer"
+                ],
+                [
+                  "death",
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "wight",
+                  "squire",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "lord",
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "squire",
+                  "squire",
+                  null,
+                  null,
+                  "acolyte",
+                  null
+                ],
+                [
+                  "sentry",
+                  "squire",
+                  "archer",
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  null,
+                  "titan",
+                  null,
+                  "watcher",
+                  null,
+                  "archer"
+                ],
+                [
+                  "bone_lord",
+                  "archer",
+                  null,
+                  "archer",
+                  "acolyte",
+                  null
+                ],
+                [
+                  "dregazul",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archer",
+                  null
+                ],
+                [
+                  "ghost",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "alchemist",
+                  null
+                ],
+                [
+                  "dead_dragon",
+                  "squire",
+                  "gumtic",
+                  null,
+                  "acolyte",
+                  null
+                ],
+                [
+                  "archer",
+                  "squire",
+                  "archer",
+                  "shadow",
+                  "dwarfdruid",
+                  "archer"
+                ],
+                [
+                  "squire",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archdruid",
+                  "succubus"
+                ],
+                [
+                  "orc",
+                  "orc",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "goblin",
+                  "orc",
+                  "goblin",
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "goblin",
+                  "goblin",
+                  "goblin",
+                  null,
+                  "goblin_archer",
+                  null
+                ],
+                [
+                  "uter_betrezen",
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  null,
+                  "ismir_son",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "ghoul",
+                  "mermaid",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  null,
+                  "squire",
+                  null,
+                  "baroness",
+                  "acolyte",
+                  null
+                ],
+                [
+                  "hermit",
+                  "squire",
+                  null,
+                  null,
+                  "medusa",
+                  null
+                ],
+                [
+                  null,
+                  "tiamat",
+                  null,
+                  "archer",
+                  null,
+                  "acolyte"
+                ],
+                [
+                  "nosferatu",
+                  "squire",
+                  "archer",
+                  "medium",
+                  null,
+                  null
+                ],
+                [
+                  "squire",
+                  "squire",
+                  "archer",
+                  "cleric",
+                  "highvampire",
+                  null
+                ],
+                [
+                  "thug",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "sundancer",
+                  null
+                ],
+                [
+                  "drulliaan",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archer",
+                  "sylfid"
+                ],
+                [
+                  "elf_bandit",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "travnitsa",
+                  "archer"
+                ],
+                [
+                  "shamanka",
+                  "squire",
+                  null,
+                  null,
+                  "deva_roshi",
+                  null
+                ],
+                [
+                  "aleman",
+                  "archer",
+                  null,
+                  "archer",
+                  "patriarch",
+                  null
+                ],
+                [
+                  "squire",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "novice",
+                  "archer"
+                ]
+              ],
+              "unit_progression": true,
+              "capital_services": true,
+              "initial_potions": [
+                5,
+                5,
+                5,
+                10
+              ],
+              "battle_engagement": "A directional command targeting a living enemy stack starts combat from the current tile. Passing beside a stack is safe. Entry costs ceil(half the full movement allowance), capped at remaining points; zero points forbids attack. Victory and retreat keep the attacker on its original tile.",
+              "chests": [
+                {
+                  "position": [
+                    5,
+                    4
+                  ],
+                  "potions": [
+                    1,
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                {
+                  "position": [
+                    10,
+                    26
+                  ],
+                  "potions": [
+                    0,
+                    1,
+                    0,
+                    0
+                  ]
+                },
+                {
+                  "position": [
+                    25,
+                    12
+                  ],
+                  "potions": [
+                    0,
+                    0,
+                    1,
+                    0
+                  ]
+                },
+                {
+                  "position": [
+                    31,
+                    43
+                  ],
+                  "potions": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                },
+                {
+                  "position": [
+                    43,
+                    27
+                  ],
+                  "potions": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                }
+              ]
+            }
+          },
+          "use_cached_auto_reset": true
+        },
+        "logger": {
+          "checkpointing": {
+            "load_model": false
+          }
+        },
+        "system": {
+          "system_name": "ff_ppo",
+          "actor_lr": 0.0003,
+          "critic_lr": 0.0003,
+          "rollout_length": 100,
+          "epochs": 4,
+          "num_minibatches": 10,
+          "gamma": 0.99,
+          "gae_lambda": 0.95,
+          "clip_eps": 0.2,
+          "ent_coef": 0.01,
+          "vf_coef": 0.5,
+          "max_grad_norm": 0.5,
+          "decay_learning_rates": true,
+          "reward_scale": 1.0,
+          "standardize_advantages": true,
+          "kl_penalty_coef": 3.0,
+          "normalize_observations": false,
+          "obs_norm_warmup_steps": 128
+        },
+        "network": {
+          "actor_network": {
+            "pre_torso": {
+              "_target_": "stoix.networks.torso.MLPTorso",
+              "layer_sizes": [
+                128,
+                128
+              ],
+              "use_layer_norm": false,
+              "activation": "tanh"
+            },
+            "action_head": {
+              "_target_": "stoix.networks.heads.CategoricalHead"
+            }
+          },
+          "critic_network": {
+            "pre_torso": {
+              "_target_": "stoix.networks.torso.MLPTorso",
+              "layer_sizes": [
+                128,
+                128
+              ],
+              "use_layer_norm": false,
+              "activation": "tanh"
+            },
+            "critic_head": {
+              "_target_": "stoix.networks.heads.ScalarCriticHead"
+            }
+          }
+        }
+      }
+    },
+    "after-opt2-10m": {
+      "config": {
+        "arch": {
+          "seed": 42,
+          "num_envs": 250,
+          "update_batch_size": 1,
+          "num_updates_per_eval": 10,
+          "num_updates": 400,
+          "total_timesteps": 10000000,
+          "total_num_envs": 250
+        },
+        "env": {
+          "env_name": "number_grid",
+          "scenario": {
+            "name": "NumberGrid-48x48"
+          },
+          "kwargs": {
+            "map_config": {
+              "name": "NumberGrid-48x48-v72-complete-unit-catalog",
+              "size": 48,
+              "agent_position": [
+                2,
+                2
+              ],
+              "agent_number": 2,
+              "opponent_positions": [
+                [
+                  3,
+                  8
+                ],
+                [
+                  20,
+                  8
+                ],
+                [
+                  26,
+                  26
+                ],
+                [
+                  6,
+                  28
+                ],
+                [
+                  6,
+                  40
+                ],
+                [
+                  16,
+                  20
+                ],
+                [
+                  16,
+                  36
+                ],
+                [
+                  28,
+                  8
+                ],
+                [
+                  30,
+                  40
+                ],
+                [
+                  40,
+                  10
+                ],
+                [
+                  40,
+                  24
+                ],
+                [
+                  40,
+                  40
+                ],
+                [
+                  12,
+                  8
+                ],
+                [
+                  12,
+                  28
+                ],
+                [
+                  12,
+                  42
+                ],
+                [
+                  22,
+                  16
+                ],
+                [
+                  22,
+                  34
+                ],
+                [
+                  22,
+                  42
+                ],
+                [
+                  32,
+                  16
+                ],
+                [
+                  32,
+                  28
+                ],
+                [
+                  36,
+                  4
+                ],
+                [
+                  38,
+                  32
+                ],
+                [
+                  44,
+                  16
+                ],
+                [
+                  44,
+                  34
+                ],
+                [
+                  10,
+                  20
+                ],
+                [
+                  24,
+                  12
+                ],
+                [
+                  36,
+                  36
+                ],
+                [
+                  19,
+                  27
+                ],
+                [
+                  3,
+                  21
+                ],
+                [
+                  43,
+                  3
+                ],
+                [
+                  32,
+                  22
+                ],
+                [
+                  28,
+                  34
+                ],
+                [
+                  16,
+                  14
+                ],
+                [
+                  38,
+                  18
+                ],
+                [
+                  10,
+                  14
+                ],
+                [
+                  10,
+                  34
+                ],
+                [
+                  34,
+                  10
+                ],
+                [
+                  4,
+                  15
+                ],
+                [
+                  4,
+                  34
+                ],
+                [
+                  24,
+                  21
+                ],
+                [
+                  24,
+                  3
+                ]
+              ],
+              "opponent_numbers": [
+                1,
+                1,
+                4,
+                3,
+                9,
+                9,
+                11,
+                2,
+                6,
+                1,
+                3,
+                12,
+                1,
+                1,
+                4,
+                3,
+                9,
+                9,
+                11,
+                2,
+                6,
+                1,
+                3,
+                12,
+                2,
+                3,
+                4,
+                1,
+                1,
+                4,
+                3,
+                9,
+                9,
+                11,
+                2,
+                6,
+                3,
+                12,
+                3,
+                11,
+                12
+              ],
+              "max_steps": 5000,
+              "step_cost": 0.001,
+              "exploration_bonus": 0.01,
+              "mask_walls": true,
+              "map_seed": 42,
+              "number_generation": "Historical labels retained and copied with added squads. Numbers do not affect battles.",
+              "reconstruction_note": "48x48 map with 41 squads (27 × 1.5 rounded up). Starting capital and first nearby Squire retained; other original positions scaled by two. Fourteen additional human squads spread into the largest gaps, reusing existing compositions. The original three Orc/Goblin groups are unchanged. Titans occupy both slots of their formation line.",
+              "battle_mode": true,
+              "hero_units": 5,
+              "hero_hp": 120,
+              "battle_max_rounds": 75,
+              "enemy_units": [
+                1,
+                1,
+                2,
+                3,
+                3,
+                3,
+                4,
+                5,
+                5,
+                5,
+                6,
+                6,
+                1,
+                2,
+                1,
+                3,
+                3,
+                3,
+                4,
+                5,
+                5,
+                4,
+                6,
+                6,
+                2,
+                3,
+                4,
+                1,
+                1,
+                2,
+                3,
+                3,
+                3,
+                4,
+                5,
+                5,
+                6,
+                6,
+                3,
+                4,
+                6
+              ],
+              "enemy_hp": [
+                100,
+                250,
+                100,
+                100,
+                100,
+                250,
+                100,
+                100,
+                100,
+                250,
+                100,
+                100,
+                100,
+                100,
+                250,
+                100,
+                100,
+                250,
+                100,
+                100,
+                100,
+                250,
+                100,
+                100,
+                200,
+                200,
+                50,
+                100,
+                250,
+                100,
+                100,
+                100,
+                250,
+                100,
+                100,
+                100,
+                100,
+                100,
+                100,
+                100,
+                100
+              ],
+              "battle_recovery": "Victory or retreat preserves all hero HP, including dead units at 0 HP. Full defeat ends the episode. Enemies reset after retreat. Rest heals living heroes by ceil(10% max HP). Paid healing and revival to 1 HP require the temple and exact starting cell (capital).",
+              "battle_observation_version": 28,
+              "combat_rules_version": 2,
+              "faction": "legions",
+              "building_reward": 0.05,
+              "blocked_buildings": [],
+              "max_building_level": 5,
+              "rest_penalty_per_point": 0.001,
+              "hero_roster": [
+                "possessed",
+                "duke",
+                "possessed",
+                "cultist",
+                "cultist",
+                null
+              ],
+              "enemy_rosters": [
+                [
+                  "squire",
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  null,
+                  "titan",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "goblin_archer",
+                  "squire",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  null,
+                  "squire",
+                  null,
+                  "apprentice",
+                  "acolyte",
+                  null
+                ],
+                [
+                  "squire",
+                  "squire",
+                  null,
+                  null,
+                  "wolf_lord",
+                  null
+                ],
+                [
+                  null,
+                  "abyss_devil",
+                  null,
+                  "archer",
+                  null,
+                  "acolyte"
+                ],
+                [
+                  "teurg",
+                  "squire",
+                  "archer",
+                  "archer",
+                  null,
+                  null
+                ],
+                [
+                  "squire",
+                  "squire",
+                  "archer",
+                  "acolyte",
+                  "witch",
+                  null
+                ],
+                [
+                  "peasant",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archer",
+                  null
+                ],
+                [
+                  "squire",
+                  "titan",
+                  "centaur_savage",
+                  "acolyte",
+                  null,
+                  "archer"
+                ],
+                [
+                  "blade_master",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archer",
+                  "archer"
+                ],
+                [
+                  "archer",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archer",
+                  "archer"
+                ],
+                [
+                  "death",
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "wight",
+                  "squire",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "lord",
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "squire",
+                  "squire",
+                  null,
+                  null,
+                  "acolyte",
+                  null
+                ],
+                [
+                  "sentry",
+                  "squire",
+                  "archer",
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  null,
+                  "titan",
+                  null,
+                  "watcher",
+                  null,
+                  "archer"
+                ],
+                [
+                  "bone_lord",
+                  "archer",
+                  null,
+                  "archer",
+                  "acolyte",
+                  null
+                ],
+                [
+                  "dregazul",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archer",
+                  null
+                ],
+                [
+                  "ghost",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "alchemist",
+                  null
+                ],
+                [
+                  "dead_dragon",
+                  "squire",
+                  "gumtic",
+                  null,
+                  "acolyte",
+                  null
+                ],
+                [
+                  "archer",
+                  "squire",
+                  "archer",
+                  "shadow",
+                  "dwarfdruid",
+                  "archer"
+                ],
+                [
+                  "squire",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archdruid",
+                  "succubus"
+                ],
+                [
+                  "orc",
+                  "orc",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "goblin",
+                  "orc",
+                  "goblin",
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "goblin",
+                  "goblin",
+                  "goblin",
+                  null,
+                  "goblin_archer",
+                  null
+                ],
+                [
+                  "uter_betrezen",
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  null,
+                  "ismir_son",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  "ghoul",
+                  "mermaid",
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                [
+                  null,
+                  "squire",
+                  null,
+                  "baroness",
+                  "acolyte",
+                  null
+                ],
+                [
+                  "hermit",
+                  "squire",
+                  null,
+                  null,
+                  "medusa",
+                  null
+                ],
+                [
+                  null,
+                  "tiamat",
+                  null,
+                  "archer",
+                  null,
+                  "acolyte"
+                ],
+                [
+                  "nosferatu",
+                  "squire",
+                  "archer",
+                  "medium",
+                  null,
+                  null
+                ],
+                [
+                  "squire",
+                  "squire",
+                  "archer",
+                  "cleric",
+                  "highvampire",
+                  null
+                ],
+                [
+                  "thug",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "sundancer",
+                  null
+                ],
+                [
+                  "drulliaan",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "archer",
+                  "sylfid"
+                ],
+                [
+                  "elf_bandit",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "travnitsa",
+                  "archer"
+                ],
+                [
+                  "shamanka",
+                  "squire",
+                  null,
+                  null,
+                  "deva_roshi",
+                  null
+                ],
+                [
+                  "aleman",
+                  "archer",
+                  null,
+                  "archer",
+                  "patriarch",
+                  null
+                ],
+                [
+                  "squire",
+                  "squire",
+                  "archer",
+                  "archer",
+                  "novice",
+                  "archer"
+                ]
+              ],
+              "unit_progression": true,
+              "capital_services": true,
+              "initial_potions": [
+                5,
+                5,
+                5,
+                10
+              ],
+              "battle_engagement": "A directional command targeting a living enemy stack starts combat from the current tile. Passing beside a stack is safe. Entry costs ceil(half the full movement allowance), capped at remaining points; zero points forbids attack. Victory and retreat keep the attacker on its original tile.",
+              "chests": [
+                {
+                  "position": [
+                    5,
+                    4
+                  ],
+                  "potions": [
+                    1,
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                {
+                  "position": [
+                    10,
+                    26
+                  ],
+                  "potions": [
+                    0,
+                    1,
+                    0,
+                    0
+                  ]
+                },
+                {
+                  "position": [
+                    25,
+                    12
+                  ],
+                  "potions": [
+                    0,
+                    0,
+                    1,
+                    0
+                  ]
+                },
+                {
+                  "position": [
+                    31,
+                    43
+                  ],
+                  "potions": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                },
+                {
+                  "position": [
+                    43,
+                    27
+                  ],
+                  "potions": [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                }
+              ]
+            }
+          },
+          "use_cached_auto_reset": true
+        },
+        "logger": {
+          "checkpointing": {
+            "load_model": false
+          }
+        },
+        "system": {
+          "system_name": "ff_ppo",
+          "actor_lr": 0.0003,
+          "critic_lr": 0.0003,
+          "rollout_length": 100,
+          "epochs": 4,
+          "num_minibatches": 10,
+          "gamma": 0.99,
+          "gae_lambda": 0.95,
+          "clip_eps": 0.2,
+          "ent_coef": 0.01,
+          "vf_coef": 0.5,
+          "max_grad_norm": 0.5,
+          "decay_learning_rates": true,
+          "reward_scale": 1.0,
+          "standardize_advantages": true,
+          "kl_penalty_coef": 3.0,
+          "normalize_observations": false,
+          "obs_norm_warmup_steps": 128
+        },
+        "network": {
+          "actor_network": {
+            "pre_torso": {
+              "_target_": "stoix.networks.torso.MLPTorso",
+              "layer_sizes": [
+                128,
+                128
+              ],
+              "use_layer_norm": false,
+              "activation": "tanh"
+            },
+            "action_head": {
+              "_target_": "stoix.networks.heads.CategoricalHead"
+            }
+          },
+          "critic_network": {
+            "pre_torso": {
+              "_target_": "stoix.networks.torso.MLPTorso",
+              "layer_sizes": [
+                128,
+                128
+              ],
+              "use_layer_norm": false,
+              "activation": "tanh"
+            },
+            "critic_head": {
+              "_target_": "stoix.networks.heads.ScalarCriticHead"
+            }
+          }
+        }
+      },
+      "disposition": "Rejected: 154890.95 transitions/s versus 155729.68 for the retained version; no speed improvement",
+      "changes": [
+        "Select native/current identity before a single XP lookup",
+        "Read only the HP column during roster restoration"
+      ],
+      "results": {
+        "environment": "NumberGrid-48x48-v72-complete-unit-catalog",
+        "algorithm": "Stoix Anakin feedforward PPO",
+        "recurrent": false,
+        "device": "NVIDIA GeForce GTX 1660 Ti",
+        "backend": "gpu",
+        "jax": "0.11.2",
+        "cuda_runtime": "13.4.92",
+        "python": "3.12.3",
+        "training_steps": 10000000,
+        "ppo_updates": 400,
+        "actor_optimizer_updates": 16000,
+        "critic_optimizer_updates": 16000,
+        "seed": 42,
+        "training_seconds": 64.5615531749998,
+        "mean_steps_per_second": 154890.94527967932,
+        "ppo_compile_seconds": 41.20824504300003,
+        "training_loop_seconds": 64.74606465099998,
+        "training_loop_steps_per_second": 154449.54151117743,
+        "wandb_logging_seconds": 0.014050112999996145,
+        "wandb_init_seconds": 2.5057219930000088,
+        "completed_training_episodes": 6093,
+        "won_training_episodes": 0,
+        "wandb": {
+          "requested_mode": "offline",
+          "mode": "offline",
+          "status": "finished",
+          "summary_interval": 1000000,
+          "id": "0gvwo3qj",
+          "project": "numbergrid",
+          "directory": "/mnt/c/jaxjax/results/unit-catalog/after-opt2-10m/wandb/offline-run-20261009_174857-0gvwo3qj",
+          "url": null,
+          "wandb_version": "0.30.0",
+          "init_seconds": 2.5057219930000088,
+          "finish_seconds": 0.05591712500000767,
+          "logging_seconds": 0.014050112999996145
+        },
+        "initial_evaluation": {
+          "episodes": 64,
+          "successes": 0,
+          "success_rate": 0.0,
+          "mean_return": -12.105623245239258,
+          "mean_length": 5000.0,
+          "min_length": 5000,
+          "max_length": 5000,
+          "action_selection": "argmax",
+          "seed": 1042
+        },
+        "final_evaluation": {
+          "episodes": 1024,
+          "successes": 0,
+          "success_rate": 0.0,
+          "mean_return": 6.174480438232422,
+          "mean_length": 2994.443359375,
+          "min_length": 365,
+          "max_length": 5000,
+          "action_selection": "argmax",
+          "seed": 1042
+        },
+        "sampled_evaluation": {
+          "episodes": 1024,
+          "successes": 0,
+          "success_rate": 0.0,
+          "mean_return": 10.066307067871094,
+          "mean_length": 1299.34765625,
+          "min_length": 60,
+          "max_length": 5000,
+          "action_selection": "sample",
+          "seed": 1042
+        },
+        "parameter_count": 308568,
+        "num_envs": 250,
+        "rollout_length": 100,
+        "observation_size": 1031,
+        "weights_changed": true,
+        "checkpoint_roundtrip_verified": true,
+        "checkpoint_sha256": "4d46682d6842f6b849901775b7760b41e8c45d6fb372ecac691c475f298eb6b6",
+        "learner_source_sha256": "6f147922521be6bfc2c78bfd4f12b30d881db4c85e2fc515e9f6ff22b29482a1",
+        "total_runner_seconds": 245.57621015,
+        "timing": "Sum of synchronized learner calls, including rollout and PPO updates; excludes compilation, evaluation, host logging and saving.",
+        "reconstruction": "Fixed map and observation encoding recreated from README; remote weights and results were not recovered.",
+        "combat_counts": {
+          "battle_transition": 890126,
+          "player_battle_transition": 390791,
+          "enemy_battle_transition": 407991,
+          "battle_victory": 11621
+        },
+        "construction_count": 75587,
+        "rest_count": 820732,
+        "rest_penalty_total": 235.38601079955697,
+        "transition_definition": "One map move, rest, construction, paid capital service, potion use or unit turn; includes scripted enemy turns and completed retreats.",
+        "source_hashes": {
+          "benchmark_number_grid.py": "d6cfaf27a5f37d3626c44947a4558ef44db8e473caf21a1eaf49af3f3f7c4a20",
+          "numbergrid_config.py": "ea1b00f763e1eb8cc81ce0801156220f016751929f5cc20f4ba72c83cd86ec2b",
+          "numbergrid_tracking.py": "5d276c58507c182d350828dd41593fd22c03e29c74d8a7b2276ccafbb2b1a573",
+          "stoix/envs/number_grid_buildings.py": "46420077250790475aab68abe5611665b2410f618993e98b55a0646c967cf429",
+          "stoix/envs/data/buildings.json": "cc7ed172e0370b7811a340d9774db2d79996a49ebfee0b4260e0065fa02d78e3",
+          "stoix/envs/data/units.json": "021bcddaab9bb590f72a49cc956a4456c2fc82ee572146a901fff0a8bec4b19c",
+          "stoix/envs/number_grid_effects.py": "910a1fbc69fb7255769d8a3e9d68666a97fd4b7ddd3f3c1816e131a7035d1928",
+          "stoix/envs/number_grid_wards.py": "7e1de4536ececd72d22f15df45026cb5ede44224f4ffda8abfdbd7be563b99db",
+          "stoix/envs/number_grid_summoning.py": "3dfac6560f01b1563d4bcbf1a5156dc225166b3632a61d5ccb7fbf80818f77b8",
+          "stoix/envs/number_grid.py": "9b96602a9de218b86d2896e617e0a46965f59a60192e7a07f20ff81c62cb5f5b",
+          "stoix/envs/number_grid_combat.py": "7589b6640225dbf0ca4cd049f7dd45c9c648d26ce005cfab448cf86ccecaecd5",
+          "stoix/envs/number_grid_progression.py": "0709a4ea57dfa438d3e607b90e7a9f078a00a8e3dd56b5640846229b1afeabc9",
+          "stoix/envs/number_grid_capital.py": "4a668a2720ab869407c2f4894c419247c83573da7c16148c8ae8580cbd07e288",
+          "stoix/envs/number_grid_potions.py": "deb6ae6732876de0168697738570f96b9d16f0c61724f166d5501611e0172ad4",
+          "stoix/envs/number_grid_chests.py": "c788ceb704a49617def9b7aef61ba2fb9a2bc4e756b76a2feeafe05f50e99c60",
+          "stoix/envs/number_grid_legacy.py": "975105ab1647a8a5ca2ed71ca6c5163239ddb23748a0dbd7ef59e0d1bf8f9412",
+          "stoix/utils/make_env.py": "37840f25554349de585ab5f605a5662fecf95aa4b653eaab37582b83cead764b",
+          "stoix/wrappers/number_grid_metrics.py": "35e93e45b581af4845f6da116964b20356b9f6c9c8b7b6504d5624caf66257d2",
+          "stoix/wrappers/number_grid_reset.py": "0832394ca8f244a6177e9ff0f7adc8977722a8bdf8ae6baaf51872fdb90f0f06",
+          "stoix/systems/ppo/anakin/ff_ppo.py": "6f147922521be6bfc2c78bfd4f12b30d881db4c85e2fc515e9f6ff22b29482a1"
+        }
+      }
+    }
+  },
+  "performance_acceptance": {
+    "status": "accepted",
+    "date": "2026-10-09",
+    "scope": "Remaining slowdown after one additional optimization attempt, as explicitly requested by the user"
+  },
+  "optimization": [
+    "Validate selected copy/summon action without a second full action mask",
+    "Compute only target and copier permanent statistics instead of two complete squads"
+  ],
+  "full_tests": {
+    "seconds": 827.301756204,
+    "wall_seconds": 890.2819044589996,
+    "execution_limit": 888.1778755187988,
+    "wall_limit": 900,
+    "parent_started_at": 1791554809.992,
+    "backend": "cuda",
+    "groups": {
+      "suite": {
+        "exit_code": 0,
+        "seconds": 827.3002880710001,
+        "log": "/mnt/c/jaxjax/results/gpu-tests/full-unit-catalog-4/suite.log"
+      }
+    },
+    "compilation_cache": "/mnt/c/jaxjax/results/gpu-tests/full-unit-catalog-4/compilation-cache",
+    "cold_cache": true,
+    "passed": true
+  },
+  "baseline_commit": "9da01466014a2a6e33df3eb82cf6ff9e85de9407",
+  "test_count": 312,
+  "additional_experiment_tests": {
+    "source": "results/unit-catalog/final-optimization-tests.xml",
+    "experiment_patch_sha256": "166b3d9ecf7125d292fe69010f0b9bb681c05c2eea180d3142316baf946325ac",
+    "passed": 29,
+    "experiment_patch": "results/unit-catalog/opt2.patch",
+    "failures": 0,
+    "pytest_seconds": 181.177
+  },
+  "selected_run": "after-opt-10m",
+  "selected_source_hash_differences": []
+}

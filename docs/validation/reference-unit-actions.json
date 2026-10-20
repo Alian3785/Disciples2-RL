@@ -1,0 +1,14 @@
+{
+  "backend": "cuda",
+  "tests": 297,
+  "groups": {
+    "environment": 194,
+    "actions": 103
+  },
+  "wall_seconds": 590.794,
+  "runner_seconds": 557.182243428,
+  "cold_jax_cache": true,
+  "result": "results/unit-actions-20261009/final-full-cuda-wall-clock/results.json",
+  "runtime_source_audit": "results/unit-actions-20261009/final-source-audit.json",
+  "runtime_source_matches": true
+}

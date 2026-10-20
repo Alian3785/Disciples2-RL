@@ -1,0 +1,65 @@
+{
+  "date": "2026-10-14",
+  "map": "trade_train",
+  "backend": "cuda:0",
+  "map_sha256": "9362e5886d166569ec4f711157a5eddd16c53ee5b1ca2791b44158bc103f5b8b",
+  "won": true,
+  "decisions": 4225,
+  "reward": -42.19397355709225,
+  "level_reward_payments": [
+    {
+      "enemy": 6,
+      "decision": 598,
+      "strength": 11,
+      "bonus": 55
+    },
+    {
+      "enemy": 5,
+      "decision": 1204,
+      "strength": 15,
+      "bonus": 75
+    },
+    {
+      "enemy": 1,
+      "decision": 1877,
+      "strength": 21,
+      "bonus": 105
+    },
+    {
+      "enemy": 4,
+      "decision": 2617,
+      "strength": 25,
+      "bonus": 125
+    },
+    {
+      "enemy": 2,
+      "decision": 3368,
+      "strength": 30,
+      "bonus": 150
+    },
+    {
+      "enemy": 3,
+      "decision": 4225,
+      "strength": 37,
+      "bonus": 185
+    }
+  ],
+  "expected_bonus": 695,
+  "observed_reward_delta": 694.999993801117,
+  "identical_actions_to_original_witness": true,
+  "payout_flags_only_on_defeat_of_enemy": true,
+  "army_victory_rewarded": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+  ],
+  "training_transitions": 0,
+  "state_injections": 0,
+  "regression_tests_run": false,
+  "benchmarks_run": false,
+  "ruff": "passed",
+  "witness": "results/trade-train-victory-level-validation-20261014/winning-walkthrough.json"
+}

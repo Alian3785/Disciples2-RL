@@ -1,0 +1,19 @@
+{
+  "date": "2026-10-10",
+  "map": "NumberGrid-48x48-v82-spell-research",
+  "observation_version": 38,
+  "observation_size": 1547,
+  "actions": 212,
+  "backend": "cuda",
+  "targeted": {
+    "passed": 21,
+    "pytest_seconds": 290.12,
+    "wall_seconds": 299.842,
+    "log": "results/spell-research-20261010/targeted.log"
+  },
+  "static": {
+    "ruff": "passed",
+    "javascript_syntax": "passed",
+    "git_diff_check": "passed"
+  }
+}

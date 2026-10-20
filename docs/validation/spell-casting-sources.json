@@ -1,0 +1,232 @@
+{
+  "edition": "Disciples II: Rise of the Elves (installed Steam edition)",
+  "date": "2026-10-10",
+  "map": "NumberGrid-48x48-v83-spell-casting",
+  "observation_version": 39,
+  "contract": {
+    "legions": {
+      "actions": 229,
+      "cast_actions": [
+        212,
+        228
+      ],
+      "observation_size": 1678
+    },
+    "empire": {
+      "actions": 239,
+      "cast_actions": [
+        217,
+        238
+      ],
+      "observation_size": 1693
+    },
+    "mountain_clans": {
+      "actions": 239,
+      "cast_actions": [
+        217,
+        238
+      ],
+      "observation_size": 1693
+    },
+    "undead_hordes": {
+      "actions": 235,
+      "cast_actions": [
+        215,
+        234
+      ],
+      "observation_size": 1687
+    },
+    "elves": {
+      "actions": 235,
+      "cast_actions": [
+        215,
+        234
+      ],
+      "observation_size": 1687
+    }
+  },
+  "catalog_sha256": "0b89e889ca859b5d0462e0ad9e670ba9cc7a6d8ab75d2e096926b949962efc0c",
+  "source_hashes": {
+    "C:/Disciples 2 python reference/Big_map/campaign_env_magic.py": "84b0f1ed97b8b7d3924ff4b4c2b422e6097deafaaa29487f23b253c0adfc407f",
+    "C:/Disciples 2 python reference/Big_map/campaign_env_data.py": "d070eefeb994e6fe0f7cde0b41beed3a32049e0246a95753141d6adfd2bb1282",
+    "C:/Disciples 2 python reference/Big_map/campaign_env_masks.py": "e613821c3ea9e2373f2e4317047f7600b38e7b00841df1439c3d219d3fe40eab",
+    "C:/Disciples 2 python reference/Big_map/campaign_env_battle.py": "fbdaa0a070e68fab670f565384a80cecd5c2fa757dc92e46d8a77b93217b80cb",
+    "C:/Disciples 2 python reference/Big_map/campaign_env_inventory.py": "20349ca1d31541e7a600a6858627b50289936cd9d3dbc8f64462108eb7bf8b65",
+    "C:/Disciples 2 python reference/Big_map/campaign_env_territory.py": "4a5e067f751d7912ce34f2d9ac04436f2e25a48c1213daa33d2009f198a25300",
+    "C:/Disciples 2 python reference/Big_map/campaign_env_map.py": "78c4d1f6c59f612037a25422f64fbeb215cb50ce2030e0eefda5ac73da95ccf2",
+    "C:/Disciples 2 python reference/Big_map/campaign_env.py": "0b4c6e1e6d88cd3d6b6b3a311071cb0ecd8734e982e3da543db6aa48fc85216f",
+    "C:/Disciples 2 python reference/Big_map/battle_env.py": "409f46f2fb8dffc7e482593028de475e2fdb256922eb807e189c233083c48f8c",
+    "C:/Disciples 2 python reference/Big_map/spells.py": "302d071b14fa6a16af24ad387b67f4953fbc3a237ecb1d5d417b75fe7278bc01",
+    "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals/Gspells.dbf": "4ae108be0679ee6473c2ef5d5ea351e53e9a28512c2f74b2d5af9f8f0a2d97b5"
+  },
+  "cast_kinds": {
+    "empire": {
+      "buff": 5,
+      "damage": 4,
+      "heal": 4,
+      "moves": 1,
+      "summon_battle": 2,
+      "ward": 6
+    },
+    "mountain_clans": {
+      "buff": 11,
+      "damage": 5,
+      "heal": 1,
+      "moves": 2,
+      "summon_battle": 3
+    },
+    "legions": {
+      "damage": 8,
+      "debuff": 6,
+      "summon_battle": 3
+    },
+    "undead_hordes": {
+      "damage": 9,
+      "debuff": 6,
+      "summon_battle": 4,
+      "ward": 1
+    },
+    "elves": {
+      "buff": 1,
+      "damage": 7,
+      "debuff": 4,
+      "heal": 2,
+      "health_bonus": 1,
+      "moves": 1,
+      "summon_battle": 4
+    }
+  },
+  "value_differences": [
+    {
+      "id": "g000ss0033",
+      "reference_id": "mcl_d2_s013",
+      "field": "damage",
+      "original": 50,
+      "reference": 60,
+      "reference_source": "C:/Disciples 2 python reference/Big_map/campaign_env_data.py:579",
+      "decision": "Use installed original game Gspells.dbf"
+    }
+  ],
+  "mechanics": [
+    {
+      "rule": "Same spell at most once per day, twice for the mage lord; counters reset on REST",
+      "source": [
+        "C:/Disciples 2 python reference/Big_map/campaign_env_magic.py:182-196",
+        "C:/Disciples 2 python reference/Big_map/campaign_env_data.py:207",
+        "C:/Disciples 2 python reference/Big_map/campaign_env_territory.py:1530-1534"
+      ],
+      "test": "stoix/tests/number_grid_casting_test.py::test_damage_hits_nearest_field_stack_spends_mana_and_daily_limit"
+    },
+    {
+      "rule": "Cast price is the full use_* mana for every lord; mage discount applies to research only",
+      "source": "C:/Disciples 2 python reference/Big_map/campaign_env_magic.py:159-181",
+      "test": "stoix/tests/number_grid_casting_test.py::test_damage_hits_nearest_field_stack_spends_mana_and_daily_limit"
+    },
+    {
+      "rule": "One nearest living stack by Chebyshev distance, lower id on ties, no pathfinding",
+      "source": "C:/Disciples 2 python reference/Big_map/campaign_env_masks.py:472-560",
+      "test": "stoix/tests/number_grid_casting_test.py::test_nearest_target_is_one_vector_chebyshev_argmin"
+    },
+    {
+      "rule": "Damage and debuffs skip city and ruin stacks; summons reach any stack",
+      "source": [
+        "C:/Disciples 2 python reference/Big_map/campaign_env_magic.py:1504-1514",
+        "C:/Disciples 2 python reference/Big_map/campaign_env_magic.py:880-910"
+      ],
+      "test": "stoix/tests/number_grid_casting_test.py::test_damage_skips_cities_and_ruins_summons_reach_them"
+    },
+    {
+      "rule": "Damage ignores armour; immunity or ward to the element blocks it per unit",
+      "source": "C:/Disciples 2 python reference/Big_map/campaign_env_magic.py:1922-1976",
+      "test": "stoix/tests/number_grid_casting_test.py::test_immunity_and_ward_block_spell_damage_but_not_other_units"
+    },
+    {
+      "rule": "A stack killed by a spell is removed without victory reward (magic multiplier 0)",
+      "source": [
+        "C:/Disciples 2 python reference/Big_map/campaign_env.py:166-167",
+        "C:/Disciples 2 python reference/Big_map/campaign_env_inventory.py:3343"
+      ],
+      "test": "stoix/tests/number_grid_casting_test.py::test_kill_by_spell_removes_stack_without_victory_reward"
+    },
+    {
+      "rule": "Debuffs act in the next battles of that stack until REST or its defeat",
+      "source": "C:/Disciples 2 python reference/Big_map/campaign_env_magic.py:1722-1757",
+      "test": "stoix/tests/number_grid_casting_test.py::test_debuffs_change_the_next_battle_of_that_stack_only"
+    },
+    {
+      "rule": "Support spells: hero stack needs a living unit; moves/heal need room; effects are not renewed",
+      "source": [
+        "C:/Disciples 2 python reference/Big_map/campaign_env_magic.py:804-825",
+        "C:/Disciples 2 python reference/Big_map/campaign_env_magic.py:1758-1912"
+      ],
+      "test": "stoix/tests/number_grid_casting_test.py::test_support_spells_heal_moves_buffs_wards_health_and_terrain"
+    },
+    {
+      "rule": "Movement spells restore RESTORE_M percent of the hero's current maximum movement (base 20, boot percent, +1 per level 2-10), not of the reference base MOVES_PER_TURN = 20; never above the maximum",
+      "source": [
+        "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals/Gspells.dbf: RESTORE_M g000ss0006 50, g000ss0032 100, g000ss0087 100, g000ss0100 30",
+        "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals/Tglobal.dbf: 'Hasted units recover 50% of their move points'; x000tgc006 '+ 50% Move points'; x160tgc200 '+30% Move Points'"
+      ],
+      "decision": "Use the original percentage of the maximum (user request 2026-10-10)",
+      "assumption": "Fractional points are truncated as for boots; not confirmed for spells. Check in the original: maximum 25, spend all points, cast Haste: 12 means truncation, 13 rounding",
+      "test": "stoix/tests/number_grid_casting_test.py::test_support_spells_heal_moves_buffs_wards_health_and_terrain"
+    },
+    {
+      "rule": "Stat layers: potions, then map spells, then equipment; secondary attack scaled; health bonus removed as max(0, HP - bonus)",
+      "source": [
+        "C:/Disciples 2 python reference/Big_map/campaign_env_inventory.py:2879",
+        "C:/Disciples 2 python reference/Big_map/campaign_env_battle.py:1149-1246"
+      ],
+      "test": "stoix/tests/number_grid_casting_test.py::test_blue_modifier_layer_order_potions_spell_equipment"
+    },
+    {
+      "rule": "Terrain spells cap forest/water cost at 2 (plain cost) before the dead-hero doubling",
+      "source": "C:/Disciples 2 python reference/Big_map/campaign_env_map.py:150-170",
+      "test": "stoix/tests/number_grid_casting_test.py::test_support_spells_heal_moves_buffs_wards_health_and_terrain"
+    },
+    {
+      "rule": "Summon starts a separate battle at once: lone native-level unit, weapon or large units in front",
+      "source": [
+        "C:/Disciples 2 python reference/Big_map/campaign_env_magic.py:1088-1111",
+        "C:/Disciples 2 python reference/Big_map/campaign_env_battle.py:1455",
+        "C:/Disciples 2 python reference/Big_map/battle_env.py:369"
+      ],
+      "test": "stoix/tests/number_grid_casting_test.py::test_catalog_cast_data_actions_and_summons"
+    },
+    {
+      "rule": "Summon victory: stack defeated, ruin loot, no defeat/ruin reward, no capture; other outcomes are a withdrawal and keep enemy wounds",
+      "source": "C:/Disciples 2 python reference/Big_map/campaign_env_magic.py:2625-2758",
+      "test": [
+        "stoix/tests/number_grid_casting_test.py::test_summon_battle_victory_returns_party_and_pays_no_defeat_reward",
+        "stoix/tests/number_grid_casting_test.py::test_summon_defeat_keeps_wounds_hero_bonus_and_never_ends_the_game"
+      ]
+    },
+    {
+      "rule": "Hero engage on a stack a summon fought the same day: +0.05 once",
+      "source": [
+        "C:/Disciples 2 python reference/Big_map/campaign_env.py:169",
+        "C:/Disciples 2 python reference/Big_map/campaign_env.py:1603-1608"
+      ],
+      "test": "stoix/tests/number_grid_casting_test.py::test_summon_defeat_keeps_wounds_hero_bonus_and_never_ends_the_game"
+    },
+    {
+      "rule": "Enemy wounds persist after every battle the stack survives, hero withdrawals included",
+      "source": "C:/Disciples 2 python reference/Big_map/campaign_env_battle.py:1484",
+      "test": "stoix/tests/number_grid_casting_test.py::test_summon_defeat_keeps_wounds_hero_bonus_and_never_ends_the_game"
+    },
+    {
+      "rule": "Enemy regeneration on REST: max(1, rint(max * p)), p = 15% or 5% on player land, plus city bonus",
+      "source": "C:/Disciples 2 python reference/Big_map/campaign_env_magic.py:1977-2023",
+      "test": "stoix/tests/number_grid_casting_test.py::test_damage_hits_nearest_field_stack_spends_mana_and_daily_limit"
+    },
+    {
+      "rule": "Mask and step share one predicate; batched transitions equal single ones",
+      "source": "AGENTS.md",
+      "test": "stoix/tests/number_grid_casting_test.py::test_batched_casts_match_single_transitions_and_mask_equals_step"
+    },
+    {
+      "rule": "Not ported: area targeting of the original game; staff and scroll casts; thieves",
+      "source": "User scope: cast as in the Python reference, one nearest target"
+    }
+  ]
+}

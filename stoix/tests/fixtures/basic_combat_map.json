@@ -1,0 +1,244 @@
+{
+  "name": "Fixed-combat-regression-formation",
+  "size": 24,
+  "agent_position": [
+    2,
+    2
+  ],
+  "agent_number": 2,
+  "opponent_positions": [
+    [
+      3,
+      8
+    ],
+    [
+      10,
+      4
+    ],
+    [
+      13,
+      13
+    ],
+    [
+      3,
+      14
+    ],
+    [
+      3,
+      20
+    ],
+    [
+      8,
+      10
+    ],
+    [
+      8,
+      18
+    ],
+    [
+      14,
+      4
+    ],
+    [
+      15,
+      20
+    ],
+    [
+      20,
+      5
+    ],
+    [
+      20,
+      12
+    ],
+    [
+      20,
+      20
+    ],
+    [
+      6,
+      4
+    ],
+    [
+      6,
+      14
+    ],
+    [
+      6,
+      21
+    ],
+    [
+      11,
+      8
+    ],
+    [
+      11,
+      17
+    ],
+    [
+      11,
+      21
+    ],
+    [
+      16,
+      8
+    ],
+    [
+      16,
+      14
+    ],
+    [
+      18,
+      2
+    ],
+    [
+      19,
+      16
+    ],
+    [
+      22,
+      8
+    ],
+    [
+      22,
+      17
+    ]
+  ],
+  "opponent_numbers": [
+    1,
+    1,
+    4,
+    3,
+    9,
+    9,
+    11,
+    2,
+    6,
+    1,
+    3,
+    12,
+    1,
+    1,
+    4,
+    3,
+    9,
+    9,
+    11,
+    2,
+    6,
+    1,
+    3,
+    12
+  ],
+  "max_steps": 5000,
+  "step_cost": 0.001,
+  "exploration_bonus": 0.01,
+  "mask_walls": true,
+  "map_seed": 42,
+  "number_generation": "Historical labels from the twelve-squad map, repeated for the new squads. Numbers do not affect archer battles.",
+  "battle_mode": true,
+  "hero_units": 6,
+  "hero_hp": 45,
+  "hero_warrior_slot": 1,
+  "warrior_hp": 100,
+  "warrior_damage": 25,
+  "warrior_accuracy": 0.8,
+  "warrior_initiative": 50,
+  "hero_mage_slot": 5,
+  "mage_damage": 20,
+  "archer_damage": 25,
+  "archer_accuracy": 0.8,
+  "battle_max_rounds": 75,
+  "enemy_units": [
+    1,
+    2,
+    2,
+    3,
+    3,
+    4,
+    4,
+    5,
+    5,
+    6,
+    6,
+    6,
+    1,
+    2,
+    2,
+    3,
+    3,
+    4,
+    4,
+    5,
+    5,
+    6,
+    6,
+    6
+  ],
+  "enemy_hp": [
+    20,
+    25,
+    30,
+    25,
+    30,
+    30,
+    35,
+    30,
+    35,
+    15,
+    20,
+    25,
+    20,
+    25,
+    30,
+    25,
+    30,
+    30,
+    35,
+    30,
+    35,
+    15,
+    20,
+    25
+  ],
+  "battle_observation_version": 7,
+  "enemy_warrior_slots": [
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "combat_rules_version": 2,
+  "archer_armor": 0,
+  "archer_initiative": 60,
+  "warrior_armor": 0,
+  "mage_hp": 45,
+  "mage_accuracy": 0.8,
+  "mage_armor": 0,
+  "mage_initiative": 60,
+  "faction": "legions",
+  "building_reward": 0.05,
+  "blocked_buildings": [],
+  "max_building_level": 5,
+  "rest_penalty_per_point": 0.001
+}

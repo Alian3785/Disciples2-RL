@@ -1,0 +1,83 @@
+{
+  "date": "2026-10-10",
+  "url": "http://127.0.0.1:8769/viewer.html",
+  "map": "NumberGrid-48x48-v80-ruins",
+  "footprint": [
+    3,
+    3
+  ],
+  "anchor": [
+    7,
+    23
+  ],
+  "attack_from": [
+    10,
+    25
+  ],
+  "approaches": [
+    [
+      8,
+      26
+    ],
+    [
+      9,
+      26
+    ],
+    [
+      10,
+      24
+    ],
+    [
+      10,
+      25
+    ],
+    [
+      10,
+      26
+    ]
+  ],
+  "route_file": "results/ruins-20261010/ui-plan.json",
+  "method": "Ordinary browser buttons only: walk via two chests, rest twice, apply Might/Celerity/Accuracy/Titan/Invulnerability to Duke, attack ruin, choose legal targets until victory. No state injection.",
+  "entry": {
+    "living_hero": true,
+    "movement_before": 24,
+    "movement_cost": 12
+  },
+  "guardians": [
+    {
+      "unit": "Тролль",
+      "hp": 350,
+      "damage": 120,
+      "size": 2
+    },
+    {
+      "unit": "Гоблин лучник",
+      "hp": 40,
+      "damage": 15,
+      "size": 1
+    }
+  ],
+  "after_victory": {
+    "steps": "47",
+    "wins": "1",
+    "ruin": "Руины\n\nНужен живой герой. Подходы к входу слабо подсвечены. Победите стражу, чтобы получить награду. Разграбленные руины остаются препятствием.\n\nЗабытые руины · 3 × 3\n\nРазграблены. Непроходимое препятствие.\n\nНаграда получена: Зелье силы × 1",
+    "northEnabled": false,
+    "northWestEnabled": false,
+    "strengthCount": 1,
+    "repeatAttackButtons": 0
+  },
+  "cleared_render": "Gray 3x3 ruin without active approach tint; reward marked received; attack button absent.",
+  "console_errors": [],
+  "reset": {
+    "steps": 0,
+    "guardians_restored": true,
+    "attack_disabled_at_capital": true
+  },
+  "screenshots": [
+    "docs/images/ruins-map.png",
+    "docs/images/ruins-battle.png",
+    "docs/images/ruins-cleared.png"
+  ],
+  "final_get_status": 200,
+  "viewer_map_current": true
+}

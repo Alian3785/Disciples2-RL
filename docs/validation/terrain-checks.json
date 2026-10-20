@@ -1,0 +1,44 @@
+{
+  "date": "2026-10-10",
+  "map": "NumberGrid-48x48-v81-terrain",
+  "observation_version": 37,
+  "observation_size": 1526,
+  "actions": 195,
+  "backend": "cuda",
+  "targeted": {
+    "initial": "34 passed, 2 outdated test expectations failed",
+    "log": "results/terrain-20261010/targeted.log",
+    "seconds": 286.83
+  },
+  "focused": {
+    "passed": 2,
+    "seconds": 46.34,
+    "log": "results/terrain-20261010/focused.log"
+  },
+  "full": {
+    "passed": true,
+    "pytest_seconds": 664.63,
+    "seconds": 673.994622058,
+    "wall_seconds": 674.2487432956696,
+    "execution_limit": 893.7356560230255,
+    "wall_limit": 900,
+    "parent_started_at": 1791593681.192,
+    "backend": "cuda",
+    "groups": {
+      "suite": {
+        "exit_code": 0,
+        "seconds": 673.992821154,
+        "log": "/mnt/c/jaxjax/results/gpu-tests/terrain-final-20261010/suite.log"
+      }
+    },
+    "compilation_cache": "/mnt/c/jaxjax/results/gpu-tests/compilation-cache",
+    "cold_cache": false,
+    "isolated_cache": false,
+    "results": "results/gpu-tests/terrain-final-20261010/results.json"
+  },
+  "static": {
+    "ruff": "passed",
+    "javascript_syntax": "passed",
+    "git_diff_check": "passed"
+  }
+}

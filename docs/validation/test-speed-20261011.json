@@ -1,0 +1,208 @@
+{
+  "date": "2026-10-11",
+  "branch": "codex/seven-minute-gpu-tests",
+  "base_commit": "67b269d",
+  "scope": "Test selection, shared fixtures and the end-to-end time guard only; production environment and PPO unchanged.",
+  "runtime": {
+    "python": "3.12.3",
+    "jax": "0.11.2",
+    "backend": "gpu",
+    "devices": [
+      "NVIDIA GeForce GTX 1660 Ti"
+    ]
+  },
+  "command": "wsl.exe -d Ubuntu-24.04 --cd /mnt/c/jaxjax -- bash scripts/run_gpu.sh scripts/test_gpu.py --output results/gpu-tests/seven-minute-cold-4 --cold-cache --wall-started-at <Windows epoch before WSL>",
+  "methodology": {
+    "wall_seconds": "Windows timestamp before WSL launch through pytest exit and runner cleanup; includes fixture preparation and compilation.",
+    "pytest_seconds": "Includes setup, execution and JAX compilation. Compilation is not separately instrumented.",
+    "cache": "New empty isolated JAX persistent cache; no test results reused.",
+    "gpu_processes": 1,
+    "training_runs": 0,
+    "comparison": "The mandatory set was reduced. This is not a same-coverage speedup or a learner throughput benchmark."
+  },
+  "after": {
+    "seconds": 338.06883785599996,
+    "wall_seconds": 351.6574032306671,
+    "execution_limit": 406.62398505210876,
+    "wall_limit": 420,
+    "parent_started_at": 1791751444.763,
+    "backend": "cuda",
+    "groups": {
+      "suite": {
+        "exit_code": 0,
+        "seconds": 338.065976794,
+        "log": "/mnt/c/jaxjax/results/gpu-tests/seven-minute-cold-4/suite.log"
+      }
+    },
+    "compilation_cache": "/mnt/c/jaxjax/results/gpu-tests/seven-minute-cold-4/compilation-cache",
+    "cold_cache": true,
+    "isolated_cache": true,
+    "selection": "core",
+    "durations": "/mnt/c/jaxjax/results/gpu-tests/seven-minute-cold-4/durations.jsonl",
+    "passed": true,
+    "directory": "results/gpu-tests/seven-minute-cold-4",
+    "tests": 115,
+    "failures": 0,
+    "errors": 0,
+    "pytest_seconds": 326.519
+  },
+  "previous_full_suite": {
+    "seconds": 869.5514660469998,
+    "wall_seconds": 894.5617311000824,
+    "execution_limit": 889.1232168674469,
+    "wall_limit": 900,
+    "parent_started_at": 1791747603.351,
+    "backend": "cuda",
+    "groups": {},
+    "compilation_cache": "/mnt/c/jaxjax/results/gpu-tests/compilation-cache",
+    "cold_cache": false,
+    "isolated_cache": false,
+    "passed": false
+  },
+  "intermediate_runs": [
+    {
+      "seconds": 406.40353242000003,
+      "wall_seconds": 414.49440717697144,
+      "execution_limit": 413.2538185119629,
+      "wall_limit": 420,
+      "parent_started_at": 1791749442.18,
+      "backend": "cuda",
+      "groups": {},
+      "compilation_cache": "/mnt/c/jaxjax/results/gpu-tests/seven-minute-cold-1/compilation-cache",
+      "cold_cache": true,
+      "isolated_cache": true,
+      "selection": "core",
+      "durations": "/mnt/c/jaxjax/results/gpu-tests/seven-minute-cold-1/durations.jsonl",
+      "passed": false,
+      "directory": "seven-minute-cold-1"
+    },
+    {
+      "seconds": 403.31654518299996,
+      "wall_seconds": 414.682754278183,
+      "execution_limit": 410.28193974494934,
+      "wall_limit": 420,
+      "parent_started_at": 1791750265.074,
+      "backend": "cuda",
+      "groups": {},
+      "compilation_cache": "/mnt/c/jaxjax/results/gpu-tests/seven-minute-cold-2/compilation-cache",
+      "cold_cache": true,
+      "isolated_cache": true,
+      "selection": "core",
+      "durations": "/mnt/c/jaxjax/results/gpu-tests/seven-minute-cold-2/durations.jsonl",
+      "passed": false,
+      "directory": "seven-minute-cold-2"
+    },
+    {
+      "seconds": 406.46021746,
+      "wall_seconds": 414.4807279109955,
+      "execution_limit": 413.2369182109833,
+      "wall_limit": 420,
+      "parent_started_at": 1791750836.53,
+      "backend": "cuda",
+      "groups": {},
+      "compilation_cache": "/mnt/c/jaxjax/results/gpu-tests/seven-minute-cold-3/compilation-cache",
+      "cold_cache": true,
+      "isolated_cache": true,
+      "selection": "core",
+      "durations": "/mnt/c/jaxjax/results/gpu-tests/seven-minute-cold-3/durations.jsonl",
+      "passed": false,
+      "directory": "seven-minute-cold-3"
+    }
+  ],
+  "intermediate_notes": {
+    "seven-minute-cold-1": "Time guard fired; an attempted shared unit-summoner fixture lacked that enabled feature. Its original dedicated fixture was restored.",
+    "seven-minute-cold-2": "Time guard fired; the experimental capacity 8 recompiled the terrain batch at capacity 32. Fixed by retaining the shared capacity 64.",
+    "seven-minute-cold-3": "117 tests passed in 399.72 pytest seconds, but the worker did not exit before the end-to-end guard. Scroll/staff setup was then hoisted and two detailed unit cases made targeted-only."
+  },
+  "coverage": {
+    "selection": "pytest.mark.core; default pytest and scripts/test_gpu.py select the same mandatory set.",
+    "retained": [
+      "damage/armor/rounding and turn queue",
+      "mask/step and scalar/vmap equivalence on current map",
+      "75-round forced retreat and human service",
+      "auto-reset/PRNG/final observations on a minimal combat map",
+      "policy mask and PPO gradient",
+      "XP/promotions/death/recovery",
+      "items/potions/scrolls/staves/spells/summons",
+      "recruitment/trade/cities/terrain/ruins",
+      "Default objectives and regeneration",
+      "party swaps and reference starting parties",
+      "tracking and the test-training budget"
+    ],
+    "targeted_only": [
+      "legacy numeric mode and old map variants",
+      "full-map auto-reset variants",
+      "full winning-route rollout (before training or after a map change)",
+      "all-faction permutations and detailed per-unit/effect matrices"
+    ],
+    "fixture_corrections": "Unit summoners require their dedicated enabled map; retained as targeted tests. Copies reuse the current map. The attempted batch capacity 8 caused an extra terrain compilation; capacity 64 restored."
+  },
+  "slowest_tests_including_setup_and_compilation": [
+    {
+      "nodeid": "stoix/tests/number_grid_chex_test.py::CombatTransformsTest::test_batched_step_matches_individual_steps",
+      "seconds": 55.338281232000014
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_combat_stats_test.py::test_wait_is_once_per_round_and_reverses_the_rolled_queue",
+      "seconds": 52.758268684
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_default_map_test.py::test_alar_sells_an_artifact",
+      "seconds": 37.86931714600007
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_combat_stats_test.py::test_damage_bonus_cap_armor_defend_and_python_rounding[25-0-0-False-25]",
+      "seconds": 37.28395966599996
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_chex_test.py::test_human_service_uses_identical_mask_and_rejects_unreachable_target",
+      "seconds": 21.371327516000008
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_chex_test.py::test_cached_autoreset_changes_rng_and_preserves_final_observation[contract]",
+      "seconds": 9.921979986000025
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_turns_test.py::test_human_game_automatically_selects_retreat_after_round_limit",
+      "seconds": 9.472903725999913
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_terrain_test.py::test_actual_step_mask_quotes_and_last_partial_move",
+      "seconds": 9.452317192999942
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_scrolls_test.py::test_hire_scroll_consumption_and_staff_access",
+      "seconds": 9.182988562000048
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_chex_test.py::test_masked_warrior_policy_sample_argmax_and_ppo_gradient",
+      "seconds": 9.060705917000035
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_default_map_test.py::test_default_map_layout_and_actions",
+      "seconds": 8.178437572000007
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_reference_actions_test.py::test_baroness_enemy_escape_victory_awards_only_actual_damage_no_kill_xp",
+      "seconds": 5.943671975999962
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_casting_test.py::test_batched_casts_match_single_transitions_and_mask_equals_step",
+      "seconds": 5.445489049999992
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_progression_test.py::test_cap_building_requirement_full_heal_and_discarded_excess",
+      "seconds": 4.9729934009999965
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_territory_test.py::test_growth_income_acquisition_and_obstacles",
+      "seconds": 3.1201850010000385
+    }
+  ],
+  "static_checks": [
+    "Ruff",
+    "git diff --check",
+    "PowerShell parser",
+    "bash -n scripts/run_gpu.sh"
+  ]
+}

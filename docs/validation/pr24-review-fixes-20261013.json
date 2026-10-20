@@ -1,0 +1,67 @@
+{
+  "date": "2026-10-13",
+  "pull_request": "https://github.com/Alian3785/jaxrep/pull/24",
+  "base_commit": "bb8893419d5d210e1e34cf26b45dc8b2e3575049",
+  "source_hashes": {
+    "web/battle_app.js": "58787f532c94de1bdf0e73d2ff09f93fee0b08d0d59901bcaeb1e820c7b98e8b",
+    "viewer.html": "167be113475a8d2e8090f73e90fe3d0816d78977828364ef501e6797b6a18de1",
+    "stoix/tests/number_grid_campaign_metrics_test.py": "232e28b9ee954aa34a333f657c865a0f69c6cbd24600d4e71ae57a247c8212e5",
+    "docs/DEFAULT_MAP.md": "8ba704e774d83baa45ea34e3ed5ad8720014d8730d087ee74fe7b6cb4b0692f2"
+  },
+  "fixes": [
+    {
+      "review_comment_id": 4252215827,
+      "file": "web/battle_app.js",
+      "change": "Fill only the city tile; keep the wider annotation transparent and draw neighboring units/chests over it. Refresh the standalone viewer.",
+      "visual_verification": "Default map: city [34,29] and adjacent squad [34,30] visible at normal and 2x zoom.",
+      "screenshot": "results/pr24-city-marker.jpg"
+    },
+    {
+      "review_id": 5495827995,
+      "file": "stoix/tests/number_grid_campaign_metrics_test.py",
+      "change": "Assert timeout truncation, discount=1, reset observation, and terminal next_obs against an independent non-autoreset step, for two consecutive episodes.",
+      "targeted": {
+        "passed": 1,
+        "deselected": 5,
+        "pytest_seconds": 15.41
+      }
+    }
+  ],
+  "mandatory": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "0",
+    "tests": "145",
+    "time": "304.580",
+    "timestamp": "2026-10-12T23:58:14.911777+03:00",
+    "hostname": "DESKTOP-HB69M4C"
+  },
+  "runner": {
+    "seconds": 312.5605024789984,
+    "wall_seconds": 312.71703267097473,
+    "execution_limit": 413.8062319755554,
+    "wall_limit": 420,
+    "parent_started_at": 1791838692.019106,
+    "backend": "cuda",
+    "groups": {
+      "suite": {
+        "exit_code": 0,
+        "seconds": 312.5583733769963,
+        "log": "/mnt/c/jaxjax/results/gpu-tests/pr24-review-fixes-20261012/suite.log"
+      }
+    },
+    "compilation_cache": "/mnt/c/jaxjax/results/gpu-tests/compilation-cache",
+    "cold_cache": false,
+    "isolated_cache": false,
+    "selection": "core",
+    "durations": "/mnt/c/jaxjax/results/gpu-tests/pr24-review-fixes-20261012/durations.jsonl",
+    "passed": true
+  },
+  "static": [
+    "node --check web/battle_app.js",
+    "ruff check stoix/tests/number_grid_campaign_metrics_test.py",
+    "git diff --check"
+  ],
+  "performance_benchmark": "Not needed: only rendering, documentation and test assertions changed. Environment and learner computations unchanged."
+}

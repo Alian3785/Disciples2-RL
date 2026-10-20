@@ -1,0 +1,68 @@
+{
+  "date": "2026-10-10",
+  "rules": {
+    "prices": {
+      "road": 1,
+      "plain": 2,
+      "forest": 4,
+      "water": 6
+    },
+    "living_flying": 2,
+    "dead_leader_cost_multiplier": 2,
+    "last_partial_move": true,
+    "water_territory": false
+  },
+  "sources": [
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env_data.py",
+      "sha256": "d070eefeb994e6fe0f7cde0b41beed3a32049e0246a95753141d6adfd2bb1282",
+      "supports": "Lines 155-176: terrain prices and four flying hero names"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env_map.py",
+      "sha256": "78c4d1f6c59f612037a25422f64fbeb215cb50ce2030e0eefda5ac73da95ccf2",
+      "supports": "Lines 120-200: destination terrain, live flight first, boots, double cost on dead leader, partial final move"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env.py",
+      "sha256": "9b07bc7af24cc026c6eb53dd8a329f0174eae5e7e22627b3ba876115f783e78a",
+      "supports": "Lines 1497-1518: only zero movement blocks directional travel"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env_inventory.py",
+      "sha256": "b6c16aee9d88f1a64107780ecea28f30c6279f6030c0350947a46e156627b98c",
+      "supports": "Lines 2075-2115: movement and terrain boots"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env_territory.py",
+      "sha256": "4a5e067f751d7912ce34f2d9ac04436f2e25a48c1213daa33d2009f198a25300",
+      "supports": "Lines 1612-1630: water excluded from territorial path"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/tests/test_campaign_default_terrain.py",
+      "sha256": "ffc783b0b90d93ebba581e05e413b08b9ad30808b46ce44131a5c20829270780",
+      "supports": "Water/forest/road integration tests"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/tests/test_dead_hero_equipment.py",
+      "sha256": "9c6dfd03163751120e887cf11ee67eb4e6e3ee17f51124b4935256a9c2774b87",
+      "supports": "Death disables terrain boots; revival restores"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/tmp/manual.txt",
+      "sha256": "3e496a79f6791440df220b0144a5d17c24af565df2a9702e98eda98ce0179853",
+      "supports": "Saved official manual text lines 601-609 (1/2/4/6), 682-688 (half travel capability; gear suspended)"
+    },
+    {
+      "path": "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/DII Manual.pdf",
+      "sha256": "51b5bc825bb77744b0141bc935aca1ae1803e70950599d8e0c793d5c4258114e",
+      "supports": "Installed official manual"
+    },
+    {
+      "path": "C:/jaxjax/stoix/envs/data/units.json",
+      "sha256": "021bcddaab9bb590f72a49cc956a4456c2fc82ee572146a901fff0a8bec4b19c",
+      "supports": "Imported unit IDs for Pegasus Knight, Archangel, Archdevil, Banshee"
+    }
+  ],
+  "interpretation": "Reference doubles movement cost with dead leader. No second halving of maximum points; this implements the documented half travel capability without applying the penalty twice. Flying cannot cross blocked objects. User level 2-10 cap retained. Original executable/IDA not run."
+}

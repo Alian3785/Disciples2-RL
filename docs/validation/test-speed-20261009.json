@@ -1,0 +1,81 @@
+{
+  "date": "2026-10-09",
+  "branch": "codex/faster-gpu-tests",
+  "scope": "Test fixture/JIT optimizations and 1M transition test-training budget; environment and PPO calculations unchanged by this task.",
+  "environment": {
+    "gpu": "NVIDIA GeForce GTX 1660 Ti",
+    "python": "3.12.3",
+    "jax": "0.11.2",
+    "jaxlib": "0.11.2",
+    "pytest": "9.1.1",
+    "chex": "0.1.92",
+    "backend": "cuda",
+    "cache": "persistent; not cleared",
+    "background": "Existing manual-play server was idle; no concurrent training or other test suite."
+  },
+  "methodology": {
+    "baseline": "Saved successful full suite immediately preceding these test optimizations.",
+    "after": "Successful complete suite after targeted correction of two test adaptations.",
+    "wall_time": "Includes Windows-to-WSL launch, fixture preparation and JAX compilation.",
+    "pytest_time": "Includes fixtures, test execution and JAX compilation; compilation was not separately instrumented.",
+    "comparison_limit": "Single saved baseline versus final run with ordinary persistent cache; not a cold-cache or learner throughput benchmark."
+  },
+  "baseline": {
+    "directory": "results/gpu-tests/merchant-trainer-final-20261009",
+    "passed": 337,
+    "pytest_seconds": 597.68,
+    "runner_seconds": 608.8068998070003,
+    "wall_seconds": 662.4159741401672
+  },
+  "after": {
+    "directory": "results/gpu-tests/faster-tests-final-2026-10-09T20-43-39-602Z",
+    "passed": 341,
+    "pytest_seconds": 469.86,
+    "runner_seconds": 477.77241581,
+    "wall_seconds": 521.4888370037079
+  },
+  "improvement": {
+    "wall_seconds_saved": 140.92713713645935,
+    "wall_time_reduction_percent": 21.274719004079934,
+    "pytest_seconds_saved": 127.81999999999994,
+    "pytest_time_reduction_percent": 21.386025967072676
+  },
+  "coverage": {
+    "previous_case_count": 337,
+    "current_case_count": 341,
+    "removed_cases": [],
+    "added_cases": [
+      "stoix.tests.number_grid_tracking_test::test_test_training_budget_rejects_before_cuda_or_tracking[flag]",
+      "stoix.tests.number_grid_tracking_test::test_test_training_budget_rejects_before_cuda_or_tracking[environment]",
+      "stoix.tests.number_grid_tracking_test::test_test_training_budget_rejects_before_cuda_or_tracking[pytest]",
+      "stoix.tests.number_grid_tracking_test::test_test_budget_preserves_smoke_and_explicit_non_test_training"
+    ]
+  },
+  "training": {
+    "training_runs_executed": 0,
+    "max_test_transitions_per_run": 1000000,
+    "budget_scope": "Sum of transitions over all parallel environments.",
+    "guard": "--test-run, NUMBERGRID_TEST_RUN=1, or PYTEST_CURRENT_TEST reject oversized budgets before tracking/CUDA setup.",
+    "smoke_transitions": 250000
+  },
+  "validation": {
+    "full_suite_passed": true,
+    "warning": "Existing TensorFlow Probability deprecation warning for jax.core.pytype_aval_mappings.",
+    "targeted_fixes": {
+      "log": "results/gpu-tests/faster-tests-2026-10-09T20-33-10-595Z-fixes.log",
+      "passed": 17,
+      "pytest_seconds": 24.94
+    },
+    "initial_attempt": {
+      "directory": "results/gpu-tests/faster-tests-2026-10-09T20-33-10-595Z",
+      "passed": 339,
+      "failed": 2,
+      "reason": "Stage test mock still named after-20m; one JIT test helper call incorrectly used keyword cap=False. Both corrected and verified by targeted tests before final suite."
+    }
+  },
+  "durations": {
+    "baseline_junit": "results/gpu-tests/merchant-trainer-final-20261009/junit.xml",
+    "after_junit": "results/gpu-tests/faster-tests-final-2026-10-09T20-43-39-602Z/junit.xml",
+    "after_log": "results/gpu-tests/faster-tests-final-2026-10-09T20-43-39-602Z/suite.log"
+  }
+}

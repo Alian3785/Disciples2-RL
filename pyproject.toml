@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jaxrep-numbergrid"
+version = "1.0.0"
+description = "Reconstructed NumberGrid with Stoix feedforward PPO for a local NVIDIA GPU"
+requires-python = ">=3.12"
+readme = "README_JAX.md"
+license = "Apache-2.0"
+license-files = ["LICENSE_STOIX"]
+dynamic = ["dependencies"]
+
+[project.optional-dependencies]
+dev = ["ruff==0.16.10"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["numbergrid-runtime.txt"]}
+
+[tool.setuptools.packages.find]
+include = ["stoix*"]
+
+[tool.setuptools.package-data]
+"stoix.envs" = ["data/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["stoix/tests/number_grid_campaign_metrics_test.py", "stoix/tests/number_grid_original_effects_test.py", "stoix/tests/number_grid_test.py", "stoix/tests/number_grid_mask_test.py", "stoix/tests/number_grid_combat_stats_test.py", "stoix/tests/number_grid_chex_test.py", "stoix/tests/number_grid_turns_test.py", "stoix/tests/number_grid_regeneration_test.py", "stoix/tests/number_grid_protections_test.py", "stoix/tests/number_grid_progression_test.py", "stoix/tests/number_grid_limits_test.py", "stoix/tests/number_grid_buildings_test.py", "stoix/tests/number_grid_tracking_test.py", "stoix/tests/number_grid_variety_test.py", "stoix/tests/number_grid_capital_test.py", "stoix/tests/number_grid_potions_test.py", "stoix/tests/number_grid_engagement_test.py", "stoix/tests/number_grid_chests_test.py", "stoix/tests/number_grid_reference_actions_test.py", "stoix/tests/number_grid_summoning_test.py", "stoix/tests/number_grid_items_test.py", "stoix/tests/number_grid_sites_test.py", "stoix/tests/number_grid_recruitment_test.py", "stoix/tests/number_grid_territory_test.py", "stoix/tests/number_grid_mercenary_test.py", "stoix/tests/number_grid_ruins_test.py", "stoix/tests/number_grid_terrain_test.py", "stoix/tests/number_grid_spells_test.py", "stoix/tests/number_grid_casting_test.py", "stoix/tests/number_grid_default_map_test.py", "stoix/tests/number_grid_battle_items_test.py", "stoix/tests/number_grid_scrolls_test.py", "stoix/tests/number_grid_unit_swaps_test.py", "stoix/tests/number_grid_starting_party_test.py", "stoix/tests/number_grid_mirror_match_test.py"]
+addopts = "-p no:cacheprovider -m core --strict-markers"
+markers = ["core: mandatory CUDA regression suite, including fresh compilation within ten minutes"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["F821", "F823", "F601", "B006", "B023"]

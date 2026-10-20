@@ -1,0 +1,471 @@
+{
+  "edition": "Installed Steam Disciples II: Rise of the Elves",
+  "read_only": true,
+  "items": [
+    {
+      "item_id": "G000IG0001",
+      "category": 6,
+      "name": "Life Potion",
+      "description": "Revives dead units",
+      "price": 400,
+      "hp": 0,
+      "modifiers": []
+    },
+    {
+      "item_id": "G000IG0002",
+      "category": 4,
+      "name": "Potion of Protection",
+      "description": "Enchanted unit will receive 15% less damage from attacks for 1 day",
+      "price": 200,
+      "hp": 0,
+      "modifiers": [
+        {
+          "BELONGS_TO": "g000um2002",
+          "DESC": "x000tg6000",
+          "TYPE": "5",
+          "PERCENT": "",
+          "NUMBER": "15",
+          "ABILITY": "",
+          "IMMUNITY": "",
+          "IMMUNECAT": "2",
+          "MOVE": ""
+        }
+      ]
+    },
+    {
+      "item_id": "G000IG0003",
+      "category": 4,
+      "name": "Treebark Potion",
+      "description": "Enchanted unit will receive 30% less damage from attacks for 1 day",
+      "price": 450,
+      "hp": 0,
+      "modifiers": [
+        {
+          "BELONGS_TO": "g000um2003",
+          "DESC": "x000tg6000",
+          "TYPE": "5",
+          "PERCENT": "",
+          "NUMBER": "30",
+          "ABILITY": "",
+          "IMMUNITY": "",
+          "IMMUNECAT": "2",
+          "MOVE": ""
+        }
+      ]
+    },
+    {
+      "item_id": "G000IG0004",
+      "category": 7,
+      "name": "Iron Skin Potion",
+      "description": "Enchanted unit will permanently receive 10% less damage from attacks",
+      "price": 800,
+      "hp": 0,
+      "modifiers": [
+        {
+          "BELONGS_TO": "g000um2004",
+          "DESC": "x000tg6000",
+          "TYPE": "5",
+          "PERCENT": "",
+          "NUMBER": "10",
+          "ABILITY": "",
+          "IMMUNITY": "",
+          "IMMUNECAT": "2",
+          "MOVE": ""
+        }
+      ]
+    },
+    {
+      "item_id": "G000IG0005",
+      "category": 5,
+      "name": "Potion of Healing",
+      "description": "Heals 50 hit points",
+      "price": 150,
+      "hp": 50,
+      "modifiers": []
+    },
+    {
+      "item_id": "G000IG0006",
+      "category": 5,
+      "name": "Potion of Restoration",
+      "description": "Heals 100 hit points",
+      "price": 300,
+      "hp": 100,
+      "modifiers": []
+    },
+    {
+      "item_id": "G000IG0007",
+      "category": 7,
+      "name": "Highfather's Potion",
+      "description": "Adds 15% hit points permanently",
+      "price": 800,
+      "hp": 0,
+      "modifiers": [
+        {
+          "BELONGS_TO": "g000um2007",
+          "DESC": "x000tg6000",
+          "TYPE": "6",
+          "PERCENT": "15",
+          "NUMBER": "1",
+          "ABILITY": "",
+          "IMMUNITY": "",
+          "IMMUNECAT": "2",
+          "MOVE": ""
+        }
+      ]
+    },
+    {
+      "item_id": "G000IG0008",
+      "category": 4,
+      "name": "Potion of Striking",
+      "description": "Enchanted units have 15% greater chance to hit for 1 day",
+      "price": 200,
+      "hp": 0,
+      "modifiers": [
+        {
+          "BELONGS_TO": "g000um2008",
+          "DESC": "x000tg6000",
+          "TYPE": "3",
+          "PERCENT": "15",
+          "NUMBER": "",
+          "ABILITY": "",
+          "IMMUNITY": "",
+          "IMMUNECAT": "2",
+          "MOVE": ""
+        }
+      ]
+    },
+    {
+      "item_id": "G000IG0009",
+      "category": 4,
+      "name": "Potion of Accuracy",
+      "description": "Enchanted units have 30% greater chance to hit for 1 day",
+      "price": 450,
+      "hp": 0,
+      "modifiers": [
+        {
+          "BELONGS_TO": "g000um2009",
+          "DESC": "x000tg6000",
+          "TYPE": "3",
+          "PERCENT": "30",
+          "NUMBER": "",
+          "ABILITY": "",
+          "IMMUNITY": "",
+          "IMMUNECAT": "2",
+          "MOVE": ""
+        }
+      ]
+    },
+    {
+      "item_id": "G000IG0010",
+      "category": 7,
+      "name": "Potion of Fortune",
+      "description": "Enchanted units permanently gain 10% greater chance to hit",
+      "price": 800,
+      "hp": 0,
+      "modifiers": [
+        {
+          "BELONGS_TO": "g000um2010",
+          "DESC": "x000tg6000",
+          "TYPE": "3",
+          "PERCENT": "10",
+          "NUMBER": "",
+          "ABILITY": "",
+          "IMMUNITY": "",
+          "IMMUNECAT": "2",
+          "MOVE": ""
+        }
+      ]
+    },
+    {
+      "item_id": "G000IG0011",
+      "category": 4,
+      "name": "Potion of Swiftness",
+      "description": "Increases by 15% the initiative of the target unit for 1 day",
+      "price": 200,
+      "hp": 0,
+      "modifiers": [
+        {
+          "BELONGS_TO": "g000um2011",
+          "DESC": "x000tg6000",
+          "TYPE": "9",
+          "PERCENT": "15",
+          "NUMBER": "",
+          "ABILITY": "",
+          "IMMUNITY": "",
+          "IMMUNECAT": "2",
+          "MOVE": ""
+        }
+      ]
+    },
+    {
+      "item_id": "G000IG0012",
+      "category": 4,
+      "name": "Potion of Speed",
+      "description": "Increases by 30% the initiative of the target unit for 1 day",
+      "price": 450,
+      "hp": 0,
+      "modifiers": [
+        {
+          "BELONGS_TO": "g000um2012",
+          "DESC": "x000tg6000",
+          "TYPE": "9",
+          "PERCENT": "30",
+          "NUMBER": "",
+          "ABILITY": "",
+          "IMMUNITY": "",
+          "IMMUNECAT": "2",
+          "MOVE": ""
+        }
+      ]
+    },
+    {
+      "item_id": "G000IG0013",
+      "category": 7,
+      "name": "Quicksilver Potion",
+      "description": "Increases permanently by 10% the initiative of the target unit",
+      "price": 800,
+      "hp": 0,
+      "modifiers": [
+        {
+          "BELONGS_TO": "g000um2013",
+          "DESC": "x000tg6000",
+          "TYPE": "9",
+          "PERCENT": "10",
+          "NUMBER": "",
+          "ABILITY": "",
+          "IMMUNITY": "",
+          "IMMUNECAT": "2",
+          "MOVE": ""
+        }
+      ]
+    },
+    {
+      "item_id": "G000IG0014",
+      "category": 4,
+      "name": "Potion of Vigor",
+      "description": "Increases by 15% the damage inflicted by enchanted unit in battle for 1 day",
+      "price": 200,
+      "hp": 0,
+      "modifiers": [
+        {
+          "BELONGS_TO": "g000um2014",
+          "DESC": "x000tg6000",
+          "TYPE": "4",
+          "PERCENT": "15",
+          "NUMBER": "",
+          "ABILITY": "",
+          "IMMUNITY": "",
+          "IMMUNECAT": "2",
+          "MOVE": ""
+        }
+      ]
+    },
+    {
+      "item_id": "G000IG0015",
+      "category": 4,
+      "name": "Potion of Strength",
+      "description": "Increases by 30% the damage inflicted by enchanted unit in battle for 1 day",
+      "price": 450,
+      "hp": 0,
+      "modifiers": [
+        {
+          "BELONGS_TO": "g000um2015",
+          "DESC": "x000tg6000",
+          "TYPE": "4",
+          "PERCENT": "30",
+          "NUMBER": "",
+          "ABILITY": "",
+          "IMMUNITY": "",
+          "IMMUNECAT": "2",
+          "MOVE": ""
+        }
+      ]
+    },
+    {
+      "item_id": "G000IG0016",
+      "category": 7,
+      "name": "Titan's Might Potion",
+      "description": "Increases permanently by 10% the damage inflicted by enchanted unit in battle",
+      "price": 800,
+      "hp": 0,
+      "modifiers": [
+        {
+          "BELONGS_TO": "g000um2016",
+          "DESC": "x000tg6000",
+          "TYPE": "4",
+          "PERCENT": "10",
+          "NUMBER": "",
+          "ABILITY": "",
+          "IMMUNITY": "",
+          "IMMUNECAT": "2",
+          "MOVE": ""
+        }
+      ]
+    },
+    {
+      "item_id": "G000IG0017",
+      "category": 4,
+      "name": "Potion of Invulnerability",
+      "description": "Enchanted unit will receive 50% less damage from attacks for 1 day",
+      "price": 700,
+      "hp": 0,
+      "modifiers": [
+        {
+          "BELONGS_TO": "g000um2017",
+          "DESC": "x000tg6000",
+          "TYPE": "5",
+          "PERCENT": "",
+          "NUMBER": "50",
+          "ABILITY": "",
+          "IMMUNITY": "",
+          "IMMUNECAT": "2",
+          "MOVE": ""
+        }
+      ]
+    },
+    {
+      "item_id": "G000IG0018",
+      "category": 5,
+      "name": "Healing Ointment",
+      "description": "Heals 200 hit points",
+      "price": 600,
+      "hp": 200,
+      "modifiers": []
+    },
+    {
+      "item_id": "G000IG0019",
+      "category": 4,
+      "name": "Potion of Celerity",
+      "description": "Increases by 60% the initiative of the target unit for 1 day",
+      "price": 700,
+      "hp": 0,
+      "modifiers": [
+        {
+          "BELONGS_TO": "g000um2019",
+          "DESC": "x000tg6000",
+          "TYPE": "9",
+          "PERCENT": "60",
+          "NUMBER": "",
+          "ABILITY": "",
+          "IMMUNITY": "",
+          "IMMUNECAT": "2",
+          "MOVE": ""
+        }
+      ]
+    },
+    {
+      "item_id": "G000IG0020",
+      "category": 4,
+      "name": "Potion of Might",
+      "description": "Increases by 50% the damage inflicted by enchanted unit in battle for 1 day",
+      "price": 700,
+      "hp": 0,
+      "modifiers": [
+        {
+          "BELONGS_TO": "g000um2020",
+          "DESC": "x000tg6000",
+          "TYPE": "4",
+          "PERCENT": "50",
+          "NUMBER": "",
+          "ABILITY": "",
+          "IMMUNITY": "",
+          "IMMUNECAT": "2",
+          "MOVE": ""
+        }
+      ]
+    },
+    {
+      "item_id": "G000IG0021",
+      "category": 4,
+      "name": "Potion of Air Warding",
+      "description": "Enchanted units are unaffected by the first Air based attack in battle",
+      "price": 400,
+      "hp": 0,
+      "modifiers": [
+        {
+          "BELONGS_TO": "g000um2021",
+          "DESC": "x000tg6000",
+          "TYPE": "12",
+          "PERCENT": "",
+          "NUMBER": "",
+          "ABILITY": "",
+          "IMMUNITY": "7",
+          "IMMUNECAT": "2",
+          "MOVE": ""
+        }
+      ]
+    },
+    {
+      "item_id": "G000IG0022",
+      "category": 4,
+      "name": "Potion of Water Warding",
+      "description": "Enchanted units are unaffected by the first Water based attack in battle",
+      "price": 400,
+      "hp": 0,
+      "modifiers": [
+        {
+          "BELONGS_TO": "g000um2022",
+          "DESC": "x000tg6000",
+          "TYPE": "12",
+          "PERCENT": "",
+          "NUMBER": "",
+          "ABILITY": "",
+          "IMMUNITY": "5",
+          "IMMUNECAT": "2",
+          "MOVE": ""
+        }
+      ]
+    },
+    {
+      "item_id": "G000IG0023",
+      "category": 4,
+      "name": "Potion of Earth Warding",
+      "description": "Enchanted units are unaffected by the first Earth based attack in battle",
+      "price": 400,
+      "hp": 0,
+      "modifiers": [
+        {
+          "BELONGS_TO": "g000um2023",
+          "DESC": "x000tg6000",
+          "TYPE": "12",
+          "PERCENT": "",
+          "NUMBER": "",
+          "ABILITY": "",
+          "IMMUNITY": "6",
+          "IMMUNECAT": "2",
+          "MOVE": ""
+        }
+      ]
+    },
+    {
+      "item_id": "G000IG0024",
+      "category": 4,
+      "name": "Potion of Fire Warding",
+      "description": "Enchanted units are unaffected by the first Fire based attack in battle",
+      "price": 400,
+      "hp": 0,
+      "modifiers": [
+        {
+          "BELONGS_TO": "g000um2024",
+          "DESC": "x000tg6000",
+          "TYPE": "12",
+          "PERCENT": "",
+          "NUMBER": "",
+          "ABILITY": "",
+          "IMMUNITY": "4",
+          "IMMUNECAT": "2",
+          "MOVE": ""
+        }
+      ]
+    }
+  ],
+  "sources": {
+    "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Disciples II Rise of the Elves\\Globals\\GItem.DBF": "9defb57de768aa0b4bff6b0c5434112aca9021fcf9df61347e4ced7bf8886942",
+    "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Disciples II Rise of the Elves\\Globals\\GmodifL.dbf": "b3a8ff7a3e9de3ff4cee15f41e45ccabeb821c198d22501e9af8ae00cf26e671",
+    "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Disciples II Rise of the Elves\\Globals\\Tglobal.dbf": "5da65f5cb78f714e1814f97d301b43ae54e1b7bf086e61c8f3f93abdfc9e12ce",
+    "C:\\Disciples 2 python reference\\Big_map\\campaign_env_data.py": "d070eefeb994e6fe0f7cde0b41beed3a32049e0246a95753141d6adfd2bb1282",
+    "C:\\Disciples 2 python reference\\Big_map\\campaign_env_inventory.py": "b6c16aee9d88f1a64107780ecea28f30c6279f6030c0350947a46e156627b98c",
+    "C:\\Disciples 2 python reference\\Big_map\\permanent_unit_stats.py": "d065dda3ed1e441b5c99430fbcbee3223cf337e294839bbc4449e9b1362e3980",
+    "C:\\Disciples 2 python reference\\Big_map\\campaign_env_masks.py": "e613821c3ea9e2373f2e4317047f7600b38e7b00841df1439c3d219d3fe40eab"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "map": "NumberGrid-48x48-v79-mercenary-camp",
+  "observations": 1443,
+  "actions": 189,
+  "full_suite": {
+    "seconds": 835.965033752,
+    "wall_seconds": 839.1158745288849,
+    "execution_limit": 890.8376586437225,
+    "wall_limit": 900,
+    "parent_started_at": 1791588630.146,
+    "backend": "cuda",
+    "groups": {
+      "suite": {
+        "exit_code": 0,
+        "seconds": 835.9551476199999,
+        "log": "/mnt/c/jaxjax/results/gpu-tests/mercenary-camp-final-20261010/suite.log"
+      }
+    },
+    "compilation_cache": "/mnt/c/jaxjax/results/gpu-tests/compilation-cache",
+    "cold_cache": false,
+    "isolated_cache": false,
+    "passed": true
+  },
+  "pytest": {
+    "passed": 370,
+    "seconds": 820.65
+  },
+  "logs": {
+    "targeted": "results/mercenary-camp-20261010/targeted.log",
+    "discount": "results/mercenary-camp-20261010/fix-check.log",
+    "regeneration": "results/mercenary-camp-20261010/regen-check.log",
+    "full": "results/gpu-tests/mercenary-camp-final-20261010/suite.log"
+  },
+  "notes": [
+    "Two fixture failures corrected: absent lute in default scenario and former neutral cell occupied by the camp. Confirmed with targeted CUDA reruns before the full suite.",
+    "Full suite used the persistent compilation cache; every test executed.",
+    "No CPU tests. Benchmark training capped at 1,000,000 aggregate transitions.",
+    "Online W&B initialization returned HTTP 403 before training; retry uses an independent offline run with 1,000,000 transitions."
+  ],
+  "static": {
+    "ruff": "passed",
+    "javascript_syntax": "passed"
+  },
+  "ui": "docs/validation/mercenary-ui.json",
+  "performance": "docs/validation/mercenary-performance.json",
+  "final_get_status": 200
+}

@@ -1,0 +1,719 @@
+{
+  "coordinate_transform": "[x,y] -> [y+1,x+1]",
+  "wotan_unit_instance_audit": {
+    "armies": 71,
+    "instance_and_name_mismatches": [],
+    "profile_normalization": "Reference MapConfig resolves source unit names to canonical profiles in layout.json; JAX uses those exact profile IDs.",
+    "original_profile_aliases": [
+      {
+        "enemy": 4,
+        "expected": [
+          "g000uu0031",
+          "g000uu6112"
+        ],
+        "actual": [
+          "g000uu0031",
+          "g000uu6012"
+        ]
+      },
+      {
+        "enemy": 5,
+        "expected": [
+          "g000uu0004",
+          "g000uu0016",
+          "g000uu0154",
+          "g000uu3001"
+        ],
+        "actual": [
+          "g000uu0004",
+          "g000uu0012",
+          "g000uu0154",
+          "g000uu3001"
+        ]
+      },
+      {
+        "enemy": 8,
+        "expected": [
+          "g000uu0054",
+          "g000uu0155",
+          "g000uu0172"
+        ],
+        "actual": [
+          "g000uu0054",
+          "g000uu0156",
+          "g000uu0172"
+        ]
+      },
+      {
+        "enemy": 11,
+        "expected": [
+          "g000uu5229"
+        ],
+        "actual": [
+          "g000uu0029"
+        ]
+      },
+      {
+        "enemy": 12,
+        "expected": [
+          "g000uu5230"
+        ],
+        "actual": [
+          "g000uu0030"
+        ]
+      },
+      {
+        "enemy": 13,
+        "expected": [
+          "g000uu5354"
+        ],
+        "actual": [
+          "g000uu0154"
+        ]
+      },
+      {
+        "enemy": 14,
+        "expected": [
+          "g000uu5210"
+        ],
+        "actual": [
+          "g000uu0010"
+        ]
+      },
+      {
+        "enemy": 15,
+        "expected": [
+          "g000uu5034",
+          "g000uu5034",
+          "g000uu5112"
+        ],
+        "actual": [
+          "g000uu5012",
+          "g000uu5034",
+          "g000uu5034"
+        ]
+      },
+      {
+        "enemy": 16,
+        "expected": [
+          "g000uu5229"
+        ],
+        "actual": [
+          "g000uu0029"
+        ]
+      },
+      {
+        "enemy": 17,
+        "expected": [
+          "g000uu5139"
+        ],
+        "actual": [
+          "g000uu5039"
+        ]
+      },
+      {
+        "enemy": 18,
+        "expected": [
+          "g000uu0029",
+          "g000uu5230"
+        ],
+        "actual": [
+          "g000uu0029",
+          "g000uu0030"
+        ]
+      },
+      {
+        "enemy": 19,
+        "expected": [
+          "g000uu0029",
+          "g000uu5230"
+        ],
+        "actual": [
+          "g000uu0029",
+          "g000uu0030"
+        ]
+      },
+      {
+        "enemy": 20,
+        "expected": [
+          "g000uu5040",
+          "g000uu5040",
+          "g000uu5132"
+        ],
+        "actual": [
+          "g000uu5032",
+          "g000uu5040",
+          "g000uu5040"
+        ]
+      },
+      {
+        "enemy": 21,
+        "expected": [
+          "g000uu0007",
+          "g000uu0008",
+          "g000uu0011",
+          "g000uu5002",
+          "g000uu5003",
+          "g000uu5103"
+        ],
+        "actual": [
+          "g000uu0007",
+          "g000uu0008",
+          "g000uu0011",
+          "g000uu5002",
+          "g000uu5003",
+          "g000uu5003"
+        ]
+      },
+      {
+        "enemy": 22,
+        "expected": [
+          "g000uu5030",
+          "g000uu5030",
+          "g000uu5130"
+        ],
+        "actual": [
+          "g000uu5030",
+          "g000uu5030",
+          "g000uu5030"
+        ]
+      },
+      {
+        "enemy": 23,
+        "expected": [
+          "g000uu5116"
+        ],
+        "actual": [
+          "g000uu5016"
+        ]
+      },
+      {
+        "enemy": 24,
+        "expected": [
+          "g000uu5132"
+        ],
+        "actual": [
+          "g000uu5032"
+        ]
+      },
+      {
+        "enemy": 25,
+        "expected": [
+          "g000uu5030",
+          "g000uu5030",
+          "g000uu5130"
+        ],
+        "actual": [
+          "g000uu5030",
+          "g000uu5030",
+          "g000uu5030"
+        ]
+      },
+      {
+        "enemy": 26,
+        "expected": [
+          "g000uu5137"
+        ],
+        "actual": [
+          "g000uu5037"
+        ]
+      },
+      {
+        "enemy": 27,
+        "expected": [
+          "g000uu5139"
+        ],
+        "actual": [
+          "g000uu5039"
+        ]
+      },
+      {
+        "enemy": 28,
+        "expected": [
+          "g000uu5031",
+          "g000uu5131"
+        ],
+        "actual": [
+          "g000uu5031",
+          "g000uu5031"
+        ]
+      },
+      {
+        "enemy": 29,
+        "expected": [
+          "g000uu5132"
+        ],
+        "actual": [
+          "g000uu5032"
+        ]
+      },
+      {
+        "enemy": 30,
+        "expected": [
+          "g000uu5253"
+        ],
+        "actual": [
+          "g000uu0053"
+        ]
+      },
+      {
+        "enemy": 31,
+        "expected": [
+          "g000uu5126"
+        ],
+        "actual": [
+          "g000uu5026"
+        ]
+      },
+      {
+        "enemy": 32,
+        "expected": [
+          "g000uu5002",
+          "g000uu5003",
+          "g000uu5201"
+        ],
+        "actual": [
+          "g000uu0001",
+          "g000uu5002",
+          "g000uu5003"
+        ]
+      },
+      {
+        "enemy": 33,
+        "expected": [
+          "g000uu6012",
+          "g000uu6112"
+        ],
+        "actual": [
+          "g000uu6012",
+          "g000uu6012"
+        ]
+      },
+      {
+        "enemy": 34,
+        "expected": [
+          "g000uu5218"
+        ],
+        "actual": [
+          "g000uu0018"
+        ]
+      },
+      {
+        "enemy": 35,
+        "expected": [
+          "g000uu5113"
+        ],
+        "actual": [
+          "g000uu5013"
+        ]
+      },
+      {
+        "enemy": 39,
+        "expected": [
+          "g000uu5132"
+        ],
+        "actual": [
+          "g000uu5032"
+        ]
+      },
+      {
+        "enemy": 40,
+        "expected": [
+          "g000uu0029",
+          "g000uu5229"
+        ],
+        "actual": [
+          "g000uu0029",
+          "g000uu0029"
+        ]
+      },
+      {
+        "enemy": 42,
+        "expected": [
+          "g000uu0029",
+          "g000uu5229"
+        ],
+        "actual": [
+          "g000uu0029",
+          "g000uu0029"
+        ]
+      },
+      {
+        "enemy": 44,
+        "expected": [
+          "g000uu5137"
+        ],
+        "actual": [
+          "g000uu5037"
+        ]
+      },
+      {
+        "enemy": 45,
+        "expected": [
+          "g000uu5137"
+        ],
+        "actual": [
+          "g000uu5037"
+        ]
+      },
+      {
+        "enemy": 46,
+        "expected": [
+          "g000uu5132"
+        ],
+        "actual": [
+          "g000uu5032"
+        ]
+      },
+      {
+        "enemy": 47,
+        "expected": [
+          "g000uu5139"
+        ],
+        "actual": [
+          "g000uu5039"
+        ]
+      },
+      {
+        "enemy": 48,
+        "expected": [
+          "g000uu5139"
+        ],
+        "actual": [
+          "g000uu5039"
+        ]
+      },
+      {
+        "enemy": 49,
+        "expected": [
+          "g000uu5137"
+        ],
+        "actual": [
+          "g000uu5037"
+        ]
+      },
+      {
+        "enemy": 50,
+        "expected": [
+          "g000uu0006",
+          "g000uu5030",
+          "g000uu5031",
+          "g000uu5131"
+        ],
+        "actual": [
+          "g000uu0006",
+          "g000uu5030",
+          "g000uu5031",
+          "g000uu5031"
+        ]
+      },
+      {
+        "enemy": 51,
+        "expected": [
+          "g000uu0006",
+          "g000uu0006",
+          "g000uu5002",
+          "g000uu5002",
+          "g000uu5003",
+          "g000uu5354"
+        ],
+        "actual": [
+          "g000uu0006",
+          "g000uu0006",
+          "g000uu0154",
+          "g000uu5002",
+          "g000uu5002",
+          "g000uu5003"
+        ]
+      },
+      {
+        "enemy": 52,
+        "expected": [
+          "g000uu5028",
+          "g000uu5028",
+          "g000uu5126"
+        ],
+        "actual": [
+          "g000uu5026",
+          "g000uu5028",
+          "g000uu5028"
+        ]
+      },
+      {
+        "enemy": 53,
+        "expected": [
+          "g000uu0006",
+          "g000uu0006",
+          "g000uu0006",
+          "g000uu5130"
+        ],
+        "actual": [
+          "g000uu0006",
+          "g000uu0006",
+          "g000uu0006",
+          "g000uu5030"
+        ]
+      },
+      {
+        "enemy": 54,
+        "expected": [
+          "g000uu0006",
+          "g000uu0006",
+          "g000uu5131"
+        ],
+        "actual": [
+          "g000uu0006",
+          "g000uu0006",
+          "g000uu5031"
+        ]
+      },
+      {
+        "enemy": 55,
+        "expected": [
+          "g000uu0006",
+          "g000uu0008",
+          "g000uu0011",
+          "g000uu5002",
+          "g000uu5003",
+          "g000uu5103"
+        ],
+        "actual": [
+          "g000uu0006",
+          "g000uu0008",
+          "g000uu0011",
+          "g000uu5002",
+          "g000uu5003",
+          "g000uu5003"
+        ]
+      },
+      {
+        "enemy": 56,
+        "expected": [
+          "g000uu0007",
+          "g000uu5354"
+        ],
+        "actual": [
+          "g000uu0007",
+          "g000uu0154"
+        ]
+      },
+      {
+        "enemy": 57,
+        "expected": [
+          "g000uu5040",
+          "g000uu5132"
+        ],
+        "actual": [
+          "g000uu5032",
+          "g000uu5040"
+        ]
+      },
+      {
+        "enemy": 58,
+        "expected": [
+          "g000uu5031",
+          "g000uu5031",
+          "g000uu5131"
+        ],
+        "actual": [
+          "g000uu5031",
+          "g000uu5031",
+          "g000uu5031"
+        ]
+      },
+      {
+        "enemy": 59,
+        "expected": [
+          "g000uu0006",
+          "g000uu0006",
+          "g000uu5030",
+          "g000uu5030",
+          "g000uu5131"
+        ],
+        "actual": [
+          "g000uu0006",
+          "g000uu0006",
+          "g000uu5030",
+          "g000uu5030",
+          "g000uu5031"
+        ]
+      },
+      {
+        "enemy": 60,
+        "expected": [
+          "g000uu0006",
+          "g000uu0006",
+          "g000uu0006",
+          "g000uu5031",
+          "g000uu5031",
+          "g000uu5130"
+        ],
+        "actual": [
+          "g000uu0006",
+          "g000uu0006",
+          "g000uu0006",
+          "g000uu5030",
+          "g000uu5031",
+          "g000uu5031"
+        ]
+      },
+      {
+        "enemy": 61,
+        "expected": [
+          "g000uu5030",
+          "g000uu5131"
+        ],
+        "actual": [
+          "g000uu5030",
+          "g000uu5031"
+        ]
+      },
+      {
+        "enemy": 62,
+        "expected": [
+          "g000uu0006",
+          "g000uu0006",
+          "g000uu0006",
+          "g000uu5031",
+          "g000uu5031",
+          "g000uu5130"
+        ],
+        "actual": [
+          "g000uu0006",
+          "g000uu0006",
+          "g000uu0006",
+          "g000uu5030",
+          "g000uu5031",
+          "g000uu5031"
+        ]
+      },
+      {
+        "enemy": 63,
+        "expected": [
+          "g000uu5031",
+          "g000uu5130"
+        ],
+        "actual": [
+          "g000uu5030",
+          "g000uu5031"
+        ]
+      },
+      {
+        "enemy": 64,
+        "expected": [
+          "g000uu5139"
+        ],
+        "actual": [
+          "g000uu5039"
+        ]
+      },
+      {
+        "enemy": 65,
+        "expected": [
+          "g000uu5113"
+        ],
+        "actual": [
+          "g000uu5013"
+        ]
+      },
+      {
+        "enemy": 66,
+        "expected": [
+          "g000uu5113"
+        ],
+        "actual": [
+          "g000uu5013"
+        ]
+      },
+      {
+        "enemy": 67,
+        "expected": [
+          "g000uu5113"
+        ],
+        "actual": [
+          "g000uu5013"
+        ]
+      },
+      {
+        "enemy": 68,
+        "expected": [
+          "g000uu5112"
+        ],
+        "actual": [
+          "g000uu5012"
+        ]
+      },
+      {
+        "enemy": 69,
+        "expected": [
+          "g000uu5112"
+        ],
+        "actual": [
+          "g000uu5012"
+        ]
+      },
+      {
+        "enemy": 70,
+        "expected": [
+          "g000uu5112"
+        ],
+        "actual": [
+          "g000uu5012"
+        ]
+      },
+      {
+        "enemy": 71,
+        "expected": [
+          "g000uu5113"
+        ],
+        "actual": [
+          "g000uu5013"
+        ]
+      }
+    ]
+  },
+  "maps": [
+    {
+      "name": "super_last_stand",
+      "sha256": {
+        "definition": "9a9a1922dc016e305b54bdf64ebe3805dd57a0a58326fd9cc61da284768e8be6",
+        "layout": "a17d0166783fe964bbf21d08dd20367b979a08523b541dfcd9f294d7b9487fba",
+        "jax_map": "2e79c2a506290aa955671cf9fe76cd1c05c55bdb4764392f6ff6cbd507a07d5e"
+      },
+      "armies": 40,
+      "fighters": 189,
+      "scheduled_armies": 33,
+      "chests": 2,
+      "ruins": 2,
+      "starting_gold": 3000
+    },
+    {
+      "name": "siege_train",
+      "sha256": {
+        "definition": "b0adb55c6164ab9dd59964e87fc11cef09be180c4218eef6c6e128f3fdd28187",
+        "layout": "6c459dc941bf12e13112dc4e0a330c40af32ecf8d88e3627790c8efa9e4d377d",
+        "jax_map": "05aeddf94a08fcbff7f45ab4351318d8a1aab19a33533fc4564416e4ef78ced2"
+      },
+      "armies": 33,
+      "fighters": 106,
+      "scheduled_armies": 1,
+      "chests": 0,
+      "ruins": 0,
+      "starting_gold": 0
+    },
+    {
+      "name": "wotans_retribution",
+      "sha256": {
+        "definition": "f46faada955bf1ac79942beab7835c024e51a12cdfc7ca68b5e8d8524842e3b7",
+        "layout": "05c9bcb05532ca6e581f06d273b58e41ecebcd4733e7dbb6216c61c3797e97a1",
+        "jax_map": "b40bc2a350eefabc9d653eb4ca94b297bdd1e8284e3036a0e238a50f518c25a0"
+      },
+      "armies": 71,
+      "fighters": 149,
+      "scheduled_armies": 0,
+      "chests": 24,
+      "ruins": 4,
+      "starting_gold": 100
+    }
+  ]
+}

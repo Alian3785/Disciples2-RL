@@ -1,0 +1,1146 @@
+{
+ "edition": "Disciples II: Rise of the Elves (installed Steam edition)",
+ "source": "Globals/GItem.dbf (ITEM_CAT 8 scrolls, 9 staves), Tglobal.dbf",
+ "mana_kinds": [
+  "infernal",
+  "life",
+  "death",
+  "runes",
+  "elves"
+ ],
+ "items": [
+  {
+   "key": "air_ward_scroll",
+   "game_id": "G000IG5001",
+   "name": "Air ward scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0001",
+   "description": "Enchanted units are unaffected by the first air based attack in battle (Ex: Lightning)"
+  },
+  {
+   "key": "celerity_scroll",
+   "game_id": "G000IG5002",
+   "name": "Celerity scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0002",
+   "description": "Increases by 10% the initiative of the target units"
+  },
+  {
+   "key": "strength_scroll",
+   "game_id": "G000IG5003",
+   "name": "Strength scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0003",
+   "description": "Increases by 10% the damage inflicted by the enchanted units in battle"
+  },
+  {
+   "key": "lightning_scroll",
+   "game_id": "G000IG5004",
+   "name": "Lightning scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0004",
+   "description": "Inflicts 15 points of air damage to target units"
+  },
+  {
+   "key": "water_ward_scroll",
+   "game_id": "G000IG5005",
+   "name": "Water ward scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0005",
+   "description": "Enchanted units are unaffected by the first water based attack in battle (Ex: Blizzard)"
+  },
+  {
+   "key": "haste_scroll",
+   "game_id": "G000IG5006",
+   "name": "Haste scroll",
+   "category": "scroll",
+   "price": 400,
+   "spell": "g000ss0006",
+   "description": "Hasted units recover 50% of their move points"
+  },
+  {
+   "key": "healing_scroll_empire",
+   "game_id": "G000IG5007",
+   "name": "Healing scroll",
+   "category": "scroll",
+   "price": 400,
+   "spell": "g000ss0007",
+   "description": "Heals 30 hit points"
+  },
+  {
+   "key": "summon_i_living_armor_scroll",
+   "game_id": "G000IG5008",
+   "name": "Summon I: Living armor scroll",
+   "category": "scroll",
+   "price": 400,
+   "spell": "g000ss0008",
+   "description": "Summons the magically animated Living Armor"
+  },
+  {
+   "key": "earth_ward_scroll",
+   "game_id": "G000IG5010",
+   "name": "Earth ward scroll",
+   "category": "scroll",
+   "price": 400,
+   "spell": "g000ss0010",
+   "description": "Enchanted units are unaffected by the first earth based attack in battle (Ex: Earth pillar)"
+  },
+  {
+   "key": "mind_ward_scroll",
+   "game_id": "G000IG5011",
+   "name": "Mind ward scroll",
+   "category": "scroll",
+   "price": 600,
+   "spell": "g000ss0011",
+   "description": "Enchanted units are unaffected by the first mind based attack in battle (Ex: Paralyze)"
+  },
+  {
+   "key": "holy_armor_scroll",
+   "game_id": "G000IG5012",
+   "name": "Holy armor scroll",
+   "category": "scroll",
+   "price": 600,
+   "spell": "g000ss0012",
+   "description": "Enchanted units will receive 20% less damage from attacks"
+  },
+  {
+   "key": "holy_strength_scroll",
+   "game_id": "G000IG5013",
+   "name": "Holy strength scroll",
+   "category": "scroll",
+   "price": 600,
+   "spell": "g000ss0013",
+   "description": "Enchanted units have 20% greater chance to hit"
+  },
+  {
+   "key": "wrath_of_god_scroll",
+   "game_id": "G000IG5014",
+   "name": "Wrath of god scroll",
+   "category": "scroll",
+   "price": 600,
+   "spell": "g000ss0014",
+   "description": "Inflicts 50 points of air damage to target units"
+  },
+  {
+   "key": "summon_ii_golem_scroll",
+   "game_id": "G000IG5015",
+   "name": "Summon II: Golem scroll",
+   "category": "scroll",
+   "price": 800,
+   "spell": "g000ss0015",
+   "description": "Summons the earth elemental Golem"
+  },
+  {
+   "key": "fire_ward_scroll",
+   "game_id": "G000IG5016",
+   "name": "Fire ward scroll",
+   "category": "scroll",
+   "price": 800,
+   "spell": "g000ss0016",
+   "description": "Enchanted units are unaffected by the first fire based attack in battle (Ex: Fireball)"
+  },
+  {
+   "key": "call_to_arms_scroll",
+   "game_id": "G000IG5017",
+   "name": "Call to arms scroll",
+   "category": "scroll",
+   "price": 800,
+   "spell": "g000ss0017",
+   "description": "Increases by 33% the damage inflicted by the enchanted units in battle"
+  },
+  {
+   "key": "death_ward_scroll",
+   "game_id": "G000IG5018",
+   "name": "Death ward scroll",
+   "category": "scroll",
+   "price": 1000,
+   "spell": "g000ss0018",
+   "description": "Enchanted units are unaffected by the first death based attack in battle (Ex: Plague)"
+  },
+  {
+   "key": "armageddon_scroll",
+   "game_id": "G000IG5019",
+   "name": "Armageddon scroll",
+   "category": "scroll",
+   "price": 1000,
+   "spell": "g000ss0019",
+   "description": "Inflicts 125 points of air damage to target units"
+  },
+  {
+   "key": "major_healing_scroll",
+   "game_id": "G000IG5020",
+   "name": "Major healing scroll",
+   "category": "scroll",
+   "price": 1000,
+   "spell": "g000ss0020",
+   "description": "Heals 150 hit points"
+  },
+  {
+   "key": "ice_shield_scroll",
+   "game_id": "G000IG5021",
+   "name": "Ice shield scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0021",
+   "description": "Enchanted units will receive 10% less damage from attacks"
+  },
+  {
+   "key": "forestwalk_scroll",
+   "game_id": "G000IG5022",
+   "name": "Forestwalk scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0022",
+   "description": "The target stack will suffer no move penalty when venturing in forests"
+  },
+  {
+   "key": "vithar_s_might_scroll",
+   "game_id": "G000IG5023",
+   "name": "Vithar's might scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0023",
+   "description": "Increases by 10% the damage inflicted by the enchanted units in battle"
+  },
+  {
+   "key": "blizzard_scroll",
+   "game_id": "G000IG5024",
+   "name": "Blizzard scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0024",
+   "description": "Inflicts 15 points of water damage to target units"
+  },
+  {
+   "key": "summon_i_roc_scroll",
+   "game_id": "G000IG5025",
+   "name": "Summon I: Roc scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0025",
+   "description": "Summons the flying Roc"
+  },
+  {
+   "key": "hymn_of_the_clans_scroll",
+   "game_id": "G000IG5026",
+   "name": "Hymn of the Clans scroll",
+   "category": "scroll",
+   "price": 400,
+   "spell": "g000ss0026",
+   "description": "Increases by 15% the initiative of the target units"
+  },
+  {
+   "key": "seafaring_scroll",
+   "game_id": "G000IG5027",
+   "name": "Seafaring scroll",
+   "category": "scroll",
+   "price": 400,
+   "spell": "g000ss0027",
+   "description": "The party will suffer no penalty when sailing on water for a day"
+  },
+  {
+   "key": "ice_pillar_scroll",
+   "game_id": "G000IG5028",
+   "name": "Ice pillar scroll",
+   "category": "scroll",
+   "price": 400,
+   "spell": "g000ss0028",
+   "description": "Inflicts 30 points of water damage to target units"
+  },
+  {
+   "key": "healing_scroll_mountain_clans",
+   "game_id": "G000IG5029",
+   "name": "Healing scroll",
+   "category": "scroll",
+   "price": 400,
+   "spell": "g000ss0029",
+   "description": "Heals 30 hit points"
+  },
+  {
+   "key": "summon_ii_valkyrie_scroll",
+   "game_id": "G000IG5031",
+   "name": "Summon II: Valkyrie scroll",
+   "category": "scroll",
+   "price": 600,
+   "spell": "g000ss0031",
+   "description": "Summons a Valkyrie"
+  },
+  {
+   "key": "chant_of_hasting_scroll",
+   "game_id": "G000IG5032",
+   "name": "Chant of hasting scroll",
+   "category": "scroll",
+   "price": 600,
+   "spell": "g000ss0032",
+   "description": "Hasted units recover 100% of their moving points"
+  },
+  {
+   "key": "tempest_scroll",
+   "game_id": "G000IG5033",
+   "name": "Tempest scroll",
+   "category": "scroll",
+   "price": 600,
+   "spell": "g000ss0033",
+   "description": "Inflicts 50 points of earth damage to target units"
+  },
+  {
+   "key": "chant_of_arms_scroll",
+   "game_id": "G000IG5034",
+   "name": "Chant of arms scroll",
+   "category": "scroll",
+   "price": 600,
+   "spell": "g000ss0034",
+   "description": "Enchanted units have 25% greater chance to hit"
+  },
+  {
+   "key": "chant_of_fortitude_scroll",
+   "game_id": "G000IG5035",
+   "name": "Chant of fortitude scroll",
+   "category": "scroll",
+   "price": 800,
+   "spell": "g000ss0035",
+   "description": "Enchanted units will receive 33% less damage from attacks"
+  },
+  {
+   "key": "wotan_s_blessing_scroll",
+   "game_id": "G000IG5036",
+   "name": "Wotan's blessing scroll",
+   "category": "scroll",
+   "price": 800,
+   "spell": "g000ss0036",
+   "description": "Enchanted units have 33% greater chance to hit"
+  },
+  {
+   "key": "vengeance_of_ymir_scroll",
+   "game_id": "G000IG5037",
+   "name": "Vengeance of Ymir scroll",
+   "category": "scroll",
+   "price": 800,
+   "spell": "g000ss0037",
+   "description": "Inflicts 75 points of water damage to target units"
+  },
+  {
+   "key": "summon_iii_stone_ancestor_scroll",
+   "game_id": "G000IG5038",
+   "name": "Summon III: Stone ancestor scroll",
+   "category": "scroll",
+   "price": 1000,
+   "spell": "g000ss0038",
+   "description": "Summon Dwarven Stone ancestor"
+  },
+  {
+   "key": "wotan_s_chant_scroll",
+   "game_id": "G000IG5040",
+   "name": "Wotan's chant scroll",
+   "category": "scroll",
+   "price": 1000,
+   "spell": "g000ss0040",
+   "description": "Increases by 50% the damage inflicted by the enchanted units in battle"
+  },
+  {
+   "key": "incantare_hellhound_scroll",
+   "game_id": "G000IG5041",
+   "name": "Incantare Hellhound scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0041",
+   "description": "Summons a fire breathing Hellhound"
+  },
+  {
+   "key": "ignis_mare_scroll",
+   "game_id": "G000IG5043",
+   "name": "Ignis mare scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0043",
+   "description": "Inflicts 15 points of fire damage to target units"
+  },
+  {
+   "key": "menta_minoris_scroll",
+   "game_id": "G000IG5044",
+   "name": "Menta minoris scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0044",
+   "description": "Inflicts 15 points of mind damage to target units"
+  },
+  {
+   "key": "tormentio_scroll",
+   "game_id": "G000IG5045",
+   "name": "Tormentio scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0045",
+   "description": "Reduces by 50 the armor of target units"
+  },
+  {
+   "key": "incantare_beliarh_scroll",
+   "game_id": "G000IG5046",
+   "name": "Incantare Beliarh scroll",
+   "category": "scroll",
+   "price": 400,
+   "spell": "g000ss0046",
+   "description": "Summons an infernal Beliarh"
+  },
+  {
+   "key": "ignis_carn_scroll",
+   "game_id": "G000IG5048",
+   "name": "Ignis carn scroll",
+   "category": "scroll",
+   "price": 400,
+   "spell": "g000ss0048",
+   "description": "Inflicts 30 points of fire damage to target units"
+  },
+  {
+   "key": "cursa_demoneus_scroll",
+   "game_id": "G000IG5049",
+   "name": "Cursa demoneus scroll",
+   "category": "scroll",
+   "price": 400,
+   "spell": "g000ss0049",
+   "description": "Reduces by 15% the damage inflicted by enchanted units in battle"
+  },
+  {
+   "key": "chronos_scroll",
+   "game_id": "G000IG5050",
+   "name": "Chronos scroll",
+   "category": "scroll",
+   "price": 400,
+   "spell": "g000ss0050",
+   "description": "Reduces by 15% the initiative of the target units"
+  },
+  {
+   "key": "menta_potens_scroll",
+   "game_id": "G000IG5054",
+   "name": "Menta potens scroll",
+   "category": "scroll",
+   "price": 600,
+   "spell": "g000ss0054",
+   "description": "Inflicts 50 points of mind damage to target units"
+  },
+  {
+   "key": "tortio_menta_scroll",
+   "game_id": "G000IG5055",
+   "name": "Tortio menta scroll",
+   "category": "scroll",
+   "price": 800,
+   "spell": "g000ss0055",
+   "description": "Enchanted units have 33% less chance to hit"
+  },
+  {
+   "key": "sinestra_ignis_scroll",
+   "game_id": "G000IG5056",
+   "name": "Sinestra ignis scroll",
+   "category": "scroll",
+   "price": 800,
+   "spell": "g000ss0056",
+   "description": "Inflicts 75 points of fire damage to target units"
+  },
+  {
+   "key": "projicere_terra_scroll",
+   "game_id": "G000IG5057",
+   "name": "Projicere terra scroll",
+   "category": "scroll",
+   "price": 800,
+   "spell": "g000ss0057",
+   "description": "Inflicts 75 points of earth damage to target units"
+  },
+  {
+   "key": "incantare_avenger_scroll",
+   "game_id": "G000IG5058",
+   "name": "Incantare Avenger scroll",
+   "category": "scroll",
+   "price": 1000,
+   "spell": "g000ss0058",
+   "description": "Summons an infernal Avenger"
+  },
+  {
+   "key": "deus_talonis_scroll",
+   "game_id": "G000IG5060",
+   "name": "Deus talonis scroll",
+   "category": "scroll",
+   "price": 1000,
+   "spell": "g000ss0060",
+   "description": "Inflicts 125 points of fire damage to target units"
+  },
+  {
+   "key": "summon_i_skeleton_scroll",
+   "game_id": "G000IG5061",
+   "name": "Summon I: Skeleton scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0061",
+   "description": "Summons a Skeleton"
+  },
+  {
+   "key": "pestilence_scroll",
+   "game_id": "G000IG5062",
+   "name": "Pestilence scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0062",
+   "description": "Inflicts 15 points of death damage to target units"
+  },
+  {
+   "key": "ice_storm_scroll",
+   "game_id": "G000IG5063",
+   "name": "Ice storm scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0063",
+   "description": "Inflicts 15 points of water damage to target units"
+  },
+  {
+   "key": "weakness_scroll",
+   "game_id": "G000IG5064",
+   "name": "Weakness scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0064",
+   "description": "Enchanted units have 10% less chance to hit"
+  },
+  {
+   "key": "rust_scroll",
+   "game_id": "G000IG5065",
+   "name": "Rust scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0065",
+   "description": "Reduces by 50 the armor of target units"
+  },
+  {
+   "key": "summon_ii_evil_ent_scroll",
+   "game_id": "G000IG5066",
+   "name": "Summon II: Evil Ent scroll",
+   "category": "scroll",
+   "price": 400,
+   "spell": "g000ss0066",
+   "description": "Summons an evil Ent"
+  },
+  {
+   "key": "plague_scroll",
+   "game_id": "G000IG5067",
+   "name": "Plague scroll",
+   "category": "scroll",
+   "price": 400,
+   "spell": "g000ss0067",
+   "description": "Inflicts 30 points of death damage to target units"
+  },
+  {
+   "key": "staff_of_thunder",
+   "game_id": "G000IG6001",
+   "name": "Staff of Thunder",
+   "category": "staff",
+   "price": 600,
+   "spell": "g000ss0004",
+   "description": "Inflicts 15 points of air damage to target units",
+   "cast_mana": [
+    0,
+    100,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "key": "staff_of_necromancy",
+   "game_id": "G000IG6002",
+   "name": "Staff of Necromancy",
+   "category": "staff",
+   "price": 600,
+   "spell": "g000ss0061",
+   "description": "Summons a Skeleton",
+   "cast_mana": [
+    0,
+    0,
+    100,
+    0,
+    0
+   ]
+  },
+  {
+   "key": "staff_of_holiness",
+   "game_id": "G000IG6003",
+   "name": "Staff of Holiness",
+   "category": "staff",
+   "price": 1200,
+   "spell": "g000ss0007",
+   "description": "Heals 30 hit points",
+   "cast_mana": [
+    0,
+    200,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "key": "staff_of_travelling",
+   "game_id": "G000IG6005",
+   "name": "Staff of Travelling",
+   "category": "staff",
+   "price": 1200,
+   "spell": "g000ss0006",
+   "description": "Hasted units recover 50% of their move points",
+   "cast_mana": [
+    0,
+    200,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "key": "staff_of_earth_elemental_control",
+   "game_id": "G000IG6009",
+   "name": "Staff of Earth Elemental Control",
+   "category": "staff",
+   "price": 2400,
+   "spell": "g000ss0015",
+   "description": "Summons the earth elemental Golem",
+   "cast_mana": [
+    100,
+    200,
+    0,
+    100,
+    0
+   ]
+  },
+  {
+   "key": "staff_of_demonology",
+   "game_id": "G000IG6010",
+   "name": "Staff of Demonology",
+   "category": "staff",
+   "price": 3000,
+   "spell": "g000ss0056",
+   "description": "Inflicts 75 points of fire damage to target units",
+   "cast_mana": [
+    200,
+    100,
+    100,
+    0,
+    0
+   ]
+  },
+  {
+   "key": "staff_of_dragon_mastering",
+   "game_id": "G000IG6011",
+   "name": "Staff of Dragon mastering",
+   "category": "staff",
+   "price": 1800,
+   "spell": "g000ss0072",
+   "description": "Inflicts 50 points of death damage to target units",
+   "cast_mana": [
+    0,
+    0,
+    150,
+    150,
+    0
+   ]
+  },
+  {
+   "key": "staff_of_celerity",
+   "game_id": "G000IG6012",
+   "name": "Staff of Celerity",
+   "category": "staff",
+   "price": 600,
+   "spell": "g000ss0002",
+   "description": "Increases by 10% the initiative of the target units",
+   "cast_mana": [
+    0,
+    100,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "key": "spirit_staff",
+   "game_id": "G000IG6013",
+   "name": "Spirit Staff",
+   "category": "staff",
+   "price": 1800,
+   "spell": "g000ss0011",
+   "description": "Enchanted units are unaffected by the first mind based attack in battle (Ex: Paralyze)",
+   "cast_mana": [
+    0,
+    150,
+    0,
+    150,
+    0
+   ]
+  },
+  {
+   "key": "curse_of_nygrael_scroll",
+   "game_id": "G000IG5069",
+   "name": "Curse of Nygrael scroll",
+   "category": "scroll",
+   "price": 400,
+   "spell": "g000ss0069",
+   "description": "Reduces by 15% the damage inflicted by enchanted units in battle"
+  },
+  {
+   "key": "stone_rain_scroll",
+   "game_id": "G000IG5070",
+   "name": "Stone rain scroll",
+   "category": "scroll",
+   "price": 400,
+   "spell": "g000ss0070",
+   "description": "Inflicts 30 points of earth damage to target units"
+  },
+  {
+   "key": "summon_iii_nightmare_scroll",
+   "game_id": "G000IG5071",
+   "name": "Summon III: Nightmare scroll",
+   "category": "scroll",
+   "price": 600,
+   "spell": "g000ss0071",
+   "description": "Summons a Nightmare"
+  },
+  {
+   "key": "call_decay_dragon_scroll",
+   "game_id": "G000IG5072",
+   "name": "Call decay dragon scroll",
+   "category": "scroll",
+   "price": 600,
+   "spell": "g000ss0072",
+   "description": "Inflicts 50 points of death damage to target units"
+  },
+  {
+   "key": "touch_of_mortis_scroll",
+   "game_id": "G000IG5073",
+   "name": "Touch of Mortis scroll",
+   "category": "scroll",
+   "price": 600,
+   "spell": "g000ss0073",
+   "description": "Enchanted units have 20% less chance to hit"
+  },
+  {
+   "key": "terror_scroll",
+   "game_id": "G000IG5075",
+   "name": "Terror scroll",
+   "category": "scroll",
+   "price": 800,
+   "spell": "g000ss0075",
+   "description": "Reduces by 33% the initiative of the target units"
+  },
+  {
+   "key": "rot_scroll",
+   "game_id": "G000IG5076",
+   "name": "Rot scroll",
+   "category": "scroll",
+   "price": 800,
+   "spell": "g000ss0076",
+   "description": "Reduces by 33% the damage inflicted by enchanted units in battle"
+  },
+  {
+   "key": "call_red_dragon_scroll",
+   "game_id": "G000IG5077",
+   "name": "Call red dragon scroll",
+   "category": "scroll",
+   "price": 800,
+   "spell": "g000ss0077",
+   "description": "Inflicts 75 points of fire damage to target units"
+  },
+  {
+   "key": "summon_iv_death_scroll",
+   "game_id": "G000IG5078",
+   "name": "Summon IV: Death scroll",
+   "category": "scroll",
+   "price": 1000,
+   "spell": "g000ss0078",
+   "description": "Summons Thanatos"
+  },
+  {
+   "key": "damage_ward_scroll",
+   "game_id": "G000IG5079",
+   "name": "Damage ward scroll",
+   "category": "scroll",
+   "price": 1000,
+   "spell": "g000ss0079",
+   "description": "Enchanted units are unaffected by the first weapon based attack in battle (Ex: Sword)"
+  },
+  {
+   "key": "hecatomb_scroll",
+   "game_id": "G000IG5080",
+   "name": "Hecatomb scroll",
+   "category": "scroll",
+   "price": 1000,
+   "spell": "g000ss0080",
+   "description": "Inflicts 125 points of death damage to target units"
+  },
+  {
+   "key": "staff_of_protection",
+   "game_id": "G000IG6014",
+   "name": "Staff of Protection",
+   "category": "staff",
+   "price": 1800,
+   "spell": "g000ss0012",
+   "description": "Enchanted units will receive 20% less damage from attacks",
+   "cast_mana": [
+    0,
+    150,
+    0,
+    150,
+    0
+   ]
+  },
+  {
+   "key": "chain_lightning_scroll",
+   "game_id": "G000IG5081",
+   "name": "Chain lightning scroll",
+   "category": "scroll",
+   "price": 900,
+   "spell": "g000ss0081",
+   "description": "Inflicts 40 points of air damage at the center of the spell area"
+  },
+  {
+   "key": "highfather_s_blessing_scroll",
+   "game_id": "G000IG5082",
+   "name": "Highfather's blessing scroll",
+   "category": "scroll",
+   "price": 1200,
+   "spell": "g000ss0082",
+   "description": "Heals 60 hit points at the center of the spell area"
+  },
+  {
+   "key": "winds_of_restoration_scroll",
+   "game_id": "G000IG5084",
+   "name": "Winds of restoration scroll",
+   "category": "scroll",
+   "price": 2000,
+   "spell": "g000ss0084",
+   "description": "Heals all the spell caster's units for 80 hit points"
+  },
+  {
+   "key": "ymir_s_blessing_scroll",
+   "game_id": "G000IG5085",
+   "name": "Ymir's blessing scroll",
+   "category": "scroll",
+   "price": 900,
+   "spell": "g000ss0085",
+   "description": "Increases by 20% the damage inflicted by the units in the spell area"
+  },
+  {
+   "key": "ice_spirits_scroll",
+   "game_id": "G000IG5086",
+   "name": "Ice spirits scroll",
+   "category": "scroll",
+   "price": 1200,
+   "spell": "g000ss0086",
+   "description": "Inflicts 60 points of water damage at the center of the spell area"
+  },
+  {
+   "key": "winds_of_travel_scroll",
+   "game_id": "G000IG5087",
+   "name": "Winds of travel scroll",
+   "category": "scroll",
+   "price": 1600,
+   "spell": "g000ss0087",
+   "description": "All the caster's units recover 100% of their moving points"
+  },
+  {
+   "key": "ancestor_s_call_scroll",
+   "game_id": "G000IG5088",
+   "name": "Ancestor's call scroll",
+   "category": "scroll",
+   "price": 2000,
+   "spell": "g000ss0088",
+   "description": "Increases by 33 the armor of all the caster's units"
+  },
+  {
+   "key": "maledicere_scroll",
+   "game_id": "G000IG5089",
+   "name": "Maledicere scroll",
+   "category": "scroll",
+   "price": 900,
+   "spell": "g000ss0089",
+   "description": "All the units in the area have 25% less chance to hit"
+  },
+  {
+   "key": "ignis_potens_scroll",
+   "game_id": "G000IG5090",
+   "name": "Ignis potens scroll",
+   "category": "scroll",
+   "price": 1200,
+   "spell": "g000ss0090",
+   "description": "Inflicts 60 points of fire damage at the center of the spell area"
+  },
+  {
+   "key": "protectio_ignis_scroll",
+   "game_id": "G000IG5091",
+   "name": "Protectio ignis scroll",
+   "category": "scroll",
+   "price": 1600,
+   "spell": "g000ss0091",
+   "description": "All the units in the area have 33% less initiative"
+  },
+  {
+   "key": "death_storm_scroll",
+   "game_id": "G000IG5093",
+   "name": "Death storm scroll",
+   "category": "scroll",
+   "price": 900,
+   "spell": "g000ss0093",
+   "description": "Inflicts 40 points of earth damage at the center of the spell area"
+  },
+  {
+   "key": "mortis_venom_scroll",
+   "game_id": "G000IG5096",
+   "name": "Mortis' venom scroll",
+   "category": "scroll",
+   "price": 1500,
+   "spell": "g000ss0096",
+   "description": "Inflicts 80 points of death damage at the center of the spell area"
+  },
+  {
+   "key": "highfather_staff",
+   "game_id": "G000IG6015",
+   "name": "Highfather Staff",
+   "category": "staff",
+   "price": 3600,
+   "spell": "g000ss0082",
+   "description": "Heals 60 hit points at the center of the spell area",
+   "cast_mana": [
+    150,
+    300,
+    0,
+    150,
+    0
+   ]
+  },
+  {
+   "key": "staff_of_tempest",
+   "game_id": "G000IG6016",
+   "name": "Staff of Tempest",
+   "category": "staff",
+   "price": 4800,
+   "spell": "g000ss0086",
+   "description": "Inflicts 60 points of water damage at the center of the spell area",
+   "cast_mana": [
+    0,
+    200,
+    200,
+    400,
+    0
+   ]
+  },
+  {
+   "key": "bramble_scroll",
+   "game_id": "G000IG5097",
+   "name": "Bramble Scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0097",
+   "description": "Inflicts 15 points of earth damage to target units"
+  },
+  {
+   "key": "summon_i_ent_minor_scroll",
+   "game_id": "G000IG5098",
+   "name": "Summon I: Ent Minor Scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0098",
+   "description": "Summons an Ent Minor"
+  },
+  {
+   "key": "swift_scroll",
+   "game_id": "G000IG5100",
+   "name": "Swift Scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0100",
+   "description": "Hasted units recover 30% of their moving points"
+  },
+  {
+   "key": "swarm_scroll",
+   "game_id": "G000IG5101",
+   "name": "Swarm Scroll",
+   "category": "scroll",
+   "price": 200,
+   "spell": "g000ss0101",
+   "description": "Reduces by 10% the damage inflicted by enchanted units in battle"
+  },
+  {
+   "key": "healing_scroll_elves",
+   "game_id": "G000IG5102",
+   "name": "Healing Scroll",
+   "category": "scroll",
+   "price": 400,
+   "spell": "g000ss0102",
+   "description": "Heals 30 hit points"
+  },
+  {
+   "key": "summon_ii_ent_scroll",
+   "game_id": "G000IG5103",
+   "name": "Summon II: Ent Scroll",
+   "category": "scroll",
+   "price": 400,
+   "spell": "g000ss0103",
+   "description": "Summons a mighty Ent"
+  },
+  {
+   "key": "singe_scroll",
+   "game_id": "G000IG5104",
+   "name": "Singe Scroll",
+   "category": "scroll",
+   "price": 400,
+   "spell": "g000ss0104",
+   "description": "Inflicts 30 points of fire damage to target units"
+  },
+  {
+   "key": "drown_scroll",
+   "game_id": "G000IG5105",
+   "name": "Drown Scroll",
+   "category": "scroll",
+   "price": 400,
+   "spell": "g000ss0105",
+   "description": "Inflicts 30 points of water damage to target units"
+  },
+  {
+   "key": "confusion_scroll",
+   "game_id": "G000IG5106",
+   "name": "Confusion Scroll",
+   "category": "scroll",
+   "price": 400,
+   "spell": "g000ss0106",
+   "description": "Reduces by 15% the initiative of target units"
+  },
+  {
+   "key": "summon_iii_ent_major_scroll",
+   "game_id": "G000IG5108",
+   "name": "Summon III: Ent Major Scroll",
+   "category": "scroll",
+   "price": 600,
+   "spell": "g000ss0108",
+   "description": "Summons an Ent Major"
+  },
+  {
+   "key": "will_o_wisp_scroll",
+   "game_id": "G000IG5109",
+   "name": "Will-O-Wisp Scroll",
+   "category": "scroll",
+   "price": 600,
+   "spell": "g000ss0109",
+   "description": "Inflicts 50 points of air damage to target units"
+  },
+  {
+   "key": "recovery_scroll",
+   "game_id": "G000IG5110",
+   "name": "Recovery Scroll",
+   "category": "scroll",
+   "price": 600,
+   "spell": "g000ss0110",
+   "description": "Heals 50 hit points at the center of the spell area"
+  },
+  {
+   "key": "distraction_scroll",
+   "game_id": "G000IG5111",
+   "name": "Distraction Scroll",
+   "category": "scroll",
+   "price": 600,
+   "spell": "g000ss0111",
+   "description": "Enchanted units have 20% less chance to hit"
+  },
+  {
+   "key": "avalanche_scroll",
+   "game_id": "G000IG5112",
+   "name": "Avalanche Scroll",
+   "category": "scroll",
+   "price": 800,
+   "spell": "g000ss0112",
+   "description": "Inflicts 60 points of earth damage at the center of the spell area"
+  },
+  {
+   "key": "gust_scroll",
+   "game_id": "G000IG5113",
+   "name": "Gust Scroll",
+   "category": "scroll",
+   "price": 800,
+   "spell": "g000ss0113",
+   "description": "Inflicts 75 points of air damage to target units"
+  },
+  {
+   "key": "mold_scroll",
+   "game_id": "G000IG5114",
+   "name": "Mold Scroll",
+   "category": "scroll",
+   "price": 800,
+   "spell": "g000ss0114",
+   "description": "Reduces by 80 the armor of target units"
+  },
+  {
+   "key": "gallean_s_curse_scroll",
+   "game_id": "G000IG5115",
+   "name": "Gallean's Curse Scroll",
+   "category": "scroll",
+   "price": 800,
+   "spell": "g000ss0115",
+   "description": "Reduces by 33% the damage inflicted by enchanted units in battle"
+  },
+  {
+   "key": "gallean_s_boon_scroll",
+   "game_id": "G000IG5116",
+   "name": "Gallean's Boon Scroll",
+   "category": "scroll",
+   "price": 800,
+   "spell": "g000ss0116",
+   "description": "Adds 50 hit points to enchanted units"
+  },
+  {
+   "key": "summon_iv_verdant_scroll",
+   "game_id": "G000IG5117",
+   "name": "Summon IV: Verdant Scroll",
+   "category": "scroll",
+   "price": 1000,
+   "spell": "g000ss0117",
+   "description": "Summons the forest Verdant"
+  },
+  {
+   "key": "wrath_of_the_glades_scroll",
+   "game_id": "G000IG5118",
+   "name": "Wrath of the Glades Scroll",
+   "category": "scroll",
+   "price": 1000,
+   "spell": "g000ss0118",
+   "description": "Inflicts 125 points of earth damage to target unit"
+  },
+  {
+   "key": "staff_of_fumbling",
+   "game_id": "G000IG6020",
+   "name": "Staff of Fumbling",
+   "category": "staff",
+   "price": 1800,
+   "spell": "g000ss0111",
+   "description": "Enchanted units have 20% less chance to hit",
+   "cast_mana": [
+    0,
+    0,
+    150,
+    0,
+    150
+   ]
+  },
+  {
+   "key": "staff_of_treecalling",
+   "game_id": "G000IG6021",
+   "name": "Staff of Treecalling",
+   "category": "staff",
+   "price": 1800,
+   "spell": "g000ss0103",
+   "description": "Summons a mighty Ent",
+   "cast_mana": [
+    0,
+    0,
+    0,
+    0,
+    200
+   ]
+  }
+ ]
+}

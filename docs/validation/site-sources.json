@@ -1,0 +1,160 @@
+{
+  "edition": "Installed Steam Disciples II Rise of the Elves",
+  "date": "2026-10-09",
+  "dbf": {
+    "Gunits.dbf": {
+      "path": "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals/Gunits.dbf",
+      "sha256": "c663448bc47c08a40863d0efe4ae1476478ccf082af095a612416f181f7721db"
+    },
+    "GDynUpgr.DBF": {
+      "path": "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals/GDynUpgr.DBF",
+      "sha256": "85debbfc03ac7deba04f24f5a3b93a4570c96265af689c80f8147a6bf212d5d2"
+    },
+    "GVars.DBF": {
+      "path": "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals/GVars.DBF",
+      "sha256": "7a58ec3b871884433f92cb30be1c9f93cd5fbb467cdd3a17498bbf7ce0d6dc74"
+    },
+    "GItem.DBF": {
+      "path": "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals/GItem.DBF",
+      "sha256": "9defb57de768aa0b4bff6b0c5434112aca9021fcf9df61347e4ced7bf8886942"
+    }
+  },
+  "geometry": {
+    "size": [
+      3,
+      3
+    ],
+    "row_column_offsets": [
+      [
+        1,
+        3
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        3,
+        2
+      ],
+      [
+        3,
+        3
+      ]
+    ],
+    "reference": "C:/Disciples 2 python reference/Big_map/maps/default.py:463-558",
+    "corroboration": [
+      "https://github.com/VladimirMakeev/D2RSG/blob/master/ScenarioGenerator/src/scenario/site.h",
+      "https://github.com/VladimirMakeev/D2RSG/blob/master/ScenarioGenerator/src/scenario/mapelement.h"
+    ],
+    "repository_tree": "cf2e5f41f68742c6ac83045036865b547bad87fb"
+  },
+  "training": {
+    "source": "Gunits.TRAINING_C; GDynUpgr.TRAINING_C with DYN_UPG_LV",
+    "profiles": 356,
+    "nonzero_growth_profiles": 0,
+    "reference": "C:/Disciples 2 python reference/Big_map/unit_service_costs.py",
+    "manual": "DII Manual.pdf PDF pages 13 and 15: train units and leader; final XP comes from combat",
+    "examples": {
+      "g000uu0052": [
+        1,
+        10,
+        4,
+        0,
+        0
+      ],
+      "g000uu0070": [
+        1,
+        10,
+        4,
+        0,
+        0
+      ],
+      "g000uu0058": [
+        2,
+        10,
+        5,
+        0,
+        0
+      ],
+      "g000uu5017": [
+        1,
+        10,
+        5,
+        0,
+        0
+      ]
+    }
+  },
+  "sale_percent": 20,
+  "validation": {
+    "static": "Python AST, Ruff and JavaScript syntax passed",
+    "targeted_gpu": {
+      "passed": 10,
+      "log": "results/merchant-trainer/targeted.log"
+    },
+    "route_gpu": {
+      "passed": 2,
+      "log": "results/merchant-trainer/route-fixed.log"
+    },
+    "performance": "site-performance.json",
+    "full_gpu": {
+      "passed": 337,
+      "pytest_seconds": 597.68,
+      "wall_seconds": 662.4159741401672,
+      "path": "results/gpu-tests/merchant-trainer-final-20261009"
+    },
+    "ui": "site-ui-checks.json"
+  },
+  "offers": [
+    {
+      "ITEM_CAT": 6,
+      "ITEM_ID": "G000IG0001",
+      "NAME_TXT": "x000tg8001",
+      "DESC_TXT": "x000tg8051",
+      "IMAGE_ID": "icnpo001",
+      "VALUE": "g0400:r0000:y0000:e0000:w0000",
+      "MOD_EQUIP": "",
+      "MOD_POTION": "",
+      "HP_POTION": 0,
+      "SPELL_ID": "",
+      "CASTING": "",
+      "ATTACK_ID": "",
+      "UNIT_ID": "g000uu0150"
+    },
+    {
+      "ITEM_CAT": 5,
+      "ITEM_ID": "G000IG0005",
+      "NAME_TXT": "x000tg8005",
+      "DESC_TXT": "x000tg8055",
+      "IMAGE_ID": "icnpo005",
+      "VALUE": "g0150:r0000:y0000:e0000:w0000",
+      "MOD_EQUIP": "",
+      "MOD_POTION": "",
+      "HP_POTION": 50,
+      "SPELL_ID": "",
+      "CASTING": "",
+      "ATTACK_ID": "",
+      "UNIT_ID": "g000uu0012"
+    },
+    {
+      "ITEM_CAT": 4,
+      "ITEM_ID": "G000IG0017",
+      "NAME_TXT": "x000tg8017",
+      "DESC_TXT": "x000tg8067",
+      "IMAGE_ID": "icnpo017",
+      "VALUE": "g0700:r0000:y0000:e0000:w0000",
+      "MOD_EQUIP": "",
+      "MOD_POTION": "g000um2017",
+      "HP_POTION": 0,
+      "SPELL_ID": "",
+      "CASTING": "",
+      "ATTACK_ID": "",
+      "UNIT_ID": "g000uu0161"
+    }
+  ]
+}

@@ -1,0 +1,1651 @@
+{
+  "source": {
+    "reference": "Big_map/Buildings.py",
+    "reference_sha256": "f1450a25d42d0a7d2e0983736ce2d88a1a398f44ce57967ff2fad4ee53e2e5ca",
+    "gold_multiplier": 100,
+    "game": "Steam Disciples II: Rise of the Elves",
+    "game_tables": [
+      "Globals/Gbuild.DBF",
+      "Globals/GbuiList.dbf"
+    ]
+  },
+  "factions": {
+    "empire": {
+      "name": "Империя",
+      "buildings": [
+        {
+          "id": "emp_d2_b001",
+          "original_id": "g000bb0001",
+          "name": "Конюшня",
+          "gold": 200,
+          "requires": [],
+          "blocks": [
+            "Темница"
+          ],
+          "unit": "Рыцарь",
+          "level": 2,
+          "branch": 0
+        },
+        {
+          "id": "emp_d2_b002",
+          "original_id": "g000bb0007",
+          "name": "Темница",
+          "gold": 200,
+          "requires": [],
+          "blocks": [
+            "Конюшня"
+          ],
+          "unit": "Охотник на ведьм",
+          "level": 2,
+          "branch": 0
+        },
+        {
+          "id": "emp_d2_b003",
+          "original_id": "g000bb0002",
+          "name": "Имперская конюшня",
+          "gold": 500,
+          "requires": [
+            "Конюшня"
+          ],
+          "blocks": [],
+          "unit": "Имперский рыцарь",
+          "level": 3,
+          "branch": 0
+        },
+        {
+          "id": "emp_d2_b004",
+          "original_id": "g000bb0008",
+          "name": "Пыточная камера",
+          "gold": 500,
+          "requires": [
+            "Темница"
+          ],
+          "blocks": [],
+          "unit": "Инквизитор",
+          "level": 3,
+          "branch": 0
+        },
+        {
+          "id": "emp_d2_b005",
+          "original_id": "g000bb0006",
+          "name": "Фонтан Жизни",
+          "gold": 1500,
+          "requires": [
+            "Имперская конюшня"
+          ],
+          "blocks": [
+            "Святыня"
+          ],
+          "unit": "Ангел",
+          "level": 4,
+          "branch": 0
+        },
+        {
+          "id": "emp_d2_b006",
+          "original_id": "g000bb0003",
+          "name": "Святыня",
+          "gold": 1500,
+          "requires": [
+            "Имперская конюшня"
+          ],
+          "blocks": [
+            "Фонтан Жизни"
+          ],
+          "unit": "Паладин",
+          "level": 4,
+          "branch": 0
+        },
+        {
+          "id": "emp_d2_b007",
+          "original_id": "g000bb0009",
+          "name": "Магистрат",
+          "gold": 1500,
+          "requires": [
+            "Пыточная камера"
+          ],
+          "blocks": [],
+          "unit": "Великий инквизитор",
+          "level": 4,
+          "branch": 0
+        },
+        {
+          "id": "emp_d2_b008",
+          "original_id": "g000bb0004",
+          "name": "Священная статуя",
+          "gold": 3000,
+          "requires": [
+            "Святыня"
+          ],
+          "blocks": [
+            "Часовня"
+          ],
+          "unit": "Мастер клинка",
+          "level": 5,
+          "branch": 0
+        },
+        {
+          "id": "emp_d2_b009",
+          "original_id": "g000bb0005",
+          "name": "Часовня",
+          "gold": 3000,
+          "requires": [
+            "Святыня"
+          ],
+          "blocks": [
+            "Священная статуя"
+          ],
+          "unit": "Защитник Веры",
+          "level": 5,
+          "branch": 0
+        },
+        {
+          "id": "emp_d2_b010",
+          "original_id": "g000bb0012",
+          "name": "Библиотека",
+          "gold": 200,
+          "requires": [],
+          "blocks": [],
+          "unit": "Маг",
+          "level": 2,
+          "branch": 2
+        },
+        {
+          "id": "emp_d2_b011",
+          "original_id": "g000bb0022",
+          "name": "Разрушенный храм",
+          "gold": 750,
+          "requires": [
+            "Библиотека"
+          ],
+          "blocks": [],
+          "unit": "Титан",
+          "level": 3,
+          "branch": 4
+        },
+        {
+          "id": "emp_d2_b012",
+          "original_id": "g000bb0013",
+          "name": "Башня",
+          "gold": 500,
+          "requires": [
+            "Библиотека"
+          ],
+          "blocks": [
+            "Круг стихий"
+          ],
+          "unit": "Волшебник",
+          "level": 3,
+          "branch": 2
+        },
+        {
+          "id": "emp_d2_b013",
+          "original_id": "g000bb0015",
+          "name": "Круг стихий",
+          "gold": 500,
+          "requires": [
+            "Библиотека"
+          ],
+          "blocks": [
+            "Башня"
+          ],
+          "unit": "Элементалист",
+          "level": 3,
+          "branch": 2
+        },
+        {
+          "id": "emp_d2_b014",
+          "original_id": "g000bb0014",
+          "name": "Башня Тайн",
+          "gold": 1500,
+          "requires": [
+            "Башня"
+          ],
+          "blocks": [],
+          "unit": "Белый маг",
+          "level": 4,
+          "branch": 2
+        },
+        {
+          "id": "emp_d2_b015",
+          "original_id": "g000bb0010",
+          "name": "Стрелковый полигон",
+          "gold": 200,
+          "requires": [],
+          "blocks": [],
+          "unit": "Стрелок",
+          "level": 2,
+          "branch": 1
+        },
+        {
+          "id": "emp_d2_b016",
+          "original_id": "g000bb0011",
+          "name": "Имперская гильдия",
+          "gold": 500,
+          "requires": [
+            "Стрелковый полигон"
+          ],
+          "blocks": [],
+          "unit": "Имперский ассасин",
+          "level": 3,
+          "branch": 1
+        },
+        {
+          "id": "emp_d2_b017",
+          "original_id": "g000bb0016",
+          "name": "Монастырь",
+          "gold": 200,
+          "requires": [],
+          "blocks": [
+            "Церковь"
+          ],
+          "unit": "Жрец",
+          "level": 2,
+          "branch": 3
+        },
+        {
+          "id": "emp_d2_b018",
+          "original_id": "g000bb0019",
+          "name": "Церковь",
+          "gold": 200,
+          "requires": [],
+          "blocks": [
+            "Монастырь"
+          ],
+          "unit": "Клирик",
+          "level": 2,
+          "branch": 3
+        },
+        {
+          "id": "emp_d2_b019",
+          "original_id": "g000bb0017",
+          "name": "Святилище",
+          "gold": 500,
+          "requires": [
+            "Монастырь"
+          ],
+          "blocks": [],
+          "unit": "Священник",
+          "level": 3,
+          "branch": 3
+        },
+        {
+          "id": "emp_d2_b020",
+          "original_id": "g000bb0020",
+          "name": "Собор",
+          "gold": 500,
+          "requires": [
+            "Церковь"
+          ],
+          "blocks": [],
+          "unit": "Аббатиса",
+          "level": 3,
+          "branch": 3
+        },
+        {
+          "id": "emp_d2_b021",
+          "original_id": "g000bb0018",
+          "name": "Дом молитвы",
+          "gold": 1500,
+          "requires": [
+            "Святилище"
+          ],
+          "blocks": [],
+          "unit": "Патриарх",
+          "level": 4,
+          "branch": 3
+        },
+        {
+          "id": "emp_d2_b022",
+          "original_id": "g000bb0021",
+          "name": "Базилика",
+          "gold": 1500,
+          "requires": [
+            "Собор"
+          ],
+          "blocks": [],
+          "unit": "Прорицательница",
+          "level": 4,
+          "branch": 3
+        },
+        {
+          "id": "emp_d2_b023",
+          "original_id": "g000bb0025",
+          "name": "Гильдия",
+          "gold": 150,
+          "requires": [],
+          "blocks": [],
+          "unit": "Вор империи",
+          "level": 2,
+          "branch": -1
+        },
+        {
+          "id": "emp_d2_b024",
+          "original_id": "g000bb0024",
+          "name": "Башня магии",
+          "gold": 150,
+          "requires": [],
+          "blocks": [],
+          "unit": null,
+          "level": 2,
+          "branch": -1
+        },
+        {
+          "id": "emp_d2_b025",
+          "original_id": "g000bb0023",
+          "name": "Храм",
+          "gold": 300,
+          "requires": [],
+          "blocks": [],
+          "unit": null,
+          "level": 2,
+          "branch": -1
+        }
+      ]
+    },
+    "mountain_clans": {
+      "name": "Горные Кланы",
+      "buildings": [
+        {
+          "id": "mcl_d2_b001",
+          "original_id": "g000bb0026",
+          "name": "Пивоварня",
+          "gold": 200,
+          "requires": [],
+          "blocks": [],
+          "unit": "Гном воин",
+          "level": 2,
+          "branch": 0
+        },
+        {
+          "id": "mcl_d2_b002",
+          "original_id": "g000bb0027",
+          "name": "Арсенал",
+          "gold": 500,
+          "requires": [
+            "Пивоварня"
+          ],
+          "blocks": [
+            "Форпост"
+          ],
+          "unit": "Ветеран",
+          "level": 3,
+          "branch": 0
+        },
+        {
+          "id": "mcl_d2_b003",
+          "original_id": "g000bb0031",
+          "name": "Форпост",
+          "gold": 500,
+          "requires": [
+            "Пивоварня"
+          ],
+          "blocks": [
+            "Арсенал"
+          ],
+          "unit": "Горец",
+          "level": 3,
+          "branch": 0
+        },
+        {
+          "id": "mcl_d2_b004",
+          "original_id": "g000bb0028",
+          "name": "Святыня Предков",
+          "gold": 1500,
+          "requires": [
+            "Арсенал"
+          ],
+          "blocks": [],
+          "unit": "Старый ветеран",
+          "level": 4,
+          "branch": 0
+        },
+        {
+          "id": "mcl_d2_b005",
+          "original_id": "g000bb0032",
+          "name": "Снежная хижина",
+          "gold": 1500,
+          "requires": [
+            "Форпост"
+          ],
+          "blocks": [
+            "Чертог Фенрира"
+          ],
+          "unit": "Отшельник",
+          "level": 4,
+          "branch": 0
+        },
+        {
+          "id": "mcl_d2_b006",
+          "original_id": "g000bb0033",
+          "name": "Чертог Фенрира",
+          "gold": 1500,
+          "requires": [
+            "Форпост"
+          ],
+          "blocks": [
+            "Снежная хижина"
+          ],
+          "unit": "Повелитель волков",
+          "level": 4,
+          "branch": 0
+        },
+        {
+          "id": "mcl_d2_b007",
+          "original_id": "g000bb0029",
+          "name": "Чертог короля",
+          "gold": 4500,
+          "requires": [
+            "Святыня Предков"
+          ],
+          "blocks": [
+            "Зал рун"
+          ],
+          "unit": "Король гномов",
+          "level": 5,
+          "branch": 0
+        },
+        {
+          "id": "mcl_d2_b008",
+          "original_id": "g000bb0030",
+          "name": "Зал рун",
+          "gold": 3000,
+          "requires": [
+            "Святыня Предков"
+          ],
+          "blocks": [
+            "Чертог короля"
+          ],
+          "unit": "Владыка рун",
+          "level": 5,
+          "branch": 0
+        },
+        {
+          "id": "mcl_d2_b009",
+          "original_id": "g000bb0037",
+          "name": "Домик в горах",
+          "gold": 200,
+          "requires": [],
+          "blocks": [],
+          "unit": "Посвященная",
+          "level": 2,
+          "branch": 2
+        },
+        {
+          "id": "mcl_d2_b010",
+          "original_id": "g000bb0046",
+          "name": "Горное логово",
+          "gold": 750,
+          "requires": [
+            "Домик в горах"
+          ],
+          "blocks": [],
+          "unit": "Йети",
+          "level": 3,
+          "branch": 4
+        },
+        {
+          "id": "mcl_d2_b011",
+          "original_id": "g000bb0038",
+          "name": "Сад Мудрости",
+          "gold": 500,
+          "requires": [
+            "Домик в горах"
+          ],
+          "blocks": [
+            "Башня алхимии"
+          ],
+          "unit": "Друид",
+          "level": 3,
+          "branch": 2
+        },
+        {
+          "id": "mcl_d2_b012",
+          "original_id": "g000bb0040",
+          "name": "Башня алхимии",
+          "gold": 500,
+          "requires": [
+            "Домик в горах"
+          ],
+          "blocks": [
+            "Сад Мудрости"
+          ],
+          "unit": "Алхимик",
+          "level": 3,
+          "branch": 2
+        },
+        {
+          "id": "mcl_d2_b013",
+          "original_id": "g000bb0039",
+          "name": "Бузина",
+          "gold": 1500,
+          "requires": [
+            "Сад Мудрости"
+          ],
+          "blocks": [],
+          "unit": "Архидруид",
+          "level": 4,
+          "branch": 2
+        },
+        {
+          "id": "mcl_d2_b014",
+          "original_id": "g000bb0034",
+          "name": "Стрельбище",
+          "gold": 200,
+          "requires": [],
+          "blocks": [],
+          "unit": "Арбалетчик",
+          "level": 2,
+          "branch": 1
+        },
+        {
+          "id": "mcl_d2_b015",
+          "original_id": "g000bb0035",
+          "name": "Незатухающая кузня",
+          "gold": 500,
+          "requires": [
+            "Стрельбище"
+          ],
+          "blocks": [
+            "Гильдия инженеров"
+          ],
+          "unit": "Хранитель кузни",
+          "level": 3,
+          "branch": 1
+        },
+        {
+          "id": "mcl_d2_b016",
+          "original_id": "g000bb0036",
+          "name": "Гильдия инженеров",
+          "gold": 700,
+          "requires": [
+            "Стрельбище"
+          ],
+          "blocks": [
+            "Незатухающая кузня"
+          ],
+          "unit": "Огнеметчик",
+          "level": 3,
+          "branch": 1
+        },
+        {
+          "id": "mcl_d2_b017",
+          "original_id": "g000bb0041",
+          "name": "Горный пик",
+          "gold": 300,
+          "requires": [],
+          "blocks": [],
+          "unit": "Скальной гигант",
+          "level": 2,
+          "branch": 3
+        },
+        {
+          "id": "mcl_d2_b018",
+          "original_id": "g000bb0042",
+          "name": "Облачная крепость",
+          "gold": 750,
+          "requires": [
+            "Горный пик"
+          ],
+          "blocks": [
+            "Ледяные горы"
+          ],
+          "unit": "Штормовой гигант",
+          "level": 3,
+          "branch": 3
+        },
+        {
+          "id": "mcl_d2_b019",
+          "original_id": "g000bb0044",
+          "name": "Ледяные горы",
+          "gold": 750,
+          "requires": [
+            "Горный пик"
+          ],
+          "blocks": [
+            "Облачная крепость"
+          ],
+          "unit": "Ледяной гигант",
+          "level": 3,
+          "branch": 3
+        },
+        {
+          "id": "mcl_d2_b020",
+          "original_id": "g000bb0043",
+          "name": "Мост Биврёст",
+          "gold": 2250,
+          "requires": [
+            "Облачная крепость"
+          ],
+          "blocks": [],
+          "unit": "Старейшина",
+          "level": 4,
+          "branch": 3
+        },
+        {
+          "id": "mcl_d2_b021",
+          "original_id": "g000bb0045",
+          "name": "Ледяные пещеры",
+          "gold": 2250,
+          "requires": [
+            "Ледяные горы"
+          ],
+          "blocks": [],
+          "unit": "Сын Имира",
+          "level": 4,
+          "branch": 3
+        },
+        {
+          "id": "mcl_d2_b022",
+          "original_id": "g000bb0049",
+          "name": "Гильдия",
+          "gold": 150,
+          "requires": [],
+          "blocks": [],
+          "unit": "Вор гномов",
+          "level": 2,
+          "branch": -1
+        },
+        {
+          "id": "mcl_d2_b023",
+          "original_id": "g000bb0048",
+          "name": "Башня магии",
+          "gold": 150,
+          "requires": [],
+          "blocks": [],
+          "unit": null,
+          "level": 2,
+          "branch": -1
+        },
+        {
+          "id": "mcl_d2_b024",
+          "original_id": "g000bb0047",
+          "name": "Храм",
+          "gold": 300,
+          "requires": [],
+          "blocks": [],
+          "unit": null,
+          "level": 2,
+          "branch": -1
+        }
+      ]
+    },
+    "undead_hordes": {
+      "name": "Орды Нежити",
+      "buildings": [
+        {
+          "id": "und_d2_b001",
+          "original_id": "g000bb0075",
+          "name": "Проклятая земля",
+          "gold": 200,
+          "requires": [],
+          "blocks": [
+            "Зловещий монастырь"
+          ],
+          "unit": "Зомби",
+          "level": 2,
+          "branch": 0
+        },
+        {
+          "id": "und_d2_b002",
+          "original_id": "g000bb0079",
+          "name": "Зловещий монастырь",
+          "gold": 200,
+          "requires": [],
+          "blocks": [
+            "Проклятая земля"
+          ],
+          "unit": "Тамплиер",
+          "level": 2,
+          "branch": 0
+        },
+        {
+          "id": "und_d2_b003",
+          "original_id": "g000bb0076",
+          "name": "Кладбище",
+          "gold": 500,
+          "requires": [
+            "Проклятая земля"
+          ],
+          "blocks": [],
+          "unit": "Скелет воин",
+          "level": 3,
+          "branch": 0
+        },
+        {
+          "id": "und_d2_b004",
+          "original_id": "g000bb0080",
+          "name": "Тёмный идол",
+          "gold": 500,
+          "requires": [
+            "Зловещий монастырь"
+          ],
+          "blocks": [],
+          "unit": "Лорд тьмы",
+          "level": 3,
+          "branch": 0
+        },
+        {
+          "id": "und_d2_b005",
+          "original_id": "g000bb0077",
+          "name": "Хранилище душ",
+          "gold": 1500,
+          "requires": [
+            "Кладбище"
+          ],
+          "blocks": [],
+          "unit": "Скелет рыцарь",
+          "level": 4,
+          "branch": 0
+        },
+        {
+          "id": "und_d2_b006",
+          "original_id": "g000bb0078",
+          "name": "Крематорий",
+          "gold": 3000,
+          "requires": [
+            "Хранилище душ"
+          ],
+          "blocks": [],
+          "unit": "Скелет призрак",
+          "level": 5,
+          "branch": 0
+        },
+        {
+          "id": "und_d2_b007",
+          "original_id": "g000bb0083",
+          "name": "Тёмный храм",
+          "gold": 200,
+          "requires": [],
+          "blocks": [],
+          "unit": "Чернокнижник",
+          "level": 2,
+          "branch": 2
+        },
+        {
+          "id": "und_d2_b008",
+          "original_id": "g000bb0084",
+          "name": "Оккультный храм",
+          "gold": 500,
+          "requires": [
+            "Тёмный храм"
+          ],
+          "blocks": [
+            "Проклятая часовня"
+          ],
+          "unit": "Некромант",
+          "level": 3,
+          "branch": 2
+        },
+        {
+          "id": "und_d2_b009",
+          "original_id": "g000bb0089",
+          "name": "Проклятая часовня",
+          "gold": 620,
+          "requires": [
+            "Тёмный храм"
+          ],
+          "blocks": [
+            "Оккультный храм"
+          ],
+          "unit": "Дух",
+          "level": 3,
+          "branch": 2
+        },
+        {
+          "id": "und_d2_b010",
+          "original_id": "g000bb0085",
+          "name": "Крипта",
+          "gold": 1500,
+          "requires": [
+            "Оккультный храм"
+          ],
+          "blocks": [
+            "Тёмная башня"
+          ],
+          "unit": "Вампир",
+          "level": 4,
+          "branch": 2
+        },
+        {
+          "id": "und_d2_b011",
+          "original_id": "g000bb0087",
+          "name": "Тёмная башня",
+          "gold": 1500,
+          "requires": [
+            "Оккультный храм"
+          ],
+          "blocks": [
+            "Крипта"
+          ],
+          "unit": "Лич",
+          "level": 4,
+          "branch": 2
+        },
+        {
+          "id": "und_d2_b012",
+          "original_id": "g000bb0090",
+          "name": "Обитель Мортис",
+          "gold": 1875,
+          "requires": [
+            "Проклятая часовня"
+          ],
+          "blocks": [
+            "Ловушка душ"
+          ],
+          "unit": "Смерть",
+          "level": 4,
+          "branch": 2
+        },
+        {
+          "id": "und_d2_b013",
+          "original_id": "g000bb0091",
+          "name": "Ловушка душ",
+          "gold": 2250,
+          "requires": [
+            "Проклятая часовня"
+          ],
+          "blocks": [
+            "Обитель Мортис"
+          ],
+          "unit": "Сущий",
+          "level": 4,
+          "branch": 2
+        },
+        {
+          "id": "und_d2_b014",
+          "original_id": "g000bb0086",
+          "name": "Цитадель",
+          "gold": 3000,
+          "requires": [
+            "Крипта"
+          ],
+          "blocks": [],
+          "unit": "Высший вампир",
+          "level": 5,
+          "branch": 2
+        },
+        {
+          "id": "und_d2_b015",
+          "original_id": "g000bb0088",
+          "name": "Башня колдовства",
+          "gold": 3000,
+          "requires": [
+            "Тёмная башня"
+          ],
+          "blocks": [],
+          "unit": "Архилич",
+          "level": 5,
+          "branch": 2
+        },
+        {
+          "id": "und_d2_b016",
+          "original_id": "g000bb0081",
+          "name": "Гробница",
+          "gold": 200,
+          "requires": [],
+          "blocks": [],
+          "unit": "Призрак",
+          "level": 2,
+          "branch": 1
+        },
+        {
+          "id": "und_d2_b017",
+          "original_id": "g000bb0082",
+          "name": "Катакомбы",
+          "gold": 1000,
+          "requires": [
+            "Гробница"
+          ],
+          "blocks": [],
+          "unit": "Тень",
+          "level": 3,
+          "branch": 1
+        },
+        {
+          "id": "und_d2_b018",
+          "original_id": "g000bb0092",
+          "name": "Пещера",
+          "gold": 300,
+          "requires": [],
+          "blocks": [],
+          "unit": "Дракон рока",
+          "level": 2,
+          "branch": 3
+        },
+        {
+          "id": "und_d2_b019",
+          "original_id": "g000bb0093",
+          "name": "Кладбище костей",
+          "gold": 750,
+          "requires": [
+            "Пещера"
+          ],
+          "blocks": [],
+          "unit": "Дракон смерти",
+          "level": 3,
+          "branch": 3
+        },
+        {
+          "id": "und_d2_b020",
+          "original_id": "g000bb0096",
+          "name": "Логово оборотней",
+          "gold": 750,
+          "requires": [
+            "Пещера"
+          ],
+          "blocks": [],
+          "unit": "Оборотень",
+          "level": 3,
+          "branch": 4
+        },
+        {
+          "id": "und_d2_b021",
+          "original_id": "g000bb0094",
+          "name": "Проклятый могильник",
+          "gold": 2250,
+          "requires": [
+            "Кладбище костей"
+          ],
+          "blocks": [
+            "Драконий могильник"
+          ],
+          "unit": "Змей ужаса",
+          "level": 4,
+          "branch": 3
+        },
+        {
+          "id": "und_d2_b022",
+          "original_id": "g000bb0095",
+          "name": "Драконий могильник",
+          "gold": 2250,
+          "requires": [
+            "Кладбище костей"
+          ],
+          "blocks": [
+            "Проклятый могильник"
+          ],
+          "unit": "Драколич",
+          "level": 4,
+          "branch": 3
+        },
+        {
+          "id": "und_d2_b023",
+          "original_id": "g000bb0099",
+          "name": "Гильдия",
+          "gold": 150,
+          "requires": [],
+          "blocks": [],
+          "unit": "Вор нежити",
+          "level": 2,
+          "branch": -1
+        },
+        {
+          "id": "und_d2_b024",
+          "original_id": "g000bb0098",
+          "name": "Башня магии",
+          "gold": 150,
+          "requires": [],
+          "blocks": [],
+          "unit": null,
+          "level": 2,
+          "branch": -1
+        },
+        {
+          "id": "und_d2_b025",
+          "original_id": "g000bb0097",
+          "name": "Храм",
+          "gold": 300,
+          "requires": [],
+          "blocks": [],
+          "unit": null,
+          "level": 2,
+          "branch": -1
+        }
+      ]
+    },
+    "legions": {
+      "name": "Легионы Проклятых",
+      "buildings": [
+        {
+          "id": "lod_d2_b001",
+          "original_id": "g000bb0050",
+          "name": "Нечестивый портал",
+          "gold": 200,
+          "requires": [],
+          "blocks": [],
+          "unit": "Берсерк",
+          "level": 2,
+          "branch": 0
+        },
+        {
+          "id": "lod_d2_b002",
+          "original_id": "g000bb0071",
+          "name": "Храм Скорби",
+          "gold": 750,
+          "requires": [
+            "Нечестивый портал"
+          ],
+          "blocks": [],
+          "unit": "Сатир",
+          "level": 3,
+          "branch": 4
+        },
+        {
+          "id": "lod_d2_b003",
+          "original_id": "g000bb0051",
+          "name": "Башня душ",
+          "gold": 500,
+          "requires": [
+            "Нечестивый портал"
+          ],
+          "blocks": [],
+          "unit": "Темный паладин",
+          "level": 3,
+          "branch": 0
+        },
+        {
+          "id": "lod_d2_b004",
+          "original_id": "g000bb0052",
+          "name": "Идол Бетрезена",
+          "gold": 1500,
+          "requires": [
+            "Башня душ"
+          ],
+          "blocks": [],
+          "unit": "Адский рыцарь",
+          "level": 4,
+          "branch": 0
+        },
+        {
+          "id": "lod_d2_b005",
+          "original_id": "g000bb0055",
+          "name": "Аббатство оккультизма",
+          "gold": 200,
+          "requires": [],
+          "blocks": [
+            "Дворец Порока"
+          ],
+          "unit": "Колдун",
+          "level": 2,
+          "branch": 2
+        },
+        {
+          "id": "lod_d2_b006",
+          "original_id": "g000bb0061",
+          "name": "Дворец Порока",
+          "gold": 200,
+          "requires": [],
+          "blocks": [
+            "Аббатство оккультизма"
+          ],
+          "unit": "Ведьма",
+          "level": 2,
+          "branch": 2
+        },
+        {
+          "id": "lod_d2_b007",
+          "original_id": "g000bb0059",
+          "name": "Крепость душ",
+          "gold": 500,
+          "requires": [
+            "Аббатство оккультизма"
+          ],
+          "blocks": [
+            "Тёмное святилище"
+          ],
+          "unit": "Двойник",
+          "level": 3,
+          "branch": 2
+        },
+        {
+          "id": "lod_d2_b008",
+          "original_id": "g000bb0056",
+          "name": "Тёмное святилище",
+          "gold": 500,
+          "requires": [
+            "Аббатство оккультизма"
+          ],
+          "blocks": [
+            "Крепость душ"
+          ],
+          "unit": "Демонолог",
+          "level": 3,
+          "branch": 2
+        },
+        {
+          "id": "lod_d2_b009",
+          "original_id": "g000bb0062",
+          "name": "Дворец Греха",
+          "gold": 500,
+          "requires": [
+            "Дворец Порока"
+          ],
+          "blocks": [],
+          "unit": "Колдунья",
+          "level": 3,
+          "branch": 2
+        },
+        {
+          "id": "lod_d2_b010",
+          "original_id": "g000bb0060",
+          "name": "Зал Обмана",
+          "gold": 1500,
+          "requires": [
+            "Тёмное святилище"
+          ],
+          "blocks": [
+            "Алтарь"
+          ],
+          "unit": "Инкуб",
+          "level": 4,
+          "branch": 2
+        },
+        {
+          "id": "lod_d2_b011",
+          "original_id": "g000bb0057",
+          "name": "Алтарь",
+          "gold": 1500,
+          "requires": [
+            "Тёмное святилище"
+          ],
+          "blocks": [
+            "Зал Обмана"
+          ],
+          "unit": "Пандемонеус",
+          "level": 4,
+          "branch": 2
+        },
+        {
+          "id": "lod_d2_b012",
+          "original_id": "g000bb0063",
+          "name": "Высокий храм",
+          "gold": 1500,
+          "requires": [
+            "Дворец Греха"
+          ],
+          "blocks": [],
+          "unit": "Суккуб",
+          "level": 4,
+          "branch": 2
+        },
+        {
+          "id": "lod_d2_b013",
+          "original_id": "g000bb0058",
+          "name": "Святыня поклонения",
+          "gold": 3000,
+          "requires": [
+            "Алтарь"
+          ],
+          "blocks": [],
+          "unit": "Модеус",
+          "level": 5,
+          "branch": 2
+        },
+        {
+          "id": "lod_d2_b014",
+          "original_id": "g000bb0053",
+          "name": "Шпиль",
+          "gold": 300,
+          "requires": [],
+          "blocks": [],
+          "unit": "Мраморная гаргулья",
+          "level": 2,
+          "branch": 1
+        },
+        {
+          "id": "lod_d2_b015",
+          "original_id": "g000bb0054",
+          "name": "Ониксовый шпиль",
+          "gold": 750,
+          "requires": [
+            "Шпиль"
+          ],
+          "blocks": [],
+          "unit": "Ониксовая гаргулья",
+          "level": 3,
+          "branch": 1
+        },
+        {
+          "id": "lod_d2_b016",
+          "original_id": "g000bb0064",
+          "name": "Нечестивые врата",
+          "gold": 300,
+          "requires": [],
+          "blocks": [],
+          "unit": "Демон",
+          "level": 2,
+          "branch": 3
+        },
+        {
+          "id": "lod_d2_b017",
+          "original_id": "g000bb0065",
+          "name": "Часовня Истязаний",
+          "gold": 750,
+          "requires": [
+            "Нечестивые врата"
+          ],
+          "blocks": [],
+          "unit": "Молох",
+          "level": 3,
+          "branch": 3
+        },
+        {
+          "id": "lod_d2_b018",
+          "original_id": "g000bb0066",
+          "name": "Нечестивый алтарь",
+          "gold": 2250,
+          "requires": [
+            "Часовня Истязаний"
+          ],
+          "blocks": [
+            "Адский портал"
+          ],
+          "unit": "Тварь",
+          "level": 4,
+          "branch": 3
+        },
+        {
+          "id": "lod_d2_b019",
+          "original_id": "g000bb0068",
+          "name": "Адский портал",
+          "gold": 2250,
+          "requires": [
+            "Часовня Истязаний"
+          ],
+          "blocks": [
+            "Нечестивый алтарь"
+          ],
+          "unit": "Повелитель демонов",
+          "level": 4,
+          "branch": 3
+        },
+        {
+          "id": "lod_d2_b020",
+          "original_id": "g000bb0067",
+          "name": "Темница с рабами",
+          "gold": 4500,
+          "requires": [
+            "Нечестивый алтарь"
+          ],
+          "blocks": [],
+          "unit": "Тиамат",
+          "level": 5,
+          "branch": 3
+        },
+        {
+          "id": "lod_d2_b021",
+          "original_id": "g000bb0069",
+          "name": "Нечестивые залы",
+          "gold": 4500,
+          "requires": [
+            "Адский портал"
+          ],
+          "blocks": [
+            "Нечестивый особняк"
+          ],
+          "unit": "Владыка",
+          "level": 5,
+          "branch": 3
+        },
+        {
+          "id": "lod_d2_b022",
+          "original_id": "g000bb0070",
+          "name": "Нечестивый особняк",
+          "gold": 4500,
+          "requires": [
+            "Адский портал"
+          ],
+          "blocks": [
+            "Нечестивые залы"
+          ],
+          "unit": "Дьявол Бездны",
+          "level": 5,
+          "branch": 3
+        },
+        {
+          "id": "lod_d2_b023",
+          "original_id": "g000bb0074",
+          "name": "Гильдия",
+          "gold": 150,
+          "requires": [],
+          "blocks": [],
+          "unit": "Вор легионов",
+          "level": 2,
+          "branch": -1
+        },
+        {
+          "id": "lod_d2_b024",
+          "original_id": "g000bb0073",
+          "name": "Башня магии",
+          "gold": 150,
+          "requires": [],
+          "blocks": [],
+          "unit": null,
+          "level": 2,
+          "branch": -1
+        },
+        {
+          "id": "lod_d2_b025",
+          "original_id": "g000bb0072",
+          "name": "Храм",
+          "gold": 300,
+          "requires": [],
+          "blocks": [],
+          "unit": null,
+          "level": 2,
+          "branch": -1
+        }
+      ]
+    },
+    "elves": {
+      "name": "Альянс Эльфов",
+      "buildings": [
+        {
+          "id": "elf_d2_b001",
+          "original_id": "g000bb0100",
+          "name": "Пещера кентавров",
+          "gold": 200,
+          "requires": [],
+          "blocks": [
+            "Стойла кентавров"
+          ],
+          "unit": "Кентавр странник",
+          "level": 2,
+          "branch": 0
+        },
+        {
+          "id": "elf_d2_b002",
+          "original_id": "g000bb0102",
+          "name": "Стойла кентавров",
+          "gold": 200,
+          "requires": [],
+          "blocks": [
+            "Пещера кентавров"
+          ],
+          "unit": "Кентавр латник",
+          "level": 2,
+          "branch": 0
+        },
+        {
+          "id": "elf_d2_b003",
+          "original_id": "g000bb0101",
+          "name": "Земли племён",
+          "gold": 500,
+          "requires": [
+            "Пещера кентавров"
+          ],
+          "blocks": [],
+          "unit": "Кентавр дикарь",
+          "level": 3,
+          "branch": 0
+        },
+        {
+          "id": "elf_d2_b004",
+          "original_id": "g000bb0109",
+          "name": "Глава",
+          "gold": 200,
+          "requires": [],
+          "blocks": [],
+          "unit": "Проводник",
+          "level": 2,
+          "branch": 2
+        },
+        {
+          "id": "elf_d2_b005",
+          "original_id": "g000bb0116",
+          "name": "Птичник",
+          "gold": 750,
+          "requires": [
+            "Глава"
+          ],
+          "blocks": [],
+          "unit": "Грифон",
+          "level": 3,
+          "branch": 4
+        },
+        {
+          "id": "elf_d2_b006",
+          "original_id": "g000bb0117",
+          "name": "Воларий",
+          "gold": 1500,
+          "requires": [
+            "Птичник"
+          ],
+          "blocks": [],
+          "unit": "Повелитель небес",
+          "level": 4,
+          "branch": 4
+        },
+        {
+          "id": "elf_d2_b007",
+          "original_id": "g000bb0110",
+          "name": "Элементариум",
+          "gold": 500,
+          "requires": [
+            "Глава"
+          ],
+          "blocks": [
+            "Верховный совет"
+          ],
+          "unit": "Теург",
+          "level": 3,
+          "branch": 2
+        },
+        {
+          "id": "elf_d2_b008",
+          "original_id": "g000bb0111",
+          "name": "Верховный совет",
+          "gold": 500,
+          "requires": [
+            "Глава"
+          ],
+          "blocks": [
+            "Элементариум"
+          ],
+          "unit": "Архонт",
+          "level": 3,
+          "branch": 2
+        },
+        {
+          "id": "elf_d2_b009",
+          "original_id": "g000bb0103",
+          "name": "Хижина скорняка",
+          "gold": 200,
+          "requires": [],
+          "blocks": [
+            "Дозорная башня"
+          ],
+          "unit": "Охотник",
+          "level": 2,
+          "branch": 1
+        },
+        {
+          "id": "elf_d2_b010",
+          "original_id": "g000bb0106",
+          "name": "Дозорная башня",
+          "gold": 200,
+          "requires": [],
+          "blocks": [
+            "Хижина скорняка"
+          ],
+          "unit": "Дозорный",
+          "level": 2,
+          "branch": 1
+        },
+        {
+          "id": "elf_d2_b011",
+          "original_id": "g000bb0105",
+          "name": "Лачуга",
+          "gold": 500,
+          "requires": [
+            "Хижина скорняка"
+          ],
+          "blocks": [
+            "Хибара"
+          ],
+          "unit": "Бандит",
+          "level": 3,
+          "branch": 1
+        },
+        {
+          "id": "elf_d2_b012",
+          "original_id": "g000bb0104",
+          "name": "Хибара",
+          "gold": 500,
+          "requires": [
+            "Хижина скорняка"
+          ],
+          "blocks": [
+            "Лачуга"
+          ],
+          "unit": "Стингер",
+          "level": 3,
+          "branch": 1
+        },
+        {
+          "id": "elf_d2_b013",
+          "original_id": "g000bb0107",
+          "name": "Пиромантиум",
+          "gold": 500,
+          "requires": [
+            "Дозорная башня"
+          ],
+          "blocks": [
+            "Гидромантиум"
+          ],
+          "unit": "Смотритель",
+          "level": 3,
+          "branch": 1
+        },
+        {
+          "id": "elf_d2_b014",
+          "original_id": "g000bb0108",
+          "name": "Гидромантиум",
+          "gold": 500,
+          "requires": [
+            "Дозорная башня"
+          ],
+          "blocks": [
+            "Пиромантиум"
+          ],
+          "unit": "Часовой",
+          "level": 3,
+          "branch": 1
+        },
+        {
+          "id": "elf_d2_b015",
+          "original_id": "g000bb0121",
+          "name": "Укрытие",
+          "gold": 1500,
+          "requires": [
+            "Лачуга"
+          ],
+          "blocks": [],
+          "unit": "Разбойник эльф",
+          "level": 4,
+          "branch": 1
+        },
+        {
+          "id": "elf_d2_b016",
+          "original_id": "g000bb0122",
+          "name": "Пристанище",
+          "gold": 3000,
+          "requires": [
+            "Укрытие"
+          ],
+          "blocks": [],
+          "unit": "Мародёр",
+          "level": 5,
+          "branch": 1
+        },
+        {
+          "id": "elf_d2_b017",
+          "original_id": "g000bb0112",
+          "name": "Круг спригганов",
+          "gold": 200,
+          "requires": [],
+          "blocks": [],
+          "unit": "Оракул",
+          "level": 2,
+          "branch": 3
+        },
+        {
+          "id": "elf_d2_b018",
+          "original_id": "g000bb0113",
+          "name": "Заросли",
+          "gold": 500,
+          "requires": [
+            "Круг спригганов"
+          ],
+          "blocks": [],
+          "unit": "Дева рощи",
+          "level": 3,
+          "branch": 3
+        },
+        {
+          "id": "elf_d2_b019",
+          "original_id": "g000bb0114",
+          "name": "Огненная земля",
+          "gold": 1500,
+          "requires": [
+            "Заросли"
+          ],
+          "blocks": [
+            "Алтарь Галлеана"
+          ],
+          "unit": "Солнечная танцовщица",
+          "level": 4,
+          "branch": 3
+        },
+        {
+          "id": "elf_d2_b020",
+          "original_id": "g000bb0115",
+          "name": "Алтарь Галлеана",
+          "gold": 1500,
+          "requires": [
+            "Заросли"
+          ],
+          "blocks": [
+            "Огненная земля"
+          ],
+          "unit": "Сильфида",
+          "level": 4,
+          "branch": 3
+        },
+        {
+          "id": "elf_d2_b021",
+          "original_id": "g000bb0120",
+          "name": "Гильдия",
+          "gold": 150,
+          "requires": [],
+          "blocks": [],
+          "unit": "Вор эльфов",
+          "level": 2,
+          "branch": -1
+        },
+        {
+          "id": "elf_d2_b022",
+          "original_id": "g000bb0119",
+          "name": "Башня магии",
+          "gold": 150,
+          "requires": [],
+          "blocks": [],
+          "unit": null,
+          "level": 2,
+          "branch": -1
+        },
+        {
+          "id": "elf_d2_b023",
+          "original_id": "g000bb0118",
+          "name": "Храм",
+          "gold": 300,
+          "requires": [],
+          "blocks": [],
+          "unit": null,
+          "level": 2,
+          "branch": -1
+        }
+      ]
+    }
+  }
+}

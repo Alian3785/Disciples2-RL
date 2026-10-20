@@ -1,0 +1,67 @@
+{
+  "date": "2026-10-10",
+  "url": "http://127.0.0.1:8769/viewer.html",
+  "http_status": 200,
+  "environment": "NumberGrid-48x48-v78-territory-cities",
+  "backend": "gpu",
+  "browser": "Codex in-app browser",
+  "screenshots": [
+    "docs/images/territory-mines-map.png",
+    "docs/images/territory-cities-ui.png"
+  ],
+  "checks": {
+    "initial_armies": 45,
+    "starting_party": "2 Possessed, Duke, Cultist; leadership 3/3",
+    "initial_north_and_west_disabled": true,
+    "rest_turns": [
+      {
+        "day": 2,
+        "gold": 100,
+        "infernal_mana": 25,
+        "gold_income": 100,
+        "mana_income": 25
+      },
+      {
+        "day": 3,
+        "gold": 250,
+        "infernal_mana": 50,
+        "gold_income": 150,
+        "mana_income": 25
+      },
+      {
+        "day": 4,
+        "gold": 400,
+        "infernal_mana": 125,
+        "gold_income": 150,
+        "mana_income": 75
+      }
+    ],
+    "mines_acquired_without_hero_visit": true,
+    "capital_regeneration_percent": 55,
+    "own_land_regeneration_percent": 30,
+    "services_unavailable_outside_owned_fort": true,
+    "city_levels": [
+      1,
+      3
+    ],
+    "defenders_per_city": [
+      2,
+      2
+    ],
+    "upgrade_prices": [
+      150,
+      500
+    ],
+    "unowned_upgrade_buttons_disabled": true,
+    "visible_map_objects": "Both cities, obstacles, five mana sources, gold mine, owned land and merchant/trainer footprints",
+    "javascript_errors": []
+  },
+  "final_ui_state": {
+    "day": 4,
+    "gold": 400,
+    "infernal_mana": 125,
+    "movement_points": 16,
+    "hero": "capital",
+    "enemies_alive": 45
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "sources": [
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/maps/default.py",
+      "sha256": "9433428e3731215ee5bebb92cde6384d389e1edd366a2248df3ec1bf0a7bb5dc"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/maps/wotans_retribution.py",
+      "sha256": "f46faada955bf1ac79942beab7835c024e51a12cdfc7ca68b5e8d8524842e3b7"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env_map.py",
+      "sha256": "78c4d1f6c59f612037a25422f64fbeb215cb50ce2030e0eefda5ac73da95ccf2"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env.py",
+      "sha256": "9b07bc7af24cc026c6eb53dd8a329f0174eae5e7e22627b3ba876115f783e78a"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env_territory.py",
+      "sha256": "4a5e067f751d7912ce34f2d9ac04436f2e25a48c1213daa33d2009f198a25300"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env_battle.py",
+      "sha256": "293cb833a2d0051455c1935b88170cf344a153a67425ac98a0474dc42cad07d0"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env_inventory.py",
+      "sha256": "b6c16aee9d88f1a64107780ecea28f30c6279f6030c0350947a46e156627b98c"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/tmp/manual.txt",
+      "sha256": "3e496a79f6791440df220b0144a5d17c24af565df2a9702e98eda98ce0179853"
+    },
+    {
+      "path": "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/DII Manual.pdf",
+      "sha256": "51b5bc825bb77744b0141bc935aca1ae1803e70950599d8e0c793d5c4258114e"
+    },
+    {
+      "path": "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Scenedit manual/Disciples 2 Scenario Editor Manual.htm",
+      "sha256": "9f0cbb76a7f742919e512351682536c1585fed0804522a8995e2d82dc24957b7"
+    },
+    {
+      "path": "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals/Gunits.dbf",
+      "sha256": "c663448bc47c08a40863d0efe4ae1476478ccf082af095a612416f181f7721db"
+    },
+    {
+      "path": "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals/GAttacks.dbf",
+      "sha256": "0f4d3eacb636e4484de376186e48daff04cb425878b5ef61cced7ae405589a44"
+    },
+    {
+      "path": "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals/GItem.dbf",
+      "sha256": "9defb57de768aa0b4bff6b0c5434112aca9021fcf9df61347e4ced7bf8886942"
+    },
+    {
+      "path": "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals/GmodifL.dbf",
+      "sha256": "b3a8ff7a3e9de3ff4cee15f41e45ccabeb821c198d22501e9af8ae00cf26e671"
+    },
+    {
+      "path": "C:/jaxjax/stoix/envs/data/units.json",
+      "sha256": "021bcddaab9bb590f72a49cc956a4456c2fc82ee572146a901fff0a8bec4b19c"
+    }
+  ],
+  "guardians": [
+    null,
+    "g000uu5016",
+    null,
+    "goblin_archer",
+    null,
+    null
+  ],
+  "potion": {
+    "item_id": "G000IG0015",
+    "category": 4,
+    "name": "Potion of Strength",
+    "description": "Increases by 30% the damage inflicted by enchanted unit in battle for 1 day",
+    "price": 450,
+    "hp": 0,
+    "modifiers": [
+      {
+        "BELONGS_TO": "g000um2015",
+        "DESC": "x000tg6000",
+        "TYPE": "4",
+        "PERCENT": "30",
+        "NUMBER": "",
+        "ABILITY": "",
+        "IMMUNITY": "",
+        "IMMUNECAT": "2",
+        "MOVE": ""
+      }
+    ]
+  },
+  "scenario": {
+    "anchor": [
+      7,
+      23
+    ],
+    "entrance": [
+      9,
+      25
+    ],
+    "reward": {
+      "strength": 1
+    },
+    "gold": 0
+  },
+  "reference_gap": "Reference leaves the entrance tile outside static obstacles after clearing; user explicitly requests the whole cleared ruin remain an obstacle. JAX keeps all 9 cells blocked, overriding only eligible attacks.",
+  "original_game_executed": false
+}

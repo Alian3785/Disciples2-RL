@@ -1,0 +1,81 @@
+{
+  "date": "2026-10-10",
+  "files": [
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env_data.py",
+      "sha256": "d070eefeb994e6fe0f7cde0b41beed3a32049e0246a95753141d6adfd2bb1282"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env_territory.py",
+      "sha256": "4a5e067f751d7912ce34f2d9ac04436f2e25a48c1213daa33d2009f198a25300"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env_magic.py",
+      "sha256": "84b0f1ed97b8b7d3924ff4b4c2b422e6097deafaaa29487f23b253c0adfc407f"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/grid_world_env.py",
+      "sha256": "474121f9a0834504fe55415840d8d8df7106c952e4311358eed5e7c7e709b34f"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/grid.py",
+      "sha256": "dec701a71fcc290ea3c8224a8dd85f8cf4483da8ac4ef486e1dec71fc5c8a95d"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env.py",
+      "sha256": "9b07bc7af24cc026c6eb53dd8a329f0174eae5e7e22627b3ba876115f783e78a"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env_battle.py",
+      "sha256": "293cb833a2d0051455c1935b88170cf344a153a67425ac98a0474dc42cad07d0"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/tests/test_city_capture_living_leader.py",
+      "sha256": "fe12053aac31d3fdd99a257192d83610dcef41ef1c454b9fcaa43dba685a4581"
+    },
+    {
+      "path": "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals/GVars.DBF",
+      "sha256": "7a58ec3b871884433f92cb30be1c9f93cd5fbb467cdd3a17498bbf7ce0d6dc74"
+    },
+    {
+      "path": "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals/GcityInf.dbf",
+      "sha256": "11f82049a1cb45a2528482b3253c08d4919b9034c54099544289ef77491e6750"
+    },
+    {
+      "path": "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals/Grace.dbf",
+      "sha256": "ce369781f7286f81b458d3634c9e03138b9155cf42692a2316ed2a7292d55336"
+    },
+    {
+      "path": "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals/GmodifL.dbf",
+      "sha256": "b3a8ff7a3e9de3ff4cee15f41e45ccabeb821c198d22501e9af8ae00cf26e671"
+    },
+    {
+      "path": "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals/Gunits.dbf",
+      "sha256": "c663448bc47c08a40863d0efe4ae1476478ccf082af095a612416f181f7721db"
+    }
+  ],
+  "reconstructed_formula": {
+    "url": "https://raw.githubusercontent.com/VladimirMakeev/D2ModdingToolset/master/mss32/src/unitutils.cpp",
+    "sha256": "d4c461d68b85576c6d28050aa6f4e5081fb6740f60ca931e595178e1ff4f70c2",
+    "functions": [
+      "getUnitRegen",
+      "getTerrainRegenBonus"
+    ],
+    "authority": "Reconstructed original formula; optional modifier extension is not enabled"
+  },
+  "differences": {
+    "capital_regeneration": {
+      "python": 50,
+      "installed": 35
+    },
+    "capital_armor": {
+      "python": 40,
+      "installed": 50
+    },
+    "land_inside_fort": {
+      "python": "adds 10%",
+      "implementation": "fort bonus replaces terrain bonus"
+    },
+    "regeneration_rounding": "existing project integer HP ceil, reference fractional HP"
+  }
+}

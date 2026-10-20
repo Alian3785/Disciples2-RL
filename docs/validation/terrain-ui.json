@@ -1,0 +1,124 @@
+{
+  "date": "2026-10-10",
+  "url": "http://127.0.0.1:8769/viewer.html",
+  "map": "NumberGrid-48x48-v81-terrain",
+  "method": "Ordinary browser direction/rest buttons. No injected game state.",
+  "moves": [
+    {
+      "action": "Восток",
+      "before": "20 / 20 очков движения",
+      "after": "19 / 20 очков движения",
+      "step": "1"
+    },
+    {
+      "action": "Юго-восток",
+      "before": "19 / 20 очков движения",
+      "after": "17 / 20 очков движения",
+      "step": "2"
+    },
+    {
+      "action": "Запад",
+      "before": "17 / 20 очков движения",
+      "after": "16 / 20 очков движения",
+      "step": "3"
+    },
+    {
+      "action": "Юг",
+      "before": "16 / 20 очков движения",
+      "after": "19 / 24 очков движения",
+      "step": "4"
+    },
+    {
+      "action": "Юго-запад",
+      "before": "19 / 24 очков движения",
+      "after": "17 / 24 очков движения",
+      "step": "5"
+    },
+    {
+      "action": "Юг",
+      "before": "17 / 24 очков движения",
+      "after": "15 / 24 очков движения",
+      "step": "6"
+    },
+    {
+      "action": "Юг",
+      "before": "15 / 24 очков движения",
+      "after": "13 / 24 очков движения",
+      "step": "7"
+    },
+    {
+      "action": "Юг",
+      "before": "13 / 24 очков движения",
+      "after": "11 / 24 очков движения",
+      "step": "8"
+    },
+    {
+      "action": "Юг",
+      "before": "11 / 24 очков движения",
+      "after": "9 / 24 очков движения",
+      "step": "9"
+    },
+    {
+      "action": "Юг",
+      "before": "9 / 24 очков движения",
+      "after": "7 / 24 очков движения",
+      "step": "10"
+    },
+    {
+      "action": "Юго-восток",
+      "before": "7 / 24 очков движения",
+      "after": "5 / 24 очков движения",
+      "step": "11"
+    },
+    {
+      "action": "Юго-восток",
+      "before": "5 / 24 очков движения",
+      "after": "3 / 24 очков движения",
+      "step": "12"
+    },
+    {
+      "action": "Юг",
+      "before": "3 / 24 очков движения",
+      "after": "0 / 24 очков движения",
+      "step": "13"
+    },
+    {
+      "action": "Отдых · закончить ход",
+      "before": "0 / 24 очков движения",
+      "after": "24 / 24 очков движения",
+      "step": "14"
+    },
+    {
+      "action": "Юг",
+      "before": "24 / 24 очков движения",
+      "after": "18 / 24 очков движения",
+      "step": "15"
+    }
+  ],
+  "verified": {
+    "road_spent": 1,
+    "plain_spent": 2,
+    "water_spent": 6,
+    "last_partial_water_step": {
+      "before": 3,
+      "after": 0
+    },
+    "lake_rendered": true,
+    "forest_rendered": true,
+    "road_rendered": true,
+    "direction_prices_rendered": true,
+    "console_errors": []
+  },
+  "flight": "CUDA tests verified all four flying heroes, every terrain, death and resurrection. Not exercised through manual UI: changing faction retains the existing Duke starting roster.",
+  "reset": {
+    "steps": 0,
+    "faction": "legions",
+    "movement": 20
+  },
+  "screenshots": [
+    "docs/images/terrain-map.png",
+    "docs/images/terrain-water-cost.png"
+  ],
+  "final_get_status": 200,
+  "viewer_map_current": true
+}

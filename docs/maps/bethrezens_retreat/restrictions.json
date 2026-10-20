@@ -1,0 +1,117 @@
+{
+  "scenario": "S101SC0000",
+  "name": "Bethrezen's Retreat",
+  "scenario_limits": {
+    "MAX_UNIT": 3,
+    "MAX_LEADER": 5,
+    "MAX_CITY": 5,
+    "MAX_SPELL": 3
+  },
+  "bethrezen_instance": {
+    "NO_SCEN": "S101SC0000",
+    "UNIT_ID": "S101UN0064",
+    "HP": "300",
+    "XP": "0",
+    "CREATION": "0",
+    "TYPE": "G000UU6001",
+    "LEVEL": "1",
+    "TRANSF": "F",
+    "DYNLEVEL": ""
+  },
+  "bethrezen_profile": {
+    "UNIT_ID": "g000uu6001",
+    "UNIT_CAT": "2",
+    "LEVEL": "1",
+    "PREV_ID": "g000000000",
+    "RACE_ID": "g000rr0004",
+    "SUBRACE": "5",
+    "BRANCH": "5",
+    "SIZE_SMALL": "T",
+    "SEX_M": "T",
+    "ENROLL_C": "g1800:r0000:y0000:e0000:w0000",
+    "ENROLL_B": "g000000000",
+    "NAME_TXT": "x000tg2401",
+    "DESC_TXT": "x000tg2701",
+    "ABIL_TXT": "x000tgb006",
+    "ATTACK_ID": "g000aa6001",
+    "ATTACK2_ID": "g000aa6501",
+    "ATCK_TWICE": "F",
+    "HIT_POINT": "300",
+    "BASE_UNIT": "g000uu6101",
+    "ARMOR": "0",
+    "REGEN": "5",
+    "REVIVE_C": "g0600:r0000:y0000:e0000:w0000",
+    "HEAL_C": "g0003:r0000:y0000:e0000:w0000",
+    "TRAINING_C": "g0005:r0000:y0000:e0000:w0000",
+    "XP_KILLED": "720",
+    "UPGRADE_B": "g000000000",
+    "XP_NEXT": "5750",
+    "MOVE": "25",
+    "SCOUT": "5",
+    "LIFE_TIME": "",
+    "LEADERSHIP": "6",
+    "NEGOTIATE": "60",
+    "LEADER_CAT": "1",
+    "DYN_UPG1": "g000DU6001",
+    "DYN_UPG_LV": "10",
+    "DYN_UPG2": "g002DU6001",
+    "WATER_ONLY": "F",
+    "DEATH_ANIM": "2"
+  },
+  "modifiers": [
+    {
+      "NO_SCEN": "S101SC0000",
+      "UNIT_ID": "S101UN0064",
+      "MODIF_ID": "G000UM9032"
+    },
+    {
+      "NO_SCEN": "S101SC0000",
+      "UNIT_ID": "S101UN0064",
+      "MODIF_ID": "G000UM9032"
+    }
+  ],
+  "modifier_definitions": [
+    {
+      "MODIF_ID": "g000um9032",
+      "SOURCE": "1",
+      "COMMENTS": "-1 Leadership"
+    }
+  ],
+  "modifier_effects": [
+    {
+      "BELONGS_TO": "g000um9032",
+      "DESC": "x000tg6032",
+      "TYPE": "2",
+      "PERCENT": "",
+      "NUMBER": "-1",
+      "ABILITY": "",
+      "IMMUNITY": "",
+      "IMMUNECAT": "",
+      "MOVE": ""
+    }
+  ],
+  "leadership": {
+    "base_internal": 6,
+    "scenario_delta": -2,
+    "effective_internal": 4,
+    "displayed_companion_capacity": 3,
+    "conversion_source": "https://github.com/VladimirMakeev/D2ModdingToolset/blob/master/mss32/src/enclayoutunithooks.cpp#L652-L658"
+  },
+  "semantics": {
+    "MAX_UNIT": "Highest unit upgrade building tier, not a numerical unit level cap.",
+    "MAX_LEADER": "Leader promotion ceiling; higher imported levels are preserved without further promotion.",
+    "MAX_SPELL": "Highest spell level learnable in the Mage Guild; not a ban on scripted spells or items."
+  },
+  "sha256": {
+    "Scens/Sinfo.DBF": "9073d072e2b9e338f13a24466520ae07cf28c64b982bd22978c819c77cc6df12",
+    "Scens/SUnit.DBF": "80b5a3a697f13ed8d9446ed3a4c4bfbf7c40fa3e74e5a12ec2a759854c1c4857",
+    "Scens/SUnitM.dbf": "c077b2fb442d02cdb20ed273ed3155848bca765e12d5c4f7da51dbd0801ce349",
+    "Globals/Gunits.dbf": "c663448bc47c08a40863d0efe4ae1476478ccf082af095a612416f181f7721db",
+    "Globals/Gmodif.dbf": "78003ddc29d8a00acde01f860a9d215ef4089536b88b2e89150dabac8107f3fa",
+    "Globals/GmodifL.dbf": "b3a8ff7a3e9de3ff4cee15f41e45ccabeb821c198d22501e9af8ae00cf26e671",
+    "Globals/LmodifE.dbf": "264a92622e01251a988007c032eabf5f1d777b3bf6f1e522703854bbce3d895a",
+    "Scenedit manual/Disciples 2 Scenario Editor Manual.htm": "9f0cbb76a7f742919e512351682536c1585fed0804522a8995e2d82dc24957b7"
+  },
+  "original_game_executed": false,
+  "ida_used": false
+}

@@ -1,0 +1,112 @@
+{
+  "before": {
+    "device": "NVIDIA GeForce GTX 1660 Ti",
+    "jax": "0.11.2",
+    "cuda_runtime": "13.4.92",
+    "seed": 42,
+    "training_steps": 1000000,
+    "num_envs": 250,
+    "rollout_length": 100,
+    "ppo_updates": 40,
+    "observation_size": 1443,
+    "parameter_count": 427198,
+    "training_seconds": 9.833220179999898,
+    "mean_steps_per_second": 101696.08548315964,
+    "ppo_compile_seconds": 65.98179905500001,
+    "initial_evaluation_seconds": 56.70847094999999,
+    "final_evaluation_seconds": 69.486064919,
+    "sampled_evaluation_seconds": 58.44856660400001,
+    "checkpoint_seconds": 0.3868766130001404,
+    "total_runner_seconds": 306.1028188099999,
+    "checkpoint_roundtrip_verified": true,
+    "learner_source_sha256": "6f147922521be6bfc2c78bfd4f12b30d881db4c85e2fc515e9f6ff22b29482a1",
+    "wandb": {
+      "requested_mode": "offline",
+      "mode": "offline",
+      "status": "finished",
+      "summary_interval": 1000000,
+      "id": "py7vuvma",
+      "project": "numbergrid",
+      "directory": "/mnt/c/jaxjax/results/mercenary-camp-20261010/after-offline-1m/wandb/offline-run-20261010_024627-py7vuvma",
+      "url": null,
+      "wandb_version": "0.30.0",
+      "init_seconds": 2.6303436600001078,
+      "finish_seconds": 0.03520380700001624,
+      "logging_seconds": 0.006176412000058917
+    }
+  },
+  "after": {
+    "device": "NVIDIA GeForce GTX 1660 Ti",
+    "jax": "0.11.2",
+    "cuda_runtime": "13.4.92",
+    "seed": 42,
+    "training_steps": 1000000,
+    "num_envs": 250,
+    "rollout_length": 100,
+    "ppo_updates": 40,
+    "observation_size": 1491,
+    "parameter_count": 440260,
+    "training_seconds": 10.234028527000419,
+    "mean_steps_per_second": 97713.23163324216,
+    "ppo_compile_seconds": 63.73379465700009,
+    "initial_evaluation_seconds": 52.194115680000095,
+    "final_evaluation_seconds": 68.51385975599987,
+    "sampled_evaluation_seconds": 65.27587745699998,
+    "checkpoint_seconds": 0.3009856599999239,
+    "total_runner_seconds": 308.6123307109999,
+    "checkpoint_roundtrip_verified": true,
+    "learner_source_sha256": "6f147922521be6bfc2c78bfd4f12b30d881db4c85e2fc515e9f6ff22b29482a1",
+    "wandb": {
+      "requested_mode": "offline",
+      "mode": "offline",
+      "status": "finished",
+      "summary_interval": 1000000,
+      "id": "idlgy4ds",
+      "project": "numbergrid",
+      "directory": "/mnt/c/jaxjax/results/ruins-20261010/after-1m/wandb/offline-run-20261010_032743-idlgy4ds",
+      "url": null,
+      "wandb_version": "0.30.0",
+      "init_seconds": 3.2380459979999614,
+      "finish_seconds": 0.03343340000014905,
+      "logging_seconds": 0.013203652000129296
+    }
+  },
+  "speed_change_percent": -3.9164278850998824,
+  "same_config_except_map": true,
+  "same_packages": true,
+  "before_snapshot_audit": {
+    "number_grid_map.json": {
+      "sha256": "1eb12ce755e7c249c05e52b28664a4e613835389cc5b4a889e2516944010454a",
+      "saved_map": "results/mercenary-camp-20261010/after-offline-1m/map.json",
+      "semantic_match": true
+    },
+    "stoix/envs/number_grid.py": {
+      "sha256": "c2cb00705103e571548e11437f90163746e3aace2473b9fccf5d4cd61ec51bfb",
+      "baseline": "c2cb00705103e571548e11437f90163746e3aace2473b9fccf5d4cd61ec51bfb",
+      "matches": true
+    },
+    "stoix/envs/number_grid_items.py": {
+      "sha256": "a7295baf24e0a652a437a4a44d6641d53df4aca3f5bcaf7ba467d6299f30b6c2",
+      "baseline": "a7295baf24e0a652a437a4a44d6641d53df4aca3f5bcaf7ba467d6299f30b6c2",
+      "matches": true
+    },
+    "stoix/envs/number_grid_potions.py": {
+      "sha256": "a3740d4b1a659f693349932c8229890a90c3cff19876d74ebb0198bd48afa3f0",
+      "baseline": "a3740d4b1a659f693349932c8229890a90c3cff19876d74ebb0198bd48afa3f0",
+      "matches": true
+    },
+    "stoix/envs/number_grid_sites.py": {
+      "sha256": "c7a4807f486b9faad161274e7042c223649634f3152678ee49637886e841d801",
+      "baseline": "c7a4807f486b9faad161274e7042c223649634f3152678ee49637886e841d801",
+      "matches": true
+    },
+    "stoix/envs/number_grid_territory.py": {
+      "sha256": "a90977c8ea1b06b5d86fd31533906a33dfb5b29cd7f3b1edf1137e07db357a92",
+      "baseline": "a90977c8ea1b06b5d86fd31533906a33dfb5b29cd7f3b1edf1137e07db357a92",
+      "matches": true
+    }
+  },
+  "comparison": "One independent 1M-transition test run per version; same synchronized learner timing; no competing GPU tasks. Compilation, evaluation, logging and checkpoint excluded from throughput and separately reported.",
+  "after_path": "results/ruins-20261010/after-1m",
+  "before_path": "results/mercenary-camp-20261010/after-offline-1m"
+}
