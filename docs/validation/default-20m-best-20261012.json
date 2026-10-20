@@ -1,0 +1,630 @@
+{
+  "date": "2026-10-12",
+  "branch": "codex/default-20m-best",
+  "command": "bash scripts/run_gpu.sh benchmark_number_grid.py --map default --total-timesteps 20000000 --seed 42 --tracking auto --select-best --run-name default-20m-best-agent-decisions-20261012 --output results/default-20m-best-20261012",
+  "run": {
+    "environment": "NumberGrid-50x50-default",
+    "algorithm": "Stoix Anakin feedforward PPO",
+    "recurrent": false,
+    "device": "NVIDIA GeForce GTX 1660 Ti",
+    "backend": "gpu",
+    "jax": "0.11.2",
+    "cuda_runtime": "13.4.92",
+    "python": "3.12.3",
+    "training_steps": 20000000,
+    "ppo_updates": 800,
+    "actor_optimizer_updates": 32000,
+    "critic_optimizer_updates": 32000,
+    "seed": 42,
+    "training_seconds": 596.8352621300014,
+    "mean_steps_per_second": 33510.08438848515,
+    "ppo_compile_seconds": 73.59862990500005,
+    "training_loop_seconds": 599.3845167030004,
+    "training_loop_steps_per_second": 33367.561961748426,
+    "tracking_logging_seconds": 0.016109343000607623,
+    "tracking_init_seconds": 5.495023631999629,
+    "completed_training_episodes": 29090,
+    "won_training_episodes": 11517,
+    "tracking": {
+      "requested": "auto",
+      "service": "comet",
+      "mode": "online",
+      "url": "https://www.comet.com/lentix/numbergrid/fd4d74b2a8bb4512b4454412de19d5ae",
+      "skipped": [
+        "W&B cloud: AuthenticationError: Failed to authenticate with https://api.wandb.ai: <!doctype html><meta charset=\"utf-8\"><meta name=viewport content=\"width=device-width, initial-scale=1\"><title>403</title>403 Forbidden"
+      ],
+      "status": "finished",
+      "summary_interval": 1000000,
+      "id": "fd4d74b2a8bb4512b4454412de19d5ae",
+      "project": "numbergrid",
+      "version": "3.58.8",
+      "init_seconds": 5.495023631999629,
+      "finish_seconds": 8.074761557000784,
+      "logging_seconds": 0.021516843001336383
+    },
+    "initial_evaluation": {
+      "episodes": 64,
+      "successes": 0,
+      "success_rate": 0.0,
+      "mean_return": -3.0715785026550293,
+      "mean_length": 28.546875,
+      "min_length": 28,
+      "max_length": 33,
+      "action_selection": "argmax",
+      "seed": 1042
+    },
+    "final_evaluation": {
+      "episodes": 1024,
+      "successes": 816,
+      "success_rate": 0.796875,
+      "mean_return": 41.19873809814453,
+      "mean_length": 952.4052734375,
+      "min_length": 119,
+      "max_length": 5000,
+      "action_selection": "argmax",
+      "seed": 1042
+    },
+    "sampled_evaluation": {
+      "episodes": 1024,
+      "successes": 754,
+      "success_rate": 0.736328125,
+      "mean_return": 39.80004119873047,
+      "mean_length": 634.27734375,
+      "min_length": 124,
+      "max_length": 5000,
+      "action_selection": "sample",
+      "seed": 1042
+    },
+    "initial_evaluation_seconds": 45.094042976999845,
+    "final_evaluation_seconds": 68.2592299400003,
+    "sampled_evaluation_seconds": 65.4113119499998,
+    "checkpoint_seconds": 0.525236581000172,
+    "intermediate_checkpoint_seconds": 2.014428420000513,
+    "parameter_count": 706840,
+    "num_envs": 250,
+    "rollout_length": 100,
+    "observation_size": 2490,
+    "weights_changed": true,
+    "checkpoint_roundtrip_verified": true,
+    "checkpoint_sha256": "03f674b27375ba8f16d9a881b39b17b93ef0c670a234a7daa5e2cf6ce722a1a7",
+    "learner_source_sha256": "6f147922521be6bfc2c78bfd4f12b30d881db4c85e2fc515e9f6ff22b29482a1",
+    "total_runner_seconds": 1114.0690698079998,
+    "timing": "Sum of synchronized learner calls, including rollout and PPO updates; excludes compilation, evaluation, host logging and saving.",
+    "reconstruction": "Fixed map and observation encoding recreated from README; remote weights and results were not recovered.",
+    "combat_counts": {
+      "battle_transition": 6690799,
+      "player_battle_transition": 4306263,
+      "enemy_battle_transition": 2155503,
+      "automatic_battle_transition": 2384536,
+      "battle_victory": 508081
+    },
+    "construction_count": 387392,
+    "rest_count": 3205709,
+    "rest_penalty_total": 43278.746643066406,
+    "transition_definition": "One agent decision, including all automatic enemy turns, skips and completed retreats up to the next decision. Internal activations spend no additional step budget or per-step penalties.",
+    "source_hashes": {
+      "benchmark_number_grid.py": "a4a090fd9fe3cc97d7d746b8bdd217d43597f7793a422b847d30da40e4f716f3",
+      "numbergrid_config.py": "ea1b00f763e1eb8cc81ce0801156220f016751929f5cc20f4ba72c83cd86ec2b",
+      "numbergrid_tracking.py": "d90721d9c5a3041207f1c0062dae11b2a88683949f1645c023830caa387ff17e",
+      "stoix/envs/number_grid_buildings.py": "ff1612572d541fe066aeb243d10f7b9a298ff73e16637637cd4237c19dd40426",
+      "stoix/envs/data/buildings.json": "cc68ef8177d8d1403b05e0201cdff04c5ea0e48d3a42388ceb869b38c71011fa",
+      "stoix/envs/number_grid_spells.py": "6b48956400a6a09257fa6dff7ae7835782ded1cdda12c8098a36a988e02fd2b0",
+      "stoix/envs/number_grid_casting.py": "765a1c3680d29642724f268eb42ea1bec08ea451e359b949fcc3b4578a0cc3fe",
+      "stoix/envs/number_grid_unit_swaps.py": "d1ec09f2cfefb5a6ee67061470b1eb0deb1420f20ea8ca4afaccd36b4bdf78a2",
+      "stoix/envs/number_grid_lords.py": "c0f66aa040bea81a4d97ca4c6ac136ca012fca795a4c609d36fb7eeac9a36d16",
+      "stoix/envs/data/spells.json": "af92db4702e81381f4d494063566427e4fe4a94b502f1f7250b72674fbd54c81",
+      "stoix/envs/data/units.json": "021bcddaab9bb590f72a49cc956a4456c2fc82ee572146a901fff0a8bec4b19c",
+      "stoix/envs/number_grid_effects.py": "6c7f7eb66ffc795cf30f97327449a92322105b41e6f0926fff32d4809f46c7d1",
+      "stoix/envs/number_grid_wards.py": "bcbd1dd0a2261815da5dd33c869e64f59e1553e4c317292e1b84cb736ec67981",
+      "stoix/envs/number_grid_summoning.py": "d724daa308bc01973fd3aa24d81040f72c8e3290d8d56e6389dc35903b81c738",
+      "stoix/envs/number_grid.py": "3f8f5fc47e7eb358c19eee1c5587c1c01ad4728966720bd8c2d71ab69b3dc600",
+      "stoix/envs/number_grid_combat.py": "c448e4ebefdcab173c66713e16ae9d8e57301a788de59dad59419a29d6e9b248",
+      "stoix/envs/number_grid_progression.py": "e48a63875731a9af0fb2183a27f080852cd4126eda5f2314651e00533533de98",
+      "stoix/envs/number_grid_capital.py": "a347409e944b749eb2664e0682d5c0e322e3c0288c1afba3b7d64704593520d1",
+      "stoix/envs/number_grid_potions.py": "717597e95d54d828fc2115be8d4b86d9bfd52a286ce1497befd7dfbafed34ee5",
+      "stoix/envs/number_grid_chests.py": "0cf85d98e5dee763a7b45493c061303b48004d0397af2dbf395572e91f58ccf6",
+      "stoix/envs/number_grid_items.py": "0e8a653dd7bec181b1773433c6a4a014c5c480ec7fb5a4d9f9a247fbb415157b",
+      "stoix/envs/number_grid_item_combat.py": "b11c5118ffbdf52f2454cb999f66b27d49af00d9e55ff847c503eb3afad8ea97",
+      "stoix/envs/number_grid_sites.py": "478a9f54c42fe3d95b945add20b6fbea6860a6551e16cd67af084f9cfde72460",
+      "stoix/envs/number_grid_recruitment.py": "0f2eb770d80cbc4b4daafc12d47aebd0042f4a64281a893b54dcf21d6fd8c667",
+      "stoix/envs/number_grid_territory.py": "f9caa0d1f733fd81a97f2a9dd8f093747854f6bd613b6fa9e98fbfd9766a61b5",
+      "stoix/envs/number_grid_ruins.py": "65ebbfa8261069d82728b032d95baca7a67e7cc36a6456a9f6610d4cbb562845",
+      "stoix/envs/number_grid_terrain.py": "110669455952f9e27555d62a5e7ce9a8dfef2c3c6451f046fe8d9e9120f5db9f",
+      "stoix/envs/data/training_prices.json": "001442eeaadf9b96fad451d3aa053a848c33c7e06f873957dedd34eda428cc47",
+      "stoix/envs/number_grid_legacy.py": "975105ab1647a8a5ca2ed71ca6c5163239ddb23748a0dbd7ef59e0d1bf8f9412",
+      "stoix/utils/make_env.py": "37840f25554349de585ab5f605a5662fecf95aa4b653eaab37582b83cead764b",
+      "stoix/wrappers/number_grid_metrics.py": "6bcfe9b473cbd2793f4802544c5ae23401060e01f04e9be6ed58d79196c6bf3e",
+      "stoix/wrappers/number_grid_reset.py": "0832394ca8f244a6177e9ff0f7adc8977722a8bdf8ae6baaf51872fdb90f0f06",
+      "stoix/systems/ppo/anakin/ff_ppo.py": "6f147922521be6bfc2c78bfd4f12b30d881db4c85e2fc515e9f6ff22b29482a1"
+    },
+    "best_checkpoint": {
+      "path": "best",
+      "training_steps": 15000000,
+      "selection_episodes": 128,
+      "selection_seed": 2042,
+      "candidates": 20,
+      "final_evaluation": {
+        "episodes": 1024,
+        "successes": 881,
+        "success_rate": 0.8603515625,
+        "mean_return": 39.387264251708984,
+        "mean_length": 744.9248046875,
+        "min_length": 118,
+        "max_length": 5000,
+        "action_selection": "argmax",
+        "seed": 1042
+      },
+      "sampled_evaluation": {
+        "episodes": 1024,
+        "successes": 790,
+        "success_rate": 0.771484375,
+        "mean_return": 37.41685485839844,
+        "mean_length": 533.9306640625,
+        "min_length": 132,
+        "max_length": 5000,
+        "action_selection": "sample",
+        "seed": 1042
+      },
+      "selection_seconds": 202.70208121399992
+    }
+  },
+  "selected": {
+    "environment": "NumberGrid-50x50-default",
+    "algorithm": "Stoix Anakin feedforward PPO",
+    "recurrent": false,
+    "device": "NVIDIA GeForce GTX 1660 Ti",
+    "backend": "gpu",
+    "jax": "0.11.2",
+    "cuda_runtime": "13.4.92",
+    "python": "3.12.3",
+    "seed": 42,
+    "mean_steps_per_second": 33510.08438848515,
+    "parameter_count": 706840,
+    "num_envs": 250,
+    "rollout_length": 100,
+    "observation_size": 2490,
+    "learner_source_sha256": "6f147922521be6bfc2c78bfd4f12b30d881db4c85e2fc515e9f6ff22b29482a1",
+    "source_hashes": {
+      "benchmark_number_grid.py": "a4a090fd9fe3cc97d7d746b8bdd217d43597f7793a422b847d30da40e4f716f3",
+      "numbergrid_config.py": "ea1b00f763e1eb8cc81ce0801156220f016751929f5cc20f4ba72c83cd86ec2b",
+      "numbergrid_tracking.py": "d90721d9c5a3041207f1c0062dae11b2a88683949f1645c023830caa387ff17e",
+      "stoix/envs/number_grid_buildings.py": "ff1612572d541fe066aeb243d10f7b9a298ff73e16637637cd4237c19dd40426",
+      "stoix/envs/data/buildings.json": "cc68ef8177d8d1403b05e0201cdff04c5ea0e48d3a42388ceb869b38c71011fa",
+      "stoix/envs/number_grid_spells.py": "6b48956400a6a09257fa6dff7ae7835782ded1cdda12c8098a36a988e02fd2b0",
+      "stoix/envs/number_grid_casting.py": "765a1c3680d29642724f268eb42ea1bec08ea451e359b949fcc3b4578a0cc3fe",
+      "stoix/envs/number_grid_unit_swaps.py": "d1ec09f2cfefb5a6ee67061470b1eb0deb1420f20ea8ca4afaccd36b4bdf78a2",
+      "stoix/envs/number_grid_lords.py": "c0f66aa040bea81a4d97ca4c6ac136ca012fca795a4c609d36fb7eeac9a36d16",
+      "stoix/envs/data/spells.json": "af92db4702e81381f4d494063566427e4fe4a94b502f1f7250b72674fbd54c81",
+      "stoix/envs/data/units.json": "021bcddaab9bb590f72a49cc956a4456c2fc82ee572146a901fff0a8bec4b19c",
+      "stoix/envs/number_grid_effects.py": "6c7f7eb66ffc795cf30f97327449a92322105b41e6f0926fff32d4809f46c7d1",
+      "stoix/envs/number_grid_wards.py": "bcbd1dd0a2261815da5dd33c869e64f59e1553e4c317292e1b84cb736ec67981",
+      "stoix/envs/number_grid_summoning.py": "d724daa308bc01973fd3aa24d81040f72c8e3290d8d56e6389dc35903b81c738",
+      "stoix/envs/number_grid.py": "3f8f5fc47e7eb358c19eee1c5587c1c01ad4728966720bd8c2d71ab69b3dc600",
+      "stoix/envs/number_grid_combat.py": "c448e4ebefdcab173c66713e16ae9d8e57301a788de59dad59419a29d6e9b248",
+      "stoix/envs/number_grid_progression.py": "e48a63875731a9af0fb2183a27f080852cd4126eda5f2314651e00533533de98",
+      "stoix/envs/number_grid_capital.py": "a347409e944b749eb2664e0682d5c0e322e3c0288c1afba3b7d64704593520d1",
+      "stoix/envs/number_grid_potions.py": "717597e95d54d828fc2115be8d4b86d9bfd52a286ce1497befd7dfbafed34ee5",
+      "stoix/envs/number_grid_chests.py": "0cf85d98e5dee763a7b45493c061303b48004d0397af2dbf395572e91f58ccf6",
+      "stoix/envs/number_grid_items.py": "0e8a653dd7bec181b1773433c6a4a014c5c480ec7fb5a4d9f9a247fbb415157b",
+      "stoix/envs/number_grid_item_combat.py": "b11c5118ffbdf52f2454cb999f66b27d49af00d9e55ff847c503eb3afad8ea97",
+      "stoix/envs/number_grid_sites.py": "478a9f54c42fe3d95b945add20b6fbea6860a6551e16cd67af084f9cfde72460",
+      "stoix/envs/number_grid_recruitment.py": "0f2eb770d80cbc4b4daafc12d47aebd0042f4a64281a893b54dcf21d6fd8c667",
+      "stoix/envs/number_grid_territory.py": "f9caa0d1f733fd81a97f2a9dd8f093747854f6bd613b6fa9e98fbfd9766a61b5",
+      "stoix/envs/number_grid_ruins.py": "65ebbfa8261069d82728b032d95baca7a67e7cc36a6456a9f6610d4cbb562845",
+      "stoix/envs/number_grid_terrain.py": "110669455952f9e27555d62a5e7ce9a8dfef2c3c6451f046fe8d9e9120f5db9f",
+      "stoix/envs/data/training_prices.json": "001442eeaadf9b96fad451d3aa053a848c33c7e06f873957dedd34eda428cc47",
+      "stoix/envs/number_grid_legacy.py": "975105ab1647a8a5ca2ed71ca6c5163239ddb23748a0dbd7ef59e0d1bf8f9412",
+      "stoix/utils/make_env.py": "37840f25554349de585ab5f605a5662fecf95aa4b653eaab37582b83cead764b",
+      "stoix/wrappers/number_grid_metrics.py": "6bcfe9b473cbd2793f4802544c5ae23401060e01f04e9be6ed58d79196c6bf3e",
+      "stoix/wrappers/number_grid_reset.py": "0832394ca8f244a6177e9ff0f7adc8977722a8bdf8ae6baaf51872fdb90f0f06",
+      "stoix/systems/ppo/anakin/ff_ppo.py": "6f147922521be6bfc2c78bfd4f12b30d881db4c85e2fc515e9f6ff22b29482a1"
+    },
+    "tracking": {
+      "requested": "auto",
+      "service": "comet",
+      "mode": "online",
+      "url": "https://www.comet.com/lentix/numbergrid/fd4d74b2a8bb4512b4454412de19d5ae",
+      "skipped": [
+        "W&B cloud: AuthenticationError: Failed to authenticate with https://api.wandb.ai: <!doctype html><meta charset=\"utf-8\"><meta name=viewport content=\"width=device-width, initial-scale=1\"><title>403</title>403 Forbidden"
+      ],
+      "status": "finished",
+      "summary_interval": 1000000,
+      "id": "fd4d74b2a8bb4512b4454412de19d5ae",
+      "project": "numbergrid",
+      "version": "3.58.8",
+      "init_seconds": 5.495023631999629,
+      "finish_seconds": 8.074761557000784,
+      "logging_seconds": 0.021516843001336383
+    },
+    "training_steps": 15000000,
+    "checkpoint_sha256": "688d4a32ef3af55d03fb08dfc7a38973ea122640d39a1f979994463c6b39fa04",
+    "final_evaluation": {
+      "episodes": 1024,
+      "successes": 881,
+      "success_rate": 0.8603515625,
+      "mean_return": 39.387264251708984,
+      "mean_length": 744.9248046875,
+      "min_length": 118,
+      "max_length": 5000,
+      "action_selection": "argmax",
+      "seed": 1042
+    },
+    "sampled_evaluation": {
+      "episodes": 1024,
+      "successes": 790,
+      "success_rate": 0.771484375,
+      "mean_return": 37.41685485839844,
+      "mean_length": 533.9306640625,
+      "min_length": 132,
+      "max_length": 5000,
+      "action_selection": "sample",
+      "seed": 1042
+    },
+    "selection_evaluation": {
+      "episodes": 128,
+      "successes": 110,
+      "success_rate": 0.859375,
+      "mean_return": 39.93278503417969,
+      "mean_length": 845.359375,
+      "min_length": 143,
+      "max_length": 5000,
+      "action_selection": "argmax",
+      "seed": 2042
+    },
+    "source_run": "results/default-20m-best-20261012",
+    "source_run_training_steps": 20000000,
+    "timing": "Learner speed belongs to the full source run; selected weights are from training_steps."
+  },
+  "selection": [
+    {
+      "training_steps": 1000000,
+      "path": "checkpoints/001000000.msgpack",
+      "sha256": "c25debbf4cfa0b7618c66df84bac893d1c8d1766428bf55efb43ae96d7c4b5a5",
+      "evaluation": {
+        "episodes": 128,
+        "successes": 0,
+        "success_rate": 0.0,
+        "mean_return": 5.825357437133789,
+        "mean_length": 4925.34375,
+        "min_length": 222,
+        "max_length": 5000,
+        "action_selection": "argmax",
+        "seed": 2042
+      }
+    },
+    {
+      "training_steps": 2000000,
+      "path": "checkpoints/002000000.msgpack",
+      "sha256": "d71b45566d7360112d6e1e692ffcda706df3787e92f49acc2ebc04a1ded7eded",
+      "evaluation": {
+        "episodes": 128,
+        "successes": 0,
+        "success_rate": 0.0,
+        "mean_return": 3.816246747970581,
+        "mean_length": 4965.1875,
+        "min_length": 544,
+        "max_length": 5000,
+        "action_selection": "argmax",
+        "seed": 2042
+      }
+    },
+    {
+      "training_steps": 3000000,
+      "path": "checkpoints/003000000.msgpack",
+      "sha256": "fc3d889794a477c88577d558cd1f675c81bfa8440741919c3f1e5a547a588525",
+      "evaluation": {
+        "episodes": 128,
+        "successes": 0,
+        "success_rate": 0.0,
+        "mean_return": 8.450029373168945,
+        "mean_length": 3533.6171875,
+        "min_length": 247,
+        "max_length": 5000,
+        "action_selection": "argmax",
+        "seed": 2042
+      }
+    },
+    {
+      "training_steps": 4000000,
+      "path": "checkpoints/004000000.msgpack",
+      "sha256": "32af709b77d601d97e95904722b5d818e3fe095f2852272b5b81a850bd726f18",
+      "evaluation": {
+        "episodes": 128,
+        "successes": 0,
+        "success_rate": 0.0,
+        "mean_return": 11.131183624267578,
+        "mean_length": 2347.7265625,
+        "min_length": 252,
+        "max_length": 5000,
+        "action_selection": "argmax",
+        "seed": 2042
+      }
+    },
+    {
+      "training_steps": 5000000,
+      "path": "checkpoints/005000000.msgpack",
+      "sha256": "37162c9d9c400a729138b9f1e837c59f06c1955c27c2e3b91bb9c4f0ce954187",
+      "evaluation": {
+        "episodes": 128,
+        "successes": 0,
+        "success_rate": 0.0,
+        "mean_return": 11.961419105529785,
+        "mean_length": 1999.8046875,
+        "min_length": 220,
+        "max_length": 5000,
+        "action_selection": "argmax",
+        "seed": 2042
+      }
+    },
+    {
+      "training_steps": 6000000,
+      "path": "checkpoints/006000000.msgpack",
+      "sha256": "803f535b9b061a40ae08c1f6b8b38bafeac05b0532d10345028672003c19c3ba",
+      "evaluation": {
+        "episodes": 128,
+        "successes": 0,
+        "success_rate": 0.0,
+        "mean_return": 12.102383613586426,
+        "mean_length": 1931.6796875,
+        "min_length": 186,
+        "max_length": 5000,
+        "action_selection": "argmax",
+        "seed": 2042
+      }
+    },
+    {
+      "training_steps": 7000000,
+      "path": "checkpoints/007000000.msgpack",
+      "sha256": "762407a101568e2ea14b9c805be6ea768a4687c92939c43ddeba9624c4e22e68",
+      "evaluation": {
+        "episodes": 128,
+        "successes": 0,
+        "success_rate": 0.0,
+        "mean_return": 19.739593505859375,
+        "mean_length": 3323.1796875,
+        "min_length": 160,
+        "max_length": 5000,
+        "action_selection": "argmax",
+        "seed": 2042
+      }
+    },
+    {
+      "training_steps": 8000000,
+      "path": "checkpoints/008000000.msgpack",
+      "sha256": "9b32587149e0f79cf79d376ae6e79452b7df49c0abf1c62eb5889d7ab3eaeeee",
+      "evaluation": {
+        "episodes": 128,
+        "successes": 1,
+        "success_rate": 0.0078125,
+        "mean_return": 20.66468620300293,
+        "mean_length": 3129.2890625,
+        "min_length": 220,
+        "max_length": 5000,
+        "action_selection": "argmax",
+        "seed": 2042
+      }
+    },
+    {
+      "training_steps": 9000000,
+      "path": "checkpoints/009000000.msgpack",
+      "sha256": "4bdb099ae3afaa35250d8de4d55eaf530caa4104638df26898feca99bb0e4c61",
+      "evaluation": {
+        "episodes": 128,
+        "successes": 4,
+        "success_rate": 0.03125,
+        "mean_return": 23.76110076904297,
+        "mean_length": 2174.3671875,
+        "min_length": 243,
+        "max_length": 5000,
+        "action_selection": "argmax",
+        "seed": 2042
+      }
+    },
+    {
+      "training_steps": 10000000,
+      "path": "checkpoints/010000000.msgpack",
+      "sha256": "3cc4f6f08e40d658d19c4d8251756830e9443ca06ed66f36e7e91fe1671bbe6d",
+      "evaluation": {
+        "episodes": 128,
+        "successes": 13,
+        "success_rate": 0.1015625,
+        "mean_return": 19.623247146606445,
+        "mean_length": 1853.359375,
+        "min_length": 159,
+        "max_length": 5000,
+        "action_selection": "argmax",
+        "seed": 2042
+      }
+    },
+    {
+      "training_steps": 11000000,
+      "path": "checkpoints/011000000.msgpack",
+      "sha256": "a9c60c245e5c5362b147109f42ca3be89d5707ca9d93a432fa778f1fcd6fce4f",
+      "evaluation": {
+        "episodes": 128,
+        "successes": 65,
+        "success_rate": 0.5078125,
+        "mean_return": 29.25203514099121,
+        "mean_length": 610.8671875,
+        "min_length": 166,
+        "max_length": 5000,
+        "action_selection": "argmax",
+        "seed": 2042
+      }
+    },
+    {
+      "training_steps": 12000000,
+      "path": "checkpoints/012000000.msgpack",
+      "sha256": "5a5880bcf8b84848a24193bd155d316d032fcde0fa1d4d484db08b1b9edfbe24",
+      "evaluation": {
+        "episodes": 128,
+        "successes": 59,
+        "success_rate": 0.4609375,
+        "mean_return": 32.13337707519531,
+        "mean_length": 1813.4765625,
+        "min_length": 138,
+        "max_length": 5000,
+        "action_selection": "argmax",
+        "seed": 2042
+      }
+    },
+    {
+      "training_steps": 13000000,
+      "path": "checkpoints/013000000.msgpack",
+      "sha256": "fd6ea1cb8c1159ed6e41c841478e1433723d166d98dab8de2e59bbc978650637",
+      "evaluation": {
+        "episodes": 128,
+        "successes": 94,
+        "success_rate": 0.734375,
+        "mean_return": 36.239349365234375,
+        "mean_length": 939.609375,
+        "min_length": 154,
+        "max_length": 5000,
+        "action_selection": "argmax",
+        "seed": 2042
+      }
+    },
+    {
+      "training_steps": 14000000,
+      "path": "checkpoints/014000000.msgpack",
+      "sha256": "503f89ff56ccf064d6dda842a7245b24058541c4486a29194d5802ca05c762f3",
+      "evaluation": {
+        "episodes": 128,
+        "successes": 109,
+        "success_rate": 0.8515625,
+        "mean_return": 37.489341735839844,
+        "mean_length": 884.8828125,
+        "min_length": 152,
+        "max_length": 5000,
+        "action_selection": "argmax",
+        "seed": 2042
+      }
+    },
+    {
+      "training_steps": 15000000,
+      "path": "checkpoints/015000000.msgpack",
+      "sha256": "688d4a32ef3af55d03fb08dfc7a38973ea122640d39a1f979994463c6b39fa04",
+      "evaluation": {
+        "episodes": 128,
+        "successes": 110,
+        "success_rate": 0.859375,
+        "mean_return": 39.93278503417969,
+        "mean_length": 845.359375,
+        "min_length": 143,
+        "max_length": 5000,
+        "action_selection": "argmax",
+        "seed": 2042
+      }
+    },
+    {
+      "training_steps": 16000000,
+      "path": "checkpoints/016000000.msgpack",
+      "sha256": "c3271e1b580beca083432e335015e71327c5d938eda1f42e67c66efc665e4923",
+      "evaluation": {
+        "episodes": 128,
+        "successes": 94,
+        "success_rate": 0.734375,
+        "mean_return": 42.3526611328125,
+        "mean_length": 1195.7265625,
+        "min_length": 144,
+        "max_length": 5000,
+        "action_selection": "argmax",
+        "seed": 2042
+      }
+    },
+    {
+      "training_steps": 17000000,
+      "path": "checkpoints/017000000.msgpack",
+      "sha256": "b3a1f89bb79673fdff33804b3d74c0f07782bba7a51dd65ee0040e58936b6568",
+      "evaluation": {
+        "episodes": 128,
+        "successes": 100,
+        "success_rate": 0.78125,
+        "mean_return": 39.458412170410156,
+        "mean_length": 805.328125,
+        "min_length": 153,
+        "max_length": 5000,
+        "action_selection": "argmax",
+        "seed": 2042
+      }
+    },
+    {
+      "training_steps": 18000000,
+      "path": "checkpoints/018000000.msgpack",
+      "sha256": "65c797ccb8caf359a60e1c54b0830f298a4ccdabf0981438aaedc02bef8428c2",
+      "evaluation": {
+        "episodes": 128,
+        "successes": 104,
+        "success_rate": 0.8125,
+        "mean_return": 38.990928649902344,
+        "mean_length": 827.6875,
+        "min_length": 146,
+        "max_length": 5000,
+        "action_selection": "argmax",
+        "seed": 2042
+      }
+    },
+    {
+      "training_steps": 19000000,
+      "path": "checkpoints/019000000.msgpack",
+      "sha256": "36cac2daab7420a06736e940a8183ed1fb0e7d825a8321272915f0e069fa0344",
+      "evaluation": {
+        "episodes": 128,
+        "successes": 91,
+        "success_rate": 0.7109375,
+        "mean_return": 40.97418975830078,
+        "mean_length": 1139.6328125,
+        "min_length": 130,
+        "max_length": 5000,
+        "action_selection": "argmax",
+        "seed": 2042
+      }
+    },
+    {
+      "training_steps": 20000000,
+      "path": "checkpoints/020000000.msgpack",
+      "sha256": "03f674b27375ba8f16d9a881b39b17b93ef0c670a234a7daa5e2cf6ce722a1a7",
+      "evaluation": {
+        "episodes": 128,
+        "successes": 100,
+        "success_rate": 0.78125,
+        "mean_return": 39.26127624511719,
+        "mean_length": 976.890625,
+        "min_length": 310,
+        "max_length": 5000,
+        "action_selection": "argmax",
+        "seed": 2042
+      }
+    }
+  ],
+  "selection_rule": "Argmax map win rate on 128 fixed episodes (seed 2042), then mean return, then earlier checkpoint. Independent final evaluation uses 1024 episodes (seed 1042).",
+  "gpu_tests": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "0",
+    "tests": "22",
+    "time": "2.374",
+    "timestamp": "2026-10-12T01:34:12.062059+03:00",
+    "hostname": "DESKTOP-HB69M4C"
+  },
+  "integrity": "All checkpoint hashes and measured source hashes verified; selected weights, map and network config match the source run.",
+  "viewer": {
+    "verified_at": "2026-10-12T01:59:21.4268870+03:00",
+    "first_action": 1,
+    "replay_seed": 42,
+    "map": "default",
+    "step_count": 1,
+    "selected_steps": 15000000,
+    "argmax_wins": 881,
+    "replay_won": true,
+    "page_http_status": 200,
+    "replay_decisions": 478,
+    "training_budget": 20000000,
+    "argmax_episodes": 1024,
+    "replay_policy": "argmax",
+    "first_action_label": "↗ северо-восток",
+    "backend": "gpu",
+    "browser_render_check": "Unavailable: browser automation runtime could not initialize"
+  }
+}

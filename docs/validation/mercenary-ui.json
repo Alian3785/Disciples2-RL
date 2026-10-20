@@ -1,0 +1,74 @@
+{
+  "date": "2026-10-10",
+  "url": "http://127.0.0.1:8769/viewer.html",
+  "camp_position": [
+    6,
+    6
+  ],
+  "interaction_position": [
+    7,
+    9
+  ],
+  "initial_offers": [
+    {
+      "unit": "Варвар",
+      "price": 850,
+      "stock": 1
+    },
+    {
+      "unit": "Гоблин лучник",
+      "price": 50,
+      "stock": 1
+    }
+  ],
+  "actions": "Seven rests for 1000 gold; walk to camp with ordinary directional buttons; dismiss front Possessed and rear Cultist; hire Barbarian and Goblin Archer.",
+  "gold_sequence": [
+    1000,
+    150,
+    100
+  ],
+  "hired": [
+    {
+      "unit": "Варвар",
+      "slot": 0,
+      "hp": 250
+    },
+    {
+      "unit": "Гоблин лучник",
+      "slot": 3,
+      "hp": 40
+    }
+  ],
+  "remaining_stock": [
+    0,
+    0
+  ],
+  "day_before_and_after": 8,
+  "movement_before_and_after": 8,
+  "leadership_after": [
+    3,
+    3,
+    0
+  ],
+  "merchant_and_trainer_unavailable_at_camp": true,
+  "console_errors": [],
+  "reset": {
+    "day": 1,
+    "gold": 0,
+    "stock": [
+      1,
+      1
+    ],
+    "leadership": [
+      3,
+      3,
+      0
+    ]
+  },
+  "screenshots": [
+    "docs/images/mercenary-camp-map.png",
+    "docs/images/mercenary-hire-ui.png"
+  ],
+  "final_get_status": 200,
+  "viewer_map_current": true
+}

@@ -1,0 +1,215 @@
+{
+  "date": "2026-10-14",
+  "branch": "codex/mirror-match-core-gpu",
+  "base_commit": "40030b6",
+  "scope": "Core Mirror match map, scripted bot and competing territories; ten-minute total budget requested by the user.",
+  "runtime": {
+    "python": "3.12.3",
+    "jax": "0.11.2",
+    "backend": "gpu",
+    "devices": [
+      "NVIDIA GeForce GTX 1660 Ti"
+    ]
+  },
+  "command": "bash scripts/run_gpu.sh scripts/test_gpu.py --output results/gpu-tests/mirror-core-cold-10min-20261014 --cold-cache --wall-started-at <Windows launch epoch>",
+  "pytest": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "0",
+    "tests": "163",
+    "time": "359.582",
+    "timestamp": "2026-10-14T13:32:07.076793+03:00",
+    "hostname": "DESKTOP-HB69M4C"
+  },
+  "runner": {
+    "seconds": 370.550453881,
+    "wall_seconds": 403.5639805793762,
+    "execution_limit": 582.9367668628693,
+    "wall_limit": 600,
+    "parent_started_at": 1791973910.061,
+    "backend": "cuda",
+    "groups": {
+      "suite": {
+        "exit_code": 0,
+        "seconds": 370.549012514,
+        "log": "/mnt/c/jaxjax/results/gpu-tests/mirror-core-cold-10min-20261014/suite.log"
+      }
+    },
+    "compilation_cache": "/mnt/c/jaxjax/results/gpu-tests/mirror-core-cold-10min-20261014/compilation-cache",
+    "cold_cache": true,
+    "isolated_cache": true,
+    "selection": "core",
+    "durations": "/mnt/c/jaxjax/results/gpu-tests/mirror-core-cold-10min-20261014/durations.jsonl",
+    "passed": true
+  },
+  "timing": {
+    "wall_seconds_including_wsl": 403.5639805793762,
+    "pytest_seconds_including_fixtures_and_compilation": 359.582,
+    "logged_xla_compilation_seconds": 286.39285206,
+    "logged_xla_compilation_count": 1704,
+    "logged_mlir_lowering_seconds": 14.511681532999999,
+    "pure_test_execution_seconds": null,
+    "note": "XLA and MLIR totals are subsets of pytest time. Python tracing, host checks, cache I/O and GPU execution are not separately timed; nested tracing timers are deliberately not summed."
+  },
+  "mirror_core": [
+    "stoix/tests/number_grid_mirror_match_test.py::test_map_layout_and_large_units",
+    "stoix/tests/number_grid_mirror_match_test.py::test_exclusive_growth_ties_income_and_read_only_queries",
+    "stoix/tests/number_grid_mirror_match_test.py::test_bfs_neutral_priority_budget_and_blockers",
+    "stoix/tests/number_grid_mirror_match_test.py::test_respawn_and_home_rest_restore_only_bot",
+    "stoix/tests/number_grid_mirror_match_test.py::test_neutral_combat_uses_engine_promotes_without_buildings_and_preserves_player",
+    "stoix/tests/number_grid_mirror_match_test.py::test_bot_autobattle_does_not_inherit_campaign_experience_bonus",
+    "stoix/tests/number_grid_mirror_match_test.py::test_reset_shapes_mask_rng_and_no_neutral_credit",
+    "stoix/tests/number_grid_mirror_match_test.py::test_pursuit_and_blocked_home_queue_encounters",
+    "stoix/tests/number_grid_mirror_match_test.py::test_objective_requires_recorded_hero_victory[False]",
+    "stoix/tests/number_grid_mirror_match_test.py::test_objective_requires_recorded_hero_victory[True]",
+    "stoix/tests/number_grid_mirror_match_test.py::test_spell_target_follows_bot_position_and_reference_id"
+  ],
+  "slowest_phases": [
+    {
+      "nodeid": "stoix/tests/number_grid_campaign_metrics_test.py::test_executed_build_invalid_repeat_and_timeout",
+      "phase": "call",
+      "seconds": 65.628231753,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_default_map_test.py::test_alar_sells_an_artifact",
+      "phase": "call",
+      "seconds": 45.94015826200001,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_mirror_match_test.py::test_respawn_and_home_rest_restore_only_bot",
+      "phase": "call",
+      "seconds": 37.25741061299999,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_original_effects_test.py::test_short_powerup_survives_wait_and_long_survives_completed_turn",
+      "phase": "call",
+      "seconds": 26.763844502000012,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_campaign_metrics_test.py::test_episode_counters_reset_with_environment[contract]",
+      "phase": "call",
+      "seconds": 17.188931089999997,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_chex_test.py::test_batched_combat_contract_matches_individual_steps",
+      "phase": "call",
+      "seconds": 15.885081772000007,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_campaign_metrics_test.py::test_executed_build_invalid_repeat_and_timeout",
+      "phase": "setup",
+      "seconds": 13.327767600000001,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_default_map_test.py::test_default_map_layout_and_actions",
+      "phase": "setup",
+      "seconds": 8.855542223000015,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_mirror_match_test.py::test_map_layout_and_large_units",
+      "phase": "setup",
+      "seconds": 7.5966423419999956,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_reference_actions_test.py::test_baroness_enemy_escape_victory_awards_only_actual_damage_no_kill_xp",
+      "phase": "call",
+      "seconds": 6.59711921600001,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_progression_test.py::test_cap_building_requirement_full_heal_and_discarded_excess",
+      "phase": "call",
+      "seconds": 6.296136832000002,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_chex_test.py::test_masked_warrior_policy_sample_argmax_and_ppo_gradient",
+      "phase": "call",
+      "seconds": 6.118864467999998,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_mirror_match_test.py::test_bfs_neutral_priority_budget_and_blockers",
+      "phase": "call",
+      "seconds": 4.747553065000034,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_original_effects_test.py::test_dot_reapplication_refreshes_age_and_can_affect_another_target",
+      "phase": "call",
+      "seconds": 3.992719133999998,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_territory_test.py::test_growth_income_acquisition_and_obstacles",
+      "phase": "call",
+      "seconds": 3.774061450000005,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_campaign_metrics_test.py::test_internal_dot_victory_counts_once",
+      "phase": "call",
+      "seconds": 3.407134409000008,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_mirror_match_test.py::test_exclusive_growth_ties_income_and_read_only_queries",
+      "phase": "call",
+      "seconds": 3.114195885000015,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_original_effects_test.py::test_periodic_order_damage_before_recovery_and_wait_guard",
+      "phase": "call",
+      "seconds": 2.883339982999999,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_combat_stats_test.py::test_every_current_squad_is_reachable_for_an_attack",
+      "phase": "call",
+      "seconds": 2.8435214499999972,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "stoix/tests/number_grid_territory_test.py::test_two_city_armies_capture_live_hero_and_no_remote_capture",
+      "phase": "call",
+      "seconds": 2.6693483409999885,
+      "outcome": "passed"
+    }
+  ],
+  "sources_sha256": {
+    "scripts/test_gpu.py": "9fa5842dde767a3df1c05987b0f4dd9e6f26ceec67155c0bd0b0299cf7b61608",
+    "scripts/test_gpu.ps1": "5643f936c42596c12140be7ea5f439cd48b87becb1cb89b9c938ae5a942a1416",
+    "pyproject.toml": "5bca593d9213281e93088a13e4efffeb8ed02d613de26a615b55eb66bb14c9a8",
+    "scripts/build_mirror_match.py": "8506d30c9e2627ac9a931bb7978d570c3cff44e4d71d0a4aea0e0b17135e78c3",
+    "maps/mirror_match.json": "e1aeb9b7fe90c687e6b6acd8c9704bdeebce8885b811c73c44e07ed0fe6ae1e4",
+    "stoix/envs/number_grid.py": "3cfe729d4b0d782f68a7d6821b629dbb32226ddd64bd74c078b369a9f55bae80",
+    "stoix/envs/number_grid_bot.py": "94ed22829476e55df7574ae51840b25ddfea8bdbf81af7b9d19edb267f70e9b6",
+    "stoix/envs/number_grid_casting.py": "37e22e45261d0d1540f89cff42fd8bc954363e6c73ca90fc6a96da4b165b65f4",
+    "stoix/envs/number_grid_progression.py": "c544956bd6e32ab7359aa67117fb486c66e5fc3974db0641177f892595cd4a82",
+    "stoix/envs/number_grid_territory.py": "934f5d9f7a2f6af458023ac2a970c8ab49c6e1daa7765d303042b7c0d02099b2",
+    "stoix/envs/number_grid_metrics.py": "a9549e504f4edf512d969852aab7bb05552cfb7044cd1213b44f92b40ecd2fda",
+    "stoix/tests/number_grid_mirror_match_test.py": "9a52e07e59b0a272a86e95d657d5c9f8f768ea61a37d1e4a5aa42a981774df10",
+    "stoix/tests/number_grid_chex_test.py": "10241d59bbf1a583c882c2092487db931e2b315eddee613313d7a48db382fd16",
+    "stoix/tests/number_grid_casting_test.py": "f55ec424b54a7ad1bdcfcef21cd1bb733bd87e637bff80ebb14e0bf8560bab3d",
+    "stoix/tests/number_grid_terrain_test.py": "61793d098611e2d2cce8cf505bc80981fe7e64c14080f5dc0aa502a101af02e4",
+    "stoix/tests/number_grid_scrolls_test.py": "6a9fcdbb129b16bd736a6b11fbe054a437042c19bdfbe065d32017bc15d90467",
+    "stoix/tests/number_grid_turns_test.py": "436bda6e0086d1d68c2d0b564d03cc9b692ffb12518fa5ffe7a5bb0629fe3c27"
+  },
+  "static_checks": {
+    "ruff": "passed",
+    "git_diff_check": "passed"
+  },
+  "training_and_learner_benchmarks": "not run",
+  "extended_suite": "not part of this complete core run"
+}

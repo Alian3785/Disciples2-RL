@@ -1,0 +1,93 @@
+{
+  "date": "2026-10-13",
+  "map": "trade_train",
+  "backend": "cuda:0",
+  "map_sha256": "f8b77d670614f89efd675eff35fd24713f99901084fc9a809a8eabfc54ab9dc5",
+  "won": true,
+  "decisions": 4225,
+  "enemy_bonuses": [
+    {
+      "enemy": 6,
+      "levels": [
+        5,
+        1,
+        4,
+        5
+      ],
+      "bonus": 55
+    },
+    {
+      "enemy": 5,
+      "levels": [
+        6,
+        2,
+        5,
+        6
+      ],
+      "bonus": 75
+    },
+    {
+      "enemy": 1,
+      "levels": [
+        7,
+        3,
+        3,
+        6,
+        7
+      ],
+      "bonus": 105
+    },
+    {
+      "enemy": 4,
+      "levels": [
+        8,
+        4,
+        3,
+        7,
+        8
+      ],
+      "bonus": 125
+    },
+    {
+      "enemy": 2,
+      "levels": [
+        9,
+        5,
+        4,
+        8,
+        9
+      ],
+      "bonus": 150
+    },
+    {
+      "enemy": 3,
+      "levels": [
+        10,
+        6,
+        5,
+        9,
+        10,
+        3
+      ],
+      "bonus": 185
+    }
+  ],
+  "expected_bonus": 695,
+  "observed_reward_delta": 695.0000120997429,
+  "reward": -42.1939552584663,
+  "identical_actions_to_previous_witness": true,
+  "army_engage_rewarded": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+  ],
+  "training_transitions": 0,
+  "state_injections": 0,
+  "regression_tests_run": false,
+  "benchmarks_run": false,
+  "ruff": "passed",
+  "witness": "results/trade-train-level-validation/winning-walkthrough.json"
+}

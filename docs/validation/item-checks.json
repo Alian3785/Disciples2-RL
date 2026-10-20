@@ -1,0 +1,20 @@
+{
+  "scenario": "NumberGrid-48x48-v74-hero-equipment",
+  "static_checks": {
+    "python_syntax": "passed",
+    "ruff_0_16_10": "passed",
+    "javascript_syntax": "passed",
+    "installed_game_item_ids_and_prices": "55 of 55 matched"
+  },
+  "gpu_tests": {
+    "status": "not_run",
+    "reason": "Task-specific GPU permission is pending under AGENTS.md",
+    "required_execution": "One CUDA process, full suite including compilation at most 900 seconds"
+  },
+  "performance": {
+    "status": "not_measured",
+    "before_run": "results/all-potions/after-opt-42",
+    "before_source_hashes": "All saved pre-change source files match the measured run",
+    "comparison_record": "results/hero-equipment/baseline-comparison.json"
+  }
+}

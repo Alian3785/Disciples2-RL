@@ -1,0 +1,535 @@
+[
+  {
+    "key": "runestone",
+    "game_id": "G000IG2001",
+    "name": "Runestone (Artifact)",
+    "price": 500,
+    "original_price": 500,
+    "category": 0,
+    "description": "The leader equipped with this item will receive 10% less damage from attacks"
+  },
+  {
+    "key": "holy_chalice",
+    "game_id": "G000IG2002",
+    "name": "Holy Chalice (Artifact)",
+    "price": 1000,
+    "original_price": 1000,
+    "category": 0,
+    "description": "The leader equipped with this item will receive 15% less damage from attacks"
+  },
+  {
+    "key": "skull_bracers",
+    "game_id": "G000IG2003",
+    "name": "Skull Bracers (Artifact)",
+    "price": 1500,
+    "original_price": 1500,
+    "category": 0,
+    "description": "The leader equipped with this item will receive 20% less damage from attacks"
+  },
+  {
+    "key": "horn_of_awareness",
+    "game_id": "G000IG2004",
+    "name": "Horn of Awareness (Artifact)",
+    "price": 2000,
+    "original_price": 2000,
+    "category": 0,
+    "description": "The leader equipped with this item will receive 25% less damage from attacks"
+  },
+  {
+    "key": "etched_circlet",
+    "game_id": "G000IG2005",
+    "name": "Etched Circlet (Artifact)",
+    "price": 2500,
+    "original_price": 2500,
+    "category": 0,
+    "description": "The leader equipped with this item will receive 35% less damage from attacks"
+  },
+  {
+    "key": "rusted_shackles",
+    "game_id": "G000IG2007",
+    "name": "Rusted Shackles (Artifact)",
+    "price": 1500,
+    "original_price": 1500,
+    "category": 0,
+    "description": "Allows leader to instantly retreat from a dangerous situation"
+  },
+  {
+    "key": "dwarven_bracer",
+    "game_id": "G000IG3001",
+    "name": "Dwarven Bracer (Artifact)",
+    "price": 500,
+    "original_price": 500,
+    "category": 0,
+    "description": "The leader equipped with this item inflicts 10% more damage in battle"
+  },
+  {
+    "key": "unholy_chalice",
+    "game_id": "G000IG3002",
+    "name": "Unholy Chalice (Artifact)",
+    "price": 1000,
+    "original_price": 1000,
+    "category": 0,
+    "description": "The leader equipped with this item inflicts 15% more damage in battle"
+  },
+  {
+    "key": "ring_of_strength",
+    "game_id": "G000IG3003",
+    "name": "Ring of Strength (Artifact)",
+    "price": 1500,
+    "original_price": 1500,
+    "category": 0,
+    "description": "The leader equipped with this item inflicts 20% more damage in battle"
+  },
+  {
+    "key": "runic_blade",
+    "game_id": "G000IG3004",
+    "name": "Runic Blade (Artifact)",
+    "price": 2000,
+    "original_price": 2000,
+    "category": 0,
+    "description": "The leader equipped with this item inflicts 25% more damage in battle"
+  },
+  {
+    "key": "mjolnirs_crown",
+    "game_id": "G000IG3005",
+    "name": "Mjolnir's Crown (Artifact)",
+    "price": 2500,
+    "original_price": 2500,
+    "category": 0,
+    "description": "The leader equipped with this item inflicts 35% more damage in battle"
+  },
+  {
+    "key": "ring_of_ages",
+    "game_id": "G000IG3006",
+    "name": "Ring of the Ages (Artifact)",
+    "price": 3750,
+    "original_price": 3750,
+    "category": 0,
+    "description": "The leader equipped with this item inflicts 40% more damage in battle and his initiative increases by 25%"
+  },
+  {
+    "key": "bethrezens_claw",
+    "game_id": "G000IG3007",
+    "name": "Bethrezen's Claw (Artifact)",
+    "price": 5000,
+    "original_price": 5000,
+    "category": 0,
+    "description": "The leader equipped with this item inflicts 40% more damage in battle and his initiative increases by 50%"
+  },
+  {
+    "key": "soul_crystal",
+    "game_id": "G000IG3015",
+    "name": "Soul Crystal (Artifact)",
+    "price": 2000,
+    "original_price": 2000,
+    "category": 0,
+    "description": "The leader equipped with this item will paralyze his enemies in battle"
+  },
+  {
+    "key": "horn_of_incubus",
+    "game_id": "G000IG3016",
+    "name": "Horn of Incubus (Artifact)",
+    "price": 2000,
+    "original_price": 2000,
+    "category": 0,
+    "description": "The leader equipped with this item will petrify his enemies in battle"
+  },
+  {
+    "key": "unholy_dagger",
+    "game_id": "G000IG3017",
+    "name": "Unholy Dagger (Artifact)",
+    "price": 1500,
+    "original_price": 1500,
+    "category": 0,
+    "description": "The leader equipped with this item will drain the life of his enemies in battle"
+  },
+  {
+    "key": "wight_blade",
+    "game_id": "G000IG3018",
+    "name": "Wight Blade (Artifact)",
+    "price": 5000,
+    "original_price": 5000,
+    "category": 0,
+    "description": "The leader equipped with this item will drain the levels of his enemies in battle"
+  },
+  {
+    "key": "thanatos_blade",
+    "game_id": "G000IG3019",
+    "name": "Thanatos Blade (Artifact)",
+    "price": 1500,
+    "original_price": 1500,
+    "category": 0,
+    "description": "The leader equipped with this item will poison his enemies in battle"
+  },
+  {
+    "key": "skull_of_thanatos",
+    "game_id": "G000IG3020",
+    "name": "Skull of Thanatos (Artifact)",
+    "price": 3750,
+    "original_price": 3750,
+    "category": 0,
+    "description": "The leader equipped with this item will poison his enemies in battle"
+  },
+  {
+    "key": "hags_ring",
+    "game_id": "G000IG3021",
+    "name": "Hag's Ring (Artifact)",
+    "price": 2500,
+    "original_price": 2500,
+    "category": 0,
+    "description": "The leader equipped with this item will transform his enemies in battle"
+  },
+  {
+    "key": "lute_of_charming",
+    "game_id": "G000IG3022",
+    "name": "Lute of Charming (Artifact)",
+    "price": 1500,
+    "original_price": 1500,
+    "category": 0,
+    "description": "The leader equipped with this item will receive 10% lower prices from Merchants, Mages, and Mercenaries"
+  },
+  {
+    "key": "banner_protection",
+    "game_id": "G000IG1001",
+    "name": "Banner of Protection",
+    "price": 1000,
+    "original_price": 1000,
+    "category": 1,
+    "description": "All the units in the party receive 10% less damage from attacks"
+  },
+  {
+    "key": "banner_resistance",
+    "game_id": "G000IG1002",
+    "name": "Banner of Resistance",
+    "price": 3000,
+    "original_price": 3000,
+    "category": 1,
+    "description": "All the units in the party receive 15% less damage from attacks"
+  },
+  {
+    "key": "banner_striking",
+    "game_id": "G000IG1003",
+    "name": "Banner of Striking",
+    "price": 1000,
+    "original_price": 1000,
+    "category": 1,
+    "description": "Increases by 10% the chances to hit of all the units in the party",
+    "accuracy_percent": 10,
+    "original_accuracy_percent": 10,
+    "modifier_id": "g000um2103",
+    "modifier_source": "GmodifL.dbf TYPE=3 (L_POWER), PERCENT"
+  },
+  {
+    "key": "banner_battle",
+    "game_id": "G000IG1004",
+    "name": "Banner of Battle",
+    "price": 3000,
+    "original_price": 3000,
+    "category": 1,
+    "description": "Increases by 15% the chances to hit of all the units in the party",
+    "accuracy_percent": 15,
+    "original_accuracy_percent": 15,
+    "modifier_id": "g000um2104",
+    "modifier_source": "GmodifL.dbf TYPE=3 (L_POWER), PERCENT"
+  },
+  {
+    "key": "banner_speed",
+    "game_id": "G000IG1005",
+    "name": "Banner of Speed",
+    "price": 1000,
+    "original_price": 1000,
+    "category": 1,
+    "description": "Increases by 10% the initiative of all the units in the party"
+  },
+  {
+    "key": "banner_celerity",
+    "game_id": "G000IG1006",
+    "name": "Banner of Celerity",
+    "price": 3000,
+    "original_price": 3000,
+    "category": 1,
+    "description": "Increases by 15% the initiative of all the units in the party"
+  },
+  {
+    "key": "banner_strength",
+    "game_id": "G000IG1007",
+    "name": "Banner of Strength",
+    "price": 1000,
+    "original_price": 1000,
+    "category": 1,
+    "description": "Increases by 10% the damage inflicted by all the units in the party"
+  },
+  {
+    "key": "banner_might",
+    "game_id": "G000IG1008",
+    "name": "Banner of Might",
+    "price": 3000,
+    "original_price": 3000,
+    "category": 1,
+    "description": "Increases by 15% the damage inflicted by all the units in the party"
+  },
+  {
+    "key": "banner_fortitude",
+    "game_id": "G000IG1015",
+    "name": "Banner of Fortitude",
+    "price": 5000,
+    "original_price": 5000,
+    "category": 1,
+    "description": "All the units in the party receive 20% less damage from attacks"
+  },
+  {
+    "key": "banner_war",
+    "game_id": "G000IG1016",
+    "name": "Banner of War",
+    "price": 5000,
+    "original_price": 5000,
+    "category": 1,
+    "description": "Increases by 20% the damage inflicted by all the units in the party"
+  },
+  {
+    "key": "banner_health",
+    "game_id": "G000IG1017",
+    "name": "Banner of Health",
+    "price": 5000,
+    "original_price": 5000,
+    "category": 1,
+    "description": "All the units in the party receive 10% regeneration between turns"
+  },
+  {
+    "key": "tome_air",
+    "game_id": "G000IG4001",
+    "name": "Tome of Air",
+    "price": 400,
+    "original_price": 400,
+    "category": 2,
+    "description": "The leader equipped with this item is unaffected by the first air based attack in battle"
+  },
+  {
+    "key": "tome_water",
+    "game_id": "G000IG4002",
+    "name": "Tome of Water",
+    "price": 400,
+    "original_price": 400,
+    "category": 2,
+    "description": "The leader equipped with this item is unaffected by the first water based attack in battle"
+  },
+  {
+    "key": "tome_earth",
+    "game_id": "G000IG4003",
+    "name": "Tome of Earth",
+    "price": 400,
+    "original_price": 400,
+    "category": 2,
+    "description": "The leader equipped with this item is unaffected by the first earth based attack in battle"
+  },
+  {
+    "key": "tome_fire",
+    "game_id": "G000IG4004",
+    "name": "Tome of Fire",
+    "price": 400,
+    "original_price": 400,
+    "category": 2,
+    "description": "The leader equipped with this item is unaffected by the first fire based attack in battle"
+  },
+  {
+    "key": "tome_war",
+    "game_id": "G000IG4005",
+    "name": "Tome of War",
+    "price": 600,
+    "original_price": 600,
+    "category": 2,
+    "description": "All the units in the leader's party will gain 25% more experience in battle"
+  },
+  {
+    "key": "tome_arcanum",
+    "game_id": "G000IG4006",
+    "name": "Tome of Arcanum",
+    "price": 900,
+    "original_price": 900,
+    "category": 2,
+    "description": "Allows the leader to equip and use Orbs in battle"
+  },
+  {
+    "key": "tome_sorcery",
+    "game_id": "G000IG4007",
+    "name": "Tome of Sorcery",
+    "price": 1200,
+    "original_price": 1200,
+    "category": 2,
+    "description": "Allows the leader to equip and use Talismans in battle"
+  },
+  {
+    "key": "tome_mind",
+    "game_id": "G000IG4008",
+    "name": "Tome of Thought",
+    "price": 900,
+    "original_price": 900,
+    "category": 2,
+    "description": "The leader equipped with this item is unaffected by the first Mind based attack in battle"
+  },
+  {
+    "key": "elven_boots",
+    "game_id": "G000IG1010",
+    "name": "Elven Boots",
+    "price": 1200,
+    "original_price": 1200,
+    "category": 3,
+    "description": "The target party will suffer no move penalty when venturing in forests"
+  },
+  {
+    "key": "elemental_boots",
+    "game_id": "G000IG1011",
+    "name": "Boots of the Elements",
+    "price": 1600,
+    "original_price": 1600,
+    "category": 3,
+    "description": "The target party will suffer no move penalty when sailing on water"
+  },
+  {
+    "key": "boots_speed",
+    "game_id": "G000IG8003",
+    "name": "Boots of Speed",
+    "price": 400,
+    "original_price": 400,
+    "category": 3,
+    "description": "Increases by 20% the move points of the leader wearing the Boots"
+  },
+  {
+    "key": "boots_traveling",
+    "game_id": "G000IG8004",
+    "name": "Boots of Traveling",
+    "price": 1200,
+    "original_price": 1200,
+    "category": 3,
+    "description": "Increases by 40% the move points of the leader wearing the Boots"
+  },
+  {
+    "key": "boots_seven_leagues",
+    "game_id": "G000IG8005",
+    "name": "Boots of Seven Leagues",
+    "price": 2000,
+    "original_price": 2000,
+    "category": 3,
+    "description": "Increases by 60% the move points of the leader wearing the Boots"
+  },
+  {
+    "key": "bronze_ring",
+    "game_id": "G000IG7001",
+    "name": "Bronze Ring (Valuable)",
+    "price": 250,
+    "original_price": 250,
+    "category": 4,
+    "description": "This jewel is worth 50 gold coins to a merchant",
+    "sell_price": 50,
+    "original_sell_price": 50,
+    "sell_price_source": "Tglobal.dbf item description"
+  },
+  {
+    "key": "silver_ring",
+    "game_id": "G000IG7002",
+    "name": "Silver Ring (Valuable)",
+    "price": 500,
+    "original_price": 500,
+    "category": 4,
+    "description": "This jewel is worth 100 gold coins to a merchant",
+    "sell_price": 100,
+    "original_sell_price": 100,
+    "sell_price_source": "Tglobal.dbf item description"
+  },
+  {
+    "key": "emerald",
+    "game_id": "G000IG7003",
+    "name": "Emerald (Valuable)",
+    "price": 750,
+    "original_price": 750,
+    "category": 4,
+    "description": "This precious stone is worth 150 gold coins to a merchant",
+    "sell_price": 150,
+    "original_sell_price": 150,
+    "sell_price_source": "Tglobal.dbf item description"
+  },
+  {
+    "key": "gold_ring",
+    "game_id": "G000IG7004",
+    "name": "Gold Ring (Valuable)",
+    "price": 1000,
+    "original_price": 1000,
+    "category": 4,
+    "description": "This jewel is worth 200 gold coins to a merchant",
+    "sell_price": 200,
+    "original_sell_price": 200,
+    "sell_price_source": "Tglobal.dbf item description"
+  },
+  {
+    "key": "ruby",
+    "game_id": "G000IG7005",
+    "name": "Ruby (Valuable)",
+    "price": 1250,
+    "original_price": 1250,
+    "category": 4,
+    "description": "This precious stone is worth 250 gold coins to a merchant",
+    "sell_price": 250,
+    "original_sell_price": 250,
+    "sell_price_source": "Tglobal.dbf item description"
+  },
+  {
+    "key": "sapphire",
+    "game_id": "G000IG7006",
+    "name": "Sapphire (Valuable)",
+    "price": 1500,
+    "original_price": 1500,
+    "category": 4,
+    "description": "This precious stone is worth 300 gold coins to a merchant",
+    "sell_price": 300,
+    "original_sell_price": 300,
+    "sell_price_source": "Tglobal.dbf item description"
+  },
+  {
+    "key": "diamond",
+    "game_id": "G000IG7007",
+    "name": "Diamond (Valuable)",
+    "price": 1750,
+    "original_price": 1750,
+    "category": 4,
+    "description": "This precious stone is worth 350 gold coins to a merchant",
+    "sell_price": 350,
+    "original_sell_price": 350,
+    "sell_price_source": "Tglobal.dbf item description"
+  },
+  {
+    "key": "ancient_relic",
+    "game_id": "G000IG7008",
+    "name": "Ancient Relic (Valuable)",
+    "price": 2000,
+    "original_price": 2000,
+    "category": 4,
+    "description": "This relic is worth 400 gold coins to a merchant",
+    "sell_price": 400,
+    "original_sell_price": 400,
+    "sell_price_source": "Tglobal.dbf item description"
+  },
+  {
+    "key": "royal_scepter",
+    "game_id": "G000IG7009",
+    "name": "Royal Scepter (Valuable)",
+    "price": 2500,
+    "original_price": 2500,
+    "category": 4,
+    "description": "This royal scepter is worth 500 gold coins to a merchant",
+    "sell_price": 500,
+    "original_sell_price": 500,
+    "sell_price_source": "Tglobal.dbf item description"
+  },
+  {
+    "key": "imperial_crown",
+    "game_id": "G000IG7010",
+    "name": "Imperial Crown (Valuable)",
+    "price": 5000,
+    "original_price": 5000,
+    "category": 4,
+    "description": "This monarch's crown is worth 1000 coins gold to a merchant",
+    "sell_price": 1000,
+    "original_sell_price": 1000,
+    "sell_price_source": "Tglobal.dbf item description"
+  }
+]

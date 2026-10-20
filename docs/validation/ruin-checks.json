@@ -1,0 +1,39 @@
+{
+  "backend": "cuda",
+  "targeted": {
+    "passed": 69,
+    "pytest_seconds": 260.49,
+    "log": "results/ruins-20261010/targeted.log"
+  },
+  "focused": {
+    "passed": 4,
+    "pytest_seconds": 27.7,
+    "log": "results/ruins-20261010/focused.log"
+  },
+  "full": {
+    "tests": 377,
+    "pytest_seconds": 798.29,
+    "seconds": 813.2032921480001,
+    "wall_seconds": 816.4087715148926,
+    "execution_limit": 890.785835981369,
+    "wall_limit": 900,
+    "parent_started_at": 1791591226.122,
+    "backend": "cuda",
+    "groups": {
+      "suite": {
+        "exit_code": 0,
+        "seconds": 813.1923455939999,
+        "log": "/mnt/c/jaxjax/results/gpu-tests/ruins-final-20261010/suite.log"
+      }
+    },
+    "compilation_cache": "/mnt/c/jaxjax/results/gpu-tests/compilation-cache",
+    "cold_cache": false,
+    "isolated_cache": false,
+    "passed": true
+  },
+  "static": {
+    "ruff": "passed",
+    "javascript_syntax": "passed"
+  },
+  "training_limit": 1000000
+}

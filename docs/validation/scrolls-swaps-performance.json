@@ -1,0 +1,36 @@
+{
+  "date": "2026-10-11",
+  "gpu": "GTX 1660 Ti 6 GB, WSL2, the same machine as battle-items-performance.json",
+  "method": "benchmark_number_grid.py --test-run --seed 42, 1,000,000 transitions per run, one GPU process at a time, separate git worktrees per commit. One run per configuration; the Default scroll pair was repeated because the first pair dropped more than 7% (AGENTS.md).",
+  "commits": {"base": "2f4a2f9", "scrolls": "ca460bc", "unit_swaps": "c10057d"},
+  "scrolls": {
+    "round_1": {
+      "current_map": {"learner_sps": {"base": 87996, "scrolls": 89731}, "change_percent": 1.97,
+                      "ppo_compile_seconds": {"base": 74.0, "scrolls": 80.3}},
+      "default_map": {"learner_sps": {"base": 89765, "scrolls": 80446}, "change_percent": -10.38,
+                      "ppo_compile_seconds": {"base": 56.8, "scrolls": 61.5}}
+    },
+    "round_2_default_map": {"learner_sps": {"base": 87281, "scrolls": 87009}, "change_percent": -0.31,
+                            "ppo_compile_seconds": {"base": 64.6, "scrolls": 64.9}},
+    "conclusion": "The repeat did not confirm the round 1 Default drop: the scroll run moved from 80,446 to 87,009. No slowdown of 7% or more."
+  },
+  "unit_swaps": {
+    "current_map": {"learner_sps": {"scrolls": 89242, "unit_swaps": 86507}, "change_percent": -3.06,
+                    "ppo_compile_seconds": {"scrolls": 79.1, "unit_swaps": 82.8},
+                    "actions": {"scrolls": 229, "unit_swaps": 244}, "observation": {"scrolls": 1678, "unit_swaps": 1694}},
+    "default_map": {"learner_sps": {"scrolls": 87009, "unit_swaps": 82070}, "change_percent": -5.68,
+                    "ppo_compile_seconds": {"scrolls": 64.9, "unit_swaps": 64.2},
+                    "actions": {"scrolls": 263, "unit_swaps": 278}, "observation": {"scrolls": 2455, "unit_swaps": 2471}},
+    "conclusion": "Below the 7% threshold on both maps."
+  },
+  "cpu_env_check": {
+    "note": "Dev only, cloud CPU (4 cores): vmapped action_mask + step + observation in lax.scan, 128 envs x 100 steps, uniform random valid actions, median of 9 runs. Different action sets change the random policy, so this is a rough proxy.",
+    "default_map_sps": {"base": 20853, "scrolls": 20536, "unit_swaps": 19279, "unit_swaps_off": 20510},
+    "current_map_sps": {"base": 15325, "scrolls": 15586, "unit_swaps": 15255, "unit_swaps_off": 15903}
+  },
+  "gpu_tests": {
+    "scrolls": "ca460bc: 60 passed in 7 min 52 s (scrolls, casting, default_map, battle_items, items, spells)",
+    "unit_swaps": "c10057d: 54 passed in 7 min 41 s (unit_swaps, terrain, spells, casting, default_map, scrolls)"
+  },
+  "results": "C:\\jaxjax\\results\\scrolls-staves-20261011 (round 1) and C:\\jaxjax\\results\\unit-swaps-20261011 (round 2 and unit swaps) on the user's PC"
+}

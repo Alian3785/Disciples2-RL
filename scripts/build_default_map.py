@@ -1,0 +1,200 @@
+"""Build maps/default.json from the Python reference Default map.
+
+Source: <reference>/Big_map/maps/default/layout.json (a reset(seed=0) snapshot of
+maps/default.py) plus the shop stock in campaign_env_data.py. Reference (x, y)
+becomes JAX [y+1, x+1]: the JAX grid adds an impassable outer ring, so 48x48
+becomes 50x50. Rule flags are copied from number_grid_map.json. See
+docs/DEFAULT_MAP.md for every difference from the reference.
+
+    python scripts/build_default_map.py --reference "C:/Disciples 2 python reference"
+"""
+import argparse
+import json
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+UNITS = json.loads((ROOT/'stoix/envs/data/units.json').read_text(encoding='utf-8'))
+CURRENT = json.loads((ROOT/'number_grid_map.json').read_text(encoding='utf-8'))
+
+# Reference loot names -> JAX potion or item keys.
+POTIONS = {
+    'Potion of Healing': 'healing', 'Life Potion': 'life', 'Эликсир Жизни': 'life',
+    'Potion of Strength': 'strength', 'Potion of Invulnerability': 'invulnerability',
+    'Эликсир неуязвимости': 'invulnerability', 'Эликсир Силы титана': 'titan',
+    'Эликсир Всевышнего': 'highfather',
+}
+ITEMS = {
+    'Banner of War': 'banner_war', 'Banner of Might': 'banner_might',
+    'Tome of Arcanum': 'tome_arcanum', 'Ruby (Valuable)': 'ruby',
+    'Diamond (Valuable)': 'diamond', 'Bronze Ring (Valuable)': 'bronze_ring',
+    'Кольцо веков (Артефакт)': 'ring_of_ages', 'Vampire Orb': 'vampire_orb',
+    'Orb of Life': 'orb_of_life', 'Lich Orb': 'lich_orb',
+    'Zombie Talisman': 'zombie_talisman', 'Mind ward scroll': 'mind_ward_scroll',
+}
+# campaign_env_data.py MERCHANT_BUY_ITEMS: the Default map has no per-site
+# table, so Алар sells all of it and Тралар sells nothing (campaign_env_map.py).
+ALAR = {'life': 10, 'healing': 10, 'restoration': 10, 'ointment': 10, 'might': 1,
+        'fire_ward': 1, 'earth_ward': 1, 'water_ward': 1, 'air_ward': 1, 'celerity': 1}
+# User request: one artifact for sale as well (docs/MAP_SITES.md#предметы-у-торговца).
+ALAR_ITEMS = {'runestone': 1}
+# Requested shop: Armageddon and the strongest Ent summon (Verdant), 1000 gold each.
+SPELLS = [{'spell': 'g000ss0019', 'price': 1000, 'stock': 1},
+          {'spell': 'g000ss0117', 'price': 1000, 'stock': 1}]
+GREEN_DRAGON = 31  # campaign_env_magic.py: heals fully every day.
+CAPITAL_GUARD = 75
+ROLES = {22: 'guard', 32: 'guard', 33: 'guard', 34: 'guard', 35: 'guard',
+         67: 'garrison', 68: 'garrison', 69: 'garrison', CAPITAL_GUARD: 'capital'}
+# Copied unchanged from the current map so both maps train with the same rules.
+RULES = ('max_steps', 'step_cost', 'exploration_bonus', 'mask_walls', 'map_seed',
+         'battle_mode', 'battle_max_rounds', 'battle_recovery', 'battle_observation_version',
+         'combat_rules_version', 'building_reward', 'blocked_buildings', 'max_building_level',
+         'rest_penalty_per_point', 'unit_progression', 'capital_services', 'battle_engagement',
+         'equipment_auto_equip', 'equipment_requires_skills', 'faction_recruitment',
+         'territory', 'lord_type', 'spell_research', 'spell_casting', 'unit_swaps')
+
+
+def cell(point):
+    x, y = point
+    return [y+1, x+1]
+
+
+def site_cells(anchor):
+    x, y = anchor
+    return {(x+i, y+j) for i in range(3) for j in range(3)}
+
+
+# Each original unit id has exactly one catalogue key.
+UNIT_KEYS = {row['game_id']: key for key, row in UNITS.items()}
+
+
+def roster(stack):
+    slots = [None]*6
+    for unit in stack['units']:
+        slot = unit['position']-1  # red positions 1-3 front, 4-6 back
+        if slots[slot] is not None or (unit['big'] and (slot > 2 or slots[slot+3] is not None)):
+            raise ValueError(f"Stack {stack['id']}: overlapping units")
+        slots[slot] = UNIT_KEYS[unit['unit_id']]
+    return slots
+
+
+def loot(names):
+    potions, items = {}, {}
+    for name in names:
+        target = potions if name in POTIONS else items
+        key = POTIONS.get(name) or ITEMS[name]
+        target[key] = target.get(key, 0)+1
+    return potions, items
+
+
+def build(layout):
+    stacks = sorted(layout['enemies'], key=lambda e: e['id'])
+    if [e['id'] for e in stacks] != list(range(1, len(stacks)+1)):
+        raise ValueError('Expected enemy ids 1..N')
+    index = {e['id']: i for i, e in enumerate(stacks)}
+    rosters = [roster(e) for e in stacks]
+    sites = {s['code']: s for s in layout['sites']}
+    removed = set().union(*(site_cells(s['position']) for s in layout['sites']),
+                          *(site_cells(r['ruin_pos']) for r in layout['ruins']))
+    obstacles = sorted(cell(p) for p in layout['obstacles'] if tuple(p) not in removed)
+    objects = ({tuple(e['position']) for e in stacks} | {tuple(c['position']) for c in layout['chests']}
+               | {tuple(p) for p in layout['gold_mines']} | {tuple(m['position']) for m in layout['mana']}
+               | {tuple(c['position']) for c in layout['cities']+layout['capitals']})
+    # JAX water cannot hold an object; those four cells become plain.
+    terrain = {kind: [cell(p) for p in points if kind != 'water' or tuple(p) not in objects]
+               for kind, points in (('road', layout['terrain']['road']),
+                                    ('forest', layout['terrain']['forest']),
+                                    ('water', layout['terrain']['water']))}
+    capital, enemy_capital = layout['capitals']
+    chests = []
+    for chest in layout['chests']:
+        potions, items = loot(chest['items'])
+        chests.append(dict(position=cell(chest['position']), potions=potions, items=items))
+    ruins = []
+    for ruin in layout['ruins']:
+        potions, items = loot([ruin['item']])
+        ruins.append(dict(name=ruin['title'], position=cell(ruin['ruin_pos']),
+                          potions=potions, items=items, gold=ruin['gold']))
+
+    def site(code, **extra):
+        return dict(name=sites[code]['name'], position=cell(sites[code]['position']), **extra)
+    units = [[UNITS[k]['max_hp'] for k in r if k] for r in rosters]
+    game_map = dict(
+        name='NumberGrid-50x50-default',
+        size=layout['grid_size']+2,
+        agent_position=cell(capital['position']),
+        agent_number=1,
+        opponent_positions=[cell(e['position']) for e in stacks],
+        opponent_numbers=[1]*len(stacks),
+        **{key: CURRENT[key] for key in RULES},
+        # Reference hero battle slots: orbs, talismans and battle potions (docs/BATTLE_ITEMS.md).
+        battle_items=True,
+        # Reference skill ladder: Pathfinding, Weapon Master, the lord's Might (docs/HERO_SKILLS.md).
+        hero_skills=True,
+        number_generation='Legacy labels; numbers do not affect battles.',
+        reconstruction_note=('Python reference Default map "'+layout['title']+'" ('+layout['map_id']
+                             + '), generated by scripts/build_default_map.py; see docs/DEFAULT_MAP.md.'),
+        hero_hp=150,
+        enemy_units=[len(u) for u in units],
+        enemy_hp=[max(u) for u in units],
+        # No hero_roster: faction and lord_type choose the reference party (docs/STARTING_PARTIES.md).
+        faction='empire',
+        enemy_rosters=rosters,
+        initial_potions={},
+        initial_items={},
+        chests=chests,
+        merchants=[site('T1', potions=ALAR, items=ALAR_ITEMS), site('T2', potions={})],
+        trainer=site('U1'),
+        mercenaries=[site('H1', roster=[{'unit': 'g000uu5040', 'stock': 1}]),
+                     site('H2', roster=[{'unit': 'goblin', 'stock': 1},
+                                        {'unit': 'goblin_archer', 'stock': 1}])],
+        spell_shop=site('M1', spells=SPELLS),
+        # Reference goal "cities": capture FINAL_OBJECTIVE_CITIES (Порт Полонис, Соругирилла).
+        cities=[dict(name=c['name'], position=cell(c['position']), level=c['level'], objective=c['objective'])
+                for c in layout['cities']],
+        mines=([dict(kind='gold', position=cell(p)) for p in layout['gold_mines']]
+               + [dict(kind=m['kind'], position=cell(m['position'])) for m in layout['mana']]),
+        obstacles=obstacles,
+        city_defender_roles={str(index[i]): role for i, role in ROLES.items()},
+        enemy_capitals=[dict(name=enemy_capital['name'], position=cell(enemy_capital['position']),
+                             guard=index[CAPITAL_GUARD],
+                             footprint=sorted(cell(p) for p in enemy_capital['footprint']))],
+        enemy_full_regeneration=[index[GREEN_DRAGON]],
+        ruins=ruins,
+        terrain=terrain,
+    )
+    game_map['battle_observation_version'] = max(42, game_map['battle_observation_version'])
+    # Reference equipment lore: banner 7, boots 8, artifacts 9, book 11, the lord's own lore at once.
+    game_map['equipment_requires_skills'] = True
+    if game_map['opponent_positions'][index[CAPITAL_GUARD]] != game_map['enemy_capitals'][0]['position']:
+        raise ValueError('Capital guard is not on the capital')
+    return game_map
+
+
+def dump(game_map):
+    """One top-level key per line; lists of objects or cells one element per line."""
+    def compact(value):
+        return json.dumps(value, ensure_ascii=False)
+    lines = []
+    for key, value in game_map.items():
+        if isinstance(value, list) and value and isinstance(value[0], (list, dict)):
+            body = ',\n'.join('    '+compact(v) for v in value)
+            lines.append(f'  {compact(key)}: [\n{body}\n  ]')
+        else:
+            lines.append(f'  {compact(key)}: {compact(value)}')
+    return '{\n'+',\n'.join(lines)+'\n}\n'
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument('--reference', type=Path, required=True,
+                        help='Python reference root (contains Big_map/) or its Big_map folder')
+    parser.add_argument('--output', type=Path, default=ROOT/'maps/default.json')
+    args = parser.parse_args()
+    base = args.reference/'Big_map' if (args.reference/'Big_map').is_dir() else args.reference
+    layout = json.loads((base/'maps/default/layout.json').read_text(encoding='utf-8'))
+    args.output.write_text(dump(build(layout)), encoding='utf-8')
+    print('Wrote', args.output)
+
+
+if __name__ == '__main__':
+    main()

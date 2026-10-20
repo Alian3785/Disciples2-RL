@@ -1,0 +1,43 @@
+{
+  "date": "2026-10-11",
+  "base_commit": "4fe4ab0",
+  "branch": "codex/battle-round-limit-retreat",
+  "rule": "Round 76 forces each surviving party member to choose the normal retreat action, with a single -1 penalty and no episode termination from the round limit alone.",
+  "backend": "cuda",
+  "targeted": {
+    "passed": 4,
+    "pytest_seconds": 111.10,
+    "junit": "results/round-limit-retreat/targeted.xml",
+    "coverage": ["round 75/76 boundary", "single penalty", "all survivors retreat", "mask/step agreement", "enemy attacks", "paralysis", "poison after round 75", "victory priority", "episode budget", "human automatic actions"]
+  },
+  "updated_regressions": {
+    "passed": 2,
+    "pytest_seconds": 43.63,
+    "junit": "results/round-limit-retreat/updated-regressions.xml",
+    "coverage": ["casualties persist", "forced retreat does not fund recovery", "episode timeout does not fund recovery"]
+  },
+  "shared_regressions": {
+    "passed": 2,
+    "pytest_seconds": 13.97,
+    "junit": "results/round-limit-retreat/shared-regressions.xml",
+    "note": "Two wound-preservation tests now reuse the existing batched CUDA executable instead of creating independent vmap compilations; all assertions are retained. One case overlaps updated_regressions."
+  },
+  "full_suite": {
+    "passed": false,
+    "attempts": [
+      {"directory": "results/gpu-tests/round-limit-retreat-20261011", "status": "stopped to update two obsolete timeout expectations", "wall_seconds": 400.342},
+      {"directory": "results/gpu-tests/round-limit-retreat-final-20261011", "status": "stopped by the execution time guard; no assertion failures reported", "wall_seconds": 894.562},
+      {"directory": "results/gpu-tests/round-limit-retreat-verified-20261011", "status": "stopped at the user's explicit request", "wall_seconds": 37.971}
+    ],
+    "note": "No complete passing full-suite result is claimed. The new standalone-summon timeout regression was not reached."
+  },
+  "static": {"ruff": "passed", "javascript_syntax": "passed", "viewer_matches_canonical_js": true},
+  "performance": {
+    "before_artifacts": "results/round-limit-retreat/before",
+    "before_transitions_per_second": 91506.06290394135,
+    "before_transitions": 1000000,
+    "seed": 42,
+    "after": "not run; user requested finishing without further long runs",
+    "comparison_available": false
+  }
+}

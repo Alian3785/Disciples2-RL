@@ -1,0 +1,45 @@
+{
+  "map": "trade_train",
+  "source_files": [
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/maps/trade_train.py",
+      "sha256": "cdef9d41077fe12b406c845ee77f752291b99278e1d7d305c38634009aafb810"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/maps/trade_train/layout.json",
+      "sha256": "9141dcda56b15634fc741c965c369a122de0c795f6151dcbe85ce3dd528338bc"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env_map.py",
+      "sha256": "78c4d1f6c59f612037a25422f64fbeb215cb50ce2030e0eefda5ac73da95ccf2"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env_economy.py",
+      "sha256": "16b05b7e579a1ade852ef735bda01d35f99cb23006e03f2229cfe879c09ef802"
+    },
+    {
+      "path": "C:/jaxjax/stoix/envs/data/units.json",
+      "sha256": "021bcddaab9bb590f72a49cc956a4456c2fc82ee572146a901fff0a8bec4b19c"
+    },
+    {
+      "path": "C:/jaxjax/maps/trade_train.json",
+      "sha256": "246c06dc100783d74d9f3972db0afc478c1be73546361a9febda0636188d3d4f"
+    }
+  ],
+  "coordinate_transform": "Resolved 24x24 snapshot (x,y) -> JAX [y+1,x+1], 26x26 with blocked border",
+  "site_geometry": "JAX 3x3 sites and five south/east approach cells; reference scaled 2x2 geometry is intentionally not copied",
+  "mercenary_prices": "Explicit scenario gold from ELITE_MERCENARIES; catalogue ENROLL_C only when price is omitted",
+  "runtime": "Existing JAX mechanics and python_reference reward profile",
+  "scenario_enemies": 6,
+  "scenario_fighters": 19,
+  "expected_mercenary_prices": [
+    2500,
+    2000,
+    2500,
+    1800,
+    2000,
+    2500,
+    1800,
+    1800
+  ]
+}

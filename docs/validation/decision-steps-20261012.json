@@ -1,0 +1,180 @@
+{
+  "date": "2026-10-12",
+  "branch": "codex/decision-step-transitions",
+  "base_commit": "f2bd272",
+  "behavior": "One environment transition per player decision, with enemy actions and forced skips inside a JAX while_loop. Step budget, ordinary step cost and composition cost apply once. Event rewards are summed. Truncation follows all automatic responses, including copy preparation.",
+  "reference": "C:/Disciples 2 python reference/Big_map/battle_env.py::_advance_until_blue_turn",
+  "sources_sha256": {
+    "stoix/envs/number_grid.py": "3f8f5fc47e7eb358c19eee1c5587c1c01ad4728966720bd8c2d71ab69b3dc600",
+    "stoix/envs/number_grid_summoning.py": "d724daa308bc01973fd3aa24d81040f72c8e3290d8d56e6389dc35903b81c738",
+    "serve_number_grid.py": "d69b45ce4840b4e7a9899beeff9561ec4f493ecb6c73c1193526637398dd9365",
+    "stoix/wrappers/number_grid_metrics.py": "6bcfe9b473cbd2793f4802544c5ae23401060e01f04e9be6ed58d79196c6bf3e",
+    "numbergrid_tracking.py": "d90721d9c5a3041207f1c0062dae11b2a88683949f1645c023830caa387ff17e",
+    "number_grid_map.json": "73e9bf7da2f2fc185d2e7c8763374285a9ee0442da87e6836ae81b60686dd703"
+  },
+  "verification": {
+    "related": {
+      "name": "pytest",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0",
+      "tests": "41",
+      "time": "181.690",
+      "timestamp": "2026-10-12T00:36:55.007140+03:00",
+      "hostname": "DESKTOP-HB69M4C"
+    },
+    "decision_boundaries": {
+      "name": "pytest",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0",
+      "tests": "6",
+      "time": "88.899",
+      "timestamp": "2026-10-12T00:44:36.748953+03:00",
+      "hostname": "DESKTOP-HB69M4C"
+    },
+    "mandatory": {
+      "name": "pytest",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0",
+      "tests": "125",
+      "time": "223.292",
+      "timestamp": "2026-10-12T00:46:33.240979+03:00",
+      "hostname": "DESKTOP-HB69M4C"
+    },
+    "mandatory_runner": {
+      "seconds": 229.920122999,
+      "wall_seconds": 234.97908520698547,
+      "execution_limit": 413.3868010044098,
+      "wall_limit": 420,
+      "parent_started_at": 1791755189.954,
+      "backend": "cuda",
+      "groups": {
+        "suite": {
+          "exit_code": 0,
+          "seconds": 229.918967232,
+          "log": "/mnt/c/jaxjax/results/gpu-tests/decision-steps-final-20261012/suite.log"
+        }
+      },
+      "compilation_cache": "/mnt/c/jaxjax/results/gpu-tests/compilation-cache",
+      "cold_cache": false,
+      "isolated_cache": false,
+      "selection": "core",
+      "durations": "/mnt/c/jaxjax/results/gpu-tests/decision-steps-final-20261012/durations.jsonl",
+      "passed": true
+    },
+    "ruff": "passed for all modified Python files"
+  },
+  "performance": {
+    "command": "bash scripts/run_gpu.sh benchmark_number_grid.py --test-run --map current --seed 42 --tracking disabled --output <path>",
+    "configuration_identical_except_map_version_label": true,
+    "package_versions_identical": true,
+    "learner_source_unchanged": true,
+    "before": {
+      "device": "NVIDIA GeForce GTX 1660 Ti",
+      "backend": "gpu",
+      "jax": "0.11.2",
+      "cuda_runtime": "13.4.92",
+      "python": "3.12.3",
+      "seed": 42,
+      "training_steps": 1000000,
+      "ppo_updates": 40,
+      "num_envs": 250,
+      "rollout_length": 100,
+      "observation_size": 1694,
+      "parameter_count": 498549,
+      "mean_steps_per_second": 87560.2922112857,
+      "training_seconds": 11.420701949999994,
+      "ppo_compile_seconds": 76.806816448,
+      "initial_evaluation_seconds": 59.349375415,
+      "final_evaluation_seconds": 70.92049497700003,
+      "sampled_evaluation_seconds": 70.09722255100002,
+      "checkpoint_seconds": 0.43228589599999623,
+      "total_runner_seconds": 330.269251252,
+      "combat_counts": {
+        "battle_transition": 606652,
+        "player_battle_transition": 200770,
+        "enemy_battle_transition": 403947,
+        "battle_victory": 428
+      },
+      "transition_definition": "One map move, rest, construction, paid capital service, potion use or unit turn; includes scripted enemy turns and completed retreats."
+    },
+    "after": {
+      "device": "NVIDIA GeForce GTX 1660 Ti",
+      "backend": "gpu",
+      "jax": "0.11.2",
+      "cuda_runtime": "13.4.92",
+      "python": "3.12.3",
+      "seed": 42,
+      "training_steps": 1000000,
+      "ppo_updates": 40,
+      "num_envs": 250,
+      "rollout_length": 100,
+      "observation_size": 1694,
+      "parameter_count": 498549,
+      "mean_steps_per_second": 34264.67599433937,
+      "training_seconds": 29.184574812999927,
+      "ppo_compile_seconds": 77.15889942799981,
+      "initial_evaluation_seconds": 61.2630600440001,
+      "final_evaluation_seconds": 79.01448905999996,
+      "sampled_evaluation_seconds": 110.63389151800015,
+      "checkpoint_seconds": 0.39915997299999617,
+      "total_runner_seconds": 398.5751101829999,
+      "combat_counts": {
+        "battle_transition": 398612,
+        "player_battle_transition": 182330,
+        "enemy_battle_transition": 211811,
+        "automatic_battle_transition": 216282,
+        "battle_victory": 616
+      },
+      "transition_definition": "One agent decision, including all automatic enemy turns, skips and completed retreats up to the next decision. Internal activations spend no additional step budget or per-step penalties."
+    },
+    "raw_steps_rate_change_percent": -60.867334805533034,
+    "after_simulated_map_or_unit_transitions": 1216282,
+    "after_simulated_map_or_unit_transitions_per_second": 41675.508647747076,
+    "caveat": "Raw steps/s changes its unit: old steps include scripted turns, new steps are player decisions. The trajectories and total simulated work therefore differ, despite identical learner settings. Compilation/evaluation are separate. This is a benchmark, not a trained solution of the map.",
+    "optimization_attempt": {
+      "method": "Execute the selected action before the automatic-only loop, sharing its initial random draw with the map branch.",
+      "result": {
+        "device": "NVIDIA GeForce GTX 1660 Ti",
+        "backend": "gpu",
+        "jax": "0.11.2",
+        "cuda_runtime": "13.4.92",
+        "python": "3.12.3",
+        "seed": 42,
+        "training_steps": 1000000,
+        "ppo_updates": 40,
+        "num_envs": 250,
+        "rollout_length": 100,
+        "observation_size": 1694,
+        "parameter_count": 498549,
+        "mean_steps_per_second": 35541.073009961234,
+        "training_seconds": 28.136460587999863,
+        "ppo_compile_seconds": 118.13847424999994,
+        "initial_evaluation_seconds": 90.42779546800011,
+        "final_evaluation_seconds": 113.41346656899987,
+        "sampled_evaluation_seconds": 127.34904504299993,
+        "checkpoint_seconds": 0.49869120799985467,
+        "total_runner_seconds": 518.9717641210002,
+        "combat_counts": {
+          "battle_transition": 383202,
+          "player_battle_transition": 180632,
+          "enemy_battle_transition": 197361,
+          "automatic_battle_transition": 202570,
+          "battle_victory": 522
+        },
+        "transition_definition": "One agent decision, including all automatic enemy turns, skips and completed retreats up to the next decision. Internal activations spend no additional step budget or per-step penalties."
+      },
+      "retained": false,
+      "reason": "Only a small learner improvement while duplicating the battle graph. Restore the compact variant with its completed mandatory verification."
+    },
+    "slowdown_acceptance": {
+      "accepted": true,
+      "date": "2026-10-12",
+      "user_reply": "Сохранить новую механику с этой скоростью",
+      "retained_variant": "after-current",
+      "learner_seconds_per_million_decisions": 29.184574812999927
+    }
+  }
+}

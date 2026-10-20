@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-09",
+  "url": "http://127.0.0.1:8769/viewer.html",
+  "backend": "gpu",
+  "http_get": 200,
+  "browser": "Codex In-app Browser",
+  "checks": {
+    "initial_stock": [
+      1,
+      10,
+      10
+    ],
+    "services_disabled_away_from_entrance": true,
+    "merchant_approach_reached": true,
+    "sold_runestone_gold": 100,
+    "healing_purchase": {
+      "price": 150,
+      "stock_after": 9,
+      "inventory_after": 6
+    },
+    "hero_training": {
+      "xp": 12,
+      "cost": 48
+    },
+    "unit_training": {
+      "xp": 25,
+      "cost": 100
+    },
+    "gold_remainder": 2,
+    "day_and_movement_unchanged_by_services": true,
+    "console_errors": [],
+    "fresh_episode_restored": true
+  },
+  "screenshots": [
+    "results/merchant-trainer/ui-map.png",
+    "results/merchant-trainer/ui-training.png"
+  ]
+}

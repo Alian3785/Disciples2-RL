@@ -1,0 +1,116 @@
+{
+  "date": "2026-10-13",
+  "map": "trade_train",
+  "runtime": {
+    "python": "3.12.3",
+    "jax": "0.11.2",
+    "backend": "gpu",
+    "devices": [
+      "NVIDIA GeForce GTX 1660 Ti"
+    ]
+  },
+  "preflight": "passed",
+  "targeted_tests": {
+    "passed": 11,
+    "failed": 0,
+    "seconds": 67.88,
+    "includes_setup_and_compilation": true,
+    "file": "stoix/tests/number_grid_trade_train_test.py",
+    "durations": "results/trade-train-validation/test-durations.jsonl"
+  },
+  "converter": {
+    "super_last_stand": {
+      "matches_saved": true,
+      "changed_fields": []
+    },
+    "siege_train": {
+      "matches_saved": true,
+      "changed_fields": []
+    },
+    "wotans_retribution": {
+      "matches_saved": true,
+      "changed_fields": []
+    },
+    "trade_train": {
+      "matches_saved": true,
+      "changed_fields": []
+    }
+  },
+  "witness": {
+    "seed": 42,
+    "map_sha256": "246c06dc100783d74d9f3972db0afc478c1be73546361a9febda0636188d3d4f",
+    "won": true,
+    "decisions": 4225,
+    "max_steps": 5000,
+    "rest_actions": 3849,
+    "final_day": 3850,
+    "reward": -737.1939673582092,
+    "victory_order": [
+      6,
+      5,
+      1,
+      4,
+      2,
+      3
+    ],
+    "final_party": [
+      {
+        "slot": 0,
+        "unit": "Защитник Веры",
+        "level": 11,
+        "xp": 0,
+        "hp": 360,
+        "max_hp": 360
+      },
+      {
+        "slot": 1,
+        "unit": "Герцог",
+        "level": 7,
+        "xp": 0,
+        "hp": 279,
+        "max_hp": 279
+      },
+      {
+        "slot": 2,
+        "unit": "Кентавр дикарь",
+        "level": 6,
+        "xp": 0,
+        "hp": 273,
+        "max_hp": 273
+      },
+      {
+        "slot": 3,
+        "unit": "Белый маг",
+        "level": 10,
+        "xp": 0,
+        "hp": 247,
+        "max_hp": 247
+      },
+      {
+        "slot": 4,
+        "unit": "Архилич",
+        "level": 11,
+        "xp": 0,
+        "hp": 255,
+        "max_hp": 255
+      },
+      {
+        "slot": 5,
+        "unit": "Смотритель",
+        "level": 3,
+        "xp": 176,
+        "hp": 74,
+        "max_hp": 120
+      }
+    ],
+    "state_injections": 0,
+    "planner_actions_used_for_learning": false,
+    "path": "results/trade-train-validation/winning-walkthrough.json",
+    "sha256": "0b3f8ea85f6af7bb352ca8795026f34156d3c90bd5adc7489b7cf38919751155"
+  },
+  "first_attempt": "Final undead army survived; preparation revised to add fire attacker and potions without changing the environment",
+  "ruff": "passed",
+  "training_transitions": 0,
+  "benchmarks_run": false,
+  "full_regression_suite_run": false
+}

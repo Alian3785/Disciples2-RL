@@ -1,0 +1,2347 @@
+{
+  "reference": {
+    "battle_env.py": "409f46f2fb8dffc7e482593028de475e2fdb256922eb807e189c233083c48f8c",
+    "data_dicts_compact_lines.py": "e82aa5038f659197992238da49cbcedf02c8cfc5746398c0de4aa1f09b379089"
+  },
+  "training": {
+    "transitions": 20000000,
+    "from_scratch": true,
+    "seed": 42
+  },
+  "excluded": "All single/mass summoners and Doppelganger; equal minimum HP uses source order.",
+  "stages": [
+    {
+      "order": 1,
+      "type": "Archer",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Гоблин лучник",
+      "minimum_hp": 40,
+      "source_index": 198,
+      "key": "goblin_archer",
+      "replacement": {
+        "squad": 2,
+        "slot": 0,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_advance_until_blue_turn",
+        "battle_env.py:_filter_non_immune_targets",
+        "battle_env.py:_single_target",
+        "data_dicts_compact_lines.py:DATA"
+      ],
+      "verification": {
+        "gpu_tests": 50,
+        "seconds": 104.47,
+        "notes": "49 passed in initial group; obsolete targeting assertion updated and rerun: 1 passed."
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/01-archer-20m-offline",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 296120.955831065,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          299947.5010947206,
+          301068.6408525564
+        ],
+        "after": [
+          305759.0795480328,
+          303356.222668231
+        ],
+        "regression_fraction": -0.013475778275680916
+      }
+    },
+    {
+      "order": 2,
+      "type": "Mage",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Ученик",
+      "minimum_hp": 35,
+      "source_index": 10,
+      "key": "apprentice",
+      "replacement": {
+        "squad": 3,
+        "slot": 3,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack._aoe_damage_all",
+        "battle_env.py:_uses_hero_aoe_accuracy_falloff",
+        "battle_env.py:_hero_aoe_accuracy_for_target",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA"
+      ],
+      "verification": {
+        "gpu_tests": 4,
+        "seconds": 16.06
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/02-mage-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 319601.1672846037,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          296120.955831065
+        ],
+        "after": [
+          319601.1672846037
+        ],
+        "regression_fraction": -0.07929263698221334
+      }
+    },
+    {
+      "order": 3,
+      "type": "Wolf Lord",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Повелитель волков",
+      "minimum_hp": 225,
+      "source_index": 74,
+      "key": "wolf_lord",
+      "replacement": {
+        "squad": 4,
+        "slot": 4,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:step wolf_self_select",
+        "battle_env.py:_revert_fenrir_survivors",
+        "battle_env.py:_restore_persistent_forms",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA"
+      ],
+      "verification": {
+        "gpu_tests": 5,
+        "seconds": 27.33
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/03-wolf-lord-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 316326.5240462097,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          319601.1672846037
+        ],
+        "after": [
+          316326.5240462097
+        ],
+        "regression_fraction": 0.0102460302827303
+      }
+    },
+    {
+      "order": 4,
+      "type": "Teurg",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Теург",
+      "minimum_hp": 95,
+      "source_index": 145,
+      "key": "teurg",
+      "replacement": {
+        "squad": 6,
+        "slot": 0,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_apply_teurg_armor_shred",
+        "battle_env.py:_attack._aoe_damage_all",
+        "data_dicts_compact_lines.py:DATA"
+      ],
+      "verification": {
+        "gpu_test_exit_code": 0,
+        "suites": [
+          "number_grid_reference_actions_test.py",
+          "number_grid_potions_test.py"
+        ]
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/04-teurg-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 301794.63815950445,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          316326.5240462097
+        ],
+        "after": [
+          301794.63815950445
+        ],
+        "regression_fraction": 0.04593951117606054
+      }
+    },
+    {
+      "order": 5,
+      "type": "Witch",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Ведьма",
+      "minimum_hp": 75,
+      "source_index": 40,
+      "key": "witch",
+      "replacement": {
+        "squad": 7,
+        "slot": 4,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_apply_witch_effect",
+        "battle_env.py:_apply_start_of_turn_effects",
+        "battle_env.py:_restore_transformed_unit",
+        "battle_env.py:_pick_weapon_immune_or_highest_hp",
+        "data_dicts_compact_lines.py:DATA"
+      ],
+      "verification": {
+        "gpu_tests": 8,
+        "seconds": 64.01
+      },
+      "performance_trials": {
+        "original": "05-witch-20m",
+        "baseline_repeat": "04-teurg-repeat-20m",
+        "optimized": "05-witch-opt-20m",
+        "optimizations": [
+          "Gather only the recovering actor initiative",
+          "Share disjoint secondary effect protection checks",
+          "One recovery PRNG draw instead of twelve unused candidates"
+        ]
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/05-witch-opt-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 264465.80289039813,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          305345.9607678553
+        ],
+        "after": [
+          264465.80289039813
+        ],
+        "regression_fraction": 0.1338814431167047,
+        "user_accepted": "2026-10-09: Принять замедление и продолжить следующие типы"
+      }
+    },
+    {
+      "order": 6,
+      "type": "Warrior",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Крестьянин",
+      "minimum_hp": 40,
+      "source_index": 179,
+      "key": "peasant",
+      "replacement": {
+        "squad": 8,
+        "slot": 0,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_warrior_allowed_targets",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and neutral level normalization"
+      ],
+      "verification": {
+        "gpu_tests": 1,
+        "seconds": 16.3
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/06-warrior-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 270004.59092302644,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          264465.80289039813
+        ],
+        "after": [
+          270004.59092302644
+        ],
+        "regression_fraction": -0.020943305229234932
+      }
+    },
+    {
+      "order": 7,
+      "type": "Centaur Savage",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Кентавр дикарь",
+      "minimum_hp": 210,
+      "source_index": 142,
+      "user_deviation": "Additional 5% damage rounded to integer HP, explicitly requested 2026-10-09.",
+      "key": "centaur_savage",
+      "replacement": {
+        "squad": 9,
+        "slot": 2,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack._single_target Centaur Savage",
+        "battle_env.py:_warrior_allowed_targets",
+        "data_dicts_compact_lines.py:DATA"
+      ],
+      "verification": {
+        "gpu_tests": 1,
+        "seconds": 15.27
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/07-centaur-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 262046.57444401455,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          270004.59092302644
+        ],
+        "after": [
+          262046.57444401455
+        ],
+        "regression_fraction": 0.0294736339549152
+      }
+    },
+    {
+      "order": 8,
+      "type": "Doppelganger",
+      "status": "excluded",
+      "excluded": "explicitly excluded copy ability",
+      "unit": "Двойник",
+      "minimum_hp": 120,
+      "source_index": 41
+    },
+    {
+      "order": 9,
+      "type": "Demon",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Мастер клинка",
+      "minimum_hp": 250,
+      "source_index": 8,
+      "key": "blade_master",
+      "replacement": {
+        "squad": 10,
+        "slot": 0,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:DOUBLE_STRIKE_TYPES and step",
+        "battle_env.py:_advance_until_blue_turn",
+        "battle_env.py:_apply_cached_poison",
+        "battle_env.py:_apply_start_of_turn_effects",
+        "data_dicts_compact_lines.py:DATA"
+      ],
+      "verification": {
+        "gpu_tests": 19,
+        "seconds": 158.71,
+        "notes": "18 passed in combined run; stale Witch observation-offset assertion fixed. Witch and Wolf (including new episode-limit cleanup) rerun: 2 passed in 36.12 s."
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/09-demon-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 272014.44407404546,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          262046.57444401455
+        ],
+        "after": [
+          272014.44407404546
+        ],
+        "regression_fraction": -0.038038542007960974
+      }
+    },
+    {
+      "order": 10,
+      "type": "Death",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Смерть",
+      "minimum_hp": 125,
+      "source_index": 116,
+      "key": "death",
+      "replacement": {
+        "squad": 12,
+        "slot": 0,
+        "previous": "squire"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack._single_target Death",
+        "battle_env.py:_roll_status",
+        "battle_env.py:_apply_start_of_turn_effects",
+        "data_dicts_compact_lines.py:DATA"
+      ],
+      "verification": {
+        "gpu_tests": 34,
+        "seconds": 215.32,
+        "ruff": "passed"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/10-death-opt-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 260504.61306813397,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          272014.44407404546
+        ],
+        "after": [
+          260504.61306813397
+        ],
+        "regression_fraction": 0.04231330819615731,
+        "initial_speed": 231841.56179981207,
+        "optimization": "Vectorized pending queue prefix; 10,000 random CUDA states exactly equal to the original loop; 3 poison GPU regressions passed in 36.69 seconds."
+      }
+    },
+    {
+      "order": 11,
+      "type": "Wight",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Сущий",
+      "minimum_hp": 105,
+      "source_index": 117,
+      "key": "wight",
+      "replacement": {
+        "squad": 13,
+        "slot": 0,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_apply_wight_decay_effect",
+        "battle_env.py:_attack._single_target Wight",
+        "battle_env.py:_restore_transformed_unit",
+        "tests/test_transform_turn_restore.py",
+        "tests/test_transform_damage_state_regression.py"
+      ],
+      "verification": {
+        "gpu_tests": 21,
+        "seconds": 180.53,
+        "ruff": "passed",
+        "javascript_syntax": "passed",
+        "optimizations": "15 reference regressions passed in 140.66s; new geometry test corrected and passed separately; final Wight and Wolf tests passed in 41.48s."
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/11-wight-opt2-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 246675.10085928172,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          260504.61306813397
+        ],
+        "after": [
+          246675.10085928172
+        ],
+        "regression_fraction": 0.053087398514648165,
+        "initial_speed": 228067.0041,
+        "first_optimization_speed": 240351.17980266627,
+        "optimization": "Unified secondary source handling and direct native-level lookup for lowered forms."
+      }
+    },
+    {
+      "order": 12,
+      "type": "Sentry",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Часовой",
+      "minimum_hp": 120,
+      "source_index": 153,
+      "key": "sentry",
+      "replacement": {
+        "squad": 16,
+        "slot": 0,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack._single_target Sentry",
+        "battle_env.py:_apply_start_of_turn_effects",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "gpu_tests": 3,
+        "seconds": 33.36,
+        "poison_equivalence_states": 10000,
+        "ruff": "passed",
+        "javascript_syntax": "passed",
+        "full_suite": {
+          "passed": 230,
+          "pytest_seconds": 546.69,
+          "launcher_wall_seconds": 600.845,
+          "limit_note": "All passed; end-to-end launcher exceeded 600s by 0.845s, further fixture sharing planned."
+        }
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/12-sentry-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 231715.61626510014,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          246675.10085928172
+        ],
+        "after": [
+          231715.61626510014
+        ],
+        "regression_fraction": 0.060644485568551065
+      }
+    },
+    {
+      "order": 13,
+      "type": "Watcher",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Смотритель",
+      "minimum_hp": 120,
+      "source_index": 152,
+      "key": "watcher",
+      "replacement": {
+        "squad": 17,
+        "slot": 3,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack._single_target Watcher",
+        "battle_env.py:_apply_start_of_turn_effects",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "gpu_tests": 5,
+        "seconds": 60.51,
+        "ruff": "passed",
+        "full_suite": {
+          "passed": 230,
+          "pytest_seconds": 546.69,
+          "launcher_wall_seconds": 600.845,
+          "limit_note": "All passed; end-to-end launcher exceeded 600s by 0.845s, further fixture sharing planned."
+        },
+        "notes": "Includes both Sentry/Watcher element checks, mixed tick order, and optimized six-slot/large-unit potion cases."
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/13-watcher-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 236541.7537907971,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          231715.61626510014
+        ],
+        "after": [
+          236541.7537907971
+        ],
+        "regression_fraction": -0.02082784752916922
+      }
+    },
+    {
+      "order": 14,
+      "type": "Lord",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Владыка",
+      "minimum_hp": 570,
+      "source_index": 57,
+      "key": "lord",
+      "replacement": {
+        "squad": 14,
+        "slot": 0,
+        "previous": "titan"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack._single_target Lord",
+        "battle_env.py:_cached_dot_can_apply",
+        "battle_env.py:_apply_start_of_turn_effects",
+        "DATA and GDynUpgr"
+      ],
+      "verification": {
+        "gpu_tests": 71,
+        "seconds": 53.09,
+        "notes": "Lord cached burn plus changed Witch/healer fixtures and full legacy regression module passed on CUDA."
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/14-lord-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 233483.65771517646,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          236541.7537907971
+        ],
+        "after": [
+          233483.65771517646
+        ],
+        "regression_fraction": 0.012928356311779465
+      }
+    },
+    {
+      "order": 15,
+      "type": "Bone Lord",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Костяной лорд",
+      "minimum_hp": 400,
+      "source_index": 239,
+      "key": "bone_lord",
+      "replacement": {
+        "squad": 18,
+        "slot": 0,
+        "previous": "squire"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "gpu_tests": 2,
+        "seconds": 21.29,
+        "notes": "Includes independent 1024-case integer redistribution oracle."
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/15-bone-lord-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 229549.09679043473,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          233483.65771517646
+        ],
+        "after": [
+          229549.09679043473
+        ],
+        "regression_fraction": 0.016851547398411326
+      }
+    },
+    {
+      "order": 16,
+      "type": "Dregazul",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Дрега Зул",
+      "minimum_hp": 200,
+      "source_index": 245,
+      "key": "dregazul",
+      "replacement": {
+        "squad": 19,
+        "slot": 0,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "gpu_tests": 6,
+        "seconds": 47.76,
+        "notes": "Dregazul and stable large-unit, healer, formation and growth regressions passed."
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/16-dregazul-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 230930.14901315936,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          229549.09679043473
+        ],
+        "after": [
+          230930.14901315936
+        ],
+        "regression_fraction": -0.006016369665725385
+      }
+    },
+    {
+      "order": 17,
+      "type": "Dead dragon",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Змей ужаса",
+      "minimum_hp": 450,
+      "source_index": 126,
+      "key": "dead_dragon",
+      "replacement": {
+        "squad": 21,
+        "slot": 0,
+        "previous": "titan"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "gpu_tests": 3,
+        "seconds": 24.17,
+        "notes": "Area poison plus stable Titan and map formation regressions."
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/17-dead-dragon-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 230089.7585943083,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          230930.14901315936
+        ],
+        "after": [
+          230089.7585943083
+        ],
+        "regression_fraction": 0.003639154187715654
+      }
+    },
+    {
+      "order": 18,
+      "type": "Gumtic",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Гамтик кровавый",
+      "minimum_hp": 1100,
+      "source_index": 249,
+      "key": "gumtic",
+      "replacement": {
+        "squad": 21,
+        "slot": 2,
+        "previous": "titan"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "gpu_tests": 2,
+        "seconds": 17.63,
+        "notes": "Independent primary/secondary area hits, dead/escaped exclusion, multiple uncached victims."
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/18-gumtic-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 235147.68645208506,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          230089.7585943083
+        ],
+        "after": [
+          235147.68645208506
+        ],
+        "regression_fraction": -0.02198241194513506
+      }
+    },
+    {
+      "order": 19,
+      "type": "Ismir son",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Сын Имира",
+      "minimum_hp": 500,
+      "source_index": 92,
+      "key": "ismir_son",
+      "replacement": {
+        "squad": 28,
+        "slot": 1,
+        "previous": "titan"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "gpu_tests": 1,
+        "seconds": 26.54,
+        "ruff": "passed",
+        "notes": "Seven cached-water scenarios, caster death/revival, source growth and chance boundary.",
+        "full_suite": {
+          "passed": 237,
+          "orchestrator_seconds": 464.248267936,
+          "launcher_wall_seconds": 493.001,
+          "backend": "cuda",
+          "groups": 2,
+          "logs": "results/unit-actions-20261009/19-full-cuda"
+        }
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/19-ismir-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 226808.41918805728,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          235147.68645208506
+        ],
+        "after": [
+          226808.41918805728
+        ],
+        "regression_fraction": 0.03546395624745835
+      }
+    },
+    {
+      "order": 20,
+      "type": "Ghost",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Привидение",
+      "minimum_hp": 45,
+      "source_index": 120,
+      "key": "ghost",
+      "replacement": {
+        "squad": 20,
+        "slot": 0,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "backend": "gpu",
+        "tests": 5,
+        "pytest_seconds": 70.83,
+        "log": "results/unit-actions-20261009/20-ghost-tests.launcher.log"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/20-ghost-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 225176.46413422332,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          226808.41918805728
+        ],
+        "after": [
+          225176.46413422332
+        ],
+        "regression_fraction": 0.007195301919021069
+      }
+    },
+    {
+      "order": 21,
+      "type": "Shadow",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Тень",
+      "minimum_hp": 135,
+      "source_index": 122,
+      "key": "shadow",
+      "replacement": {
+        "squad": 22,
+        "slot": 3,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "training": {
+        "results": "results/unit-actions-20261009/21-shadow-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 230194.68670325654,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          225176.46413422332
+        ],
+        "after": [
+          230194.68670325654
+        ],
+        "regression_fraction": -0.02228573305086612
+      },
+      "verification": {
+        "backend": "gpu",
+        "tests": 1,
+        "pytest_seconds": 19.94,
+        "log": "results/unit-actions-20261009/21-shadow-tests.launcher.log"
+      }
+    },
+    {
+      "order": 22,
+      "type": "Succub",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Суккуб",
+      "minimum_hp": 145,
+      "source_index": 46,
+      "key": "succubus",
+      "replacement": {
+        "squad": 23,
+        "slot": 5,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "training": {
+        "results": "results/unit-actions-20261009/22-succub-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 228542.95168868144,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          230194.68670325654
+        ],
+        "after": [
+          228542.95168868144
+        ],
+        "regression_fraction": 0.007175382882335324
+      },
+      "verification": {
+        "backend": "gpu",
+        "tests": 3,
+        "pytest_seconds": 27.02,
+        "log": "results/unit-actions-20261009/22-succub-tests.launcher.log"
+      }
+    },
+    {
+      "order": 23,
+      "type": "Betrezen",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Утер",
+      "minimum_hp": 300,
+      "source_index": 233,
+      "key": "uter_betrezen",
+      "replacement": {
+        "squad": 27,
+        "slot": 0,
+        "previous": "squire"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "backend": "gpu",
+        "tests": 3,
+        "pytest_seconds": 33.43,
+        "log": "results/unit-actions-20261009/23-betrezen-tests-fixed.launcher.log"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/23-betrezen-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 223956.47184557279,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          228542.95168868144
+        ],
+        "after": [
+          223956.47184557279
+        ],
+        "regression_fraction": 0.020068349556263243
+      }
+    },
+    {
+      "order": 24,
+      "type": "Uter",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Упырь",
+      "minimum_hp": 150,
+      "source_index": 190,
+      "key": "ghoul",
+      "replacement": {
+        "squad": 29,
+        "slot": 0,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "backend": "gpu",
+        "tests": 4,
+        "pytest_seconds": 48.18,
+        "log": "results/unit-actions-20261009/24-uter-tests.launcher.log"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/24-uter-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 225948.62752400598,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          223956.47184557279
+        ],
+        "after": [
+          225948.62752400598
+        ],
+        "regression_fraction": -0.008895280685645268
+      }
+    },
+    {
+      "order": 25,
+      "type": "Uter Demon",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Русалка",
+      "minimum_hp": 75,
+      "source_index": 212,
+      "key": "mermaid",
+      "replacement": {
+        "squad": 29,
+        "slot": 1,
+        "previous": "squire"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "backend": "gpu",
+        "tests": 2,
+        "pytest_seconds": 43.08,
+        "log": "results/unit-actions-20261009/25-uter-demon-tests.launcher.log"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/25-uter-demon-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 221397.94676624736,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          225948.62752400598
+        ],
+        "after": [
+          221397.94676624736
+        ],
+        "regression_fraction": 0.020140333701629265
+      }
+    },
+    {
+      "order": 26,
+      "type": "Tiamat",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Тиамат",
+      "minimum_hp": 495,
+      "source_index": 56,
+      "key": "tiamat",
+      "replacement": {
+        "squad": 32,
+        "slot": 1,
+        "previous": "titan"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "backend": "gpu",
+        "tests": 23,
+        "pytest_seconds": 106.75,
+        "wall_seconds": 121.601,
+        "log": "results/unit-actions-20261009/26-tiamat-tests.launcher.log"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/26-tiamat-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 223705.21489021176,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          221397.94676624736
+        ],
+        "after": [
+          223705.21489021176
+        ],
+        "regression_fraction": -0.010421361885530223
+      }
+    },
+    {
+      "order": 27,
+      "type": "Baroness",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Баронесса",
+      "minimum_hp": 100,
+      "source_index": 67,
+      "key": "baroness",
+      "replacement": {
+        "squad": 30,
+        "slot": 3,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "backend": "gpu",
+        "tests": 11,
+        "pytest_seconds": 95.11,
+        "wall_seconds": 111.035,
+        "log": "results/unit-actions-20261009/27-baroness-tests.launcher.log"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/27-baroness-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 213507.95182632795,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          223705.21489021176
+        ],
+        "after": [
+          213507.95182632795
+        ],
+        "regression_fraction": 0.04558348391157685
+      }
+    },
+    {
+      "order": 28,
+      "type": "Incub",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Медуза",
+      "minimum_hp": 115,
+      "source_index": 214,
+      "key": "medusa",
+      "replacement": {
+        "squad": 31,
+        "slot": 4,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "backend": "gpu",
+        "tests": 3,
+        "pytest_seconds": 32.61,
+        "wall_seconds": 42.024,
+        "log": "results/unit-actions-20261009/28-incub-tests.launcher.log"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/28-incub-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 221405.24830998268,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          213507.95182632795
+        ],
+        "after": [
+          221405.24830998268
+        ],
+        "regression_fraction": -0.03698830144780074
+      }
+    },
+    {
+      "order": 29,
+      "type": "Abyss Devil",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Дьявол Бездны",
+      "minimum_hp": 600,
+      "source_index": 58,
+      "key": "abyss_devil",
+      "replacement": {
+        "squad": 5,
+        "slot": 1,
+        "previous": "titan"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "backend": "cuda",
+        "passed": 1,
+        "seconds": 34.17,
+        "log": "results/unit-actions-20261009/29-abyss-tests.launcher.log"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/29-abyss-devil-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 218117.28995190613,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          221405.24830998268
+        ],
+        "after": [
+          218117.28995190613
+        ],
+        "regression_fraction": 0.01485040839444407
+      }
+    },
+    {
+      "order": 30,
+      "type": "Cliric",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Медиум",
+      "minimum_hp": 45,
+      "source_index": 156,
+      "key": "medium",
+      "replacement": {
+        "squad": 33,
+        "slot": 3,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "backend": "gpu",
+        "tests": 3,
+        "pytest_seconds": 43.26,
+        "wall_seconds": 57.959,
+        "log": "results/unit-actions-20261009/30-cliric-tests.launcher.log"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/30-cliric-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 211834.48998257128,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          218117.28995190613
+        ],
+        "after": [
+          211834.48998257128
+        ],
+        "regression_fraction": 0.02880468563826455
+      }
+    },
+    {
+      "order": 31,
+      "type": "Profit",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Клирик",
+      "minimum_hp": 75,
+      "source_index": 20,
+      "key": "cleric",
+      "replacement": {
+        "squad": 34,
+        "slot": 3,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "backend": "gpu",
+        "tests": 5,
+        "pytest_seconds": 63.83,
+        "wall_seconds": 80.76,
+        "log": "results/unit-actions-20261009/31-profit-tests.launcher.log"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/31-profit-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 210748.3230799445,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          211834.48998257128
+        ],
+        "after": [
+          210748.3230799445
+        ],
+        "regression_fraction": 0.0051274318111094175
+      }
+    },
+    {
+      "order": 32,
+      "type": "Sundancer",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Солнечная танцовщица",
+      "minimum_hp": 115,
+      "source_index": 159,
+      "key": "sundancer",
+      "replacement": {
+        "squad": 35,
+        "slot": 4,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "command": "bash scripts/run_gpu.sh -m pytest stoix/tests/number_grid_reference_actions_test.py -q -k \"sundancer or profit or cliric\"",
+        "passed": 9,
+        "pytest_seconds": 81.37,
+        "wall_seconds": 96.272
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/32-sundancer-opt-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 196487.34234421508,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          210748.3230799445
+        ],
+        "after": [
+          196487.34234421508
+        ],
+        "regression_fraction": 0.06766829992910406
+      }
+    },
+    {
+      "order": 33,
+      "type": "Sylfid",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Сильфида",
+      "minimum_hp": 95,
+      "source_index": 160,
+      "key": "sylfid",
+      "replacement": {
+        "squad": 36,
+        "slot": 5,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "passed": 1,
+        "pytest_seconds": 22.15,
+        "wall_seconds": 26.741,
+        "selection": "sylfid",
+        "backend": "cuda"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/33-sylfid-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 202243.28450176746,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          196487.34234421508
+        ],
+        "after": [
+          202243.28450176746
+        ],
+        "regression_fraction": -0.02929421350444472
+      }
+    },
+    {
+      "order": 34,
+      "type": "Travnitsa",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Травница",
+      "minimum_hp": 60,
+      "source_index": 78,
+      "key": "travnitsa",
+      "replacement": {
+        "squad": 37,
+        "slot": 4,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "passed": 6,
+        "pytest_seconds": 45.51,
+        "wall_seconds": 52.062,
+        "selection": "travnitsa",
+        "backend": "cuda"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/34-travnitsa-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 194574.12850294178,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          202243.28450176746
+        ],
+        "after": [
+          194574.12850294178
+        ],
+        "regression_fraction": 0.03792044822511109
+      }
+    },
+    {
+      "order": 35,
+      "type": "Deva roshi",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Дева рощи",
+      "minimum_hp": 85,
+      "source_index": 158,
+      "key": "deva_roshi",
+      "replacement": {
+        "squad": 38,
+        "slot": 4,
+        "previous": "acolyte"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "passed": 1,
+        "pytest_seconds": 22.74,
+        "wall_seconds": 34.321,
+        "selection": "deva_roshi",
+        "backend": "cuda"
+      },
+      "full_verification": {
+        "passed": 276,
+        "backend": "cuda",
+        "wall_seconds": 584.455,
+        "runner_seconds": 548.6438813709999,
+        "results": "results/unit-actions-20261009/35-full-cuda-balanced/results.json"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/35-deva-roshi-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 196257.95283005573,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          194574.12850294178
+        ],
+        "after": [
+          196257.95283005573
+        ],
+        "regression_fraction": -0.008653896281429319
+      }
+    },
+    {
+      "order": 36,
+      "type": "Patriach",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Патриарх",
+      "minimum_hp": 125,
+      "source_index": 23,
+      "key": "patriarch",
+      "replacement": {
+        "squad": 39,
+        "slot": 4,
+        "previous": "acolyte"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "passed": 4,
+        "pytest_seconds": 43.49,
+        "wall_seconds": 56.307,
+        "selection": "patriach",
+        "backend": "cuda"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/36-patriach-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 186925.36380992283,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          196257.95283005573
+        ],
+        "after": [
+          186925.36380992283
+        ],
+        "regression_fraction": 0.047552666710093505
+      }
+    },
+    {
+      "order": 37,
+      "type": "Novice",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Посвященная",
+      "minimum_hp": 90,
+      "source_index": 79,
+      "key": "novice",
+      "replacement": {
+        "squad": 40,
+        "slot": 4,
+        "previous": "acolyte"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "passed": 1,
+        "pytest_seconds": 24.21,
+        "wall_seconds": 35.058,
+        "selection": "novice",
+        "backend": "cuda"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/37-novice-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 188183.1926367696,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          186925.36380992283
+        ],
+        "after": [
+          188183.1926367696
+        ],
+        "regression_fraction": -0.006729043085484276
+      }
+    },
+    {
+      "order": 38,
+      "type": "Alchemist",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Алхимик",
+      "minimum_hp": 120,
+      "source_index": 81,
+      "key": "alchemist",
+      "replacement": {
+        "squad": 20,
+        "slot": 4,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "passed": 2,
+        "pytest_seconds": 56.66,
+        "wall_seconds": 70.385,
+        "selection": "alchemist",
+        "backend": "cuda"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/38-alchemist-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 195065.9423046966,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          188183.1926367696
+        ],
+        "after": [
+          195065.9423046966
+        ],
+        "regression_fraction": -0.036574731098393265
+      }
+    },
+    {
+      "order": 39,
+      "type": "Dwarfdruid",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Друид",
+      "minimum_hp": 120,
+      "source_index": 80,
+      "key": "dwarfdruid",
+      "replacement": {
+        "squad": 22,
+        "slot": 4,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "passed": 1,
+        "pytest_seconds": 27.84,
+        "wall_seconds": 39.439,
+        "selection": "dwarfdruid",
+        "backend": "cuda"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/39-dwarfdruid-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 192647.76572484392,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          195065.9423046966
+        ],
+        "after": [
+          192647.76572484392
+        ],
+        "regression_fraction": 0.012396713394875691
+      }
+    },
+    {
+      "order": 40,
+      "type": "Arhidruid",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Архидруид",
+      "minimum_hp": 150,
+      "source_index": 82,
+      "key": "archdruid",
+      "replacement": {
+        "squad": 23,
+        "slot": 4,
+        "previous": "acolyte"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "passed": 1,
+        "pytest_seconds": 26.12,
+        "wall_seconds": 30.601,
+        "selection": "arhidruid",
+        "backend": "cuda"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/40-arhidruid-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 180482.61312919998,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          192647.76572484392
+        ],
+        "after": [
+          180482.61312919998
+        ],
+        "regression_fraction": 0.06314712527224042
+      }
+    },
+    {
+      "order": 41,
+      "type": "Hermit",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Отшельник",
+      "minimum_hp": 250,
+      "source_index": 73,
+      "key": "hermit",
+      "replacement": {
+        "squad": 31,
+        "slot": 0,
+        "previous": "squire"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "passed": 4,
+        "pytest_seconds": 41.35,
+        "wall_seconds": 53.894,
+        "selection": "hermit",
+        "backend": "cuda"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/41-hermit-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 178903.66913936532,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          180482.61312919998
+        ],
+        "after": [
+          178903.66913936532
+        ],
+        "regression_fraction": 0.008748454837055997
+      }
+    },
+    {
+      "order": 42,
+      "type": "Vampire",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Носферату",
+      "minimum_hp": 90,
+      "source_index": 135,
+      "key": "nosferatu",
+      "replacement": {
+        "squad": 33,
+        "slot": 0,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "passed": 1,
+        "pytest_seconds": 26.99,
+        "wall_seconds": 37.175,
+        "selection": "vampire_nosferatu",
+        "backend": "cuda"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/42-vampire-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 180109.27429863112,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          178903.66913936532
+        ],
+        "after": [
+          180109.27429863112
+        ],
+        "regression_fraction": -0.006738850941769403
+      }
+    },
+    {
+      "order": 43,
+      "type": "Highvampire",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Высший вампир",
+      "minimum_hp": 210,
+      "source_index": 118,
+      "key": "highvampire",
+      "replacement": {
+        "squad": 34,
+        "slot": 4,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "passed": 1,
+        "pytest_seconds": 25.22,
+        "wall_seconds": 36.475,
+        "selection": "highvampire",
+        "backend": "cuda"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/43-highvampire-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 179297.2395994973,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          180109.27429863112
+        ],
+        "after": [
+          179297.2395994973
+        ],
+        "regression_fraction": 0.0045085668258672
+      }
+    },
+    {
+      "order": 44,
+      "type": "Summoner",
+      "status": "excluded",
+      "excluded": "single summon",
+      "unit": "Оккультист",
+      "minimum_hp": 75,
+      "source_index": 191
+    },
+    {
+      "order": 45,
+      "type": "Occultmaster",
+      "status": "excluded",
+      "excluded": "mass summon",
+      "unit": "Мастер оккультист",
+      "minimum_hp": 310,
+      "source_index": 192
+    },
+    {
+      "order": 46,
+      "type": "Lyf",
+      "status": "excluded",
+      "excluded": "mass summon",
+      "unit": "Тёмный эльф Лиф",
+      "minimum_hp": 250,
+      "source_index": 230
+    },
+    {
+      "order": 47,
+      "type": "Laclaan",
+      "status": "excluded",
+      "excluded": "mass summon",
+      "unit": "Тёмный Лаклаан",
+      "minimum_hp": 2000,
+      "source_index": 243
+    },
+    {
+      "order": 48,
+      "type": "Spider",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Головорез",
+      "minimum_hp": 110,
+      "source_index": 181,
+      "key": "thug",
+      "replacement": {
+        "squad": 35,
+        "slot": 0,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "passed": 1,
+        "pytest_seconds": 26.68,
+        "wall_seconds": 37.731,
+        "selection": "spider",
+        "backend": "cuda"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/48-spider-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 182098.71203392767,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          179297.2395994973
+        ],
+        "after": [
+          182098.71203392767
+        ],
+        "regression_fraction": -0.015624738231821755
+      }
+    },
+    {
+      "order": 49,
+      "type": "Drulliaan",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Драллиаан",
+      "minimum_hp": 2000,
+      "source_index": 244,
+      "key": "drulliaan",
+      "replacement": {
+        "squad": 36,
+        "slot": 0,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "passed": 1,
+        "pytest_seconds": 26.47,
+        "wall_seconds": 37.297,
+        "selection": "drulliaan",
+        "backend": "cuda"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/49-drulliaan-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 180059.7254326205,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          182098.71203392767
+        ],
+        "after": [
+          180059.7254326205
+        ],
+        "regression_fraction": 0.011197150043144033
+      }
+    },
+    {
+      "order": 50,
+      "type": "Elfarcher",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Бандит",
+      "minimum_hp": 115,
+      "source_index": 150,
+      "key": "elf_bandit",
+      "replacement": {
+        "squad": 37,
+        "slot": 0,
+        "previous": "archer"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "passed": 1,
+        "pytest_seconds": 29.48,
+        "wall_seconds": 39.816,
+        "selection": "elfarcher",
+        "backend": "cuda"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/50-elfarcher-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 180070.05896505457,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          180059.7254326205
+        ],
+        "after": [
+          180070.05896505457
+        ],
+        "regression_fraction": -0.0000573894712392331
+      }
+    },
+    {
+      "order": 51,
+      "type": "Shamanka",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Шаманка",
+      "minimum_hp": 165,
+      "source_index": 186,
+      "key": "shamanka",
+      "replacement": {
+        "squad": 38,
+        "slot": 0,
+        "previous": "squire"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "passed": 2,
+        "pytest_seconds": 42.48,
+        "wall_seconds": 54.8,
+        "selection": "shamanka",
+        "backend": "cuda"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/51-shamanka-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 181689.28602433353,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          180070.05896505457
+        ],
+        "after": [
+          181689.28602433353
+        ],
+        "regression_fraction": -0.008992205970195233
+      }
+    },
+    {
+      "order": 52,
+      "type": "Aleman",
+      "status": "trained",
+      "excluded": null,
+      "unit": "Сэр Аллемон",
+      "minimum_hp": 800,
+      "source_index": 250,
+      "key": "aleman",
+      "replacement": {
+        "squad": 39,
+        "slot": 0,
+        "previous": "squire"
+      },
+      "mechanics_sources": [
+        "battle_env.py:_attack",
+        "battle_env.py:_advance_until_blue_turn",
+        "data_dicts_compact_lines.py:DATA and GDynUpgr"
+      ],
+      "verification": {
+        "passed": 1,
+        "pytest_seconds": 26.51,
+        "wall_seconds": 38.351,
+        "selection": "aleman",
+        "backend": "cuda"
+      },
+      "training": {
+        "results": "results/unit-actions-20261009/52-aleman-20m",
+        "from_scratch": true,
+        "seed": 42,
+        "steps": 20000000,
+        "speed": 180017.57704457294,
+        "weights_changed": true,
+        "checkpoint_verified": true,
+        "wandb_url": null,
+        "argmax_wins": 0,
+        "sampled_wins": 0
+      },
+      "performance": {
+        "before": [
+          181689.28602433353
+        ],
+        "after": [
+          180017.57704457294
+        ],
+        "regression_fraction": 0.009200922169602777
+      }
+    }
+  ],
+  "final_validation": {
+    "backend": "cuda",
+    "tests": 297,
+    "groups": {
+      "environment": 194,
+      "actions": 103
+    },
+    "wall_seconds": 590.794,
+    "runner_seconds": 557.182243428,
+    "cold_jax_cache": true,
+    "result": "results/unit-actions-20261009/final-full-cuda-wall-clock/results.json",
+    "runtime_source_audit": "results/unit-actions-20261009/final-source-audit.json",
+    "runtime_source_matches": true
+  }
+}

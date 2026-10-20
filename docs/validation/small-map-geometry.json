@@ -1,0 +1,175 @@
+{
+  "method": "Static JSON geometry analysis; no environment execution or gameplay simulation",
+  "map": "NumberGrid-26x26-small",
+  "map_sha256": "3749f2f677c929d225b84c27fd035ad428f9799c3f64894e16841108ba7bbe7a",
+  "source_layout_sha256": "3eea06b85ea0fafe4d04ff520eede48e2dd29c8aedb8dad42e609f02bf8d9c78",
+  "armies": 37,
+  "overlappingObjects": [
+    [
+      "17,15",
+      [
+        "army 34",
+        "army 68",
+        "Порт Полонис"
+      ]
+    ],
+    [
+      "13,21",
+      [
+        "army 35",
+        "army 69",
+        "Соругирилла"
+      ]
+    ]
+  ],
+  "unreachableObjects": [],
+  "overlappingBuildingCells": 0,
+  "reachableApproaches": [
+    {
+      "name": "Лавка Алара",
+      "cells": [
+        [
+          19,
+          13
+        ],
+        [
+          20,
+          13
+        ],
+        [
+          21,
+          11
+        ],
+        [
+          21,
+          12
+        ],
+        [
+          21,
+          13
+        ]
+      ]
+    },
+    {
+      "name": "Тренировочный лагерь",
+      "cells": [
+        [
+          16,
+          22
+        ],
+        [
+          17,
+          22
+        ],
+        [
+          18,
+          20
+        ]
+      ]
+    },
+    {
+      "name": "Лагерь северных варваров",
+      "cells": [
+        [
+          22,
+          10
+        ],
+        [
+          23,
+          10
+        ],
+        [
+          24,
+          8
+        ],
+        [
+          24,
+          9
+        ],
+        [
+          24,
+          10
+        ]
+      ]
+    },
+    {
+      "name": "Лавка заклинаний Маллавиена",
+      "cells": [
+        [
+          3,
+          23
+        ],
+        [
+          4,
+          22
+        ],
+        [
+          4,
+          23
+        ]
+      ]
+    },
+    {
+      "name": "Замок орка",
+      "cells": [
+        [
+          5,
+          10
+        ],
+        [
+          7,
+          8
+        ],
+        [
+          7,
+          9
+        ],
+        [
+          7,
+          10
+        ]
+      ]
+    },
+    {
+      "name": "Замок Ху'Ларша",
+      "cells": [
+        [
+          19,
+          24
+        ],
+        [
+          20,
+          24
+        ],
+        [
+          21,
+          22
+        ],
+        [
+          21,
+          23
+        ],
+        [
+          21,
+          24
+        ]
+      ]
+    }
+  ],
+  "terrainCounts": {
+    "road": 13,
+    "forest": 95,
+    "water": 107
+  },
+  "terrainDuplicates": 0,
+  "terrainOnBlocked": [],
+  "testsRun": false,
+  "unit_slots": 82,
+  "unknownUnits": [],
+  "illegalLevels": [],
+  "invalidBuildingAnchors": [],
+  "invalidCoordinates": [],
+  "unexpectedBlockedObjects": [],
+  "referenceDragonIndex": 15,
+  "referenceCapitalGuardIndex": 36
+}

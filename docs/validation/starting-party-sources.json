@@ -1,0 +1,193 @@
+{
+  "date": "2026-10-11",
+  "reference": "github.com/Alian3785/Disciples2-RL Big_map at 0fab177b91596f200685a308e360fa36606dea98",
+  "slots": "reference positions 7-12 as JAX slots 0-5; front row 0-2, back row 3-5",
+  "parties": {
+    "empire": {
+      "warrior": [
+        "Скваер",
+        "Рыцарь на пегасе",
+        "Скваер",
+        null,
+        "Служка",
+        null
+      ],
+      "mage": [
+        "Скваер",
+        null,
+        "Скваер",
+        "Архимаг",
+        null,
+        "Служка"
+      ],
+      "guildmaster": [
+        "Скваер",
+        null,
+        "Скваер",
+        "Рейнджер людей",
+        null,
+        "Служка"
+      ]
+    },
+    "legions": {
+      "warrior": [
+        "Одержимый",
+        "Герцог",
+        "Одержимый",
+        null,
+        "Сектант",
+        null
+      ],
+      "mage": [
+        "Одержимый",
+        null,
+        "Одержимый",
+        "Архидьявол",
+        null,
+        "Сектант"
+      ],
+      "guildmaster": [
+        "Одержимый",
+        null,
+        "Одержимый",
+        "Советник",
+        null,
+        "Сектант"
+      ]
+    },
+    "mountain_clans": {
+      "warrior": [
+        "Гном",
+        "Королевский страж",
+        "Гном",
+        null,
+        "Травница",
+        null
+      ],
+      "mage": [
+        "Гном",
+        null,
+        "Гном",
+        "Хранитель знаний",
+        null,
+        "Травница"
+      ],
+      "guildmaster": [
+        "Гном",
+        null,
+        "Гном",
+        "Инженер",
+        null,
+        "Травница"
+      ]
+    },
+    "undead_hordes": {
+      "warrior": [
+        "Воин",
+        "Рыцарь смерти",
+        "Воин",
+        null,
+        "Адепт",
+        null
+      ],
+      "mage": [
+        "Воин",
+        null,
+        "Воин",
+        "Королева лич",
+        null,
+        "Адепт"
+      ],
+      "guildmaster": [
+        "Воин",
+        null,
+        "Воин",
+        "Носферату",
+        null,
+        "Адепт"
+      ]
+    },
+    "elves": {
+      "warrior": [
+        "Кентавр копейщик",
+        "Лесной лорд",
+        "Кентавр копейщик",
+        null,
+        "Медиум",
+        null
+      ],
+      "mage": [
+        "Кентавр копейщик",
+        null,
+        "Кентавр копейщик",
+        "Дриада",
+        null,
+        "Медиум"
+      ],
+      "guildmaster": [
+        "Кентавр копейщик",
+        null,
+        "Кентавр копейщик",
+        "Хранитель леса",
+        null,
+        "Медиум"
+      ]
+    }
+  },
+  "hero_movement": {
+    "Архидьявол": 20,
+    "Архимаг": 20,
+    "Герцог": 20,
+    "Дриада": 25,
+    "Инженер": 30,
+    "Королева лич": 20,
+    "Королевский страж": 20,
+    "Лесной лорд": 25,
+    "Носферату": 35,
+    "Рейнджер людей": 35,
+    "Рыцарь на пегасе": 20,
+    "Рыцарь смерти": 20,
+    "Советник": 35,
+    "Хранитель знаний": 20,
+    "Хранитель леса": 35
+  },
+  "moves_without_living_hero": 20,
+  "pathfinding_percent": 20,
+  "sources": [
+    {
+      "path": "Big_map/campaign_env.py",
+      "sha256": "0b4c6e1e6d88cd3d6b6b3a311071cb0ecd8734e982e3da543db6aa48fc85216f",
+      "supports": "Lines 863-972 _starting_blue_roster_spec: party by Realcapital and typeoflord; lines 974-1011 _create_starting_blue_team; lines 121-126 the optional boss roster (not ported)"
+    },
+    {
+      "path": "Big_map/grid.py",
+      "sha256": "dec701a71fcc290ea3c8224a8dd85f8cf4483da8ac4ef486e1dec71fc5c8a95d",
+      "supports": "Lines 118-302 BLUE_TEAM_TEMPLATE: fallback party used for Legions with a warrior lord"
+    },
+    {
+      "path": "Big_map/campaign_env_data.py",
+      "sha256": "d070eefeb994e6fe0f7cde0b41beed3a32049e0246a95753141d6adfd2bb1282",
+      "supports": "Line 123 MOVES_PER_TURN 20; lines 124-154 HERO_BASE_MOVES_BY_NAME; line 205 Pathfinding 20%"
+    },
+    {
+      "path": "Big_map/campaign_env_economy.py",
+      "sha256": "16b05b7e579a1ade852ef735bda01d35f99cb23006e03f2229cfe879c09ef802",
+      "supports": "Lines 320-366 _resolve_travel_hero/_hero_base_moves: living hero allowance, else MOVES_PER_TURN; lines 2422-2448 _sync_moves_per_turn_with_hero"
+    },
+    {
+      "path": "Big_map/campaign_env_map.py",
+      "sha256": "78c4d1f6c59f612037a25422f64fbeb215cb50ce2030e0eefda5ac73da95ccf2",
+      "supports": "Lines 67-98: Pathfinding is round(20% of the hero base allowance)"
+    },
+    {
+      "path": "Big_map/campaign_env_battle.py",
+      "sha256": "fbdaa0a070e68fab670f565384a80cecd5c2fa757dc92e46d8a77b93217b80cb",
+      "supports": "Lines 1889-1892 _battle_grid_move_cost: (allowance + 1) // 2"
+    },
+    {
+      "path": "Big_map/unit_revive_costs.py",
+      "sha256": "484d5351e8a7b7824f925e866650c3f4d2cea0f55475bf37c0245a05fb0e45ce",
+      "supports": "REVIVE_PROFILE_IDS_BY_NAME: reference names to Gunits.dbf ids of the JAX catalog keys"
+    }
+  ]
+}

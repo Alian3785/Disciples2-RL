@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-10",
+  "authority": "User-requested Python reference mechanics; installed game ENROLL_C and ENROLL_B corroborate prices/buildings",
+  "files": [
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env_data.py",
+      "sha256": "d070eefeb994e6fe0f7cde0b41beed3a32049e0246a95753141d6adfd2bb1282"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env_economy.py",
+      "sha256": "16b05b7e579a1ade852ef735bda01d35f99cb23006e03f2229cfe879c09ef802"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env_inventory.py",
+      "sha256": "b6c16aee9d88f1a64107780ecea28f30c6279f6030c0350947a46e156627b98c"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env.py",
+      "sha256": "9b07bc7af24cc026c6eb53dd8a329f0174eae5e7e22627b3ba876115f783e78a"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/hire.py",
+      "sha256": "754e7da166a0d0fd30099bd1df863d5fd1226e489382ff81dc8c50c910a22dc4"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/tests/test_unit_dismissal.py",
+      "sha256": "78916acb277ce708300bb99bf1128bf2c125d7e1f13594a26a07c9e7889b9119"
+    },
+    {
+      "path": "C:/jaxjax/stoix/envs/data/units.json",
+      "sha256": "021bcddaab9bb590f72a49cc956a4456c2fc82ee572146a901fff0a8bec4b19c"
+    },
+    {
+      "path": "C:/jaxjax/stoix/envs/data/buildings.json",
+      "sha256": "cc7ed172e0370b7811a340d9774db2d79996a49ebfee0b4260e0065fa02d78e3"
+    }
+  ]
+}

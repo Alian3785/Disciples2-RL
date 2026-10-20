@@ -1,0 +1,56 @@
+{
+  "date": "2026-10-13",
+  "map": "trade_train",
+  "backend": "cuda:0",
+  "map_sha256": "5067bb73d91fbc98b5fe472d2e8d22967bafded889e73814236071ab863cdd56",
+  "won": true,
+  "decisions": 4225,
+  "enemy_bonuses": [
+    {
+      "enemy": 6,
+      "hp": 670,
+      "bonus": 33.5
+    },
+    {
+      "enemy": 5,
+      "hp": 740,
+      "bonus": 37
+    },
+    {
+      "enemy": 1,
+      "hp": 1020,
+      "bonus": 51
+    },
+    {
+      "enemy": 4,
+      "hp": 1129,
+      "bonus": 56.45
+    },
+    {
+      "enemy": 2,
+      "hp": 1220,
+      "bonus": 61
+    },
+    {
+      "enemy": 3,
+      "hp": 1461,
+      "bonus": 73.05
+    }
+  ],
+  "expected_bonus": 312,
+  "observed_reward_delta": 312.00000447034836,
+  "identical_actions_to_previous_witness": true,
+  "army_engage_rewarded": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+  ],
+  "training_transitions": 0,
+  "state_injections": 0,
+  "regression_tests_run": false,
+  "ruff": "passed",
+  "witness": "results/trade-train-hp-validation/winning-walkthrough.json"
+}

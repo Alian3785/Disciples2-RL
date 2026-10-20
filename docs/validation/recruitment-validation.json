@@ -1,0 +1,55 @@
+{
+  "date": "2026-10-10",
+  "map": "NumberGrid-48x48-v77-leadership-recruitment",
+  "branch": "codex/leadership-recruitment",
+  "backend": "cuda",
+  "observation_version": 33,
+  "observation_size": 1301,
+  "actions": 185,
+  "full_suite": {
+    "path": "results/gpu-tests/leadership-recruitment-final-20261010",
+    "tests": 353,
+    "pytest_seconds": 472.93,
+    "wall_seconds": 525.3887679576874,
+    "passed": true
+  },
+  "targeted": {
+    "recruitment": {
+      "path": "results/merchant-actions-movement-2026-10-09T20-54-49-302Z/recruit-targeted.xml",
+      "tests": 8,
+      "seconds": 82.53
+    },
+    "roster_fixes": {
+      "path": "results/merchant-actions-movement-2026-10-09T20-54-49-302Z/roster-fixes.xml",
+      "tests": 18,
+      "seconds": 161.89
+    }
+  },
+  "first_full_attempt": {
+    "path": "results/gpu-tests/leadership-recruitment-20261010",
+    "passed": 344,
+    "failed": 9,
+    "reason": "Old regression fixtures still assumed five initial units; fixed explicit formations and current-map expectations, then reran affected tests and complete suite."
+  },
+  "performance": "recruitment-performance.json",
+  "static": {
+    "ruff": "passed",
+    "javascript_syntax": "passed",
+    "changed_file_diff_check": "passed"
+  },
+  "browser": {
+    "url": "http://127.0.0.1:8769/viewer.html",
+    "checks": [
+      "Initial roster: possessed, duke, possessed in front; cultist behind; leadership 3/3",
+      "Dismissal releases leadership without refund: 100 gold remains 100; capacity 2/3",
+      "Rehire costs 50 gold, restores leadership 3/3 and does not repeat the +3 reward",
+      "After freeing front/back cells, gargoyle costs 80 gold and consumes 2 leadership; total capacity 3/3",
+      "Recruitment unavailable away from capital; dismissal remains enabled",
+      "Initial session restored after verification",
+      "Manual merchant selling absent; automatic valuable selling retained"
+    ],
+    "screenshot": "../images/leadership-recruitment-ui.png",
+    "http_status": 200,
+    "javascript_errors": []
+  }
+}

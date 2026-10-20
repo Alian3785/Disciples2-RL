@@ -1,0 +1,154 @@
+{
+  "date": "2026-10-10",
+  "gpu": "GTX 1660 Ti",
+  "method": "Interleaved base, A, B, base, A, B; one GPU process at a time; the idle game server on :8769 stayed running",
+  "sides": {
+    "base": {
+      "commit": "48da74b",
+      "map": "NumberGrid-48x48-v82-spell-research",
+      "observation": 1547,
+      "actions": 212
+    },
+    "A": {
+      "commit": "47c1ef5",
+      "map": "NumberGrid-48x48-v83-spell-casting",
+      "observation": 1678,
+      "actions": 229,
+      "kept": true
+    },
+    "B": {
+      "commit": "3b67b2d",
+      "map": "NumberGrid-48x48-v83-spell-casting",
+      "observation": 1678,
+      "actions": 229,
+      "kept": false,
+      "change": "one-hot selects instead of .at[index].set, HP-only lookups; reverted in 6df5db4"
+    }
+  },
+  "learner": {
+    "command": "scripts/run_gpu.sh benchmark_number_grid.py --test-run --seed 42 --wandb-mode offline",
+    "transitions": 1000000,
+    "learner_source_changed": false,
+    "rounds": {
+      "base": [
+        {
+          "mean_sps": 100148,
+          "loop_sps": 99940,
+          "ppo_compile_s": 66.0,
+          "training_s": 9.99,
+          "runner_s": 287.3
+        },
+        {
+          "mean_sps": 104011,
+          "loop_sps": 103772,
+          "ppo_compile_s": 60.1,
+          "training_s": 9.61,
+          "runner_s": 275.7
+        }
+      ],
+      "A": [
+        {
+          "mean_sps": 98476,
+          "loop_sps": 98254,
+          "ppo_compile_s": 70.3,
+          "training_s": 10.15,
+          "runner_s": 303.2
+        },
+        {
+          "mean_sps": 100497,
+          "loop_sps": 100276,
+          "ppo_compile_s": 70.8,
+          "training_s": 9.95,
+          "runner_s": 302.3
+        }
+      ],
+      "B": [
+        {
+          "mean_sps": 95666,
+          "loop_sps": 95436,
+          "ppo_compile_s": 70.6,
+          "training_s": 10.45,
+          "runner_s": 305.3
+        },
+        {
+          "mean_sps": 98805,
+          "loop_sps": 98601,
+          "ppo_compile_s": 75.6,
+          "training_s": 10.12,
+          "runner_s": 308.6
+        }
+      ]
+    },
+    "mean_sps": {
+      "base": 102080,
+      "A": 99487,
+      "B": 97236
+    },
+    "change_percent": {
+      "A": -2.5,
+      "B": -4.7
+    },
+    "parameters": {
+      "base": 456789,
+      "A": 492518,
+      "B": 492518
+    }
+  },
+  "env_only": {
+    "script": "vmapped action_mask + step in lax.scan, uniform valid-action policy, 250 envs x 100 steps, 20 repeats",
+    "rounds_median_sps": {
+      "base": [
+        181821,
+        189085
+      ],
+      "A": [
+        187568,
+        186067
+      ],
+      "B": [
+        188950,
+        191748
+      ]
+    },
+    "mean_median_sps": {
+      "base": 185453,
+      "A": 186818,
+      "B": 190349
+    },
+    "change_percent": {
+      "A": 0.7,
+      "B": 2.6
+    },
+    "compile_seconds": [
+      33.1,
+      40.8
+    ]
+  },
+  "clock_note": "In this WSL boot the monotonic clock ran ~4-5% slower than real time (sleep 120 s -> 120.0 s monotonic, 125.1 s Windows). Absolute SPS are inflated by about that much; comparisons between sides in the same session are not affected.",
+  "decision": "Keep A: the learner is the deciding measurement and B was slower there in both rounds. -2.5% is below the 7% threshold; the user allowed up to 10% for this change.",
+  "tests": {
+    "commit": "6df5db4",
+    "full_without_limit": {
+      "passed": 419,
+      "failed": 0,
+      "pytest_seconds": 1080.8,
+      "command_seconds": 1142.1,
+      "note": "cache fill after the change"
+    },
+    "standard_warm_cache": {
+      "command": "scripts/run_gpu.sh scripts/test_gpu.py",
+      "passed": 419,
+      "failed": 0,
+      "pytest_seconds": 720.6,
+      "runner_seconds": 730.7,
+      "wall_seconds": 767.6,
+      "limit_seconds": 900,
+      "result": "passed"
+    },
+    "casting_test_seconds": 21.0,
+    "earlier_cold_run": {
+      "commit": "0963fdb",
+      "result": "stopped by the 15-minute limit after 258 passed, 0 failed; every JAX function recompiled after the state change"
+    }
+  }
+}

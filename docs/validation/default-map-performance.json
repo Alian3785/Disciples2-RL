@@ -1,0 +1,130 @@
+{
+  "date": "2026-10-10",
+  "gpu": "GTX 1660 Ti 6 GB, driver 591.86, CUDA 13.1, WSL2 Ubuntu 24.04, jax 0.11.2",
+  "method": "Interleaved base, new, base, new on the current map, then the Default map; one GPU process at a time; the idle game server on :8769 stayed running",
+  "sides": {
+    "base": {
+      "commit": "c06839d",
+      "map": "number_grid_map.json (current)",
+      "observation": 1678,
+      "actions": 229
+    },
+    "new": {
+      "commit": "dc134f1",
+      "maps": {
+        "current": {
+          "observation": 1678,
+          "actions": 229,
+          "parameters": 492518
+        },
+        "default": {
+          "observation": 2432,
+          "actions": 229,
+          "parameters": 685542
+        }
+      }
+    }
+  },
+  "env_only": {
+    "script": "bench_env.py 250 100 20: vmapped action_mask + step in lax.scan, uniform valid-action policy, 250 envs x 100 steps, 20 repeats",
+    "current_map": {
+      "rounds_median_sps": {
+        "base": [188301, 175418],
+        "new": [181378, 183624]
+      },
+      "rounds_best_sps": {
+        "base": [192715, 187958],
+        "new": [193245, 193892]
+      },
+      "mean_median_sps": {
+        "base": 181860,
+        "new": 182501
+      },
+      "mean_best_sps": {
+        "base": 190336,
+        "new": 193569
+      },
+      "change_percent": {
+        "median": 0.4,
+        "best": 1.7,
+        "median_by_round": [-3.7, 4.7]
+      },
+      "compile_seconds": {
+        "base": 38.2,
+        "new": 40.2
+      },
+      "battle_fraction": 0.094
+    },
+    "default_map": {
+      "rounds_median_sps": [248686, 228103],
+      "mean_median_sps": 238394,
+      "mean_best_sps": 246920,
+      "compile_seconds": 27.9,
+      "battle_fraction": 0.277
+    }
+  },
+  "learner": {
+    "command": "scripts/run_gpu.sh benchmark_number_grid.py --test-run --seed 42 --wandb-mode offline [--map default]",
+    "transitions": 1000000,
+    "learner_source_changed": false,
+    "current_map": {
+      "rounds_mean_sps": {
+        "base": [91063, 88388],
+        "new": [97485, 92329]
+      },
+      "mean_sps": {
+        "base": 89725,
+        "new": 94907
+      },
+      "loop_sps": {
+        "base": 89550,
+        "new": 94684
+      },
+      "ppo_compile_s": {
+        "base": 74.0,
+        "new": 80.0
+      },
+      "change_percent": {
+        "mean": 5.8,
+        "loop": 5.7,
+        "by_round": [7.1, 4.5]
+      },
+      "note": "The current map rollouts are bit-identical before and after the change; the gain is run-to-run spread (base ran about 10% slower than in the previous session)."
+    },
+    "default_map": {
+      "mean_sps": 96111,
+      "loop_sps": 95918,
+      "ppo_compile_s": 55.8
+    }
+  },
+  "clock_note": "In this WSL boot the monotonic clock ran about 5.3% slower than real time (3925 s monotonic over 4146 s real). Absolute SPS are inflated and pytest seconds understated by about that much; comparisons between sides in the same session are not affected. The 900 s limit is checked against real time.",
+  "decision": "No slowdown on the current map (env +0.4%, learner +5.8%, both within spread). Within the 7% threshold; the user allowed up to 10% for this change.",
+  "tests": {
+    "commit": "dc134f1",
+    "full_without_limit": {
+      "passed": 422,
+      "failed": 0,
+      "pytest_seconds": 1202.8,
+      "command_seconds": 1273.0,
+      "default_map_test_seconds": 40.9,
+      "note": "empty cache, cold compilation"
+    },
+    "standard_warm_cache": {
+      "command": "scripts/run_gpu.sh scripts/test_gpu.py",
+      "passed": 422,
+      "failed": 0,
+      "pytest_seconds": 758.7,
+      "runner_seconds": 783.0,
+      "wall_seconds": 833.1,
+      "limit_seconds": 900,
+      "default_map_test_seconds": 15.0,
+      "result": "passed"
+    },
+    "slowest_files_seconds": {
+      "number_grid_spells_test.py": 147.5,
+      "number_grid_reference_actions_test.py": 92.7,
+      "number_grid_chex_test.py": 87.6
+    },
+    "warnings": ["DeprecationWarning jax.core.pytype_aval_mappings from tensorflow_probability"]
+  }
+}

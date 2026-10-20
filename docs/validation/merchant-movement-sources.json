@@ -1,0 +1,52 @@
+{
+  "rule": "User request: remove manual item/potion sales, retain merchant-approach valuable auto-sale, hero movement gains +1 for each level 2..10 and +0 thereafter.",
+  "movement": {
+    "base": 20,
+    "bonus": "min(max(level - 1, 0), 9)",
+    "boots": "Percentage of base 20, added independently of hero-level bonus.",
+    "levelup": "Grant only the cap delta to remaining points; no full refill.",
+    "scope": "The actual hero unit, not ordinary allies or temporary copied forms."
+  },
+  "reference_files": [
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env_map.py",
+      "sha256": "78c4d1f6c59f612037a25422f64fbeb215cb50ce2030e0eefda5ac73da95ccf2"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env_economy.py",
+      "sha256": "16b05b7e579a1ade852ef735bda01d35f99cb23006e03f2229cfe879c09ef802"
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/campaign_env_battle.py",
+      "sha256": "293cb833a2d0051455c1935b88170cf344a153a67425ac98a0474dc42cad07d0"
+    }
+  ],
+  "source_functions": {
+    "level": "campaign_env_map.py:81 _hero_level_move_bonus",
+    "delta": "campaign_env_economy.py:2422 _sync_moves_per_turn_with_hero; campaign_env_battle.py:1395 grant_delta=True"
+  },
+  "difference": "Python reference has an unbounded level - 1 movement bonus. The level-10 cap is explicitly user-specified.",
+  "actions": {
+    "before": 205,
+    "after": 174,
+    "purchases": [
+      165,
+      166,
+      167
+    ],
+    "training": [
+      168,
+      169,
+      170,
+      171,
+      172,
+      173
+    ],
+    "manual_sales": 0
+  },
+  "format": {
+    "map": "v76",
+    "observation_version": 32,
+    "observation_size": 1280
+  }
+}

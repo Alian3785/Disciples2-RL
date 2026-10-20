@@ -1,0 +1,126 @@
+{
+  "date": "2026-10-12",
+  "branch": "codex/clear-dead-leader-battle-slots",
+  "base_commit": "370e4d1",
+  "behavior": "On victory or completed retreat with a dead leader, release both battle slots after post-battle healing. Inventory copies and individual talisman charges survive. A revival during combat preserves equipment.",
+  "references": [
+    "Installed Rise of the Elves DII Manual.pdf, Aftermath, p. 27",
+    "C:\\Disciples 2 python reference\\Big_map\\campaign_env_inventory.py::_unequip_dead_hero_battle_items",
+    "C:\\Disciples 2 python reference\\Big_map\\tests\\test_dead_hero_equipment.py"
+  ],
+  "sources_sha256": {
+    "maps/default.json": "306bac45892527e964fc1dc822a5bedd94162c835b21d5ae3039f7c978fc4bbf",
+    "stoix/envs/number_grid.py": "f39566bc9a572cf4b9a3aa0e56692e359736e7f18c6948db6d352671f561d8f1",
+    "stoix/envs/number_grid_battle_items.py": "9f15f9815146872af9bbb0bae28e94c1b83912fcacc65a8765262840bde88b10",
+    "stoix/envs/number_grid_casting.py": "765a1c3680d29642724f268eb42ea1bec08ea451e359b949fcc3b4578a0cc3fe",
+    "stoix/envs/number_grid_items.py": "0e8a653dd7bec181b1773433c6a4a014c5c480ec7fb5a4d9f9a247fbb415157b",
+    "stoix/envs/number_grid_sites.py": "478a9f54c42fe3d95b945add20b6fbea6860a6551e16cd67af084f9cfde72460"
+  },
+  "verification": {
+    "targeted": {
+      "tests": "19",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "62.189"
+    },
+    "inventory_and_effects": {
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "35.086"
+    },
+    "mandatory": {
+      "tests": "122",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "269.732"
+    },
+    "mandatory_runner": {
+      "seconds": 279.976698305,
+      "wall_seconds": 285.4936239719391,
+      "execution_limit": 413.29082560539246,
+      "wall_limit": 420,
+      "parent_started_at": 1791753038.122,
+      "backend": "cuda",
+      "groups": {
+        "suite": {
+          "exit_code": 0,
+          "seconds": 279.97530144199993,
+          "log": "/mnt/c/jaxjax/results/gpu-tests/dead-leader-items/suite.log"
+        }
+      },
+      "compilation_cache": "/mnt/c/jaxjax/results/gpu-tests/compilation-cache",
+      "cold_cache": false,
+      "isolated_cache": false,
+      "selection": "core",
+      "durations": "/mnt/c/jaxjax/results/gpu-tests/dead-leader-items/durations.jsonl",
+      "passed": true
+    },
+    "ruff": "ruff check . passed",
+    "timing": "pytest durations include fixtures and JAX compilation; runner wall time includes Windows/WSL startup. Persistent cache reuses compiled executables only."
+  },
+  "performance": {
+    "command": "bash scripts/run_gpu.sh benchmark_number_grid.py --test-run --map default --seed 42 --tracking disabled --output results/dead-leader-items/<before|after>",
+    "methodology": "One CUDA job at a time, synchronized full learner. Same GPU, libraries, PPO settings, seed and budget. Compilation, evaluation, logging and saving excluded from learner throughput and reported separately. Observation grows by 16 charge-history features; trajectories can therefore differ. These are performance probes, not trained gameplay models.",
+    "before": {
+      "environment": "NumberGrid-50x50-default",
+      "device": "NVIDIA GeForce GTX 1660 Ti",
+      "backend": "gpu",
+      "jax": "0.11.2",
+      "python": "3.12.3",
+      "cuda_runtime": "13.4.92",
+      "seed": 42,
+      "training_steps": 1000000,
+      "num_envs": 250,
+      "rollout_length": 100,
+      "ppo_updates": 40,
+      "parameter_count": 702744,
+      "observation_size": 2474,
+      "training_seconds": 11.91161700500001,
+      "mean_steps_per_second": 83951.65824927387,
+      "ppo_compile_seconds": 63.195238793,
+      "initial_evaluation_seconds": 46.579481101,
+      "final_evaluation_seconds": 59.245898587,
+      "sampled_evaluation_seconds": 57.497709739000015,
+      "tracking_logging_seconds": 0.0,
+      "checkpoint_seconds": 0.530852216999989,
+      "total_runner_seconds": 284.039328013
+    },
+    "after": {
+      "environment": "NumberGrid-50x50-default",
+      "device": "NVIDIA GeForce GTX 1660 Ti",
+      "backend": "gpu",
+      "jax": "0.11.2",
+      "python": "3.12.3",
+      "cuda_runtime": "13.4.92",
+      "seed": 42,
+      "training_steps": 1000000,
+      "num_envs": 250,
+      "rollout_length": 100,
+      "ppo_updates": 40,
+      "parameter_count": 706840,
+      "observation_size": 2490,
+      "training_seconds": 11.612157080999964,
+      "mean_steps_per_second": 86116.64422247779,
+      "ppo_compile_seconds": 63.16327365500001,
+      "initial_evaluation_seconds": 39.154634784999985,
+      "final_evaluation_seconds": 58.35781028700001,
+      "sampled_evaluation_seconds": 56.83797739700003,
+      "tracking_logging_seconds": 0.0,
+      "checkpoint_seconds": 0.48681265499999427,
+      "total_runner_seconds": 272.85751578300005
+    },
+    "learner_change_percent": 2.578848373400233,
+    "artifacts": [
+      "results/dead-leader-items/before",
+      "results/dead-leader-items/after"
+    ],
+    "config_sha256": {
+      "before": "d95396205a29c1536e8880b61b150b3d95327b568fef1432bf944db07ffadc1d",
+      "after": "2050abfcb48cdbc0dc085eec707e66b8ac91d5485711c45776aec549a6d811b2"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-11",
+  "gpu": "GTX 1660 Ti 6 GB, WSL2, JAX 0.11.2, CUDA runtime 13.4.92, the same machine as scrolls-swaps-performance.json",
+  "method": "benchmark_number_grid.py --test-run --seed 42, 1,000,000 transitions per run, one GPU process at a time, separate git worktrees per commit. One run per map and commit, no repeat (AGENTS.md asks for one only to confirm a drop of 7% or more).",
+  "commits": {"before": "19242f5", "after": "2bb4cdd"},
+  "current_map": {"learner_sps": {"before": 88240, "after": 86667}, "change_percent": -1.78,
+                  "training_loop_sps": {"before": 88042, "after": 86377},
+                  "ppo_compile_seconds": {"before": 79.6, "after": 113.0},
+                  "actions": 244, "observation": 1694, "parameters": 498549},
+  "default_map": {"learner_sps": {"before": 84812, "after": 85436}, "change_percent": 0.74,
+                  "training_loop_sps": {"before": 84622, "after": 85269},
+                  "ppo_compile_seconds": {"before": 66.6, "after": 74.0},
+                  "actions": 278, "observation": 2471},
+  "compile_check": {
+    "note": "Dev only, cloud CPU (4 cores): XLA compile of a vmapped lax.scan of reset, action_mask, step and observation on the current map, cold cache, two runs per commit.",
+    "current_map_seconds": {"before": [35.8, 35.3], "after": [35.2, 34.7]},
+    "hlo_characters": {"before": 10223127, "after": 10247267}
+  },
+  "conclusion": "Learner speed is within noise on both maps, far below the 7% threshold. The PPO compile rise on the user's PC (current +33 s, Default +7 s) is a single run; the environment graph grew 0.2% and compiles in the same time on CPU, so it is not attributed to the change.",
+  "gpu_tests": "2bb4cdd: 170 passed in 13 min 3 s (starting_party, unit_swaps, default_map, spells, progression, protections, recruitment, variety, reference_actions)",
+  "results": "C:\\jaxjax\\results\\worktrees\\party-before and party-after (results/party-bench-current, results/party-bench-default, results/party-tests) on the user's PC"
+}

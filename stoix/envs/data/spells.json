@@ -1,0 +1,2815 @@
+{
+  "edition": "Disciples II: Rise of the Elves (installed Steam edition)",
+  "mana_kinds": [
+    "infernal",
+    "life",
+    "death",
+    "runes",
+    "elves"
+  ],
+  "factions": {
+    "empire": [
+      {
+        "id": "g000ss0001",
+        "reference_id": "emp_d2_s001",
+        "name": "Защита от магии Воздуха",
+        "original_name": "Air ward",
+        "level": 1,
+        "description": "На юнитов, защищённых этим заклинанием, не действует первая в бою атака магии Воздуха (например, молния)",
+        "original_description": "Enchanted units are unaffected by the first air based attack in battle (Ex: Lightning)",
+        "research_mana": [
+          0,
+          200,
+          0,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "ward",
+          "cast_mana": [
+            0,
+            100,
+            0,
+            0,
+            0
+          ],
+          "element": "air"
+        }
+      },
+      {
+        "id": "g000ss0002",
+        "reference_id": "emp_d2_s002",
+        "name": "Быстрота",
+        "original_name": "Celerity",
+        "level": 1,
+        "description": "На 10% увеличивает инициативу выбранных юнитов",
+        "original_description": "Increases by 10% the initiative of the target units",
+        "research_mana": [
+          0,
+          200,
+          0,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "buff",
+          "cast_mana": [
+            0,
+            100,
+            0,
+            0,
+            0
+          ],
+          "stat": "initiative",
+          "multiplier": 1.1
+        }
+      },
+      {
+        "id": "g000ss0003",
+        "reference_id": "emp_d2_s003",
+        "name": "Сила",
+        "original_name": "Strength",
+        "level": 1,
+        "description": "На 10% увеличивает урон, наносимый зачарованными юнитами в бою",
+        "original_description": "Increases by 10% the damage inflicted by the enchanted units in battle",
+        "research_mana": [
+          0,
+          200,
+          0,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "buff",
+          "cast_mana": [
+            0,
+            100,
+            0,
+            0,
+            0
+          ],
+          "stat": "damage",
+          "multiplier": 1.1
+        }
+      },
+      {
+        "id": "g000ss0004",
+        "reference_id": "emp_d2_s004",
+        "name": "Молния",
+        "original_name": "Lightning",
+        "level": 1,
+        "description": "Наносит выбранным юнитам 15 единиц урона магией Воздуха",
+        "original_description": "Inflicts 15 points of air damage to target units",
+        "research_mana": [
+          0,
+          200,
+          0,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            0,
+            100,
+            0,
+            0,
+            0
+          ],
+          "amount": 15,
+          "element": "air"
+        }
+      },
+      {
+        "id": "g000ss0005",
+        "reference_id": "emp_d2_s005",
+        "name": "Защита от магии Воды",
+        "original_name": "Water ward",
+        "level": 1,
+        "description": "На юнитов, защищённых этим заклинанием, не действует первая в бою атака магии Воды (например, снежная буря)",
+        "original_description": "Enchanted units are unaffected by the first water based attack in battle (Ex: Blizzard)",
+        "research_mana": [
+          0,
+          200,
+          0,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "ward",
+          "cast_mana": [
+            0,
+            100,
+            0,
+            0,
+            0
+          ],
+          "element": "water"
+        }
+      },
+      {
+        "id": "g000ss0006",
+        "reference_id": "emp_d2_s006",
+        "name": "Ускорение",
+        "original_name": "Haste",
+        "level": 2,
+        "description": "Под воздействием этого заклинания юниты восстанавливают 50% единиц движения",
+        "original_description": "Hasted units recover 50% of their move points",
+        "research_mana": [
+          0,
+          400,
+          0,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "moves",
+          "cast_mana": [
+            0,
+            200,
+            0,
+            0,
+            0
+          ],
+          "percent": 50
+        }
+      },
+      {
+        "id": "g000ss0007",
+        "reference_id": "emp_d2_s007",
+        "name": "Исцеление",
+        "original_name": "Healing",
+        "level": 2,
+        "description": "Восстанавливает 30 единиц здоровья",
+        "original_description": "Heals 30 hit points",
+        "research_mana": [
+          0,
+          400,
+          0,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "heal",
+          "cast_mana": [
+            0,
+            200,
+            0,
+            0,
+            0
+          ],
+          "amount": 30
+        }
+      },
+      {
+        "id": "g000ss0008",
+        "reference_id": "emp_d2_s008",
+        "name": "Призывание I: Живой Доспех",
+        "original_name": "Summon I: Living armor",
+        "level": 2,
+        "description": "Призывает оживлённый волшебством доспех",
+        "original_description": "Summons the magically animated Living Armor",
+        "research_mana": [
+          0,
+          400,
+          0,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "summon_battle",
+          "cast_mana": [
+            0,
+            200,
+            0,
+            0,
+            0
+          ],
+          "unit": "g000uu0024"
+        }
+      },
+      {
+        "id": "g000ss0010",
+        "reference_id": "emp_d2_s010",
+        "name": "Защита от магии земли",
+        "original_name": "Earth ward",
+        "level": 2,
+        "description": "На юнитов, защищённых этим заклинанием, не действует первая в бою атака магии Земли (например, земляной столп)",
+        "original_description": "Enchanted units are unaffected by the first earth based attack in battle (Ex: Earth pillar)",
+        "research_mana": [
+          0,
+          400,
+          0,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "ward",
+          "cast_mana": [
+            0,
+            200,
+            0,
+            0,
+            0
+          ],
+          "element": "earth"
+        }
+      },
+      {
+        "id": "g000ss0011",
+        "reference_id": "emp_d2_s011",
+        "name": "Защита от магии сознания",
+        "original_name": "Mind ward",
+        "level": 3,
+        "description": "На юнитов, защищённых этим заклинанием, не действует первая в бою атака магии Разума (например, паралич)",
+        "original_description": "Enchanted units are unaffected by the first mind based attack in battle (Ex: Paralyze)",
+        "research_mana": [
+          0,
+          450,
+          0,
+          450,
+          0
+        ],
+        "cast": {
+          "kind": "ward",
+          "cast_mana": [
+            0,
+            150,
+            0,
+            150,
+            0
+          ],
+          "element": "mind"
+        }
+      },
+      {
+        "id": "g000ss0012",
+        "reference_id": "emp_d2_s012",
+        "name": "Святая броня",
+        "original_name": "Holy armor",
+        "level": 3,
+        "description": "Под воздействием этого заклинания получаемый юнитами урон уменьшается на 20%",
+        "original_description": "Enchanted units will receive 20% less damage from attacks",
+        "research_mana": [
+          0,
+          450,
+          0,
+          450,
+          0
+        ],
+        "cast": {
+          "kind": "buff",
+          "cast_mana": [
+            0,
+            150,
+            0,
+            150,
+            0
+          ],
+          "stat": "armor",
+          "amount": 20
+        }
+      },
+      {
+        "id": "g000ss0013",
+        "reference_id": "emp_d2_s013",
+        "name": "Святая сила",
+        "original_name": "Holy strength",
+        "level": 3,
+        "description": "На 20% увеличивает шанс юнитов попасть по противнику",
+        "original_description": "Enchanted units have 20% greater chance to hit",
+        "research_mana": [
+          450,
+          450,
+          0,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "buff",
+          "cast_mana": [
+            150,
+            150,
+            0,
+            0,
+            0
+          ],
+          "stat": "accuracy",
+          "multiplier": 1.2
+        }
+      },
+      {
+        "id": "g000ss0014",
+        "reference_id": "emp_d2_s014",
+        "name": "Гнев Богов",
+        "original_name": "Wrath of God",
+        "level": 3,
+        "description": "Наносит выбранным юнитам 50 единиц урона магией Воздуха",
+        "original_description": "Inflicts 50 points of air damage to target units",
+        "research_mana": [
+          0,
+          450,
+          0,
+          450,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            0,
+            150,
+            0,
+            150,
+            0
+          ],
+          "amount": 50,
+          "element": "air"
+        }
+      },
+      {
+        "id": "g000ss0081",
+        "reference_id": "emp_d2_s015",
+        "name": "Цепь молний",
+        "original_name": "Chain lightning",
+        "level": 3,
+        "description": "Наносит 40 единиц урона магией Воздуха в центр площади заклинания",
+        "original_description": "Inflicts 40 points of air damage at the center of the spell area",
+        "research_mana": [
+          0,
+          680,
+          0,
+          680,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            0,
+            225,
+            0,
+            225,
+            0
+          ],
+          "amount": 40,
+          "element": "air"
+        }
+      },
+      {
+        "id": "g000ss0015",
+        "reference_id": "emp_d2_s016",
+        "name": "Призывание II: Голем",
+        "original_name": "Summon II: Golem",
+        "level": 4,
+        "description": "Призывает голема-элементаля Земли",
+        "original_description": "Summons the earth elemental Golem",
+        "research_mana": [
+          400,
+          800,
+          0,
+          400,
+          0
+        ],
+        "cast": {
+          "kind": "summon_battle",
+          "cast_mana": [
+            100,
+            200,
+            0,
+            100,
+            0
+          ],
+          "unit": "g000uu0025"
+        }
+      },
+      {
+        "id": "g000ss0016",
+        "reference_id": "emp_d2_s017",
+        "name": "Защита от магии Огня",
+        "original_name": "Fire ward",
+        "level": 4,
+        "description": "На юнитов, защищённых этим заклинанием, не действует первая в бою атака магии Огня (например, огненный шар)",
+        "original_description": "Enchanted units are unaffected by the first fire based attack in battle (Ex: Fireball)",
+        "research_mana": [
+          600,
+          800,
+          0,
+          300,
+          0
+        ],
+        "cast": {
+          "kind": "ward",
+          "cast_mana": [
+            125,
+            200,
+            0,
+            75,
+            0
+          ],
+          "element": "fire"
+        }
+      },
+      {
+        "id": "g000ss0017",
+        "reference_id": "emp_d2_s018",
+        "name": "Призыв к оружию",
+        "original_name": "Call to arms",
+        "level": 4,
+        "description": "На 33% увеличивает урон, наносимый зачарованными юнитами в бою",
+        "original_description": "Increases by 33% the damage inflicted by the enchanted units in battle",
+        "research_mana": [
+          400,
+          800,
+          0,
+          400,
+          0
+        ],
+        "cast": {
+          "kind": "buff",
+          "cast_mana": [
+            100,
+            200,
+            0,
+            100,
+            0
+          ],
+          "stat": "damage",
+          "multiplier": 1.33
+        }
+      },
+      {
+        "id": "g000ss0082",
+        "reference_id": "emp_d2_s019",
+        "name": "Благословение Всевышнего",
+        "original_name": "Highfather's blessing",
+        "level": 4,
+        "description": "Восстанавливает 60 единиц здоровья в центре области действия заклинания.",
+        "original_description": "Heals 60 hit points at the center of the spell area",
+        "research_mana": [
+          600,
+          1200,
+          0,
+          600,
+          0
+        ],
+        "cast": {
+          "kind": "heal",
+          "cast_mana": [
+            150,
+            300,
+            0,
+            150,
+            0
+          ],
+          "amount": 60
+        }
+      },
+      {
+        "id": "g000ss0018",
+        "reference_id": "emp_d2_s021",
+        "name": "Защита от магии Смерти",
+        "original_name": "Death ward",
+        "level": 5,
+        "description": "На юнитов, защищённых этим заклинанием, не действует первая в бою атака магии Смерти (например, чума)",
+        "original_description": "Enchanted units are unaffected by the first death based attack in battle (Ex: Plague)",
+        "research_mana": [
+          300,
+          1250,
+          600,
+          350,
+          0
+        ],
+        "cast": {
+          "kind": "ward",
+          "cast_mana": [
+            60,
+            250,
+            120,
+            70,
+            0
+          ],
+          "element": "death"
+        }
+      },
+      {
+        "id": "g000ss0019",
+        "reference_id": "emp_d2_s022",
+        "name": "Армагеддон",
+        "original_name": "Armageddon",
+        "level": 5,
+        "description": "Наносит выбранным юнитам 125 единиц урона магией Воздуха",
+        "original_description": "Inflicts 125 points of air damage to target units",
+        "research_mana": [
+          500,
+          1250,
+          400,
+          350,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            70,
+            250,
+            80,
+            100,
+            0
+          ],
+          "amount": 125,
+          "element": "air"
+        }
+      },
+      {
+        "id": "g000ss0020",
+        "reference_id": "emp_d2_s023",
+        "name": "Великое исцеление",
+        "original_name": "Major healing",
+        "level": 5,
+        "description": "Восстанавливает 150 единиц здоровья",
+        "original_description": "Heals 150 hit points",
+        "research_mana": [
+          450,
+          1250,
+          300,
+          500,
+          0
+        ],
+        "cast": {
+          "kind": "heal",
+          "cast_mana": [
+            100,
+            250,
+            60,
+            100,
+            0
+          ],
+          "amount": 150
+        }
+      },
+      {
+        "id": "g000ss0084",
+        "reference_id": "emp_d2_s024",
+        "name": "Ветер возрождения",
+        "original_name": "Winds of restoration",
+        "level": 5,
+        "description": "Восстанавливает 80 единиц здоровья всем юнитам заклинателя",
+        "original_description": "Heals all the spell caster's units for 80 hit points",
+        "research_mana": [
+          800,
+          2500,
+          800,
+          900,
+          0
+        ],
+        "cast": {
+          "kind": "heal",
+          "cast_mana": [
+            160,
+            500,
+            160,
+            180,
+            0
+          ],
+          "amount": 80
+        }
+      }
+    ],
+    "mountain_clans": [
+      {
+        "id": "g000ss0021",
+        "reference_id": "mcl_d2_s001",
+        "name": "Ледяной щит",
+        "original_name": "Ice shield",
+        "level": 1,
+        "description": "Под действием этого заклинания получаемый юнитами урон уменьшается на 10%",
+        "original_description": "Enchanted units will receive 10% less damage from attacks",
+        "research_mana": [
+          0,
+          0,
+          0,
+          200,
+          0
+        ],
+        "cast": {
+          "kind": "buff",
+          "cast_mana": [
+            0,
+            0,
+            0,
+            100,
+            0
+          ],
+          "stat": "armor",
+          "amount": 10
+        }
+      },
+      {
+        "id": "g000ss0022",
+        "reference_id": "mcl_d2_s002",
+        "name": "Хождение по лесу",
+        "original_name": "Forestwalk",
+        "level": 1,
+        "description": "Выбранный отряд не получает штраф к перемещению по лесу.",
+        "original_description": "The target stack will suffer no move penalty when venturing in forests",
+        "research_mana": [
+          0,
+          0,
+          0,
+          100,
+          0
+        ],
+        "cast": {
+          "kind": "buff",
+          "cast_mana": [
+            0,
+            0,
+            0,
+            25,
+            0
+          ],
+          "stat": "terrain",
+          "terrain": "forest"
+        }
+      },
+      {
+        "id": "g000ss0023",
+        "reference_id": "mcl_d2_s003",
+        "name": "Сила Витара",
+        "original_name": "Vithar's might",
+        "level": 1,
+        "description": "На 10% увеличивает урон, наносимый зачарованными юнитами в бою",
+        "original_description": "Increases by 10% the damage inflicted by the enchanted units in battle",
+        "research_mana": [
+          0,
+          0,
+          0,
+          200,
+          0
+        ],
+        "cast": {
+          "kind": "buff",
+          "cast_mana": [
+            0,
+            0,
+            0,
+            100,
+            0
+          ],
+          "stat": "damage",
+          "multiplier": 1.1
+        }
+      },
+      {
+        "id": "g000ss0024",
+        "reference_id": "mcl_d2_s004",
+        "name": "Буран",
+        "original_name": "Blizzard",
+        "level": 1,
+        "description": "Наносит выбранным юнитам 15 единиц урона магией Воды",
+        "original_description": "Inflicts 15 points of water damage to target units",
+        "research_mana": [
+          0,
+          0,
+          0,
+          200,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            0,
+            0,
+            0,
+            100,
+            0
+          ],
+          "amount": 15,
+          "element": "water"
+        }
+      },
+      {
+        "id": "g000ss0025",
+        "reference_id": "mcl_d2_s005",
+        "name": "Призывание I: Рух",
+        "original_name": "Summon I: Roc",
+        "level": 1,
+        "description": "Призывает летающую птицу Рух",
+        "original_description": "Summons the flying Roc",
+        "research_mana": [
+          0,
+          0,
+          0,
+          200,
+          0
+        ],
+        "cast": {
+          "kind": "summon_battle",
+          "cast_mana": [
+            0,
+            0,
+            0,
+            100,
+            0
+          ],
+          "unit": "g000uu0049"
+        }
+      },
+      {
+        "id": "g000ss0026",
+        "reference_id": "mcl_d2_s006",
+        "name": "Гимн Кланов",
+        "original_name": "Hymn of the Clans",
+        "level": 2,
+        "description": "На 15% увеличивает инициативу выбранных юнитов",
+        "original_description": "Increases by 15% the initiative of the target units",
+        "research_mana": [
+          0,
+          0,
+          0,
+          400,
+          0
+        ],
+        "cast": {
+          "kind": "buff",
+          "cast_mana": [
+            0,
+            0,
+            0,
+            200,
+            0
+          ],
+          "stat": "initiative",
+          "multiplier": 1.15
+        }
+      },
+      {
+        "id": "g000ss0027",
+        "reference_id": "mcl_d2_s007",
+        "name": "Мореплавание",
+        "original_name": "Seafaring",
+        "level": 2,
+        "description": "В течение дня отряд не получает штраф к перемещению по воде.",
+        "original_description": "The party will suffer no penalty when sailing on water for a day",
+        "research_mana": [
+          0,
+          0,
+          0,
+          200,
+          0
+        ],
+        "cast": {
+          "kind": "buff",
+          "cast_mana": [
+            0,
+            0,
+            0,
+            50,
+            0
+          ],
+          "stat": "terrain",
+          "terrain": "water"
+        }
+      },
+      {
+        "id": "g000ss0028",
+        "reference_id": "mcl_d2_s008",
+        "name": "Ледяной столб",
+        "original_name": "Ice pillar",
+        "level": 2,
+        "description": "Наносит выбранным юнитам 30 единиц урона магией Воды",
+        "original_description": "Inflicts 30 points of water damage to target units",
+        "research_mana": [
+          0,
+          0,
+          0,
+          400,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            0,
+            0,
+            0,
+            200,
+            0
+          ],
+          "amount": 30,
+          "element": "water"
+        }
+      },
+      {
+        "id": "g000ss0029",
+        "reference_id": "mcl_d2_s009",
+        "name": "Исцеление",
+        "original_name": "Healing",
+        "level": 2,
+        "description": "Восстанавливает 30 единиц здоровья",
+        "original_description": "Heals 30 hit points",
+        "research_mana": [
+          0,
+          0,
+          0,
+          400,
+          0
+        ],
+        "cast": {
+          "kind": "heal",
+          "cast_mana": [
+            0,
+            0,
+            0,
+            200,
+            0
+          ],
+          "amount": 30
+        }
+      },
+      {
+        "id": "g000ss0031",
+        "reference_id": "mcl_d2_s011",
+        "name": "Призывание II: Валькирия",
+        "original_name": "Summon II: Valkyrie",
+        "level": 3,
+        "description": "Призывает валькирию",
+        "original_description": "Summons a Valkyrie",
+        "research_mana": [
+          0,
+          450,
+          0,
+          450,
+          0
+        ],
+        "cast": {
+          "kind": "summon_battle",
+          "cast_mana": [
+            0,
+            150,
+            0,
+            150,
+            0
+          ],
+          "unit": "g000uu0050"
+        }
+      },
+      {
+        "id": "g000ss0032",
+        "reference_id": "mcl_d2_s012",
+        "name": "Быстрота",
+        "original_name": "Chant of hasting",
+        "level": 3,
+        "description": "Под воздействием этого заклинания юниты восстанавливают 100% единиц движения",
+        "original_description": "Hasted units recover 100% of their moving points",
+        "research_mana": [
+          0,
+          0,
+          300,
+          300,
+          0
+        ],
+        "cast": {
+          "kind": "moves",
+          "cast_mana": [
+            0,
+            0,
+            75,
+            75,
+            0
+          ],
+          "percent": 100
+        }
+      },
+      {
+        "id": "g000ss0033",
+        "reference_id": "mcl_d2_s013",
+        "name": "Буря",
+        "original_name": "Tempest",
+        "level": 3,
+        "description": "Наносит выбранным юнитам 50 единиц урона магией Земли.",
+        "original_description": "Inflicts 50 points of earth damage to target units",
+        "research_mana": [
+          0,
+          450,
+          0,
+          450,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            0,
+            150,
+            0,
+            150,
+            0
+          ],
+          "amount": 50,
+          "element": "earth"
+        }
+      },
+      {
+        "id": "g000ss0034",
+        "reference_id": "mcl_d2_s014",
+        "name": "Заколдованное оружие",
+        "original_name": "Chant of arms",
+        "level": 3,
+        "description": "На 25% увеличивает шанс юнитов попасть по противнику",
+        "original_description": "Enchanted units have 25% greater chance to hit",
+        "research_mana": [
+          0,
+          450,
+          0,
+          450,
+          0
+        ],
+        "cast": {
+          "kind": "buff",
+          "cast_mana": [
+            0,
+            150,
+            0,
+            150,
+            0
+          ],
+          "stat": "accuracy",
+          "multiplier": 1.25
+        }
+      },
+      {
+        "id": "g000ss0085",
+        "reference_id": "mcl_d2_s015",
+        "name": "Благословение Имира",
+        "original_name": "Ymir's blessing",
+        "level": 3,
+        "description": "На 20% увеличивает урон, наносимый юнитами в области действия заклинания.",
+        "original_description": "Increases by 20% the damage inflicted by the units in the spell area",
+        "research_mana": [
+          0,
+          680,
+          0,
+          680,
+          0
+        ],
+        "cast": {
+          "kind": "buff",
+          "cast_mana": [
+            0,
+            225,
+            0,
+            225,
+            0
+          ],
+          "stat": "damage",
+          "multiplier": 1.2
+        }
+      },
+      {
+        "id": "g000ss0035",
+        "reference_id": "mcl_d2_s016",
+        "name": "Стойкость",
+        "original_name": "Chant of fortitude",
+        "level": 4,
+        "description": "Под воздействием этого заклинания получаемый юнитами урон уменьшается на 33%",
+        "original_description": "Enchanted units will receive 33% less damage from attacks",
+        "research_mana": [
+          0,
+          300,
+          500,
+          800,
+          0
+        ],
+        "cast": {
+          "kind": "buff",
+          "cast_mana": [
+            0,
+            75,
+            125,
+            200,
+            0
+          ],
+          "stat": "armor",
+          "amount": 33
+        }
+      },
+      {
+        "id": "g000ss0036",
+        "reference_id": "mcl_d2_s017",
+        "name": "Благословение Вотана",
+        "original_name": "Wotan's blessing",
+        "level": 4,
+        "description": "На 33% увеличивает шанс юнитов попасть по противнику",
+        "original_description": "Enchanted units have 33% greater chance to hit",
+        "research_mana": [
+          0,
+          400,
+          400,
+          800,
+          0
+        ],
+        "cast": {
+          "kind": "buff",
+          "cast_mana": [
+            0,
+            100,
+            100,
+            200,
+            0
+          ],
+          "stat": "accuracy",
+          "multiplier": 1.33
+        }
+      },
+      {
+        "id": "g000ss0037",
+        "reference_id": "mcl_d2_s018",
+        "name": "Возмездие Имира",
+        "original_name": "Vengeance of Ymir",
+        "level": 4,
+        "description": "Наносит выбранным юнитам 75 единиц урона магией Воды",
+        "original_description": "Inflicts 75 points of water damage to target units",
+        "research_mana": [
+          0,
+          400,
+          400,
+          800,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            0,
+            100,
+            100,
+            200,
+            0
+          ],
+          "amount": 75,
+          "element": "water"
+        }
+      },
+      {
+        "id": "g000ss0086",
+        "reference_id": "mcl_d2_s019",
+        "name": "Духи льда",
+        "original_name": "Ice spirits",
+        "level": 4,
+        "description": "Наносит 60 единиц урона магией Воды в центр площади заклинания",
+        "original_description": "Inflicts 60 points of water damage at the center of the spell area",
+        "research_mana": [
+          0,
+          600,
+          600,
+          1200,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            0,
+            150,
+            150,
+            300,
+            0
+          ],
+          "amount": 60,
+          "element": "water"
+        }
+      },
+      {
+        "id": "g000ss0087",
+        "reference_id": "mcl_d2_s020",
+        "name": "Ветер дорог",
+        "original_name": "Winds of travel",
+        "level": 4,
+        "description": "Восстанавливает 100% единиц движения всем юнитам заклинателя",
+        "original_description": "All the caster's units recover 100% of their moving points",
+        "research_mana": [
+          0,
+          800,
+          800,
+          1600,
+          0
+        ],
+        "cast": {
+          "kind": "moves",
+          "cast_mana": [
+            0,
+            200,
+            200,
+            400,
+            0
+          ],
+          "percent": 100
+        }
+      },
+      {
+        "id": "g000ss0038",
+        "reference_id": "mcl_d2_s021",
+        "name": "Призывание III: Каменный предок",
+        "original_name": "Summon III: Stone Ancestor",
+        "level": 5,
+        "description": "Призывает каменного предка гномов",
+        "original_description": "Summon Dwarven Stone ancestor",
+        "research_mana": [
+          600,
+          350,
+          300,
+          1250,
+          0
+        ],
+        "cast": {
+          "kind": "summon_battle",
+          "cast_mana": [
+            120,
+            70,
+            60,
+            250,
+            0
+          ],
+          "unit": "g000uu0051"
+        }
+      },
+      {
+        "id": "g000ss0040",
+        "reference_id": "mcl_d2_s023",
+        "name": "Песнь Вотана",
+        "original_name": "Wotan's chant",
+        "level": 5,
+        "description": "На 50% увеличивает урон, наносимый зачарованными юнитами в бою",
+        "original_description": "Increases by 50% the damage inflicted by the enchanted units in battle",
+        "research_mana": [
+          300,
+          550,
+          400,
+          1250,
+          0
+        ],
+        "cast": {
+          "kind": "buff",
+          "cast_mana": [
+            60,
+            110,
+            80,
+            250,
+            0
+          ],
+          "stat": "damage",
+          "multiplier": 1.5
+        }
+      },
+      {
+        "id": "g000ss0088",
+        "reference_id": "mcl_d2_s024",
+        "name": "Зов предков",
+        "original_name": "Ancestor's call",
+        "level": 5,
+        "description": "Усиливает броню всех юнитов заклинателя на 33",
+        "original_description": "Increases by 33 the armor of all the caster's units",
+        "research_mana": [
+          800,
+          900,
+          800,
+          2500,
+          0
+        ],
+        "cast": {
+          "kind": "buff",
+          "cast_mana": [
+            160,
+            180,
+            160,
+            500,
+            0
+          ],
+          "stat": "armor",
+          "amount": 33
+        }
+      }
+    ],
+    "legions": [
+      {
+        "id": "g000ss0041",
+        "reference_id": "lod_d2_s001",
+        "name": "Вызов Адской гончей",
+        "original_name": "Incantare Hellhound",
+        "level": 1,
+        "description": "Призывает огнедышащую Адскую гончую.",
+        "original_description": "Summons a fire breathing Hellhound",
+        "research_mana": [
+          200,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "summon_battle",
+          "cast_mana": [
+            100,
+            0,
+            0,
+            0,
+            0
+          ],
+          "unit": "g000uu0075"
+        }
+      },
+      {
+        "id": "g000ss0043",
+        "reference_id": "lod_d2_s003",
+        "name": "Блуждающий огонек",
+        "original_name": "Ignis mare",
+        "level": 1,
+        "description": "Наносит выбранным юнитам 15 единиц урона магией Огня.",
+        "original_description": "Inflicts 15 points of fire damage to target units",
+        "research_mana": [
+          200,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            100,
+            0,
+            0,
+            0,
+            0
+          ],
+          "amount": 15,
+          "element": "fire"
+        }
+      },
+      {
+        "id": "g000ss0044",
+        "reference_id": "lod_d2_s004",
+        "name": "Сон разума",
+        "original_name": "Menta minoris",
+        "level": 1,
+        "description": "Наносит выбранным юнитам 15 единиц урона магией Разума.",
+        "original_description": "Inflicts 15 points of mind damage to target units",
+        "research_mana": [
+          200,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            100,
+            0,
+            0,
+            0,
+            0
+          ],
+          "amount": 15,
+          "element": "mind"
+        }
+      },
+      {
+        "id": "g000ss0045",
+        "reference_id": "lod_d2_s005",
+        "name": "Адские муки",
+        "original_name": "Tormentio",
+        "level": 1,
+        "description": "Уменьшает броню выбранных юнитов на 50.",
+        "original_description": "Reduces by 50 the armor of target units",
+        "research_mana": [
+          200,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "debuff",
+          "cast_mana": [
+            100,
+            0,
+            0,
+            0,
+            0
+          ],
+          "stat": "armor",
+          "amount": -50
+        }
+      },
+      {
+        "id": "g000ss0046",
+        "reference_id": "lod_d2_s006",
+        "name": "Вызов Белиарха",
+        "original_name": "Incantare Beliarh",
+        "level": 2,
+        "description": "Призывает инфернального Белиарха.",
+        "original_description": "Summons an infernal Beliarh",
+        "research_mana": [
+          400,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "summon_battle",
+          "cast_mana": [
+            200,
+            0,
+            0,
+            0,
+            0
+          ],
+          "unit": "g000uu0076"
+        }
+      },
+      {
+        "id": "g000ss0048",
+        "reference_id": "lod_d2_s008",
+        "name": "Огненный морок",
+        "original_name": "Ignis carn",
+        "level": 2,
+        "description": "Наносит выбранным юнитам 30 единиц урона магией Огня.",
+        "original_description": "Inflicts 30 points of fire damage to target units",
+        "research_mana": [
+          400,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            200,
+            0,
+            0,
+            0,
+            0
+          ],
+          "amount": 30,
+          "element": "fire"
+        }
+      },
+      {
+        "id": "g000ss0049",
+        "reference_id": "lod_d2_s009",
+        "name": "Проклятье демонов",
+        "original_name": "Cursa demoneus",
+        "level": 2,
+        "description": "На 15% уменьшает урон, наносимый зачарованными юнитами в бою.",
+        "original_description": "Reduces by 15% the damage inflicted by enchanted units in battle",
+        "research_mana": [
+          400,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "debuff",
+          "cast_mana": [
+            200,
+            0,
+            0,
+            0,
+            0
+          ],
+          "stat": "damage",
+          "multiplier": 0.85
+        }
+      },
+      {
+        "id": "g000ss0050",
+        "reference_id": "lod_d2_s010",
+        "name": "Время",
+        "original_name": "Chronos",
+        "level": 2,
+        "description": "На 15% уменьшает инициативу выбранных юнитов.",
+        "original_description": "Reduces by 15% the initiative of the target units",
+        "research_mana": [
+          400,
+          0,
+          0,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "debuff",
+          "cast_mana": [
+            200,
+            0,
+            0,
+            0,
+            0
+          ],
+          "stat": "initiative",
+          "multiplier": 0.85
+        }
+      },
+      {
+        "id": "g000ss0054",
+        "reference_id": "lod_d2_s014",
+        "name": "Ментальный удар",
+        "original_name": "Menta potens",
+        "level": 3,
+        "description": "Наносит выбранным юнитам 50 единиц урона магией Разума.",
+        "original_description": "Inflicts 50 points of mind damage to target units",
+        "research_mana": [
+          450,
+          0,
+          450,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            150,
+            0,
+            150,
+            0,
+            0
+          ],
+          "amount": 50,
+          "element": "mind"
+        }
+      },
+      {
+        "id": "g000ss0089",
+        "reference_id": "lod_d2_s015",
+        "name": "Проклятие",
+        "original_name": "Maledicere",
+        "level": 3,
+        "description": "У всех юнитов в области действия заклинания шанс попадания снижается на 25%.",
+        "original_description": "All the units in the area have 25% less chance to hit",
+        "research_mana": [
+          680,
+          0,
+          680,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "debuff",
+          "cast_mana": [
+            225,
+            0,
+            225,
+            0,
+            0
+          ],
+          "stat": "accuracy",
+          "multiplier": 0.75
+        }
+      },
+      {
+        "id": "g000ss0055",
+        "reference_id": "lod_d2_s016",
+        "name": "Отвод глаз",
+        "original_name": "Tortio menta",
+        "level": 4,
+        "description": "Шанс попадания зачарованных юнитов снижается на 33%.",
+        "original_description": "Enchanted units have 33% less chance to hit",
+        "research_mana": [
+          800,
+          400,
+          400,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "debuff",
+          "cast_mana": [
+            200,
+            100,
+            100,
+            0,
+            0
+          ],
+          "stat": "accuracy",
+          "multiplier": 0.67
+        }
+      },
+      {
+        "id": "g000ss0056",
+        "reference_id": "lod_d2_s017",
+        "name": "Знак пламени",
+        "original_name": "Sinestra ignis",
+        "level": 4,
+        "description": "Наносит выбранным юнитам 75 единиц урона магией Огня.",
+        "original_description": "Inflicts 75 points of fire damage to target units",
+        "research_mana": [
+          800,
+          400,
+          400,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            200,
+            100,
+            100,
+            0,
+            0
+          ],
+          "amount": 75,
+          "element": "fire"
+        }
+      },
+      {
+        "id": "g000ss0057",
+        "reference_id": "lod_d2_s018",
+        "name": "Мощь земли",
+        "original_name": "Projicere terra",
+        "level": 4,
+        "description": "Наносит выбранным юнитам 75 единиц урона магией Земли.",
+        "original_description": "Inflicts 75 points of earth damage to target units",
+        "research_mana": [
+          800,
+          300,
+          500,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            200,
+            75,
+            125,
+            0,
+            0
+          ],
+          "amount": 75,
+          "element": "earth"
+        }
+      },
+      {
+        "id": "g000ss0090",
+        "reference_id": "lod_d2_s019",
+        "name": "Сила огня",
+        "original_name": "Ignis potens",
+        "level": 4,
+        "description": "Наносит 60 единиц урона магией Огня в центре области действия заклинания.",
+        "original_description": "Inflicts 60 points of fire damage at the center of the spell area",
+        "research_mana": [
+          1200,
+          600,
+          600,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            400,
+            200,
+            200,
+            0,
+            0
+          ],
+          "amount": 60,
+          "element": "fire"
+        }
+      },
+      {
+        "id": "g000ss0091",
+        "reference_id": "lod_d2_s020",
+        "name": "Великий Хронос",
+        "original_name": "Chronos major",
+        "level": 4,
+        "description": "У всех юнитов в области действия заклинания инициатива снижается на 33%.",
+        "original_description": "All the units in the area have 33% less initiative",
+        "research_mana": [
+          1200,
+          0,
+          600,
+          600,
+          0
+        ],
+        "cast": {
+          "kind": "debuff",
+          "cast_mana": [
+            300,
+            0,
+            150,
+            150,
+            0
+          ],
+          "stat": "initiative",
+          "multiplier": 0.67
+        }
+      },
+      {
+        "id": "g000ss0058",
+        "reference_id": "lod_d2_s021",
+        "name": "Вызов Мстителя",
+        "original_name": "Incantare Avenger",
+        "level": 5,
+        "description": "Призывает инфернального Мстителя.",
+        "original_description": "Summons an infernal Avenger",
+        "research_mana": [
+          1250,
+          400,
+          550,
+          300,
+          0
+        ],
+        "cast": {
+          "kind": "summon_battle",
+          "cast_mana": [
+            250,
+            80,
+            110,
+            60,
+            0
+          ],
+          "unit": "g000uu0077"
+        }
+      },
+      {
+        "id": "g000ss0060",
+        "reference_id": "lod_d2_s023",
+        "name": "Месть богов",
+        "original_name": "Deus talonis",
+        "level": 5,
+        "description": "Наносит выбранным юнитам 125 единиц урона магией Огня.",
+        "original_description": "Inflicts 125 points of fire damage to target units",
+        "research_mana": [
+          1250,
+          350,
+          400,
+          500,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            250,
+            70,
+            80,
+            100,
+            0
+          ],
+          "amount": 125,
+          "element": "fire"
+        }
+      }
+    ],
+    "undead_hordes": [
+      {
+        "id": "g000ss0061",
+        "reference_id": "und_d2_s001",
+        "name": "Призывание I: Скелет",
+        "original_name": "Summon I: Skeleton",
+        "level": 1,
+        "description": "Призывает скелета",
+        "original_description": "Summons a Skeleton",
+        "research_mana": [
+          0,
+          0,
+          200,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "summon_battle",
+          "cast_mana": [
+            0,
+            0,
+            100,
+            0,
+            0
+          ],
+          "unit": "g000uu0101"
+        }
+      },
+      {
+        "id": "g000ss0062",
+        "reference_id": "und_d2_s002",
+        "name": "Мор",
+        "original_name": "Pestilence",
+        "level": 1,
+        "description": "Наносит выбранным юнитам 15 единиц урона магией Смерти",
+        "original_description": "Inflicts 15 points of death damage to target units",
+        "research_mana": [
+          0,
+          0,
+          200,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            0,
+            0,
+            100,
+            0,
+            0
+          ],
+          "amount": 15,
+          "element": "death"
+        }
+      },
+      {
+        "id": "g000ss0063",
+        "reference_id": "und_d2_s003",
+        "name": "Снежная буря",
+        "original_name": "Ice storm",
+        "level": 1,
+        "description": "Наносит выбранным юнитам 15 единиц урона магией Воды",
+        "original_description": "Inflicts 15 points of water damage to target units",
+        "research_mana": [
+          0,
+          0,
+          200,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            0,
+            0,
+            100,
+            0,
+            0
+          ],
+          "amount": 15,
+          "element": "water"
+        }
+      },
+      {
+        "id": "g000ss0064",
+        "reference_id": "und_d2_s004",
+        "name": "Слабость",
+        "original_name": "Weakness",
+        "level": 1,
+        "description": "На 10% снижает шанс юнитов попасть по противнику",
+        "original_description": "Enchanted units have 10% less chance to hit",
+        "research_mana": [
+          0,
+          0,
+          200,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "debuff",
+          "cast_mana": [
+            0,
+            0,
+            100,
+            0,
+            0
+          ],
+          "stat": "accuracy",
+          "multiplier": 0.9
+        }
+      },
+      {
+        "id": "g000ss0065",
+        "reference_id": "und_d2_s005",
+        "name": "Ржавчина",
+        "original_name": "Rust",
+        "level": 1,
+        "description": "Уменьшает броню выбранных юнитов на 50.",
+        "original_description": "Reduces by 50 the armor of target units",
+        "research_mana": [
+          0,
+          0,
+          200,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "debuff",
+          "cast_mana": [
+            0,
+            0,
+            100,
+            0,
+            0
+          ],
+          "stat": "armor",
+          "amount": -50
+        }
+      },
+      {
+        "id": "g000ss0066",
+        "reference_id": "und_d2_s006",
+        "name": "Призывание II: Хуорн",
+        "original_name": "Summon II: Evil Ent",
+        "level": 2,
+        "description": "Призывает злого энта",
+        "original_description": "Summons an evil Ent",
+        "research_mana": [
+          0,
+          0,
+          400,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "summon_battle",
+          "cast_mana": [
+            0,
+            0,
+            200,
+            0,
+            0
+          ],
+          "unit": "g000uu0102"
+        }
+      },
+      {
+        "id": "g000ss0067",
+        "reference_id": "und_d2_s007",
+        "name": "Чума",
+        "original_name": "Plague",
+        "level": 2,
+        "description": "Наносит выбранным воинам 30 единиц урона магией Смерти",
+        "original_description": "Inflicts 30 points of death damage to target units",
+        "research_mana": [
+          0,
+          0,
+          400,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            0,
+            0,
+            200,
+            0,
+            0
+          ],
+          "amount": 30,
+          "element": "death"
+        }
+      },
+      {
+        "id": "g000ss0069",
+        "reference_id": "und_d2_s009",
+        "name": "Проклятие Ниграэля",
+        "original_name": "Curse of Nygrael",
+        "level": 2,
+        "description": "Уменьшает урон, наносимый юнитами в бою, на 15%",
+        "original_description": "Reduces by 15% the damage inflicted by enchanted units in battle",
+        "research_mana": [
+          0,
+          0,
+          400,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "debuff",
+          "cast_mana": [
+            0,
+            0,
+            200,
+            0,
+            0
+          ],
+          "stat": "damage",
+          "multiplier": 0.85
+        }
+      },
+      {
+        "id": "g000ss0070",
+        "reference_id": "und_d2_s010",
+        "name": "Каменный дождь",
+        "original_name": "Stone rain",
+        "level": 2,
+        "description": "Наносит выбранным воинам 30 единиц урона магией Земли",
+        "original_description": "Inflicts 30 points of earth damage to target units",
+        "research_mana": [
+          0,
+          0,
+          400,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            0,
+            0,
+            200,
+            0,
+            0
+          ],
+          "amount": 30,
+          "element": "earth"
+        }
+      },
+      {
+        "id": "g000ss0071",
+        "reference_id": "und_d2_s011",
+        "name": "Призывание III: Кошмар",
+        "original_name": "Summon III: Nightmare",
+        "level": 3,
+        "description": "Призывает кошмара",
+        "original_description": "Summons a Nightmare",
+        "research_mana": [
+          450,
+          0,
+          450,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "summon_battle",
+          "cast_mana": [
+            150,
+            0,
+            150,
+            0,
+            0
+          ],
+          "unit": "g000uu0103"
+        }
+      },
+      {
+        "id": "g000ss0072",
+        "reference_id": "und_d2_s012",
+        "name": "Драконья порча",
+        "original_name": "Call decay dragon",
+        "level": 3,
+        "description": "Наносит выбранным юнитам 50 единиц урона магией Смерти",
+        "original_description": "Inflicts 50 points of death damage to target units",
+        "research_mana": [
+          0,
+          0,
+          450,
+          450,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            0,
+            0,
+            150,
+            150,
+            0
+          ],
+          "amount": 50,
+          "element": "death"
+        }
+      },
+      {
+        "id": "g000ss0073",
+        "reference_id": "und_d2_s013",
+        "name": "Прикосновение Мортис",
+        "original_name": "Touch of Mortis",
+        "level": 3,
+        "description": "На 20% снижает шанс юнитов попасть по противнику",
+        "original_description": "Enchanted units have 20% less chance to hit",
+        "research_mana": [
+          450,
+          0,
+          450,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "debuff",
+          "cast_mana": [
+            150,
+            0,
+            150,
+            0,
+            0
+          ],
+          "stat": "accuracy",
+          "multiplier": 0.8
+        }
+      },
+      {
+        "id": "g000ss0093",
+        "reference_id": "und_d2_s015",
+        "name": "Смерч Смерти",
+        "original_name": "Death storm",
+        "level": 3,
+        "description": "Наносит 40 единиц урона магией Земли в центр площади заклинания",
+        "original_description": "Inflicts 40 points of earth damage at the center of the spell area",
+        "research_mana": [
+          680,
+          0,
+          680,
+          0,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            225,
+            0,
+            225,
+            0,
+            0
+          ],
+          "amount": 40,
+          "element": "earth"
+        }
+      },
+      {
+        "id": "g000ss0075",
+        "reference_id": "und_d2_s016",
+        "name": "Ужас",
+        "original_name": "Terror",
+        "level": 4,
+        "description": "На 33% снижает инициативу выбранных юнитов",
+        "original_description": "Reduces by 33% the initiative of the target units",
+        "research_mana": [
+          400,
+          0,
+          800,
+          400,
+          0
+        ],
+        "cast": {
+          "kind": "debuff",
+          "cast_mana": [
+            100,
+            0,
+            200,
+            100,
+            0
+          ],
+          "stat": "initiative",
+          "multiplier": 0.67
+        }
+      },
+      {
+        "id": "g000ss0076",
+        "reference_id": "und_d2_s017",
+        "name": "Гниение",
+        "original_name": "Rot",
+        "level": 4,
+        "description": "Уменьшает урон, наносимый юнитами в бою, на 33%",
+        "original_description": "Reduces by 33% the damage inflicted by enchanted units in battle",
+        "research_mana": [
+          400,
+          0,
+          800,
+          400,
+          0
+        ],
+        "cast": {
+          "kind": "debuff",
+          "cast_mana": [
+            100,
+            0,
+            200,
+            100,
+            0
+          ],
+          "stat": "damage",
+          "multiplier": 0.67
+        }
+      },
+      {
+        "id": "g000ss0077",
+        "reference_id": "und_d2_s018",
+        "name": "Огненное дыхание",
+        "original_name": "Call red dragon",
+        "level": 4,
+        "description": "Наносит выбранным юнитам 75 единиц урона магией Огня",
+        "original_description": "Inflicts 75 points of fire damage to target units",
+        "research_mana": [
+          500,
+          0,
+          800,
+          300,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            125,
+            0,
+            200,
+            75,
+            0
+          ],
+          "amount": 75,
+          "element": "fire"
+        }
+      },
+      {
+        "id": "g000ss0078",
+        "reference_id": "und_d2_s021",
+        "name": "Призывание IV: Танатос",
+        "original_name": "Summon IV: Thanatos",
+        "level": 5,
+        "description": "Призывает танатоса",
+        "original_description": "Summons Thanatos",
+        "research_mana": [
+          500,
+          300,
+          1250,
+          450,
+          0
+        ],
+        "cast": {
+          "kind": "summon_battle",
+          "cast_mana": [
+            100,
+            60,
+            250,
+            90,
+            0
+          ],
+          "unit": "g000uu0104"
+        }
+      },
+      {
+        "id": "g000ss0079",
+        "reference_id": "und_d2_s022",
+        "name": "Защита от повреждений",
+        "original_name": "Damage ward",
+        "level": 5,
+        "description": "На юнитов, защищённых этим заклинанием, не действует первая в бою атака оружием (например, мечом)",
+        "original_description": "Enchanted units are unaffected by the first weapon based attack in battle (Ex: Sword)",
+        "research_mana": [
+          350,
+          500,
+          1250,
+          400,
+          0
+        ],
+        "cast": {
+          "kind": "ward",
+          "cast_mana": [
+            70,
+            100,
+            250,
+            80,
+            0
+          ],
+          "element": "weapon"
+        }
+      },
+      {
+        "id": "g000ss0080",
+        "reference_id": "und_d2_s023",
+        "name": "Истребление",
+        "original_name": "Hecatomb",
+        "level": 5,
+        "description": "Наносит выбранным юнитам 125 единиц урона магией Смерти",
+        "original_description": "Inflicts 125 points of death damage to target units",
+        "research_mana": [
+          500,
+          400,
+          1250,
+          350,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            100,
+            82,
+            250,
+            70,
+            0
+          ],
+          "amount": 125,
+          "element": "death"
+        }
+      },
+      {
+        "id": "g000ss0096",
+        "reference_id": "und_d2_s024",
+        "name": "Яд Мортис",
+        "original_name": "Mortis' venom",
+        "level": 5,
+        "description": "Наносит 80 единиц урона магией Смерти в центр площади заклинания",
+        "original_description": "Inflicts 80 points of death damage at the center of the spell area",
+        "research_mana": [
+          680,
+          600,
+          1880,
+          600,
+          0
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            135,
+            120,
+            375,
+            120,
+            0
+          ],
+          "amount": 80,
+          "element": "death"
+        }
+      }
+    ],
+    "elves": [
+      {
+        "id": "g000ss0097",
+        "reference_id": "elf_d2_s001",
+        "name": "Кустарник",
+        "original_name": "Bramble",
+        "level": 1,
+        "description": "Наносит выбранным юнитам 15 единиц урона магией Земли",
+        "original_description": "Inflicts 15 points of earth damage to target units",
+        "research_mana": [
+          0,
+          0,
+          0,
+          0,
+          200
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            0,
+            0,
+            0,
+            0,
+            100
+          ],
+          "amount": 15,
+          "element": "earth"
+        }
+      },
+      {
+        "id": "g000ss0098",
+        "reference_id": "elf_d2_s002",
+        "name": "Призывание I: Энт Малый",
+        "original_name": "Summon I: Ent Minor",
+        "level": 1,
+        "description": "Призывает малого энта",
+        "original_description": "Summons an Ent Minor",
+        "research_mana": [
+          0,
+          0,
+          0,
+          0,
+          200
+        ],
+        "cast": {
+          "kind": "summon_battle",
+          "cast_mana": [
+            0,
+            0,
+            0,
+            0,
+            100
+          ],
+          "unit": "g000uu8136"
+        }
+      },
+      {
+        "id": "g000ss0100",
+        "reference_id": "elf_d2_s004",
+        "name": "Скорость",
+        "original_name": "Swift",
+        "level": 1,
+        "description": "Под воздействием этого заклинания юниты восстанавливают 30% единиц движения",
+        "original_description": "Hasted units recover 30% of their moving points",
+        "research_mana": [
+          0,
+          0,
+          0,
+          0,
+          200
+        ],
+        "cast": {
+          "kind": "moves",
+          "cast_mana": [
+            0,
+            0,
+            0,
+            0,
+            100
+          ],
+          "percent": 30
+        }
+      },
+      {
+        "id": "g000ss0101",
+        "reference_id": "elf_d2_s005",
+        "name": "Стая",
+        "original_name": "Swarm",
+        "level": 1,
+        "description": "На 10% уменьшает урон, наносимый зачарованными юнитами в бою.",
+        "original_description": "Reduces by 10% the damage inflicted by enchanted units in battle",
+        "research_mana": [
+          0,
+          0,
+          0,
+          0,
+          200
+        ],
+        "cast": {
+          "kind": "buff",
+          "cast_mana": [
+            0,
+            0,
+            0,
+            0,
+            100
+          ],
+          "stat": "armor",
+          "amount": 10
+        }
+      },
+      {
+        "id": "g000ss0102",
+        "reference_id": "elf_d2_s006",
+        "name": "Лечение",
+        "original_name": "Healing",
+        "level": 2,
+        "description": "Восстанавливает 30 единиц здоровья",
+        "original_description": "Heals 30 hit points",
+        "research_mana": [
+          0,
+          0,
+          0,
+          0,
+          400
+        ],
+        "cast": {
+          "kind": "heal",
+          "cast_mana": [
+            0,
+            0,
+            0,
+            0,
+            200
+          ],
+          "amount": 30
+        }
+      },
+      {
+        "id": "g000ss0103",
+        "reference_id": "elf_d2_s007",
+        "name": "Призывание II: Энт",
+        "original_name": "Summon II: Ent",
+        "level": 2,
+        "description": "Призывает могучего энта",
+        "original_description": "Summons a mighty Ent",
+        "research_mana": [
+          0,
+          0,
+          0,
+          0,
+          400
+        ],
+        "cast": {
+          "kind": "summon_battle",
+          "cast_mana": [
+            0,
+            0,
+            0,
+            0,
+            200
+          ],
+          "unit": "g000uu8037"
+        }
+      },
+      {
+        "id": "g000ss0104",
+        "reference_id": "elf_d2_s008",
+        "name": "Опаление",
+        "original_name": "Singe",
+        "level": 2,
+        "description": "Наносит выбранным юнитам 30 единиц урона магией Огня",
+        "original_description": "Inflicts 30 points of fire damage to target units",
+        "research_mana": [
+          0,
+          0,
+          0,
+          0,
+          400
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            0,
+            0,
+            0,
+            0,
+            200
+          ],
+          "amount": 30,
+          "element": "fire"
+        }
+      },
+      {
+        "id": "g000ss0105",
+        "reference_id": "elf_d2_s009",
+        "name": "Утопление",
+        "original_name": "Drown",
+        "level": 2,
+        "description": "Наносит выбранным юнитам 30 единиц урона магией Воды",
+        "original_description": "Inflicts 30 points of water damage to target units",
+        "research_mana": [
+          0,
+          0,
+          0,
+          0,
+          400
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            0,
+            0,
+            0,
+            0,
+            200
+          ],
+          "amount": 30,
+          "element": "water"
+        }
+      },
+      {
+        "id": "g000ss0106",
+        "reference_id": "elf_d2_s010",
+        "name": "Смятение",
+        "original_name": "Confusion",
+        "level": 2,
+        "description": "На 15% снижает инициативу выбранных юнитов",
+        "original_description": "Reduces by 15% the initiative of target units",
+        "research_mana": [
+          0,
+          0,
+          0,
+          0,
+          400
+        ],
+        "cast": {
+          "kind": "debuff",
+          "cast_mana": [
+            0,
+            0,
+            0,
+            0,
+            200
+          ],
+          "stat": "initiative",
+          "multiplier": 0.85
+        }
+      },
+      {
+        "id": "g000ss0108",
+        "reference_id": "elf_d2_s012",
+        "name": "Призывание III: Энт Большой",
+        "original_name": "Summon III: Ent Major",
+        "level": 3,
+        "description": "Призывает великого энта",
+        "original_description": "Summons an Ent Major",
+        "research_mana": [
+          0,
+          450,
+          0,
+          0,
+          450
+        ],
+        "cast": {
+          "kind": "summon_battle",
+          "cast_mana": [
+            0,
+            150,
+            0,
+            0,
+            150
+          ],
+          "unit": "g000uu8038"
+        }
+      },
+      {
+        "id": "g000ss0109",
+        "reference_id": "elf_d2_s013",
+        "name": "Блуждающий Огонек",
+        "original_name": "Will-O-Wisp",
+        "level": 3,
+        "description": "Наносит выбранным юнитам 50 единиц урона магией Воздуха.",
+        "original_description": "Inflicts 50 points of air damage to target units",
+        "research_mana": [
+          0,
+          450,
+          0,
+          0,
+          450
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            0,
+            150,
+            0,
+            0,
+            150
+          ],
+          "amount": 50,
+          "element": "mind"
+        }
+      },
+      {
+        "id": "g000ss0110",
+        "reference_id": "elf_d2_s014",
+        "name": "Излечение",
+        "original_name": "Recovery",
+        "level": 3,
+        "description": "Восстанавливает 50 единиц здоровья в центре зоны действия заклинания",
+        "original_description": "Heals 50 hit points at the center of the spell area",
+        "research_mana": [
+          0,
+          450,
+          0,
+          0,
+          450
+        ],
+        "cast": {
+          "kind": "heal",
+          "cast_mana": [
+            0,
+            225,
+            0,
+            0,
+            225
+          ],
+          "amount": 50
+        }
+      },
+      {
+        "id": "g000ss0111",
+        "reference_id": "elf_d2_s015",
+        "name": "Отвлечение",
+        "original_name": "Distraction",
+        "level": 3,
+        "description": "Шанс попадания зачарованных юнитов снижается на 20%.",
+        "original_description": "Enchanted units have 20% less chance to hit",
+        "research_mana": [
+          0,
+          0,
+          450,
+          0,
+          450
+        ],
+        "cast": {
+          "kind": "debuff",
+          "cast_mana": [
+            0,
+            0,
+            150,
+            0,
+            150
+          ],
+          "stat": "accuracy",
+          "multiplier": 0.8
+        }
+      },
+      {
+        "id": "g000ss0112",
+        "reference_id": "elf_d2_s016",
+        "name": "Лавина",
+        "original_name": "Avalanche",
+        "level": 4,
+        "description": "Наносит 60 единиц урона магией Земли в центр площади заклинания",
+        "original_description": "Inflicts 60 points of earth damage at the center of the spell area",
+        "research_mana": [
+          0,
+          400,
+          0,
+          400,
+          800
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            0,
+            200,
+            0,
+            200,
+            300
+          ],
+          "amount": 60,
+          "element": "earth"
+        }
+      },
+      {
+        "id": "g000ss0113",
+        "reference_id": "elf_d2_s017",
+        "name": "Порыв",
+        "original_name": "Gust",
+        "level": 4,
+        "description": "Наносит выбранным юнитам 75 единиц урона магией Воздуха",
+        "original_description": "Inflicts 75 points of air damage to target units",
+        "research_mana": [
+          0,
+          400,
+          0,
+          400,
+          800
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            0,
+            100,
+            0,
+            100,
+            200
+          ],
+          "amount": 75,
+          "element": "air"
+        }
+      },
+      {
+        "id": "g000ss0114",
+        "reference_id": "elf_d2_s018",
+        "name": "Плесень",
+        "original_name": "Mold",
+        "level": 4,
+        "description": "Уменьшает броню выбранных юнитов на 80",
+        "original_description": "Reduces by 80 the armor of target units",
+        "research_mana": [
+          0,
+          300,
+          450,
+          0,
+          800
+        ],
+        "cast": {
+          "kind": "debuff",
+          "cast_mana": [
+            0,
+            100,
+            100,
+            0,
+            200
+          ],
+          "stat": "armor",
+          "amount": -80
+        }
+      },
+      {
+        "id": "g000ss0115",
+        "reference_id": "elf_d2_s019",
+        "name": "Проклятие Галеана",
+        "original_name": "Gallean's Curse",
+        "level": 4,
+        "description": "Уменьшает урон, наносимый юнитами в бою, на 33%",
+        "original_description": "Reduces by 33% the damage inflicted by enchanted units in battle",
+        "research_mana": [
+          0,
+          300,
+          450,
+          0,
+          800
+        ],
+        "cast": {
+          "kind": "debuff",
+          "cast_mana": [
+            0,
+            100,
+            100,
+            0,
+            200
+          ],
+          "stat": "damage",
+          "multiplier": 0.67
+        }
+      },
+      {
+        "id": "g000ss0116",
+        "reference_id": "elf_d2_s020",
+        "name": "Благословение Галеана",
+        "original_name": "Gallean's Boon",
+        "level": 4,
+        "description": "Добавляет зачарованным юнитам 50 единиц здоровья",
+        "original_description": "Adds 50 hit points to enchanted units",
+        "research_mana": [
+          0,
+          600,
+          0,
+          300,
+          800
+        ],
+        "cast": {
+          "kind": "health_bonus",
+          "cast_mana": [
+            0,
+            200,
+            0,
+            200,
+            400
+          ],
+          "amount": 50
+        }
+      },
+      {
+        "id": "g000ss0117",
+        "reference_id": "elf_d2_s021",
+        "name": "Призывание IV: Вердант",
+        "original_name": "Summon IV: Verdant",
+        "level": 5,
+        "description": "Призывает лесного буйного энта",
+        "original_description": "Summons the forest Verdant",
+        "research_mana": [
+          0,
+          500,
+          450,
+          300,
+          1250
+        ],
+        "cast": {
+          "kind": "summon_battle",
+          "cast_mana": [
+            0,
+            110,
+            80,
+            50,
+            250
+          ],
+          "unit": "g000uu8039"
+        }
+      },
+      {
+        "id": "g000ss0118",
+        "reference_id": "elf_d2_s022",
+        "name": "Гнев Зеленых Пастбищ",
+        "original_name": "Wrath of the Glades",
+        "level": 5,
+        "description": "Наносит выбранным юнитам 125 единиц урона магией Земли",
+        "original_description": "Inflicts 125 points of earth damage to target unit",
+        "research_mana": [
+          0,
+          300,
+          500,
+          450,
+          1250
+        ],
+        "cast": {
+          "kind": "damage",
+          "cast_mana": [
+            0,
+            100,
+            80,
+            70,
+            250
+          ],
+          "amount": 125,
+          "element": "earth"
+        }
+      }
+    ]
+  }
+}
