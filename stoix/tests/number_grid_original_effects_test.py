@@ -160,8 +160,14 @@ def test_native_flags_wards_and_retreating_summoner(current_game):
     assert env.progression.ghost_modes[ids['ghost']] == SHORT
     assert env.progression.power_long[ids['dwarfdruid']]
     assert not env.progression.power_long[ids['travnitsa']]
-    assert env.progression.healer_ward_elements[ids['sundancer']] == 1
-    assert env.progression.healer_ward_elements[ids['deva_roshi']] == 267
+    # GAttacks WARD1..4 through GmodifL: Sundancer fire, Sylfid air, Deva roshi
+    # air+fire+earth+water. REACH=1 makes the first two act on every ally.
+    assert env.progression.healer_ward_elements[ids['sundancer']] == 4
+    assert env.progression.healer_ward_elements[ids['sylfid']] == 256
+    assert env.progression.healer_ward_elements[ids['deva_roshi']] == 270
+    mass = env.progression.mass_healers
+    assert all(bool(mass[ids[key]]) for key in ('cleric','abbess','prophetess','elf_oracle','sundancer','sylfid'))
+    assert not any(bool(mass[ids[key]]) for key in ('deva_roshi','g000uu8133','acolyte','priest','patriarch','travnitsa'))
     summoned = state.replace(summon_owner=state.summon_owner.at[1].set(0),escaped=state.escaped.at[0].set(True))
     from types import SimpleNamespace
     from stoix.envs.number_grid_summoning import Summoning

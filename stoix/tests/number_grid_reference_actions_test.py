@@ -1191,7 +1191,8 @@ def test_cliric_red_post_victory_after_withdrawal_and_episode_deadline(current_g
     assert out.actor == 3 and out.pending_healers[3]  # another player decision, never an automatic heal
 
 
-def test_profit_mass_heal_excludes_self_and_only_named_forms_cure(elemental_attack_game):
+def test_profit_mass_heal_includes_self_and_only_named_forms_cure(elemental_attack_game):
+    """Discipl2.exe heal/cure canPerform and L_ALL target lists never exclude the caster."""
     env,_,start = elemental_attack_game
     assert MAP['enemy_rosters'][34][3] == 'cleric'
     start = start.replace(actor=jnp.int32(3),hp=start.hp.at[:5].set(jnp.array([50,100,0,5,20])),
@@ -1208,7 +1209,8 @@ def test_profit_mass_heal_excludes_self_and_only_named_forms_cure(elemental_atta
     rolls = jnp.full((4,env.random_size),.99)
     out,_ = scalar_battle(env)(states,jnp.full(4,SHOOT+3),states.battle_key,rolls)
     chex.assert_trees_all_equal(out.hp[:,0],jnp.array([70,90,120,110]))
-    chex.assert_trees_all_equal(out.hp[:,3],jnp.full(4,5))
+    # The wounded caster (5 HP) heals itself by its own amount: 20/40/70/60.
+    chex.assert_trees_all_equal(out.hp[:,3],jnp.array([25,45,75,65]))
     assert not jnp.any(out.hp[:,2]) and jnp.all(out.last_target == -1)
     chex.assert_trees_all_equal(out.paralyzed[:,0],jnp.array([1,0,0,1],bool))
     chex.assert_trees_all_equal(out.long_paralyzed[:,0],jnp.array([1,0,0,1],bool))
@@ -1221,33 +1223,37 @@ def test_profit_mass_heal_excludes_self_and_only_named_forms_cure(elemental_atta
 
 def test_sundancer_shared_ward_recast_owners_and_sticky_native_consumption():
     from stoix.envs.number_grid_wards import grant_wards,expire_wards,ward_tags
+    from stoix.envs.number_grid_wards import WARD_MASK
+    fire = jnp.uint32(4)  # Sundancer's GmodifL g000um0016 is a fire ward
+    assert WARD_MASK == 270
     owners = jnp.zeros((12,4),jnp.uint32)
     sticky = jnp.zeros(12,jnp.uint32)
-    native = jnp.zeros(12,jnp.uint32).at[1].set(1).at[3].set(1)
-    used = jnp.zeros(12,jnp.uint32).at[1].set(1)
+    native = jnp.zeros(12,jnp.uint32).at[1].set(fire).at[3].set(fire)
+    used = jnp.zeros(12,jnp.uint32).at[1].set(fire)
     recipients = jnp.zeros(12,bool).at[1:4].set(True)
     grant,expire = jax.jit(grant_wards),jax.jit(expire_wards)
-    owners,sticky,used = grant(owners,sticky,used,native,recipients,jnp.uint32(1),jnp.int32(0))
-    assert used[1] == 0 and sticky[1] == 1 and jnp.all(ward_tags(owners)[1:4] == 1)
-    owners,sticky,used = grant(owners,sticky,used,native,recipients,jnp.uint32(1),jnp.int32(6))
+    owners,sticky,used = grant(owners,sticky,used,native,recipients,fire,jnp.int32(0))
+    assert used[1] == 0 and sticky[1] == fire and jnp.all(ward_tags(owners)[1:4] == fire)
+    owners,sticky,used = grant(owners,sticky,used,native,recipients,fire,jnp.int32(6))
     assert jnp.all(owners[1:4,0] == 65)
     owners,sticky,used = expire(owners,sticky,used,native,jnp.uint32(1))
     assert jnp.all(owners[1:4,0] == 64) and not jnp.any(used)
     # One blocked hit consumes the shared projection, independent of owner count.
-    used = used.at[1:3].set(1)
-    owners,sticky,used = grant(owners,sticky,used,native,recipients,jnp.uint32(1),jnp.int32(6))
-    assert not jnp.any(used) and sticky[1] == 1
+    used = used.at[1:3].set(fire)
+    owners,sticky,used = grant(owners,sticky,used,native,recipients,fire,jnp.int32(6))
+    assert not jnp.any(used) and sticky[1] == fire
     owners,sticky,used = expire(owners,sticky,used,native,jnp.uint32(64))
     assert not jnp.any(owners) and not jnp.any(sticky)
-    assert used[1] == 1 and used[2] == 0 and used[3] == 0
+    assert used[1] == fire and used[2] == 0 and used[3] == 0
     # Native protection first consumed while a temporary grant is active stays spent.
-    owners,sticky,used = grant(owners,sticky,used,native,recipients,jnp.uint32(267),jnp.int32(11))
-    used = used.at[3].set(267)
+    owners,sticky,used = grant(owners,sticky,used,native,recipients,jnp.uint32(WARD_MASK),jnp.int32(11))
+    used = used.at[3].set(WARD_MASK)
     owners,sticky,used = expire(owners,sticky,used,native,jnp.uint32(1 << 11))
-    assert used[3] == 1 and not jnp.any(owners)
+    assert used[3] == fire and not jnp.any(owners)
 
 
-def test_sundancer_heals_full_hp_grants_shared_weapon_block_and_expires_on_wait_return(current_game):
+def test_sundancer_wards_whole_party_with_fire_and_expires_on_wait_return(current_game):
+    """GAttacks g000aa8134/g000aa8034: REACH=1 (all allies); GmodifL g000um0016: fire ward."""
     from stoix.envs.number_grid import CONTINUE
     from stoix.tests.number_grid_fixtures import enemy_roster_state
     env,initial,_,attack = current_game
@@ -1258,13 +1264,21 @@ def test_sundancer_heals_full_hp_grants_shared_weapon_block_and_expires_on_wait_
     state = state.replace(actor=jnp.int32(3),priority=jnp.zeros(12).at[0].set(10000.))
     rolls = jnp.zeros(env.random_size).at[36].set(.99)
     granted,_ = attack(state,jnp.int32(SHOOT),state.battle_key,rolls)
-    assert granted.last_damage == 0 and granted.healer_wards[0,0] == 8
-    assert env.unit_traits(granted)[0,3] & 1
-    # A ward cast still grants at full HP. Force the enemy's lowest-HP target.
+    # Every living ally, the caster included, receives the caster-owned fire ward.
+    assert granted.last_damage == 0 and granted.last_target == -1
+    assert jnp.all(granted.healer_wards[:5,0] == 8) and not jnp.any(granted.healer_wards[:5,1:])
+    assert not jnp.any(granted.healer_wards[5])
+    assert jnp.all((env.unit_traits(granted)[:5,3] & 4) == 4) and not jnp.any(env.unit_traits(granted)[:5,3] & 1)
+    # A weapon hit passes through the fire ward. Force the enemy's lowest-HP target.
     target = granted.replace(actor=jnp.int32(6),hp=granted.hp.at[0].set(1),
         priority=jnp.zeros(12).at[1].set(10000.))
-    blocked,_ = attack(target,jnp.int32(CONTINUE),target.battle_key,rolls)
-    assert blocked.hp[0] == 1 and blocked.last_ward == 1 and blocked.wards_used[0] & 1
+    hit,_ = attack(target,jnp.int32(CONTINUE),target.battle_key,rolls)
+    assert hit.hp[0] == 0 and hit.last_ward == 0 and hit.wards_used[0] == 0
+    # A fire area attack is blocked once on every warded ally.
+    fire = enemy_roster_state(env,target,['cultist','squire','squire','archer','archer','archer'])
+    blocked,_ = attack(fire,jnp.int32(CONTINUE),fire.battle_key,rolls)
+    chex.assert_trees_all_equal(blocked.hp[:5],fire.hp[:5])
+    assert blocked.last_ward == 0b11111 and jnp.all(blocked.wards_used[:5] & 4)
     assert blocked.healer_wards[0,0] == 8
     # Returning after WAIT expires the caster's grants even after first activation.
     waiting = granted.replace(actor=jnp.int32(4),turn_phase=jnp.full(12,2,jnp.int32).at[3].set(1),
@@ -1272,7 +1286,7 @@ def test_sundancer_heals_full_hp_grants_shared_weapon_block_and_expires_on_wait_
         activation_done=jnp.ones(12,bool),paralyzed=granted.paralyzed.at[3].set(True))
     expired,_ = attack(waiting,jnp.int32(DEFEND),waiting.battle_key,rolls)
     assert expired.actor == 3 and not jnp.any(expired.healer_wards)
-    assert not (env.unit_traits(expired)[0,3] & 1)
+    assert not jnp.any(env.unit_traits(expired)[:5,3] & 4)
 
 
 def test_sundancer_expiry_in_saved_forms_and_on_caster_lethal_periodic_tick(current_game):
@@ -1295,7 +1309,8 @@ def test_sundancer_expiry_in_saved_forms_and_on_caster_lethal_periodic_tick(curr
     assert end.hp[3] == 0 and end.actor == 1 and not jnp.any(end.healer_wards)
 
 
-def test_sylfid_point_heal_air_ward_and_minimum_hp_representative(current_game):
+def test_sylfid_mass_heal_air_ward_and_minimum_hp_representative(current_game):
+    """GAttacks: Sylfid wards and heal both have REACH=1, so they cover the caster too."""
     from stoix.envs.number_grid_combat import UNITS
     from stoix.envs.number_grid import CONTINUE
     from stoix.tests.number_grid_fixtures import enemy_roster_state
@@ -1306,13 +1321,19 @@ def test_sylfid_point_heal_air_ward_and_minimum_hp_representative(current_game):
     state = compiled_method(env,'_begin_battle')(initial.replace(enemy=jnp.int32(11)))
     state = hero_roster_state(env,state,['possessed','duke','possessed','sylfid','cultist',None])
     state = enemy_roster_state(env,state,['apprentice','squire','squire','archer','archer','archer'])
-    state = state.replace(actor=jnp.int32(3),hp=state.hp.at[0].set(50),priority=jnp.zeros(12).at[0].set(10000.))
+    state = state.replace(actor=jnp.int32(3),hp=state.hp.at[0].set(50).at[3].set(30),
+                          priority=jnp.zeros(12).at[0].set(10000.))
     rolls = jnp.zeros(env.random_size).at[36].set(.99)
     healed,_ = attack(state,jnp.int32(SHOOT),state.battle_key,rolls)
-    assert healed.hp[0] == 105 and healed.last_damage == 55
-    assert healed.healer_wards[0,1] == 8 and env.unit_traits(healed)[0,3] == (1 << 8)
+    # Both wounded units heal by 55, the caster included; the sum is reported.
+    assert healed.hp[0] == 105 and healed.hp[3] == 85 and healed.last_damage == 110
+    assert jnp.all(healed.healer_wards[:5,1] == 8) and not jnp.any(healed.healer_wards[5])
+    assert env.unit_traits(healed)[0,3] == (1 << 8)
     attacked,_ = attack(healed.replace(actor=jnp.int32(6),priority=jnp.zeros(12).at[1].set(10000.)),jnp.int32(CONTINUE),healed.battle_key,rolls)
     assert attacked.hp[0] == 105 and attacked.last_ward & 1 and attacked.wards_used[0] == (1 << 8)
+    # The apprentice's air area attack is blocked on every warded ally, the caster too.
+    chex.assert_trees_all_equal(attacked.hp[:5],healed.hp[:5])
+    assert attacked.wards_used[3] == (1 << 8)
 
 
 def test_travnitsa_transformed_original_buff_expires_with_imp_turn(current_game):
@@ -1373,23 +1394,43 @@ def test_travnitsa_fenrir_uses_reference_stored_original_damage(current_game):
     assert compiled_method(env,'unit_stats')(spent)[0,DAMAGE] == 40 and not spent.powerup[0]
 
 
-def test_deva_roshi_mass_heals_and_grants_four_elements_without_self_or_cure(current_game):
+def test_deva_roshi_heals_and_wards_one_target_with_four_elements_without_cure(current_game):
+    """GAttacks g000aa8133/g000aa8033: REACH=2 (one ally, the caster allowed).
+
+    GmodifL wards g000um0001/0016/0010/0005: air, fire, earth and water.
+    """
     from stoix.envs.number_grid_combat import UNITS
+    from stoix.envs.number_grid_wards import WARD_MASK
     env,initial,_,attack = current_game
     assert MAP['enemy_rosters'][38][4] == 'deva_roshi'
     assert UNITS['deva_roshi']['max_hp'] == 85 and UNITS['deva_roshi']['damage'] == 50
+    assert not env.progression.mass_healers[env.progression.ids['deva_roshi']]
     start = compiled_method(env,'_begin_battle')(initial.replace(enemy=jnp.int32(11)))
     start = hero_roster_state(env,start,['possessed','duke','possessed','deva_roshi','cultist',None])
     start = start.replace(actor=jnp.int32(3),hp=start.hp.at[0].set(1).at[2].set(0).at[3].set(5),
         paralyzed=start.paralyzed.at[0].set(True),priority=jnp.zeros(12).at[6].set(10000.))
     rolls = jnp.zeros(env.random_size).at[36].set(.99)
-    out,_ = attack(start,jnp.int32(SHOOT+3),start.battle_key,rolls)
-    assert out.hp[0] == 51 and out.hp[2] == 0 and out.hp[3] == 5
-    assert out.paralyzed[0] and out.last_target == -1
-    for slot in (0,1,4):
-        assert jnp.all(out.healer_wards[slot] == 8)
-        assert (env.unit_traits(out)[slot,3] & 267) == 267
-    assert not jnp.any(out.healer_wards[2:4]) and not jnp.any(out.healer_wards[5])
+    own,_ = attack(start,jnp.int32(SHOOT+3),start.battle_key,rolls)
+    assert own.hp[3] == 55 and own.hp[0] == 1 and own.hp[2] == 0 and own.last_target == 3
+    assert jnp.all(own.healer_wards[3] == 8) and (env.unit_traits(own)[3,3] & WARD_MASK) == WARD_MASK
+    assert not jnp.any(own.healer_wards[:3]) and not jnp.any(own.healer_wards[4:])
+    ally,_ = attack(start,jnp.int32(SHOOT),start.battle_key,rolls)
+    assert ally.hp[0] == 51 and ally.hp[3] == 5 and ally.paralyzed[0] and ally.last_target == 0
+    assert jnp.all(ally.healer_wards[0] == 8) and not jnp.any(ally.healer_wards[1:])
+    assert (env.unit_traits(ally)[0,3] & WARD_MASK) == WARD_MASK
+
+
+def test_enemy_single_ward_healer_still_wards_without_wounded_allies(current_game):
+    from stoix.tests.number_grid_fixtures import enemy_roster_state
+    env,initial,_,_ = current_game
+    red = compiled_method(env,'_begin_battle')(initial.replace(enemy=jnp.int32(11)))
+    red = enemy_roster_state(env,red,['squire','archer','squire','deva_roshi','archer',None])
+    red = red.replace(actor=jnp.int32(9),hp=red.hp.at[7].set(30))
+    choose = compiled_method(env,'_enemy_action')
+    # A wounded ally is healed first; otherwise the lowest-HP living ally gets wards.
+    assert choose(red,jnp.zeros(6)) == SHOOT+1
+    full = enemy_roster_state(env,red,['squire','archer','squire','deva_roshi','archer',None]).replace(actor=jnp.int32(9))
+    assert choose(full,jnp.zeros(6)) == SHOOT+1  # archer 45 HP < Deva roshi 85 < squire 100
 
 
 @pytest.mark.core

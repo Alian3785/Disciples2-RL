@@ -33,7 +33,7 @@
     if(base&&(current()?.state.summon_owner?.[i]??-1)>=0)base={...base,name:base.name+' · призван'};
     if(base&&current()?.state.imp?.[i])base={...base,name:base.name+' · '+(base.size===2?'Толстый бес':'Бес'),role:'melee',attack_type:'weapon',immunities:0,protections:0,unit_type:'Warrior'};
     const owners=current()?.state.healer_wards?.[i]||[];
-    const temporary=[1,256,8,2].reduce((bits,bit,j)=>bits|(owners[j]?bit:0),0);
+    const temporary=[4,256,8,2].reduce((bits,bit,j)=>bits|(owners[j]?bit:0),0);  // fire, air, water, earth
     const s=current()?.state,potionWard=s&&!s.imp?.[i]&&!s.decay_form?.[i]&&(s.summon_owner?.[i]??-1)<0?(s.copied?.[i]?(s.copy_traits?.[i]?.[3]||0):(s.potion_wards?.[i]||0)):0;
     const bookWard=base?.hero&&i<6&&!s?.imp?.[i]&&!s?.decay_form?.[i]&&!s?.copied?.[i]?(equipmentInfo()?.items?.[s?.equipped?.[3]]?.ward||0):0;
     if(base)base={...base,protections:(base.protections||0)|temporary|potionWard|bookWard};
@@ -46,7 +46,7 @@
   const isSummoner=i=>['Summoner','Occultmaster','Lyf','Laclaan'].includes(profile(i)?.unit_type);
   const targetAction=i=>i<6&&isCopier(current()?.state.actor)?57+i:8+i%6;
   const isPowerSupport=i=>['Travnitsa','Novice','Dwarfdruid','Arhidruid'].includes(profile(i)?.unit_type);
-  const isMassHealer=i=>['Profit','Deva roshi'].includes(profile(i)?.unit_type);
+  const isMassHealer=i=>!!profile(i)?.mass_support;  // GAttacks REACH=1, from the JAX catalogue
   const role=i=>profile(i)?.name||'Пусто';
   const unitName=i=>(i<6?'Ваш ':'Вражеский ')+role(i).toLowerCase()+' '+(i%6+1);
   const partyText=units=>{const counts=new Map();for(const u of units||[])if(u)counts.set(u.name,(counts.get(u.name)||0)+1);return [...counts].map(([name,count])=>name+' × '+count).join(' · ');};
@@ -860,7 +860,7 @@
     $('battle-hint').textContent='Источник атаки, иммунитеты и оставшиеся защиты указаны на карточках. Точность 80% соответствует фактическому шансу попадания 92,2%. Броня и действие защиты уменьшают прошедший урон. Титан занимает обе клетки линии. Служка лечит одного живого союзника на 20 HP.';
     $('fenrir').hidden=!s.in_battle||profile(s.actor)?.unit_type!=='Wolf Lord';
     if(s.in_battle&&s.round===0)$('battle-hint').textContent='Подготовка двойников перед первым раундом: выберите доступного бойца любой стороны или пропустите копирование кнопкой защиты.';
-    $('attack-hint').textContent=profile(s.actor)?.unit_type==='Succub'?'Массовое превращение в бесов без урона: выберите любого доступного живого противника.':profile(s.actor)?.unit_type==='Witch'?'Превращение: выберите живого противника.':profile(s.actor)?.unit_type==='Alchemist'?'Дополнительный ход: выберите живого союзника, кроме алхимика и отступающего.':profile(s.actor)?.unit_type==='Patriach'?'Выберите союзника: лечение живого или однократное воскрешение погибшего с 50% HP.':isPowerSupport(s.actor)?(['Dwarfdruid','Arhidruid'].includes(profile(s.actor)?.unit_type)?'Выберите союзника для усиления и очищения; себя — только для очищения.':'Усиление: выберите другого живого союзника.'):isMassHealer(s.actor)?'Массовое лечение всех живых союзников, кроме самого лекаря. Выберите любую доступную карточку.':isHealer(s.actor)?'Лечение: выберите живого союзника.':isMage(s.actor)?'Массовая атака: выберите любого живого врага.':isWarrior(s.actor)?(mask.slice(8,14).some(Boolean)?'Ход воина: выберите подсвеченного врага для удара мечом.':'Воин не достаёт до врагов. Можно защищаться, ждать или отступить.'):'Нажмите на живого противника, чтобы выстрелить.';
+    $('attack-hint').textContent=profile(s.actor)?.unit_type==='Succub'?'Массовое превращение в бесов без урона: выберите любого доступного живого противника.':profile(s.actor)?.unit_type==='Witch'?'Превращение: выберите живого противника.':profile(s.actor)?.unit_type==='Alchemist'?'Дополнительный ход: выберите живого союзника, кроме алхимика и отступающего.':profile(s.actor)?.unit_type==='Patriach'?'Выберите союзника: лечение живого или однократное воскрешение погибшего с 50% HP.':isPowerSupport(s.actor)?(['Dwarfdruid','Arhidruid'].includes(profile(s.actor)?.unit_type)?'Выберите союзника для усиления и очищения; себя — только для очищения.':'Усиление: выберите другого живого союзника.'):isMassHealer(s.actor)?'Действует на всех живых союзников, включая самого лекаря. Выберите любую доступную карточку.':isHealer(s.actor)?'Лечение: выберите живого союзника.':isMage(s.actor)?'Массовая атака: выберите любого живого врага.':isWarrior(s.actor)?(mask.slice(8,14).some(Boolean)?'Ход воина: выберите подсвеченного врага для удара мечом.':'Воин не достаёт до врагов. Можно защищаться, ждать или отступить.'):'Нажмите на живого противника, чтобы выстрелить.';
     if(isCopier(s.actor))$('attack-hint').textContent='Копирование: выберите доступного бойца любой стороны. Большие юниты и стражи недоступны.';
     if(isSummoner(s.actor))$('attack-hint').textContent='Призыв: выберите свободную клетку своего отряда. Большое существо занимает переднюю и заднюю клетки линии.';
     const winText=map.campaign_objective==='reach_position'?'Победа! Герой достиг цели ⚑.'

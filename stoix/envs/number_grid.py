@@ -527,7 +527,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             profiles = [self.combat_info['heroes']+squad for squad in self.combat_info['enemies']]
             self.damage_caps = jnp.array([[p['damage_cap'] if p else 300 for p in squad] for squad in profiles], jnp.float32)
             self.size_table = jnp.array([[p['size'] if p else 0 for p in squad] for squad in profiles], jnp.int32)
-            self.mass_healers = jnp.array([[bool(p and p['unit_type'] in ('Profit','Deva roshi')) for p in squad] for squad in profiles])
+            self.mass_healers = jnp.array([[bool(p and p['mass_support']) for p in squad] for squad in profiles])
             self.mass_cures = jnp.array([[bool(p and p['unit_type'] == 'Profit' and p['name'] in ('Аббатиса','Прорицательница','Matriarch','Prophetess')) for p in squad] for squad in profiles])
             power_types = {'Travnitsa':1.25,'Novice':1.5,'Dwarfdruid':1.75,'Arhidruid':2.}
             self.power_factors = jnp.array([[power_types.get(p['unit_type'],0.) if p else 0. for p in squad] for squad in profiles])
@@ -539,9 +539,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
             self.patriarchs = jnp.array([[bool(p and p['unit_type'] == 'Patriach') for p in squad] for squad in profiles])
             self.has_patriarchs = any(p and p['unit_type'] == 'Patriach' for squad in profiles for p in squad)
             self.has_powerups = any(p and p['unit_type'] in power_types for squad in profiles for p in squad)
-            ward_types = {'Sundancer':1,'Sylfid':256,'Deva roshi':267}
-            self.healer_ward_elements = jnp.array([[ward_types.get(p['unit_type'],0) if p else 0 for p in squad] for squad in profiles],jnp.uint32)
-            self.has_healer_wards = any(p and p['unit_type'] in ward_types for squad in profiles for p in squad)
+            self.healer_ward_elements = jnp.array([[p['ward_bits'] if p else 0 for p in squad] for squad in profiles],jnp.uint32)
+            self.has_healer_wards = any(p and p['ward_bits'] for squad in profiles for p in squad)
             self.has_protections |= self.has_healer_wards
             self.has_healers = any(p and p['role'] == 'healer' for squad in profiles for p in squad)
             self.has_cures = any(p and (p['unit_type'] in ('Patriach','Dwarfdruid','Arhidruid') or (p['unit_type'] == 'Profit' and p['name'] in ('Аббатиса','Прорицательница','Matriarch','Prophetess'))) for squad in profiles for p in squad)
@@ -2349,6 +2348,14 @@ class NumberGrid(Summoning, NumericNumberGrid):
             wounded = (state.hp[6:] > 0) & ~state.escaped[6:] & (state.hp[6:] < self._combat_stats(state)[6:, HP])
             score = jnp.where(wounded, state.hp[6:] + random_values[:6] * .5, 1e9)
             heal = jnp.where(jnp.any(wounded), SHOOT + jnp.argmin(score).astype(jnp.int32), DEFEND)
+            if self.has_healer_wards:
+                # A single-target ward healer (Deva roshi) still bestows its wards
+                # when nobody is wounded: lowest-HP living ally, caster included.
+                living = (state.hp[6:] > 0) & ~state.escaped[6:]
+                warder = self._effect_value(state, 'healer_ward_elements')[state.actor] > 0
+                spare = jnp.where(living, state.hp[6:] + random_values[:6] * .5, 1e9)
+                heal = jnp.where(~jnp.any(wounded) & warder & jnp.any(living),
+                                 SHOOT + jnp.argmin(spare).astype(jnp.int32), heal)
             heal = jnp.where(self._actor_mass_healer(state),SHOOT,heal)
             action = jnp.where(self._actor_is_healer(state), heal, action)
             if self.has_powerups:
@@ -2577,11 +2584,14 @@ class NumberGrid(Summoning, NumericNumberGrid):
                 hp = vampiric_heal(hp,stats[:,HP],state.escaped,actor,pool,leech_mode == 2)
             hit = attack & jnp.any(targets & hits)
             if self.has_healers:
-                # Mass healing excludes the caster. Only the two native Profit
-                # cure forms cleanse; the ordinary Cleric does not remove effects.
+                # An L_ALL support (GAttacks REACH=1) heals, cures and wards every
+                # living ally, caster included: Discipl2.exe target lists and the
+                # heal/cure/ward checks never exclude the attacker (see
+                # support_reaches_all). Only the two native Profit cure forms
+                # cleanse; the ordinary Cleric does not remove effects.
                 mass = self._actor_mass_healer(state)
                 allies = (self.slots < 6) == (actor < 6)
-                recipients = allies & (hp > 0) & ~state.escaped & jnp.where(mass,self.slots != actor,self.slots == target)
+                recipients = allies & (hp > 0) & ~state.escaped & (mass | (self.slots == target))
                 cure_caster = (self.progression.mass_cures[effective_ids[actor]] if self.progression_enabled
                                else self.mass_cures[state.enemy,actor])
                 cleanse = recipients & attack & healer & cure_caster
