@@ -37,6 +37,25 @@ def slots(env, state, *keys):
                          battle_item_used=jnp.zeros(2, bool))
 
 
+@pytest.mark.core
+@pytest.mark.parametrize('armor,defended,expected', [(50, False, 38), (0, True, 38), (90, True, 8)])
+def test_item_damage_subtracts_integer_absorbed_part(default_game, armor, defended, expected):
+    from stoix.envs.number_grid_combat import ARMOR
+    env, initial, _, _ = default_game
+    state = compiled_method(env, '_begin_battle')(initial.replace(enemy=jnp.int32(11)))
+    state = enemy_roster_state(env, state, ['goblin']*6)
+    state = slots(env, owned(env, state, 'vampire_orb'), 'vampire_orb', None)
+    state = state.replace(actor=jnp.int32(1), unit_levels=state.unit_levels.at[1].set(10),
+        hp=state.hp.at[6:].set(1000), potion_bonus=state.potion_bonus.at[6:, ARMOR].set(armor),
+        defended=state.defended.at[6:].set(defended))
+    action = jnp.int32(env.battle_item_rules.use_start+12)
+    assert compiled_method(env, 'action_mask')(state)[action]
+    after, _ = compiled_method(env, '_battle_step')(
+        state, action, state.battle_key, jnp.zeros(env.random_size))
+    assert after.hp[6] == 1000-expected and after.last_damage == expected*6
+    assert after.battle_items[0] == -1
+
+
 def allowed(mask, start, end):
     return [NAMES[i] for i in range(start, end) if mask[i]]
 

@@ -87,12 +87,11 @@ RULES = {
         'Страж столицы получает +50 брони в бою (GVars PROT_CAP), город — бонус укрепления', 'DBF/EXE',
         'number_grid_territory.py:CAPITAL_ARMOR, defender_armor; docs/DEFAULT_MAP.md', 'original'),
     'armor_cap': _rule(
-        'Эффективная броня не выше 90%: урон × (1 − min(броня, 90)/100)', 'Python-референс',
-        'number_grid_progression.py:damage (clip 0..90); docs/LEGIONS_DUKE.md', 'reference',
-        'Ударить стража с бронёй 100 (50 + столица): урон должен быть 10% силы удара.'),
+        'Эффективная броня, включая Defend, не выше 90%', 'DBF/EXE',
+        'Discipl2.exe sub_5D35F3; GVars DFENDBONUS=50; docs/ARCHER_BATTLES.md', 'original'),
     'damage_roll': _rule(
-        'Урон = round((сила + 0…5) × (1 − броня/100)), Defend ×0,5, округление Python', 'Python-референс',
-        'number_grid_progression.py:_damage_rolls', 'reference'),
+        'D = min(сила после модификаторов + 0…5, предел); урон = D − trunc(D × броня/100)', 'EXE',
+        'Discipl2.exe sub_5D3715, sub_65C047, sub_5840EC; docs/ARCHER_BATTLES.md', 'original'),
     'pair_roll': _rule(
         'Попадание: два целых броска 0…99, успех при a + b < 2 × точность', 'Python-референс',
         'number_grid_combat.py:accuracy_hits', 'reference',
@@ -646,7 +645,7 @@ def guardian_model(world, wounds=0):
     regen = int(row.get('regeneration', game.get('REGEN', 0)) or 0)
     return dict(
         key=world.guardian_key, name=row['name'], level=world.guardian_level, max_hp=int(base[HP]),
-        hp=max(1, int(base[HP]) - int(wounds)), damage=int(min(base[DAMAGE], cap)),
+        hp=max(1, int(base[HP]) - int(wounds)), damage=int(min(base[DAMAGE], cap)), cap=cap,
         weak_damage=int(min(round(base[DAMAGE] * WEAKEN_FACTOR), cap)), accuracy=base[ACCURACY],
         armor=armor, effective_armor=int(min(max(armor, 0), ARMOR_CAP)), initiative=base[INITIATIVE],
         source=row['attack_type'], role=row['role'], immunities=set(row.get('immunities', [])),
@@ -665,12 +664,15 @@ def hit_chance(accuracy):
     return sum(min(s, 198 - s) + 1 for s in range(199) if s < limit) / 10000
 
 
-def hit_damage(power, armor, defended=False):
-    """damage_rolls for the six bonus draws 0..5 (Python round, armour clipped to 0..90)."""
-    power, armor = int(min(power, 400)), int(min(max(armor, 0), ARMOR_CAP))
+def hit_damage(power, armor, defended=False, cap=300):
+    """Six capped raw rolls, minus the integer absorbed part, as in JAX combat."""
+    power, armor = int(min(power, cap)), int(min(max(armor, 0), ARMOR_CAP))
     if power <= 0:
         return [0] * 6
-    return [int(round((power + b) * (1 - armor / 100) * (.5 if defended else 1.))) for b in range(6)]
+    if defended:
+        armor = min(ARMOR_CAP, armor+(100-armor)*50//100)
+    raw = [min(power+b, cap) for b in range(6)]
+    return [int(d-d*armor//100) for d in raw]
 
 
 def before_chance(initiative, other):
@@ -720,7 +722,7 @@ def vs_guardian(world, unit, guard, worn, defend=False, buff=1.):
     notes = []
     dist = {0: 1.}
     if not zero and power > 0:
-        values = hit_damage(power, guard['effective_armor'])
+        values = hit_damage(power, guard['effective_armor'], cap=unit['cap'])
         if mech['centaur']:
             values = [v + round(power / 20) for v in values]  # bypasses armour on a connected hit
         single = defaultdict(float, {0: 1 - hit})
@@ -777,7 +779,7 @@ def vs_guardian(world, unit, guard, worn, defend=False, buff=1.):
     for kind, power_g in (('n', guard['damage']), ('w', guard['weak_damage'])):
         for guarded in (False, True):
             values = [0] * 6 if guard['source'] in unit['immunities'] else hit_damage(
-                power_g, stats[ARMOR], guarded)
+                power_g, stats[ARMOR], guarded, cap=guard['cap'])
             strike[kind, guarded] = values
     expected = _mean(dist)
     dot_round = stationary_dot(dot['p'], dot['long']) * dot['amount'] if dot else 0.

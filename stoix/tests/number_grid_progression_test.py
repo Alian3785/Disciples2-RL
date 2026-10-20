@@ -276,7 +276,7 @@ def test_magistrate_clears_six_slot_xp_blocking_observation(default_game):
     assert not jnp.any(flags(copied))
 
 
-def test_dynamic_armor_damage_retains_python_rounding(env):
+def test_dynamic_armor_damage_uses_integer_defend_bonus(env):
     s = battle(env)
     ids = s.unit_ids.at[0].set(env.progression.ids['infernal_knight']).at[6].set(env.progression.ids['defender_of_faith'])
     levels = s.unit_levels.at[0].set(11).at[6].set(11)
@@ -285,8 +285,8 @@ def test_dynamic_armor_damage_retains_python_rounding(env):
         jnp.repeat(jnp.array([False,True]),6),jnp.tile(jnp.arange(6),2))
     stats = compiled_method(env,'unit_stats')(s)
     assert stats[0,1] == 165 and stats[6,3] == 35
-    expected = [round((165+bonus)*.65*(.5 if guard else 1))
-                for guard in (False,True) for bonus in range(6)]
+    # Defend: 35 + trunc((100-35)*50/100) = 67 armor, not 67.5.
+    expected = [108, 108, 109, 110, 110, 111, 55, 55, 56, 56, 56, 57]
     chex.assert_trees_all_equal(damage,jnp.array(expected))
 
 
@@ -396,8 +396,7 @@ def test_duke_damage_cap_and_passive_armor_affect_real_attacks(env):
     guards = jnp.tile(jnp.repeat(jnp.array([False,True]),6),2)
     bonuses = jnp.tile(jnp.arange(6),4)
     actual = jax.jit(env.progression.damage)(s,actors,jnp.full(24,6),guards,bonuses)
-    expected = [round((damage+bonus)*.8*(.5 if guard else 1))
-        for damage in (300,400) for guard in (False,True) for bonus in range(6)]
+    expected = [240]*6 + [120]*6 + [320]*6 + [160]*6
     chex.assert_trees_all_equal(actual,jnp.array(expected))
     before = s.replace(unit_levels=s.unit_levels.at[1].set(12))
     after = s.replace(unit_levels=s.unit_levels.at[1].set(13))

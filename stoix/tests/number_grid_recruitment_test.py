@@ -71,6 +71,66 @@ def test_all_faction_offers_prices_buildings_and_placement(current_game, faction
 
 
 @pytest.mark.core
+@pytest.mark.parametrize('hero', ['duke', 'g000uu0072', 'g000uu0071'],
+                         ids=['relocated-warrior', 'mage', 'scout'])
+def test_faction_and_mercenary_hire_into_free_front_center(current_game, hero):
+    """Manual p. 10: unoccupied positions can be used; the hero does not reserve one."""
+    env, initial, step, _ = current_game
+    rules = env.recruitment
+    mask = compiled_method(env, 'action_mask')
+    quotes = compiled_method(rules, 'quotes')
+    # Both side positions and the entire rear row are occupied; only slot 1 is free.
+    base = hero_roster_state(env, initial,
+        ['possessed', None, 'possessed', hero, 'cultist', 'cultist'])
+    base = base.replace(gold=jnp.int32(1000), unit_levels=base.unit_levels.at[3].set(6))
+    base = base.replace(native_ids=base.unit_ids, native_levels=base.unit_levels)
+    for offer in (0, 5):
+        position = rules.positions[0] if offer == 0 else env.site_rules.approaches['mercenary'][0]
+        before = base.replace(position=position)
+        action = jnp.int32(rules.start+offer)
+        quote = quotes(before)
+        assert quote['leadership'][2] == 1 and quote['targets'][offer] == 1
+        assert mask(before)[action]
+        after, _ = step(before, action)
+        assert after.last_event == HIRED and after.last_target == 1
+        chex.assert_trees_all_equal(after.unit_ids, before.unit_ids.at[1].set(rules.ids[offer]))
+        assert after.native_ids[1] == rules.ids[offer] and after.hp[1] > 0
+        assert after.gold == before.gold-quote['prices'][offer]
+        assert after.movement_points == before.movement_points and after.day == before.day
+        expected_stock = before.mercenary_stock
+        if offer == 5:
+            expected_stock = expected_stock.at[0].add(-1)
+        chex.assert_trees_all_equal(after.mercenary_stock, expected_stock)
+        assert not mask(after)[action]
+
+
+@pytest.mark.core
+@pytest.mark.parametrize('occupant', ['possessed', 'g000uu0055'], ids=['small', 'large'])
+@pytest.mark.parametrize('dead', [False, True], ids=['alive', 'dead'])
+def test_occupied_front_center_blocks_faction_and_mercenary_hire(current_game, occupant, dead):
+    env, initial, step, _ = current_game
+    rules = env.recruitment
+    mask = compiled_method(env, 'action_mask')
+    quotes = compiled_method(rules, 'quotes')
+    base = hero_roster_state(env, initial,
+        ['possessed', occupant, 'possessed', 'g000uu0072', None, None])
+    base = base.replace(gold=jnp.int32(1000), unit_levels=base.unit_levels.at[3].set(6),
+                        hp=base.hp.at[1].set(0 if dead else base.hp[1]))
+    base = base.replace(native_ids=base.unit_ids, native_levels=base.unit_levels)
+    for offer in (0, 5):
+        position = rules.positions[0] if offer == 0 else env.site_rules.approaches['mercenary'][0]
+        before = base.replace(position=position)
+        action = jnp.int32(rules.start+offer)
+        quote = quotes(before)
+        assert quote['leadership'][2] >= 1 and quote['targets'][offer] == -1
+        assert not mask(before)[action]
+        after, _ = step(before, action)
+        for field in ('unit_ids', 'native_ids', 'unit_levels', 'hp', 'gold', 'mercenary_stock',
+                      'movement_points', 'day'):
+            chex.assert_trees_all_equal(getattr(after, field), getattr(before, field))
+
+
+@pytest.mark.core
 def test_dismiss_rehire_rewards_and_effect_cleanup(current_game):
     env, initial, advance, _ = current_game
     rules = env.recruitment
@@ -112,6 +172,14 @@ def test_large_units_dead_slots_and_mask_step_agreement(current_game):
     assert large.unit_ids[0] == env.progression.ids['g000uu0055'] and large.unit_ids[3] == 0
     assert rules.composition(large).tolist() == [3,2,1,2]
     assert float(ts.reward) == pytest.approx(2.949)
+    center = hero_roster_state(env, base, ['possessed', None, 'possessed', 'duke', None, None])
+    center = center.replace(unit_levels=center.unit_levels.at[3].set(6))
+    assert rules.targets(center)[2] == 1 and available(center)[rules.start+2]
+    center_large, _ = advance(center, jnp.int32(rules.start+2))
+    assert center_large.last_target == 1
+    assert center_large.unit_ids[1] == rules.ids[2] and center_large.unit_ids[4] == 0
+    # A zero ID behind a large unit is reserved, so the next rear recruit goes to slot 5.
+    assert rules.targets(center_large)[1] == 5
     dead = large.replace(hp=large.hp.at[0].set(0),position=jnp.array([3,2]))
     assert rules.composition(dead)[1] == 2
     assert available(dead)[rules.dismiss_start] and available(dead)[rules.dismiss_start+3]

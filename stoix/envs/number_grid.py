@@ -13,6 +13,7 @@ import jax.numpy as jnp
 from flax import struct
 from stoix.envs.number_grid_combat import (
     HP, DAMAGE, ACCURACY, ARMOR, INITIATIVE, MELEE, AREA, HEALER, build_combat_tables, accuracy_hits, can_revive,
+    armor_with_defend, capped_damage_bonus, damage_after_armor,
 )
 from stoix.envs.number_grid_capital import CapitalRules, HEAL_START, REVIVE_START, CAPITAL_ACTIONS
 from stoix.envs.number_grid_potions import PotionRules, POTION_START, merchants, scenario_potions
@@ -524,6 +525,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
              self.has_protections) = build_combat_tables(game_map)
             self.shatter_armor_ids = jnp.array(self.combat_info.pop('_shatter_armor_ids'), jnp.int32)
             profiles = [self.combat_info['heroes']+squad for squad in self.combat_info['enemies']]
+            self.damage_caps = jnp.array([[p['damage_cap'] if p else 300 for p in squad] for squad in profiles], jnp.float32)
             self.size_table = jnp.array([[p['size'] if p else 0 for p in squad] for squad in profiles], jnp.int32)
             self.mass_healers = jnp.array([[bool(p and p['unit_type'] in ('Profit','Deva roshi')) for p in squad] for squad in profiles])
             self.mass_cures = jnp.array([[bool(p and p['unit_type'] == 'Profit' and p['name'] in ('Аббатиса','Прорицательница','Matriarch','Prophetess')) for p in squad] for squad in profiles])
@@ -1360,7 +1362,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
         if self.has_weakening or self.has_powerups or self.has_potion_buffs or self.items_enabled or self.has_spell_mods:
             damage = jnp.rint(values[:,DAMAGE]*jnp.where(state.weakened,self._weakening_factor(state),1.))
             caps = (self.progression.stat_caps[self._effective_ids(state),DAMAGE] if self.progression_enabled
-                    else jnp.full(12,300.))
+                    else self.damage_caps[state.enemy])
             caps = jnp.where(state.imp | state.fenrir,300.,caps)
             if self.has_powerups:
                 damage = jnp.where(state.primary_override >= 0,state.primary_override,damage)
@@ -2502,6 +2504,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
                                                  state.imp if self.has_witches else None,
                                                  stats[target_slots,ARMOR] if self.has_potion_buffs or self.items_enabled or self.has_spell_mods else None)
             else:
+                cap = jnp.where(state.imp[actor] | state.fenrir[actor], 300., self.damage_caps[state.enemy, actor])
+                bonuses = capped_damage_bonus(stats[actor, DAMAGE], bonuses, cap)
                 damage_id = self.damage_ids[state.enemy, actor]
                 if self.has_wolf_lord:
                     damage_id = jnp.where(state.fenrir[actor], self.combat_info['fenrir_damage_id'], damage_id)
@@ -2515,9 +2519,10 @@ class NumberGrid(Summoning, NumericNumberGrid):
                     armor_id = jnp.where(state.imp[target_slots], 0, armor_id)
                 damage = self.damage_rolls[damage_id, armor_id,
                                            state.defended[target_slots].astype(jnp.int32), bonuses]
-            if self.has_weakening and not self.progression_enabled:
-                amount = (stats[actor,DAMAGE]+bonuses)*(1.-jnp.minimum(stats[target_slots,ARMOR],90.)/100.)
-                damage = jnp.where(stats[actor,DAMAGE] > 0,jnp.rint(amount*jnp.where(state.defended[target_slots],.5,1.)),0).astype(jnp.int32)
+            if (self.has_weakening or self.has_powerups) and not self.progression_enabled:
+                armor = armor_with_defend(stats[target_slots,ARMOR], state.defended[target_slots])
+                damage = jnp.where(stats[actor,DAMAGE] > 0,
+                                   damage_after_armor(stats[actor,DAMAGE]+bonuses, armor), 0)
             connected = attack & ~healer & targets & hits
             ghost_mode = self._actor_ghost_mode(state)
             # AOE status-only attacks reject an existing matching flag before

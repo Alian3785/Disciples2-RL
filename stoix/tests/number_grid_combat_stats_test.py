@@ -1,4 +1,4 @@
-"""Basic combat characteristics, Python-reference arithmetic and turn scheduling."""
+"""Basic combat characteristics, original damage arithmetic and turn scheduling."""
 from stoix.tests.number_grid_fixtures import compiled_method, basic_environment
 import copy
 import json
@@ -13,7 +13,9 @@ from stoix.tests.number_grid_fixtures import MAP, hero_roster_state
 from stoix.envs.number_grid import (
     NumberGrid, SHOOT, DEFEND, WAIT, RETREAT, CONTINUE, HIT, MISS,
 )
-from stoix.envs.number_grid_combat import accuracy_hits, HP, DAMAGE, ACCURACY, ARMOR, INITIATIVE
+from stoix.envs.number_grid_combat import (
+    accuracy_hits, armor_with_defend, build_combat_tables, HP, DAMAGE, ACCURACY, ARMOR, INITIATIVE,
+)
 
 
 def battle(hero=None, enemy=None, **overrides):
@@ -82,17 +84,23 @@ def test_two_roll_accuracy_matches_exhaustive_discrete_distribution(chance, coun
 @pytest.mark.core
 @pytest.mark.parametrize('damage,armor,bonus,defended,expected', [
     (25, 0, 0, False, 25), (25, 0, 5, False, 30),
-    (25, 0, 0, True, 12), (25, 0, 2, True, 14),
+    (25, 0, 0, True, 13), (25, 0, 2, True, 14),
+    (25, 50, 0, False, 13), (25, 30, 0, False, 18),
+    (1, 90, 0, False, 1), (1, 90, 0, True, 1),
     (25, 40, 5, False, 18), (25, 40, 5, True, 9),
-    (15, 70, 0, False, 5),  # Python float/round: 4.500000000000001, not 4.
-    (300, 90, 5, True, 15), (400, 100, 5, False, 30),
-    (0, 0, 5, False, 0),
+    (15, 70, 0, False, 5),  # 15 - trunc(15*70/100), independent of float ties.
+    (299, 0, 5, False, 300), (300, 0, 5, False, 300),
+    (300, 90, 5, True, 30), (400, 100, 5, False, 30),
+    (100, 0, 0, True, 50), (100, 35, 0, True, 33), (100, 50, 0, True, 25),
+    (100, 79, 0, True, 11), (100, 80, 0, True, 10),
+    (100, 85, 0, True, 10), (100, 90, 0, True, 10),
+    (0, 0, 5, False, 0), (0, 90, 5, True, 0),
 ])
-def test_damage_bonus_cap_armor_defend_and_python_rounding(current_game, damage, armor, bonus, defended, expected):
+def test_damage_bonus_cap_armor_defend_and_original_rounding(current_game, damage, armor, bonus, defended, expected):
     env, initial, _, fight = current_game
     state = compiled_method(env,'_begin_battle')(initial.replace(enemy=jnp.int32(0)))
     # Dynamic combat modifiers cover the same arithmetic without constructing
-    # ten legacy maps with different baked-in stats. The base Squire has armor 0.
+    # separate legacy maps with different baked-in stats. The base Squire has armor 0.
     state = state.replace(actor=jnp.int32(0),hp=state.hp.at[6].set(1000),
         primary_override=state.primary_override.at[0].set(damage),
         potion_bonus=state.potion_bonus.at[6,ARMOR].set(armor),
@@ -101,6 +109,111 @@ def test_damage_bonus_cap_armor_defend_and_python_rounding(current_game, damage,
     result,_ = fight(state,jnp.int32(SHOOT),state.battle_key,values)
     assert result.last_damage == expected and result.hp[6] == 1000 - expected
     assert result.last_event == HIT
+
+
+@pytest.mark.core
+@pytest.mark.parametrize('key,power,expected', [
+    ('duke', 399, 400), ('duke', 400, 400), ('duke', 600, 400),
+    ('g000uu0072', 299, 300), ('g000uu0072', 600, 300),  # Mage lacks Heavy Strike.
+])
+def test_final_damage_cap_uses_attacker_profile(current_game, key, power, expected):
+    env, initial, _, fight = current_game
+    state = compiled_method(env, '_begin_battle')(initial.replace(enemy=jnp.int32(0)))
+    uid = env.progression.ids[key]
+    state = state.replace(actor=jnp.int32(1), unit_ids=state.unit_ids.at[1].set(uid),
+        unit_levels=state.unit_levels.at[1].set(env.progression.base_levels[uid]),
+        hp=state.hp.at[6:].set(0).at[6].set(1000),
+        primary_override=state.primary_override.at[1].set(power))
+    values = jnp.zeros(env.random_size).at[24:30].set(.99)
+    result, _ = fight(state, jnp.int32(SHOOT), state.battle_key, values)
+    assert result.last_damage == expected and result.hp[6] == 1000-expected
+
+
+@pytest.mark.core
+@pytest.mark.parametrize('actor,target,power,weakened,expected', [
+    (0, 6, 600, False, 150), (0, 6, 600, True, 150),
+    (0, 6, 400, True, 137),  # round(400*.67)+5 = 273; armor absorbs 136.
+    (6, 0, 600, True, 150),  # The same cap applies to the opponent.
+])
+def test_final_damage_cap_after_buffs_and_weakening_before_armor(
+        current_game, actor, target, power, weakened, expected):
+    env, initial, _, fight = current_game
+    state = compiled_method(env, '_begin_battle')(initial.replace(enemy=jnp.int32(0)))
+    intrinsic = env.progression.raw_stats(state.unit_ids, state.unit_levels)[actor, DAMAGE]
+    state = state.replace(actor=jnp.int32(actor), hp=state.hp.at[target].set(1000),
+        potion_bonus=state.potion_bonus.at[actor, DAMAGE].set(power-intrinsic).at[target, ARMOR].set(50),
+        weakened=state.weakened.at[actor].set(weakened))
+    if actor >= 6:
+        # Make the desired front target uniquely weakest for the enemy AI.
+        state = state.replace(hp=state.hp.at[1:3].set(2000))
+    values = jnp.zeros(env.random_size).at[24:30].set(.99)
+    result, _ = fight(state, jnp.int32(SHOOT), state.battle_key, values)
+    assert result.last_damage == expected and result.hp[target] == 1000-expected
+
+
+@pytest.mark.parametrize('power,hero,armor,defended,bonus,expected', [
+    (25, False, 50, False, 0., 13),
+    (25, False, 0, True, 0., 13),
+    (300, False, 0, False, .99, 300),
+    (400, True, 0, False, .99, 400),
+    (400, True, 90, True, .99, 40),
+])
+def test_static_attacks_apply_final_cap_and_integer_armor(power, hero, armor, defended, bonus, expected):
+    env, state = battle(hero=[dict(damage=power, hero=hero)]+[{}]*5,
+                        enemy=[dict(max_hp=1000, armor=armor)]+[{}]*5)
+    state = state.replace(defended=state.defended.at[6].set(defended))
+    result, _ = compiled_method(env, '_battle_step')(
+        state, jnp.int32(SHOOT), state.battle_key, rolls(bonus=bonus))
+    assert result.last_damage == expected and result.hp[6] == 1000-expected
+
+
+@pytest.mark.core
+def test_defend_armor_cap_in_static_and_progression_tables(current_game):
+    """DFENDBONUS=50 and sub_5D35F3: truncate the armor bonus before the 90 cap."""
+    env = current_game[0]
+    armors = [0, 35, 79, 80, 85, 90]
+    config = copy.deepcopy(MAP)
+    config['hero_combat_stats'] = [dict(damage=100, armor=armor) for armor in armors]
+    _, damage_ids, armor_ids, table, *_ = build_combat_tables(config)
+    for defended, expected in ((0, [100, 65, 21, 20, 15, 10]), (1, [50, 33, 11, 10, 10, 10])):
+        np.testing.assert_array_equal(table[damage_ids[0, :6], armor_ids[0, :6], defended, 0],
+                                      expected)
+        np.testing.assert_array_equal(env.progression.damage_rolls[100, jnp.array(armors), defended, 0],
+                                      expected)
+    np.testing.assert_array_equal(
+        jax.jit(armor_with_defend)(jnp.array(armors), jnp.ones(6, bool)),
+        [50, 67, 89, 90, 90, 90])
+
+
+@pytest.mark.core
+@pytest.mark.parametrize('fort,shreds,expected', [(40, 0, 10), (40, 1, 13), (0, 1, 33)])
+def test_defend_uses_armor_after_fortification_and_shatter(current_game, fort, shreds, expected):
+    env, initial, _, fight = current_game
+    state = compiled_method(env, '_begin_battle')(initial.replace(enemy=jnp.int32(0)))
+    state = state.replace(actor=jnp.int32(0), hp=state.hp.at[6].set(1000),
+        primary_override=state.primary_override.at[0].set(100),
+        potion_bonus=state.potion_bonus.at[6, ARMOR].set(50),
+        battle_fort_armor=jnp.int32(fort), armor_shreds=state.armor_shreds.at[6].set(shreds),
+        defended=state.defended.at[6].set(True))
+    result, _ = fight(state, jnp.int32(SHOOT), state.battle_key, jnp.zeros(env.random_size))
+    assert result.last_damage == expected and result.hp[6] == 1000-expected
+
+
+def test_nonprogression_defend_with_weakening():
+    env, state = battle(
+        hero=[{}, dict(damage=200), {}, {}],
+        enemy=[dict(max_hp=1000, armor=90)] + [{}]*5,
+        hero_roster=['tiamat', 'duke', 'possessed', None, 'novice', None], hero_units=4)
+    assert env.has_weakening and env.has_powerups and not env.progression_enabled
+    state = state.replace(actor=jnp.int32(1), defended=state.defended.at[6].set(True))
+    fight = compiled_method(env, '_battle_step')
+    for weakened, override, bonus, expected in ((False, -1, 0., 20), (True, -1, 0., 14),
+                                               (False, 600, .99, 40)):
+        before = state.replace(weakened=state.weakened.at[1].set(weakened),
+                               primary_override=state.primary_override.at[1].set(override))
+        values = jnp.zeros(env.random_size).at[24:30].set(bonus)
+        result, _ = fight(before, jnp.int32(SHOOT), before.battle_key, values)
+        assert result.last_damage == expected and result.hp[6] == 1000-expected
 
 
 def test_mage_rolls_hit_and_damage_independently_for_each_target():

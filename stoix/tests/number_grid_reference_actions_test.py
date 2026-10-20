@@ -316,10 +316,10 @@ def test_centaur_critical_integer_rounding_ignores_secondary_power_armor_and_def
     actions = jnp.array([SHOOT,SHOOT,SHOOT+1,SHOOT+2,SHOOT,SHOOT,SHOOT],jnp.int32)
     rolls = jnp.zeros((7,env.random_size)).at[1,12:24].set(.99).at[:,36:].set(.99)
     result, _ = scalar_battle(env)(states,actions,states.battle_key,rolls)
-    # 100 damage: defended 90 armour removes 5 HP, then an unreduced extra 5.
-    # At level 4: 112 damage -> 6 primary + round(5.6)=6 extra. Imp has no crit.
-    chex.assert_trees_all_equal(result.last_damage, jnp.array([10,0,0,0,3,12,1]))
-    chex.assert_trees_all_equal(result.hp[:,6], jnp.array([90,100,100,100,0,88,99]))
+    # Defend cannot raise 90 armor further: 100 damage removes 10 HP, plus 5 critical.
+    # At level 4: 112 - trunc(112*.9) = 12 primary + round(5.6)=6 extra. Imp has no crit.
+    chex.assert_trees_all_equal(result.last_damage, jnp.array([15,0,0,0,3,18,2]))
+    chex.assert_trees_all_equal(result.hp[:,6], jnp.array([85,100,100,100,0,82,98]))
     assert compiled_method(env,'unit_stats')(jax.tree.map(lambda a:a[5],states))[1,DAMAGE] == 112
     assert result.wards_used[0,6] == 0 and result.wards_used[2,7] == 1
     assert result.last_immune[3] == 1 << 8
@@ -661,7 +661,7 @@ def test_bone_lord_leech_overkill_sharing_defend_miss_and_imp(current_game):
         defended=states.defended.at[3,1].set(True),imp=states.imp.at[5,6].set(True))
     rolls = jnp.zeros((7,env.random_size)).at[:,36].set(.99).at[4,12:24].set(.99)
     result,_ = scalar_battle(env)(states,jnp.full(7,CONTINUE,jnp.int32),states.battle_key,rolls)
-    chex.assert_trees_all_equal(result.last_damage,jnp.array([50,50,50,32,0,20,1]))
+    chex.assert_trees_all_equal(result.last_damage,jnp.array([50,50,50,33,0,20,1]))
     chex.assert_trees_all_equal(result.hp[:,6],jnp.array([375,400,400,366,350,350,350]))
     chex.assert_trees_all_equal(result.hp[:,jnp.array([7,9,10])],jnp.array([
         [44,30,45],[45,39,50],[45,45,50],[44,30,45],[44,30,45],[44,30,45],[44,30,45]]))
