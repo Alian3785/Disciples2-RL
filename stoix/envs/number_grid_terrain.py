@@ -10,7 +10,9 @@ from stoix.envs.number_grid_sites import site_entries
 PLAIN, ROAD, FOREST, WATER = range(4)
 KINDS = ('plain', 'road', 'forest', 'water')
 COSTS = (2, 1, 4, 6)
-FLYING_HERO_IDS = frozenset(('g000uu0019', 'g000uu0022', 'g000uu0072', 'g000uu0099'))
+# Death Knight has the Pegasus Knight's movement abilities in installed Gmabi.dbf.
+# Source rows and the game's flight description: docs/validation/death-knight-flight-20261020.json.
+FLYING_HERO_IDS = frozenset(('g000uu0019', 'g000uu0022', 'g000uu0072', 'g000uu0096', 'g000uu0099'))
 
 
 class TerrainRules:

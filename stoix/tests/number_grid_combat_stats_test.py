@@ -9,7 +9,7 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
-from stoix.tests.number_grid_fixtures import MAP, hero_roster_state
+from stoix.tests.number_grid_fixtures import MAP, hero_roster_state, enemy_roster_state
 from stoix.envs.number_grid import (
     NumberGrid, SHOOT, DEFEND, WAIT, RETREAT, CONTINUE, HIT, MISS,
 )
@@ -264,34 +264,90 @@ def test_initiative_is_additive_rerolled_and_resolves_equal_values_without_side_
     assert int(jnp.argmax(env._round_priority(r, 11))) == 6
     assert int(jnp.argmax(env._round_priority(r.at[0].set(.08), 11))) == 0
     # Completing the round draws a new priority vector, even if the last unit waited.
-    state = state.replace(turn_phase=jnp.full(12, 2).at[0].set(1))
+    state = state.replace(turn_phase=jnp.full(12, 2).at[0].set(1),priority=state.priority.at[0].set(-1.))
     result = attack(env, state, jnp.full(36, .5), DEFEND)
     assert result.round == 2
     np.testing.assert_array_equal(result.priority, env._round_priority(jnp.full(36, .5), 11))
 
 
 @pytest.mark.core
-def test_wait_is_once_per_round_and_reverses_the_rolled_queue(current_game):
+@pytest.mark.parametrize('priorities,order', [
+    ([160., 150., 140.], (0, 1, 2)),
+    ([140., 160., 150.], (1, 2, 0)),
+    ([150., 150., 150.], (0, 1, 2)),
+])
+def test_wait_is_once_per_round_and_preserves_wait_order(current_game, priorities, order):
+    """EXE 0x65A73E appends waiters; initiative and equal rolls cannot reverse them."""
     env, initial, _, fight = current_game
-    state = compiled_method(env,'_begin_battle')(initial.replace(enemy=jnp.int32(0))).replace(actor=jnp.int32(0))
+    state = compiled_method(env,'_begin_battle')(initial.replace(enemy=jnp.int32(0))).replace(actor=jnp.int32(order[0]))
     def attack(env, state, values, action):
         values = jnp.pad(values, (0, env.random_size-values.size))
         return fight(state, jnp.int32(action), state.battle_key, values)[0]
     mask = compiled_method(env,'action_mask')
     state = state.replace(hp=jnp.array([45, 100, 45, 0, 0, 0, 25, 0, 0, 0, 0, 0]),
-                          priority=jnp.array([160., 150., 140., 0, 0, 0, 130., 0, 0, 0, 0, 0]))
-    for actor in (0, 1, 2):
+                          priority=jnp.array([*priorities, 0, 0, 0, 130., 0, 0, 0, 0, 0]))
+    for actor in order:
         assert state.actor == actor
         state = attack(env, state, rolls(), WAIT)
     assert state.actor == 6
     state = attack(env, state, rolls(.99, .99), CONTINUE)
-    for actor in (2, 1, 0):
+    for actor in order:
         assert state.actor == actor and not mask(state)[WAIT]
         rejected, _ = compiled_method(env,'step')(state, jnp.int32(WAIT))
         assert rejected.actor == actor
         np.testing.assert_array_equal(rejected.battle_key, state.battle_key)
         state = attack(env, state, rolls(), DEFEND)
     assert state.round == 2 and mask(state)[WAIT]
+
+
+@pytest.mark.core
+def test_asteroth_wait_leaves_one_attack_and_cannot_create_three(current_game):
+    """Wait replaces Asteroth's two strikes with one; it is illegal between strikes."""
+    env, initial, step, fight = current_game
+    state = compiled_method(env, '_begin_battle')(initial.replace(enemy=jnp.int32(0)))
+    state = hero_roster_state(env, state, ['g000uu6011', 'duke', None, None, None, None])
+    state = enemy_roster_state(env, state, ['squire', None, None, None, None, None])
+    state = state.replace(actor=jnp.int32(0), hp=jnp.where(state.hp > 0, 10000, 0),
+        priority=jnp.zeros(12).at[0].set(100.).at[1].set(50.).at[6].set(25.))
+    values = jnp.zeros(env.random_size)
+    first, _ = fight(state, jnp.int32(SHOOT), state.battle_key, values)
+    assert first.actor == 0 and first.second_strike
+    assert not compiled_method(env, 'action_mask')(first)[WAIT]
+    rejected, _ = step(first, jnp.int32(WAIT))
+    np.testing.assert_array_equal(rejected.battle_key, first.battle_key)
+    np.testing.assert_array_equal(rejected.hp, first.hp)
+    assert rejected.actor == 0 and rejected.second_strike
+    second, _ = fight(first, jnp.int32(SHOOT), first.battle_key, values)
+    assert not second.second_strike and second.turn_phase[0] == 2 and second.actor == 1
+    # Both allies wait before the enemy, then resume in that same order.
+    waited, _ = fight(state, jnp.int32(WAIT), state.battle_key, values)
+    waited, _ = fight(waited, jnp.int32(WAIT), waited.battle_key, values)
+    assert waited.actor == 6
+    resumed, _ = fight(waited, jnp.int32(CONTINUE), waited.battle_key, values)
+    assert resumed.actor == 0 and resumed.turn_phase[0] == 1
+    single, _ = fight(resumed, jnp.int32(SHOOT), resumed.battle_key, values)
+    assert single.hp[6] == resumed.hp[6] - first.last_damage
+    assert not single.second_strike and single.turn_phase[0] == 2
+    assert single.actor == 1 and single.round == 1
+
+
+def test_wait_position_survives_temporary_forms(current_game):
+    """Transforming a waiting unit changes its stats without moving its queued turn."""
+    from stoix.envs.number_grid_item_combat import transform_imp, transform_form
+    env, initial, _, _ = current_game
+    state = compiled_method(env, '_begin_battle')(initial.replace(enemy=jnp.int32(0)))
+    state = hero_roster_state(env, state, ['archer', 'duke', 'archer', None, None, None])
+    state = state.replace(turn_phase=state.turn_phase.at[0].set(1),
+        waited=state.waited.at[0].set(True),priority=state.priority.at[0].set(-1.).at[2].set(100.))
+    slots, selected = jnp.array([0,2]), jnp.ones(2,bool)
+    imp, _ = jax.jit(lambda s: transform_imp(env,s,s.wards_used,slots,selected))(state)
+    assert imp.priority[0] == -1. and imp.priority[2] == 30.
+    forms = jnp.full(2,env.progression.ids['archer'],jnp.int32)
+    form, *_ = jax.jit(lambda s: transform_form(env,s,s.hp,s.wards_used,slots,selected,forms))(state)
+    assert form.priority[0] == -1.
+    assert form.priority[2] == env.progression.base_stats[forms[1],INITIATIVE]
+    cured, *_ = compiled_method(env, '_cleanse')(imp,imp.hp,imp.wards_used,jnp.ones(12,bool))
+    assert cured.priority[0] == -1. and not cured.imp[0]
 
 
 @pytest.mark.core
@@ -331,7 +387,8 @@ def test_recovery_restores_individual_hp_and_retreat_does_not_grant_extra_attack
     result = attack(env, state, rolls())
     np.testing.assert_array_equal(result.hp[:6], [120, 100, 45, 45, 45, 45])
     assert not result.in_battle
-    state = state.replace(actor=jnp.int32(0), turn_phase=state.turn_phase.at[0].set(1))
+    state = state.replace(actor=jnp.int32(0), turn_phase=state.turn_phase.at[0].set(1),
+        priority=state.priority.at[0].set(-1.))
     result = attack(env, state, rolls(), RETREAT)
     assert result.retreating[0] and result.turn_phase[0] == 2
 

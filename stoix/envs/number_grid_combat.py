@@ -6,6 +6,7 @@ from pathlib import Path
 import jax.numpy as jnp
 from stoix.envs.number_grid_effects import CAPITAL_GUARDS
 from stoix.envs.number_grid_limits import MAX_HP, MAX_INITIATIVE, MAX_ARMOR
+from stoix.envs.number_grid_wards import WARD_MASK
 
 HP, DAMAGE, ACCURACY, ARMOR, INITIATIVE = range(5)
 STAT_NAMES = ('max_hp', 'damage', 'accuracy', 'armor', 'initiative')
@@ -17,6 +18,46 @@ UNITS = json.loads((Path(__file__).parent / 'data/units.json').read_text(encodin
 DEFEND_BONUS = 50  # Installed GVars.dbf: DFENDBONUS; see docs/ARCHER_BATTLES.md.
 PROFILE_FIELDS = set(STAT_NAMES) | {'size', 'role', 'attack_type', 'immunities', 'protections', 'exp_kill', 'exp_required', 'exp_current', 'hero',
                                   'secondary_attack_type', 'secondary_accuracy', 'secondary_damage'}
+# Installed GAttacks REACH (LAttR.dbf): 1 is L_ALL, 2 is L_ANY.
+REACH_ALL = '1'
+BESTOW_WARDS = '24'  # LattC.dbf L_BESTOW_WARDS
+# Installed GmodifL.dbf: the one-hit wards (L_IMMUNITY, IMMUNECAT 2) that
+# Sundancer, Sylfid and Deva roshi bestow through GAttacks WARD1..WARD4.
+WARD_MODIFIER_SOURCES = {'g000um0001': 'air', 'g000um0005': 'water',
+                         'g000um0010': 'earth', 'g000um0016': 'fire'}
+
+
+def _primary_attack(profile):
+    return (profile.get('game_data') or {}).get('primary_attack') or {}
+
+
+def support_reaches_all(profile):
+    """A healer-role support whose primary attack targets every living ally.
+
+    Uses the unit's own GAttacks REACH, not a list of unit types. In Discipl2.exe
+    the L_ALL/L_ANY target lists (sub_65AF46, sub_65B077) iterate the whole group,
+    and the heal, cure and bestow-wards checks (0x65C986, 0x6608F2, 0x65D979)
+    never compare the target with the caster, so a wounded caster is included.
+    """
+    return profile.get('role') == 'healer' and str(_primary_attack(profile).get('REACH', '')) == REACH_ALL
+
+
+def healer_ward_bits(profile):
+    """Attack-source bits of the wards granted by an L_BESTOW_WARDS primary attack."""
+    attack = _primary_attack(profile)
+    if str(attack.get('CLASS', '')) != BESTOW_WARDS:
+        return 0
+    bits = 0
+    for index in range(1, 5):
+        ward = str(attack.get(f'WARD{index}') or '').lower()
+        if ward in ('', 'g000000000'):
+            continue
+        if ward not in WARD_MODIFIER_SOURCES:
+            raise ValueError(f'Unsupported healer ward modifier {ward}')
+        bits |= 1 << ATTACK_TYPES.index(WARD_MODIFIER_SOURCES[ward])
+    if bits & ~WARD_MASK:
+        raise ValueError('Healer wards exceed the four supported elements')
+    return bits
 
 
 def armor_with_defend(armor, defended):
@@ -175,6 +216,7 @@ def build_combat_tables(game_map):
             immune, wards = _protection_mask(values['immunities']), _protection_mask(values['protections'])
             profiles.append(dict(name=values['name'], level=values['level'], size=size, role=values['role'],
                                  damage_cap=400 if values.get('hero') else 300,
+                                 mass_support=support_reaches_all(values), ward_bits=healer_ward_bits(values),
                                  unit_type=values.get('unit_type', ''), game_data=values.get('game_data', {}),
                                  secondary_source=secondary_source,
                                  secondary_accuracy=values.get('secondary_accuracy', 0),

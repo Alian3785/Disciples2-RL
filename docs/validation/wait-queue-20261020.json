@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-20",
+  "branch": "codex/wait-fifo-single-attack",
+  "source": {
+    "saved_listing": "results/source-research/steam-ai/ida-analysis/Discipl2-ida.lst",
+    "audit": "results/source-research/audit-20261020/findings-ru.md, item 15",
+    "wait_handler": "0x65A73E",
+    "queue_append": "0x622D7D",
+    "evidence": [
+      "0x65A745 pushes 1, then 0x65A751 calls sub_622D7D with the unit ID.",
+      "0x622D86 starts at turnsOrder index 0; 0x622D98 bounds the scan to 13 entries.",
+      "0x622DAE checks the unit ID at offset 0xE70 + index * 8 against the empty ID.",
+      "0x622DC5 stores the unit ID in the first empty entry; 0x622DD5 stores the supplied attack count at offset 0xE74 + index * 8."
+    ],
+    "struct_reference": "D2ModdingToolset/mss32/include/battlemsgdata.h: BattleTurn.unitId, BattleTurn.attackCount",
+    "original_game_or_ida_launched": false
+  },
+  "rules": {
+    "waiting_order": "FIFO by actual Wait actions, not reversed initiative",
+    "delayed_attack_count": 1,
+    "wait_between_double_strikes": false,
+    "new_alchemist_turn": "Keeps native attack count while preserving the spent Wait flag"
+  },
+  "regressions": [
+    "test_wait_is_once_per_round_and_preserves_wait_order",
+    "test_asteroth_wait_leaves_one_attack_and_cannot_create_three",
+    "test_wait_position_survives_temporary_forms",
+    "test_periodic_queues_preserve_wait_fifo_after_a_normal_turn",
+    "test_demon_two_strikes_retarget_and_consume_one_activation",
+    "test_alchemist_extra_turn_preserves_wait_and_round_effects"
+  ],
+  "tests_run": false,
+  "training_or_benchmarks_run": false,
+  "validation_scope": "Source review and static checks only; previous CUDA/training results predate this fix."
+}

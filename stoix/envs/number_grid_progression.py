@@ -12,7 +12,7 @@ from stoix.envs.number_grid_limits import MAX_LEVEL, MAX_HP, MAX_INITIATIVE, MAX
 from stoix.envs.number_grid_combat import (
     UNITS, ROLES, HP, DAMAGE, ARMOR, STAT_NAMES,
     _validated_stats, _source, _protection_mask, uses_aoe_accuracy_falloff, build_damage_rolls,
-    capped_damage_bonus,
+    capped_damage_bonus, support_reaches_all, healer_ward_bits,
 )
 from stoix.envs.number_grid_buildings import CATALOG
 from stoix.envs.number_grid_effects import CAPITAL_GUARDS
@@ -123,9 +123,11 @@ class ProgressionRules:
         power_types = {'Travnitsa':1.25,'Novice':1.5,'Dwarfdruid':1.75,'Arhidruid':2.}
         self.power_factors = jnp.array([power_types.get(r.get('unit_type'),0.) for r in rows])
         self.power_cures = jnp.array([r.get('unit_type') in ('Dwarfdruid','Arhidruid') for r in rows])
-        ward_types = {'Sundancer':1,'Sylfid':256,'Deva roshi':267}
-        self.healer_ward_elements = jnp.array([ward_types.get(r.get('unit_type'),0) for r in rows],jnp.uint32)
-        self.mass_healers = jnp.array([r.get('unit_type') in ('Profit','Deva roshi') for r in rows])
+        # Installed GAttacks: ward elements and L_ALL reach come from each unit's own
+        # primary attack (Sundancer/Sylfid all allies, Deva roshi one target).
+        ward_bits = [healer_ward_bits(r) for r in rows]
+        self.healer_ward_elements = jnp.array(ward_bits,jnp.uint32)
+        self.mass_healers = jnp.array([support_reaches_all(r) for r in rows])
         self.mass_cures = jnp.array([r.get('unit_type') == 'Profit' and r['name'] in ('Аббатиса','Прорицательница','Matriarch','Prophetess') for r in rows])
         post_names = {'Служка','Жрец','Священник','Архангел','Медиум','Оракул','Дева рощи','Патриарх','Клирик','Аббатиса','Прорицательница','Нейтральный эльфийский оракул','Солнечная танцовщица','Сильфида'}
         self.post_healers = jnp.array([r['name'] in post_names and r['role'] == 'healer' for r in rows])
@@ -190,7 +192,7 @@ class ProgressionRules:
         # Revival items (Orb/Talisman of Life, Life Potion) set it from number_grid.
         self.revival_cutoffs = False
         self.has_powerups = any(rows[i].get('unit_type') in power_types for i in used_ids)
-        self.has_healer_wards = any(rows[i].get('unit_type') in ward_types for i in used_ids)
+        self.has_healer_wards = any(ward_bits[i] for i in used_ids)
         self.has_cures = any(rows[i].get('unit_type') in ('Patriach','Dwarfdruid','Arhidruid') or (rows[i].get('unit_type') == 'Profit' and rows[i]['name'] in ('Аббатиса','Прорицательница','Matriarch','Prophetess')) for i in used_ids)
         self.has_poisoners = any((rows[i]['name'] == 'Ниддог' or rows[i].get('unit_type') in ('Dregazul','Spider')) or rows[i].get('unit_type') in ('Death','Dead dragon') for i in used_ids)
         self.cached_water = jnp.array([r.get('unit_type') == 'Ismir son' for r in rows])
@@ -359,7 +361,8 @@ class ProgressionRules:
                 max_level=self.max_hero_level if row.get('hero') else MAX_LEVEL,
                 scenario_dynamic=bool(self.scenario_dynamic[i]),
                 hero_skills=row.get('hero_skills', []),
-                unit_type=row.get('unit_type', ''),
+                unit_type=row.get('unit_type', ''), mass_support=support_reaches_all(row),
+                ward_bits=ward_bits[i],
                 secondary_attack_type=row.get('secondary_attack_type', ''),
                 role=row['role'], size=row.get('size', 1), attack_type=row['attack_type'],
                 immunities=_protection_mask(row['immunities']),

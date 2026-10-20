@@ -45,7 +45,7 @@ def advance_linked_queue(hp, escaped, phases, priority, round_number, activated,
         order = jnp.where(wrap,extra_priority,order)
         done = jnp.where(wrap,False,done)
         enabled = ~stopped & alive(health) & (round_no <= max_rounds)
-        score = jnp.where(active & (phase == 0),order,jnp.where(active & (phase == 1),-order,-1e9))
+        score = jnp.where(active & (phase < 2),order,-1e9)
         candidate = jnp.argmax(score).astype(jnp.int32)
         actor = jnp.where(enabled,candidate,actor)
         first = enabled & ~done[candidate]

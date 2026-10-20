@@ -101,7 +101,7 @@ def advance_poison_queue(hp, escaped, phases, priority, round_number, activated,
     def sweep(health, phase, order, done, left, amounts, owners, actor, enabled, current_round, rolls):
         active = (health > 0) & ~escaped
         pending = active & (phase < 2)
-        scores = jnp.where(phase == 0, order, -order)
+        scores = order  # negative FIFO positions already put WAIT after normal turns
         first = pending & ~done
         immune = (immunities & jnp.uint32(1 << 4)) != 0
         tick = first & (left > 0) & ~immune
@@ -175,7 +175,7 @@ def advance_periodic_queue(hp, escaped, phases, priority, round_number, activate
     def sweep(health, phase, order, done, left, amounts, owners, actor, enabled, current_round, rolls):
         active = (health > 0) & ~escaped
         pending = active & (phase < 2)
-        scores = jnp.where(phase == 0, order, -order)
+        scores = order  # negative FIFO positions already put WAIT after normal turns
         first = (pending & ~done)[:, None]
         immune = (immunities[:, None] & immunity_masks[None, :]) != 0
         tick = first & (left > 0) & ~immune
