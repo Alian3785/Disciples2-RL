@@ -121,6 +121,7 @@ def test_spell_shop_sells_armageddon_and_verdant(default_game):
 
 
 def test_capital_guard_armor_and_regeneration(default_game):
+    from stoix.envs.number_grid import FORT_RED, RETREAT
     env, initial, step, _ = default_game
     guard = DEFAULT['opponent_positions'][GUARD]
     assert not env.casting.field[GUARD]  # damage and weakening never target the capital
@@ -130,6 +131,11 @@ def test_capital_guard_armor_and_regeneration(default_game):
     near = initial.replace(position=jnp.array([guard[0]-dr, guard[1]-dc], jnp.int32))
     battle, _ = step(near, jnp.int32(direction))
     assert battle.in_battle and battle.enemy == GUARD and battle.battle_fort_armor == CAPITAL_ARMOR
+    assert battle.battle_fort_defender == FORT_RED
+    assert compiled_method(env,'action_mask')(battle.replace(actor=jnp.int32(1)))[RETREAT]
+    visitor = initial.replace(enemy=jnp.int32(0),
+        enemy_positions=initial.enemy_positions.at[0].set(jnp.array(guard,jnp.int32)))
+    assert compiled_method(env.territory,'defender_in_fort')(visitor)
     # Rest: Myzrael's own 50% +35% capital of 900; the Green Dragon heals fully.
     wounds = initial.enemy_wounds.at[GUARD, 4].set(800).at[DRAGON, 1].set(500)
     rested, _ = step(initial.replace(enemy_wounds=wounds), jnp.int32(REST))

@@ -522,6 +522,24 @@ def effects(default_game):
     return env, base, keys, valid, after, hp, info, apply
 
 
+def test_fear_item_respects_defending_side_without_armour(effects):
+    from stoix.envs.number_grid import FORT_NONE, FORT_BLUE, FORT_RED
+    env, base, _, _, _, _, _, apply = effects
+    rules = env.battle_item_rules
+    item = rules.keys.index('talisman_of_nightmare')
+    base = base.replace(battle_items=jnp.array([item,-1],jnp.int32),
+        battle_item_charges=jnp.array([rules.uses[item],0],jnp.int32),
+        battle_fort_armor=jnp.int32(0),battle_hero_fort_armor=jnp.int32(0))
+    states = jax.tree.map(lambda x:jnp.repeat(x[None],3,axis=0),base).replace(
+        battle_fort_defender=jnp.array([FORT_NONE,FORT_BLUE,FORT_RED],jnp.int32))
+    valid, after, _, _ = apply(states,jnp.full(3,rules.use_start+12+1,jnp.int32))
+    assert jnp.all(valid)
+    np.testing.assert_array_equal(after.paralyzed[:,7],[False,False,True])
+    np.testing.assert_array_equal(after.retreating[:,7],[True,True,False])
+    np.testing.assert_array_equal(after.feared[:,7],[True,True,False])
+    assert not jnp.any(after.long_paralyzed[:,7])
+
+
 def test_reference_item_effects(effects):
     """Check catalogued item effects against their expected combat-state changes."""
     env, base, keys, valid, after, hp, info, _ = effects

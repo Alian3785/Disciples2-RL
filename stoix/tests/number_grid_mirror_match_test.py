@@ -14,7 +14,9 @@ import jax.numpy as jnp
 import pytest
 
 from scripts.build_mirror_match import build
-from stoix.envs.number_grid import NumberGrid, load_map, DEFEND, REST
+from stoix.envs.number_grid import (
+    MAP, NumberGrid, load_map, DEFEND, REST, RETREAT, CONTINUE, FORT_NONE, FORT_BLUE, FORT_RED,
+)
 from stoix.envs.number_grid_bot import HUNTING, RETURNING, RESTING, DEFEATED
 from stoix.envs.number_grid_casting import DAMAGE
 from stoix.envs.number_grid_metrics import CAMPAIGN_FIELDS, campaign_events
@@ -162,6 +164,7 @@ def test_pursuit_opens_agent_battle_and_home_return_does_not_overlap(mirror, nav
     chex.assert_trees_all_equal(after.position, state.position)
     assert after.enemy_positions[env.bot.enemy].tolist() == [12, 12]
     assert not after.pending_encounters[env.bot.enemy]
+    assert after.battle_fort_defender == FORT_NONE
     # Return home occupied by the hero also stops adjacent and queues combat.
     home = env.bot.home
     returning = only_bot(env, initial).replace(position=home, bot_mode=jnp.int32(RETURNING),
@@ -170,6 +173,48 @@ def test_pursuit_opens_agent_battle_and_home_return_does_not_overlap(mirror, nav
     assert not fight and moved.bot_mode == RETURNING
     assert moved.pending_encounters[env.bot.enemy]
     assert jnp.any(moved.enemy_positions[env.bot.enemy] != home)
+
+
+def test_bot_home_defender_and_attacker_from_own_capital(mirror):
+    env, initial = mirror
+    begin = compiled_method(env,'_begin_battle')
+    home = begin(initial.replace(enemy=jnp.int32(env.bot.enemy)))
+    assert home.battle_fort_defender == FORT_RED
+    assert compiled_method(env,'action_mask')(home.replace(actor=jnp.int32(1)))[RETREAT]
+    field = begin(initial.replace(enemy=jnp.int32(env.bot.enemy),
+        enemy_positions=initial.enemy_positions.at[env.bot.enemy].set(jnp.array([12,12]))))
+    assert field.battle_fort_defender == FORT_NONE
+
+
+@pytest.fixture(scope='module')
+def mirror_with_city():
+    """One extended-suite environment and shared JIT for all defensive entry cases."""
+    assert jax.default_backend() == 'gpu', 'Mirror match tests require CUDA'
+    config = load_map('mirror_match')
+    config = {**config, 'cities':[{**MAP['cities'][0], 'position':[12,13]}]}
+    env = NumberGrid(map_config=config)
+    initial, _ = compiled_method(env,'reset')(jax.random.PRNGKey(42))
+    return env, initial
+
+
+@pytest.mark.parametrize('location', ['capital','city','field'])
+def test_pending_attack_identifies_player_settlement_defenders(mirror_with_city, location):
+    """Real pending-encounter entry, including a visiting party inside an owned city."""
+    env, initial = mirror_with_city
+    position = {'capital':env.territory.capital,'city':[12,13],'field':[12,30]}[location]
+    state = only_bot(env,initial,hero=position).replace(
+        city_owned=jnp.ones(1,bool),
+        pending_encounters=initial.pending_encounters.at[env.bot.enemy].set(True))
+    battle, _ = compiled_method(env,'step')(state,jnp.int32(CONTINUE))
+    expected = FORT_NONE if location == 'field' else FORT_BLUE
+    assert battle.in_battle and battle.battle_fort_defender == expected
+    assert battle.battle_fort_armor == 0  # RED arrived as the attacker.
+    # Pin a living player's activation without changing the encounter role.
+    controlled = battle.replace(actor=jnp.int32(1),paralyzed=jnp.zeros(12,bool),
+        long_paralyzed=jnp.zeros(12,bool),retreating=jnp.zeros(12,bool))
+    assert bool(compiled_method(env,'action_mask')(controlled)[RETREAT]) == (location == 'field')
+    allowed = jax.jit(env._can_retreat)(controlled,jnp.array([1,7]))
+    chex.assert_trees_all_equal(allowed,jnp.array([location == 'field',True]))
 
 
 @pytest.mark.core

@@ -154,7 +154,7 @@ def test_reference_selection_and_skill_thresholds(all_items):
 
 
 def test_banner_health_regeneration_and_instant_retreat(all_items):
-    from stoix.envs.number_grid import RETREAT, ESCAPE
+    from stoix.envs.number_grid import RETREAT, ESCAPE, GUARD, FORT_BLUE
     env,state,refresh,_=all_items
     # One additional scalar kernel covers map rest and actual battle withdrawal.
     # Other equipment tests call small shared kernels, avoiding one full env per item.
@@ -173,6 +173,9 @@ def test_banner_health_regeneration_and_instant_retreat(all_items):
         return result.escaped[1],result.retreating[1],result.last_event
     escaped,retreating,event=retreat(start)
     assert escaped and not retreating and event==ESCAPE
+    defender = start.replace(battle_fort_defender=jnp.int32(FORT_BLUE))
+    escaped,retreating,event=retreat(defender)
+    assert not escaped and not retreating and event==GUARD
 
 
 @pytest.mark.core

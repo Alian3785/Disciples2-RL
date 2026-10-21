@@ -155,6 +155,7 @@ SLOWED = 32
 PARALYZED = 25
 PARALYSIS_SKIP = 26
 ROUND_LIMIT_RETREAT = 56
+FORT_NONE, FORT_BLUE, FORT_RED = range(3)
 
 
 @struct.dataclass
@@ -176,6 +177,7 @@ class BattleState(NumberGridState):
     script_orders: jax.Array
     pending_encounters: jax.Array
     battle_hero_fort_armor: jax.Array
+    battle_fort_defender: jax.Array  # 0: field, 1: blue defends a settlement, 2: red
     reference_visits: jax.Array
     reference_previous: jax.Array
     reference_city_reached: jax.Array
@@ -1016,6 +1018,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             script_orders=self.script_events.initial_orders,
             pending_encounters=jnp.zeros(self.num_opponents, bool),
             battle_hero_fort_armor=zero,
+            battle_fort_defender=zero,
             reference_visits=jnp.zeros(self.size*self.size if self.reference_rewards else 0, jnp.uint8),
             reference_previous=jnp.full(2, -1, jnp.int32),
             reference_city_reached=jnp.zeros(self.territory.count if self.territory_enabled else 0, bool),
@@ -1577,13 +1580,18 @@ class NumberGrid(Summoning, NumericNumberGrid):
                 else self.ghost_modes[state.enemy,state.actor])
         return jnp.where(state.imp[state.actor],0,mode)
 
+    def _can_retreat(self, state, slots):
+        """Settlement restriction for either side; turn/status checks stay with callers.
+
+        Snapshot the defending side at battle entry, independently of armour.
+        Steam sub_5F5A4B; sources: docs/validation/fort-defenders-20261021.json.
+        """
+        return ~jnp.where(slots < 6, state.battle_fort_defender == FORT_BLUE,
+                          state.battle_fort_defender == FORT_RED)
+
     def _fear_protected(self, state, target_slots):
         """Fear paralyses instead of routing: map teams, defended cities and ruins."""
-        protected = self.fear_protected[target_slots]
-        if self.territory_enabled:
-            protected |= (target_slots>=6) & (state.battle_fort_armor>0)
-            if self.scenario.enabled or self.bot.enabled or self.script_events.enabled:
-                protected |= (target_slots<6) & (state.battle_hero_fort_armor>0)
+        protected = self.fear_protected[target_slots] | ~self._can_retreat(state, target_slots)
         if self.ruins_enabled:
             protected |= (target_slots>=6) & (state.enemy>=0) & (self.ruins.enemy_ruin[jnp.maximum(state.enemy,0)]>=0)
         return protected
@@ -1962,19 +1970,22 @@ class NumberGrid(Summoning, NumericNumberGrid):
             mask = jnp.where(state.post_victory > 0,post,mask)
         forced_action = jnp.where(controlled, RETREAT, CONTINUE)
         mask = jnp.where(self.round_limit_retreat(state), jnp.arange(self.num_actions) == forced_action, mask)
+        mask = mask.at[RETREAT].set(mask[RETREAT] & self._can_retreat(state, state.actor))
         if self.scenario.enabled or self.bot.enabled or self.script_events.enabled:
             mask = jnp.where(~state.in_battle & jnp.any(state.pending_encounters & state.alive),
                              jnp.arange(self.num_actions) == CONTINUE, mask)
         return jnp.where(state.done, jnp.arange(self.num_actions) == CONTINUE, mask)
 
     def round_limit_retreat(self, state):
-        """After the round limit, every remaining player activation must retreat.
+        """After the round limit, a player party allowed to withdraw must retreat.
 
         Spell summons keep their existing timeout/return path. Post-battle
-        healing is not an active fight and must finish normally.
+        healing must finish normally. Settlement defenders keep fighting;
+        the episode decision budget still applies.
         """
         return (state.in_battle & (state.round > self.max_rounds)
-                & ~state.summon_battle & ~state.bot_autobattle & (state.post_victory == 0))
+                & ~state.summon_battle & ~state.bot_autobattle & (state.post_victory == 0)
+                & self._can_retreat(state, jnp.int32(0)))
 
     def automatic_battle_turn(self, state):
         """Reference _advance_until_blue_turn: no player choice on this activation."""
@@ -2038,7 +2049,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
 
     def _begin_battle(self, state, key=None, random_values=None):
         """Initialize tactical state and snapshot entry strength for an eligible victory reward."""
-        state = state.replace(copied=jnp.zeros(12,bool),summon_owner=jnp.full(12,-1,jnp.int32),
+        state = state.replace(battle_fort_defender=jnp.int32(FORT_NONE), battle_hero_fort_armor=jnp.int32(0),
+                              copied=jnp.zeros(12,bool),summon_owner=jnp.full(12,-1,jnp.int32),
                               summon_saved_hp=jnp.zeros(12,jnp.int32),
                               preparation=jnp.zeros(12,bool),
                               primary_override=jnp.full(12,-1,jnp.int32),preweak_damage=jnp.full(12,-1,jnp.int32),
@@ -2081,11 +2093,14 @@ class NumberGrid(Summoning, NumericNumberGrid):
                                   battle_xp=jnp.zeros(2, jnp.int32),
                                   last_xp=jnp.zeros(12, jnp.int32), last_promoted=jnp.uint32(0))
         if self.territory_enabled:
+            defended_fort = self.territory.defender_in_fort(state)
             state = state.replace(battle_fort_armor=self.territory.defender_armor(state))
             if self.bot.enabled:
                 at_home = jnp.all(state.enemy_positions[self.bot.enemy] == self.bot.home)
+                defended_fort |= (state.enemy == self.bot.enemy) & at_home
                 state = state.replace(battle_fort_armor=jnp.where(
                     (state.enemy == self.bot.enemy) & at_home, 50, state.battle_fort_armor))
+            state = state.replace(battle_fort_defender=jnp.where(defended_fort, FORT_RED, FORT_NONE))
         if self.spell_casting_enabled:
             state, spell_hp = self.casting.begin_battle(state, state.hp)
             state = state.replace(hp=spell_hp)
@@ -2271,11 +2286,15 @@ class NumberGrid(Summoning, NumericNumberGrid):
             engage |= attacked
         next_state = jax.lax.cond(engage | summon, lambda s: self._begin_battle(s, key, random_values), lambda s: s, next_state)
         if self.scenario.enabled or self.bot.enabled or self.script_events.enabled:
+            inside_fort = (jnp.all(next_state.position == jnp.array(self.territory.capital))
+                           | jnp.any(self.territory.city_at(next_state) & next_state.city_owned))
             fort = jnp.where(jnp.all(next_state.position == jnp.array(self.territory.capital)), 50,
                 jnp.max(jnp.where(self.territory.city_at(next_state) & next_state.city_owned,
                                   self.territory.fort_bonus[next_state.city_levels], 0), initial=0))
             next_state = next_state.replace(battle_hero_fort_armor=jnp.where(attacked, fort, 0),
-                battle_fort_armor=jnp.where(attacked, 0, next_state.battle_fort_armor))
+                battle_fort_armor=jnp.where(attacked, 0, next_state.battle_fort_armor),
+                battle_fort_defender=jnp.where(attacked,
+                    jnp.where(inside_fort, FORT_BLUE, FORT_NONE), next_state.battle_fort_defender))
         if self.spell_casting_enabled:
             next_state = next_state.replace(last_event=jnp.where(summon, SUMMON_CAST, next_state.last_event))
         if self.position_objective:
@@ -2454,12 +2473,15 @@ class NumberGrid(Summoning, NumericNumberGrid):
         """Resolve one tactical activation, its aftermath, and optional combat event counters."""
         actor = state.actor
         post_turn = state.post_victory > 0
+        can_retreat = self._can_retreat(state, actor)
         skipping = (state.paralyzed[actor] | state.long_paralyzed[actor]) & ~post_turn
         if self.has_paralysis:
             state = state.replace(paralyzed=state.paralyzed.at[actor].set(state.paralyzed[actor] & post_turn))
-        escaping = state.retreating[actor] & ~skipping & ~post_turn
+        escaping = state.retreating[actor] & can_retreat & ~skipping & ~post_turn
         action = jnp.where(actor >= 6, self._enemy_action(
             state, random_values[30:36] if self.basic_combat else random_values[1:]), action)
+        # Public step rejects this command; internal AI/autobattles must also obey.
+        action = jnp.where((action == RETREAT) & ~can_retreat, DEFEND, action)
         action = jnp.where(escaping | skipping, CONTINUE, action)
         special_event = jnp.int32(-1)
         if self.has_copies or self.has_summons:
@@ -2831,7 +2853,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
         # Orb of Rage on the hero: the bonus activation follows the spent one.
         phases = jnp.where(item_extra, 0, phases)
         defended = state.defended.at[actor].set((action == DEFEND) & (special_event < 0))
-        retreating = state.retreating.at[actor].set(jnp.where(skipping,state.retreating[actor],action == RETREAT))
+        retreating = state.retreating.at[actor].set(
+            jnp.where(skipping,state.retreating[actor],action == RETREAT) & can_retreat)
         escaped = state.escaped.at[actor].set(escaping)
         if self.items_enabled:
             instant=(action==RETREAT)&(actor==self._equipment_hero(state))&jnp.any(self.item_rules.value(state,'instant_retreat')[:2])
@@ -2921,7 +2944,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
         if self.capital_training.enabled:
             state, capital_training_bonus = self.capital_training.battle(state, hp, escaped, round_number)
         round_limit_reached = ((state.round <= self.max_rounds) & (round_number > self.max_rounds)
-                               & ~raw_ended & ~post_turn & ~state.bot_autobattle)
+                               & ~raw_ended & ~post_turn & ~state.bot_autobattle
+                               & self._can_retreat(state, jnp.int32(0)))
         pending = jnp.zeros(12,jnp.bool_)
         post_team = jnp.int32(0)
         if self.progression_enabled and self.has_healers:
@@ -3102,6 +3126,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             battle_key=key, hp=jnp.minimum(jnp.where(back, recovered_hp, hp), MAX_HP), **progress,
             battle_fort_armor=jnp.where(back,0,state.battle_fort_armor),
             battle_hero_fort_armor=jnp.where(back,0,state.battle_hero_fort_armor),
+            battle_fort_defender=jnp.where(back | lost, FORT_NONE, state.battle_fort_defender),
             post_victory=post_team,pending_healers=pending,
             second_strike=another_strike & ~(victory | withdrawal | lost),
             wards_used=jnp.where(back, jnp.uint32(0), wards_used),
@@ -3272,6 +3297,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             battle_valid = jnp.where(state.post_victory > 0,post_valid,battle_valid)
         battle_valid = jnp.where(self.round_limit_retreat(state),
                                  action == jnp.where(controlled, RETREAT, CONTINUE), battle_valid)
+        battle_valid &= (action != RETREAT) | self._can_retreat(state, state.actor)
         if self.scenario.enabled or self.bot.enabled or self.script_events.enabled:
             world_valid = jnp.where(jnp.any(state.pending_encounters & state.alive), action == CONTINUE, world_valid)
         valid = jnp.where(state.in_battle, battle_valid, world_valid) & ~state.done

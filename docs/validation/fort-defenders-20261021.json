@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-21",
+  "mechanic": "Only the defending side inside a city or capital cannot retreat; Fear becomes one skipped activation for those defenders.",
+  "edition": "Installed Steam Disciples II: Rise of the Elves",
+  "request": "User explicitly requested this rule for both agent and opponent, and clarified that attackers may retreat.",
+  "method": "Read current JAX code and an existing disassembly listing. No disassembler or original game was launched.",
+  "sources": [
+    {
+      "path": "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Discipl2.exe",
+      "sha256": "115d4629ef35041187dea53700901eff47eb33d1f7270cc9dd3c2c72870a194a",
+      "listing": "results/source-research/steam-ai/ida-analysis/Discipl2-ida.lst",
+      "retreat": "The audited retreat path at 0x624633 calls sub_5F5A4B. At 0x5F5A74..0x5F5AA8 that helper rejects Fort/Ruin groups and defending stacks with nonempty insideId (+0x94); an attacking stack is not rejected merely for having insideId.",
+      "fear": "CBatAttackFear vtable 0x6F3F3C. sub_65D15B calls the same sub_5F5A4B at 0x65D1D4 with the target group's attacking/defending role. onHit 0x65D06F checks that result: at 0x65D114 it sets status 0x1D (Retreating), or at 0x65D126 it sets status 2 (Paralyze) and records the current round via sub_623C09."
+    },
+    {
+      "path": "results/source-research/audit-recheck-20261021.txt",
+      "section": "17. Retreat from a fortification; direct EXE verification, not only a Toolset hook."
+    }
+  ],
+  "implementation": [
+    "BattleState.battle_fort_defender snapshots none, blue or red at entry. It is independent of fortification armour and is cleared on battle completion/reset.",
+    "City/capital garrisons and visiting enemy armies are identified by their current settlement position; the mobile bot's home capital is included.",
+    "Pending attacks on the player's owned city/capital make BLUE the defender and RED the attacker. Attacking from a settlement never marks the attacker as its defender.",
+    "The same _can_retreat predicate guards action_mask, public step and tactical resolution, including queued escapes and instant-retreat equipment.",
+    "Primary Fear, secondary Fear and item Fear share _fear_protected and use the finite paralyzed flag for settlement defenders. Existing immunity and ward checks remain in force.",
+    "The environment's forced player retreat at its round limit is disabled for settlement defenders, with no forced-retreat event or penalty; the episode decision budget still applies. This is integration with the existing JAX limit, not a new claim about an original-game round cap."
+  ],
+  "scope": "This change adds the requested city/capital retreat restriction. Existing fear handling for ruins and explicit scenario team overrides is retained; it is not used as a general prohibition on voluntary retreat.",
+  "regression_tests": [
+    "stoix/tests/number_grid_territory_test.py::test_city_armor_and_fear_protect_defenders_only",
+    "stoix/tests/number_grid_territory_test.py::test_fort_retreat_mask_step_and_escape_for_both_sides",
+    "stoix/tests/number_grid_territory_test.py::test_fort_fear_skips_one_activation_but_attackers_escape",
+    "stoix/tests/number_grid_items_test.py::test_banner_health_regeneration_and_instant_retreat",
+    "stoix/tests/number_grid_battle_items_test.py::test_fear_item_respects_defending_side_without_armour",
+    "stoix/tests/number_grid_default_map_test.py::test_capital_guard_armor_and_regeneration",
+    "stoix/tests/number_grid_mirror_match_test.py::test_bot_home_defender_and_attacker_from_own_capital",
+    "stoix/tests/number_grid_mirror_match_test.py::test_pending_attack_identifies_player_settlement_defenders"
+  ],
+  "static_checks": [
+    "Ruff passed for all seven changed Python files.",
+    "AST parsing passed for all seven changed Python files; this JSON parsed successfully.",
+    "The installed executable SHA-256 matches the recorded source hash.",
+    "git diff --check passed."
+  ],
+  "tests_run": false,
+  "training_or_benchmarks_run": false,
+  "original_game_launched": false,
+  "disassembler_launched": false
+}

@@ -3,10 +3,13 @@ import chex
 import jax
 import jax.numpy as jnp
 import pytest
-from stoix.envs.number_grid import MAP, REST, SHOOT, HEAL_START, REVIVE_START
+from stoix.envs.number_grid import (
+    MAP, REST, SHOOT, DEFEND, RETREAT, CONTINUE, HEAL_START, REVIVE_START,
+    FORT_NONE, FORT_BLUE, FORT_RED, ROUND_LIMIT_RETREAT,
+)
 from stoix.envs.number_grid_territory import TerritoryRules, CITY_CAPTURED, CITY_UPGRADED, OBSTACLE
 from stoix.envs.number_grid_combat import ARMOR
-from stoix.tests.number_grid_fixtures import compiled_method, hero_roster_state
+from stoix.tests.number_grid_fixtures import compiled_method, hero_roster_state, enemy_roster_state
 
 
 def cleared_city(env, state, index=0):
@@ -275,14 +278,76 @@ def test_city_armor_and_fear_protect_defenders_only(current_game):
     stats = compiled_method(env,'_combat_stats')
     city = begin(s.replace(enemy=jnp.int32(43)))
     assert city.battle_fort_armor == 20
+    assert city.battle_fort_defender == FORT_RED
+    assert compiled_method(env,'action_mask')(city.replace(actor=jnp.int32(1)))[RETREAT]
     chex.assert_trees_all_equal(stats(city)[6:,ARMOR]-stats(city.replace(battle_fort_armor=jnp.int32(0)))[6:,ARMOR],jnp.full(6,20.))
     assert stats(city)[1,ARMOR] == stats(s)[1,ARMOR]  # attacking from capital grants no defensive armor
     field = begin(s.replace(enemy=jnp.int32(0)))
-    assert field.battle_fort_armor == 0
+    assert field.battle_fort_armor == 0 and field.battle_fort_defender == FORT_NONE
     caster = hero_roster_state(env,s,['baroness','duke',None,None,None,None])
     fear = begin(caster.replace(enemy=jnp.int32(41))).replace(actor=jnp.int32(0))
     hit,_ = fight(fear,jnp.int32(SHOOT),fear.battle_key,jnp.zeros(env.random_size))
     assert hit.paralyzed[6] and not hit.retreating[6] and not hit.feared[6]
+
+
+@pytest.mark.parametrize('fort_side', [FORT_NONE, FORT_BLUE, FORT_RED])
+def test_fort_retreat_mask_step_and_escape_for_both_sides(current_game, fort_side):
+    """Steam sub_5F5A4B: a settlement blocks its defenders, never its attackers."""
+    env, initial, step, fight = current_game
+    state = compiled_method(env,'_begin_battle')(initial.replace(enemy=jnp.int32(0)))
+    state = enemy_roster_state(env,state,['squire','archer',None,None,None,None])
+    # The restriction is independent of the armour value, including zero.
+    state = state.replace(actor=jnp.int32(1), battle_fort_defender=jnp.int32(fort_side),
+                          battle_fort_armor=jnp.int32(0), battle_hero_fort_armor=jnp.int32(0))
+    mask = compiled_method(env,'action_mask')
+    assert bool(mask(state)[RETREAT]) == (fort_side != FORT_BLUE)
+    rolls = jnp.zeros(env.random_size).at[36].set(.99).at[67].set(.99)
+    if fort_side == FORT_BLUE:
+        denied, _ = step(state,jnp.int32(RETREAT))
+        for field in ('hp','retreating','escaped','battle_key','turn_phase','actor'):
+            chex.assert_trees_all_equal(getattr(denied,field),getattr(state,field))
+        late = state.replace(round=jnp.int32(env.max_rounds+1))
+        assert not env.round_limit_retreat(late) and not env.automatic_battle_turn(late)
+        assert mask(late)[DEFEND] and not mask(late)[RETREAT]
+        boundary = state.replace(round=jnp.int32(env.max_rounds),
+            turn_phase=jnp.full(12,2,jnp.int32).at[1].set(0))
+        following, _ = fight(boundary,jnp.int32(DEFEND),boundary.battle_key,rolls)
+        assert following.round == env.max_rounds+1 and following.last_event != ROUND_LIMIT_RETREAT
+    else:
+        following, _ = fight(state,jnp.int32(RETREAT),state.battle_key,rolls)
+        assert following.retreating[1]
+    # A queued escape cannot bypass the restriction, for either actor colour.
+    for actor, blocked in ((1,fort_side == FORT_BLUE),(6,fort_side == FORT_RED)):
+        queued = state.replace(actor=jnp.int32(actor),retreating=state.retreating.at[actor].set(True))
+        following, _ = fight(queued,jnp.int32(CONTINUE),queued.battle_key,rolls)
+        assert bool(following.escaped[actor]) == (not blocked)
+        assert not following.retreating[actor]
+
+
+@pytest.mark.parametrize('fort_side', [FORT_NONE, FORT_BLUE, FORT_RED])
+@pytest.mark.parametrize('target', [1, 7], ids=['blue-target','red-target'])
+def test_fort_fear_skips_one_activation_but_attackers_escape(current_game, fort_side, target):
+    """Fear onHit 0x65D06F selects Retreating or Paralyze using sub_5F5A4B."""
+    env, initial, _, fight = current_game
+    state = compiled_method(env,'_begin_battle')(initial.replace(enemy=jnp.int32(0)))
+    state = hero_roster_state(env,state,['baroness','duke',None,None,None,None])
+    state = enemy_roster_state(env,state,['baroness','squire',None,None,None,None])
+    actor = 6 if target < 6 else 0
+    state = state.replace(actor=jnp.int32(actor),battle_fort_defender=jnp.int32(fort_side),
+        battle_fort_armor=jnp.int32(0),battle_hero_fort_armor=jnp.int32(0),
+        priority=jnp.zeros(12).at[target].set(10000.))
+    rolls = jnp.zeros(env.random_size).at[36].set(.99).at[67].set(.99)
+    hit, _ = fight(state,jnp.int32(SHOOT+target%6),state.battle_key,rolls)
+    protected = fort_side == (FORT_BLUE if target < 6 else FORT_RED)
+    assert bool(hit.paralyzed[target]) == protected
+    assert not hit.long_paralyzed[target]
+    assert bool(hit.feared[target]) == (not protected)
+    assert bool(hit.retreating[target]) == (not protected)
+    assert hit.actor == target
+    following, _ = fight(hit,jnp.int32(CONTINUE),hit.battle_key,rolls)
+    assert not following.paralyzed[target]
+    assert bool(following.escaped[target]) == (not protected)
+    assert not following.retreating[target]
 
 
 def test_map_victory_requires_entry_into_both_cities_and_reset_clears_resources(current_game):
