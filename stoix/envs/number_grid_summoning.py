@@ -25,7 +25,7 @@ def linked_summon_hp(hp, escaped, summon_owner):
 def advance_linked_queue(hp, escaped, phases, priority, round_number, activated,
                          turns, damage, source, immunities, extra_priority,
                          next_actor, hold, max_rounds, immunity_masks, fallback_damage,
-                         applied_rounds, removal_rolls, summon_owner):
+                         applied_rounds, removal_rolls, summon_owner, return_death_order=False):
     """Bounded device queue: a DOT-killed caster removes dependents immediately.
 
     Process the first candidate inline and continue only after a death. Keep
@@ -36,8 +36,9 @@ def advance_linked_queue(hp, escaped, phases, priority, round_number, activated,
         active = (health > 0) & ~escaped
         return jnp.any(active[:6]) & jnp.any(active[6:])
 
-    def advance(_, carry):
-        health, phase, order, round_no, done, left, amounts, owners, actor, losses, visited, stopped = carry
+    def advance(index, carry):
+        health, phase, order, round_no, done, left, amounts, owners, actor, losses, visited, deaths, stopped = carry
+        previous_hp = health
         active = (health > 0) & ~escaped
         wrap = ~jnp.any(active & (phase < 2)) & alive(health) & ~stopped
         round_no += wrap.astype(jnp.int32)
@@ -63,6 +64,7 @@ def advance_linked_queue(hp, escaped, phases, priority, round_number, activated,
         left = left.at[candidate].set(remaining)
         health = linked_summon_hp(health, escaped, summon_owner)
         dead = health <= 0
+        deaths = jnp.where(enabled & (previous_hp > 0) & dead, index, deaths)
         phase = jnp.where(dead,2,phase)
         done |= dead
         live_dot = (left > 0) & ((health > 0) & ~escaped)[:,None]
@@ -71,10 +73,11 @@ def advance_linked_queue(hp, escaped, phases, priority, round_number, activated,
         owners = jnp.where(live_dot,owners,-1)
         visited |= enabled & (slots == candidate)
         stopped |= ~enabled | ~alive(health) | (health[candidate] > 0)
-        return health,phase,order,round_no,done,left,amounts,owners,actor,losses,visited,stopped
+        return health,phase,order,round_no,done,left,amounts,owners,actor,losses,visited,deaths,stopped
 
     initial = advance(0, (hp,phases,priority,round_number,activated,
-        turns,damage,source,next_actor,jnp.zeros_like(damage),jnp.zeros(12,bool),hold | ~alive(hp)))
+        turns,damage,source,next_actor,jnp.zeros_like(damage),jnp.zeros(12,bool),
+        jnp.full(12,24,jnp.int32),hold | ~alive(hp)))
     def pending(carry):
         count, current = carry
         return (count < 24) & ~current[-1]
@@ -84,7 +87,7 @@ def advance_linked_queue(hp, escaped, phases, priority, round_number, activated,
         return count + 1, advance(count, current)
 
     _, result = jax.lax.while_loop(pending, following, (jnp.int32(1), initial))
-    return result[:-1]
+    return result[:-1] if return_death_order else result[:-2]
 
 
 class Summoning:
@@ -270,7 +273,7 @@ class Summoning:
         zero = ('effect_rounds','transform_long','powerup_long','saved_powerup_long','defended','retreating','escaped','copied','fenrir','imp','imp_wards','decay_form',
             'decay_shreds','armor_shreds','feared','weakened','saved_weakened','item_weakened',
             'saved_item_weakened','lycanthrope','paralyzed','long_paralyzed',
-            'waited','bonus_turns','battle_revived','revival_xp_cutoff','powerup','powerup_layered',
+            'waited','bonus_turns','battle_revived','powerup','powerup_layered',
             'saved_powerup','saved_powerup_layered','healer_wards','saved_healer_wards',
             'ward_native_used','saved_ward_native_used','wards_used')
         negative = ('disable_source','initiative_override','saved_initiative_override','slow_original','primary_override',

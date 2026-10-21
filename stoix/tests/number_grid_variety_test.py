@@ -193,9 +193,9 @@ def test_new_units_level_growth_and_enemy_healer_cap(env):
         [55,17,81,0,30],[45,17,81,0,50],[55,22,100,0,10]],jnp.float32))
     state = enemy_roster_state(env,battle(env,5),[None,'titan',None,'archer',None,'acolyte'])
     # Enemies have no capital: acolyte cannot change form and caps at 79/80 XP.
-    state = state.replace(hp=state.hp.at[:6].set(0))
+    state = state.replace(hp=state.hp.at[:6].set(0), battle_earned_xp=jnp.full(12,3333,jnp.int32))
     result = jax.jit(env.progression.finish)(state, state.hp, state.escaped,
-        jnp.bool_(False), jnp.bool_(True), jnp.bool_(False), jnp.array([10000,0],jnp.int32))
+        jnp.bool_(False), jnp.bool_(True), jnp.bool_(False))
     ids, levels, xp = result[:3]
     assert ids[11] == state.unit_ids[11] and levels[11] == 1 and xp[11] == 79
     assert levels[7] == 2 and xp[7] == 0  # terminal Titan grows numerically

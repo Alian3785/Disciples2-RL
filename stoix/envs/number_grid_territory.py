@@ -197,6 +197,8 @@ class TerritoryRules:
             raise ValueError('Capital guards must be distinct stacks outside cities')
         self.has_capital_guards = bool(guards)
         self.capital_guards = jnp.array([i in guards for i in range(self.enemy_count)], bool)
+        self.enemy_capital_positions = jnp.array(
+            [c['position'] for c in self.enemy_capitals], jnp.int32).reshape(-1, 2)
         offsets = [(r,c) for r in range(-2,3) for c in range(-2,3)]
         self.local_offsets = jnp.array(offsets,jnp.int32)
         # Mana, six income values, independent source growth, city and mine rows,
@@ -340,6 +342,13 @@ class TerritoryRules:
         return state.replace(city_levels=state.city_levels.at[index].add(valid.astype(jnp.int32)),gold=state.gold-cost,
             last_upgraded_city=jnp.where(valid,index,-1),last_service_cost=jnp.where(valid,cost,state.last_service_cost),
             last_event=jnp.where(valid,CITY_UPGRADED,state.last_event))
+
+    def defender_in_fort(self,state):
+        """A defending garrison or visiting army, independent of its armour bonus."""
+        position = state.enemy_positions[jnp.maximum(state.enemy, 0)]
+        city = jnp.any(jnp.all(self.positions == position, axis=1) & ~state.city_owned)
+        capital = jnp.any(jnp.all(self.enemy_capital_positions == position, axis=1))
+        return (state.enemy >= 0) & (city | capital)
 
     def defender_armor(self,state):
         armor = jnp.int32(0)

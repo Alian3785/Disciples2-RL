@@ -1,0 +1,66 @@
+{
+  "date": "2026-10-21",
+  "branch": "codex/original-xp-growth",
+  "base_commit": "f9d9ef5",
+  "scope": "Audit points 6 and 7: native kill XP and next-level requirements through level 99. Distribution, rounding of shares and one promotion per battle are outside this change.",
+  "sources": {
+    "edition": "Installed Steam Disciples II: Rise of the Elves",
+    "directory": "C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals",
+    "gunits.dbf_sha256": "c663448bc47c08a40863d0efe4ae1476478ccf082af095a612416f181f7721db",
+    "gdynupgr.dbf_sha256": "85debbfc03ac7deba04f24f5a3b93a4570c96265af689c80f8147a6bf212d5d2",
+    "exe_sha256": "115d4629ef35041187dea53700901eff47eb33d1f7270cc9dd3c2c72870a194a",
+    "saved_listing": "results/source-research/steam-ai/ida-analysis/Discipl2-ida.lst",
+    "application": "sub_599335 splits dynamic levels at DYN_UPG_LV using the native base LEVEL. sub_599417 adds both products: XP_KILLED at 0x59955C..0x59956C; XP_NEXT at 0x59956F..0x5995A6. The table fields are loaded at 0x597EAE/0x597EC1 and read via 0x597F5B/0x597F5F.",
+    "fixture": "stoix/tests/data/unit_xp_growth.json"
+  },
+  "implementation": [
+    "Native heroes and other units use the same additive early/late XP_KILLED growth; the rounded x1.1 hero recurrence is removed.",
+    "All 356 catalogue records now retain both XP_NEXT increments as growth.required_early and growth.required_late. The catalogue importer reads them directly from GDynUpgr.",
+    "Both XP lookups cover levels 0..99 on the device. required_xp and experience share these values with battle XP banks, promotions, trainers, observations and manual play.",
+    "The existing level-99 promotion/training lock is retained; 98 -> 99 remains legal.",
+    "The explicit Super Last Stand exp_increment override replaces only early XP_NEXT growth. Native late growth still applies. Native catalogue rows no longer contain this override.",
+    "The standalone guardian planner's threshold cost arithmetic follows both XP_NEXT stages. It was not run.",
+    "Duke fixture combat statistics retain their original reference provenance; only XP values and the supported level range were updated from original-game sources."
+  ],
+  "examples": {
+    "duke": {
+      "unit_id": "g000uu0070",
+      "growth_ids": ["g000DU0070", "g002DU0070"],
+      "base_level": 1,
+      "threshold": 10,
+      "kill_base_early_late": [60, 6, 3],
+      "next_base_early_late": [150, 500, 0],
+      "levels": [10, 15, 20, 99],
+      "kill_xp": [114, 129, 144, 381],
+      "next_xp": [4650, 4650, 4650, 4650]
+    },
+    "cyclops": {
+      "unit_id": "g000uu8047",
+      "next_base_early_late": [2000, 0, 100],
+      "levels": [10, 20, 98],
+      "next_xp": [2000, 3000, 10800]
+    }
+  },
+  "regression_tests": [
+    "number_grid_progression_test.py::test_duke_levels_through_99_match_reference_stats_and_original_xp",
+    "number_grid_progression_test.py::test_catalogue_xp_through_99_matches_installed_dbf_rows",
+    "number_grid_progression_test.py::test_killed_hero_original_xp_reaches_both_battle_banks",
+    "number_grid_progression_test.py::test_native_xp_threshold_boundary_promotes_hero_and_late_growing_neutral",
+    "number_grid_progression_test.py::test_duke_levelups_need_no_building_heal_once_and_use_original_threshold",
+    "number_grid_progression_test.py::test_human_snapshot_exposes_duke_progress_and_passive_bonuses",
+    "number_grid_reference_campaigns_test.py::test_betrezen_identity_and_starting_assets",
+    "number_grid_limits_test.py::test_level_99_blocks_victory_xp_healing_and_training"
+  ],
+  "static_checks": [
+    "Ruff passed for all five changed Python files.",
+    "All changed Python files parsed with ast; changed and new JSON files parsed successfully.",
+    "Catalogue data diff is limited to required_early/required_late and removal of native exp_increment across 356 records.",
+    "Duke non-XP fixture statistics are unchanged for levels 1..99.",
+    "Raw source fixture IDs cover the catalogue; installed DBF and EXE SHA-256 hashes match the recorded sources.",
+    "git diff --check passed."
+  ],
+  "tests_run": false,
+  "training_or_benchmarks_run": false,
+  "original_game_launched": false,
+  "disassembler_launched": false
+}

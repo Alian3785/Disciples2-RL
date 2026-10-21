@@ -23,6 +23,10 @@ def test_betrezen_identity_and_starting_assets(fortress):
     assert row['game_id'] == 'g000uu6001'
     assert row['hero'] and row['name'] == 'Бетрезен'
     assert row['exp_required'] == 150 and row['exp_increment'] == 500
+    # The scenario's explicit early increment still stops at the native boundary.
+    hero = state.unit_ids[4]
+    levels = jnp.array([1,10,15,99],jnp.int32)
+    assert jax.jit(env.progression.required_xp)(hero,levels).tolist() == [150,4650,4650,4650]
     assert int(state.hp[4]) == 300 and int(state.gold) == 3000
     assert bool(env.capital.temple_built(state))
     assert env.item_rules.skill_levels[:2] == (1, 1)

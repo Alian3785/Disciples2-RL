@@ -218,7 +218,7 @@ def test_patriarch_cannot_revive_any_summon(default_game, item_battle, owner, ma
                                        pending_healers=jnp.zeros(12, bool).at[4].set(True))):
         assert not mask(before)[action]
         rejected, _ = step(before, action)
-        for field in ('hp', 'actor', 'battle_key', 'battle_revived', 'revival_xp_cutoff'):
+        for field in ('hp', 'actor', 'battle_key', 'battle_revived', 'battle_earned_xp'):
             np.testing.assert_array_equal(getattr(rejected, field), getattr(before, field))
     permanent = state.replace(summon_owner=state.summon_owner.at[3].set(-1), summon_battle=jnp.bool_(False))
     assert mask(permanent)[action]
@@ -237,12 +237,14 @@ def test_item_summon_preserves_escaped_fighter_at_battle_end(default_game, item_
     env, _, step, mask = default_game
     before = item_battle.replace(hp=item_battle.hp.at[0].set(37),
         escaped=item_battle.escaped.at[0].set(True), unit_xp=item_battle.unit_xp.at[0].set(17),
-        unit_levels=item_battle.unit_levels.at[0].set(2))
+        unit_levels=item_battle.unit_levels.at[0].set(2),
+        battle_earned_xp=item_battle.battle_earned_xp.at[0].set(40))
     action = jnp.int32(NAMES.index('item2_ally_0'))
     assert mask(before)[action]
     summoned, _ = step(before, action)
     assert summoned.summon_saved_hp[0] == 37 and summoned.summon_owner[0] == 1
     assert not summoned.escaped[0] and summoned.hp[0] > 0
+    assert summoned.battle_earned_xp[0] == 40
     if victory:
         ending = summoned.replace(actor=jnp.int32(1), hp=summoned.hp.at[6:].set(0),
                                    battle_xp=jnp.array([0, 100], jnp.int32))
@@ -254,7 +256,7 @@ def test_item_summon_preserves_escaped_fighter_at_battle_end(default_game, item_
         assert not result.lost and not result.done
         np.testing.assert_array_equal(result.position, before.origin)
     assert result.hp[0] == 37 and result.unit_ids[0] == before.unit_ids[0]
-    assert result.unit_levels[0] == 2 and result.unit_xp[0] == 17 and result.last_xp[0] == 0
+    assert result.unit_levels[0] == 2 and result.unit_xp[0] == 57 and result.last_xp[0] == 40
     assert not jnp.any(result.summon_saved_hp) and jnp.all(result.summon_owner == -1)
 
 
@@ -520,6 +522,24 @@ def effects(default_game):
     valid, after, hp, info = apply(batch, actions)
     keys = [key for key, *_ in CASES]
     return env, base, keys, valid, after, hp, info, apply
+
+
+def test_fear_item_respects_defending_side_without_armour(effects):
+    from stoix.envs.number_grid import FORT_NONE, FORT_BLUE, FORT_RED
+    env, base, _, _, _, _, _, apply = effects
+    rules = env.battle_item_rules
+    item = rules.keys.index('talisman_of_nightmare')
+    base = base.replace(battle_items=jnp.array([item,-1],jnp.int32),
+        battle_item_charges=jnp.array([rules.uses[item],0],jnp.int32),
+        battle_fort_armor=jnp.int32(0),battle_hero_fort_armor=jnp.int32(0))
+    states = jax.tree.map(lambda x:jnp.repeat(x[None],3,axis=0),base).replace(
+        battle_fort_defender=jnp.array([FORT_NONE,FORT_BLUE,FORT_RED],jnp.int32))
+    valid, after, _, _ = apply(states,jnp.full(3,rules.use_start+12+1,jnp.int32))
+    assert jnp.all(valid)
+    np.testing.assert_array_equal(after.paralyzed[:,7],[False,False,True])
+    np.testing.assert_array_equal(after.retreating[:,7],[True,True,False])
+    np.testing.assert_array_equal(after.feared[:,7],[True,True,False])
+    assert not jnp.any(after.long_paralyzed[:,7])
 
 
 def test_reference_item_effects(effects):

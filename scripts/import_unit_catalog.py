@@ -154,11 +154,11 @@ def main():
             row['growth'][phase] = [integer(g, 'HIT_POINT'), integer(g, primary_growth),
                                     integer(g, 'POWER'), integer(g, 'ARMOR'), integer(g, 'INITIATIVE')]
             row['growth']['kill_'+phase] = integer(g, 'XP_KILLED')
+            row['growth']['required_'+phase] = integer(g, 'XP_NEXT')
             row['growth']['secondary_'+phase] = [integer(g, secondary_growth), integer(g, 'POWER') if secondary else 0]
         row['leader'] = integer(source, 'UNIT_CAT') in (2, 6)
         row['hero'] = int(ref.get('следуровень', 0)) > 0
         if row['hero']:
-            row['exp_increment'] = int(ref.get('следуровень', integer(growth.get(source['DYN_UPG1'].lower(), {}), 'XP_NEXT')))
             # Preserve the user-requested reference hero skill progression.
             row['level_bonuses'] = previous.get('level_bonuses') or old['duke']['level_bonuses']
         for field, ru, scale in (('max_hp', 'здоровье', 1), ('damage', 'урон', 1), ('accuracy', 'точн', 100),

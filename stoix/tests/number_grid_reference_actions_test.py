@@ -980,7 +980,8 @@ def test_baroness_enemy_escape_victory_awards_only_actual_damage_no_kill_xp(curr
     won,_ = fight(feared,jnp.full(2,CONTINUE),feared.battle_key,rolls)
     assert jnp.all(won.last_event == VICTORY) and not jnp.any(won.in_battle)
     chex.assert_trees_all_equal(won.recovery_balance,jnp.array([[0,0],[50,0]]))
-    assert not jnp.any(won.last_xp) and not jnp.any(won.battle_xp) and not jnp.any(won.feared)
+    # No kills: eligible survivors receive only the original minimum of 1 XP.
+    assert jnp.all(won.last_xp <= 1) and not jnp.any(won.battle_xp) and not jnp.any(won.feared)
 
 
 def test_baroness_highest_hp_ai_and_fear_delayed_by_paralysis(current_game):
@@ -1449,7 +1450,7 @@ def test_patriach_revives_once_half_hp_cleanses_and_cannot_act_this_round(curren
     rolls = jnp.zeros(env.random_size).at[36].set(.99)
     risen,_ = attack(state,jnp.int32(SHOOT+4),state.battle_key,rolls)
     assert risen.hp[4] == 22  # Python round(45*.5), ties to even.
-    assert risen.battle_revived[4] and risen.revival_xp_cutoff[4] == 100 and risen.turn_phase[4] == 2
+    assert risen.battle_revived[4] and risen.battle_earned_xp[4] == 0 and risen.turn_phase[4] == 2
     assert not risen.paralyzed[4] and not risen.long_paralyzed[4] and not risen.feared[4] and not risen.retreating[4]
     assert risen.poison_mode[4] == 0 and risen.poison_source[4] == -1
     fallen = risen.replace(actor=jnp.int32(3),hp=risen.hp.at[4].set(0))
@@ -1490,40 +1491,14 @@ def test_patriach_post_victory_revival_receives_no_past_xp(current_game):
     state = hero_roster_state(env,state,['possessed','duke','possessed','patriarch','cultist',None])
     state = state.replace(actor=jnp.int32(3),post_victory=jnp.int32(1),
         pending_healers=jnp.zeros(12,bool).at[3].set(True),
-        hp=state.hp.at[4:].set(0),battle_xp=jnp.array([0,100],jnp.int32))
+        hp=state.hp.at[4:].set(0),battle_xp=jnp.array([0,100],jnp.int32),
+        battle_earned_xp=state.battle_earned_xp.at[:4].set(25))
     rolls = jnp.zeros(env.random_size).at[36].set(.99)
     risen,_ = attack(state,jnp.int32(SHOOT+4),state.battle_key,rolls)
-    assert not risen.in_battle and risen.hp[4] == 22 and risen.last_xp[4] == 0
+    assert not risen.in_battle and risen.hp[4] == 22 and risen.last_xp[4] == 1  # final minimum, not old kills
     chex.assert_trees_all_equal(risen.last_xp[:4],jnp.full(4,25,jnp.int32))
     skipped,_ = attack(state,jnp.int32(WAIT),state.battle_key,rolls)
     assert skipped.hp[4] == 0 and jnp.sum(skipped.last_xp) == 100
-
-
-def test_patriach_xp_excludes_pre_revival_kills_and_redistributes_to_final_survivors():
-    from fractions import Fraction
-    import random
-    import numpy as np
-    from stoix.envs.number_grid_progression import revival_xp_shares
-    rng = random.Random(42)
-    totals,cuts,masks,expected = [],[],[],[]
-    for case in range(512):
-        events = [rng.randrange(0,1001) for _ in range(10)]
-        bank = [0]
-        for value in events:
-            bank.append(bank[-1]+value)
-        revivals = [rng.randrange(11) for _ in range(6)]
-        if case == 0:
-            events = [100,100]; bank = [0,100,200]; revivals = [0,1,2,0,0,0]
-        final_alive = [rng.random() < .75 for _ in range(6)]
-        awards = [Fraction(0) for _ in range(6)]
-        for i,value in enumerate(events):
-            recipients = [j for j in range(6) if final_alive[j] and revivals[j] <= i]
-            for j in recipients:
-                awards[j] += Fraction(value,len(recipients))
-        totals.append(bank[-1]); cuts.append([bank[i] for i in revivals]); masks.append(final_alive)
-        expected.append([int(a+Fraction(1,2)) for a in awards])
-    actual = jax.jit(jax.vmap(revival_xp_shares))(jnp.array(totals,jnp.int32),jnp.array(cuts,jnp.int32),jnp.array(masks,bool))
-    np.testing.assert_array_equal(actual,expected)
 
 
 def test_novice_half_extra_primary_damage_without_stacking(current_game):

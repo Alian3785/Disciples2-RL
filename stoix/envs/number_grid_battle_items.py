@@ -418,9 +418,8 @@ class BattleItemRules:
             restored = jnp.where(self.percent[kind] > 0, jnp.rint(maximum*self.percent[kind]/100.), amount)
             restored = jnp.minimum(maximum, jnp.maximum(1, restored.astype(jnp.int32)))
             hp = jnp.where(revived, restored, hp)
-            # A revived fighter shares only XP banked after its return.
-            state = state.replace(revival_xp_cutoff=jnp.where(revived, state.battle_xp[jnp.where(slots < 6, 1, 0)],
-                                                              state.revival_xp_cutoff),
+            # Death erased the personal award; revival never restores it.
+            state = state.replace(battle_earned_xp=jnp.where(revived, 0, state.battle_earned_xp),
                 turn_phase=jnp.where(revived, 2, state.turn_phase), priority=jnp.where(revived, 0., state.priority),
                 retreating=state.retreating & ~revived, paralyzed=state.paralyzed & ~revived,
                 long_paralyzed=state.long_paralyzed & ~revived, feared=state.feared & ~revived)

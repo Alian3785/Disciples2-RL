@@ -259,7 +259,8 @@ def test_camp_origin_survives_promotion_swaps_battle_death_and_reset(capital):
     # A real XP award at victory promotes the mercenary without changing its origin.
     threshold = env.unit_experience(battle)[slot, 2]
     battle = battle.replace(unit_xp=battle.unit_xp.at[slot].set(threshold - 1),
-        native_xp=battle.native_xp.at[slot].set(threshold - 1), battle_xp=battle.battle_xp.at[1].set(100))
+        native_xp=battle.native_xp.at[slot].set(threshold - 1),
+        battle_earned_xp=battle.battle_earned_xp.at[slot].set(100))
     promoted, _ = finish(env, battle)
     assert promoted.unit_levels[slot] > hired.unit_levels[slot]
     assert promoted.mercenary_units[slot] and rules.reward_vacancies(promoted) == 1

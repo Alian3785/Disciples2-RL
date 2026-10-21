@@ -44,7 +44,7 @@ class ProgressionRules:
                      max_hp=0, damage=0, accuracy=0, armor=0, initiative=0,
                      attack_type='weapon', immunities=[], protections=[],
                      growth=dict(threshold=10, early=[0]*5, late=[0]*5,
-                                 kill_early=0, kill_late=0))]
+                                 kill_early=0, kill_late=0, required_early=0, required_late=0))]
         for key, values in UNITS.items():
             if not values.get('upgrade_unavailable_reason'):
                 self.ids[key] = len(rows)
@@ -189,8 +189,6 @@ class ProgressionRules:
         self.has_hermits = any(rows[i].get('unit_type') == 'Hermit' for i in used_ids)
         self.has_alchemists = any(rows[i].get('unit_type') == 'Alchemist' for i in used_ids)
         self.has_patriarchs = any(rows[i].get('unit_type') == 'Patriach' for i in used_ids)
-        # Revival items (Orb/Talisman of Life, Life Potion) set it from number_grid.
-        self.revival_cutoffs = False
         self.has_powerups = any(rows[i].get('unit_type') in power_types for i in used_ids)
         self.has_healer_wards = any(ward_bits[i] for i in used_ids)
         self.has_cures = any(rows[i].get('unit_type') in ('Patriach','Dwarfdruid','Arhidruid') or (rows[i].get('unit_type') == 'Profit' and rows[i]['name'] in ('Аббатиса','Прорицательница','Matriarch','Prophetess')) for i in used_ids)
@@ -243,27 +241,10 @@ class ProgressionRules:
         self.thresholds = jnp.array([r['growth']['threshold'] for r in rows], jnp.int32)
         self.early = jnp.array([r['growth']['early'] for r in rows], jnp.float32)
         self.late = jnp.array([r['growth']['late'] for r in rows], jnp.float32)
-        self.kill_base = jnp.array([r['exp_kill'] for r in rows], jnp.int32)
-        self.kill_early = jnp.array([r['growth']['kill_early'] for r in rows], jnp.int32)
-        self.kill_late = jnp.array([0 if r.get('hero') else r['growth']['kill_late'] for r in rows], jnp.int32)
         # A tiny lookup covers the early levels; later growth is linear. This
         # avoids gathering five separate profile arrays on every environment step.
         self.level_anchor = max(max(r['growth']['threshold'],
             max((b['level'] for b in r.get('level_bonuses', [])), default=0)) for r in rows)
-        # Heroes use the reference's rounded x1.1 kill XP, not GDynUpgr's
-        # fixed increment. Tabulate every value representable by the JAX int32
-        # state; saturation only concerns otherwise overflowing synthetic levels.
-        hero_kills = {}
-        for i, row in enumerate(rows):
-            if row.get('hero'):
-                curve = [row['exp_kill']] * (row['level']+1)
-                while 0 < curve[-1] < 2**31-1:
-                    following = min(2**31-1, int(round(curve[-1]*1.1)))
-                    if following == curve[-1]:
-                        break
-                    curve.append(following)
-                hero_kills[i] = curve
-        self.kill_anchor = max(self.level_anchor, max((len(c)-1 for c in hero_kills.values()), default=0))
 
         def grown_stats(row, level):
             extra = max(level-row['level'], 0)
@@ -284,23 +265,30 @@ class ProgressionRules:
                 values[2] = min(values[2], 100)
             return values
 
-        def killed_value(i, row, level):
-            if i in hero_kills:
-                return hero_kills[i][min(level, len(hero_kills[i])-1)]
+        def xp_value(row, level, field, growth):
+            # Gunits + GDynUpgr, applied by Steam EXE sub_599335/sub_599417.
+            # Heroes use the same two-stage additive rule as other fighters.
             extra = max(level-row['level'], 0)
             early = min(extra, max(row['growth']['threshold']-row['level'], 0))
-            return row['exp_kill']+early*row['growth']['kill_early']+(extra-early)*row['growth']['kill_late']
+            first = row['growth'][growth+'_early']
+            if growth == 'required':
+                # Explicit scenario overrides (e.g. playable Betrezen) replace
+                # only the early XP_NEXT increment; late growth stays native.
+                first = row.get('exp_increment', first)
+            return row[field]+early*first+(extra-early)*row['growth'][growth+'_late']
 
         self.stat_levels = jnp.array([[grown_stats(r, level) for r in rows]
                                      for level in range(self.level_anchor+1)], jnp.float32)
-        self.kill_levels = jnp.array([[killed_value(i, r, level) for i, r in enumerate(rows)]
-                                     for level in range(self.kill_anchor+1)], jnp.int32)
+        # All supported levels are immutable device lookups, including 98 -> 99.
+        self.kill_levels = jnp.array([[xp_value(r, level, 'exp_kill', 'kill') for r in rows]
+                                     for level in range(MAX_LEVEL+1)], jnp.int32)
+        self.required_levels = jnp.array([[xp_value(r, level, 'exp_required', 'required') for r in rows]
+                                         for level in range(MAX_LEVEL+1)], jnp.int32)
         heavy_strike_ids = {'g000uu0019','g000uu0020','g000uu0044','g000uu0045','g000uu0047','g000uu0070','g000uu0071','g000uu0096','g000uu8009','g000uu8011'}
         support_types = {'Cliric','Profit','Patriach','Deva roshi','Sundancer','Sylfid','Ghost','Witch','Shadow','Incub','Succub','Baroness','Travnitsa','Novice','Alchemist','Dwarfdruid','Arhidruid'}
         self.stat_caps = jnp.array([[MAX_HP, jnp.inf if r.get('unit_type') in support_types else 400 if r.get('game_id') in heavy_strike_ids else 300, MAX_ACCURACY, MAX_ARMOR, MAX_INITIATIVE]
                                     for r in rows], jnp.float32)
         self.required = jnp.array([r['exp_required'] for r in rows], jnp.int32)
-        self.required_increment = jnp.array([r.get('exp_increment', 0) for r in rows], jnp.int32)
         self.dynamic = jnp.array([i > 0 and not r['upgrades'] for i, r in enumerate(rows)])
         targets, bits = [], []
         for row in rows:
@@ -386,7 +374,7 @@ class ProgressionRules:
 
     def required_xp(self, ids, levels):
         levels = jnp.minimum(levels, MAX_LEVEL)
-        return self.required[ids] + jnp.maximum(levels-self.base_levels[ids], 0)*self.required_increment[ids]
+        return self.required_levels[levels, ids]
 
     def missing_upgrade_building(self, state, ids, levels):
         """An own-faction, permitted evolution is waiting for its building."""
@@ -428,8 +416,7 @@ class ProgressionRules:
 
     def experience(self, ids, levels, current):
         levels = jnp.minimum(levels, MAX_LEVEL)
-        killed = (self.kill_levels[jnp.minimum(levels, self.kill_anchor), ids]
-                  + jnp.maximum(levels-self.kill_anchor, 0)*self.kill_late[ids])
+        killed = self.kill_levels[levels, ids]
         return jnp.stack((levels, killed, self.required_xp(ids, levels), current), axis=-1)
 
     def damage(self, state, actor, targets, guarded, bonuses, damage_value=None, armor_shreds=None, imps=None, armor_values=None):
@@ -449,30 +436,52 @@ class ProgressionRules:
         return self.damage_rolls[damage_value.astype(jnp.int32), armor_ids,
                                  guarded.astype(jnp.int32), bonuses]
 
-    def finish(self, state, hp, escaped, victory, lost, withdrawal, bank, experience_book=False):
+    def accumulate(self, state, before_hp, hp, escaped, kill_xp, death_order=None):
+        """Original sub_62618B/62632E: distribute each death packet immediately.
+
+        A regular attack is one packet, including all its targets. DOT deaths
+        are separate packets in queue order. Newly dead allies still count in
+        their packet's divisor; their own accumulated share is then erased.
+        Summons never participate, including a summon covering an escapee.
+        """
+        permanent = (state.unit_ids != 0) & (state.summon_owner < 0)
+        killed = (before_hp > 0) & (hp <= 0) & permanent & ~escaped
+        participants = permanent & ~escaped & ((before_hp > 0) | (hp > 0))
+        survivors = permanent & ~escaped & (hp > 0)
+        worth = jnp.where(killed, kill_xp, 0)
+        totals = jnp.sum(worth.reshape(2, 6), axis=1)
+        side = jnp.arange(12) // 6
+        if death_order is None:
+            counts = jnp.sum(participants.reshape(2, 6), axis=1)
+            shares = totals[1-side] // jnp.maximum(counts[side], 1)
+        else:
+            # Rows are recipients, columns are successive victims. A later
+            # casualty remains in earlier divisors, even though its XP is lost.
+            present = participants[:, None] & (death_order[:, None] >= death_order[None, :])
+            counts = jnp.sum(present.reshape(2, 6, 12), axis=1)
+            portions = worth[None, :] // jnp.maximum(counts[side], 1)
+            shares = jnp.sum(jnp.where(side[:, None] != side[None, :], portions, 0), axis=1)
+        earned = state.battle_earned_xp + jnp.where(survivors, shares, 0)
+        earned = jnp.where(permanent & (hp <= 0), 0, earned)
+        return state.replace(battle_earned_xp=earned, battle_xp=state.battle_xp+totals)
+
+    def finish(self, state, hp, escaped, victory, lost, withdrawal, experience_book=False):
         """Award once, before automatic resurrection; one promotion per battle."""
         ended = victory | lost | withdrawal
-        winners = (jnp.arange(12) < 6) == victory
-        recipients = (hp > 0) & ~escaped & winners & ended & (state.unit_ids != 0)
-        # Capital guardians take no battle XP share; trainer rules stay separate.
+        recipients = (hp > 0) & ended & (state.unit_ids != 0) & (state.summon_owner < 0)
+        # Both sides retain their personal awards, including escaped fighters.
         recipients &= (self.required[state.unit_ids] > 0) & ~self.capital_guards[state.unit_ids]
-        count = jnp.maximum(jnp.sum(recipients), 1)
-        total = jnp.where(victory, bank[1], bank[0])
-        # floor(total/count + .5), exact integer arithmetic, not bankers' round.
-        scale=jnp.where(victory & experience_book,5,4)
-        whole,remainder=total//count,total%count
-        extra=jnp.where(scale==5,whole//4,0)
-        fraction=jnp.where(scale==5,whole%4,0)*count+remainder*scale
-        award=whole+extra+(fraction+2*count)//(4*count)
-        gains = jnp.where(recipients, award, 0)
-        if self.has_patriarchs or self.revival_cutoffs:
-            cutoffs = state.revival_xp_cutoff.reshape(2,6)
-            masks = recipients.reshape(2,6)
-            gains = jax.vmap(revival_xp_shares,in_axes=(None,0,0,None))(total,cutoffs,masks,scale).reshape(12)
+        scale = jnp.where((jnp.arange(12) < 6) & experience_book, 5, 4)
+        # sub_5840D8 truncates the percentage bonus on the personal integer XP.
+        award = state.battle_earned_xp*scale//4
+        # sub_665AB7 grants at least one XP to an otherwise eligible survivor.
+        gains = jnp.where(recipients, jnp.maximum(award, 1), 0)
         gains = jnp.where(self.level_up_allowed(state.unit_ids, state.unit_levels), gains, 0)
-        xp = state.unit_xp + gains
         ids, levels = state.unit_ids, state.unit_levels
         required = self.required_xp(ids, levels)
+        retreat_room = jnp.maximum(required-1-state.unit_xp, 0)
+        gains = jnp.where(escaped, jnp.minimum(gains, retreat_room), gains)
+        xp = state.unit_xp + gains
         reached = (gains > 0) & (required > 0) & (xp >= required)
         choices, bits = self.targets[ids], self.building_bits[ids]
         # Opponents have no capital in this scenario. They still retain XP and
@@ -495,23 +504,3 @@ class ProgressionRules:
             jnp.where(ended, saved, state.enemy_progress[state.enemy]))
         promoted = jnp.sum(jnp.where(changed, jnp.left_shift(jnp.uint32(1), jnp.arange(12, dtype=jnp.uint32)), jnp.uint32(0)))
         return ids, levels, xp, enemies, new_hp, gains, promoted
-
-def revival_xp_shares(total,cutoffs,recipients,scale=4):
-    """Six final winners, each eligible only after their last revival cutoff.
-
-    Splits every kill among eligible final survivors, exactly half-up. Quotients
-    plus sixtieths avoid both float ties and multiplying a large XP bank by 60.
-    """
-    cuts = jnp.where(recipients,cutoffs,total)
-    ordered = jnp.sort(cuts)
-    interval = jnp.concatenate((ordered[1:],total[None]))-ordered
-    counts = jnp.arange(1,7,dtype=jnp.int32)
-    whole,remainder = interval//counts,interval%counts
-    fraction = remainder*(60//counts)
-    include = recipients[:,None] & (ordered[None,:] >= cuts[:,None])
-    whole=jnp.sum(jnp.where(include,whole,0),axis=1)
-    fraction=jnp.sum(jnp.where(include,fraction,0),axis=1)
-    # Apply Tome of War before final half-up rounding, including late revivals.
-    extra=jnp.where(scale==5,whole//4,0)
-    remainder=jnp.where(scale==5,whole%4,0)
-    return whole+extra+(remainder*60+fraction*scale+120)//240
