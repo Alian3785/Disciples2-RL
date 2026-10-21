@@ -116,6 +116,7 @@
         0
       ],
       "kill_early": 2,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -128,6 +129,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -255,6 +257,7 @@
         0
       ],
       "kill_early": 2,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -267,6 +270,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -394,6 +398,7 @@
         0
       ],
       "kill_early": 2,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -406,6 +411,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -532,6 +538,7 @@
         0
       ],
       "kill_early": 2,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -544,6 +551,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -670,6 +678,7 @@
         0
       ],
       "kill_early": 7,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -682,6 +691,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -808,6 +818,7 @@
         0
       ],
       "kill_early": 13,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -820,6 +831,7 @@
         0
       ],
       "kill_late": 7,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -944,6 +956,7 @@
         0
       ],
       "kill_early": 22,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -956,6 +969,7 @@
         0
       ],
       "kill_late": 11,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -1083,6 +1097,7 @@
         0
       ],
       "kill_early": 6,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -1095,6 +1110,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -1221,6 +1237,7 @@
         0
       ],
       "kill_early": 3,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -1233,6 +1250,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -1380,6 +1398,7 @@
         0
       ],
       "kill_early": 12,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -1392,6 +1411,7 @@
         0
       ],
       "kill_late": 6,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -1519,6 +1539,7 @@
         0
       ],
       "kill_early": 13,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -1531,6 +1552,7 @@
         0
       ],
       "kill_late": 7,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -1657,6 +1679,7 @@
         0
       ],
       "kill_early": 5,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -1669,6 +1692,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -1796,6 +1820,7 @@
         0
       ],
       "kill_early": 9,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -1808,6 +1833,7 @@
         0
       ],
       "kill_late": 5,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -1934,6 +1960,7 @@
         0
       ],
       "kill_early": 23,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -1946,6 +1973,7 @@
         0
       ],
       "kill_late": 11,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -2070,6 +2098,7 @@
         0
       ],
       "kill_early": 8,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -2082,6 +2111,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -2211,6 +2241,7 @@
         0
       ],
       "kill_early": 39,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -2223,6 +2254,7 @@
         0
       ],
       "kill_late": 19,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -2349,6 +2381,7 @@
         0
       ],
       "kill_early": 6,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -2361,6 +2394,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -2489,6 +2523,7 @@
         0
       ],
       "kill_early": 5,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -2501,6 +2536,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -2628,6 +2664,7 @@
         0
       ],
       "kill_early": 12,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -2640,6 +2677,7 @@
         0
       ],
       "kill_late": 6,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -2768,6 +2806,7 @@
         0
       ],
       "kill_early": 9,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -2780,6 +2819,7 @@
         0
       ],
       "kill_late": 5,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -2904,6 +2944,7 @@
         0
       ],
       "kill_early": 23,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -2916,6 +2957,7 @@
         0
       ],
       "kill_late": 11,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -3043,6 +3085,7 @@
         0
       ],
       "kill_early": 20,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -3055,6 +3098,7 @@
         0
       ],
       "kill_late": 10,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -3179,6 +3223,7 @@
         0
       ],
       "kill_early": 32,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -3191,6 +3236,7 @@
         0
       ],
       "kill_late": 16,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -3315,6 +3361,7 @@
         0
       ],
       "kill_early": 30,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -3327,6 +3374,7 @@
         0
       ],
       "kill_late": 15,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -3455,6 +3503,7 @@
         0
       ],
       "kill_early": 16,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -3467,6 +3516,7 @@
         0
       ],
       "kill_late": 8,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -3593,6 +3643,7 @@
         0
       ],
       "kill_early": 6,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -3605,6 +3656,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -3749,6 +3801,7 @@
         0
       ],
       "kill_early": 14,
+      "required_early": 0,
       "secondary_early": [
         6,
         1
@@ -3761,6 +3814,7 @@
         0
       ],
       "kill_late": 7,
+      "required_late": 0,
       "secondary_late": [
         3,
         0
@@ -3885,6 +3939,7 @@
         0
       ],
       "kill_early": 6,
+      "required_early": 500,
       "secondary_early": [
         0,
         0
@@ -3897,6 +3952,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -3904,7 +3960,6 @@
     },
     "leader": true,
     "hero": true,
-    "exp_increment": 500,
     "level_bonuses": [
       {
         "level": 4,
@@ -4064,6 +4119,7 @@
         0
       ],
       "kill_early": 12,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -4076,6 +4132,7 @@
         0
       ],
       "kill_late": 6,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -4203,6 +4260,7 @@
         0
       ],
       "kill_early": 2,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -4215,6 +4273,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -4341,6 +4400,7 @@
         0
       ],
       "kill_early": 6,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -4353,6 +4413,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -4479,6 +4540,7 @@
         0
       ],
       "kill_early": 5,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -4491,6 +4553,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -4617,6 +4680,7 @@
         0
       ],
       "kill_early": 16,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -4629,6 +4693,7 @@
         0
       ],
       "kill_late": 8,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -4775,6 +4840,7 @@
         0
       ],
       "kill_early": 14,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -4787,6 +4853,7 @@
         0
       ],
       "kill_late": 7,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -4931,6 +4998,7 @@
         0
       ],
       "kill_early": 30,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -4943,6 +5011,7 @@
         0
       ],
       "kill_late": 15,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -5087,6 +5156,7 @@
         0
       ],
       "kill_early": 31,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -5099,6 +5169,7 @@
         0
       ],
       "kill_late": 15,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -5223,6 +5294,7 @@
         0
       ],
       "kill_early": 9,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -5235,6 +5307,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -5359,6 +5432,7 @@
         0
       ],
       "kill_early": 1,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -5371,6 +5445,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -5495,6 +5570,7 @@
         0
       ],
       "kill_early": 1,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -5507,6 +5583,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -5633,6 +5710,7 @@
         0
       ],
       "kill_early": 1,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -5645,6 +5723,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -5772,6 +5851,7 @@
         0
       ],
       "kill_early": 5,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -5784,6 +5864,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -5910,6 +5991,7 @@
         0
       ],
       "kill_early": 12,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -5922,6 +6004,7 @@
         0
       ],
       "kill_late": 6,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -6046,6 +6129,7 @@
         0
       ],
       "kill_early": 21,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -6058,6 +6142,7 @@
         0
       ],
       "kill_late": 11,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -6184,6 +6269,7 @@
         0
       ],
       "kill_early": 10,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -6196,6 +6282,7 @@
         0
       ],
       "kill_late": 5,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -6342,6 +6429,7 @@
         0
       ],
       "kill_early": 25,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -6354,6 +6442,7 @@
         0
       ],
       "kill_late": 13,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -6500,6 +6589,7 @@
         0
       ],
       "kill_early": 12,
+      "required_early": 0,
       "secondary_early": [
         4,
         1
@@ -6512,6 +6602,7 @@
         0
       ],
       "kill_late": 6,
+      "required_late": 0,
       "secondary_late": [
         2,
         0
@@ -6636,6 +6727,7 @@
         0
       ],
       "kill_early": 1,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -6648,6 +6740,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -6772,6 +6865,7 @@
         0
       ],
       "kill_early": 17,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -6784,6 +6878,7 @@
         0
       ],
       "kill_late": 9,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -6930,6 +7025,7 @@
         0
       ],
       "kill_early": 257,
+      "required_early": 0,
       "secondary_early": [
         15,
         1
@@ -6942,6 +7038,7 @@
         0
       ],
       "kill_late": 128,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -7089,6 +7186,7 @@
         0
       ],
       "kill_early": 31,
+      "required_early": 0,
       "secondary_early": [
         10,
         1
@@ -7101,6 +7199,7 @@
         0
       ],
       "kill_late": 16,
+      "required_late": 0,
       "secondary_late": [
         5,
         0
@@ -7245,6 +7344,7 @@
         0
       ],
       "kill_early": 13,
+      "required_early": 0,
       "secondary_early": [
         7,
         1
@@ -7257,6 +7357,7 @@
         0
       ],
       "kill_late": 7,
+      "required_late": 0,
       "secondary_late": [
         4,
         0
@@ -7404,6 +7505,7 @@
         0
       ],
       "kill_early": 20,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -7416,6 +7518,7 @@
         0
       ],
       "kill_late": 10,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -7543,6 +7646,7 @@
         0
       ],
       "kill_early": 19,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -7555,6 +7659,7 @@
         0
       ],
       "kill_late": 9,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -7682,6 +7787,7 @@
         0
       ],
       "kill_early": 5,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -7694,6 +7800,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -7820,6 +7927,7 @@
         0
       ],
       "kill_early": 9,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -7832,6 +7940,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -7962,6 +8071,7 @@
         0
       ],
       "kill_early": 11,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -7974,6 +8084,7 @@
         0
       ],
       "kill_late": 6,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -8101,6 +8212,7 @@
         0
       ],
       "kill_early": 6,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -8113,6 +8225,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -8240,6 +8353,7 @@
         0
       ],
       "kill_early": 9,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -8252,6 +8366,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -8378,6 +8493,7 @@
         0
       ],
       "kill_early": 2,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -8390,6 +8506,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -8517,6 +8634,7 @@
         0
       ],
       "kill_early": 4,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -8529,6 +8647,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -8656,6 +8775,7 @@
         0
       ],
       "kill_early": 6,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -8668,6 +8788,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -8795,6 +8916,7 @@
         0
       ],
       "kill_early": 3,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -8807,6 +8929,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -8933,6 +9056,7 @@
         0
       ],
       "kill_early": 4,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -8945,6 +9069,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -9071,6 +9196,7 @@
         0
       ],
       "kill_early": 2,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -9083,6 +9209,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -9229,6 +9356,7 @@
         0
       ],
       "kill_early": 13,
+      "required_early": 0,
       "secondary_early": [
         6,
         1
@@ -9241,6 +9369,7 @@
         0
       ],
       "kill_late": 7,
+      "required_late": 0,
       "secondary_late": [
         3,
         0
@@ -9368,6 +9497,7 @@
         0
       ],
       "kill_early": 6,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -9380,6 +9510,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -9526,6 +9657,7 @@
         0
       ],
       "kill_early": 15,
+      "required_early": 0,
       "secondary_early": [
         6,
         1
@@ -9538,6 +9670,7 @@
         0
       ],
       "kill_late": 8,
+      "required_late": 0,
       "secondary_late": [
         3,
         0
@@ -9664,6 +9797,7 @@
         0
       ],
       "kill_early": 7,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -9676,6 +9810,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -9802,6 +9937,7 @@
         0
       ],
       "kill_early": 17,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -9814,6 +9950,7 @@
         0
       ],
       "kill_late": 9,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -9941,6 +10078,7 @@
         0
       ],
       "kill_early": 33,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -9953,6 +10091,7 @@
         0
       ],
       "kill_late": 16,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -10080,6 +10219,7 @@
         0
       ],
       "kill_early": 53,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -10092,6 +10232,7 @@
         0
       ],
       "kill_late": 26,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -10236,6 +10377,7 @@
         0
       ],
       "kill_early": 78,
+      "required_early": 0,
       "secondary_early": [
         17,
         1
@@ -10248,6 +10390,7 @@
         0
       ],
       "kill_late": 39,
+      "required_late": 0,
       "secondary_late": [
         9,
         0
@@ -10375,6 +10518,7 @@
         0
       ],
       "kill_early": 36,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -10387,6 +10531,7 @@
         0
       ],
       "kill_late": 18,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -10533,6 +10678,7 @@
         0
       ],
       "kill_early": 17,
+      "required_early": 0,
       "secondary_early": [
         7,
         1
@@ -10545,6 +10691,7 @@
         0
       ],
       "kill_late": 9,
+      "required_late": 0,
       "secondary_late": [
         3,
         0
@@ -10671,6 +10818,7 @@
         0
       ],
       "kill_early": 16,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -10683,6 +10831,7 @@
         0
       ],
       "kill_late": 8,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -10809,6 +10958,7 @@
         0
       ],
       "kill_early": 34,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -10821,6 +10971,7 @@
         0
       ],
       "kill_late": 17,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -10950,6 +11101,7 @@
         0
       ],
       "kill_early": 64,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -10962,6 +11114,7 @@
         0
       ],
       "kill_late": 32,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -11108,6 +11261,7 @@
         0
       ],
       "kill_early": 90,
+      "required_early": 0,
       "secondary_early": [
         7,
         1
@@ -11120,6 +11274,7 @@
         0
       ],
       "kill_late": 45,
+      "required_late": 0,
       "secondary_late": [
         3,
         0
@@ -11268,6 +11423,7 @@
         0
       ],
       "kill_early": 339,
+      "required_early": 0,
       "secondary_early": [
         11,
         1
@@ -11280,6 +11436,7 @@
         0
       ],
       "kill_late": 160,
+      "required_late": 1300,
       "secondary_late": [
         5,
         0
@@ -11406,6 +11563,7 @@
         0
       ],
       "kill_early": 10,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -11418,6 +11576,7 @@
         0
       ],
       "kill_late": 5,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -11545,6 +11704,7 @@
         0
       ],
       "kill_early": 22,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -11557,6 +11717,7 @@
         0
       ],
       "kill_late": 11,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -11685,6 +11846,7 @@
         0
       ],
       "kill_early": 39,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -11697,6 +11859,7 @@
         0
       ],
       "kill_late": 20,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -11843,6 +12006,7 @@
         0
       ],
       "kill_early": 61,
+      "required_early": 0,
       "secondary_early": [
         15,
         1
@@ -11855,6 +12019,7 @@
         0
       ],
       "kill_late": 31,
+      "required_late": 0,
       "secondary_late": [
         8,
         0
@@ -11983,6 +12148,7 @@
         0
       ],
       "kill_early": 2,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -11995,6 +12161,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -12121,6 +12288,7 @@
         0
       ],
       "kill_early": 5,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -12133,6 +12301,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 10,
       "secondary_late": [
         0,
         0
@@ -12261,6 +12430,7 @@
         0
       ],
       "kill_early": 4,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -12273,6 +12443,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -12399,6 +12570,7 @@
         0
       ],
       "kill_early": 9,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -12411,6 +12583,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -12562,6 +12735,7 @@
         0
       ],
       "kill_early": 72,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -12574,6 +12748,7 @@
         0
       ],
       "kill_late": 36,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -12720,6 +12895,7 @@
         0
       ],
       "kill_early": 7,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -12732,6 +12908,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -12876,6 +13053,7 @@
         0
       ],
       "kill_early": 10,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -12888,6 +13066,7 @@
         0
       ],
       "kill_late": 5,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -13040,6 +13219,7 @@
         0
       ],
       "kill_early": 995,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -13052,6 +13232,7 @@
         0
       ],
       "kill_late": 498,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -13196,6 +13377,7 @@
         0
       ],
       "kill_early": 139,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -13208,6 +13390,7 @@
         0
       ],
       "kill_late": 69,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -13334,6 +13517,7 @@
         0
       ],
       "kill_early": 82,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -13346,6 +13530,7 @@
         0
       ],
       "kill_late": 41,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -13470,6 +13655,7 @@
         0
       ],
       "kill_early": 5,
+      "required_early": 300,
       "secondary_early": [
         0,
         0
@@ -13482,6 +13668,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -13489,7 +13676,6 @@
     },
     "leader": true,
     "hero": true,
-    "exp_increment": 300,
     "level_bonuses": [
       {
         "level": 4,
@@ -13649,6 +13835,7 @@
         0
       ],
       "kill_early": 7,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -13661,6 +13848,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -13805,6 +13993,7 @@
         0
       ],
       "kill_early": 72,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -13817,6 +14006,7 @@
         0
       ],
       "kill_late": 36,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -13943,6 +14133,7 @@
         0
       ],
       "kill_early": 2,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -13955,6 +14146,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -14081,6 +14273,7 @@
         0
       ],
       "kill_early": 30,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -14093,6 +14286,7 @@
         0
       ],
       "kill_late": 15,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -14237,6 +14431,7 @@
         0
       ],
       "kill_early": 25,
+      "required_early": 0,
       "secondary_early": [
         6,
         1
@@ -14249,6 +14444,7 @@
         0
       ],
       "kill_late": 12,
+      "required_late": 0,
       "secondary_late": [
         1,
         0
@@ -14396,6 +14592,7 @@
         0
       ],
       "kill_early": 7,
+      "required_early": 0,
       "secondary_early": [
         5,
         1
@@ -14408,6 +14605,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         3,
         0
@@ -14534,6 +14732,7 @@
         0
       ],
       "kill_early": 6,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -14546,6 +14745,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -14690,6 +14890,7 @@
         0
       ],
       "kill_early": 22,
+      "required_early": 0,
       "secondary_early": [
         7,
         1
@@ -14702,6 +14903,7 @@
         0
       ],
       "kill_late": 13,
+      "required_late": 0,
       "secondary_late": [
         3,
         0
@@ -14828,6 +15030,7 @@
         0
       ],
       "kill_early": 5,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -14840,6 +15043,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -14967,6 +15171,7 @@
         0
       ],
       "kill_early": 7,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -14979,6 +15184,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -15103,6 +15309,7 @@
         0
       ],
       "kill_early": 12,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -15115,6 +15322,7 @@
         0
       ],
       "kill_late": 6,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -15261,6 +15469,7 @@
         0
       ],
       "kill_early": 10,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -15273,6 +15482,7 @@
         0
       ],
       "kill_late": 5,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -15417,6 +15627,7 @@
         0
       ],
       "kill_early": 12,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -15429,6 +15640,7 @@
         0
       ],
       "kill_late": 6,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -15573,6 +15785,7 @@
         0
       ],
       "kill_early": 39,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -15585,6 +15798,7 @@
         0
       ],
       "kill_late": 19,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -15711,6 +15925,7 @@
         0
       ],
       "kill_early": 4,
+      "required_early": 450,
       "secondary_early": [
         0,
         0
@@ -15723,6 +15938,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -15730,7 +15946,6 @@
     },
     "leader": true,
     "hero": true,
-    "exp_increment": 450,
     "level_bonuses": [
       {
         "level": 4,
@@ -15894,6 +16109,7 @@
         0
       ],
       "kill_early": 43,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -15906,6 +16122,7 @@
         0
       ],
       "kill_late": 21,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -16035,6 +16252,7 @@
         0
       ],
       "kill_early": 15,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -16047,6 +16265,7 @@
         0
       ],
       "kill_late": 7,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -16173,6 +16392,7 @@
         0
       ],
       "kill_early": 58,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -16185,6 +16405,7 @@
         0
       ],
       "kill_late": 29,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -16329,6 +16550,7 @@
         0
       ],
       "kill_early": 3,
+      "required_early": 0,
       "secondary_early": [
         4,
         1
@@ -16341,6 +16563,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         2,
         0
@@ -16488,6 +16711,7 @@
         0
       ],
       "kill_early": 995,
+      "required_early": 0,
       "secondary_early": [
         18,
         1
@@ -16500,6 +16724,7 @@
         0
       ],
       "kill_late": 995,
+      "required_late": 0,
       "secondary_late": [
         9,
         0
@@ -16626,6 +16851,7 @@
         0
       ],
       "kill_early": 14,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -16638,6 +16864,7 @@
         0
       ],
       "kill_late": 7,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -16782,6 +17009,7 @@
         0
       ],
       "kill_early": 17,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -16794,6 +17022,7 @@
         0
       ],
       "kill_late": 8,
+      "required_late": 88,
       "secondary_late": [
         0,
         0
@@ -16940,6 +17169,7 @@
         0
       ],
       "kill_early": 336,
+      "required_early": 0,
       "secondary_early": [
         30,
         1
@@ -16952,6 +17182,7 @@
         0
       ],
       "kill_late": 160,
+      "required_late": 1300,
       "secondary_late": [
         15,
         0
@@ -17076,6 +17307,7 @@
         0
       ],
       "kill_early": 6,
+      "required_early": 500,
       "secondary_early": [
         0,
         0
@@ -17088,6 +17320,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -17095,7 +17328,6 @@
     },
     "leader": true,
     "hero": true,
-    "exp_increment": 500,
     "level_bonuses": [
       {
         "level": 4,
@@ -17255,6 +17487,7 @@
         0
       ],
       "kill_early": 6,
+      "required_early": 450,
       "secondary_early": [
         0,
         0
@@ -17267,6 +17500,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -17274,7 +17508,6 @@
     },
     "leader": true,
     "hero": true,
-    "exp_increment": 450,
     "level_bonuses": [
       {
         "level": 4,
@@ -17434,6 +17667,7 @@
         0
       ],
       "kill_early": 6,
+      "required_early": 500,
       "secondary_early": [
         0,
         0
@@ -17446,6 +17680,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -17453,7 +17688,6 @@
     },
     "leader": true,
     "hero": true,
-    "exp_increment": 500,
     "level_bonuses": [
       {
         "level": 4,
@@ -17613,6 +17847,7 @@
         0
       ],
       "kill_early": 4,
+      "required_early": 350,
       "secondary_early": [
         0,
         0
@@ -17625,6 +17860,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -17632,7 +17868,6 @@
     },
     "leader": true,
     "hero": true,
-    "exp_increment": 350,
     "level_bonuses": [
       {
         "level": 4,
@@ -17792,6 +18027,7 @@
         0
       ],
       "kill_early": 2,
+      "required_early": 100,
       "secondary_early": [
         0,
         0
@@ -17804,6 +18040,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -17933,6 +18170,7 @@
         0
       ],
       "kill_early": 10,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -17945,6 +18183,7 @@
         0
       ],
       "kill_late": 5,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -18074,6 +18313,7 @@
         0
       ],
       "kill_early": 61,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -18086,6 +18326,7 @@
         0
       ],
       "kill_late": 30,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -18212,6 +18453,7 @@
         0
       ],
       "kill_early": 3,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -18224,6 +18466,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -18351,6 +18594,7 @@
         0
       ],
       "kill_early": 7,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -18363,6 +18607,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -18489,6 +18734,7 @@
         0
       ],
       "kill_early": 14,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -18501,6 +18747,7 @@
         0
       ],
       "kill_late": 7,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -18627,6 +18874,7 @@
         0
       ],
       "kill_early": 49,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -18639,6 +18887,7 @@
         0
       ],
       "kill_late": 25,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -18765,6 +19014,7 @@
         0
       ],
       "kill_early": 16,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -18777,6 +19027,7 @@
         0
       ],
       "kill_late": 8,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -18904,6 +19155,7 @@
         0
       ],
       "kill_early": 31,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -18916,6 +19168,7 @@
         0
       ],
       "kill_late": 15,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -19043,6 +19296,7 @@
         0
       ],
       "kill_early": 22,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -19055,6 +19309,7 @@
         0
       ],
       "kill_late": 11,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -19181,6 +19436,7 @@
         0
       ],
       "kill_early": 20,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -19193,6 +19449,7 @@
         0
       ],
       "kill_late": 10,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -19319,6 +19576,7 @@
         0
       ],
       "kill_early": 20,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -19331,6 +19589,7 @@
         0
       ],
       "kill_late": 10,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -19455,6 +19714,7 @@
         0
       ],
       "kill_early": 11,
+      "required_early": 550,
       "secondary_early": [
         0,
         0
@@ -19467,6 +19727,7 @@
         0
       ],
       "kill_late": 5,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -19474,7 +19735,6 @@
     },
     "leader": true,
     "hero": true,
-    "exp_increment": 550,
     "level_bonuses": [
       {
         "level": 4,
@@ -19634,6 +19894,7 @@
         0
       ],
       "kill_early": 9,
+      "required_early": 500,
       "secondary_early": [
         0,
         0
@@ -19646,6 +19907,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -19653,7 +19915,6 @@
     },
     "leader": true,
     "hero": true,
-    "exp_increment": 500,
     "level_bonuses": [
       {
         "level": 4,
@@ -19813,6 +20074,7 @@
         0
       ],
       "kill_early": 9,
+      "required_early": 550,
       "secondary_early": [
         0,
         0
@@ -19825,6 +20087,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -19832,7 +20095,6 @@
     },
     "leader": true,
     "hero": true,
-    "exp_increment": 550,
     "level_bonuses": [
       {
         "level": 4,
@@ -19992,6 +20254,7 @@
         0
       ],
       "kill_early": 5,
+      "required_early": 350,
       "secondary_early": [
         0,
         0
@@ -20004,6 +20267,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -20011,7 +20275,6 @@
     },
     "leader": true,
     "hero": true,
-    "exp_increment": 350,
     "level_bonuses": [
       {
         "level": 4,
@@ -20171,6 +20434,7 @@
         0
       ],
       "kill_early": 5,
+      "required_early": 125,
       "secondary_early": [
         0,
         0
@@ -20183,6 +20447,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -20307,6 +20572,7 @@
         0
       ],
       "kill_early": 4,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -20319,6 +20585,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -20443,6 +20710,7 @@
         0
       ],
       "kill_early": 39,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -20455,6 +20723,7 @@
         0
       ],
       "kill_late": 19,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -20584,6 +20853,7 @@
         0
       ],
       "kill_early": 43,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -20596,6 +20866,7 @@
         0
       ],
       "kill_late": 22,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -20728,6 +20999,7 @@
         0
       ],
       "kill_early": 10,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -20740,6 +21012,7 @@
         0
       ],
       "kill_late": 5,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -20872,6 +21145,7 @@
         0
       ],
       "kill_early": 41,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -20884,6 +21158,7 @@
         0
       ],
       "kill_late": 20,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -21028,6 +21303,7 @@
         0
       ],
       "kill_early": 12,
+      "required_early": 0,
       "secondary_early": [
         6,
         1
@@ -21040,6 +21316,7 @@
         0
       ],
       "kill_late": 6,
+      "required_late": 0,
       "secondary_late": [
         3,
         0
@@ -21164,6 +21441,7 @@
         0
       ],
       "kill_early": 6,
+      "required_early": 450,
       "secondary_early": [
         0,
         0
@@ -21176,6 +21454,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -21183,7 +21462,6 @@
     },
     "leader": true,
     "hero": true,
-    "exp_increment": 450,
     "level_bonuses": [
       {
         "level": 4,
@@ -21343,6 +21621,7 @@
         0
       ],
       "kill_early": 6,
+      "required_early": 500,
       "secondary_early": [
         0,
         0
@@ -21355,6 +21634,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -21362,7 +21642,6 @@
     },
     "leader": true,
     "hero": true,
-    "exp_increment": 500,
     "level_bonuses": [
       {
         "level": 4,
@@ -21522,6 +21801,7 @@
         0
       ],
       "kill_early": 2,
+      "required_early": 100,
       "secondary_early": [
         0,
         0
@@ -21534,6 +21814,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -21658,6 +21939,7 @@
         0
       ],
       "kill_early": 9,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -21670,6 +21952,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -21794,6 +22077,7 @@
         0
       ],
       "kill_early": 10,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -21806,6 +22090,7 @@
         0
       ],
       "kill_late": 5,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -21932,6 +22217,7 @@
         0
       ],
       "kill_early": 80,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -21944,6 +22230,7 @@
         0
       ],
       "kill_late": 40,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -22072,6 +22359,7 @@
         0
       ],
       "kill_early": 30,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -22084,6 +22372,7 @@
         0
       ],
       "kill_late": 15,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -22211,6 +22500,7 @@
         0
       ],
       "kill_early": 2,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -22223,6 +22513,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -22351,6 +22642,7 @@
         0
       ],
       "kill_early": 7,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -22363,6 +22655,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -22491,6 +22784,7 @@
         0
       ],
       "kill_early": 15,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -22503,6 +22797,7 @@
         0
       ],
       "kill_late": 7,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -22631,6 +22926,7 @@
         0
       ],
       "kill_early": 24,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -22643,6 +22939,7 @@
         0
       ],
       "kill_late": 12,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -22774,6 +23071,7 @@
         0
       ],
       "kill_early": 7,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -22786,6 +23084,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -22915,6 +23214,7 @@
         0
       ],
       "kill_early": 12,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -22927,6 +23227,7 @@
         0
       ],
       "kill_late": 6,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -23053,6 +23354,7 @@
         0
       ],
       "kill_early": 5,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -23065,6 +23367,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -23191,6 +23494,7 @@
         0
       ],
       "kill_early": 7,
+      "required_early": 500,
       "secondary_early": [
         0,
         0
@@ -23203,6 +23507,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -23210,7 +23515,6 @@
     },
     "leader": true,
     "hero": true,
-    "exp_increment": 500,
     "level_bonuses": [
       {
         "level": 4,
@@ -23372,6 +23676,7 @@
         0
       ],
       "kill_early": 7,
+      "required_early": 500,
       "secondary_early": [
         0,
         0
@@ -23384,6 +23689,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -23391,7 +23697,6 @@
     },
     "leader": true,
     "hero": true,
-    "exp_increment": 500,
     "level_bonuses": [
       {
         "level": 4,
@@ -23553,6 +23858,7 @@
         0
       ],
       "kill_early": 5,
+      "required_early": 300,
       "secondary_early": [
         0,
         0
@@ -23565,6 +23871,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -23572,7 +23879,6 @@
     },
     "leader": true,
     "hero": true,
-    "exp_increment": 300,
     "level_bonuses": [
       {
         "level": 4,
@@ -23732,6 +24038,7 @@
         0
       ],
       "kill_early": 2,
+      "required_early": 100,
       "secondary_early": [
         0,
         0
@@ -23744,6 +24051,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -23870,6 +24178,7 @@
         0
       ],
       "kill_early": 4,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -23882,6 +24191,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -24006,6 +24316,7 @@
         0
       ],
       "kill_early": 9,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -24018,6 +24329,7 @@
         0
       ],
       "kill_late": 5,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -24144,6 +24456,7 @@
         0
       ],
       "kill_early": 31,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -24156,6 +24469,7 @@
         0
       ],
       "kill_late": 15,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -24305,6 +24619,7 @@
         0
       ],
       "kill_early": 40,
+      "required_early": 0,
       "secondary_early": [
         15,
         1
@@ -24317,6 +24632,7 @@
         0
       ],
       "kill_late": 20,
+      "required_late": 0,
       "secondary_late": [
         8,
         0
@@ -24441,6 +24757,7 @@
         0
       ],
       "kill_early": 9,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -24453,6 +24770,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -24577,6 +24895,7 @@
         0
       ],
       "kill_early": 10,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -24589,6 +24908,7 @@
         0
       ],
       "kill_late": 5,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -24715,6 +25035,7 @@
         0
       ],
       "kill_early": 80,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -24727,6 +25048,7 @@
         0
       ],
       "kill_late": 40,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -24851,6 +25173,7 @@
         0
       ],
       "kill_early": 22,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -24863,6 +25186,7 @@
         0
       ],
       "kill_late": 11,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -24987,6 +25311,7 @@
         0
       ],
       "kill_early": 1,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -24999,6 +25324,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -25125,6 +25451,7 @@
         0
       ],
       "kill_early": 286,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -25137,6 +25464,7 @@
         0
       ],
       "kill_late": 143,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -25261,6 +25589,7 @@
         0
       ],
       "kill_early": 12,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -25273,6 +25602,7 @@
         0
       ],
       "kill_late": 6,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -25397,6 +25727,7 @@
         0
       ],
       "kill_early": 31,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -25409,6 +25740,7 @@
         0
       ],
       "kill_late": 16,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -25533,6 +25865,7 @@
         0
       ],
       "kill_early": 1,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -25545,6 +25878,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -25669,6 +26003,7 @@
         0
       ],
       "kill_early": 3,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -25681,6 +26016,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -25805,6 +26141,7 @@
         0
       ],
       "kill_early": 34,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -25817,6 +26154,7 @@
         0
       ],
       "kill_late": 17,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -25961,6 +26299,7 @@
         0
       ],
       "kill_early": 10,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -25973,6 +26312,7 @@
         0
       ],
       "kill_late": 5,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -26097,6 +26437,7 @@
         0
       ],
       "kill_early": 18,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -26109,6 +26450,7 @@
         0
       ],
       "kill_late": 9,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -26233,6 +26575,7 @@
         0
       ],
       "kill_early": 1,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -26245,6 +26588,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -26369,6 +26713,7 @@
         0
       ],
       "kill_early": 9,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -26381,6 +26726,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -26505,6 +26851,7 @@
         0
       ],
       "kill_early": 2,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -26517,6 +26864,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -26643,6 +26991,7 @@
         0
       ],
       "kill_early": 29,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -26655,6 +27004,7 @@
         0
       ],
       "kill_late": 14,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -26779,6 +27129,7 @@
         0
       ],
       "kill_early": 2,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -26791,6 +27142,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -26915,6 +27267,7 @@
         0
       ],
       "kill_early": 6,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -26927,6 +27280,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -27051,6 +27405,7 @@
         0
       ],
       "kill_early": 1,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -27063,6 +27418,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -27189,6 +27545,7 @@
         0
       ],
       "kill_early": 193,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -27201,6 +27558,7 @@
         0
       ],
       "kill_late": 96,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -27327,6 +27685,7 @@
         0
       ],
       "kill_early": 187,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -27339,6 +27698,7 @@
         0
       ],
       "kill_late": 94,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -27465,6 +27825,7 @@
         0
       ],
       "kill_early": 289,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -27477,6 +27838,7 @@
         0
       ],
       "kill_late": 144,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -27603,6 +27965,7 @@
         0
       ],
       "kill_early": 103,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -27615,6 +27978,7 @@
         0
       ],
       "kill_late": 52,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -27759,6 +28123,7 @@
         0
       ],
       "kill_early": 36,
+      "required_early": 0,
       "secondary_early": [
         12,
         1
@@ -27771,6 +28136,7 @@
         0
       ],
       "kill_late": 18,
+      "required_late": 0,
       "secondary_late": [
         6,
         0
@@ -27895,6 +28261,7 @@
         0
       ],
       "kill_early": 40,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -27907,6 +28274,7 @@
         0
       ],
       "kill_late": 20,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -28031,6 +28399,7 @@
         0
       ],
       "kill_early": 34,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -28043,6 +28412,7 @@
         0
       ],
       "kill_late": 17,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -28167,6 +28537,7 @@
         0
       ],
       "kill_early": 8,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -28179,6 +28550,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -28303,6 +28675,7 @@
         0
       ],
       "kill_early": 39,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -28315,6 +28688,7 @@
         0
       ],
       "kill_late": 19,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -28439,6 +28813,7 @@
         0
       ],
       "kill_early": 34,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -28451,6 +28826,7 @@
         0
       ],
       "kill_late": 17,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -28575,6 +28951,7 @@
         0
       ],
       "kill_early": 12,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -28587,6 +28964,7 @@
         0
       ],
       "kill_late": 6,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -28711,6 +29089,7 @@
         0
       ],
       "kill_early": 15,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -28723,6 +29102,7 @@
         0
       ],
       "kill_late": 8,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -28847,6 +29227,7 @@
         0
       ],
       "kill_early": 47,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -28859,6 +29240,7 @@
         0
       ],
       "kill_late": 24,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -29003,6 +29385,7 @@
         0
       ],
       "kill_early": 36,
+      "required_early": 0,
       "secondary_early": [
         12,
         1
@@ -29015,6 +29398,7 @@
         0
       ],
       "kill_late": 18,
+      "required_late": 0,
       "secondary_late": [
         6,
         0
@@ -29139,6 +29523,7 @@
         0
       ],
       "kill_early": 22,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -29151,6 +29536,7 @@
         0
       ],
       "kill_late": 11,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -29275,6 +29661,7 @@
         0
       ],
       "kill_early": 10,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -29287,6 +29674,7 @@
         0
       ],
       "kill_late": 5,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -29411,6 +29799,7 @@
         0
       ],
       "kill_early": 1,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -29423,6 +29812,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -29547,6 +29937,7 @@
         0
       ],
       "kill_early": 2,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -29559,6 +29950,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -29683,6 +30075,7 @@
         0
       ],
       "kill_early": 12,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -29695,6 +30088,7 @@
         0
       ],
       "kill_late": 6,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -29819,6 +30213,7 @@
         0
       ],
       "kill_early": 23,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -29831,6 +30226,7 @@
         0
       ],
       "kill_late": 11,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -29955,6 +30351,7 @@
         0
       ],
       "kill_early": 12,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -29967,6 +30364,7 @@
         0
       ],
       "kill_late": 6,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -30091,6 +30489,7 @@
         0
       ],
       "kill_early": 7,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -30103,6 +30502,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -30227,6 +30627,7 @@
         0
       ],
       "kill_early": 4,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -30239,6 +30640,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -30363,6 +30765,7 @@
         0
       ],
       "kill_early": 7,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -30375,6 +30778,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -30499,6 +30903,7 @@
         0
       ],
       "kill_early": 2,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -30511,6 +30916,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -30635,6 +31041,7 @@
         0
       ],
       "kill_early": 13,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -30647,6 +31054,7 @@
         0
       ],
       "kill_late": 7,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -30773,6 +31181,7 @@
         0
       ],
       "kill_early": 4,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -30785,6 +31194,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -30911,6 +31321,7 @@
         0
       ],
       "kill_early": 15,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -30923,6 +31334,7 @@
         0
       ],
       "kill_late": 7,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -31049,6 +31461,7 @@
         0
       ],
       "kill_early": 43,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -31061,6 +31474,7 @@
         0
       ],
       "kill_late": 21,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -31187,6 +31601,7 @@
         0
       ],
       "kill_early": 30,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -31199,6 +31614,7 @@
         0
       ],
       "kill_late": 15,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -31325,6 +31741,7 @@
         0
       ],
       "kill_early": 24,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -31337,6 +31754,7 @@
         0
       ],
       "kill_late": 12,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -31463,6 +31881,7 @@
         0
       ],
       "kill_early": 5,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -31475,6 +31894,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -31599,6 +32019,7 @@
         0
       ],
       "kill_early": 34,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -31611,6 +32032,7 @@
         0
       ],
       "kill_late": 17,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -31737,6 +32159,7 @@
         0
       ],
       "kill_early": 64,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -31749,6 +32172,7 @@
         0
       ],
       "kill_late": 32,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -31873,6 +32297,7 @@
         0
       ],
       "kill_early": 22,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -31885,6 +32310,7 @@
         0
       ],
       "kill_late": 11,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -32011,6 +32437,7 @@
         0
       ],
       "kill_early": 286,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -32023,6 +32450,7 @@
         0
       ],
       "kill_late": 143,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -32147,6 +32575,7 @@
         0
       ],
       "kill_early": 31,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -32159,6 +32588,7 @@
         0
       ],
       "kill_late": 16,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -32285,6 +32715,7 @@
         0
       ],
       "kill_early": 193,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -32297,6 +32728,7 @@
         0
       ],
       "kill_late": 96,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -32423,6 +32855,7 @@
         0
       ],
       "kill_early": 187,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -32435,6 +32868,7 @@
         0
       ],
       "kill_late": 94,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -32561,6 +32995,7 @@
         0
       ],
       "kill_early": 289,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -32573,6 +33008,7 @@
         0
       ],
       "kill_late": 144,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -32699,6 +33135,7 @@
         0
       ],
       "kill_early": 103,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -32711,6 +33148,7 @@
         0
       ],
       "kill_late": 52,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -32835,6 +33273,7 @@
         0
       ],
       "kill_early": 34,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -32847,6 +33286,7 @@
         0
       ],
       "kill_late": 17,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -32973,6 +33413,7 @@
         0
       ],
       "kill_early": 0,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -32985,6 +33426,7 @@
         0
       ],
       "kill_late": 0,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -33111,6 +33553,7 @@
         0
       ],
       "kill_early": 0,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -33123,6 +33566,7 @@
         0
       ],
       "kill_late": 0,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -33249,6 +33693,7 @@
         0
       ],
       "kill_early": 0,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -33261,6 +33706,7 @@
         0
       ],
       "kill_late": 0,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -33387,6 +33833,7 @@
         0
       ],
       "kill_early": 0,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -33399,6 +33846,7 @@
         0
       ],
       "kill_late": 0,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -33523,6 +33971,7 @@
         0
       ],
       "kill_early": 4,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -33535,6 +33984,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -33659,6 +34109,7 @@
         0
       ],
       "kill_early": 6,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -33671,6 +34122,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -33795,6 +34247,7 @@
         0
       ],
       "kill_early": 3,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -33807,6 +34260,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -33931,6 +34385,7 @@
         0
       ],
       "kill_early": 18,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -33943,6 +34398,7 @@
         0
       ],
       "kill_late": 9,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -34067,6 +34523,7 @@
         0
       ],
       "kill_early": 40,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -34079,6 +34536,7 @@
         0
       ],
       "kill_late": 20,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -34223,6 +34681,7 @@
         0
       ],
       "kill_early": 44,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -34235,6 +34694,7 @@
         0
       ],
       "kill_late": 22,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -34361,6 +34821,7 @@
         0
       ],
       "kill_early": 29,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -34373,6 +34834,7 @@
         0
       ],
       "kill_late": 14,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -34497,6 +34959,7 @@
         0
       ],
       "kill_early": 8,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -34509,6 +34972,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -34633,6 +35097,7 @@
         0
       ],
       "kill_early": 9,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -34645,6 +35110,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -34789,6 +35255,7 @@
         0
       ],
       "kill_early": 3,
+      "required_early": 0,
       "secondary_early": [
         4,
         1
@@ -34801,6 +35268,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         2,
         0
@@ -34945,6 +35413,7 @@
         0
       ],
       "kill_early": 44,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -34957,6 +35426,7 @@
         0
       ],
       "kill_late": 22,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -35081,6 +35551,7 @@
         0
       ],
       "kill_early": 17,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -35093,6 +35564,7 @@
         0
       ],
       "kill_late": 9,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -35219,6 +35691,7 @@
         0
       ],
       "kill_early": 7,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -35231,6 +35704,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -35355,6 +35829,7 @@
         0
       ],
       "kill_early": 90,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -35367,6 +35842,7 @@
         0
       ],
       "kill_late": 45,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -35491,6 +35967,7 @@
         0
       ],
       "kill_early": 17,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -35503,6 +35980,7 @@
         0
       ],
       "kill_late": 9,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -35627,6 +36105,7 @@
         0
       ],
       "kill_early": 31,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -35639,6 +36118,7 @@
         0
       ],
       "kill_late": 16,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -35769,6 +36249,7 @@
         0
       ],
       "kill_early": 81,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -35781,6 +36262,7 @@
         0
       ],
       "kill_late": 40,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -35907,6 +36389,7 @@
         0
       ],
       "kill_early": 47,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -35919,6 +36402,7 @@
         0
       ],
       "kill_late": 24,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -36065,6 +36549,7 @@
         0
       ],
       "kill_early": 35,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -36077,6 +36562,7 @@
         0
       ],
       "kill_late": 18,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -36203,6 +36689,7 @@
         0
       ],
       "kill_early": 121,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -36215,6 +36702,7 @@
         0
       ],
       "kill_late": 61,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -36341,6 +36829,7 @@
         0
       ],
       "kill_early": 5,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -36353,6 +36842,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -36477,6 +36967,7 @@
         0
       ],
       "kill_early": 2,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -36489,6 +36980,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -36613,6 +37105,7 @@
         0
       ],
       "kill_early": 19,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -36625,6 +37118,7 @@
         0
       ],
       "kill_late": 10,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -36749,6 +37243,7 @@
         0
       ],
       "kill_early": 20,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -36761,6 +37256,7 @@
         0
       ],
       "kill_late": 10,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -36885,6 +37381,7 @@
         0
       ],
       "kill_early": 175,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -36897,6 +37394,7 @@
         0
       ],
       "kill_late": 88,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -37026,6 +37524,7 @@
         0
       ],
       "kill_early": 21,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -37038,6 +37537,7 @@
         0
       ],
       "kill_late": 11,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -37165,6 +37665,7 @@
         0
       ],
       "kill_early": 75,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -37177,6 +37678,7 @@
         0
       ],
       "kill_late": 37,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -37309,6 +37811,7 @@
         0
       ],
       "kill_early": 280,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -37321,6 +37824,7 @@
         0
       ],
       "kill_late": 140,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -37445,6 +37949,7 @@
         0
       ],
       "kill_early": 25,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -37457,6 +37962,7 @@
         0
       ],
       "kill_late": 12,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -37581,6 +38087,7 @@
         0
       ],
       "kill_early": 8,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -37593,6 +38100,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -37719,6 +38227,7 @@
         0
       ],
       "kill_early": 109,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -37731,6 +38240,7 @@
         0
       ],
       "kill_late": 54,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -37863,6 +38373,7 @@
         0
       ],
       "kill_early": 29,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -37875,6 +38386,7 @@
         0
       ],
       "kill_late": 14,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -38019,6 +38531,7 @@
         0
       ],
       "kill_early": 137,
+      "required_early": 0,
       "secondary_early": [
         15,
         1
@@ -38031,6 +38544,7 @@
         0
       ],
       "kill_late": 69,
+      "required_late": 0,
       "secondary_late": [
         8,
         0
@@ -38157,6 +38671,7 @@
         0
       ],
       "kill_early": 257,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -38169,6 +38684,7 @@
         0
       ],
       "kill_late": 129,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -38295,6 +38811,7 @@
         0
       ],
       "kill_early": 20,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -38307,6 +38824,7 @@
         0
       ],
       "kill_late": 10,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -38431,6 +38949,7 @@
         0
       ],
       "kill_early": 21,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -38443,6 +38962,7 @@
         0
       ],
       "kill_late": 11,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -38587,6 +39107,7 @@
         0
       ],
       "kill_early": 14,
+      "required_early": 0,
       "secondary_early": [
         6,
         1
@@ -38599,6 +39120,7 @@
         0
       ],
       "kill_late": 7,
+      "required_late": 0,
       "secondary_late": [
         3,
         0
@@ -38723,6 +39245,7 @@
         0
       ],
       "kill_early": 32,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -38735,6 +39258,7 @@
         0
       ],
       "kill_late": 16,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -38859,6 +39383,7 @@
         0
       ],
       "kill_early": 90,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -38871,6 +39396,7 @@
         0
       ],
       "kill_late": 45,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -39015,6 +39541,7 @@
         0
       ],
       "kill_early": 39,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -39027,6 +39554,7 @@
         0
       ],
       "kill_late": 19,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -39153,6 +39681,7 @@
         0
       ],
       "kill_early": 81,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -39165,6 +39694,7 @@
         0
       ],
       "kill_late": 40,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -39309,6 +39839,7 @@
         0
       ],
       "kill_early": 139,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -39321,6 +39852,7 @@
         0
       ],
       "kill_late": 69,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -39465,6 +39997,7 @@
         0
       ],
       "kill_early": 72,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -39477,6 +40010,7 @@
         0
       ],
       "kill_late": 36,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -39623,6 +40157,7 @@
         0
       ],
       "kill_early": 90,
+      "required_early": 0,
       "secondary_early": [
         7,
         1
@@ -39635,6 +40170,7 @@
         0
       ],
       "kill_late": 45,
+      "required_late": 0,
       "secondary_late": [
         3,
         0
@@ -39759,6 +40295,7 @@
         0
       ],
       "kill_early": 20,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -39771,6 +40308,7 @@
         0
       ],
       "kill_late": 10,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -39895,6 +40433,7 @@
         0
       ],
       "kill_early": 13,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -39907,6 +40446,7 @@
         0
       ],
       "kill_late": 6,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -40031,6 +40571,7 @@
         0
       ],
       "kill_early": 9,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -40043,6 +40584,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -40167,6 +40709,7 @@
         0
       ],
       "kill_early": 16,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -40179,6 +40722,7 @@
         0
       ],
       "kill_late": 8,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -40308,6 +40852,7 @@
         0
       ],
       "kill_early": 90,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -40320,6 +40865,7 @@
         0
       ],
       "kill_late": 45,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -40471,6 +41017,7 @@
         0
       ],
       "kill_early": 72,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -40483,6 +41030,7 @@
         0
       ],
       "kill_late": 36,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -40635,6 +41183,7 @@
         0
       ],
       "kill_early": 995,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -40647,6 +41196,7 @@
         0
       ],
       "kill_late": 498,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -40773,6 +41323,7 @@
         0
       ],
       "kill_early": 5,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -40785,6 +41336,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -40909,6 +41461,7 @@
         0
       ],
       "kill_early": 2,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -40921,6 +41474,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -41045,6 +41599,7 @@
         0
       ],
       "kill_early": 175,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -41057,6 +41612,7 @@
         0
       ],
       "kill_late": 88,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -41181,6 +41737,7 @@
         0
       ],
       "kill_early": 20,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -41193,6 +41750,7 @@
         0
       ],
       "kill_late": 10,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -41320,6 +41878,7 @@
         0
       ],
       "kill_early": 75,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -41332,6 +41891,7 @@
         0
       ],
       "kill_late": 37,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -41461,6 +42021,7 @@
         0
       ],
       "kill_early": 19,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -41473,6 +42034,7 @@
         0
       ],
       "kill_late": 10,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -41602,6 +42164,7 @@
         0
       ],
       "kill_early": 21,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -41614,6 +42177,7 @@
         0
       ],
       "kill_late": 11,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -41760,6 +42324,7 @@
         0
       ],
       "kill_early": 257,
+      "required_early": 0,
       "secondary_early": [
         15,
         1
@@ -41772,6 +42337,7 @@
         0
       ],
       "kill_late": 128,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -41899,6 +42465,7 @@
         0
       ],
       "kill_early": 280,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -41911,6 +42478,7 @@
         0
       ],
       "kill_late": 140,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -42035,6 +42603,7 @@
         0
       ],
       "kill_early": 25,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -42047,6 +42616,7 @@
         0
       ],
       "kill_late": 12,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -42171,6 +42741,7 @@
         0
       ],
       "kill_early": 8,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -42183,6 +42754,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -42309,6 +42881,7 @@
         0
       ],
       "kill_early": 109,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -42321,6 +42894,7 @@
         0
       ],
       "kill_late": 54,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -42453,6 +43027,7 @@
         0
       ],
       "kill_early": 29,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -42465,6 +43040,7 @@
         0
       ],
       "kill_late": 14,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -42609,6 +43185,7 @@
         0
       ],
       "kill_early": 137,
+      "required_early": 0,
       "secondary_early": [
         15,
         1
@@ -42621,6 +43198,7 @@
         0
       ],
       "kill_late": 69,
+      "required_late": 0,
       "secondary_late": [
         8,
         0
@@ -42748,6 +43326,7 @@
         0
       ],
       "kill_early": 36,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -42760,6 +43339,7 @@
         0
       ],
       "kill_late": 18,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -42886,6 +43466,7 @@
         0
       ],
       "kill_early": 257,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -42898,6 +43479,7 @@
         0
       ],
       "kill_late": 129,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -43027,6 +43609,7 @@
         0
       ],
       "kill_early": 90,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -43039,6 +43622,7 @@
         0
       ],
       "kill_late": 45,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -43163,6 +43747,7 @@
         0
       ],
       "kill_early": 9,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -43175,6 +43760,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -43324,6 +43910,7 @@
         0
       ],
       "kill_early": 21,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -43336,6 +43923,7 @@
         0
       ],
       "kill_late": 11,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -43485,6 +44073,7 @@
         0
       ],
       "kill_early": 21,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -43497,6 +44086,7 @@
         0
       ],
       "kill_late": 11,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -43643,6 +44233,7 @@
         0
       ],
       "kill_early": 17,
+      "required_early": 0,
       "secondary_early": [
         7,
         1
@@ -43655,6 +44246,7 @@
         0
       ],
       "kill_late": 9,
+      "required_late": 0,
       "secondary_late": [
         3,
         0
@@ -43779,6 +44371,7 @@
         0
       ],
       "kill_early": 39,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -43791,6 +44384,7 @@
         0
       ],
       "kill_late": 19,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -43943,6 +44537,7 @@
         0
       ],
       "kill_early": 995,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -43955,6 +44550,7 @@
         0
       ],
       "kill_late": 995,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -44107,6 +44703,7 @@
         0
       ],
       "kill_early": 995,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -44119,6 +44716,7 @@
         0
       ],
       "kill_late": 995,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -44271,6 +44869,7 @@
         0
       ],
       "kill_early": 995,
+      "required_early": 0,
       "secondary_early": [
         18,
         1
@@ -44283,6 +44882,7 @@
         0
       ],
       "kill_late": 955,
+      "required_late": 0,
       "secondary_late": [
         9,
         0
@@ -44407,6 +45007,7 @@
         0
       ],
       "kill_early": 32,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -44419,6 +45020,7 @@
         0
       ],
       "kill_late": 16,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -44547,6 +45149,7 @@
         0
       ],
       "kill_early": 347,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -44559,6 +45162,7 @@
         0
       ],
       "kill_late": 173,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -44691,6 +45295,7 @@
         0
       ],
       "kill_early": 676,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -44703,6 +45308,7 @@
         0
       ],
       "kill_late": 338,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -44854,6 +45460,7 @@
         0
       ],
       "kill_early": 217,
+      "required_early": 0,
       "secondary_early": [
         18,
         1
@@ -44866,6 +45473,7 @@
         0
       ],
       "kill_late": 108,
+      "required_late": 0,
       "secondary_late": [
         9,
         0
@@ -45018,6 +45626,7 @@
         0
       ],
       "kill_early": 995,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -45030,6 +45639,7 @@
         0
       ],
       "kill_late": 995,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -45182,6 +45792,7 @@
         0
       ],
       "kill_early": 995,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -45194,6 +45805,7 @@
         0
       ],
       "kill_late": 995,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -45341,6 +45953,7 @@
         0
       ],
       "kill_early": 995,
+      "required_early": 0,
       "secondary_early": [
         18,
         1
@@ -45353,6 +45966,7 @@
         0
       ],
       "kill_late": 995,
+      "required_late": 0,
       "secondary_late": [
         9,
         0
@@ -45505,6 +46119,7 @@
         0
       ],
       "kill_early": 995,
+      "required_early": 0,
       "secondary_early": [
         18,
         1
@@ -45517,6 +46132,7 @@
         0
       ],
       "kill_late": 955,
+      "required_late": 0,
       "secondary_late": [
         9,
         0
@@ -45641,6 +46257,7 @@
         0
       ],
       "kill_early": 32,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -45653,6 +46270,7 @@
         0
       ],
       "kill_late": 16,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -45781,6 +46399,7 @@
         0
       ],
       "kill_early": 347,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -45793,6 +46412,7 @@
         0
       ],
       "kill_late": 173,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -45925,6 +46545,7 @@
         0
       ],
       "kill_early": 676,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -45937,6 +46558,7 @@
         0
       ],
       "kill_late": 338,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -46064,6 +46686,7 @@
         0
       ],
       "kill_early": 6,
+      "required_early": 500,
       "secondary_early": [
         0,
         0
@@ -46076,6 +46699,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -46083,7 +46707,6 @@
     },
     "leader": true,
     "hero": true,
-    "exp_increment": 500,
     "level_bonuses": [
       {
         "level": 4,
@@ -46243,6 +46866,7 @@
         0
       ],
       "kill_early": 7,
+      "required_early": 450,
       "secondary_early": [
         0,
         0
@@ -46255,6 +46879,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -46262,7 +46887,6 @@
     },
     "leader": true,
     "hero": true,
-    "exp_increment": 450,
     "level_bonuses": [
       {
         "level": 4,
@@ -46422,6 +47046,7 @@
         0
       ],
       "kill_early": 9,
+      "required_early": 500,
       "secondary_early": [
         0,
         0
@@ -46434,6 +47059,7 @@
         0
       ],
       "kill_late": 5,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -46441,7 +47067,6 @@
     },
     "leader": true,
     "hero": true,
-    "exp_increment": 500,
     "level_bonuses": [
       {
         "level": 4,
@@ -46601,6 +47226,7 @@
         0
       ],
       "kill_early": 4,
+      "required_early": 300,
       "secondary_early": [
         0,
         0
@@ -46613,6 +47239,7 @@
         0
       ],
       "kill_late": 2,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -46620,7 +47247,6 @@
     },
     "leader": true,
     "hero": true,
-    "exp_increment": 300,
     "level_bonuses": [
       {
         "level": 4,
@@ -46782,6 +47408,7 @@
         0
       ],
       "kill_early": 3,
+      "required_early": 100,
       "secondary_early": [
         0,
         0
@@ -46794,6 +47421,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -46918,6 +47546,7 @@
         0
       ],
       "kill_early": 9,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -46930,6 +47559,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -47054,6 +47684,7 @@
         0
       ],
       "kill_early": 12,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -47066,6 +47697,7 @@
         0
       ],
       "kill_late": 6,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -47192,6 +47824,7 @@
         0
       ],
       "kill_early": 10,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -47204,6 +47837,7 @@
         0
       ],
       "kill_late": 5,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -47328,6 +47962,7 @@
         0
       ],
       "kill_early": 24,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -47340,6 +47975,7 @@
         0
       ],
       "kill_late": 12,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -47464,6 +48100,7 @@
         0
       ],
       "kill_early": 2,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -47476,6 +48113,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -47600,6 +48238,7 @@
         0
       ],
       "kill_early": 9,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -47612,6 +48251,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -47736,6 +48376,7 @@
         0
       ],
       "kill_early": 17,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -47748,6 +48389,7 @@
         0
       ],
       "kill_late": 9,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -47874,6 +48516,7 @@
         0
       ],
       "kill_early": 78,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -47886,6 +48529,7 @@
         0
       ],
       "kill_late": 38,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -48012,6 +48656,7 @@
         0
       ],
       "kill_early": 99,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -48024,6 +48669,7 @@
         0
       ],
       "kill_late": 50,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -48150,6 +48796,7 @@
         0
       ],
       "kill_early": 17,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -48162,6 +48809,7 @@
         0
       ],
       "kill_late": 8,
+      "required_late": 62,
       "secondary_late": [
         0,
         0
@@ -48288,6 +48936,7 @@
         0
       ],
       "kill_early": 15,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -48300,6 +48949,7 @@
         0
       ],
       "kill_late": 7,
+      "required_late": 26,
       "secondary_late": [
         0,
         0
@@ -48426,6 +49076,7 @@
         0
       ],
       "kill_early": 12,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -48438,6 +49089,7 @@
         0
       ],
       "kill_late": 6,
+      "required_late": 31,
       "secondary_late": [
         0,
         0
@@ -48562,6 +49214,7 @@
         0
       ],
       "kill_early": 19,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -48574,6 +49227,7 @@
         0
       ],
       "kill_late": 10,
+      "required_late": 76,
       "secondary_late": [
         0,
         0
@@ -48698,6 +49352,7 @@
         0
       ],
       "kill_early": 40,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -48710,6 +49365,7 @@
         0
       ],
       "kill_late": 20,
+      "required_late": 100,
       "secondary_late": [
         0,
         0
@@ -48836,6 +49492,7 @@
         0
       ],
       "kill_early": 19,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -48848,6 +49505,7 @@
         0
       ],
       "kill_late": 9,
+      "required_late": 43,
       "secondary_late": [
         0,
         0
@@ -48974,6 +49632,7 @@
         0
       ],
       "kill_early": 17,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -48986,6 +49645,7 @@
         0
       ],
       "kill_late": 8,
+      "required_late": 62,
       "secondary_late": [
         0,
         0
@@ -49112,6 +49772,7 @@
         0
       ],
       "kill_early": 12,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -49124,6 +49785,7 @@
         0
       ],
       "kill_late": 6,
+      "required_late": 31,
       "secondary_late": [
         0,
         0
@@ -49248,6 +49910,7 @@
         0
       ],
       "kill_early": 19,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -49260,6 +49923,7 @@
         0
       ],
       "kill_late": 10,
+      "required_late": 76,
       "secondary_late": [
         0,
         0
@@ -49404,6 +50068,7 @@
         0
       ],
       "kill_early": 17,
+      "required_early": 0,
       "secondary_early": [
         0,
         1
@@ -49416,6 +50081,7 @@
         0
       ],
       "kill_late": 8,
+      "required_late": 88,
       "secondary_late": [
         0,
         0
@@ -49540,6 +50206,7 @@
         0
       ],
       "kill_early": 40,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -49552,6 +50219,7 @@
         0
       ],
       "kill_late": 20,
+      "required_late": 100,
       "secondary_late": [
         0,
         0
@@ -49700,6 +50368,7 @@
         0
       ],
       "kill_early": 339,
+      "required_early": 0,
       "secondary_early": [
         11,
         1
@@ -49712,6 +50381,7 @@
         0
       ],
       "kill_late": 160,
+      "required_late": 1300,
       "secondary_late": [
         5,
         0
@@ -49858,6 +50528,7 @@
         0
       ],
       "kill_early": 336,
+      "required_early": 0,
       "secondary_early": [
         30,
         1
@@ -49870,6 +50541,7 @@
         0
       ],
       "kill_late": 160,
+      "required_late": 1300,
       "secondary_late": [
         15,
         0
@@ -49994,6 +50666,7 @@
         0
       ],
       "kill_early": 9,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -50006,6 +50679,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -50130,6 +50804,7 @@
         0
       ],
       "kill_early": 6,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -50142,6 +50817,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -50288,6 +50964,7 @@
         0
       ],
       "kill_early": 15,
+      "required_early": 0,
       "secondary_early": [
         6,
         1
@@ -50300,6 +50977,7 @@
         0
       ],
       "kill_late": 8,
+      "required_late": 0,
       "secondary_late": [
         3,
         0
@@ -50444,6 +51122,7 @@
         0
       ],
       "kill_early": 7,
+      "required_early": 0,
       "secondary_early": [
         5,
         1
@@ -50456,6 +51135,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 0,
       "secondary_late": [
         3,
         0
@@ -50580,6 +51260,7 @@
         0
       ],
       "kill_early": 9,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -50592,6 +51273,7 @@
         0
       ],
       "kill_late": 4,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -50718,6 +51400,7 @@
         0
       ],
       "kill_early": 15,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -50730,6 +51413,7 @@
         0
       ],
       "kill_late": 8,
+      "required_late": 75,
       "secondary_late": [
         0,
         0
@@ -50854,6 +51538,7 @@
         0
       ],
       "kill_early": 26,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -50866,6 +51551,7 @@
         0
       ],
       "kill_late": 13,
+      "required_late": 130,
       "secondary_late": [
         0,
         0
@@ -50990,6 +51676,7 @@
         0
       ],
       "kill_early": 2,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -51002,6 +51689,7 @@
         0
       ],
       "kill_late": 1,
+      "required_late": 0,
       "secondary_late": [
         0,
         0
@@ -51126,6 +51814,7 @@
         0
       ],
       "kill_early": 15,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -51138,6 +51827,7 @@
         0
       ],
       "kill_late": 7,
+      "required_late": 26,
       "secondary_late": [
         0,
         0
@@ -51262,6 +51952,7 @@
         0
       ],
       "kill_early": 5,
+      "required_early": 0,
       "secondary_early": [
         0,
         0
@@ -51274,6 +51965,7 @@
         0
       ],
       "kill_late": 3,
+      "required_late": 10,
       "secondary_late": [
         0,
         0

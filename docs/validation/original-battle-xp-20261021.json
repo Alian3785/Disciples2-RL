@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-21",
+  "change": "Personal battle XP is allocated after each attack or DOT death; death erases only that unit's battle increment, and escape preserves it below the next-level threshold.",
+  "edition": "Steam Disciples II: Rise of the Elves",
+  "executable_sha256": "115d4629ef35041187dea53700901eff47eb33d1f7270cc9dd3c2c72870a194a",
+  "primary_source": "results/source-research/steam-ai/ida-analysis/Discipl2-ida.lst (existing saved listing, read only)",
+  "source_addresses": {
+    "after_attack": "0x625CC4 calls sub_62618B after processing the attack targets",
+    "after_start_turn_effects": "0x62717F and 0x62727E call sub_62618B",
+    "packet_division": "sub_62632E: exclude XpCounted, Retreated, Hidden and Summon; integer division at 0x626535",
+    "personal_accumulation": "sub_62618B: dead units reset to zero at 0x626240-0x626260; retreat/hidden preserve their old total; others add their side's packet share",
+    "counted_dead": "sub_626563 marks dead units XpCounted after allocating both sides' shares",
+    "both_sides": "sub_665893 calls sub_665AB7 for each side",
+    "final_filters": "0x665E7C-0x665ED6 excludes Dead, Hidden, Unsummoned and Summon, but not Retreated",
+    "personal_field_and_bonus": "0x665EEE reads battle-unit field +0x2E; sub_5840D8 adds trunc(XP * percent / 100)",
+    "minimum": "0x665F15-0x665F1B sets an otherwise eligible nonpositive award to 1 before level/eligibility limits",
+    "retreat_threshold": "0x665F95-0x665FFF caps the addition to XP_NEXT-currentXP-1 for Retreated",
+    "application": "0x666023 calls sub_5D7E22 with the final personal addition"
+  },
+  "status_names": {
+    "source": "results/source-research/D2ModdingToolset/mss32/include/battlemsgdata.h",
+    "upstream": "https://github.com/VladimirMakeev/D2ModdingToolset/blob/master/mss32/include/battlemsgdata.h",
+    "note": "Structure/status names only. Mod hook behavior is not treated as original game behavior."
+  },
+  "implementation": {
+    "accumulator": "BattleState.battle_earned_xp[12], replacing revival_xp_cutoff",
+    "diagnostic_totals": "battle_xp[2] still records killed-unit XP for existing reward/report consumers; never divided at finalization",
+    "dot_order": "Queue helpers optionally return per-slot death order across the current and next round. Allocation uses fixed-size JAX arrays, with no host callbacks.",
+    "summons": "No XP share or kill value. The accumulator under a summoned replacement retains the escaped permanent fighter's XP until roster restoration.",
+    "revival": "Death resets the battle increment; native and item revivals start at zero. Pre-battle unit_xp is retained.",
+    "finalization": "Both sides, once after post-battle healing. Escape limits the addition below promotion; enemy_progress persists enemy XP.",
+    "observation": "Expose personal uncredited XP in the former revival cutoff feature positions (v25+); older progression observation versions add twelve features. Existing policy semantics change."
+  },
+  "regressions_added_or_updated": [
+    "number_grid_battle_xp_test.py: 200/4 then two allied deaths then 200/2 => surviving units earn 150 each; pre-battle XP of casualties remains",
+    "number_grid_battle_xp_test.py: escape retains 50 and excludes later kills; both sides cap at XP_NEXT-1 without promotion or healing",
+    "number_grid_battle_xp_test.py: revival cannot recover lost XP; simultaneous casualties count in their current packet; one divisor for all targets of a mass attack",
+    "number_grid_battle_xp_test.py: poison, periodic and linked queues preserve DOT death order",
+    "number_grid_battle_xp_test.py: summons/empty cells do not dilute shares; guards count in the divisor but receive no final XP",
+    "number_grid_progression_test.py: real player retreat and enemy retreat, persisted enemy XP, one-time award, promotion, minimum one and capital guards",
+    "number_grid_battle_items_test.py: summon over an escaped fighter preserves its earned 40 XP on both victory and withdrawal",
+    "number_grid_reference_actions_test.py: native resurrection and post-battle resurrection receive no earlier kill shares",
+    "number_grid_items_test.py and number_grid_default_map_test.py: original truncated bonus on personal integer XP"
+  ],
+  "validation": {
+    "method": "Read saved original listing and current code; static Ruff, AST/JSON parsing and git diff --check only.",
+    "tests_run": false,
+    "training_run": false,
+    "benchmarks_run": false,
+    "ida_launched": false,
+    "original_game_launched": false,
+    "runtime_correctness": "Regression cases were written/updated but not executed, as explicitly requested."
+  }
+}

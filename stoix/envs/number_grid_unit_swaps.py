@@ -20,7 +20,7 @@ SLOT_FIELDS = (
     'effect_rounds', 'disable_source', 'transform_long', 'powerup_long', 'saved_powerup_long',
     'copied', 'copy_stats', 'copy_secondary', 'copy_traits', 'summon_owner', 'summon_saved_hp', 'preparation',
     'initiative_override', 'saved_initiative_override', 'slow_original', 'waited', 'bonus_turns',
-    'battle_revived', 'revival_xp_cutoff', 'primary_override', 'preweak_damage', 'powerup', 'powerup_layered',
+    'battle_revived', 'battle_earned_xp', 'primary_override', 'preweak_damage', 'powerup', 'powerup_layered',
     'saved_primary_override', 'saved_preweak_damage', 'saved_powerup', 'saved_powerup_layered',
     'healer_wards', 'ward_native_used', 'saved_healer_wards', 'saved_ward_native_used', 'pending_healers',
     'fenrir', 'armor_shreds', 'imp', 'imp_wards', 'decay_form', 'decay_shreds', 'feared',

@@ -207,7 +207,7 @@ class BattleState(NumberGridState):
     waited: jax.Array  # WAIT is still spent after an Alchemist grants another turn
     bonus_turns: jax.Array
     battle_revived: jax.Array  # one Patriarch revival per recipient per battle
-    revival_xp_cutoff: jax.Array  # opposing XP bank at the last revival
+    battle_earned_xp: jax.Array  # personal XP earned since the last death, retained on escape
     primary_override: jax.Array  # -1 means native/current-form damage
     preweak_damage: jax.Array
     powerup: jax.Array
@@ -676,7 +676,6 @@ class NumberGrid(Summoning, NumericNumberGrid):
             self.has_item_summons = battle_items.SUMMON in kinds
             if battle_items.REVIVE in kinds:
                 self.has_cures = True
-                self.progression.revival_cutoffs = True
             self.has_protections = True
         if self.has_wolf_lord or self.has_copies or self.has_summons:
             self.num_actions = POTION_START+(self.potion_rules.action_count if self.potions_enabled else 0)
@@ -908,6 +907,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
             raise ValueError('Unit progression requires observation version 9, 10, 11, 12, 13, 14, 15, 16, 17 or 18')
         if self.progression_enabled:
             self.observation_size += 60 + BLOCKED_XP_FEATURES
+            if self.observation_version < 25:
+                self.observation_size += 12
         if self.observation_version >= 10:
             self.observation_size += 12
         if self.capital_enabled != (self.observation_version in (11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45)):
@@ -1047,7 +1048,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             post_victory=jnp.int32(0),pending_healers=jnp.zeros(12,jnp.bool_),
             initiative_override=jnp.full(12,-1,jnp.int32),saved_initiative_override=jnp.full(12,-1,jnp.int32),
             slow_original=jnp.full(12,-1,jnp.int32),waited=jnp.zeros(12,bool),bonus_turns=jnp.zeros(12,jnp.int32),
-            battle_revived=jnp.zeros(12,bool),revival_xp_cutoff=jnp.zeros(12,jnp.int32),
+            battle_revived=jnp.zeros(12,bool),battle_earned_xp=jnp.zeros(12,jnp.int32),
             primary_override=jnp.full(12,-1,jnp.int32),preweak_damage=jnp.full(12,-1,jnp.int32),
             powerup=jnp.zeros(12,bool),powerup_layered=jnp.zeros(12,bool),
             powerup_long=jnp.zeros(12,bool),saved_powerup_long=jnp.zeros(12,bool),
@@ -1154,7 +1155,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
                 'hp', 'copy_stats', 'copy_traits', 'copy_secondary', 'preparation', 'pending_healers',
                 'potion_doses', 'potion_bonus', 'potion_temporary', 'potion_active', 'potion_wards',
                 'equipment_bonus', 'last_poison_damage', 'last_burn_damage', 'last_water_damage',
-                'activation_done', 'priority', 'turn_phase', 'last_xp', 'mercenary_units')
+                'activation_done', 'priority', 'turn_phase', 'last_xp', 'battle_earned_xp', 'mercenary_units')
         fields.update({name: jnp.zeros_like(getattr(state, name)) for name in zero})
         fields['summon_owner'] = jnp.full_like(state.summon_owner, -1)
         return state.replace(**{name: jnp.where(affected.reshape((12,)+(1,)*(value.ndim-1)),
@@ -1746,6 +1747,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
                                    xp[:, 1]/1000., xp[:, 2]/10000., xp[:, 3]/jnp.maximum(xp[:, 2], 1)), axis=1)
                 context = jnp.concatenate((growth.reshape(-1), context,
                                           self.progression.blocked_xp_observation(state)))
+                if self.observation_version < 25:
+                    context = jnp.concatenate((context, state.battle_earned_xp/10000.))
             if self.observation_version in (8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45):
                 # Compact exact source/bitset encoding; keeps the GPU policy input small.
                 context = jnp.concatenate((self.unit_traits(state).reshape(-1) /
@@ -1780,7 +1783,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
                     flags = getattr(state,prefix+'powerup').astype(jnp.int32)+2*getattr(state,prefix+'powerup_layered')
                     context = jnp.concatenate((context,getattr(state,prefix+'primary_override')/1000.,getattr(state,prefix+'preweak_damage')/1000.,flags/3.))
             if self.observation_version >= 25:
-                context = jnp.concatenate((context,state.battle_revived,state.revival_xp_cutoff/10000.))
+                context = jnp.concatenate((context,state.battle_revived,state.battle_earned_xp/10000.))
             if self.observation_version >= 26:
                 context = jnp.concatenate((context,state.waited,state.bonus_turns/10.))
             if self.observation_version >= 27:
@@ -2068,7 +2071,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             post_victory=jnp.int32(0),pending_healers=jnp.zeros(12,jnp.bool_),
             initiative_override=jnp.full(12,-1,jnp.int32),saved_initiative_override=jnp.full(12,-1,jnp.int32),
             slow_original=jnp.full(12,-1,jnp.int32),waited=jnp.zeros(12,bool),bonus_turns=jnp.zeros(12,jnp.int32),
-            battle_revived=jnp.zeros(12,bool),revival_xp_cutoff=jnp.zeros(12,jnp.int32),
+            battle_revived=jnp.zeros(12,bool),battle_earned_xp=jnp.zeros(12,jnp.int32),
             feared=jnp.zeros(12,jnp.bool_),enemy_initial_hp=jnp.zeros(6,jnp.int32),
             enemy_damage_credit=jnp.zeros(6,jnp.int32),enemy_killed_credit=jnp.zeros(6,jnp.bool_),
             weakened=jnp.zeros(12,jnp.bool_),saved_weakened=jnp.zeros(12,jnp.bool_),
@@ -2633,7 +2636,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
                     restored = jnp.maximum(1,jnp.rint(stats[:,HP]*.5)).astype(jnp.int32)
                     hp = jnp.where(revived,restored,hp)
                     state = state.replace(battle_revived=state.battle_revived | revived,
-                        revival_xp_cutoff=jnp.where(revived,state.battle_xp[jnp.where(self.slots < 6,1,0)],state.revival_xp_cutoff),
+                        battle_earned_xp=jnp.where(revived,0,state.battle_earned_xp),
                         turn_phase=jnp.where(revived,2,state.turn_phase),priority=jnp.where(revived,0.,state.priority),
                         retreating=state.retreating & ~revived,feared=state.feared & ~revived)
                     state,hp,wards_used = self._cleanse(state,hp,wards_used,revived)
@@ -2862,6 +2865,11 @@ class NumberGrid(Summoning, NumericNumberGrid):
             retreating=retreating.at[actor].set(retreating[actor]&~instant)
         if self.has_linked_summons:
             hp = self._linked_summon_hp(state.replace(escaped=escaped),hp)
+        if self.progression_enabled:
+            kill_xp = self.unit_experience(state)[:,1]
+            state = self.progression.accumulate(state, state.hp, hp, escaped, kill_xp)
+        before_periodic_hp = hp
+        death_order = jnp.full(12,24,jnp.int32)
         active = (hp > 0) & ~escaped
         normal, waiting = active & (phases == 0), active & (phases == 1)
         new_round = ~jnp.any(normal | waiting)
@@ -2889,11 +2897,11 @@ class NumberGrid(Summoning, NumericNumberGrid):
             source = jnp.stack((state.poison_source,state.water_source,state.burn_source),axis=1)
             queue = advance_linked_queue if self.has_summons else advance_periodic_queue
             linked = {'summon_owner':state.summon_owner} if self.has_summons else {}
-            (hp,phases,priority,round_number,activated,turns,damage,source,next_actor,losses,visited) = queue(
+            (hp,phases,priority,round_number,activated,turns,damage,source,next_actor,losses,visited,death_order) = queue(
                 hp,escaped,phases,priority,round_number,state.activation_done,turns,damage,source,
                 self._combat_traits(state)[:,2],extra_priority,
                 next_actor,another_strike,queue_limit,jnp.array([16,8,4],jnp.uint32),jnp.array([0,10,10],jnp.int32),
-                state.effect_rounds[:,:3],random_values[84:156].reshape(2,12,3),**linked)
+                state.effect_rounds[:,:3],random_values[84:156].reshape(2,12,3),return_death_order=True,**linked)
             state = state.replace(activation_done=activated,poison_mode=turns[:,0],poison_damage=damage[:,0],
                 poison_source=source[:,0],last_poison_damage=losses[:,0],
                 water_mode=turns[:,1],water_damage=damage[:,1],water_source=source[:,1],last_water_damage=losses[:,1],
@@ -2902,11 +2910,12 @@ class NumberGrid(Summoning, NumericNumberGrid):
             active = (hp > 0) & ~escaped
         elif self.has_poisoners:
             (hp, phases, priority, round_number, activated, poison_mode, poison_damage,
-             poison_source, next_actor, poison_losses, visited) = advance_poison_queue(
+             poison_source, next_actor, poison_losses, visited, death_order) = advance_poison_queue(
                 hp, escaped, phases, priority, round_number, state.activation_done,
                 state.poison_mode, state.poison_damage, state.poison_source,
                 self._combat_traits(state)[:, 2], extra_priority,
-                next_actor, another_strike, queue_limit, state.effect_rounds[:,POISON],random_values[84:108].reshape(2,12))
+                next_actor, another_strike, queue_limit, state.effect_rounds[:,POISON],random_values[84:108].reshape(2,12),
+                return_death_order=True)
             state = state.replace(activation_done=activated, poison_mode=poison_mode,
                                   poison_damage=poison_damage, poison_source=poison_source, last_poison_damage=poison_losses)
             defended = defended.at[next_actor].set(False)
@@ -2920,6 +2929,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
             next_actor = jnp.where(active[next_actor],next_actor,jnp.argmax(jnp.where(
                 active & (phases < 2),priority,-1e9))).astype(jnp.int32)
         state = state.replace(waited=jnp.where(round_number != state.round,False,state.waited))
+        if self.progression_enabled and (self.has_poisoners or self.has_water or self.has_fire or self.has_summons):
+            state = self.progression.accumulate(state, before_periodic_hp, hp, escaped, kill_xp, death_order)
         party_defeated = ~jnp.any((hp[:6] > 0) | (state.summon_saved_hp[:6] > 0))
         lost = party_defeated
         summon_battle = state.summon_battle if self.spell_casting_enabled else jnp.bool_(False)
@@ -3079,14 +3090,11 @@ class NumberGrid(Summoning, NumericNumberGrid):
         reward_hp = hp
         progression_reward = jnp.float32(0.)
         if self.progression_enabled:
-            killed = (state.hp > 0) & (hp == 0)
-            kill_xp = self.unit_experience(state)[:,1]
-            bank = state.battle_xp + jnp.sum(jnp.where(killed, kill_xp, 0).reshape(2, 6), axis=1)
             if self.has_copies or self.has_summons or self.has_item_summons:
                 state,hp = self._restore_roster(state.replace(escaped=escaped),hp,raw_ended)
                 escaped = state.escaped
             ids, levels, xp, enemies, hp, gains, promoted = self.progression.finish(
-                state, hp, escaped, victory, lost, withdrawal, bank, self._party_experience_bonus(state))
+                state, hp, escaped, victory, lost, withdrawal, self._party_experience_bonus(state))
             if self.spell_casting_enabled:
                 # The summon's growth is discarded with it; slot layers belong to the party.
                 promoted = jnp.where(summon_battle, promoted & jnp.uint32(0xFC0), promoted)
@@ -3105,7 +3113,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
                 - self._hero_level_movement_bonus(state.unit_ids, state.unit_levels))
             progress = dict(unit_ids=ids, unit_levels=levels, unit_xp=xp,
                             movement_points=state.movement_points+movement_gain,
-                            enemy_progress=enemies, battle_xp=bank,
+                            enemy_progress=enemies,
                             last_xp=gains, last_promoted=promoted)
         if self.capital_enabled:
             # Count actual damage independently of healing/leech and HP rescaling.

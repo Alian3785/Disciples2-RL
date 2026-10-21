@@ -9,7 +9,6 @@ import pytest
 from stoix.envs.number_grid import MAP, REST, POTION_START
 from stoix.envs.number_grid_items import ITEMS, ItemRules, VALUABLE
 from stoix.envs.number_grid_item_combat import equipment_attack
-from stoix.envs.number_grid_progression import revival_xp_shares
 
 
 @pytest.fixture(scope='module')
@@ -207,18 +206,16 @@ def test_permanent_potion_keeps_equipment_and_revival_restores_it(current_game):
     assert revived.movement_points==env.movement_cap(revived)
 
 
-def test_war_book_awards_fraction_before_rounding(all_items):
+def test_war_book_adds_truncated_bonus_to_personal_xp(all_items):
     env,state,refresh,_=all_items
     state=hero_roster_state(env,state,['possessed','duke','possessed','cultist','cultist',None])
     state=refresh(inventory(env,state,'tome_war'))
-    # 10 XP split five ways: 2.5 => 3, not round(2)*1.25 in two stages.
+    state=state.replace(battle_earned_xp=jnp.array([2,8,3,4,7,0,0,0,0,0,0,0],jnp.int32))
+    # Original sub_5840D8: earned + trunc(earned*25/100).
     finish=jax.jit(lambda s:env.progression.finish(s,s.hp,s.escaped,jnp.bool_(True),
-        jnp.bool_(False),jnp.bool_(False),jnp.array([0,10]),env.item_rules.value(s,'experience',3)))
+        jnp.bool_(False),jnp.bool_(False),env.item_rules.value(s,'experience',3)))
     result=finish(state)
-    assert result[5][:5].tolist()==[3]*5
-    # A revived recipient gets only the portion since its last revival.
-    shares=jax.jit(revival_xp_shares)(jnp.int32(11),jnp.array([0,5,0,0,0,0]),jnp.array([True,True,False,False,False,False]),jnp.int32(5))
-    assert shares.tolist()==[10,4,0,0,0,0]
+    assert result[5][:5].tolist()==[2,10,3,5,8]
 
 
 def test_artifact_statuses_respect_sources_and_duplicate_names(all_items):

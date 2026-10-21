@@ -49,14 +49,14 @@ def test_initial_experience_and_observation_contract(env):
 
 
 @pytest.mark.core
-def test_xp_is_awarded_once_only_to_surviving_non_escaped_winners(env):
+def test_xp_is_awarded_once_with_minimum_one_for_an_escaped_survivor(env):
     s = battle(env).replace(actor=jnp.int32(0))
-    # 20 XP / 2 survivors gives 10; dead and escaped allies get none.
+    # 20 XP / 2 participants gives 10; the escapee gets only the final minimum.
     s = s.replace(hp=s.hp.at[1].set(0).at[6].set(1), escaped=s.escaped.at[2].set(True))
     won = jax.tree.map(lambda x:x[0], win(env, stack(s)))
     assert won.last_event == VICTORY
-    chex.assert_trees_all_equal(won.unit_xp[:6], jnp.array([10,0,0,10,0,0]))
-    chex.assert_trees_all_equal(won.last_xp[:6], jnp.array([10,0,0,10,0,0]))
+    chex.assert_trees_all_equal(won.unit_xp[:6], jnp.array([10,0,1,10,0,0]))
+    chex.assert_trees_all_equal(won.last_xp[:6], jnp.array([10,0,1,10,0,0]))
     assert won.hp[1] == 0  # dead units neither earn XP nor revive automatically
     rested, _ = compiled_method(env,'step')(won, jnp.int32(REST))
     chex.assert_trees_all_equal(rested.unit_xp, won.unit_xp)
@@ -68,17 +68,17 @@ def test_xp_is_awarded_once_only_to_surviving_non_escaped_winners(env):
 
 
 @pytest.mark.core
-def test_kill_bank_counts_new_deaths_only_and_uses_exact_half_up(env):
+def test_mass_attack_adds_one_packet_to_personal_xp_without_resplitting_bank(env):
     s = battle(env, 11).replace(actor=jnp.int32(3))
-    # Two cultists for the independent half-up rounding scenario.
+    # Two cultists previously received floor(85/2) each.
     s = s.replace(unit_ids=s.unit_ids.at[4].set(s.unit_ids[3]), unit_levels=s.unit_levels.at[4].set(1))
     s = s.replace(hp=s.hp.at[:6].set(jnp.array([0,0,0,30,30,0])).at[6:].set(jnp.array([1,1,0,0,0,0])),
-                  battle_xp=jnp.array([0,85]))
+                  battle_xp=jnp.array([0,85]), battle_earned_xp=s.battle_earned_xp.at[3:5].set(42))
     won = jax.tree.map(lambda x:x[0], win(env, stack(s)))
-    # Two new kills of 20, not four pre-existing corpses: 125 / 2 -> 63.
+    # Two new kills of 20, not four pre-existing corpses: 42 + floor(40/2).
     assert won.battle_xp[1] == 125
-    chex.assert_trees_all_equal(won.unit_xp[3:5], jnp.array([63,63]))
-    assert won.last_xp.sum() == 126
+    chex.assert_trees_all_equal(won.unit_xp[3:5], jnp.array([62,62]))
+    assert won.last_xp.sum() == 124
 
 
 @pytest.mark.core
@@ -88,7 +88,7 @@ def test_cap_building_requirement_full_heal_and_discarded_excess(env):
                   unit_xp=s.unit_xp.at[jnp.array([0,2])].set(94))
     ready = s.replace(buildings=jnp.uint32(1))  # Unholy portal -> berserker
     blocked = ready.replace(blocked_buildings=jnp.uint32(1))
-    excess = ready.replace(battle_xp=jnp.array([0,100000]))
+    excess = ready.replace(battle_earned_xp=jnp.full(12,100000,jnp.int32))
     out = win(env, stack(s,ready,blocked,excess))
     for row in (0,2):
         chex.assert_trees_all_equal(out.unit_xp[row,jnp.array([0,2])], jnp.full(2,94))
@@ -135,14 +135,31 @@ def test_supported_promotion_chain_uses_reference_targets_and_stats(env):
 def test_enemy_winners_keep_experience_after_hero_withdrawal(env):
     s = battle(env).replace(actor=jnp.int32(0))
     s = s.replace(hp=s.hp.at[:6].set(0).at[0].set(10),
-                  retreating=s.retreating.at[0].set(True), battle_xp=jnp.array([25,0]))
+                  retreating=s.retreating.at[0].set(True), battle_xp=jnp.array([25,0]),
+                  battle_earned_xp=s.battle_earned_xp.at[0].set(40).at[6].set(25))
     out, _ = compiled_method(env,'_battle_step')(s,jnp.int32(CONTINUE),s.battle_key,jnp.zeros(env.random_size))
     assert not out.in_battle and not out.done
     assert out.unit_xp[6] == 25 and out.enemy_progress[0,0,1] == 25
-    assert not jnp.any(out.unit_xp[:6])
+    assert out.unit_xp[0] == 40 and out.last_xp[0] == 40
     begun = compiled_method(env,'_begin_battle')(out)
     assert begun.unit_xp[6] == 25 and begun.hp[6] == 100
-    assert not jnp.any(begun.battle_xp)
+    assert not jnp.any(begun.battle_xp) and not jnp.any(begun.battle_earned_xp)
+
+
+@pytest.mark.core
+def test_fleeing_enemy_keeps_personal_xp_below_level_threshold(env):
+    state = battle(env).replace(actor=jnp.int32(6))
+    required = env.progression.required_xp(state.unit_ids, state.unit_levels)[6]
+    state = state.replace(hp=state.hp.at[6].set(10),
+        retreating=state.retreating.at[6].set(True),
+        unit_xp=state.unit_xp.at[6].set(required-10),
+        battle_earned_xp=state.battle_earned_xp.at[6].set(40))
+    out, _ = compiled_method(env,'_battle_step')(
+        state,jnp.int32(CONTINUE),state.battle_key,jnp.zeros(env.random_size))
+    assert not out.in_battle and out.last_event == VICTORY
+    assert out.last_xp[6] == 9 and out.unit_xp[6] == required-1
+    assert out.enemy_progress[0,0,1] == required-1
+    assert out.unit_levels[6] == out.enemy_progress[0,0,0] == state.unit_levels[6]
 
 
 @pytest.mark.core
@@ -155,25 +172,25 @@ def test_capital_guards_receive_no_battle_xp_on_either_side(current_game):
     ids = jnp.tile(jnp.array([rules.ids[key] for key in keys] + [rules.ids['duke']], jnp.int32), 2)
     guards = rules.capital_guards[ids]
     state = initial.replace(enemy=jnp.int32(0), unit_ids=ids, unit_levels=rules.base_levels[ids],
-        unit_xp=jnp.where(guards, 7, 0).astype(jnp.int32), hp=jnp.ones(12,jnp.int32))
+        unit_xp=jnp.where(guards, 7, 0).astype(jnp.int32), hp=jnp.ones(12,jnp.int32),
+        battle_earned_xp=jnp.full(12,1000000,jnp.int32))
     finish = compiled_method(rules, 'finish')
     for victory, lost, withdrawal in ((True,False,False), (False,True,False), (False,False,True)):
         out_ids, levels, xp, enemies, hp, gains, promoted = finish(
             state, state.hp, state.escaped, jnp.bool_(victory), jnp.bool_(lost),
-            jnp.bool_(withdrawal), jnp.full(2,1000000,jnp.int32))
+            jnp.bool_(withdrawal))
         for actual, expected in ((out_ids,state.unit_ids), (levels,state.unit_levels),
                                  (xp,state.unit_xp), (hp,state.hp)):
             chex.assert_trees_all_equal(actual[guards], expected[guards])
         assert not jnp.any(gains[guards])
-        winner = 5 if victory else 11
-        assert gains[winner] == 1000000  # Guardians do not dilute their ally's share.
-        assert promoted == jnp.uint32(1 << winner)
-        assert levels[winner] == state.unit_levels[winner]+1
+        assert gains[5] == gains[11] == 1000000
+        assert promoted == jnp.uint32((1 << 5) | (1 << 11))
+        assert levels[5] == levels[11] == state.unit_levels[5]+1
         chex.assert_trees_all_equal(enemies[0,:5,0], state.unit_levels[6:11])
         chex.assert_trees_all_equal(enemies[0,:5,1], state.unit_xp[6:11])
     alone = state.replace(hp=state.hp.at[5].set(0).at[11].set(0))
     result = finish(alone, alone.hp, alone.escaped, jnp.bool_(False), jnp.bool_(False),
-                    jnp.bool_(True), jnp.full(2,1000000,jnp.int32))
+                    jnp.bool_(True))
     chex.assert_trees_all_equal(result[1], alone.unit_levels)
     chex.assert_trees_all_equal(result[2], alone.unit_xp)
     assert not jnp.any(result[5]) and result[6] == 0
@@ -296,11 +313,12 @@ def test_foreign_buildings_do_not_fake_promotions():
     game_map['hero_roster'] = SCENARIO_PARTY  # Legions units in an Empire capital
     env = NumberGrid(map_config=game_map)
     s = battle(env).replace(actor=jnp.int32(0))
-    s = s.replace(buildings=jnp.uint32(1), unit_xp=s.unit_xp.at[0].set(94), hp=s.hp.at[6].set(1))
+    s = s.replace(buildings=jnp.uint32(1), unit_xp=s.unit_xp.at[0].set(94), hp=s.hp.at[6].set(1),
+                  battle_earned_xp=s.battle_earned_xp.at[0].set(25))
     # The cross-faction rule belongs to finish(); victory integration is tested
     # above with the shared current environment, without another combat graph.
     ids, _, xp, *_ = jax.jit(env.progression.finish)(s,s.hp,s.escaped,
-        jnp.bool_(True),jnp.bool_(False),jnp.bool_(False),jnp.array([0,25],jnp.int32))
+        jnp.bool_(True),jnp.bool_(False),jnp.bool_(False))
     assert xp[0] == 94 and ids[0] == s.unit_ids[0]
     copier = NumberGrid(map_config={**MAP,'hero_units':5,'hero_roster':['possessed']*3+['doppelganger','cultist',None]})
     assert copier.has_copies
@@ -345,7 +363,7 @@ def duke_reference():
 
 
 @pytest.mark.core
-def test_duke_levels_through_99_match_python_reference(env, duke_reference):
+def test_duke_levels_through_99_match_reference_stats_and_original_xp(env, duke_reference):
     levels = jnp.arange(1, 100, dtype=jnp.int32)
     ids = jnp.full(99, env.progression.ids['duke'], jnp.int32)
     stats = jax.jit(env.progression.stats)(ids, levels)
@@ -357,14 +375,14 @@ def test_duke_levels_through_99_match_python_reference(env, duke_reference):
         [r['level'],r['exp_kill'],r['exp_required'],0] for r in duke_reference[:99]]))
 
 
-def test_duke_levelups_need_no_building_heal_once_and_raise_threshold(env, duke_reference):
+def test_duke_levelups_need_no_building_heal_once_and_use_original_threshold(env, duke_reference):
     levels = [1,2,3,4,9,10,12,13,14,15,57,98]
     s = battle(env).replace(actor=jnp.int32(1))
     s = s.replace(hp=s.hp.at[:6].set(0).at[1].set(1).at[6].set(1))
     cases = [s.replace(unit_levels=s.unit_levels.at[1].set(level),
         unit_xp=s.unit_xp.at[1].set(duke_reference[level-1]['exp_required']-1)) for level in levels]
     # Even abundant XP grants only one level, as in the reference.
-    cases.append(cases[0].replace(battle_xp=jnp.array([0,100000])))
+    cases.append(cases[0].replace(battle_earned_xp=s.battle_earned_xp.at[1].set(100000)))
     out = win(env, stack(*cases))
     for i, level in enumerate(levels+[1]):
         expected = duke_reference[level]
@@ -415,8 +433,70 @@ def test_human_snapshot_exposes_duke_progress_and_passive_bonuses(env, human_ser
     _, state, total = game.sessions[created['session']]
     state = state.replace(unit_levels=state.unit_levels.at[1].set(15))
     snap = game.snapshot(game.env,state,total)
-    assert snap['unit_experience'][1] == [15,230,7150,0]
+    assert snap['unit_experience'][1] == [15,129,4650,0]
     assert snap['max_hp'][1] == 374
+
+
+def test_catalogue_xp_through_99_matches_installed_dbf_rows(env):
+    """Independent DBF snapshot; accumulate each level, including the 100 -> 99 clamp."""
+    source = json.loads((Path(__file__).parent / 'data/unit_xp_growth.json').read_text())['units']
+    rules = env.progression
+    keys = list(rules.ids)
+    expected, inputs = [], []
+    for key in keys:
+        base, killed, required, threshold, kill_first, kill_late, need_first, need_late = source[UNITS[key]['game_id']]
+        curve = {base: (killed, required)}
+        for level in range(base+1, 100):
+            killed += kill_first if level <= threshold else kill_late
+            required += need_first if level <= threshold else need_late
+            curve[level] = (killed, required)
+        levels = [max(base, level) for level in range(1, 101)]
+        inputs.append(levels)
+        expected.append([[min(level,99), *curve[min(level,99)], 17] for level in levels])
+    ids = jnp.array([rules.ids[key] for key in keys],jnp.int32)[:,None]
+    levels = jnp.array(inputs,jnp.int32)
+    actual = compiled_method(rules,'experience')(ids,levels,jnp.full_like(levels,17))
+    chex.assert_trees_all_equal(actual,jnp.array(expected,jnp.int32))
+    empty = compiled_method(rules,'experience')(jnp.int32(0),jnp.int32(0),jnp.int32(0))
+    chex.assert_trees_all_equal(empty,jnp.zeros(4,jnp.int32))
+
+
+@pytest.mark.parametrize('actor', [0,6], ids=['blue-wins','red-wins'])
+@pytest.mark.parametrize('level,worth', [(10,114),(20,144),(99,381)])
+def test_killed_hero_original_xp_reaches_both_battle_banks(env,actor,level,worth):
+    """Actual lethal attacks must award the native value, not the old x1.1 curve."""
+    target = 6 if actor == 0 else 0
+    s = battle(env)
+    ids = jnp.zeros(12,jnp.int32).at[actor].set(env.progression.ids['infernal_knight'])
+    ids = ids.at[target].set(env.progression.ids['duke'])
+    levels = env.progression.base_levels[ids].at[target].set(level)
+    s = s.replace(actor=jnp.int32(actor),unit_ids=ids,unit_levels=levels,unit_xp=jnp.zeros(12,jnp.int32),
+        hp=jnp.zeros(12,jnp.int32).at[actor].set(100).at[target].set(1),
+        equipped=jnp.full_like(s.equipped,-1))
+    after, _ = compiled_method(env,'_battle_step')(s,jnp.int32(SHOOT),s.battle_key,jnp.zeros(env.random_size))
+    assert after.hp[target] == 0 and after.battle_xp[target//6] == worth
+    assert after.last_xp[actor] == worth and after.unit_xp[actor] == worth
+
+
+@pytest.mark.parametrize('key,level,required', [
+    ('duke',15,4650), ('duke',98,4650), ('g000uu8047',20,3000), ('g000uu8047',98,10800),
+])
+def test_native_xp_threshold_boundary_promotes_hero_and_late_growing_neutral(env,key,level,required):
+    """One XP below the native threshold must not level up; exactly enough must."""
+    s = battle(env)
+    ids = jnp.zeros(12,jnp.int32).at[0].set(env.progression.ids[key]).at[6].set(env.progression.ids['squire'])
+    s = s.replace(actor=jnp.int32(0),unit_ids=ids,
+        unit_levels=env.progression.base_levels[ids].at[0].set(level),unit_xp=jnp.zeros(12,jnp.int32),
+        hp=jnp.zeros(12,jnp.int32).at[0].set(1).at[6].set(1),equipped=jnp.full_like(s.equipped,-1))
+    # The Squire is worth 20 XP; Weapon Master adds 25% if this map enables it.
+    award = 25 if env.hero_skills and key == 'duke' else 20
+    cases = [s.replace(unit_xp=s.unit_xp.at[0].set(required-award-offset)) for offset in (1,0)]
+    result = win(env,stack(*cases))
+    assert result.unit_levels[:,0].tolist() == [level,level+1]
+    assert result.unit_xp[:,0].tolist() == [required-1,0]
+    assert result.hp[0,0] == 1 and result.last_promoted.tolist() == [0,1]
+    maximum = compiled_method(env,'max_hp',batched=True)(result)
+    assert result.hp[1,0] == maximum[1,0]
 
 
 def test_hero_levelup_grants_only_movement_delta_until_level_ten(env):

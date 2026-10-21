@@ -233,7 +233,8 @@ def test_reference_hero_skills(default_game):
 
     def shares(level):
         won, _ = step(battle.replace(actor=jnp.int32(1), unit_levels=battle.unit_levels.at[1].set(level),
-                                     hp=battle.hp.at[6:].set(0), battle_xp=jnp.array([0, 120], jnp.int32)),
+                                     hp=battle.hp.at[6:].set(0), battle_xp=jnp.array([0, 120], jnp.int32),
+                                     battle_earned_xp=jnp.where(battle.hp > 0,30,0)),
                       jnp.int32(DEFEND))
         for _ in range(6):
             if won.in_battle:
@@ -241,4 +242,4 @@ def test_reference_hero_skills(default_game):
         assert not won.in_battle
         return won.last_xp[:6].tolist()
     assert shares(11) == [30, 30, 30, 0, 30, 0]
-    assert shares(12) == [38, 38, 38, 0, 38, 0]  # 30 x 1.25 = 37.5, half-up
+    assert shares(12) == [37, 37, 37, 0, 37, 0]  # Original bonus truncates 30*25/100.

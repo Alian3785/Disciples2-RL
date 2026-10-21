@@ -85,7 +85,7 @@ def armor_after_shreds(base, count):
 
 def advance_poison_queue(hp, escaped, phases, priority, round_number, activated,
                          turns, damage, source, immunities, extra_priority,
-                         next_actor, hold, max_rounds, applied_rounds, removal_rolls):
+                         next_actor, hold, max_rounds, applied_rounds, removal_rolls, return_death_order=False):
     """Resolve the pending queue and, if necessary, one following round in bulk.
 
     Candidate ticks are independent. Apply only the prefix through the first
@@ -141,25 +141,29 @@ def advance_poison_queue(hp, escaped, phases, priority, round_number, activated,
         amounts = jnp.where(live_dot, amounts, 0)
         owners = jnp.where(live_dot, owners, -1)
         wrap = enabled & ~ended(health) & ~jnp.any((health > 0) & ~escaped & (phase < 2))
-        return health, phase, done, left, amounts, owners, actor, losses, wrap, visited
+        rank = jnp.sum((scores[None, :] > scores[:, None]) |
+                       ((scores[None, :] == scores[:, None]) & (slots[None, :] < slots[:, None])), axis=1)
+        return health, phase, done, left, amounts, owners, actor, losses, wrap, visited, jnp.where(dead, rank, 24)
 
     enabled = ~hold & ~ended(hp) & (round_number <= max_rounds)
-    hp, phases, activated, turns, damage, source, next_actor, losses, wrap, visited = sweep(
+    hp, phases, activated, turns, damage, source, next_actor, losses, wrap, visited, deaths = sweep(
         hp, phases, priority, activated, turns, damage, source, next_actor, enabled, round_number, removal_rolls[0])
     round_number += wrap.astype(jnp.int32)
     phases = jnp.where(wrap, 0, phases)
     priority = jnp.where(wrap, extra_priority, priority)
     activated = jnp.where(wrap, False, activated)
-    hp, phases, activated, turns, damage, source, next_actor, more, _, more_visited = sweep(
+    hp, phases, activated, turns, damage, source, next_actor, more, _, more_visited, more_deaths = sweep(
         hp, phases, priority, activated, turns, damage, source, next_actor,
         wrap & (round_number <= max_rounds), round_number, removal_rolls[1])
-    return hp, phases, priority, round_number, activated, turns, damage, source, next_actor, losses+more, visited | more_visited
+    result = hp, phases, priority, round_number, activated, turns, damage, source, next_actor, losses+more, visited | more_visited
+    return result + (jnp.minimum(deaths, more_deaths+12),) if return_death_order else result
 
 
 
 def advance_periodic_queue(hp, escaped, phases, priority, round_number, activated,
                          turns, damage, source, immunities, extra_priority,
-                         next_actor, hold, max_rounds, immunity_masks, fallback_damage, applied_rounds, removal_rolls):
+                         next_actor, hold, max_rounds, immunity_masks, fallback_damage, applied_rounds, removal_rolls,
+                         return_death_order=False):
     """Resolve the pending queue and, if necessary, one following round in bulk.
 
     Per-effect ticks run in source order for each candidate. Apply only the prefix through the first
@@ -218,19 +222,22 @@ def advance_periodic_queue(hp, escaped, phases, priority, round_number, activate
         amounts = jnp.where(live_dot, amounts, 0)
         owners = jnp.where(live_dot, owners, -1)
         wrap = enabled & ~ended(health) & ~jnp.any((health > 0) & ~escaped & (phase < 2))
-        return health, phase, done, left, amounts, owners, actor, losses, wrap, visited
+        rank = jnp.sum((scores[None, :] > scores[:, None]) |
+                       ((scores[None, :] == scores[:, None]) & (slots[None, :] < slots[:, None])), axis=1)
+        return health, phase, done, left, amounts, owners, actor, losses, wrap, visited, jnp.where(dead, rank, 24)
 
     enabled = ~hold & ~ended(hp) & (round_number <= max_rounds)
-    hp, phases, activated, turns, damage, source, next_actor, losses, wrap, visited = sweep(
+    hp, phases, activated, turns, damage, source, next_actor, losses, wrap, visited, deaths = sweep(
         hp, phases, priority, activated, turns, damage, source, next_actor, enabled, round_number, removal_rolls[0])
     round_number += wrap.astype(jnp.int32)
     phases = jnp.where(wrap, 0, phases)
     priority = jnp.where(wrap, extra_priority, priority)
     activated = jnp.where(wrap, False, activated)
-    hp, phases, activated, turns, damage, source, next_actor, more, _, more_visited = sweep(
+    hp, phases, activated, turns, damage, source, next_actor, more, _, more_visited, more_deaths = sweep(
         hp, phases, priority, activated, turns, damage, source, next_actor,
         wrap & (round_number <= max_rounds), round_number, removal_rolls[1])
-    return hp, phases, priority, round_number, activated, turns, damage, source, next_actor, losses+more, visited | more_visited
+    result = hp, phases, priority, round_number, activated, turns, damage, source, next_actor, losses+more, visited | more_visited
+    return result + (jnp.minimum(deaths, more_deaths+12),) if return_death_order else result
 
 def vampiric_heal(hp, maximum, escaped, actor, pool, share_leftover):
     """Reference leech and equal capped integer shares, without a device loop."""

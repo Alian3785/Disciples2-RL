@@ -184,10 +184,11 @@ def test_hero_level_ceiling_and_tier_limited_numerical_growth(retreat):
         ids = jnp.zeros_like(initial.unit_ids).at[4].set(uid)
         levels = jnp.zeros_like(initial.unit_levels).at[4].set(level)
         state = initial.replace(unit_ids=ids, unit_levels=levels, unit_xp=jnp.zeros_like(ids),
-                                buildings=jnp.uint32(buildings), in_battle=jnp.bool_(True))
+                                buildings=jnp.uint32(buildings), in_battle=jnp.bool_(True),
+                                battle_earned_xp=jnp.zeros_like(ids).at[4].set(100000))
         hp = jnp.zeros_like(initial.hp).at[4].set(1)
         return progression.finish(state, hp, jnp.zeros(12, bool), jnp.bool_(True),
-            jnp.bool_(False), jnp.bool_(False), jnp.array([0, 100000], jnp.int32))
+            jnp.bool_(False), jnp.bool_(False))
 
     assert int(award(hero, 4)[1][4]) == 5
     for level in (5, 8):  # imported leaders are not reduced to the ceiling

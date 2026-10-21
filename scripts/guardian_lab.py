@@ -255,7 +255,7 @@ def _merge(*parts):
 
 
 def kill_xp(key, level):
-    """Experience a dead unit puts into the battle bank (ordinary growth rows)."""
+    """Experience a dead unit puts into the bank; both native growth stages."""
     row = UNITS[key]
     extra = max(level - row['level'], 0)
     early = min(extra, max(row['growth']['threshold'] - row['level'], 0))
@@ -1590,7 +1590,10 @@ def chain_steps(world, key, level, hero=False):
                           price=world.train_price(form, row['level'])))
     row = UNITS[key]
     for current in range(row['level'], level):
-        xp = row['exp_required'] + (current - row['level']) * row.get('exp_increment', 0)
+        extra = current - row['level']
+        early = min(extra, max(row['growth']['threshold'] - row['level'], 0))
+        xp = (row['exp_required'] + early * row['growth']['required_early']
+              + (extra - early) * row['growth']['required_late'])
         steps.append(dict(form=key, level=current, xp=xp, price=world.train_price(key, current)))
     return steps
 
