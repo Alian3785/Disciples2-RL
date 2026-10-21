@@ -37,11 +37,14 @@ def test_living_flying_heroes_and_dead_leader_prices(current_game):
     """Keep explicit leader cases so an omitted flyer cannot disappear from coverage."""
     env, initial, _, _ = current_game
     cases, expected = [], []
-    keys = ['duke', 'g000uu0019', 'g000uu0022', 'g000uu0072', 'g000uu0096', 'g000uu0099']
+    # Installed GMabi.dbf: Duke, Counselor and Dryad share Pegasus Knight's 0/1/3.
+    # King's Guard (g000uu0044) remains the explicit walking control.
+    keys = ['duke', 'g000uu0071', 'g000uu8010', 'g000uu0019', 'g000uu0022',
+            'g000uu0072', 'g000uu0096', 'g000uu0099', 'g000uu0044']
     for key in keys:
         living = hero_roster_state(env,initial,['possessed',key,None,'cultist',None,None])
         cases += [living,living.replace(hp=living.hp.at[1].set(0))]
-        expected += [[2,1,4,6] if key=='duke' else [2]*4,[4,2,8,12]]
+        expected += [[2,1,4,6] if key=='g000uu0044' else [2]*4,[4,2,8,12]]
     batch = jax.tree.map(lambda *xs:jnp.stack(xs),*cases)
     chex.assert_trees_all_equal(compiled_method(env,'travel_costs',batched=True)(batch),jnp.array(expected))
     fake = cases[1].replace(unit_ids=cases[1].unit_ids.at[3].set(env.progression.ids['g000uu0022']),
@@ -51,12 +54,15 @@ def test_living_flying_heroes_and_dead_leader_prices(current_game):
     assert compiled_method(env,'travel_costs')(no_hero).tolist() == [2,1,4,6]
 
 
-@pytest.mark.parametrize('leader_key,compare_batch', [
-    pytest.param('duke', False, id='scalar', marks=pytest.mark.core),
-    pytest.param('g000uu0096', False, id='death-knight', marks=pytest.mark.core),
-    pytest.param('duke', True, id='full-batch'),
+@pytest.mark.parametrize('leader_key,flying,compare_batch', [
+    pytest.param('duke', True, False, id='scalar', marks=pytest.mark.core),
+    pytest.param('g000uu0096', True, False, id='death-knight', marks=pytest.mark.core),
+    pytest.param('g000uu0071', True, False, id='counselor'),
+    pytest.param('g000uu8010', True, False, id='dryad'),
+    pytest.param('g000uu0044', False, False, id='walking'),
+    pytest.param('duke', True, True, id='full-batch'),
 ])
-def test_actual_step_mask_quotes_and_last_partial_move(current_game, leader_key, compare_batch):
+def test_actual_step_mask_quotes_and_last_partial_move(current_game, leader_key, flying, compare_batch):
     """Check terrain costs and partial final moves against masks, quotes, and actual transitions."""
     env, initial, _, _ = current_game
     initial = hero_roster_state(env,initial,['possessed',leader_key,'possessed','cultist',None,None])
@@ -69,7 +75,7 @@ def test_actual_step_mask_quotes_and_last_partial_move(current_game, leader_key,
                     s = s.replace(hp=s.hp.at[1].set(0))
                 cases.append(s)
                 actions.append(action)
-                price = cost*2 if dead else (2 if leader_key=='g000uu0096' else cost)
+                price = cost*2 if dead else (2 if flying else cost)
                 expected.append(min(points,price))
                 destinations.append(jnp.array(position)+env.directions[action]*(points>0))
     if not compare_batch:
@@ -101,19 +107,25 @@ def test_actual_step_mask_quotes_and_last_partial_move(current_game, leader_key,
 
 def test_terrain_boots_require_living_leader_and_flight_stays_two(current_game):
     env, initial, _, _ = current_game
+    initial = hero_roster_state(env,initial,['possessed','g000uu0044',None,'cultist',None,None])
     items = ItemRules(dict(MAP,initial_items={'elven_boots':1,'elemental_boots':1}))
     costs = jax.jit(lambda s:env.terrain.costs(s,items))
     for key, expected in (('elven_boots',[2,1,2,6]),('elemental_boots',[2,1,4,2])):
         s = initial.replace(equipped=initial.equipped.at[4].set(items.keys.index(key)))
         assert costs(s).tolist() == expected
         assert costs(s.replace(hp=s.hp.at[1].set(0))).tolist() == [4,2,8,12]
-        flyer = hero_roster_state(env,s,['possessed','g000uu0019',None,'cultist',None,None])
+        flyer = hero_roster_state(env,s,['possessed','duke',None,'cultist',None,None])
         assert costs(flyer).tolist() == [2]*4
 
 
-@pytest.mark.parametrize('leader_key', ['duke', 'g000uu0096'])
-def test_death_revival_and_rest_restore_correct_movement(current_game, leader_key):
-    """A revived Death Knight recovers flight and movement equipment together."""
+@pytest.mark.parametrize('leader_key,equipped_cap', [
+    pytest.param('duke', 24, id='duke'),
+    pytest.param('g000uu0071', 42, id='counselor'),
+    pytest.param('g000uu8010', 30, id='dryad'),
+    pytest.param('g000uu0096', 24, id='g000uu0096'),
+])
+def test_death_revival_and_rest_restore_correct_movement(current_game, leader_key, equipped_cap):
+    """Revival restores flight and boots (+20% of each leader's base allowance)."""
     env, initial, advance, _ = current_game
     initial = hero_roster_state(env,initial,['possessed',leader_key,'possessed','cultist',None,None])
     boot = env.item_rules.keys.index('boots_speed')
@@ -126,9 +138,8 @@ def test_death_revival_and_rest_restore_correct_movement(current_game, leader_ke
     revive = env.potion_rules.metadata()[env.potion_rules.keys.index('life')]['action_start']+1
     revived,_ = advance(rested,jnp.int32(revive))
     assert revived.hp[1] == 1 and revived.equipped[4] == boot
-    assert env.movement_cap(revived) == 24
-    expected = [2]*4 if leader_key=='g000uu0096' else [2,1,4,6]
-    assert compiled_method(env,'travel_costs')(revived).tolist() == expected
+    assert env.movement_cap(revived) == equipped_cap
+    assert compiled_method(env,'travel_costs')(revived).tolist() == [2]*4
 
 
 @pytest.mark.core
@@ -154,14 +165,19 @@ def test_observation_reset_and_human_quotes(current_game,human_service):
     research_context = 3+env.spell_research.observation_size+env.casting.observation_size+env.unit_swaps.observation_size  # lord, research, casts, swaps
     terrain_columns = slice(-35-research_context,-research_context)
     view = observe(initial)[terrain_columns]
-    assert view[-2:].tolist() == [0.,0.]
+    assert view[-2:].tolist() == [1.,0.]
+    assert jnp.allclose(view[25:33],jnp.full(8,2/12))
+    walking = hero_roster_state(env,initial,['possessed','g000uu0044',None,'cultist',None,None])
+    walking_view = observe(walking)[terrain_columns]
+    assert walking_view[-2:].tolist() == [0.,0.]
     dead = observe(initial.replace(hp=initial.hp.at[1].set(0)))[terrain_columns]
-    assert dead[-1] == 1 and jnp.allclose(dead[25:33],view[25:33]*2)
+    assert dead[-2:].tolist() == [0.,1.]
+    assert jnp.allclose(dead[25:33],walking_view[25:33]*2)
     flying = hero_roster_state(env,initial,['possessed','g000uu0019',None,'cultist',None,None])
     assert observe(flying)[terrain_columns][-2:].tolist() == [1.,0.]
     reset,_ = compiled_method(env,'reset')(jax.random.PRNGKey(42))
     chex.assert_trees_all_equal(observe(reset),observe(initial))
     response = human_service.create(42,'legions')
-    assert response['snapshot']['travel_costs'] == [2,1,4,6]
+    assert response['snapshot']['travel_costs'] == [2]*4
     assert response['turn_rules']['dead_hero_cost_multiplier'] == 2
     assert len(response['map']['terrain']['water']) == 50

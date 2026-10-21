@@ -1,0 +1,185 @@
+{
+  "date": "2026-10-21",
+  "mechanic": "Duke (g000uu0070), Counselor (g000uu0071) and Dryad (g000uu8010) are flying leaders.",
+  "edition": "Installed Steam Disciples II: Rise of the Elves",
+  "method": "Read installed DBF records with scripts/inspect_unit_sources.py::dbf; no JAX/environment execution, game or disassembler launched.",
+  "sources": [
+    {
+      "path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Disciples II Rise of the Elves\\Globals\\Gunits.dbf",
+      "sha256": "c663448bc47c08a40863d0efe4ae1476478ccf082af095a612416f181f7721db",
+      "rows": [
+        {
+          "UNIT_ID": "g000uu0019",
+          "NAME_TXT": "x000tg2019",
+          "DESC_TXT": "x000tg2519",
+          "MOVE": "20",
+          "LEADER_CAT": "1"
+        },
+        {
+          "UNIT_ID": "g000uu0044",
+          "NAME_TXT": "x000tg2044",
+          "DESC_TXT": "x000tg2544",
+          "MOVE": "20",
+          "LEADER_CAT": "1"
+        },
+        {
+          "UNIT_ID": "g000uu0070",
+          "NAME_TXT": "x000tg2070",
+          "DESC_TXT": "x000tg2570",
+          "MOVE": "20",
+          "LEADER_CAT": "1"
+        },
+        {
+          "UNIT_ID": "g000uu0071",
+          "NAME_TXT": "x000tg2071",
+          "DESC_TXT": "x000tg2571",
+          "MOVE": "35",
+          "LEADER_CAT": "2"
+        },
+        {
+          "UNIT_ID": "g000uu8010",
+          "NAME_TXT": "x160tg0310",
+          "DESC_TXT": "x160tg0410",
+          "MOVE": "25",
+          "LEADER_CAT": "3"
+        }
+      ]
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Disciples II Rise of the Elves\\Globals\\GMabi.dbf",
+      "sha256": "796523528c8f57cba2e99776ad7160006f99dd50102837653c7a3ba346dde047",
+      "rows": [
+        {
+          "UNIT_ID": "g000uu0019",
+          "M_ABILITY": "0"
+        },
+        {
+          "UNIT_ID": "g000uu0019",
+          "M_ABILITY": "1"
+        },
+        {
+          "UNIT_ID": "g000uu0019",
+          "M_ABILITY": "3"
+        },
+        {
+          "UNIT_ID": "g000uu0070",
+          "M_ABILITY": "0"
+        },
+        {
+          "UNIT_ID": "g000uu0070",
+          "M_ABILITY": "1"
+        },
+        {
+          "UNIT_ID": "g000uu0070",
+          "M_ABILITY": "3"
+        },
+        {
+          "UNIT_ID": "g000uu0071",
+          "M_ABILITY": "0"
+        },
+        {
+          "UNIT_ID": "g000uu0071",
+          "M_ABILITY": "1"
+        },
+        {
+          "UNIT_ID": "g000uu0071",
+          "M_ABILITY": "3"
+        },
+        {
+          "UNIT_ID": "g000uu8010",
+          "M_ABILITY": "0"
+        },
+        {
+          "UNIT_ID": "g000uu8010",
+          "M_ABILITY": "1"
+        },
+        {
+          "UNIT_ID": "g000uu8010",
+          "M_ABILITY": "3"
+        }
+      ]
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Disciples II Rise of the Elves\\Globals\\Lground.DBF",
+      "sha256": "b3a019bea7a824784b1e7c3096f89e7d8b5585127f3a112d35bcb02b201b12a8",
+      "rows": [
+        {
+          "ID": "0",
+          "TEXT": "L_PLAIN"
+        },
+        {
+          "ID": "1",
+          "TEXT": "L_FOREST"
+        },
+        {
+          "ID": "4",
+          "TEXT": "L_MOUNTAIN"
+        },
+        {
+          "ID": "3",
+          "TEXT": "L_WATER"
+        }
+      ]
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Disciples II Rise of the Elves\\Globals\\Tglobal.dbf",
+      "sha256": "5da65f5cb78f714e1814f97d301b43ae54e1b7bf086e61c8f3f93abdfc9e12ce",
+      "rows": [
+        {
+          "TXT_ID": "x000tg2019",
+          "TEXT": "Pegasus Knight"
+        },
+        {
+          "TXT_ID": "x000tg2044",
+          "TEXT": "King's Guard"
+        },
+        {
+          "TXT_ID": "x000tg2070",
+          "TEXT": "Duke"
+        },
+        {
+          "TXT_ID": "x000tg2071",
+          "TEXT": "Counselor"
+        },
+        {
+          "TXT_ID": "x160tg0310",
+          "TEXT": "Dryad"
+        }
+      ]
+    }
+  ],
+  "finding": "Each corrected leader has GMabi M_ABILITY 0, 1, 3, matching Pegasus Knight. Lground maps these values to plain, forest and water. Kings Guard (g000uu0044), used as the walking control, has no GMabi records in this installation. Tglobal supplies the unit names.",
+  "change": "Add the three game IDs to the existing JAX flying-leader set. Shared terrain rules charge 2 on plain, road, forest and water while the leader is alive. Death disables flight; resurrection restores it.",
+  "scope_note": "Only these three classifications changed. Other classifications, including the inherited Banshee entry, and the existing dead-leader travel rules are outside this correction.",
+  "regression_tests": [
+    "stoix/tests/number_grid_terrain_test.py::test_living_flying_heroes_and_dead_leader_prices",
+    "stoix/tests/number_grid_terrain_test.py::test_actual_step_mask_quotes_and_last_partial_move[scalar]",
+    "stoix/tests/number_grid_terrain_test.py::test_actual_step_mask_quotes_and_last_partial_move[counselor]",
+    "stoix/tests/number_grid_terrain_test.py::test_actual_step_mask_quotes_and_last_partial_move[dryad]",
+    "stoix/tests/number_grid_terrain_test.py::test_actual_step_mask_quotes_and_last_partial_move[walking]",
+    "stoix/tests/number_grid_terrain_test.py::test_actual_step_mask_quotes_and_last_partial_move[full-batch]",
+    "stoix/tests/number_grid_terrain_test.py::test_terrain_boots_require_living_leader_and_flight_stays_two",
+    "stoix/tests/number_grid_terrain_test.py::test_death_revival_and_rest_restore_correct_movement[duke]",
+    "stoix/tests/number_grid_terrain_test.py::test_death_revival_and_rest_restore_correct_movement[counselor]",
+    "stoix/tests/number_grid_terrain_test.py::test_death_revival_and_rest_restore_correct_movement[dryad]",
+    "stoix/tests/number_grid_terrain_test.py::test_observation_reset_and_human_quotes",
+    "stoix/tests/number_grid_casting_test.py::test_support_spells_heal_moves_buffs_wards_health_and_terrain"
+  ],
+  "coverage": [
+    "Explicit leader cases independent of the implementation ID set, with a walking control.",
+    "Actual step, action mask and command quotes on road, plain, forest and water, alive/dead and with 20, 1 or 0 movement points.",
+    "Resurrection restores flight and boots; revived allowances with +20% boots are Duke 24, Counselor 42 and Dryad 30, based on Gunits MOVE 20, 35 and 25.",
+    "Terrain observation and human snapshot recognize the initial Duke as flying.",
+    "Boots and terrain spell tests use a walking leader to retain their original coverage."
+  ],
+  "static_checks": [
+    "Ruff passed for all three changed Python files using the project WSL environment.",
+    "Python AST parsing passed for all three changed Python files without importing them.",
+    "Source JSON parsed successfully.",
+    "git diff --check passed."
+  ],
+  "tests_run": false,
+  "training_or_benchmarks_run": false,
+  "original_game_launched": false,
+  "disassembler_launched": false
+}

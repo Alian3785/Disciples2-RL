@@ -16,7 +16,7 @@ from stoix.envs.number_grid_casting import (
 from stoix.envs.number_grid_combat import ATTACK_TYPES, HP, DAMAGE, ACCURACY, ARMOR, INITIATIVE
 from stoix.envs.number_grid_spells import CATALOG, SpellResearchRules
 from stoix.envs.number_grid_terrain import FOREST, WATER
-from stoix.tests.number_grid_fixtures import compiled_method
+from stoix.tests.number_grid_fixtures import compiled_method, hero_roster_state
 
 EAST = 2
 MANA = jnp.full(5, 5000, jnp.int32)
@@ -272,12 +272,14 @@ def test_support_spells_heal_moves_buffs_wards_health_and_terrain(current_game):
             done = rules.finish_battle(started, after, after.hp, jnp.bool_(True), jnp.bool_(True))
             np.testing.assert_array_equal(done.hp[:4], [0, 0, 160, 45])
         if 'terrain' in checks:
+            # Use a walking leader: the Duke now flies without a terrain spell.
+            walking = hero_roster_state(env,base,['possessed','g000uu0044','possessed','cultist',None,None])
             forest = next(i for i, r in enumerate(rules.rows) if r['cast'].get('terrain') == 'forest')
-            out, _, _ = apply(base, jnp.int32(195+forest), max_hp, 20)
+            out, _, _ = apply(walking, jnp.int32(195+forest), env.max_hp(walking), 20)
             assert tuple(map(bool, rules.terrain(out))) == (True, False)
             costs = jax.jit(env.terrain.costs, static_argnums=1)(out, None, rules.terrain(out))
             assert costs[FOREST] == 2 and costs[WATER] == 6
-            dead = out.replace(hp=out.hp.at[1].set(0))  # the Duke leads the party
+            dead = out.replace(hp=out.hp.at[1].set(0))  # King's Guard leads the party
             assert jax.jit(env.terrain.costs, static_argnums=1)(dead, None, rules.terrain(dead))[FOREST] == 4
 
 
