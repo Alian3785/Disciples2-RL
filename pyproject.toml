@@ -13,7 +13,7 @@ license-files = ["LICENSE_STOIX"]
 dynamic = ["dependencies"]
 
 [project.optional-dependencies]
-dev = ["ruff==0.16.10"]
+dev = ["ruff==0.17.1"]
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["numbergrid-runtime.txt"]}

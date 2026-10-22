@@ -255,14 +255,24 @@ wsl -d Ubuntu-24.04 -u minigrid --cd C:\jaxjax -- /home/minigrid/.venvs/numbergr
 
 ## Runtime и проверки
 
-Python находится в /home/minigrid/.venvs/numbergrid-cuda13. Проверенные JAX/jaxlib 0.11.2, CUDA runtime 13.4.92, Flax 0.12.10. Launcher требует CUDA и не переключается незаметно на CPU. NUMBERGRID_VENV позволяет выбрать другое окружение. Зависимости закреплены в numbergrid-runtime.txt и runtime-constraints.txt.
+Python находится в /home/minigrid/.venvs/numbergrid-cuda13. Закреплены JAX/jaxlib и CUDA 13 плагины 0.12.0.1, CUDA runtime 13.4.92, Flax 0.12.10. Launcher требует CUDA и не переключается незаметно на CPU. NUMBERGRID_VENV позволяет выбрать другое окружение. Зависимости закреплены в numbergrid-runtime.txt и runtime-constraints.txt.
+
+JAX обновлён с 0.11.2 до последнего стабильного выпуска на 22 октября 2026 года — [0.12.0.1](https://pypi.org/project/jax/0.12.0.1/). `jax`, `jaxlib`, `jax-cuda13-plugin` и `jax-cuda13-pjrt` закреплены в одинаковой версии. Требования Python >=3.12 и NumPy >=2.2 выполнены текущим окружением. При обновлении регрессионные тесты, обучение и замеры не запускались; прежние результаты на 0.11.2 не подтверждают работу или скорость новой версии.
+
+Дополнительно на 22 октября 2026 года обновлены [NumPy 2.5.4](https://pypi.org/project/numpy/2.5.4/) и [Orbax Checkpoint 0.12.8](https://pypi.org/project/orbax-checkpoint/0.12.8/). W&B остаётся на 0.30.0. Для этих обновлений также выполняются только проверка зависимостей и статический анализ; вычисления и сохранение/загрузка моделей требуют отдельной проверки по запросу пользователя.
+
+Обновить существующее WSL-окружение по закреплённым зависимостям без запуска вычислений:
+
+```bash
+wsl -d Ubuntu-24.04 -u minigrid --cd C:\jaxjax -- /home/minigrid/.venvs/numbergrid-cuda13/bin/python -m pip install -r numbergrid-runtime.txt -c runtime-constraints.txt
+```
 
 ```bash
 bash scripts/run_gpu.sh scripts/test_gpu.py --output results/gpu-tests/RUN
 node --check web/battle_app.js
 ```
 
-Для проверки Python-кода установлен Ruff 0.16.10; версия закреплена в группе зависимостей `dev` в `pyproject.toml`. Включены только пять правил: `F821` и `F823` (неопределённые имена и локальные переменные), `F601` (повторяющиеся ключи словаря), `B006` (изменяемые аргументы по умолчанию), `B023` (захват переменной цикла вложенной функцией).
+Для проверки Python-кода установлен [Ruff 0.17.1](https://pypi.org/project/ruff/0.17.1/); версия закреплена в группе зависимостей `dev` в `pyproject.toml`. Включены только пять правил: `F821` и `F823` (неопределённые имена и локальные переменные), `F601` (повторяющиеся ключи словаря), `B006` (изменяемые аргументы по умолчанию), `B023` (захват переменной цикла вложенной функцией).
 
 Для JAX-проверок используется [Chex](https://github.com/google-deepmind/chex) 0.1.92, уже закреплённый в `numbergrid-runtime.txt` и `runtime-constraints.txt`. Проверки сравнивают обычный и `jit`/`vmap` вызовы среды, контролируют формы, типы, конечность значений и лишние трассировки. Они выполняются отдельно от learner и не добавляют накладных расходов в обучение. План использования тестов Python-референса: [docs/TESTING.md](docs/TESTING.md).
 
