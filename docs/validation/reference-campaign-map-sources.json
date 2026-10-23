@@ -1,6 +1,6 @@
 {
   "coordinate_transform": "[x,y] -> [y+1,x+1]",
-  "wotan_unit_instance_audit": {
+  "charmed_child_unit_instance_audit": {
     "armies": 71,
     "instance_and_name_mismatches": [],
     "profile_normalization": "Reference MapConfig resolves source unit names to canonical profiles in layout.json; JAX uses those exact profile IDs.",
@@ -702,7 +702,7 @@
       "starting_gold": 0
     },
     {
-      "name": "wotans_retribution",
+      "name": "the_charmed_child",
       "sha256": {
         "definition": "f46faada955bf1ac79942beab7835c024e51a12cdfc7ca68b5e8d8524842e3b7",
         "layout": "05c9bcb05532ca6e581f06d273b58e41ecebcd4733e7dbb6216c61c3797e97a1",

@@ -201,5 +201,5 @@ def test_only_fixed_siege_victory_components_are_tripled(siege):
 
 
 def test_other_reference_maps_do_not_enable_siege_shaping():
-    for name in ('super_last_stand', 'wotans_retribution'):
+    for name in ('super_last_stand', 'the_charmed_child'):
         assert 'siege_rewards' not in load_map(name)

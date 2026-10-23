@@ -20,7 +20,7 @@ CAMPAIGN_FIELDS = (
     'capital_defense_acquired', 'capital_defense_effects', 'capital_health_effects',
     'capital_guardian_rounds', 'capital_guardian_battles',
     'capital_first_contacts', 'capital_entry_strength',
-    'merchant_purchases',
+    'merchant_purchases', 'waves_completed',
 )
 EPISODE_WINDOW = 100
 
@@ -46,6 +46,16 @@ def campaign_events(env, before, world, after, action, valid, battle_counts):
         battle_retreats=battle_counts[2], unit_upgrades=battle_counts[3],
         enemy_squads_defeated=jnp.sum(before.alive & ~after.alive),
     )
+    if env.scenario.enabled and env.map_config.get('campaign_objective') == 'waves':
+        rules = env.scenario
+        # Match ScenarioRules.wave_bonus: future or partly defeated waves do
+        # not count. Measure before auto-reset, including the terminal victory.
+        defeated_before = before.scenario_spawned[rules.indices] & ~before.alive[rules.indices]
+        defeated_after = after.scenario_spawned[rules.indices] & ~after.alive[rules.indices]
+        cleared_before = jnp.all(defeated_before | ~rules.wave_groups, axis=1)
+        cleared_after = jnp.all(defeated_after | ~rules.wave_groups, axis=1)
+        values['waves_completed'] = jnp.sum(
+            cleared_after & ~cleared_before & (rules.wave_numbers > 0))
     if env.bot.enabled:
         from stoix.envs.number_grid import REST
         # REST's private bot combats do not count as the agent's victories.

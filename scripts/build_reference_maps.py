@@ -15,7 +15,8 @@ from scripts.build_default_map import CURRENT, RULES, UNITS, cell, dump, roster,
 from stoix.envs.number_grid_items import ITEMS
 from stoix.envs.number_grid_potions import POTIONS
 
-NAMES = ('super_last_stand', 'siege_train', 'wotans_retribution', 'trade_train')
+NAMES = ('super_last_stand', 'siege_train', 'the_charmed_child', 'trade_train')
+SOURCE_NAMES = {'the_charmed_child': 'wotans_retribution'}  # Legacy Python-reference filename.
 ALIASES = {
     'Potion of Healing': 'healing', 'Potion of Restoration': 'restoration', 'Life Potion': 'life',
     'Эликсир Жизни': 'life', 'Эликсир восстановления': 'restoration',
@@ -57,10 +58,11 @@ def loot(names):
 
 def build(base, name):
     """Translate a reference scenario and its layout into JAX armies, events, and rewards."""
-    module = importlib.import_module('maps.'+name)
+    source_name = SOURCE_NAMES.get(name, name)
+    module = importlib.import_module('maps.'+source_name)
     from unit_revive_costs import REVIVE_PROFILE_IDS_BY_NAME
     config = module.MAP
-    layout = json.loads((base/'maps'/name/'layout.json').read_text(encoding='utf-8'))
+    layout = json.loads((base/'maps'/source_name/'layout.json').read_text(encoding='utf-8'))
     stacks = sorted(layout['enemies'], key=lambda e: e['id'])
     index = {e['id']: i for i, e in enumerate(stacks)}
     rosters = [roster(e) for e in stacks]
@@ -108,10 +110,17 @@ def build(base, name):
               [dict(kind=m['kind'], position=cell(m['position'])) for m in layout['mana']],
         campaign_objective=layout['objective'], reward_profile='python_reference',
         reference_enemy_ids=[e['id'] for e in stacks],
-        reference_source='Big_map/maps/'+name+'.py; maps/'+name+'/layout.json',
+        reference_source='Big_map/maps/'+source_name+'.py; maps/'+source_name+'/layout.json',
         scheduled_enemies=[dict(enemy=index[e['id']], **{k:v for k,v in e['wave'].items() if k!='enemy_id'})
                            for e in stacks if e.get('wave')],
     )
+    if name == 'super_last_stand':
+        # User-requested difficulty setting: the Temple must be built during play.
+        game_map['starting_built_buildings'] = [
+            building for building in game_map['starting_built_buildings'] if building != 'Храм']
+    if name == 'the_charmed_child':
+        game_map.update(display_name='Проклятое дитя', original_name='The Charmed Child',
+                        scenario_id='S117SC0000')
     game_map['lord_type'] = {1:'warrior', 2:'mage', 3:'guildmaster'}[config.starting_lord_type]
     game_map.update(step_cost=0., exploration_bonus=.08, building_reward=0., battle_observation_version=44)
     if layout.get('objective_enemy_id') is not None:

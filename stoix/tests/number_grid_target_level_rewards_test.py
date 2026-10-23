@@ -192,7 +192,7 @@ def test_target_scope_requires_an_objective_and_enabled_reward():
 
 def test_unrelated_maps_keep_level_rewards_disabled():
     """Keep target-level shaping disabled on campaigns that did not opt into it."""
-    for name in ('default', 'default-green-dragon', 'super_last_stand', 'wotans_retribution', 'siege_train'):
+    for name in ('default', 'default-green-dragon', 'super_last_stand', 'the_charmed_child', 'siege_train'):
         assert not load_map(name).get('army_victory_level_reward', 0.)
         assert not load_map(name).get('capital_entry_level_reward', 0.)
         assert not load_map(name).get('recruitment_reward_faction_only', False)

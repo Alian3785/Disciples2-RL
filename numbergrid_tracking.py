@@ -18,7 +18,7 @@ TAGS = ['numbergrid', 'ppo', 'jax']
 
 def add_tracking_arguments(parser):
     parser.add_argument('--summary-interval', type=int, default=SUMMARY_INTERVAL,
-                        help='Transitions per console/cloud summary and optional checkpoint (default: 1000000)')
+                        help='Transitions per console/cloud summary (default: 1000000); checkpoint interval is separate')
     parser.add_argument('--tracking', choices=('auto', 'wandb', 'wandb-offline', 'comet', 'disabled'),
                         default=os.environ.get('NUMBERGRID_TRACKING', 'auto'),
                         help='Auto: W&B cloud when it accepts the saved login, otherwise Comet with a saved '
@@ -46,11 +46,12 @@ def wandb_cloud_reason(wandb):
 class CometRun:
     """The W&B calls used below, sent to a Comet experiment."""
 
-    def __init__(self, experiment):
+    def __init__(self, experiment, game_map=None):
         self.experiment = experiment
+        self.game_map = game_map
 
     def log(self, data):
-        data = compact_comet_metrics(data)
+        data = compact_comet_metrics(data, self.game_map)
         step = data.pop('training_steps')
         self.experiment.log_metrics(data, step=step)
 
@@ -104,12 +105,15 @@ class NumberGridTracking:
     def start(self, output, config, game_map, source_hashes):
         """Auto: W&B cloud, then Comet, then offline W&B; explicit choices never fall back."""
         self.output = Path(output)
+        self.campaign.waves_enabled = game_map.get('campaign_objective') == 'waves'
         requested = self.args.tracking
         self.metadata = {'requested': requested, 'service': None, 'mode': 'disabled', 'url': None,
                          'skipped': [], 'status': 'running', 'summary_interval': self.summary_interval}
         self.metadata['campaign_metrics'] = {
             'source': 'Python reference Big_map/train_campaign.py::CampaignMetricsCallback',
             'episode_window': 100,
+            'waves_completed': ('wave maps only: all scheduled members spawned and defeated; '
+                                'mean over the last 100 completed episodes, including defeats and timeouts'),
             'window_rates': ('victory/defeat/timeout/battle win: whole logging interval; '
                              'dragon reached rate and recent means: last 100 completed episodes'),
             'potions_used': 'successful doses on the map and in hero battle slots; completed-episode mean',
@@ -217,7 +221,7 @@ class NumberGridTracking:
         if not experiment.alive:
             experiment.end()
             raise RuntimeError('experiment was not created on the Comet server')
-        self.run = CometRun(experiment)
+        self.run = CometRun(experiment, settings['environment'])
         training = copy.deepcopy(settings['training'])
         training.get('env', {}).get('kwargs', {}).pop('map_config', None)  # logged as map.json
         experiment.log_parameters({'training': training, 'logging': settings['logging']})
@@ -229,7 +233,7 @@ class NumberGridTracking:
                              version=comet_ml.__version__)
         try:
             api_experiment = comet_ml.API().get_experiment_by_key(experiment.get_key())
-            self.metadata['dashboard'] = configure_comet_dashboard(api_experiment)
+            self.metadata['dashboard'] = configure_comet_dashboard(api_experiment, settings['environment'])
             parts = urlsplit(experiment.url)
             query = dict(parse_qsl(parts.query))
             query['viewId'] = self.metadata['dashboard']['view_id']
@@ -278,6 +282,7 @@ class NumberGridTracking:
         self.wins += wins
         self.battle_wins += int(row.get('battle_victory', 0))
         self.buildings_built += int(row.get('building_constructed', 0))
+        session_steps = row.get('session_training_steps', row['training_steps'])
         data = {
             'training_steps': int(row['training_steps']),
             'episodes/completed': episodes,
@@ -285,9 +290,9 @@ class NumberGridTracking:
             'episodes/wins': wins,
             'episodes/wins_total': self.wins,
             'performance/steps_per_second': step_size / elapsed,
-            'performance/mean_steps_per_second': row.get('session_training_steps', row['training_steps']) / row['training_seconds'],
+            'performance/mean_steps_per_second': session_steps / row['training_seconds'],
             'performance/training_seconds': row['training_seconds'],
-            'performance/loop_steps_per_second': row.get('session_training_steps', row['training_steps']) / loop_seconds,
+            'performance/loop_steps_per_second': session_steps / loop_seconds,
         }
         if episodes:
             data.update({
@@ -328,6 +333,9 @@ class NumberGridTracking:
         if 'entropy' in row:
             data['train/entropy_loss'] = -row['entropy']
         self.last_campaign_metrics = self.campaign.metrics(reset_window=True)
+        # Match synchronized learner timing; warm starts count only this session's work.
+        self.last_campaign_metrics['campaign/mean_seconds_per_million_steps'] = (
+            row['training_seconds'] * 1_000_000 / session_steps)
         data.update(self.last_campaign_metrics)
         for reference, source in (('ep_rew_mean', 'episode_return_mean'), ('ep_len_mean', 'episode_length_mean')):
             key = 'campaign/window/' + source

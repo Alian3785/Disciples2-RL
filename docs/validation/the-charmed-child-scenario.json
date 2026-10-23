@@ -1,0 +1,21 @@
+{
+  "scenario": "S117SC0000",
+  "name": "The Charmed Child",
+  "display_name": "Проклятое дитя",
+  "limits": {
+    "MAX_UNIT": 3,
+    "MAX_LEADER": 5,
+    "MAX_CITY": 5,
+    "MAX_SPELL": 3
+  },
+  "semantics": {
+    "MAX_UNIT": "Highest unit upgrade building tier; not a numerical unit level cap.",
+    "MAX_LEADER": "Leader promotion ceiling.",
+    "MAX_SPELL": "Highest spell research level."
+  },
+  "sha256": {
+    "Scens/Sinfo.DBF": "9073d072e2b9e338f13a24466520ae07cf28c64b982bd22978c819c77cc6df12"
+  },
+  "original_game_launched": false,
+  "ida_used": false
+}

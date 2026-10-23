@@ -81,7 +81,7 @@
     {"name": "Бетрезен", "hero": true, "exp_current": 0, "exp_required": 150, "exp_increment": 500}
   ],
   "starting_gold": 3000,
-  "starting_built_buildings": ["Храм"],
+  "starting_built_buildings": [],
   "starting_hero_abilities": ["sorcery_lore", "artifact_knowledge"],
   "starting_scroll_magic_unlocked": true,
   "enemy_rosters": [

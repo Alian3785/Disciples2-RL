@@ -1,6 +1,6 @@
 """Extended regressions for reference maps; run only on explicit request via run_gpu.sh.
 
-Sources: Big_map/maps/{super_last_stand,siege_train,wotans_retribution}.py;
+Sources: Python reference map definitions (The Charmed Child uses the legacy source module);
 campaign_env_territory.py scheduled armies; train_campaign.py REWARD_CONFIG.
 """
 import jax
@@ -8,6 +8,7 @@ import jax.numpy as jnp
 import pytest
 
 from stoix.envs.number_grid import CONTINUE, NumberGrid, load_map
+from stoix.envs.number_grid_metrics import CAMPAIGN_FIELDS, campaign_events
 from stoix.envs import number_grid_reference_rewards as rewards
 
 
@@ -28,7 +29,8 @@ def test_betrezen_identity_and_starting_assets(fortress):
     levels = jnp.array([1,10,15,99],jnp.int32)
     assert jax.jit(env.progression.required_xp)(hero,levels).tolist() == [150,4650,4650,4650]
     assert int(state.hp[4]) == 300 and int(state.gold) == 3000
-    assert bool(env.capital.temple_built(state))
+    # User-requested SLS starting setup (2026-10-22): no prebuilt Temple.
+    assert not bool(env.capital.temple_built(state))
     assert env.item_rules.skill_levels[:2] == (1, 1)
 
 
@@ -70,6 +72,15 @@ def test_wave_bonus_requires_every_member_and_is_paid_once(fortress):
     assert float(env.scenario.wave_bonus(active, two)) == 0
     assert float(env.scenario.wave_bonus(two, complete)) == 4
     assert float(env.scenario.wave_bonus(complete, complete)) == 0
+    wave_index = CAMPAIGN_FIELDS.index('waves_completed')
+    count_waves = jax.jit(lambda before, after: campaign_events(
+        env, before, after, after, CONTINUE, jnp.bool_(True), jnp.zeros(4, jnp.int32))[wave_index])
+    assert float(count_waves(state, state)) == 0  # Future armies are not cleared waves.
+    assert float(count_waves(state, active)) == 0  # Spawning is not completion.
+    assert float(count_waves(active, two)) == 0
+    assert float(count_waves(two, complete)) == 1
+    assert float(count_waves(complete, complete)) == 0
+    assert float(count_waves(two, complete.replace(done=jnp.bool_(True), won=jnp.bool_(True)))) == 1
 
 
 def test_timeout_penalty_is_not_repeated(fortress):
@@ -79,13 +90,13 @@ def test_timeout_penalty_is_not_repeated(fortress):
     assert float(rewards.finish(env, terminal, terminal)[1]) == 0
 
 
-def test_siege_and_wotan_starting_rosters_and_goals():
+def test_siege_and_charmed_child_starting_rosters_and_goals():
     siege = load_map('siege_train')
     assert siege['hero_roster'] == ['possessed', 'duke', 'possessed', None, 'cultist', None]
     assert siege['reference_enemy_ids'][siege['objective_enemy']] == 100
     assert siege['scheduled_enemies'][0]['spawn_turn'] == 27
     assert sum(siege['initial_potions'].values()) == 20
-    wotan = load_map('wotans_retribution')
-    assert wotan['hero_roster'][0] == 'reference_g000uu0036'
-    assert len(wotan['enemy_rosters']) == 71
-    assert sum(c['objective'] for c in wotan['cities']) == 3
+    charmed_child = load_map('the_charmed_child')
+    assert charmed_child['hero_roster'][0] == 'reference_g000uu0036'
+    assert len(charmed_child['enemy_rosters']) == 71
+    assert sum(c['objective'] for c in charmed_child['cities']) == 3

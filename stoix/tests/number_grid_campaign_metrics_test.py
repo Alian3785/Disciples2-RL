@@ -130,12 +130,14 @@ def test_gpu_reduction_keeps_every_total_and_latest_100_completions():
     counts = counts.at[:10, 0, mercenary].set(2).at[:, 1, mercenary].set(5)
     trainer = CAMPAIGN_FIELDS.index('trainer_uses')
     counts = counts.at[:, 0, trainer].set(jnp.arange(n) % 3).at[:, 1, trainer].set(7)
+    waves = CAMPAIGN_FIELDS.index('waves_completed')
+    counts = counts.at[:, 0, waves].set(jnp.arange(n) % 12).at[:, 1, waves].set(11)
     terminal = jnp.zeros((n, 2), bool).at[:, 0].set(True)
     events = jnp.zeros_like(counts).at[:, 0].set(counts[:, 0])
     summary = jax.jit(summarize_campaign)({'is_terminal_step': terminal,
         'campaign_events': events, 'campaign_episode': counts,
         'episode_return': jnp.full(terminal.shape, 7.), 'episode_length': jnp.full(terminal.shape, 100)})
-    tracker = CampaignMetrics()
+    tracker = CampaignMetrics(waves_enabled=True)
     tracker.add(jax.device_get(summary))
     data = tracker.metrics(reset_window=True)
     assert data['campaign/episodes_total'] == 130
@@ -157,11 +159,15 @@ def test_gpu_reduction_keeps_every_total_and_latest_100_completions():
     assert data['campaign/window/dragon_reached_episodes_rate'] == pytest.approx(.2)
     assert data['campaign/window/battle_victories_mean'] == pytest.approx(sum(range(30, 130)) / 100)
     assert data['campaign/window/unit_upgrades_mean'] == pytest.approx(sum(i % 4 for i in range(30, 130)) / 100)
+    assert data['campaign/window/waves_completed_mean'] == pytest.approx(sum(i % 12 for i in range(30, 130)) / 100)
     empty = tracker.metrics()
     assert empty['campaign/window/episodes'] == 0
     assert 'campaign/window/victory_rate' not in empty
     assert empty['campaign/window/hired_units_mean'] == data['campaign/window/hired_units_mean']
     assert empty['campaign/window/dragon_reached_episodes_rate'] == pytest.approx(.2)
+    assert empty['campaign/window/waves_completed_mean'] == data['campaign/window/waves_completed_mean']
+    tracker.waves_enabled = False
+    assert not any('waves_completed' in key for key in tracker.metrics())
 
 
 @pytest.mark.parametrize('training_autoreset', ['contract'], indirect=True)
