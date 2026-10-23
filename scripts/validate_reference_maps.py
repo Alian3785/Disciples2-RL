@@ -92,7 +92,7 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     results = [validate(name) for name in args.maps or
-               ('super_last_stand', 'siege_train', 'wotans_retribution', 'trade_train')]
+               ('super_last_stand', 'siege_train', 'the_charmed_child', 'trade_train')]
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(results, indent=2)+'\n', encoding='utf-8')
 

@@ -16,7 +16,8 @@ PARTICIPATION_NAMES = {
 
 
 class CampaignMetrics:
-    def __init__(self):
+    def __init__(self, waves_enabled=False):
+        self.waves_enabled = waves_enabled
         self.total = dict.fromkeys(CAMPAIGN_FIELDS, 0.)
         self.window = dict.fromkeys(CAMPAIGN_FIELDS, 0.)
         self.participation = dict.fromkeys(CAMPAIGN_FIELDS, 0.)
@@ -46,7 +47,9 @@ class CampaignMetrics:
         window_episodes = sum(window[name] for name in ('victories', 'defeats', 'timeouts'))
         battles = sum(total[name] for name in ('battle_victories', 'battle_defeats', 'battle_retreats'))
         window_battles = sum(window[name] for name in ('battle_victories', 'battle_defeats', 'battle_retreats'))
-        data = {f'campaign/{name}_total': value for name, value in total.items()}
+        fields = [(index, name) for index, name in enumerate(CAMPAIGN_FIELDS)
+                  if name != 'waves_completed' or self.waves_enabled]
+        data = {f'campaign/{name}_total': total[name] for _, name in fields}
         data.update({'campaign/episodes_total': episodes,
                      'campaign/window/episodes': window_episodes,
                      'campaign/window/enemy_squads_defeated_sample_count': len(self.recent)})
@@ -63,13 +66,13 @@ class CampaignMetrics:
         if episodes:
             # The reference's total/episodes includes events in still-running
             # episodes. Also expose an explicitly completed-only mean.
-            for name in CAMPAIGN_FIELDS[3:]:
+            for _, name in fields[3:]:
                 data[f'campaign/{name}_per_episode_mean'] = total[name] / episodes
                 data[f'campaign/completed/{name}_mean'] = self.completed[name] / episodes
             for name, alias in PARTICIPATION_NAMES.items():
                 data[f'campaign/{alias}_episodes_rate'] = self.participation[name] / episodes
         if self.recent:
-            for index, name in enumerate(CAMPAIGN_FIELDS[3:], 3):
+            for index, name in fields[3:]:
                 data[f'campaign/window/{name}_mean'] = sum(record[index] for record in self.recent) / len(self.recent)
             data['campaign/window/enemy_squads_defeated_mean_100'] = data['campaign/window/enemy_squads_defeated_mean']
             data['campaign/window/episode_return_mean'] = sum(record[-2] for record in self.recent) / len(self.recent)

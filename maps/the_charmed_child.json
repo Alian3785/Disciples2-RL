@@ -1,5 +1,8 @@
 {
-  "name": "NumberGrid-50x50-wotans_retribution",
+  "name": "NumberGrid-50x50-the_charmed_child",
+  "display_name": "Проклятое дитя",
+  "original_name": "The Charmed Child",
+  "scenario_id": "S117SC0000",
   "size": 50,
   "agent_position": [7, 41],
   "agent_number": 1,

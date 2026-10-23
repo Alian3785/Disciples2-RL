@@ -5,6 +5,8 @@ Sources: the existing progression, unit-swap, map-summon and autoreset rules.
 import copy
 import gzip
 import json
+from concurrent.futures import ThreadPoolExecutor
+import threading
 
 import chex
 import jax
@@ -14,6 +16,7 @@ from stoa.core_wrappers.vmap import VmapWrapper
 from stoa.core_wrappers.wrapper import AddRNGKey
 
 from numbergrid_episode_reports import EpisodeReports, read_episode_batch
+from numbergrid_async_episode_reports import AsyncEpisodeReports
 from stoix.envs.number_grid import REST
 from stoix.envs.number_grid_episode_reports import (
     HEADER, WIDTH, compact_episode_events, episode_event, permanent_party,
@@ -214,3 +217,139 @@ def test_autoreset_retains_terminal_report_and_preserves_transition(current_game
         assert jnp.all(events['emit'])
         assert jnp.all(events['data'][:,0] == 1) and jnp.all(events['data'][:,2] == 3)
         assert jnp.all(wrapped.step_count == 0)
+
+
+def report_fixture():
+    combat = dict(catalogue=[None, dict(name='Боец', key='fighter')],
+                  enemies=[[dict(name='Дракон')] + [None]*5])
+    party = [[1,0,0,0,0,0], [1,0,0,0,0,0], [0]*6, [1,0,0,0,0,0]]
+    return dict(name='fixture'), combat, party
+
+
+def read_reports(path):
+    with gzip.open(path / 'episode_reports.jsonl.gz', 'rt', encoding='utf-8') as stream:
+        return [json.loads(line) for line in stream]
+
+
+def test_async_reports_match_synchronous_history_and_final_partial(tmp_path):
+    game_map, combat, party = report_fixture()
+    synchronous = EpisodeReports(tmp_path / 'sync', game_map, combat)
+    # Interleaved streams span blocks, one stream remains unfinished at shutdown.
+    pending = packet(1, party, party)
+    pending['stream'] = [1]
+    terminal = packet(2, party, party, outcome=1, enemy=0, result=1)
+    batches = [(packet(1, party, party), 0), (pending, 0), (terminal, 1),
+               (dict(data=[], returns=[], stream=[], offset=[]), 1),
+               (packet(1, party, party, outcome=3), 2)]
+    with AsyncEpisodeReports(tmp_path / 'async', game_map, combat, max_pending=1) as writer:
+        for i, (batch, expected) in enumerate(batches):
+            # Exercise the actual host ndarray payload, including empty packets.
+            batch = {name: jax.device_get(jnp.asarray(values)) for name, values in batch.items()}
+            synchronous.consume(batch, transition_base=i*100)
+            writer.submit(batch, transition_base=i*100, expected_completed=expected)
+            if i == 2:
+                synchronous.write_summary(expected_completed=expected)
+                writer.write_summary(expected_completed=expected)
+        summary = writer.finish()
+        assert writer.finish() == summary  # Finalizing twice cannot duplicate records.
+    expected_summary = synchronous.write_summary(expected_completed=2, final=True)
+    assert summary == expected_summary
+    assert read_reports(tmp_path / 'async') == read_reports(tmp_path / 'sync')
+    assert json.loads((tmp_path / 'async/episode_reports.partial.json').read_text()) == \
+        json.loads((tmp_path / 'sync/episode_reports.partial.json').read_text())
+    assert writer._process.returncode == 0 and not writer._thread.is_alive()
+
+
+def test_async_backpressure_retains_every_batch_without_blocking_first_submit(tmp_path, monkeypatch):
+    game_map, combat, party = report_fixture()
+    entered, release, submitted = threading.Event(), threading.Event(), threading.Event()
+    exchange = AsyncEpisodeReports._exchange
+
+    def delayed_exchange(self, sequence, command, arguments):
+        if sequence == 1:
+            entered.set()
+            if not release.wait(5):
+                raise TimeoutError('Test did not release the report worker')
+        return exchange(self, sequence, command, arguments)
+
+    monkeypatch.setattr(AsyncEpisodeReports, '_exchange', delayed_exchange)
+    batch = packet(1, party, party, outcome=1, enemy=0, result=1)
+    with AsyncEpisodeReports(tmp_path, game_map, combat, max_pending=1) as writer:
+        writer.submit(batch, transition_base=0, expected_completed=1)
+        try:
+            assert entered.wait(5)  # First submit returned while its processing is blocked.
+            writer.submit(batch, transition_base=100, expected_completed=2)
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                def third_submit():
+                    submitted.set()
+                    writer.submit(batch, transition_base=200, expected_completed=3)
+                future = pool.submit(third_submit)
+                try:
+                    assert submitted.wait(5)
+                    assert not future.done()  # Full queue waits instead of dropping a batch.
+                finally:
+                    release.set()
+                future.result(timeout=5)
+        finally:
+            release.set()
+        assert writer.finish()['completed_episodes'] == 3
+    assert [record['episode'] for record in read_reports(tmp_path)] == [1, 2, 3]
+
+
+def test_async_learner_exception_drains_accepted_events(tmp_path):
+    game_map, combat, party = report_fixture()
+    with pytest.raises(ValueError, match='learner failed'):
+        with AsyncEpisodeReports(tmp_path, game_map, combat) as writer:
+            writer.submit(packet(1, party, party, outcome=3),
+                          transition_base=0, expected_completed=1)
+            writer.submit(packet(1, party, party), transition_base=100, expected_completed=1)
+            raise ValueError('learner failed')
+    assert len(read_reports(tmp_path)) == 1
+    assert len(json.loads((tmp_path / 'episode_reports.partial.json').read_text())) == 1
+    assert writer._process.returncode == 0 and not writer._thread.is_alive()
+
+
+def test_async_worker_error_propagates_and_preserves_consumed_records(tmp_path):
+    game_map, combat, party = report_fixture()
+    with pytest.raises(RuntimeError, match='Episode report'):
+        with AsyncEpisodeReports(tmp_path, game_map, combat) as writer:
+            writer.submit(packet(1, party, party, outcome=1),
+                          transition_base=0, expected_completed=2)  # Lost terminal detection.
+            writer.finish()
+    assert len(read_reports(tmp_path)) == 1
+    failure = json.loads((tmp_path / 'episode_reports.failure.json').read_text())
+    assert 'lost a terminal record' in failure['error']
+    assert writer._process.poll() is not None and not writer._thread.is_alive()
+
+
+def test_async_dead_worker_cannot_report_success(tmp_path):
+    game_map, combat, _ = report_fixture()
+    writer = AsyncEpisodeReports(tmp_path, game_map, combat)
+    writer._process.kill()
+    writer._process.wait(timeout=5)
+    with pytest.raises(RuntimeError, match='Episode report'):
+        writer.finish()
+    assert not writer._thread.is_alive()
+
+
+def test_async_final_write_failure_cannot_report_success(tmp_path):
+    game_map, combat, party = report_fixture()
+    with pytest.raises(RuntimeError, match='Episode report'):
+        with AsyncEpisodeReports(tmp_path, game_map, combat) as writer:
+            # A directory at the destination forces an actual write/replace failure.
+            (tmp_path / 'episode_reports.summary.json').mkdir()
+            writer.submit(packet(1, party, party, outcome=3),
+                          transition_base=0, expected_completed=1)
+            writer.finish()
+    assert len(read_reports(tmp_path)) == 1  # The flushed gzip prefix is retained.
+    assert 'Traceback' in (tmp_path / 'episode_reports.worker.log').read_text()
+    assert writer._process.poll() is not None and not writer._thread.is_alive()
+
+
+def test_async_refuses_to_overwrite_existing_report(tmp_path):
+    game_map, combat, _ = report_fixture()
+    destination = tmp_path / 'episode_reports.jsonl.gz'
+    destination.write_bytes(b'existing report')
+    with pytest.raises(RuntimeError, match='Episode report'):
+        AsyncEpisodeReports(tmp_path, game_map, combat)
+    assert destination.read_bytes() == b'existing report'

@@ -5,9 +5,7 @@ import io
 import json
 from pathlib import Path
 
-import jax
-
-from stoix.envs.number_grid_episode_reports import HEADER, SCHEMA_VERSION, WIDTH
+from stoix.envs.number_grid_episode_schema import HEADER, SCHEMA_VERSION, WIDTH
 
 OUTCOMES = ('ongoing', 'victory', 'defeat', 'timeout')
 METHODS = ('none', 'hero', 'summon', 'spell')
@@ -16,6 +14,8 @@ BATTLES = ('none', 'victory', 'defeat', 'retreat')
 
 def read_episode_batch(packets, count):
     """Transfer a populated prefix once per block, using reusable slice shapes."""
+    import jax  # The separate CPU writer never imports or initializes JAX.
+
     if count == 0:
         return {name: [] for name in packets}
     if not 0 < count <= packets['data'].shape[0]:
@@ -55,7 +55,9 @@ class EpisodeReports:
                 flush='On summary: every 1,000,000 training transitions and at completion')))
 
     def _json(self, name, data):
-        (self.output / name).write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        temporary = self.output / (name + '.tmp')
+        temporary.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        temporary.replace(self.output / name)
 
     def _unit(self, party, slot, fighter_id, required=None):
         uid = int(party[0][slot])

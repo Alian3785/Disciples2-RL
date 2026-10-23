@@ -60,7 +60,7 @@ _ROOT = Path(__file__).resolve().parents[2]
 # Named maps for training and human mode; anything else is a JSON path.
 MAP_FILES = {'current': _ROOT / 'number_grid_map.json', 'default': _ROOT / 'maps/default.json'}
 MAP_FILES.update({name: _ROOT / 'maps' / (name+'.json')
-                 for name in ('small', 'super_last_stand', 'siege_train', 'wotans_retribution', 'trade_train',
+                 for name in ('small', 'super_last_stand', 'siege_train', 'the_charmed_child', 'trade_train',
                               'mirror_match', 'bethrezens_retreat')})
 MAP_FILES['mirrow_match'] = MAP_FILES['mirror_match']
 MAP_FILES['mirror-match'] = MAP_FILES['mirror_match']

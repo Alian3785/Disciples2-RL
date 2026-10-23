@@ -1,6 +1,6 @@
 {
   "coordinate_transform": "[x,y] -> [y+1,x+1]",
-  "wotan_unit_instance_audit": {
+  "charmed_child_unit_instance_audit": {
     "armies": 71,
     "instance_and_name_mismatches": [],
     "profile_normalization": "Reference MapConfig resolves source unit names to canonical profiles in layout.json; JAX uses those exact profile IDs.",
@@ -678,7 +678,7 @@
       "sha256": {
         "definition": "9a9a1922dc016e305b54bdf64ebe3805dd57a0a58326fd9cc61da284768e8be6",
         "layout": "a17d0166783fe964bbf21d08dd20367b979a08523b541dfcd9f294d7b9487fba",
-        "jax_map": "2e79c2a506290aa955671cf9fe76cd1c05c55bdb4764392f6ff6cbd507a07d5e"
+        "jax_map": "bf9cf43b0133c971d3604abef40250f834c010207e3bbfe11d3857d390277cb2"
       },
       "armies": 40,
       "fighters": 189,
@@ -702,11 +702,11 @@
       "starting_gold": 0
     },
     {
-      "name": "wotans_retribution",
+      "name": "the_charmed_child",
       "sha256": {
         "definition": "f46faada955bf1ac79942beab7835c024e51a12cdfc7ca68b5e8d8524842e3b7",
         "layout": "05c9bcb05532ca6e581f06d273b58e41ecebcd4733e7dbb6216c61c3797e97a1",
-        "jax_map": "b40bc2a350eefabc9d653eb4ca94b297bdd1e8284e3036a0e238a50f518c25a0"
+        "jax_map": "ed9f1505132bafba52b71c90fa223331a7e0a2b1228ad0037decbb47865f5fb4"
       },
       "armies": 71,
       "fighters": 149,

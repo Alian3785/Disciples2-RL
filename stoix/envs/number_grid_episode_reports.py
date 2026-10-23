@@ -6,12 +6,7 @@ queued scenario encounters require a separate subsequent world decision.
 """
 import jax.numpy as jnp
 
-SCHEMA_VERSION = 1
-HEADER = ('step', 'day', 'outcome', 'enemy', 'method', 'battle_result',
-          'defeated_enemy', 'row', 'column', 'action')
-# Outcomes: ongoing, victory, defeat, timeout. Methods: none, hero, summon, spell.
-# Battle results: none, victory, defeat, retreat.
-WIDTH = len(HEADER) + 24 + 30 + 6 + 6 + 6
+from stoix.envs.number_grid_episode_schema import HEADER, SCHEMA_VERSION, WIDTH
 
 
 def empty_event():

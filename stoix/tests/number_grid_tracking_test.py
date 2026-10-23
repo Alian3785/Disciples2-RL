@@ -44,9 +44,10 @@ def services(monkeypatch):
     return wandb, comet, experiment
 
 
-def start(tmp_path, *argv):
+def start(tmp_path, *argv, game_map=None):
     tracking = NumberGridTracking(tracking_args(*argv))
-    tracking.start(tmp_path, {'env': {'kwargs': {'map_config': {'size': 48}}}}, {'size': 48}, {})
+    game_map = game_map or {'size': 48}
+    tracking.start(tmp_path, {'env': {'kwargs': {'map_config': game_map}}}, game_map, {})
     return tracking
 
 
@@ -185,6 +186,7 @@ def test_continuation_steps_affect_speed_but_do_not_appear_as_ppo_metrics():
     metrics = tracking.run.log.call_args.args[0]
     assert metrics['training_steps'] == 20_250_000
     assert metrics['performance/mean_steps_per_second'] == 250_000
+    assert metrics['campaign/mean_seconds_per_million_steps'] == 4.0
     assert metrics['performance/loop_steps_per_second'] == 125_000
     assert 'ppo/session_training_steps' not in metrics
     assert metrics['ppo/actor_loss'] == -.1
@@ -284,16 +286,17 @@ def test_smoke_run_shorter_than_interval_still_has_training_chart_point():
 
 
 @pytest.mark.parametrize('backend', ['comet', 'wandb'])
-def test_reference_campaign_charts_reach_both_backends_and_local_series(tmp_path, services, backend):
+@pytest.mark.parametrize('objective', ['waves', 'capital_guardian'])
+def test_reference_campaign_charts_reach_both_backends_and_local_series(tmp_path, services, backend, objective):
     from stoix.envs.number_grid_metrics import CAMPAIGN_FIELDS
     from numbergrid_comet_dashboard import CAMPAIGN_CHARTS
     _, _, experiment = services
-    tracking = start(tmp_path, '--tracking', backend)
+    tracking = start(tmp_path, '--tracking', backend, game_map={'size': 48, 'campaign_objective': objective})
     values = dict.fromkeys(CAMPAIGN_FIELDS, 0.)
     values.update(victories=1, timeouts=1, battle_victories=4, battle_retreats=1,
                   hired_units=3, mercenaries_hired=2, spell_casts=5, enemy_squads_defeated=4,
                   potions_used=6, dragon_battles=3, unit_upgrades=2, sold_items=4, trainer_uses=8,
-                  merchant_purchases=10)
+                  merchant_purchases=10, waves_completed=11, capital_guardian_battles=2)
     ordered = [values[name] for name in CAMPAIGN_FIELDS]
     tracking.campaign.add({'events': ordered, 'completed': ordered,
         'participation': [float(v > 0) for v in ordered], 'count': 2,
@@ -309,6 +312,15 @@ def test_reference_campaign_charts_reach_both_backends_and_local_series(tmp_path
     assert data['campaign/completed/merchant_purchases_mean'] == 5
     assert data['campaign/window/battle_victories_mean'] == 2
     assert data['campaign/window/unit_upgrades_mean'] == 1
+    if objective == 'waves':
+        assert data['campaign/window/waves_completed_mean'] == 5.5  # includes the timeout with zero waves
+    else:
+        assert 'campaign/window/waves_completed_mean' not in data
+    capital_key = 'campaign/window/capital_guardian_reached_episodes_rate'
+    if backend == 'wandb' or objective == 'capital_guardian':
+        assert data[capital_key] == .5
+    else:
+        assert capital_key not in data
     assert data['campaign/window/dragon_reached_episodes_rate'] == .5  # three battles, one reached episode
     assert data['campaign/victories_total'] == 1
     assert data['rollout/ep_rew_mean'] == 7  # rolling episodes, not latest block's reward 4
@@ -323,6 +335,9 @@ def test_reference_campaign_charts_reach_both_backends_and_local_series(tmp_path
     assert saved['campaign/merchant_purchase_episodes_rate'] == .5
     assert saved['campaign/window/spell_casts_mean'] == 2.5
     assert saved['campaign/window/enemy_squads_defeated_mean_100'] == 2
+    if objective == 'waves':
+        assert saved['campaign/window/waves_completed_mean'] == 5.5
+    assert saved[capital_key] == .5  # Filtering Comet panels must not remove local telemetry.
     assert 'campaign/scripted_bot_victories_per_episode_mean' not in data
     if backend == 'comet':
         assert experiment.log_metrics.call_args.kwargs['step'] == 250_000
@@ -338,6 +353,7 @@ def test_reference_campaign_charts_reach_both_backends_and_local_series(tmp_path
 def test_campaign_no_completed_episode_omits_undefined_rates_but_keeps_activity():
     from stoix.envs.number_grid_metrics import CAMPAIGN_FIELDS
     tracking = tracker()
+    tracking.campaign.waves_enabled = True
     events = [float(name == 'spell_casts') for name in CAMPAIGN_FIELDS]
     zero = [0.] * len(events)
     tracking.campaign.add({'events': events, 'completed': zero, 'participation': zero, 'count': 0, 'recent': []})
@@ -349,6 +365,7 @@ def test_campaign_no_completed_episode_omits_undefined_rates_but_keeps_activity(
     assert 'campaign/window/dragon_reached_episodes_rate' not in metrics
     assert 'campaign/completed/potions_used_mean' not in metrics
     assert 'campaign/completed/trainer_uses_mean' not in metrics
+    assert 'campaign/window/waves_completed_mean' not in metrics
 
 
 def test_comet_view_shows_requested_progress_and_omits_sold_item_count():
@@ -357,12 +374,12 @@ def test_comet_view_shows_requested_progress_and_omits_sold_item_count():
         {'title': 'campaign', 'panels': [{'metricName': 'campaign/completed/sold_items_mean'}]},
         {'title': 'train', 'panels': [{'metricName': 'train/approx_kl'}]},
     ]}}
-    view = compact_comet_view(old)
+    view = compact_comet_view(old, {'campaign_objective': 'capital_guardian'})
     sections = view['panels']['sections']
     assert sections[-1] == old['panels']['sections'][-1]  # preserve technical charts
     campaign = next(s for s in sections if s['title'] == 'campaign')
     names = [p['metricName'] for p in campaign['panels']]
-    assert len(names) == len(set(names)) == len(CAMPAIGN_CHARTS) == 45
+    assert len(names) == len(set(names)) == len(CAMPAIGN_CHARTS) == 47
     assert set(names) == set(CAMPAIGN_CHARTS)
     # First row: run-long win/defeat rates and the latest interval's win rate.
     first_row = [names[i] for i, item in enumerate(campaign['layout']) if item['y'] == 0]
@@ -372,11 +389,30 @@ def test_comet_view_shows_requested_progress_and_omits_sold_item_count():
     assert 'campaign/completed/merchant_sale_gold_mean' in names
     assert 'campaign/completed/merchant_purchases_mean' in names
     for name in ('campaign/completed/potions_used_mean', 'campaign/window/battle_victories_mean',
-                 'campaign/window/unit_upgrades_mean', 'campaign/window/dragon_reached_episodes_rate',
+                 'campaign/window/unit_upgrades_mean', 'campaign/window/waves_completed_mean',
+                 'campaign/window/dragon_reached_episodes_rate',
                  'campaign/victories_total', 'campaign/completed/mercenaries_hired_mean',
                  'campaign/completed/trainer_uses_mean'):
         panel = next(p for p in campaign['panels'] if p['metricName'] == name)
         assert panel['selectedXAxis'] == 'step' and panel['chartName'] != name
+
+
+@pytest.mark.parametrize('objective', [None, 'waves', 'cities', 'all_enemies', 'dragon'])
+def test_comet_general_view_removes_guardian_panels_even_when_guardian_is_present(objective):
+    from numbergrid_comet_dashboard import CAPITAL_CHARTS, compact_comet_view, compact_comet_metrics
+    guardian = compact_comet_view(game_map={'campaign_objective': 'capital_guardian'})
+    game_map = {'campaign_objective': objective, 'enemy_rosters': [['mizrael']]}
+    general = compact_comet_view(guardian, game_map)
+    campaign = next(s for s in general['panels']['sections'] if s['title'] == 'campaign')
+    names = {p['metricName'] for p in campaign['panels']}
+    assert not (names & CAPITAL_CHARTS)
+    assert 'campaign/window/waves_completed_mean' in names
+    assert 'campaign/completed/potions_used_mean' in names  # General potion usage still applies.
+    assert general['template_name'] != guardian['template_name']  # Shared templates cannot overwrite one another.
+    assert any(p['metricName'] in CAPITAL_CHARTS for s in guardian['panels']['sections'] for p in s['panels'])
+    data = dict.fromkeys(CAPITAL_CHARTS, 1.) | {'training_steps': 1_000_000, 'campaign/victory_rate': .5}
+    assert compact_comet_metrics(data, game_map) == {'training_steps': 1_000_000, 'campaign/victory_rate': .5}
+    assert compact_comet_metrics(data, {'campaign_objective': 'capital_guardian'}) == data
 
 
 def test_wandb_view_repeats_comet_sections_titles_and_axis(monkeypatch):
@@ -398,7 +434,7 @@ def test_wandb_view_repeats_comet_sections_titles_and_axis(monkeypatch):
     assert created['status'] == 'created' and created['url'] == 'https://wandb.test/view'
     assert workspace.name == 'Disciples II' and workspace._internal_name == 'nw-disciplesii-v'
     assert workspace.settings.x_axis == 'training_steps' and workspace.settings.smoothing_weight == 0
-    comet = compact_comet_view()['panels']['sections']
+    comet = compact_comet_view(game_map={'campaign_objective': 'capital_guardian'})['panels']['sections']
     assert [s.name for s in workspace.sections] == [s['title'] for s in comet]
     for section, expected in zip(workspace.sections, comet):
         assert section.is_open == expected['expanded']
@@ -415,7 +451,7 @@ def test_wandb_view_repeats_comet_sections_titles_and_axis(monkeypatch):
     assert updated['status'] == 'updated'
     assert saved[-1].auto_generate_panels is False and not saved[-1].settings.sort_panels_alphabetically
     assert [s.name for s in saved[-1].sections] == ['rollout', 'campaign', 'notes']
-    assert len(saved[-1].sections[1].panels) == updated['campaign_charts'] == 45
+    assert len(saved[-1].sections[1].panels) == updated['campaign_charts'] == 47
 
 
 @pytest.fixture

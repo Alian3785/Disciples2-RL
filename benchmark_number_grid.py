@@ -1,5 +1,6 @@
 """Measured local run of the unchanged Stoix Anakin feedforward PPO learner."""
 import argparse
+from contextlib import nullcontext
 import csv
 import hashlib
 import importlib.metadata
@@ -27,7 +28,8 @@ from numbergrid_config import ROOT, make_config
 from numbergrid_tracking import NumberGridTracking, add_tracking_arguments
 from stoix.envs.number_grid_metrics import summarize_campaign
 from stoix.envs.number_grid_episode_reports import compact_episode_events
-from numbergrid_episode_reports import EpisodeReports, read_episode_batch
+from numbergrid_episode_reports import read_episode_batch
+from numbergrid_async_episode_reports import AsyncEpisodeReports
 from numbergrid_warm_start import prepare_warm_start
 
 
@@ -228,8 +230,17 @@ def run_training(args, tracking):
     learner_block = config.arch.num_updates_per_eval * config.arch.num_envs * config.system.rollout_length
     if tracking.summary_interval % learner_block:
         raise ValueError(f'summary_interval must be a multiple of the learner block ({learner_block})')
+    save_checkpoints = getattr(args, 'save_checkpoints', True) or getattr(args, 'select_best', False)
+    checkpoint_interval = getattr(args, 'checkpoint_interval', 5_000_000)
+    if checkpoint_interval <= 0:
+        raise ValueError('checkpoint_interval must be positive')
+    if save_checkpoints and checkpoint_interval % learner_block:
+        raise ValueError(f'checkpoint_interval must be a multiple of the learner block ({learner_block})')
+    config.checkpointing = dict(enabled=save_checkpoints,
+                               interval=checkpoint_interval if save_checkpoints else None)
     config.env.kwargs.episode_reports = bool(game_map.get('battle_mode')
-        and game_map.get('unit_progression') and not getattr(args, 'no_episode_reports', False))
+        and game_map.get('unit_progression') and getattr(args, 'episode_reports', False)
+        and not getattr(args, 'no_episode_reports', False))
     run_name = f"number_grid-{game_map['size']}x{game_map['size']}" + ('-step-cost' if game_map.get('step_cost', 0) else '') + ('-smoke' if args.smoke else '')
     if game_map.get('objective_enemy') is not None:
         run_name += '-'+game_map.get('campaign_objective', 'target-enemy')
@@ -246,7 +257,9 @@ def run_training(args, tracking):
         raise FileExistsError(f'Output already contains files; choose another --output: {output}')
     output.mkdir(parents=True, exist_ok=True)
     measured_sources = ['benchmark_number_grid.py', 'numbergrid_config.py', 'numbergrid_tracking.py',
-                        'numbergrid_episode_reports.py', 'stoix/envs/number_grid_episode_reports.py',
+                        'numbergrid_episode_reports.py', 'numbergrid_async_episode_reports.py',
+                        'stoix/envs/number_grid_episode_schema.py',
+                        'stoix/envs/number_grid_episode_reports.py',
                         'stoix/envs/number_grid_scenarios.py', 'stoix/envs/number_grid_reference_rewards.py',
                         'stoix/envs/number_grid_script_events.py',
                         'stoix/envs/number_grid_hero_skills.py',
@@ -277,8 +290,6 @@ def run_training(args, tracking):
         print(json.dumps(record), flush=True)
     status('initializing', device=str(jax.devices()[0]), total_timesteps=total)
     env, _ = make(config)
-    reports = (EpisodeReports(output, game_map, env.combat_info)
-               if config.env.kwargs.episode_reports else None)
     keys = tuple(jax.random.split(jax.random.PRNGKey(seed), 3))
     learner, actor, state = learner_setup(env, keys, config)
     if warm_bytes is not None:
@@ -332,59 +343,64 @@ def run_training(args, tracking):
     reported_expected = 0
     report_summary = None
     status('training', training_steps=initial_steps, total_timesteps=total, session_training_steps=0)
-    loop_started = time.perf_counter()
-    for i in range(session_total // step_size):
-        begin = time.perf_counter()
-        state, metrics, packets = compiled(state)
-        jax.block_until_ready((state, metrics, packets))
-        elapsed = time.perf_counter() - begin
-        training_seconds += elapsed
-        host_metrics = jax.device_get(metrics)
-        if reports is not None:
-            report_started = time.perf_counter()
-            count = int(host_metrics.pop('episode_report_events'))
-            # One count and one populated batch per learner block, never per step.
-            batch = read_episode_batch(packets, count)
-            reports.consume(batch, transition_base=initial_steps + i * step_size)
-            reported_expected += int(host_metrics['episodes'])
-            if reports.completed != reported_expected:
-                raise AssertionError('Episode reports lost a terminal record')
-            episode_report_seconds += time.perf_counter() - report_started
-        campaign = host_metrics.pop('campaign', None)
-        if campaign is not None:
-            tracking.campaign.add(campaign)
-        row = {k: float(v) for k, v in host_metrics.items()}
-        if not row['all_finite']:
-            raise FloatingPointError('Non-finite learner metric')
-        row.update(training_steps=initial_steps + (i + 1) * step_size,
-                   session_training_steps=(i + 1) * step_size, training_seconds=training_seconds)
-        rows.append(row)
-        summary = tracking.log_training(row, step_size, elapsed,
-                                        time.perf_counter() - loop_started,
-                                        final=(i + 1) * step_size == session_total)
-        if summary is not None:
+    report_worker = (AsyncEpisodeReports(output, game_map, env.combat_info)
+                     if config.env.kwargs.episode_reports else None)
+    if report_worker is not None:
+        episode_report_seconds += report_worker.startup_seconds
+    with report_worker if report_worker is not None else nullcontext() as reports:
+        loop_started = time.perf_counter()
+        for i in range(session_total // step_size):
+            begin = time.perf_counter()
+            state, metrics, packets = compiled(state)
+            jax.block_until_ready((state, metrics, packets))
+            elapsed = time.perf_counter() - begin
+            training_seconds += elapsed
+            host_metrics = jax.device_get(metrics)
             if reports is not None:
                 report_started = time.perf_counter()
-                report_summary = reports.write_summary(expected_completed=reported_expected)
+                count = int(host_metrics.pop('episode_report_events'))
+                # One count and one populated batch per learner block, never per step.
+                batch = read_episode_batch(packets, count)
+                reported_expected += int(host_metrics['episodes'])
+                reports.submit(batch, transition_base=initial_steps + i * step_size,
+                               expected_completed=reported_expected)
                 episode_report_seconds += time.perf_counter() - report_started
-            status('training', training_steps=summary['training_steps'], total_timesteps=total,
-                   session_training_steps=(i + 1) * step_size,
-                   mean_steps_per_second=(i + 1) * step_size/training_seconds,
-                   mean_episode_return=summary['mean_episode_return'],
-                   episode_success_rate=summary['episode_success_rate'],
-                   mean_episode_length=summary['mean_episode_length'],
-                   episodes=int(summary['episodes']), episode_wins=int(summary['episode_wins']))
-            if getattr(args, 'save_checkpoints', False) or getattr(args, 'select_best', False):
+            campaign = host_metrics.pop('campaign', None)
+            if campaign is not None:
+                tracking.campaign.add(campaign)
+            row = {k: float(v) for k, v in host_metrics.items()}
+            if not row['all_finite']:
+                raise FloatingPointError('Non-finite learner metric')
+            row.update(training_steps=initial_steps + (i + 1) * step_size,
+                       session_training_steps=(i + 1) * step_size, training_seconds=training_seconds)
+            rows.append(row)
+            summary = tracking.log_training(row, step_size, elapsed,
+                                            time.perf_counter() - loop_started,
+                                            final=(i + 1) * step_size == session_total)
+            if summary is not None:
+                if reports is not None:
+                    report_started = time.perf_counter()
+                    reports.write_summary(expected_completed=reported_expected)
+                    episode_report_seconds += time.perf_counter() - report_started
+                status('training', training_steps=summary['training_steps'], total_timesteps=total,
+                       session_training_steps=(i + 1) * step_size,
+                       mean_steps_per_second=(i + 1) * step_size/training_seconds,
+                       mean_episode_return=summary['mean_episode_return'],
+                       episode_success_rate=summary['episode_success_rate'],
+                       mean_episode_length=summary['mean_episode_length'],
+                       episodes=int(summary['episodes']), episode_wins=int(summary['episode_wins']))
+            completed_steps = initial_steps + (i + 1) * step_size
+            if save_checkpoints and (completed_steps % checkpoint_interval == 0 or completed_steps == total):
                 checkpoint_started = time.perf_counter()
                 checkpoints.append(save_checkpoint(output, unreplicate(state.params),
-                    initial_steps + (i + 1) * step_size, state=state))
+                                                   completed_steps, state=state))
                 save_json(output / 'checkpoints.json', checkpoints)
                 intermediate_checkpoint_seconds += time.perf_counter() - checkpoint_started
-    if reports is not None:
-        report_started = time.perf_counter()
-        report_summary = reports.write_summary(expected_completed=reported_expected, final=True)
-        episode_report_seconds += time.perf_counter() - report_started
-    training_loop_seconds = time.perf_counter() - loop_started
+        if reports is not None:
+            report_started = time.perf_counter()
+            report_summary = reports.finish()
+            episode_report_seconds += time.perf_counter() - report_started
+        training_loop_seconds = time.perf_counter() - loop_started
     with (output / 'metrics.csv').open('w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=list(rows[0]))
         writer.writeheader()
@@ -439,7 +455,13 @@ def run_training(args, tracking):
         training_loop_seconds=training_loop_seconds,
         training_loop_steps_per_second=session_total/training_loop_seconds,
         tracking_logging_seconds=tracking.logging_seconds,
+        # Parent blocking time and worker work overlap; never add worker time to wall time.
         episode_report_seconds=episode_report_seconds,
+        episode_report_mode='async_process' if report_worker is not None else 'disabled',
+        episode_report_worker_seconds=report_worker.worker_seconds if report_worker else 0.0,
+        episode_report_queue_wait_seconds=report_worker.queue_wait_seconds if report_worker else 0.0,
+        episode_report_drain_seconds=report_worker.drain_seconds if report_worker else 0.0,
+        episode_report_startup_seconds=report_worker.startup_seconds if report_worker else 0.0,
         episode_reports=(None if report_summary is None else {
             **{key: report_summary[key] for key in ('schema_version', 'completed_episodes',
                 'pending_episodes', 'events', 'outcomes', 'mean_awarded_xp')},
@@ -458,7 +480,7 @@ def run_training(args, tracking):
         checkpoint_seconds=checkpoint_seconds,
         intermediate_checkpoint_seconds=intermediate_checkpoint_seconds,
         summary_interval=tracking.summary_interval,
-        checkpoint_interval=(tracking.summary_interval if checkpoints else None),
+        checkpoint_interval=(checkpoint_interval if save_checkpoints else None),
         parameter_count=sum(x.size for x in jax.tree.leaves(params)),
         num_envs=config.arch.num_envs, rollout_length=config.system.rollout_length,
         observation_size=int((env.observation_space().spaces['observation']
@@ -504,14 +526,19 @@ if __name__ == '__main__':
     p.add_argument('--reward-transfer', help='Reviewed JSON manifest for a rewards/goals-only warm-start migration; all mechanics and network checks remain enforced')
     p.add_argument('--evaluate', action='store_true',
                    help='Opt in to final argmax and sampled evaluation after training; disabled by default')
-    p.add_argument('--save-checkpoints', action='store_true',
-                   help='Save checkpoints at summary boundaries without evaluation or best-model selection')
+    p.add_argument('--save-checkpoints', action=argparse.BooleanOptionalAction, default=True,
+                   help='Save weights and full learner state periodically and at the final step; enabled by default, without evaluation')
+    p.add_argument('--checkpoint-interval', type=int, default=5_000_000,
+                   help='Checkpoint interval in total transitions (default: 5,000,000); independent of summary-interval')
     p.add_argument('--select-best', action='store_true',
-                   help='Opt in to evaluation and checkpoint selection: save at summary boundaries, select on 128 fixed episodes, evaluate final and best on 1024 other episodes')
-    p.add_argument('--map', help='current, default, default-green-dragon, default-blue-dragon, default-capital, small, small-green-dragon, small-blue-dragon, super_last_stand, siege_train, wotans_retribution, trade_train, mirror_match (mirrow_match), bethrezens_retreat, or a saved map JSON')
+                   help='Opt in to evaluation and checkpoint selection: save at checkpoint boundaries, select on 128 fixed episodes, evaluate final and best on 1024 other episodes')
+    p.add_argument('--map', help='current, default, default-green-dragon, default-blue-dragon, default-capital, small, small-green-dragon, small-blue-dragon, super_last_stand, siege_train, the_charmed_child, trade_train, mirror_match (mirrow_match), bethrezens_retreat, or a saved map JSON')
     p.add_argument('--no-unit-swaps', action='store_true',
                    help='Remove the party swap actions and features from the map (unit_swaps: false)')
-    p.add_argument('--no-episode-reports', action='store_true',
-                   help='Disable detailed per-episode reports; aggregate campaign metrics remain')
+    reports = p.add_mutually_exclusive_group()
+    reports.add_argument('--episode-reports', action='store_true',
+                         help='Opt in to detailed per-episode collection, background processing and files; disabled by default')
+    reports.add_argument('--no-episode-reports', action='store_true',
+                         help='Keep detailed per-episode reports disabled (the default); aggregate campaign metrics remain')
     add_tracking_arguments(p)
     train(p.parse_args())
