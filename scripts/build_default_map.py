@@ -4,7 +4,7 @@ Source: <reference>/Big_map/maps/default/layout.json (a reset(seed=0) snapshot o
 maps/default.py) plus the shop stock in campaign_env_data.py and the capital and
 city inventories of the original A Return To Simpler Times.sg. Reference (x, y)
 becomes JAX [y+1, x+1]: the JAX grid adds an impassable outer ring, so 48x48
-becomes 50x50. Rule flags are copied from number_grid_map.json. See
+becomes 50x50. Rule flags, except the ruler, are copied from number_grid_map.json. See
 docs/DEFAULT_MAP.md for every difference from the reference.
 
     python scripts/build_default_map.py --reference "C:/Disciples 2 python reference"
@@ -42,8 +42,10 @@ ALAR_ITEMS = {'runestone': 1}
 # 3x G000IG0005, 3x G000IG0006 and 3x G000IG0001; layout.json omits them.
 CAPITAL_POTIONS = {'healing': 3, 'restoration': 3, 'life': 3}
 # Same file, CMidVillage inventories S001FT0004-6: G000IG6003, G000IG8003, G000IG9107.
-CITY_ITEMS = {'Кордилия': {'staff_of_holiness': 1}, 'Порт Полонис': {'boots_speed': 1},
-              'Соругирилла': {'zombie_talisman': 1}}
+# Brigham's Port (S001FT0003): event S001EV0025 gives the Legions G000IG3002 on capture;
+# user request 2026-10-25: any faction gets it, like a vault item.
+CITY_ITEMS = {'Порт Бирмингем': {'unholy_chalice': 1}, 'Кордилия': {'staff_of_holiness': 1},
+              'Порт Полонис': {'boots_speed': 1}, 'Соругирилла': {'zombie_talisman': 1}}
 # Requested shop: Armageddon and the strongest Ent summon (Verdant), 1000 gold each.
 SPELLS = [{'spell': 'g000ss0019', 'price': 1000, 'stock': 1},
           {'spell': 'g000ss0117', 'price': 1000, 'stock': 1}]
@@ -57,7 +59,7 @@ RULES = ('max_steps', 'step_cost', 'exploration_bonus', 'mask_walls', 'map_seed'
          'combat_rules_version', 'building_reward', 'blocked_buildings', 'max_building_level',
          'rest_penalty_per_point', 'unit_progression', 'capital_services', 'battle_engagement',
          'equipment_auto_equip', 'equipment_requires_skills', 'faction_recruitment',
-         'territory', 'lord_type', 'spell_research', 'spell_casting', 'unit_swaps')
+         'territory', 'spell_research', 'spell_casting', 'unit_swaps')
 
 
 def cell(point):
@@ -145,6 +147,9 @@ def build(layout):
         enemy_hp=[max(u) for u in units],
         # No hero_roster: faction and lord_type choose the reference party (docs/STARTING_PARTIES.md).
         faction='empire',
+        # Reference party "2 × Скваер + Рыцарь на пегасе + Служка" is the Empire warrior's;
+        # fixed here because the current map's own ruler is a mage.
+        lord_type='warrior',
         enemy_rosters=rosters,
         initial_potions=CAPITAL_POTIONS,
         initial_items={},

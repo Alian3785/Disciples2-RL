@@ -28,12 +28,12 @@ def test_default_map_layout_and_actions(default_game):
     env, state, _, _ = default_game
     names = action_names(DEFAULT)
     assert DEFAULT['size'] == 50 and len(DEFAULT['opponent_positions']) == 75
-    assert env.num_actions == len(names) == 280 and env.observation_size == 2611
+    assert env.num_actions == len(names) == 280 and env.observation_size == 2613
     assert env.observation_version == 44 and state.item_charges_spent.shape == state.item_inventory.shape
     assert [s['kind'] for s in env.site_rules.sites] == [
         'merchant', 'merchant', 'trainer', 'mercenary', 'mercenary', 'spell_shop']
     assert env.territory.count == 5 and len(env.territory.mines) == 12 and env.ruins.count == 5
-    assert len(DEFAULT['chests']) == 18 and env.item_rules.capacity == 15+1+3  # loot + Alar's Runestone + city vaults
+    assert len(DEFAULT['chests']) == 18 and env.item_rules.capacity == 15+1+4  # loot + Alar's Runestone + city items
     shop = env.site_rules
     assert names[shop.spell_start:shop.end] == ('buy_spell_'+ARMAGEDDON, 'buy_spell_'+VERDANT)
     assert names[env.casting.start:env.casting.hire_action][-1] == 'cast_'+VERDANT and env.casting.count == 23
@@ -193,8 +193,8 @@ def test_captured_city_gives_its_vault_items(default_game):
     """Original .sg CMidVillage inventories go to the hero on capture (docs/DEFAULT_MAP.md)."""
     env, initial, step, _ = default_game
     names, items = [c['name'] for c in DEFAULT['cities']], env.item_rules
-    assert [c['items'] for c in DEFAULT['cities']] == [
-        {}, {}, {'staff_of_holiness': 1}, {'boots_speed': 1}, {'zombie_talisman': 1}]
+    assert [c['items'] for c in DEFAULT['cities']] == [  # Brigham's Port: the Legions' chalice event
+        {}, {'unholy_chalice': 1}, {'staff_of_holiness': 1}, {'boots_speed': 1}, {'zombie_talisman': 1}]
     polonis, boots = names.index('Порт Полонис'), items.keys.index('boots_speed')
     city = DEFAULT['cities'][polonis]['position']
     blocked = env.territory.blocked_grid.reshape(50, 50)
