@@ -122,6 +122,13 @@ class ItemRules:
         ruin_end = len(inventories)
         # City vault items go to the hero's inventory on capture (docs/TERRITORY_CITIES.md).
         inventories += [item_counts(c.get('items',{}),'City items') for c in game_map.get('cities',[])]
+        city_end = len(inventories)
+        # Scenario "on day N" item events (docs/HERO_ITEMS.md); day 1 would need a reset grant.
+        days = game_map.get('day_items', [])
+        if not isinstance(days, list) or any(not isinstance(d, dict) or type(d.get('day')) is not int
+                                             or d['day'] < 2 for d in days):
+            raise ValueError('day_items must list objects with an integer day of at least 2')
+        inventories += [item_counts(d.get('items',{}),'Day items') for d in days]
         # Every merchant copy may end up in the inventory; validated by number_grid_sites.
         from stoix.envs.number_grid_potions import merchants
         stock = [item_counts(m.get('items',{}),'Merchant items') for m in merchants(game_map)]
@@ -165,7 +172,9 @@ class ItemRules:
         self.observation_size = self.capacity+5+chest_count*len(self.loot_kinds)+self.charge_capacity
         self.loot_chests, self.loot_items, _ = self._tokens(inventories[1:chest_count+1])
         self.loot_ruins, self.ruin_items, self.ruin_loot = self._tokens(inventories[chest_count+1:ruin_end])
-        self.loot_cities, self.city_items, self.city_loot = self._tokens(inventories[ruin_end:])
+        self.loot_cities, self.city_items, self.city_loot = self._tokens(inventories[ruin_end:city_end])
+        self.item_days = jnp.array([d['day'] for d in days], jnp.int32)
+        self.loot_days, self.day_items, self.day_loot = self._tokens(inventories[city_end:])
 
     def _tokens(self, sources):
         """One token per item copy: its source index and item id; plus per-source counts."""
@@ -192,6 +201,10 @@ class ItemRules:
 
     def collect_cities(self, state, captured):
         return self._collect(state,captured,self.loot_cities,self.city_items,self.city_loot)
+
+    def collect_days(self, state, resting):
+        """The rest that begins day N grants its items; days only grow by one, so once."""
+        return self._collect(state,resting & (self.item_days == state.day),self.loot_days,self.day_items,self.day_loot)
 
     def _collect(self, state, collected, sources, tokens, contents):
         if not len(tokens):

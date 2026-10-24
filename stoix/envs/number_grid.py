@@ -73,7 +73,8 @@ def load_map(name=None):
     """Named campaign (including Default/Small goals), or a standalone JSON map."""
     if name == 'default-capital':
         # User-requested Simpler Times variant (2026-10-16): keep the map,
-        # including its green dragon, and pay the blue-dragon rewards for Mizrael.
+        # including its green dragon and its Legions warrior, and pay the
+        # blue-dragon rewards for Mizrael.
         game_map = load_map('default')
         target = game_map['enemy_capitals'][0]['guard']
         if game_map['enemy_rosters'][target] != [None, None, None, None, 'g000uu3001', None]:
@@ -82,7 +83,7 @@ def load_map(name=None):
                         display_name='Default — Capital', campaign_objective='capital_guardian',
                         objective_enemy=target, objective_reward_hero_only=True,
                         army_victory_level_reward=5., army_victory_level_objective_only=True,
-                        scenario_events_enabled=False, faction='legions', lord_type='warrior',
+                        scenario_events_enabled=False,
                         capital_defense_acquisition_reward=3., capital_defense_effect_reward=2.,
                         capital_guardian_round_reward=.5, episode_timeout_penalty=100.,
                         battle_round_limit_penalty=100., capital_entry_level_reward=2.,
@@ -428,7 +429,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
         self.chests_enabled = 'chests' in game_map
         self.items_enabled = 'initial_items' in game_map or any(
             c.get('items') for c in game_map.get('chests',[])+game_map.get('ruins',[])+game_map.get('cities',[])
-            + merchants(game_map) if isinstance(c,dict))
+            + game_map.get('day_items',[]) + merchants(game_map) if isinstance(c,dict))
         if self.items_enabled:
             if not self.potions_enabled:
                 raise ValueError('Equipment requires the current map inventory/progression environment')
@@ -2012,10 +2013,13 @@ class NumberGrid(Summoning, NumericNumberGrid):
         return jnp.any(alive if self.goal_enemies is None else alive & self.goal_enemies)
 
     def _capture_cities(self, state, entered):
-        """Capture a cleared city; its vault items go to the hero's inventory at once."""
+        """Capture a cleared city; its vault items and potions go to the party at once."""
         state = self.territory.capture(state, entered)
         if self.items_enabled:
             state = self.item_rules.collect_cities(state, state.last_captured_cities)
+        if self.potions_enabled and self.territory.count:
+            loot = jnp.sum(jnp.where(state.last_captured_cities[:, None], self.potion_rules.city_loot, 0), axis=0)
+            state = state.replace(potions=state.potions+loot, last_loot=state.last_loot+loot)
         return state
 
     def _campaign_won(self, state):
@@ -2154,6 +2158,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
         state = state.replace(last_ruin=jnp.int32(-1), last_sale_gold=jnp.int32(0), last_sold_count=jnp.int32(0), last_trade_item=jnp.int32(-1),
                               last_poison_damage=jnp.zeros(12, jnp.int32),
                               last_item_loot=jnp.zeros_like(state.last_item_loot),
+                              last_loot=jnp.zeros_like(state.last_loot),
                               last_water_damage=jnp.zeros(12,jnp.int32),
                               last_burn_damage=jnp.zeros(12,jnp.int32))
         destination = state.position + self.directions[jnp.clip(action, 0, 7)]
@@ -2253,6 +2258,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             next_state = self.script_events.process(self, next_state, new_day=resting,
                                                     locations=~(engage | summon))
         if self.items_enabled:
+            next_state = self.item_rules.collect_days(next_state, resting)
             changed=resting | jnp.any(next_state.last_item_loot>0) | (next_state.last_potion>=0) | (action>=REVIVE_START)&(action<REVIVE_START+6)
             if self.recruitment_enabled:
                 changed |= (next_state.last_event == HIRED) | (next_state.last_event == DISMISSED)

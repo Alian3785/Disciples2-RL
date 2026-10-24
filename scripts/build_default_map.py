@@ -59,7 +59,7 @@ RULES = ('max_steps', 'step_cost', 'exploration_bonus', 'mask_walls', 'map_seed'
          'combat_rules_version', 'building_reward', 'blocked_buildings', 'max_building_level',
          'rest_penalty_per_point', 'unit_progression', 'capital_services', 'battle_engagement',
          'equipment_auto_equip', 'equipment_requires_skills', 'faction_recruitment',
-         'territory', 'spell_research', 'spell_casting', 'unit_swaps')
+         'territory', 'lord_type', 'spell_research', 'spell_casting', 'unit_swaps')
 
 
 def cell(point):
@@ -134,7 +134,8 @@ def build(layout):
         agent_number=1,
         opponent_positions=[cell(e['position']) for e in stacks],
         opponent_numbers=[1]*len(stacks),
-        **{key: CURRENT[key] for key in RULES},
+        # Default sets its own ruler below; the other builders keep copying it.
+        **{key: CURRENT[key] for key in RULES if key != 'lord_type'},
         # Reference hero battle slots: orbs, talismans and battle potions (docs/BATTLE_ITEMS.md).
         battle_items=True,
         # Reference skill ladder: Pathfinding, Weapon Master, the lord's Might (docs/HERO_SKILLS.md).
@@ -145,10 +146,12 @@ def build(layout):
         hero_hp=150,
         enemy_units=[len(u) for u in units],
         enemy_hp=[max(u) for u in units],
-        # No hero_roster: faction and lord_type choose the reference party (docs/STARTING_PARTIES.md).
-        faction='empire',
-        # Reference party "2 × Скваер + Рыцарь на пегасе + Служка" is the Empire warrior's;
-        # fixed here because the current map's own ruler is a mage.
+        # No hero_roster: faction and lord_type choose the ruler's party (docs/STARTING_PARTIES.md).
+        # User request 2026-10-25: every Default mode plays the Legions of the Damned. In the
+        # original .sg the hero's western capital S001FT0001 belongs to S001PL0002 (G000RR0002,
+        # Legions); the eastern one with Mizrael to the Empire. The reference played the Empire.
+        faction='legions',
+        # The reference's warrior ruler; fixed here because the current map's own ruler is a mage.
         lord_type='warrior',
         enemy_rosters=rosters,
         initial_potions=CAPITAL_POTIONS,

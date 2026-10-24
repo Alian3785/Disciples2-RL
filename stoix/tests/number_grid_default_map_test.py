@@ -28,7 +28,7 @@ def test_default_map_layout_and_actions(default_game):
     env, state, _, _ = default_game
     names = action_names(DEFAULT)
     assert DEFAULT['size'] == 50 and len(DEFAULT['opponent_positions']) == 75
-    assert env.num_actions == len(names) == 280 and env.observation_size == 2613
+    assert env.num_actions == len(names) == 271 and env.observation_size == 2602
     assert env.observation_version == 44 and state.item_charges_spent.shape == state.item_inventory.shape
     assert [s['kind'] for s in env.site_rules.sites] == [
         'merchant', 'merchant', 'trainer', 'mercenary', 'mercenary', 'spell_shop']
@@ -36,7 +36,8 @@ def test_default_map_layout_and_actions(default_game):
     assert len(DEFAULT['chests']) == 18 and env.item_rules.capacity == 15+1+4  # loot + Alar's Runestone + city items
     shop = env.site_rules
     assert names[shop.spell_start:shop.end] == ('buy_spell_'+ARMAGEDDON, 'buy_spell_'+VERDANT)
-    assert names[env.casting.start:env.casting.hire_action][-1] == 'cast_'+VERDANT and env.casting.count == 23
+    # Legions book (17), both shop spells, then the Empire ward and healing known only from items.
+    assert names[env.casting.start:env.casting.hire_action][-1] == 'cast_'+VERDANT and env.casting.count == 21
     assert names[env.casting.hire_action:env.casting.end] == (
         'hire_scroll_mage', 'cast_mind_ward_scroll', 'cast_staff_of_holiness')  # staff: Кордилия's vault
     assert names[env.casting.end:env.unit_swaps.start] == battle_item_action_names(DEFAULT)  # docs/BATTLE_ITEMS.md
@@ -49,8 +50,9 @@ def test_default_map_layout_and_actions(default_game):
     assert DEFAULT['enemy_capitals'][0]['position'] == DEFAULT['opponent_positions'][GUARD] == [11, 27]
     assert [int(i) for i in jnp.flatnonzero(env.territory.capital_guards)] == [GUARD]
     rows = env.progression.rows
-    # No fixed roster: the Empire warrior ruler's reference party (docs/STARTING_PARTIES.md).
-    assert 'hero_roster' not in DEFAULT and env.map_config['hero_roster'] == STARTING_PARTIES['empire']['warrior']
+    # No fixed roster: the Legions warrior ruler's party (docs/STARTING_PARTIES.md).
+    assert DEFAULT['faction'] == 'legions' and DEFAULT['lord_type'] == 'warrior'
+    assert 'hero_roster' not in DEFAULT and env.map_config['hero_roster'] == STARTING_PARTIES['legions']['warrior']
     assert [rows[i]['key'] if i else None for i in state.unit_ids[:6].tolist()] == env.map_config['hero_roster']
     assert state.position.tolist() == [28, 6]
     assert int(state.gold) == 0 and state.spell_stock.tolist() == [1, 1]
@@ -101,7 +103,7 @@ def test_spell_shop_sells_armageddon_and_verdant(default_game):
     assert bought.last_event == SPELL_BOUGHT and bought.gold == 500
     assert bought.spell_stock.tolist() == [0, 1] and bought.learned_spells == 1 << armageddon
     assert not jnp.any(mask(bought)[shop.spell_start:shop.end])  # sold out / 500 < 1000
-    # Level V needs a mage to research; a bought copy is cast by any lord at full price.
+    # Not in the Legions book, so no research; a bought copy is cast by any lord at full price.
     cast = casting.start+armageddon
     assert not mask(bought)[cast]
     armed = bought.replace(mana=jnp.array([70, 250, 80, 100, 0], jnp.int32))
@@ -224,8 +226,8 @@ def test_reference_hero_skills(default_game):
     """docs/HERO_SKILLS.md: Pathfinding, the warrior's Might at 9, Weapon Master at 12, equipment lore."""
     env, initial, step, _ = default_game
     progression, hero = env.progression, int(initial.unit_ids[1])
-    row, plain = progression.rows[hero], progression.ids['g000uu0019']
-    assert row['key'] == 'g000uu0019' and hero != plain  # the catalogue row keeps no Might
+    row, plain = progression.rows[hero], progression.ids['duke']
+    assert row['key'] == 'duke' and hero != plain  # the catalogue row keeps no Might
     assert [b['level'] for b in row['level_bonuses']] == [4, 5, 9, 13, 14, 15]
     assert [s['level'] for s in row['hero_skills']] == list(range(1, 16))
     assert row['hero_skills'][8]['key'] == 'might' and row['hero_skills'][0]['key'] == 'artifact_knowledge'

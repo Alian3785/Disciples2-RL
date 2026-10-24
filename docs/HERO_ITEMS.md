@@ -114,9 +114,13 @@ Elven Boots / Boots of the Elements задают стоимость движен
 | (31, 43) | Skull Bracers, Banner of Might, Unholy Dagger |
 | (43, 27) | Ring of the Ages, Banner of War, Boots of Seven Leagues |
 
-Любой из 255 предметов можно положить в `initial_items`, `chests[].items`
-или `cities[].items` ([выдаются при захвате](TERRITORY_CITIES.md#предметы-города))
-по ключу из `number_grid_items.py`. Всё, кроме драгоценностей, можно и продавать
+Любой из 255 предметов можно положить в `initial_items`, `chests[].items`,
+`cities[].items` ([выдаются при захвате](TERRITORY_CITIES.md#предметы-города))
+или `day_items` по ключу из `number_grid_items.py`. `day_items` — список
+`{"day": N, "items": {...}}`, N ≥ 2: предметы выдаются на отдыхе, который начинает
+день N, один раз (день растёт на 1). Так переносится однократное событие сценария
+с условием Frequency N, например Ancient Relic «Проклятого дитя»
+([источник](REFERENCE_CAMPAIGNS.md#предметы-городов-и-событий-s117-25102026)). Всё, кроме драгоценностей, можно и продавать
 у торговца (`merchants[].items`, [правила](MAP_SITES.md#предметы-у-торговца)).
 В состояние и наблюдение входят только имеющиеся в сценарии виды/экземпляры,
 включая запас торговцев. Максимум — 1000 экземпляров на сценарий.

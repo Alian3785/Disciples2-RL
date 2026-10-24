@@ -144,7 +144,8 @@ def _scenario_magic_keys(game_map):
     keys = set()
     sources = [game_map.get('initial_items', {})]+[c.get('items', {}) for c in game_map.get('chests', [])
                                                      + game_map.get('ruins', [])+game_map.get('cities', [])
-                                                     + merchants(game_map) if isinstance(c, dict)]
+                                                     + game_map.get('day_items', [])+merchants(game_map)
+                                                     if isinstance(c, dict)]
     for contents in sources:
         keys.update(key for key, count in contents.items() if count and key in MAGIC_BY_KEY)
     return keys

@@ -34,6 +34,20 @@ ALIASES = {
 }
 
 
+# Installed Scens S117 (SInventr/SItem vaults; SEvCond category 4 "own city" with SEvEffec
+# category 9 "give item", all for the Mountain Clans player). User request 2026-10-25: grant
+# them on capture, except quest items (Idun's Prosperity Rune, S117EV0005); the victory
+# event's Talisman of Regeneration (S117EV0002) would arrive with the scenario's end.
+CHARMED_CITY_LOOT = {
+    'Fogfell': dict(potions={'restoration': 1, 'life': 1}),            # S117FT0002 vault
+    'Odzark': dict(potions={'restoration': 1}, items={'emerald': 1}),  # S117FT0007 vault
+    'Akar': dict(items={'orc_orb': 1}),                                 # S117EV0008
+    "Hasser's Keep": dict(items={'staff_of_travelling': 1}),            # S117EV000E
+}
+# S117EV001E: Frequency 6, occur once -> the Ancient Relic on day 6.
+CHARMED_DAY_ITEMS = [dict(day=6, items={'ancient_relic': 1})]
+
+
 def item_key(name):
     name = name.strip()
     name = name.replace('защиты от магии ', 'защиты от ')
@@ -120,7 +134,12 @@ def build(base, name):
             building for building in game_map['starting_built_buildings'] if building != 'Храм']
     if name == 'the_charmed_child':
         game_map.update(display_name='Проклятое дитя', original_name='The Charmed Child',
-                        scenario_id='S117SC0000')
+                        scenario_id='S117SC0000', day_items=CHARMED_DAY_ITEMS)
+        if set(CHARMED_CITY_LOOT) - {c['name'] for c in game_map['cities']}:
+            raise ValueError('Charmed Child loot names a city missing from the layout')
+        for city in game_map['cities']:
+            vault = CHARMED_CITY_LOOT.get(city['name'], {})
+            city.update(potions=vault.get('potions', {}), items=vault.get('items', {}))
     game_map['lord_type'] = {1:'warrior', 2:'mage', 3:'guildmaster'}[config.starting_lord_type]
     game_map.update(step_cost=0., exploration_bonus=.08, building_reward=0., battle_observation_version=44)
     if layout.get('objective_enemy_id') is not None:
