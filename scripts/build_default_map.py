@@ -1,7 +1,8 @@
 """Build maps/default.json from the Python reference Default map.
 
 Source: <reference>/Big_map/maps/default/layout.json (a reset(seed=0) snapshot of
-maps/default.py) plus the shop stock in campaign_env_data.py. Reference (x, y)
+maps/default.py) plus the shop stock in campaign_env_data.py and the capital
+inventory of the original A Return To Simpler Times.sg. Reference (x, y)
 becomes JAX [y+1, x+1]: the JAX grid adds an impassable outer ring, so 48x48
 becomes 50x50. Rule flags are copied from number_grid_map.json. See
 docs/DEFAULT_MAP.md for every difference from the reference.
@@ -37,6 +38,9 @@ ALAR = {'life': 10, 'healing': 10, 'restoration': 10, 'ointment': 10, 'might': 1
         'fire_ward': 1, 'earth_ward': 1, 'water_ward': 1, 'air_ward': 1, 'celerity': 1}
 # User request: one artifact for sale as well (docs/MAP_SITES.md#предметы-у-торговца).
 ALAR_ITEMS = {'runestone': 1}
+# Original Big_map/A Return To Simpler Times.sg: both CCapital inventories hold
+# 3x G000IG0005, 3x G000IG0006 and 3x G000IG0001; layout.json omits them.
+CAPITAL_POTIONS = {'healing': 3, 'restoration': 3, 'life': 3}
 # Requested shop: Armageddon and the strongest Ent summon (Verdant), 1000 gold each.
 SPELLS = [{'spell': 'g000ss0019', 'price': 1000, 'stock': 1},
           {'spell': 'g000ss0117', 'price': 1000, 'stock': 1}]
@@ -139,7 +143,7 @@ def build(layout):
         # No hero_roster: faction and lord_type choose the reference party (docs/STARTING_PARTIES.md).
         faction='empire',
         enemy_rosters=rosters,
-        initial_potions={},
+        initial_potions=CAPITAL_POTIONS,
         initial_items={},
         chests=chests,
         merchants=[site('T1', potions=ALAR, items=ALAR_ITEMS), site('T2', potions={})],

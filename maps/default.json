@@ -191,7 +191,7 @@
     [null, "g000uu0091", null, null, "g000uu0084", null],
     [null, null, null, null, "g000uu3001", null]
   ],
-  "initial_potions": {},
+  "initial_potions": {"healing": 3, "restoration": 3, "life": 3},
   "initial_items": {},
   "chests": [
     {"position": [47, 29], "potions": {}, "items": {"banner_war": 1}},
