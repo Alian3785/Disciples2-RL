@@ -114,7 +114,8 @@ Elven Boots / Boots of the Elements задают стоимость движен
 | (31, 43) | Skull Bracers, Banner of Might, Unholy Dagger |
 | (43, 27) | Ring of the Ages, Banner of War, Boots of Seven Leagues |
 
-Любой из 255 предметов можно положить в `initial_items` или `chests[].items`
+Любой из 255 предметов можно положить в `initial_items`, `chests[].items`
+или `cities[].items` ([выдаются при захвате](TERRITORY_CITIES.md#предметы-города))
 по ключу из `number_grid_items.py`. Всё, кроме драгоценностей, можно и продавать
 у торговца (`merchants[].items`, [правила](MAP_SITES.md#предметы-у-торговца)).
 В состояние и наблюдение входят только имеющиеся в сценарии виды/экземпляры,

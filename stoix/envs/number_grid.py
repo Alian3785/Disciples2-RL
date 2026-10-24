@@ -427,8 +427,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
             self.has_potion_buffs = self.potion_rules.has_buffs
         self.chests_enabled = 'chests' in game_map
         self.items_enabled = 'initial_items' in game_map or any(
-            c.get('items') for c in game_map.get('chests',[])+game_map.get('ruins',[])+merchants(game_map)
-            if isinstance(c,dict))
+            c.get('items') for c in game_map.get('chests',[])+game_map.get('ruins',[])+game_map.get('cities',[])
+            + merchants(game_map) if isinstance(c,dict))
         if self.items_enabled:
             if not self.potions_enabled:
                 raise ValueError('Equipment requires the current map inventory/progression environment')
@@ -2011,6 +2011,13 @@ class NumberGrid(Summoning, NumericNumberGrid):
         alive = alive | ~spawned
         return jnp.any(alive if self.goal_enemies is None else alive & self.goal_enemies)
 
+    def _capture_cities(self, state, entered):
+        """Capture a cleared city; its vault items go to the hero's inventory at once."""
+        state = self.territory.capture(state, entered)
+        if self.items_enabled:
+            state = self.item_rules.collect_cities(state, state.last_captured_cities)
+        return state
+
     def _campaign_won(self, state):
         """Check the configured army, city, location or bot objective without awarding rewards."""
         if self.position_objective:
@@ -2213,7 +2220,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
                 next_state, engage_bonus = self.casting.engage_bonus(next_state, engage)
                 bonus += cast_bonus + engage_bonus
             next_state = self.territory.upgrade(next_state,action)
-            next_state = self.territory.capture(next_state,moved)
+            next_state = self._capture_cities(next_state,moved)
             if self.bot.enabled:
                 next_state = self.bot.sync_defeat(next_state)
             if not self.position_objective:
@@ -3157,7 +3164,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
         if self.bot.enabled:
             next_state = self.bot.after_battle(state, next_state, victory, victory | withdrawal | lost)
         if self.territory_enabled:
-            next_state = self.territory.capture(next_state,victory & ~summon_battle)
+            next_state = self._capture_cities(next_state,victory & ~summon_battle)
             final_win = self._campaign_won(next_state)
             next_state = next_state.replace(won=final_win,done=next_state.done|final_win)
             won = final_win

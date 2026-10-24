@@ -1,8 +1,8 @@
 """Build maps/default.json from the Python reference Default map.
 
 Source: <reference>/Big_map/maps/default/layout.json (a reset(seed=0) snapshot of
-maps/default.py) plus the shop stock in campaign_env_data.py and the capital
-inventory of the original A Return To Simpler Times.sg. Reference (x, y)
+maps/default.py) plus the shop stock in campaign_env_data.py and the capital and
+city inventories of the original A Return To Simpler Times.sg. Reference (x, y)
 becomes JAX [y+1, x+1]: the JAX grid adds an impassable outer ring, so 48x48
 becomes 50x50. Rule flags are copied from number_grid_map.json. See
 docs/DEFAULT_MAP.md for every difference from the reference.
@@ -41,6 +41,9 @@ ALAR_ITEMS = {'runestone': 1}
 # Original Big_map/A Return To Simpler Times.sg: both CCapital inventories hold
 # 3x G000IG0005, 3x G000IG0006 and 3x G000IG0001; layout.json omits them.
 CAPITAL_POTIONS = {'healing': 3, 'restoration': 3, 'life': 3}
+# Same file, CMidVillage inventories S001FT0004-6: G000IG6003, G000IG8003, G000IG9107.
+CITY_ITEMS = {'Кордилия': {'staff_of_holiness': 1}, 'Порт Полонис': {'boots_speed': 1},
+              'Соругирилла': {'zombie_talisman': 1}}
 # Requested shop: Armageddon and the strongest Ent summon (Verdant), 1000 gold each.
 SPELLS = [{'spell': 'g000ss0019', 'price': 1000, 'stock': 1},
           {'spell': 'g000ss0117', 'price': 1000, 'stock': 1}]
@@ -153,7 +156,8 @@ def build(layout):
                                         {'unit': 'goblin_archer', 'stock': 1}])],
         spell_shop=site('M1', spells=SPELLS),
         # Reference goal "cities": capture FINAL_OBJECTIVE_CITIES (Порт Полонис, Соругирилла).
-        cities=[dict(name=c['name'], position=cell(c['position']), level=c['level'], objective=c['objective'])
+        cities=[dict(name=c['name'], position=cell(c['position']), level=c['level'], objective=c['objective'],
+                     items=CITY_ITEMS.get(c['name'], {}))
                 for c in layout['cities']],
         mines=([dict(kind='gold', position=cell(p)) for p in layout['gold_mines']]
                + [dict(kind=m['kind'], position=cell(m['position'])) for m in layout['mana']]),
@@ -171,6 +175,8 @@ def build(layout):
     game_map['equipment_requires_skills'] = True
     if game_map['opponent_positions'][index[CAPITAL_GUARD]] != game_map['enemy_capitals'][0]['position']:
         raise ValueError('Capital guard is not on the capital')
+    if set(CITY_ITEMS) - {c['name'] for c in layout['cities']}:
+        raise ValueError('City items name a city missing from the layout')
     return game_map
 
 

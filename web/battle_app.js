@@ -743,7 +743,8 @@
       case 55:return swapText(s);
       case 56:return 'Превышен лимит '+(snapshot.battle_max_rounds??currentMap().battle_max_rounds??75)+' раундов: весь отряд отступает. Штраф −'+fmt(snapshot.battle_round_limit_penalty??currentMap().battle_round_limit_penalty??1)+'.';
       case 54:return 'Нанят маг для чтения свитков · −'+fmt(castInfo()?.hire_cost??500)+' золота. Свитки и посохи доступны до конца игры.';
-      case 43:return 'Город захвачен: '+(territoryInfo()?.cities||[]).filter((c,i)=>s.last_captured_cities[i]).map(c=>c.name).join(', ')+'. Доступны найм, храм и рост земли.';
+      case 43:{const loot=(s.last_item_loot||[]).map((n,i)=>n?(equipmentInfo()?.items?.[i]?.name+' × '+n):'').filter(Boolean);
+        return 'Город захвачен: '+(territoryInfo()?.cities||[]).filter((c,i)=>s.last_captured_cities[i]).map(c=>c.name).join(', ')+'. Доступны найм, храм и рост земли.'+(loot.length?' Предметы города получены: '+loot.join(', ')+'.':'');}
       case 44:return 'Город улучшен: '+territoryInfo()?.cities[s.last_upgraded_city]?.name+' · −'+fmt(s.last_service_cost)+' золота.';
       case 45:return 'Путь закрыт препятствием.';
       case 52:return battleItemText(s);

@@ -119,6 +119,9 @@ class ItemRules:
         inventories += [item_counts(c.get('items',{}),'Chest items') for c in game_map.get('chests',[])]
         chest_count = len(inventories)-1
         inventories += [item_counts(r.get('items',{}),'Ruin items') for r in game_map.get('ruins',[])]
+        ruin_end = len(inventories)
+        # City vault items go to the hero's inventory on capture (docs/TERRITORY_CITIES.md).
+        inventories += [item_counts(c.get('items',{}),'City items') for c in game_map.get('cities',[])]
         # Every merchant copy may end up in the inventory; validated by number_grid_sites.
         from stoix.envs.number_grid_potions import merchants
         stock = [item_counts(m.get('items',{}),'Merchant items') for m in merchants(game_map)]
@@ -156,18 +159,19 @@ class ItemRules:
         initial = [self.keys.index(key) for key,count in inventories[0].items() for _ in range(count)]
         self.initial_inventory = jnp.array(initial+[-1]*(self.capacity-len(initial)),jnp.int32)
         self.chest_loot = jnp.array([[c.get(key,0) for key in self.keys] for c in inventories[1:chest_count+1]],jnp.int32).reshape(chest_count,self.count)
-        # Chest and ruin loot features skip merchant-only kinds: their columns are always zero.
-        looted = {key for contents in inventories for key,count in contents.items() if count}
+        # Chest and ruin loot features skip merchant- and city-only kinds: their columns are always zero.
+        looted = {key for contents in inventories[:ruin_end] for key,count in contents.items() if count}
         self.loot_kinds = [i for i,key in enumerate(self.keys) if key in looted]
         self.observation_size = self.capacity+5+chest_count*len(self.loot_kinds)+self.charge_capacity
-        ruins = inventories[chest_count+1:]
-        self.ruin_loot = jnp.array([[c.get(key,0) for key in self.keys] for c in ruins],jnp.int32).reshape(len(ruins),self.count)
-        ruin_tokens = [(r,self.keys.index(key)) for r,c in enumerate(ruins) for key,count in c.items() for _ in range(count)]
-        self.loot_ruins = jnp.array([r for r,_ in ruin_tokens],jnp.int32)
-        self.ruin_items = jnp.array([i for _,i in ruin_tokens],jnp.int32)
-        tokens = [(chest,self.keys.index(key)) for chest,c in enumerate(inventories[1:chest_count+1]) for key,count in c.items() for _ in range(count)]
-        self.loot_chests = jnp.array([c for c,_ in tokens],jnp.int32)
-        self.loot_items = jnp.array([i for _,i in tokens],jnp.int32)
+        self.loot_chests, self.loot_items, _ = self._tokens(inventories[1:chest_count+1])
+        self.loot_ruins, self.ruin_items, self.ruin_loot = self._tokens(inventories[chest_count+1:ruin_end])
+        self.loot_cities, self.city_items, self.city_loot = self._tokens(inventories[ruin_end:])
+
+    def _tokens(self, sources):
+        """One token per item copy: its source index and item id; plus per-source counts."""
+        tokens = [(s,self.keys.index(key)) for s,c in enumerate(sources) for key,count in c.items() for _ in range(count)]
+        contents = jnp.array([[c.get(key,0) for key in self.keys] for c in sources],jnp.int32).reshape(len(sources),self.count)
+        return jnp.array([s for s,_ in tokens],jnp.int32), jnp.array([i for _,i in tokens],jnp.int32), contents
 
     def value(self, state, key, slot=None):
         return self.tables[key][state.equipped+1 if slot is None else state.equipped[slot]+1]
@@ -186,6 +190,9 @@ class ItemRules:
     def collect_ruins(self, state, collected):
         return self._collect(state,collected,self.loot_ruins,self.ruin_items,self.ruin_loot)
 
+    def collect_cities(self, state, captured):
+        return self._collect(state,captured,self.loot_cities,self.city_items,self.city_loot)
+
     def _collect(self, state, collected, sources, tokens, contents):
         if not len(tokens):
             return state
@@ -194,7 +201,8 @@ class ItemRules:
         destinations = jnp.where(gained,offset+jnp.cumsum(gained)-1,self.capacity)
         inventory = state.item_inventory.at[destinations].set(tokens,mode='drop')
         loot = jnp.sum(jnp.where(collected[:,None],contents,0),axis=0)
-        return state.replace(item_inventory=inventory,last_item_loot=loot)
+        # Added, not replaced: a city capture and a chest may pay out on the same move.
+        return state.replace(item_inventory=inventory,last_item_loot=state.last_item_loot+loot)
 
     def choose(self, state, hero_alive, hero_level):
         if not self.capacity:
