@@ -131,7 +131,10 @@ def test_capital_guard_armor_and_regeneration(default_game):
     blocked = env.territory.blocked_grid.reshape(50, 50)
     direction, (dr, dc) = next((i, d) for i, d in enumerate(DIRECTIONS)
                                if not blocked[guard[0]-d[0], guard[1]-d[1]])
-    near = initial.replace(position=jnp.array([guard[0]-dr, guard[1]-dc], jnp.int32))
+    # Mizrael (initiative 90) opens with 250 Life damage to the whole party at 95% accuracy,
+    # which wipes out the level-1 Legions party; enough HP keeps the battle open to inspect.
+    near = initial.replace(position=jnp.array([guard[0]-dr, guard[1]-dc], jnp.int32),
+                           hp=initial.hp.at[:6].set(jnp.where(initial.hp[:6] > 0, 1000, 0)))
     battle, _ = step(near, jnp.int32(direction))
     assert battle.in_battle and battle.enemy == GUARD and battle.battle_fort_armor == CAPITAL_ARMOR
     assert battle.battle_fort_defender == FORT_RED

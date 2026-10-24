@@ -89,7 +89,8 @@ def test_equip_needs_access_and_happens_once_per_day(default_game):
     healing = env.potion_rules.keys.index('healing')
     tome = env.item_rules.keys.index('tome_arcanum')
     stocked = owned(env, initial, 'vampire_orb', 'zombie_talisman', 'tome_arcanum')
-    stocked = stocked.replace(potions=initial.potions.at[healing].set(1))
+    # Only one healing potion: Default otherwise starts with the capital's potions.
+    stocked = stocked.replace(potions=jnp.zeros_like(initial.potions).at[healing].set(1))
     # Potions need no lore; Tome of Arcanum allows orbs, level 10 (sorcery lore) everything.
     assert allowed(mask(stocked), rules.equip_start, rules.use_start) == ['equip_healing']
     book = stocked.replace(equipped=stocked.equipped.at[3].set(tome))
@@ -412,11 +413,10 @@ def test_leader_death_keeps_slots_until_end_and_same_battle_revival_keeps_them(d
     assert out.hp[1] > 0
     np.testing.assert_array_equal(out.battle_items, battle.battle_items)
     np.testing.assert_array_equal(out.battle_item_charges, battle.battle_item_charges)
-    # With a dead leader the post-victory healing phase still belongs to this battle.
-    healing, _ = step(battle.replace(hp=battle.hp.at[6:].set(0)), jnp.int32(DEFEND))
-    assert healing.in_battle and healing.post_victory == 1
-    np.testing.assert_array_equal(healing.battle_items, battle.battle_items)
-    ended = finish(step, healing, WAIT)
+    # The Legions party has no healer: victory with a dead leader ends the battle at once,
+    # and the slots return to the inventory.
+    ended, _ = step(battle.replace(hp=battle.hp.at[6:].set(0)), jnp.int32(DEFEND))
+    assert not ended.in_battle and ended.post_victory == 0
     assert ended.battle_items.tolist() == [-1, -1]
 
 
