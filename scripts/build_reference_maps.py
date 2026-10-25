@@ -11,12 +11,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from scripts.build_default_map import CURRENT, RULES, UNITS, cell, dump, roster, site_cells
+from scripts.build_default_map import CURRENT, RULES, UNITS, cell, dump, landmark_cells, roster, site_cells
 from stoix.envs.number_grid_items import ITEMS
 from stoix.envs.number_grid_potions import POTIONS
 
 NAMES = ('super_last_stand', 'siege_train', 'the_charmed_child', 'trade_train')
 SOURCE_NAMES = {'the_charmed_child': 'wotans_retribution'}  # Legacy Python-reference filename.
+# Installed Scens SLmark, extracted by scripts/extract_landmarks.py; the layout omits landmarks.
+LANDMARKS = {'the_charmed_child': ROOT/'docs/maps/the_charmed_child/landmarks.json'}
 ALIASES = {
     'Potion of Healing': 'healing', 'Potion of Restoration': 'restoration', 'Life Potion': 'life',
     'Эликсир Жизни': 'life', 'Эликсир восстановления': 'restoration',
@@ -95,8 +97,16 @@ def build(base, name):
     potions, items = loot(config.starting_hero_items)
     removed = set().union(*(site_cells(s['position']) for s in layout['sites']),
                           *(site_cells(r['ruin_pos']) for r in layout['ruins']))
+    landmarks = landmark_cells(LANDMARKS[name]) if name in LANDMARKS else set()
+    objects = ({tuple(layout['hero'])} | {tuple(e['position']) for e in stacks}
+               | {tuple(c['position']) for c in layout['chests']+layout['cities']+layout['capitals']}
+               | {tuple(p) for p in layout['gold_mines']} | {tuple(m['position']) for m in layout['mana']}
+               | {tuple(r['marker_pos']) for r in layout['ruins']})
+    if landmarks & (objects | removed):
+        raise ValueError('A landmark overlaps a map object, site or ruin')
     obstacles = [cell(p) for p in layout['obstacles'] if tuple(p) not in removed]
-    blocked = {tuple(p) for p in layout['obstacles']} | removed
+    obstacles += sorted(cell(p) for p in landmarks - {tuple(p) for p in layout['obstacles']})
+    blocked = {tuple(p) for p in layout['obstacles']} | removed | landmarks
     terrain = {k: [cell(p) for p in layout['terrain'][k] if tuple(p) not in blocked]
                for k in ('water', 'forest', 'road')}
     size = layout['grid_size']+2

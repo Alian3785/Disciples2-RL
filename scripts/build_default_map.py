@@ -1,8 +1,9 @@
 """Build maps/default.json from the Python reference Default map.
 
 Source: <reference>/Big_map/maps/default/layout.json (a reset(seed=0) snapshot of
-maps/default.py) plus the shop stock in campaign_env_data.py and the capital and
-city inventories of the original A Return To Simpler Times.sg. Reference (x, y)
+maps/default.py) plus the shop stock in campaign_env_data.py, the capital and
+city inventories of the original A Return To Simpler Times.sg and its landmarks
+(docs/maps/default/landmarks.json, scripts/extract_landmarks.py). Reference (x, y)
 becomes JAX [y+1, x+1]: the JAX grid adds an impassable outer ring, so 48x48
 becomes 50x50. Rule flags, except the ruler, are copied from number_grid_map.json. See
 docs/DEFAULT_MAP.md for every difference from the reference.
@@ -16,6 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 UNITS = json.loads((ROOT/'stoix/envs/data/units.json').read_text(encoding='utf-8'))
 CURRENT = json.loads((ROOT/'number_grid_map.json').read_text(encoding='utf-8'))
+LANDMARKS = ROOT/'docs/maps/default/landmarks.json'
 
 # Reference loot names -> JAX potion or item keys.
 POTIONS = {
@@ -82,6 +84,17 @@ def site_cells(anchor):
     return {(x+i, y+j) for i in range(3) for j in range(3)}
 
 
+def landmark_cells(path):
+    """Original (x, y) tiles of every landmark: houses, skeletons, landmark mountains, etc.
+
+    The layout snapshots omit landmarks, but they block movement in the original
+    (SLmark / CMidLandmark with GLmark CX x CY), as in build_bethrezens_retreat.py.
+    """
+    data = json.loads(path.read_text(encoding='utf-8'))
+    return {(x+i, y+j) for mark in data['landmarks'] for x, y in [mark['position']]
+            for i in range(mark['size'][0]) for j in range(mark['size'][1])}
+
+
 # Each original unit id has exactly one catalogue key.
 UNIT_KEYS = {row['game_id']: key for key, row in UNITS.items()}
 
@@ -105,7 +118,7 @@ def loot(names):
     return potions, items
 
 
-def build(layout):
+def build(layout, landmarks):
     stacks = sorted(layout['enemies'], key=lambda e: e['id'])
     if [e['id'] for e in stacks] != list(range(1, len(stacks)+1)):
         raise ValueError('Expected enemy ids 1..N')
@@ -114,12 +127,15 @@ def build(layout):
     sites = {s['code']: s for s in layout['sites']}
     removed = set().union(*(site_cells(s['position']) for s in layout['sites']),
                           *(site_cells(r['ruin_pos']) for r in layout['ruins']))
-    obstacles = sorted(cell(p) for p in layout['obstacles'] if tuple(p) not in removed)
     objects = ({tuple(e['position']) for e in stacks} | {tuple(c['position']) for c in layout['chests']}
                | {tuple(p) for p in layout['gold_mines']} | {tuple(m['position']) for m in layout['mana']}
                | {tuple(c['position']) for c in layout['cities']+layout['capitals']})
-    # JAX water cannot hold an object; those four cells become plain.
-    terrain = {kind: [cell(p) for p in points if kind != 'water' or tuple(p) not in objects]
+    if landmarks & (objects | removed):
+        raise ValueError('A landmark overlaps a map object, site or ruin')
+    obstacles = sorted(cell(p) for p in {tuple(p) for p in layout['obstacles']} | landmarks if p not in removed)
+    # JAX water cannot hold an object; those four cells become plain. Landmark tiles are obstacles.
+    terrain = {kind: [cell(p) for p in points if (kind != 'water' or tuple(p) not in objects)
+                      and tuple(p) not in landmarks]
                for kind, points in (('road', layout['terrain']['road']),
                                     ('forest', layout['terrain']['forest']),
                                     ('water', layout['terrain']['water']))}
@@ -220,7 +236,7 @@ def main():
     args = parser.parse_args()
     base = args.reference/'Big_map' if (args.reference/'Big_map').is_dir() else args.reference
     layout = json.loads((base/'maps/default/layout.json').read_text(encoding='utf-8'))
-    args.output.write_text(dump(build(layout)), encoding='utf-8')
+    args.output.write_text(dump(build(layout, landmark_cells(LANDMARKS))), encoding='utf-8')
     print('Wrote', args.output)
 
 
