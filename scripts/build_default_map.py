@@ -60,12 +60,17 @@ CITY_ITEMS = {'Порт Бирмингем': {'unholy_chalice': 1}, 'Корди�
 # Reference chest X11 at (36, 22), beside Соругирилла, holds that city's vault Zombie Talisman;
 # the original .sg has no bag there (17 bags), and CITY_ITEMS gives the talisman on capture.
 DUPLICATE_CHESTS = {'X11'}
-# Same file: these reference stacks hold the Undead Warlock G000UU0081 (death attack); the
-# reference's name-based IDs ("Колдун") made it the Legions Sorcerer G000UU0063 (fire attack).
-# Reference ids: 7 at (6, 22), 9 at (24, 23), 34 Порт Полонис' stack, 38 at (39, 3), 73 the guard
-# of Руины Бритона. No other enemy holds G000UU0063.
-WARLOCK_STACKS = {7, 9, 34, 38, 73}
-SORCERER, WARLOCK = 'g000uu0063', 'g000uu0081'
+# Same file: original units that the reference's name-based IDs replaced, by reference stack id.
+# The Undead Warlock G000UU0081 (death attack) became the Legions Sorcerer G000UU0063 ("Колдун",
+# fire attack) in 7 at (6, 22), 9 at (24, 23), 34 Порт Полонис' stack, 38 at (39, 3) and 73, the
+# guard of Руины Бритона. The neutral Elf Ranger G000UU5009 (25 damage) became the Elves' Scout
+# G000UU8018 (30) in 64 at (28, 41) and 65 at (30, 41); 65's neutral Centaur Lancer G000UU5111
+# (165 HP, initiative 55, 65 damage, 80 XP) became the Elves' G000UU8014 (150, 40, 30, 36).
+# No other enemy holds a replaced id.
+SORCERER, WARLOCK, SCOUT, RANGER, LANCER, NEUTRAL_LANCER = (
+    'g000uu0063', 'g000uu0081', 'g000uu8018', 'g000uu5009', 'g000uu8014', 'g000uu5111')
+ORIGINAL_UNITS = {**{i: {SORCERER: WARLOCK} for i in (7, 9, 34, 38, 73)},
+                  64: {SCOUT: RANGER}, 65: {SCOUT: RANGER, LANCER: NEUTRAL_LANCER}}
 # Small's requested shop (build_small_map.py): Armageddon and the strongest Ent summon
 # (Verdant), 1000 gold each. Default sells TOWER_SPELLS since 2026-10-25.
 SPELLS = [{'spell': 'g000ss0019', 'price': 1000, 'stock': 1},
@@ -127,17 +132,18 @@ def loot(names):
     return potions, items
 
 
-def original_warlocks(stack):
-    """Restore the Undead Warlock of WARLOCK_STACKS in place of the reference's Sorcerer."""
-    if stack['id'] not in WARLOCK_STACKS:
-        return stack
-    return dict(stack, units=[dict(u, unit_id=WARLOCK) if u['unit_id'] == SORCERER else u for u in stack['units']])
+def original_units(stack):
+    """Restore the original unit ids of ORIGINAL_UNITS in a reference stack."""
+    swap = ORIGINAL_UNITS.get(stack['id'], {})
+    return dict(stack, units=[dict(u, unit_id=swap.get(u['unit_id'], u['unit_id'])) for u in stack['units']])
 
 
 def build(layout, landmarks):
-    if {e['id'] for e in layout['enemies'] if any(u['unit_id'] == SORCERER for u in e['units'])} != WARLOCK_STACKS:
-        raise ValueError('Reference Sorcerers differ from the original Warlock stacks')
-    stacks = sorted((original_warlocks(e) for e in layout['enemies']), key=lambda e: e['id'])
+    for replaced in {r for swap in ORIGINAL_UNITS.values() for r in swap}:
+        if ({e['id'] for e in layout['enemies'] if any(u['unit_id'] == replaced for u in e['units'])}
+                != {i for i, swap in ORIGINAL_UNITS.items() if replaced in swap}):
+            raise ValueError('Reference stacks with '+replaced+' differ from ORIGINAL_UNITS')
+    stacks = sorted((original_units(e) for e in layout['enemies']), key=lambda e: e['id'])
     if [e['id'] for e in stacks] != list(range(1, len(stacks)+1)):
         raise ValueError('Expected enemy ids 1..N')
     bags = [c for c in layout['chests'] if c['code'] not in DUPLICATE_CHESTS]
@@ -154,9 +160,9 @@ def build(layout, landmarks):
     if landmarks & (objects | removed):
         raise ValueError('A landmark overlaps a map object, site or ruin')
     obstacles = sorted(cell(p) for p in {tuple(p) for p in layout['obstacles']} | landmarks if p not in removed)
-    # JAX water cannot hold an object; those four cells become plain. Landmark tiles are obstacles.
-    terrain = {kind: [cell(p) for p in points if (kind != 'water' or tuple(p) not in objects)
-                      and tuple(p) not in landmarks]
+    # Landmark tiles are obstacles. Three chests and a stack stand on water, as in the
+    # original .sg (allow_water_objects below).
+    terrain = {kind: [cell(p) for p in points if tuple(p) not in landmarks]
                for kind, points in (('road', layout['terrain']['road']),
                                     ('forest', layout['terrain']['forest']),
                                     ('water', layout['terrain']['water']))}
@@ -224,6 +230,7 @@ def build(layout, landmarks):
         enemy_full_regeneration=[index[GREEN_DRAGON]],
         ruins=ruins,
         terrain=terrain,
+        allow_water_objects=True,
     )
     game_map['battle_observation_version'] = max(42, game_map['battle_observation_version'])
     # Reference equipment lore: banner 7, boots 8, artifacts 9, book 11, the lord's own lore at once.

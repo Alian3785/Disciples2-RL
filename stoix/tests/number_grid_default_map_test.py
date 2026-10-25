@@ -42,6 +42,14 @@ def test_default_map_layout_and_actions(default_game):
     assert sum('reference_g000uu0081' in r for r in DEFAULT['enemy_rosters']) == 5
     assert not any('warlock' in r for r in DEFAULT['enemy_rosters'])
     assert env.progression.rows[env.progression.ids['reference_g000uu0081']]['attack_type'] == 'death'
+    # Neutral Elf Rangers and Centaur Lancer, not the Elves' Scout and Lancer (stronger 165-HP centaur).
+    elves = DEFAULT['enemy_rosters'][63:65]
+    assert [[r[1], r[4]] for r in elves] == [['g000uu5005', 'g000uu5009'], ['g000uu5111', 'g000uu5009']]
+    assert DEFAULT['enemy_hp'][64] == 165 and not any(
+        key in r for r in DEFAULT['enemy_rosters'] for key in ('reference_g000uu8018', 'reference_g000uu8014'))
+    # Three chests and the Orc's stack stand on water, as in the original.
+    water = DEFAULT['terrain']['water']
+    assert DEFAULT['allow_water_objects'] and all(p in water for p in ([39, 37], [18, 44], [11, 35], [43, 15]))
     shop = env.site_rules
     assert names[shop.spell_start:shop.end] == tuple('buy_spell_'+spell for spell in TOWER)
     # Legions book (17), the four tower spells, then the Empire ward and healing known only from items.
