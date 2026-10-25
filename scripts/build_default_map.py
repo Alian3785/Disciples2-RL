@@ -57,6 +57,15 @@ CAPITAL_POTIONS = {'healing': 3, 'restoration': 3, 'life': 3}
 # user request 2026-10-25: any faction gets it, like a vault item.
 CITY_ITEMS = {'Порт Бирмингем': {'unholy_chalice': 1}, 'Кордилия': {'staff_of_holiness': 1},
               'Порт Полонис': {'boots_speed': 1}, 'Соругирилла': {'zombie_talisman': 1}}
+# Reference chest X11 at (36, 22), beside Соругирилла, holds that city's vault Zombie Talisman;
+# the original .sg has no bag there (17 bags), and CITY_ITEMS gives the talisman on capture.
+DUPLICATE_CHESTS = {'X11'}
+# Same file: these reference stacks hold the Undead Warlock G000UU0081 (death attack); the
+# reference's name-based IDs ("Колдун") made it the Legions Sorcerer G000UU0063 (fire attack).
+# Reference ids: 7 at (6, 22), 9 at (24, 23), 34 Порт Полонис' stack, 38 at (39, 3), 73 the guard
+# of Руины Бритона. No other enemy holds G000UU0063.
+WARLOCK_STACKS = {7, 9, 34, 38, 73}
+SORCERER, WARLOCK = 'g000uu0063', 'g000uu0081'
 # Small's requested shop (build_small_map.py): Armageddon and the strongest Ent summon
 # (Verdant), 1000 gold each. Default sells TOWER_SPELLS since 2026-10-25.
 SPELLS = [{'spell': 'g000ss0019', 'price': 1000, 'stock': 1},
@@ -118,16 +127,28 @@ def loot(names):
     return potions, items
 
 
+def original_warlocks(stack):
+    """Restore the Undead Warlock of WARLOCK_STACKS in place of the reference's Sorcerer."""
+    if stack['id'] not in WARLOCK_STACKS:
+        return stack
+    return dict(stack, units=[dict(u, unit_id=WARLOCK) if u['unit_id'] == SORCERER else u for u in stack['units']])
+
+
 def build(layout, landmarks):
-    stacks = sorted(layout['enemies'], key=lambda e: e['id'])
+    if {e['id'] for e in layout['enemies'] if any(u['unit_id'] == SORCERER for u in e['units'])} != WARLOCK_STACKS:
+        raise ValueError('Reference Sorcerers differ from the original Warlock stacks')
+    stacks = sorted((original_warlocks(e) for e in layout['enemies']), key=lambda e: e['id'])
     if [e['id'] for e in stacks] != list(range(1, len(stacks)+1)):
         raise ValueError('Expected enemy ids 1..N')
+    bags = [c for c in layout['chests'] if c['code'] not in DUPLICATE_CHESTS]
+    if len(bags) != len(layout['chests'])-len(DUPLICATE_CHESTS):
+        raise ValueError('A duplicate chest is missing from the layout')
     index = {e['id']: i for i, e in enumerate(stacks)}
     rosters = [roster(e) for e in stacks]
     sites = {s['code']: s for s in layout['sites']}
     removed = set().union(*(site_cells(s['position']) for s in layout['sites']),
                           *(site_cells(r['ruin_pos']) for r in layout['ruins']))
-    objects = ({tuple(e['position']) for e in stacks} | {tuple(c['position']) for c in layout['chests']}
+    objects = ({tuple(e['position']) for e in stacks} | {tuple(c['position']) for c in bags}
                | {tuple(p) for p in layout['gold_mines']} | {tuple(m['position']) for m in layout['mana']}
                | {tuple(c['position']) for c in layout['cities']+layout['capitals']})
     if landmarks & (objects | removed):
@@ -141,7 +162,7 @@ def build(layout, landmarks):
                                     ('water', layout['terrain']['water']))}
     capital, enemy_capital = layout['capitals']
     chests = []
-    for chest in layout['chests']:
+    for chest in bags:
         potions, items = loot(chest['items'])
         chests.append(dict(position=cell(chest['position']), potions=potions, items=items))
     ruins = []

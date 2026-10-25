@@ -22,6 +22,7 @@ from stoix.tests.number_grid_fixtures import compiled_method, enemy_roster_state
 DEFAULT = load_map('default')
 NAMES = action_names(DEFAULT)
 NE = 1  # [28, 7] -> enemy 11 at [27, 8]
+DIRECTIONS = ((-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1))
 
 
 def owned(env, state, *keys):
@@ -479,9 +480,16 @@ def test_returned_charges_survive_sales_scrolls_and_new_loot(default_game):
     casted, _ = step(sold, cast)
     assert casted.item_inventory[0] == env.item_rules.keys.index('zombie_talisman')
     assert casted.item_charges_spent[:3].tolist() == [3, 0, 0]
-    # Picking up another copy leaves its charges fresh and the returned copy partial.
-    at_chest = casted.replace(position=jnp.array([24, 37], jnp.int32))
-    picked, _ = step(at_chest, jnp.int32(0))
+    # Another copy, from Соругирилла's vault on capture, keeps fresh charges; the returned copy stays partial.
+    city = [c['name'] for c in DEFAULT['cities']].index('Соругирилла')
+    entrance = DEFAULT['cities'][city]['position']
+    blocked = env.territory.blocked_grid.reshape(DEFAULT['size'], DEFAULT['size'])
+    direction, (dr, dc) = next((i, d) for i, d in enumerate(DIRECTIONS)
+                               if not blocked[entrance[0]-d[0], entrance[1]-d[1]])
+    near = casted.replace(position=jnp.array([entrance[0]-dr, entrance[1]-dc], jnp.int32),
+                          alive=casted.alive & ~env.territory.city_enemies[city])
+    picked, _ = step(near, jnp.int32(direction))
+    assert picked.city_owned[city]
     assert picked.item_inventory[:2].tolist() == [env.item_rules.keys.index('zombie_talisman')]*2
     assert picked.item_charges_spent[:3].tolist() == [3, 0, 0]
     observed = jax.jit(env.item_rules.observation)(picked)

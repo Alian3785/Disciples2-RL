@@ -30,12 +30,18 @@ def test_default_map_layout_and_actions(default_game):
     env, state, _, _ = default_game
     names = action_names(DEFAULT)
     assert DEFAULT['size'] == 50 and len(DEFAULT['opponent_positions']) == 75
-    assert env.num_actions == len(names) == 306 and env.observation_size == 2718
+    assert env.num_actions == len(names) == 306 and env.observation_size == 2661
     assert env.observation_version == 44 and state.item_charges_spent.shape == state.item_inventory.shape
     assert [s['kind'] for s in env.site_rules.sites] == [
         'merchant', 'merchant', 'trainer', 'mercenary', 'mercenary', 'spell_shop']
     assert env.territory.count == 5 and len(env.territory.mines) == 12 and env.ruins.count == 5
-    assert len(DEFAULT['chests']) == 18 and env.item_rules.capacity == 15+1+4  # loot + Alar's Runestone + city items
+    # Original .sg: 17 bags; the Zombie Talisman comes only from Соругирилла's vault.
+    assert len(DEFAULT['chests']) == 17 and env.item_rules.capacity == 14+1+4  # loot + Alar's Runestone + city items
+    assert not any('zombie_talisman' in c['items'] for c in DEFAULT['chests'])
+    # Same file: five Undead Warlocks (death attack), not the Legions Sorcerer ('warlock' key, fire).
+    assert sum('reference_g000uu0081' in r for r in DEFAULT['enemy_rosters']) == 5
+    assert not any('warlock' in r for r in DEFAULT['enemy_rosters'])
+    assert env.progression.rows[env.progression.ids['reference_g000uu0081']]['attack_type'] == 'death'
     shop = env.site_rules
     assert names[shop.spell_start:shop.end] == tuple('buy_spell_'+spell for spell in TOWER)
     # Legions book (17), the four tower spells, then the Empire ward and healing known only from items.
