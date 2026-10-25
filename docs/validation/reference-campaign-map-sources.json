@@ -3,7 +3,7 @@
   "charmed_child_unit_instance_audit": {
     "armies": 71,
     "instance_and_name_mismatches": [],
-    "profile_normalization": "Reference MapConfig resolves source unit names to canonical profiles in layout.json; JAX uses those exact profile IDs.",
+    "profile_normalization": "Reference MapConfig resolves source unit names to canonical profiles in layout.json; JAX uses those exact profile IDs, except the original S117 garrison units of enemies 5 (Cleric) and 8 (Holy Avenger) restored by scripts/build_reference_maps.py:CHARMED_ORIGINAL_UNITS.",
     "original_profile_aliases": [
       {
         "enemy": 4,
@@ -14,34 +14,6 @@
         "actual": [
           "g000uu0031",
           "g000uu6012"
-        ]
-      },
-      {
-        "enemy": 5,
-        "expected": [
-          "g000uu0004",
-          "g000uu0016",
-          "g000uu0154",
-          "g000uu3001"
-        ],
-        "actual": [
-          "g000uu0004",
-          "g000uu0012",
-          "g000uu0154",
-          "g000uu3001"
-        ]
-      },
-      {
-        "enemy": 8,
-        "expected": [
-          "g000uu0054",
-          "g000uu0155",
-          "g000uu0172"
-        ],
-        "actual": [
-          "g000uu0054",
-          "g000uu0156",
-          "g000uu0172"
         ]
       },
       {
@@ -706,7 +678,7 @@
       "sha256": {
         "definition": "f46faada955bf1ac79942beab7835c024e51a12cdfc7ca68b5e8d8524842e3b7",
         "layout": "05c9bcb05532ca6e581f06d273b58e41ecebcd4733e7dbb6216c61c3797e97a1",
-        "jax_map": "ce1a13c31628ec336276d7e36d170bd5bf99b6907dbc8df5d5e4b3808d403b9f"
+        "jax_map": "7dca8ec045cde2cc4e5b23da2daf9fe894ac5203cb6ee6c08124ff2638144d98"
       },
       "armies": 71,
       "fighters": 149,

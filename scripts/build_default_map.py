@@ -132,18 +132,21 @@ def loot(names):
     return potions, items
 
 
-def original_units(stack):
-    """Restore the original unit ids of ORIGINAL_UNITS in a reference stack."""
-    swap = ORIGINAL_UNITS.get(stack['id'], {})
-    return dict(stack, units=[dict(u, unit_id=swap.get(u['unit_id'], u['unit_id'])) for u in stack['units']])
+def restore_original_units(enemies, table):
+    """Reference stacks with the original unit ids of table {stack id: {reference id: original id}}.
+
+    Fails unless each replaced id occurs in exactly the stacks the table names.
+    """
+    for replaced in {r for swap in table.values() for r in swap}:
+        if ({e['id'] for e in enemies if any(u['unit_id'] == replaced for u in e['units'])}
+                != {i for i, swap in table.items() if replaced in swap}):
+            raise ValueError('Reference stacks with '+replaced+' differ from the original-unit table')
+    return [dict(e, units=[dict(u, unit_id=table.get(e['id'], {}).get(u['unit_id'], u['unit_id']))
+                           for u in e['units']]) for e in enemies]
 
 
 def build(layout, landmarks):
-    for replaced in {r for swap in ORIGINAL_UNITS.values() for r in swap}:
-        if ({e['id'] for e in layout['enemies'] if any(u['unit_id'] == replaced for u in e['units'])}
-                != {i for i, swap in ORIGINAL_UNITS.items() if replaced in swap}):
-            raise ValueError('Reference stacks with '+replaced+' differ from ORIGINAL_UNITS')
-    stacks = sorted((original_units(e) for e in layout['enemies']), key=lambda e: e['id'])
+    stacks = sorted(restore_original_units(layout['enemies'], ORIGINAL_UNITS), key=lambda e: e['id'])
     if [e['id'] for e in stacks] != list(range(1, len(stacks)+1)):
         raise ValueError('Expected enemy ids 1..N')
     bags = [c for c in layout['chests'] if c['code'] not in DUPLICATE_CHESTS]

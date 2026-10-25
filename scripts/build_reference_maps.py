@@ -11,7 +11,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from scripts.build_default_map import CURRENT, RULES, UNITS, cell, dump, landmark_cells, roster, site_cells
+from scripts.build_default_map import (CURRENT, RULES, UNITS, cell, dump, landmark_cells,
+                                       restore_original_units, roster, site_cells)
 from stoix.envs.number_grid_items import ITEMS
 from stoix.envs.number_grid_potions import POTIONS
 
@@ -48,6 +49,15 @@ CHARMED_CITY_LOOT = {
 }
 # S117EV001E: Frequency 6, occur once -> the Ancient Relic on day 6.
 CHARMED_DAY_ITEMS = [dict(day=6, items={'ancient_relic': 1})]
+# Vault of the player's capital S117FT0001: 3x G000IG0006 and 1x G000IG0001; the layout omits it.
+CHARMED_CAPITAL_POTIONS = {'restoration': 3, 'life': 1}
+# S117 garrisons that the reference's name-based profiles replaced, by reference stack id:
+# 5, the Empire capital S117FT0000, holds the Cleric G000UU0016 (heals all allies by 20), not the
+# Priest G000UU0012 (one ally by 40); 8, Hasser's Keep S117FT0006, the Holy Avenger G000UU0155
+# (250 HP, armor 0, initiative 50, 75 damage twice), not the Defender of Faith G000UU0156
+# (225, 30, 70, 125 once). No other S117 stack holds either replaced id.
+CHARMED_ORIGINAL_UNITS = {5: {'g000uu0012': 'g000uu0016'}, 8: {'g000uu0156': 'g000uu0155'}}
+ORIGINAL_UNITS = {'the_charmed_child': CHARMED_ORIGINAL_UNITS}
 
 
 def item_key(name):
@@ -79,7 +89,7 @@ def build(base, name):
     from unit_revive_costs import REVIVE_PROFILE_IDS_BY_NAME
     config = module.MAP
     layout = json.loads((base/'maps'/source_name/'layout.json').read_text(encoding='utf-8'))
-    stacks = sorted(layout['enemies'], key=lambda e: e['id'])
+    stacks = sorted(restore_original_units(layout['enemies'], ORIGINAL_UNITS.get(name, {})), key=lambda e: e['id'])
     index = {e['id']: i for i, e in enumerate(stacks)}
     rosters = [roster(e) for e in stacks]
     by_id = {r['game_id']: k for k, r in UNITS.items()}
@@ -150,6 +160,8 @@ def build(base, name):
         for city in game_map['cities']:
             vault = CHARMED_CITY_LOOT.get(city['name'], {})
             city.update(potions=vault.get('potions', {}), items=vault.get('items', {}))
+        for key, count in CHARMED_CAPITAL_POTIONS.items():
+            game_map['initial_potions'][key] = game_map['initial_potions'].get(key, 0)+count
     game_map['lord_type'] = {1:'warrior', 2:'mage', 3:'guildmaster'}[config.starting_lord_type]
     game_map.update(step_cost=0., exploration_bonus=.08, building_reward=0., battle_observation_version=44)
     if layout.get('objective_enemy_id') is not None:
