@@ -93,6 +93,12 @@ def scenario_potions(game_map):
             totals[key] = totals.get(key, 0)+count
             if totals[key] > 2**31-1:
                 raise ValueError('Chest loot plus initial inventory must fit int32')
+    # City vault potions go to the party on capture; a city may hold none.
+    for city in game_map.get('cities', []):
+        for key, count in potion_counts(city.get('potions', {}), 'City potions').items():
+            totals[key] = totals.get(key, 0)+count
+            if totals[key] > 2**31-1:
+                raise ValueError('City loot plus initial inventory must fit int32')
     for merchant in merchants(game_map):
         if not isinstance(merchant, dict):
             raise ValueError('merchant must be an object')
@@ -113,6 +119,9 @@ class PotionRules:
         self.keys = tuple(p['key'] for p in self.items)
         self.has_buffs = any(p['duration'] != 'instant' for p in self.items)
         self.initial_counts = jnp.array([game_map.get('initial_potions',{}).get(k,0) for k in self.keys],jnp.int32)
+        cities = game_map.get('cities', [])
+        self.city_loot = jnp.array([[c.get('potions',{}).get(k,0) for k in self.keys] for c in cities],
+                                   jnp.int32).reshape(len(cities),self.count)
         self.amounts = jnp.array([p['amount'] for p in self.items],jnp.int32)
         self.stats = jnp.array([max(0,p['stat']) for p in self.items],jnp.int32)
         self.healing = jnp.array([p['effect'] == 'heal' for p in self.items],bool)

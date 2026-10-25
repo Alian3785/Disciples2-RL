@@ -135,11 +135,11 @@ def test_a_big_unit_moves_its_whole_column(current_game):
 def test_default_map_and_manual_game(default_game, human_service):
     env, initial, step, mask = default_game
     rules = env.unit_swaps
-    assert rules.start == 264 and rules.pairs == swap_pairs(DEFAULT_PARTY)
-    hero, acolyte = int(initial.unit_ids[1]), int(initial.unit_ids[4])  # the hero has its own skill row
+    assert rules.start == 256 and rules.pairs == swap_pairs(DEFAULT_PARTY)
+    hero, cultist = int(initial.unit_ids[1]), int(initial.unit_ids[4])  # the hero has its own skill row
     assert env.equipment_heroes[hero] and env._equipment_hero(initial) == 1
     swapped, ts = step(initial, jnp.int32(rules.start+rules.pairs.index((1, 4))))
-    assert swapped.unit_ids[4] == hero and swapped.unit_ids[1] == acolyte and env._equipment_hero(swapped) == 4
+    assert swapped.unit_ids[4] == hero and swapped.unit_ids[1] == cultist and env._equipment_hero(swapped) == 4
     assert float(ts.reward) == pytest.approx(-PENALTY-env.step_cost)
     assert env.movement_cap(swapped) == env.movement_cap(initial) and not mask(swapped)[rules.start+rules.pairs.index((1, 4))]
     # The manual game shows the same pairs and applies them through the same JAX step.

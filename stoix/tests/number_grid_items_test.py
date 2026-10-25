@@ -206,6 +206,33 @@ def test_permanent_potion_keeps_equipment_and_revival_restores_it(current_game):
     assert revived.movement_points==env.movement_cap(revived)
 
 
+def test_charmed_child_city_and_day_loot(current_game):
+    """Installed S117 vaults, Clans capture events and the day-6 relic (docs/REFERENCE_CAMPAIGNS.md)."""
+    from stoix.envs.number_grid import load_map
+    from stoix.envs.number_grid_potions import PotionRules
+    _,state,_,_=current_game
+    config=load_map('the_charmed_child')
+    names=[c['name'] for c in config['cities']]
+    rules,potions=ItemRules(config),PotionRules(config)
+    base=state.replace(item_inventory=jnp.full(rules.capacity,-1,jnp.int32),
+                       last_item_loot=jnp.zeros(rules.count,jnp.int32))
+    captured=jnp.array([name in ('Akar',"Hasser's Keep") for name in names])
+    taken=jax.jit(rules.collect_cities)(base,captured)
+    assert sorted(rules.keys[i] for i in taken.item_inventory.tolist() if i>=0)==['orc_orb','staff_of_travelling']
+    assert int(jnp.sum(taken.last_item_loot))==2
+    vaults={name:{potions.keys[i]:int(n) for i,n in enumerate(row) if n}
+            for name,row in zip(names,potions.city_loot.tolist())}
+    assert vaults['Fogfell']=={'restoration':1,'life':1} and vaults['Odzark']=={'restoration':1}
+    # Only the rest that begins day 6 grants the relic; days grow by one, so once.
+    relic=rules.keys.index('ancient_relic')
+    collect=jax.jit(rules.collect_days)
+    for day,resting,expected in ((6,True,1),(6,False,0),(5,True,0),(12,True,0)):
+        after=collect(base.replace(day=jnp.int32(day)),jnp.bool_(resting))
+        assert int(jnp.sum(after.item_inventory==relic))==expected
+    with pytest.raises(ValueError,match='day_items'):
+        ItemRules({**config,'day_items':[dict(day=1,items={'ruby':1})]})
+
+
 def test_war_book_adds_truncated_bonus_to_personal_xp(all_items):
     env,state,refresh,_=all_items
     state=hero_roster_state(env,state,['possessed','duke','possessed','cultist','cultist',None])

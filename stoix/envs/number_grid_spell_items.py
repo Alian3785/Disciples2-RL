@@ -36,7 +36,8 @@ def scenario_spell_items(game_map):
     """Catalogue order: scrolls, then staves, among the scenario's obtainable items."""
     from stoix.envs.number_grid_potions import merchants
     sources = [game_map.get('initial_items', {})] + [c.get('items', {}) for c in game_map.get('chests', [])
-                                                       + game_map.get('ruins', []) + merchants(game_map)
+                                                       + game_map.get('ruins', []) + game_map.get('cities', [])
+                                                       + game_map.get('day_items', []) + merchants(game_map)
                                                        if isinstance(c, dict)]
     keys = {key for contents in sources for key, count in contents.items() if count}
     return tuple(item for item in SPELL_ITEMS if item['key'] in keys)

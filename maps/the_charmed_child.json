@@ -3,6 +3,9 @@
   "display_name": "Проклятое дитя",
   "original_name": "The Charmed Child",
   "scenario_id": "S117SC0000",
+  "day_items": [
+    {"day": 6, "items": {"ancient_relic": 1}}
+  ],
   "size": 50,
   "agent_position": [7, 41],
   "agent_number": 1,
@@ -1231,12 +1234,12 @@
     {"name": "S117RU0004", "position": [45, 17], "entrance": [47, 19], "gold": 23, "potions": {}, "items": {"ruby": 1}}
   ],
   "cities": [
-    {"name": "Fogfell", "position": [30, 40], "level": 4, "objective": false},
-    {"name": "Akar", "position": [44, 47], "level": 1, "objective": false},
-    {"name": "Kalen's Palace", "position": [19, 6], "level": 4, "objective": true},
-    {"name": "Frelan", "position": [43, 7], "level": 3, "objective": true},
-    {"name": "Hasser's Keep", "position": [5, 8], "level": 3, "objective": true},
-    {"name": "Odzark", "position": [5, 24], "level": 2, "objective": false}
+    {"name": "Fogfell", "position": [30, 40], "level": 4, "objective": false, "potions": {"restoration": 1, "life": 1}, "items": {}},
+    {"name": "Akar", "position": [44, 47], "level": 1, "objective": false, "potions": {}, "items": {"orc_orb": 1}},
+    {"name": "Kalen's Palace", "position": [19, 6], "level": 4, "objective": true, "potions": {}, "items": {}},
+    {"name": "Frelan", "position": [43, 7], "level": 3, "objective": true, "potions": {}, "items": {}},
+    {"name": "Hasser's Keep", "position": [5, 8], "level": 3, "objective": true, "potions": {}, "items": {"staff_of_travelling": 1}},
+    {"name": "Odzark", "position": [5, 24], "level": 2, "objective": false, "potions": {"restoration": 1}, "items": {"emerald": 1}}
   ],
   "mines": [
     {"kind": "gold", "position": [12, 1]},

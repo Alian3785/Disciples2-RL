@@ -9,7 +9,7 @@ import jax
 import jax.numpy as jnp
 import pytest
 
-from stoix.envs.number_grid import NumberGrid, MAP, SHOOT, CONTINUE, DEFEND, REST, VICTORY
+from stoix.envs.number_grid import NumberGrid, MAP, SHOOT, CONTINUE, DEFEND, REST, VICTORY, load_map
 from stoix.envs.number_grid_combat import UNITS
 
 
@@ -256,9 +256,13 @@ def test_current_progression_rewards_pay_once_and_charge_only_discarded_xp(env):
         assert grown.unit_levels[0] == level+1 and float(amount) == pytest.approx(3.)
 
 
-def test_magistrate_clears_six_slot_xp_blocking_observation(default_game):
-    """Expose the actual Inquisitor cap and clear it immediately on construction."""
-    env, initial, step, _ = default_game
+def test_magistrate_clears_six_slot_xp_blocking_observation():
+    """Expose the actual Inquisitor cap and clear it immediately on construction.
+
+    Empire buildings and units: Default's geometry with the Empire, since Default plays the Legions."""
+    env = NumberGrid(map_config={**load_map('default'), 'faction': 'empire'})
+    initial, _ = compiled_method(env, 'reset')(jax.random.PRNGKey(42))
+    step = compiled_method(env, 'step')
     rules = env.progression
     slots = jnp.array([0, 2])
     inquisitor = rules.ids['inquisitor']

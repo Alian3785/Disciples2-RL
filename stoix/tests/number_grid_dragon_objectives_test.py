@@ -34,7 +34,7 @@ def test_default_variants_keep_layout_and_original_dragon_profiles(dragon_game, 
         assert config[key] == base[key]
     assert config['opponent_positions'][DRAGON] == [47, 31]
     assert action_names(config) == action_names(base)
-    assert env.observation_size == 2604+(env.num_opponents+1 if blue else 0)
+    assert env.observation_size == 2602+(env.num_opponents+1 if blue else 0)
     assert config.get('army_victory_level_reward', 0.) == (5. if blue else 0.)
     assert config.get('army_victory_level_objective_only', False) == blue
     uid = env.progression.enemy_ids[DRAGON, 1]
@@ -124,19 +124,19 @@ def test_hero_and_summon_victories_finish_with_the_correct_bonus(dragon_game, su
     advance = compiled_method(env, '_battle_step')
     draws = jnp.zeros(env.random_size, jnp.float32)  # deterministic successful attack
     after, reward = advance(battle, jnp.int32(SHOOT+1), jax.random.PRNGKey(7), draws)
-    if not summon:
-        # The initial acolyte still has its normal post-victory healing activation.
-        assert after.in_battle and after.post_victory == 1 and not after.won
-        after, extra = advance(after, jnp.int32(WAIT), jax.random.PRNGKey(8), draws)
+    for key in range(8, 14):  # post-victory healing turns, only while a healer is alive
+        if not after.in_battle:
+            break
+        after, extra = advance(after, jnp.int32(WAIT), jax.random.PRNGKey(key), draws)
         reward += extra
     assert after.won and after.done and not after.in_battle and not after.alive[DRAGON]
     assert not jnp.any(after.city_owned) and jnp.sum(after.alive) == len(initial.alive)-1
     # Either dragon gives enough XP for the starting hero's first level (+2).
-    # Two squires and the acolyte lack their buildings and each lose XP (-.05).
+    # Two Possessed and the Cultist lack their buildings and each lose XP (-.05).
     assert float(reward) == pytest.approx(5.85 if not summon else 0 if env.objective_reward_hero_only else 3)
     if not summon:
         assert after.unit_levels[1] == 2 and after.last_promoted == 2
-        assert after.unit_xp[jnp.array([0, 2, 4])].tolist() == [79, 79, 79]
+        assert after.unit_xp[jnp.array([0, 2, 4])].tolist() == [94, 94, 74]  # one below 95 / 75
     if summon:
         assert after.hp[:6].tolist() == initial.hp[:6].tolist()
 

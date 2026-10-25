@@ -743,7 +743,9 @@
       case 55:return swapText(s);
       case 56:return 'Превышен лимит '+(snapshot.battle_max_rounds??currentMap().battle_max_rounds??75)+' раундов: весь отряд отступает. Штраф −'+fmt(snapshot.battle_round_limit_penalty??currentMap().battle_round_limit_penalty??1)+'.';
       case 54:return 'Нанят маг для чтения свитков · −'+fmt(castInfo()?.hire_cost??500)+' золота. Свитки и посохи доступны до конца игры.';
-      case 43:return 'Город захвачен: '+(territoryInfo()?.cities||[]).filter((c,i)=>s.last_captured_cities[i]).map(c=>c.name).join(', ')+'. Доступны найм, храм и рост земли.';
+      case 43:{const loot=[...(s.last_loot||[]).map((n,i)=>n?(potionInfo()?.[i]?.name+' × '+n):''),
+          ...(s.last_item_loot||[]).map((n,i)=>n?(equipmentInfo()?.items?.[i]?.name+' × '+n):'')].filter(Boolean);
+        return 'Город захвачен: '+(territoryInfo()?.cities||[]).filter((c,i)=>s.last_captured_cities[i]).map(c=>c.name).join(', ')+'. Доступны найм, храм и рост земли.'+(loot.length?' Предметы города получены: '+loot.join(', ')+'.':'');}
       case 44:return 'Город улучшен: '+territoryInfo()?.cities[s.last_upgraded_city]?.name+' · −'+fmt(s.last_service_cost)+' золота.';
       case 45:return 'Путь закрыт препятствием.';
       case 52:return battleItemText(s);
@@ -771,7 +773,8 @@
       case 10:return summonEnded(s)?'Бой призванного бойца окончен без победы. Отряд № '+(s.enemy+1)+' сохраняет раны до регенерации.':'Отступление завершено. Ранения и потери сохранены.';
       case 11:return 'Достигнут общий лимит переходов. Эпизод завершён.';
       case 12:{const b=construction()?.buildings[s.last_building];return b?'Построено: '+b.name+' (−'+b.gold+' золота).':null;}
-      case 13:return 'Отдых. Начался ход '+s.day+', +'+(snapshot.territory_quotes?.income[0]??turnRules().income)+' золота; очки перемещения восстановлены, живые бойцы получили регенерацию. Штраф: '+fmt(Math.max(0,-snapshot.reward))+'.';
+      case 13:{const gift=(s.last_item_loot||[]).map((n,i)=>n?(equipmentInfo()?.items?.[i]?.name+' × '+n):'').filter(Boolean);
+        return 'Отдых. Начался ход '+s.day+', +'+(snapshot.territory_quotes?.income[0]??turnRules().income)+' золота; очки перемещения восстановлены, живые бойцы получили регенерацию. Штраф: '+fmt(Math.max(0,-snapshot.reward))+'.'+(gift.length?' Событие дня: получено '+gift.join(', ')+'.':'');}
       case 14:return 'Атака заблокирована иммунитетом.'+blockText(s);
       case 32:return a+': атака и замедление инициативы противников (урон '+s.last_damage+').';
       case 31:return a+': дополнительный ход — '+t+'.';

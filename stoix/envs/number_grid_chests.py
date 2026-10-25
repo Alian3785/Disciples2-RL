@@ -43,8 +43,9 @@ class ChestRules:
         loot = jnp.sum(jnp.where(collected[:, None], self.loot, 0), axis=0)
         if self.items is not None:
             state=self.items.collect(state,collected)
+        # last_loot is cleared per map step; a city captured on this move may already be in it.
         return state.replace(chest_alive=state.chest_alive & ~collected,
-                             potions=state.potions+loot, last_loot=loot,
+                             potions=state.potions+loot, last_loot=state.last_loot+loot,
                              last_event=jnp.where(jnp.any(collected), CHEST_LOOT, state.last_event))
 
     def observation(self, state):

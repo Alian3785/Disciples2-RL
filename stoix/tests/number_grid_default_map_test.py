@@ -28,16 +28,18 @@ def test_default_map_layout_and_actions(default_game):
     env, state, _, _ = default_game
     names = action_names(DEFAULT)
     assert DEFAULT['size'] == 50 and len(DEFAULT['opponent_positions']) == 75
-    assert env.num_actions == len(names) == 279 and env.observation_size == 2604
+    assert env.num_actions == len(names) == 271 and env.observation_size == 2602
     assert env.observation_version == 44 and state.item_charges_spent.shape == state.item_inventory.shape
     assert [s['kind'] for s in env.site_rules.sites] == [
         'merchant', 'merchant', 'trainer', 'mercenary', 'mercenary', 'spell_shop']
     assert env.territory.count == 5 and len(env.territory.mines) == 12 and env.ruins.count == 5
-    assert len(DEFAULT['chests']) == 18 and env.item_rules.capacity == 15+1  # loot + Alar's Runestone
+    assert len(DEFAULT['chests']) == 18 and env.item_rules.capacity == 15+1+4  # loot + Alar's Runestone + city items
     shop = env.site_rules
     assert names[shop.spell_start:shop.end] == ('buy_spell_'+ARMAGEDDON, 'buy_spell_'+VERDANT)
-    assert names[env.casting.start:env.casting.hire_action][-1] == 'cast_'+VERDANT and env.casting.count == 23
-    assert names[env.casting.hire_action:env.casting.end] == ('hire_scroll_mage', 'cast_mind_ward_scroll')
+    # Legions book (17), both shop spells, then the Empire ward and healing known only from items.
+    assert names[env.casting.start:env.casting.hire_action][-1] == 'cast_'+VERDANT and env.casting.count == 21
+    assert names[env.casting.hire_action:env.casting.end] == (
+        'hire_scroll_mage', 'cast_mind_ward_scroll', 'cast_staff_of_holiness')  # staff: Кордилия's vault
     assert names[env.casting.end:env.unit_swaps.start] == battle_item_action_names(DEFAULT)  # docs/BATTLE_ITEMS.md
     assert names[env.unit_swaps.start:] == unit_swap_action_names(env.map_config)  # docs/UNIT_SWAPS.md
     # Alar sells the reference potions, then the requested artifact; Tralar only buys valuables.
@@ -48,8 +50,9 @@ def test_default_map_layout_and_actions(default_game):
     assert DEFAULT['enemy_capitals'][0]['position'] == DEFAULT['opponent_positions'][GUARD] == [11, 27]
     assert [int(i) for i in jnp.flatnonzero(env.territory.capital_guards)] == [GUARD]
     rows = env.progression.rows
-    # No fixed roster: the Empire warrior ruler's reference party (docs/STARTING_PARTIES.md).
-    assert 'hero_roster' not in DEFAULT and env.map_config['hero_roster'] == STARTING_PARTIES['empire']['warrior']
+    # No fixed roster: the Legions warrior ruler's party (docs/STARTING_PARTIES.md).
+    assert DEFAULT['faction'] == 'legions' and DEFAULT['lord_type'] == 'warrior'
+    assert 'hero_roster' not in DEFAULT and env.map_config['hero_roster'] == STARTING_PARTIES['legions']['warrior']
     assert [rows[i]['key'] if i else None for i in state.unit_ids[:6].tolist()] == env.map_config['hero_roster']
     assert state.position.tolist() == [28, 6]
     assert int(state.gold) == 0 and state.spell_stock.tolist() == [1, 1]
@@ -100,7 +103,7 @@ def test_spell_shop_sells_armageddon_and_verdant(default_game):
     assert bought.last_event == SPELL_BOUGHT and bought.gold == 500
     assert bought.spell_stock.tolist() == [0, 1] and bought.learned_spells == 1 << armageddon
     assert not jnp.any(mask(bought)[shop.spell_start:shop.end])  # sold out / 500 < 1000
-    # Level V needs a mage to research; a bought copy is cast by any lord at full price.
+    # Not in the Legions book, so no research; a bought copy is cast by any lord at full price.
     cast = casting.start+armageddon
     assert not mask(bought)[cast]
     armed = bought.replace(mana=jnp.array([70, 250, 80, 100, 0], jnp.int32))
@@ -128,7 +131,10 @@ def test_capital_guard_armor_and_regeneration(default_game):
     blocked = env.territory.blocked_grid.reshape(50, 50)
     direction, (dr, dc) = next((i, d) for i, d in enumerate(DIRECTIONS)
                                if not blocked[guard[0]-d[0], guard[1]-d[1]])
-    near = initial.replace(position=jnp.array([guard[0]-dr, guard[1]-dc], jnp.int32))
+    # Mizrael (initiative 90) opens with 250 Life damage to the whole party at 95% accuracy,
+    # which wipes out the level-1 Legions party; enough HP keeps the battle open to inspect.
+    near = initial.replace(position=jnp.array([guard[0]-dr, guard[1]-dc], jnp.int32),
+                           hp=initial.hp.at[:6].set(jnp.where(initial.hp[:6] > 0, 1000, 0)))
     battle, _ = step(near, jnp.int32(direction))
     assert battle.in_battle and battle.enemy == GUARD and battle.battle_fort_armor == CAPITAL_ARMOR
     assert battle.battle_fort_defender == FORT_RED
@@ -188,6 +194,28 @@ def test_capturing_both_objective_cities_wins(default_game):
     assert entered.city_owned[goals[1]] and entered.won and entered.done and float(ts.reward) > 2
 
 
+def test_captured_city_gives_its_vault_items(default_game):
+    """Original .sg CMidVillage inventories go to the hero on capture (docs/DEFAULT_MAP.md)."""
+    env, initial, step, _ = default_game
+    names, items = [c['name'] for c in DEFAULT['cities']], env.item_rules
+    assert [c['items'] for c in DEFAULT['cities']] == [  # Brigham's Port: the Legions' chalice event
+        {}, {'unholy_chalice': 1}, {'staff_of_holiness': 1}, {'boots_speed': 1}, {'zombie_talisman': 1}]
+    polonis, boots = names.index('Порт Полонис'), items.keys.index('boots_speed')
+    city = DEFAULT['cities'][polonis]['position']
+    blocked = env.territory.blocked_grid.reshape(50, 50)
+    direction, (dr, dc) = next((i, d) for i, d in enumerate(DIRECTIONS)
+                               if not blocked[city[0]-d[0], city[1]-d[1]])
+    near = initial.replace(position=jnp.array([city[0]-dr, city[1]-dc], jnp.int32),
+                           alive=initial.alive & ~env.territory.city_enemies[polonis])
+    entered, _ = step(near, jnp.int32(direction))
+    assert entered.city_owned[polonis] and not entered.done  # one of the two goal cities
+    assert entered.last_item_loot[boots] == 1 and entered.item_inventory.tolist().count(boots) == 1
+    # An owned city's vault is empty: entering it again adds nothing.
+    again, _ = step(near.replace(city_owned=entered.city_owned, item_inventory=entered.item_inventory),
+                    jnp.int32(direction))
+    assert again.last_item_loot[boots] == 0 and again.item_inventory.tolist().count(boots) == 1
+
+
 def test_without_objective_cities_the_capital_guard_is_not_a_goal():
     env = NumberGrid(map_config={**DEFAULT, 'cities': [dict(c, objective=False) for c in DEFAULT['cities']]})
     only_guard = jnp.zeros(len(DEFAULT['opponent_positions']), bool).at[GUARD].set(True)
@@ -201,8 +229,8 @@ def test_reference_hero_skills(default_game):
     """docs/HERO_SKILLS.md: Pathfinding, the warrior's Might at 9, Weapon Master at 12, equipment lore."""
     env, initial, step, _ = default_game
     progression, hero = env.progression, int(initial.unit_ids[1])
-    row, plain = progression.rows[hero], progression.ids['g000uu0019']
-    assert row['key'] == 'g000uu0019' and hero != plain  # the catalogue row keeps no Might
+    row, plain = progression.rows[hero], progression.ids['duke']
+    assert row['key'] == 'duke' and hero != plain  # the catalogue row keeps no Might
     assert [b['level'] for b in row['level_bonuses']] == [4, 5, 9, 13, 14, 15]
     assert [s['level'] for s in row['hero_skills']] == list(range(1, 16))
     assert row['hero_skills'][8]['key'] == 'might' and row['hero_skills'][0]['key'] == 'artifact_knowledge'

@@ -92,7 +92,7 @@ class RuinRules:
             state = self.items.collect_ruins(state,collected)
         return state.replace(ruin_looted=state.ruin_looted|collected,
             last_ruin=jnp.where(jnp.any(collected),jnp.argmax(collected),-1).astype(jnp.int32),
-            potions=state.potions+loot,last_loot=loot,
+            potions=state.potions+loot,last_loot=state.last_loot+loot,
             gold=add_resource(state.gold,jnp.sum(jnp.where(collected,self.gold,0)))), .25*jnp.any(collected)
 
     def observation(self, state):

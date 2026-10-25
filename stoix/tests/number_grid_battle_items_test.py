@@ -89,7 +89,8 @@ def test_equip_needs_access_and_happens_once_per_day(default_game):
     healing = env.potion_rules.keys.index('healing')
     tome = env.item_rules.keys.index('tome_arcanum')
     stocked = owned(env, initial, 'vampire_orb', 'zombie_talisman', 'tome_arcanum')
-    stocked = stocked.replace(potions=initial.potions.at[healing].set(1))
+    # Only one healing potion: Default otherwise starts with the capital's potions.
+    stocked = stocked.replace(potions=jnp.zeros_like(initial.potions).at[healing].set(1))
     # Potions need no lore; Tome of Arcanum allows orbs, level 10 (sorcery lore) everything.
     assert allowed(mask(stocked), rules.equip_start, rules.use_start) == ['equip_healing']
     book = stocked.replace(equipped=stocked.equipped.at[3].set(tome))
@@ -127,7 +128,7 @@ def item_battle(default_game):
     assert battle.in_battle and battle.enemy == 11
     battle = owned(env, battle, 'orb_of_life', 'zombie_talisman')
     return slots(env, battle, 'orb_of_life', 'zombie_talisman').replace(
-        actor=jnp.int32(1), hp=battle.hp.at[0].set(0))  # the hero acts; Squire 0 has fallen
+        actor=jnp.int32(1), hp=battle.hp.at[0].set(0))  # the hero acts; Possessed 0 has fallen
 
 
 @pytest.mark.core
@@ -138,10 +139,10 @@ def test_hero_revives_and_summons_on_its_turn(default_game, item_battle):
     assert allowed(mask(battle), rules.use_start, rules.end) == [
         'item1_ally_0', 'item2_ally_0', 'item2_ally_3', 'item2_ally_5']
     assert not jnp.any(mask(battle.replace(actor=jnp.int32(0)))[rules.use_start:rules.end])  # hero only
-    # Orb of Life: 50% HP, the orb leaves the inventory, the turn is spent.
+    # Orb of Life: 50% of the Possessed's 120 HP, the orb leaves the inventory, the turn is spent.
     revived, ts = step(battle, jnp.int32(NAMES.index('item1_ally_0')))
     assert ts.extras['campaign_events'][CAMPAIGN_FIELDS.index('potions_used')] == 0  # an orb, not Life Potion
-    assert revived.hp[0] == 50 and revived.last_event == BATTLE_ITEM and revived.actor != 1
+    assert revived.hp[0] == 60 and revived.last_event == BATTLE_ITEM and revived.actor != 1
     assert revived.battle_items.tolist() == [-1, rules.keys.index('zombie_talisman')]
     assert env.item_rules.keys.index('orb_of_life') not in revived.item_inventory.tolist()
     # Zombie Talisman: a summon owned by the hero (slot 1); one of five charges, once per battle.
@@ -153,7 +154,7 @@ def test_hero_revives_and_summons_on_its_turn(default_game, item_battle):
     # The mask and step share one predicate: a masked item action changes nothing.
     rejected, _ = step(battle, jnp.int32(NAMES.index('item1_enemy_0')))
     assert rejected.actor == 1 and rejected.battle_items.tolist() == battle.battle_items.tolist()
-    # Victory: the summon leaves, the fallen Squire stays dead, the talisman keeps 4 charges.
+    # Victory: the summon leaves, the fallen Possessed stays dead, the talisman keeps 4 charges.
     won, _ = step(again.replace(hp=again.hp.at[6:].set(0)), jnp.int32(DEFEND))
     for _ in range(6):
         if won.in_battle:
@@ -202,9 +203,24 @@ def test_battle_items_cannot_revive_summons(default_game, item_battle, item):
     assert mask(wounded)[action]
 
 
+@pytest.fixture(scope='module')
+def empire_item_battle():
+    """Default's geometry with the Empire: Patriarch rules exist only when the party can field one."""
+    from stoix.envs.number_grid import NumberGrid
+    env = NumberGrid(map_config={**DEFAULT, 'faction': 'empire'})
+    initial, _ = compiled_method(env, 'reset')(jax.random.PRNGKey(42))
+    step, mask = compiled_method(env, 'step'), compiled_method(env, 'action_mask')
+    battle, _ = step(initial.replace(position=jnp.array([28, 7], jnp.int32)), jnp.int32(NE))
+    assert battle.in_battle and battle.enemy == 11
+    battle = owned(env, battle, 'orb_of_life', 'zombie_talisman')
+    battle = slots(env, battle, 'orb_of_life', 'zombie_talisman').replace(
+        actor=jnp.int32(1), hp=battle.hp.at[0].set(0))
+    return env, step, mask, battle
+
+
 @pytest.mark.parametrize('owner,map_summon', [(3, False), (4, False), (-1, True)])
-def test_patriarch_cannot_revive_any_summon(default_game, item_battle, owner, map_summon):
-    env, _, step, mask = default_game
+def test_patriarch_cannot_revive_any_summon(empire_item_battle, owner, map_summon):
+    env, step, mask, item_battle = empire_item_battle
     ids = env.progression.ids
     patriarch, zombie = ids['patriarch'], ids['g000uu0087']
     state = item_battle.replace(actor=jnp.int32(4),
@@ -250,7 +266,7 @@ def test_item_summon_preserves_escaped_fighter_at_battle_end(default_game, item_
                                    battle_xp=jnp.array([0, 100], jnp.int32))
         result = finish(step, ending)
     else:
-        # Every visible ally is dead, but the escaped Squire is still alive.
+        # Every visible ally is dead, but the escaped Possessed is still alive.
         ending = summoned.replace(actor=jnp.int32(1), hp=summoned.hp.at[:6].set(0))
         result = finish(step, ending, CONTINUE)
         assert not result.lost and not result.done
@@ -412,11 +428,10 @@ def test_leader_death_keeps_slots_until_end_and_same_battle_revival_keeps_them(d
     assert out.hp[1] > 0
     np.testing.assert_array_equal(out.battle_items, battle.battle_items)
     np.testing.assert_array_equal(out.battle_item_charges, battle.battle_item_charges)
-    # With a dead leader the post-victory healing phase still belongs to this battle.
-    healing, _ = step(battle.replace(hp=battle.hp.at[6:].set(0)), jnp.int32(DEFEND))
-    assert healing.in_battle and healing.post_victory == 1
-    np.testing.assert_array_equal(healing.battle_items, battle.battle_items)
-    ended = finish(step, healing, WAIT)
+    # The Legions party has no healer: victory with a dead leader ends the battle at once,
+    # and the slots return to the inventory.
+    ended, _ = step(battle.replace(hp=battle.hp.at[6:].set(0)), jnp.int32(DEFEND))
+    assert not ended.in_battle and ended.post_victory == 0
     assert ended.battle_items.tolist() == [-1, -1]
 
 
@@ -561,7 +576,7 @@ def test_reference_item_effects(effects):
     nosferat = lost('orb_of_nosferat')
     assert nosferat[6:] == [25, 25, 25, 25, 0, 25] and int(info['immune'][row['orb_of_nosferat']]) == 1 << 10
     assert hp[row['orb_of_nosferat'], 1] == 50+125//2
-    assert hp[row['orb_of_elder_vampires'], 0] == 100  # the hero is unhurt: the party shares the pool
+    assert hp[row['orb_of_elder_vampires'], 0] == 120  # the hero is unhurt: the Possessed takes the pool
     # DOTs: single and party, long effects with round-age recovery, the Templar ward blocks water/fire.
     for key, field, amount, targets in (('orb_of_poison', 'poison', 20, [7]), ('orb_of_frost', 'water', 10, [6, 7, 8, 10, 11]),
                                         ('orb_of_flame', 'burn', 15, [6, 7, 8, 10, 11])):
@@ -573,7 +588,7 @@ def test_reference_item_effects(effects):
     assert after.powerup_long[row['orb_of_vigor'], 0]
     rage = row['orb_of_rage']
     assert after.turn_phase[rage, 0] == 0 and after.bonus_turns[rage, 0] == 1 and info['extra'][rage, 0]
-    assert hp[row['orb_of_healing'], 0] == 100 and hp[row['orb_of_restoration'], 0] == 40
+    assert hp[row['orb_of_healing'], 0] == 110 and hp[row['orb_of_restoration'], 0] == 40  # +100 / +30
     assert after.long_paralyzed[row['orb_of_fear'], 7] and after.retreating[row['talisman_of_nightmare'], 7]
     assert after.imp[row['orb_of_witches'], 8]
     lycan = row['orb_of_lycanthropy']
@@ -584,7 +599,7 @@ def test_reference_item_effects(effects):
     summon = row['elf_lord_orb']
     assert after.unit_ids[summon, 3] == ids['g000uu8009'] and after.summon_owner[summon, 3] == 1  # the hero
     life = row['orb_of_life']
-    assert hp[life, 0] == 50 and after.battle_items[life].tolist() == [-1, -1]
+    assert hp[life, 0] == 60 and after.battle_items[life].tolist() == [-1, -1]
     # Talismans spend one charge; orbs leave the slot.
     assert after.battle_item_charges[row['talisman_of_thunder']].tolist() == [4, 0]
     assert after.battle_items[row['orb_of_fire']].tolist() == [-1, -1]

@@ -50,7 +50,8 @@ def test_features_include_all_recruits_promotions_and_summon_pools(faction):
 
 
 def test_default_hired_apprentice_promotes_and_summons():
-    env = NumberGrid(map_config=load_map('default'))
+    # The Empire's Apprentice line on Default's geometry; Default itself plays the Legions.
+    env = NumberGrid(map_config={**load_map('default'), 'faction': 'empire'})
     rules = env.progression
     assert env.has_summons
     state, _ = compiled_method(env, 'reset')(jax.random.PRNGKey(42))

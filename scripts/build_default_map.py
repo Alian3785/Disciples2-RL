@@ -1,9 +1,10 @@
 """Build maps/default.json from the Python reference Default map.
 
 Source: <reference>/Big_map/maps/default/layout.json (a reset(seed=0) snapshot of
-maps/default.py) plus the shop stock in campaign_env_data.py. Reference (x, y)
+maps/default.py) plus the shop stock in campaign_env_data.py and the capital and
+city inventories of the original A Return To Simpler Times.sg. Reference (x, y)
 becomes JAX [y+1, x+1]: the JAX grid adds an impassable outer ring, so 48x48
-becomes 50x50. Rule flags are copied from number_grid_map.json. See
+becomes 50x50. Rule flags, except the ruler, are copied from number_grid_map.json. See
 docs/DEFAULT_MAP.md for every difference from the reference.
 
     python scripts/build_default_map.py --reference "C:/Disciples 2 python reference"
@@ -37,6 +38,14 @@ ALAR = {'life': 10, 'healing': 10, 'restoration': 10, 'ointment': 10, 'might': 1
         'fire_ward': 1, 'earth_ward': 1, 'water_ward': 1, 'air_ward': 1, 'celerity': 1}
 # User request: one artifact for sale as well (docs/MAP_SITES.md#предметы-у-торговца).
 ALAR_ITEMS = {'runestone': 1}
+# Original Big_map/A Return To Simpler Times.sg: both CCapital inventories hold
+# 3x G000IG0005, 3x G000IG0006 and 3x G000IG0001; layout.json omits them.
+CAPITAL_POTIONS = {'healing': 3, 'restoration': 3, 'life': 3}
+# Same file, CMidVillage inventories S001FT0004-6: G000IG6003, G000IG8003, G000IG9107.
+# Brigham's Port (S001FT0003): event S001EV0025 gives the Legions G000IG3002 on capture;
+# user request 2026-10-25: any faction gets it, like a vault item.
+CITY_ITEMS = {'Порт Бирмингем': {'unholy_chalice': 1}, 'Кордилия': {'staff_of_holiness': 1},
+              'Порт Полонис': {'boots_speed': 1}, 'Соругирилла': {'zombie_talisman': 1}}
 # Requested shop: Armageddon and the strongest Ent summon (Verdant), 1000 gold each.
 SPELLS = [{'spell': 'g000ss0019', 'price': 1000, 'stock': 1},
           {'spell': 'g000ss0117', 'price': 1000, 'stock': 1}]
@@ -125,7 +134,8 @@ def build(layout):
         agent_number=1,
         opponent_positions=[cell(e['position']) for e in stacks],
         opponent_numbers=[1]*len(stacks),
-        **{key: CURRENT[key] for key in RULES},
+        # Default sets its own ruler below; the other builders keep copying it.
+        **{key: CURRENT[key] for key in RULES if key != 'lord_type'},
         # Reference hero battle slots: orbs, talismans and battle potions (docs/BATTLE_ITEMS.md).
         battle_items=True,
         # Reference skill ladder: Pathfinding, Weapon Master, the lord's Might (docs/HERO_SKILLS.md).
@@ -136,10 +146,15 @@ def build(layout):
         hero_hp=150,
         enemy_units=[len(u) for u in units],
         enemy_hp=[max(u) for u in units],
-        # No hero_roster: faction and lord_type choose the reference party (docs/STARTING_PARTIES.md).
-        faction='empire',
+        # No hero_roster: faction and lord_type choose the ruler's party (docs/STARTING_PARTIES.md).
+        # User request 2026-10-25: every Default mode plays the Legions of the Damned. In the
+        # original .sg the hero's western capital S001FT0001 belongs to S001PL0002 (G000RR0002,
+        # Legions); the eastern one with Mizrael to the Empire. The reference played the Empire.
+        faction='legions',
+        # The reference's warrior ruler; fixed here because the current map's own ruler is a mage.
+        lord_type='warrior',
         enemy_rosters=rosters,
-        initial_potions={},
+        initial_potions=CAPITAL_POTIONS,
         initial_items={},
         chests=chests,
         merchants=[site('T1', potions=ALAR, items=ALAR_ITEMS), site('T2', potions={})],
@@ -149,7 +164,8 @@ def build(layout):
                                         {'unit': 'goblin_archer', 'stock': 1}])],
         spell_shop=site('M1', spells=SPELLS),
         # Reference goal "cities": capture FINAL_OBJECTIVE_CITIES (Порт Полонис, Соругирилла).
-        cities=[dict(name=c['name'], position=cell(c['position']), level=c['level'], objective=c['objective'])
+        cities=[dict(name=c['name'], position=cell(c['position']), level=c['level'], objective=c['objective'],
+                     items=CITY_ITEMS.get(c['name'], {}))
                 for c in layout['cities']],
         mines=([dict(kind='gold', position=cell(p)) for p in layout['gold_mines']]
                + [dict(kind=m['kind'], position=cell(m['position'])) for m in layout['mana']]),
@@ -167,6 +183,8 @@ def build(layout):
     game_map['equipment_requires_skills'] = True
     if game_map['opponent_positions'][index[CAPITAL_GUARD]] != game_map['enemy_capitals'][0]['position']:
         raise ValueError('Capital guard is not on the capital')
+    if set(CITY_ITEMS) - {c['name'] for c in layout['cities']}:
+        raise ValueError('City items name a city missing from the layout')
     return game_map
 
 

@@ -10,7 +10,7 @@ import jax
 import jax.numpy as jnp
 import pytest
 
-from stoix.envs.number_grid import MAP, REST
+from stoix.envs.number_grid import MAP, action_names
 from stoix.envs.number_grid_buildings import BuildingRules
 from stoix.envs.number_grid_casting import SPELL_CAST, SpellCastRules, cast_action_names
 from stoix.envs.number_grid_items import ITEM_BY_KEY, SCROLL, STAFF, ItemRules
@@ -136,7 +136,7 @@ def test_default_map_hires_reader_and_reads_scroll(default_game):
     env, initial, step, mask = default_game
     rules = env.casting
     scroll = env.item_rules.keys.index('mind_ward_scroll')
-    row = [r['id'] for r in rules.rows].index('g000ss0011')  # the Empire's own ward: its book row
+    row = [r['id'] for r in rules.rows].index('g000ss0011')  # the Empire's ward: item-only for the Legions
     state = initial.replace(item_inventory=initial.item_inventory.at[0].set(scroll), gold=jnp.int32(SCROLL_MAGE_COST))
     assert not initial.scroll_magic and mask(state)[rules.hire_action] and not mask(state)[rules.item_start]
     locked, _ = step(state, jnp.int32(rules.item_start))
@@ -149,7 +149,6 @@ def test_default_map_hires_reader_and_reads_scroll(default_game):
     assert ward.item_inventory[0] == -1 and ward.spell_effects == 1 << row and ward.last_event == SPELL_CAST
     assert ward.last_cast_item == 0 and (ward.mana == hired.mana).all()
     assert float(ts.reward) == pytest.approx(rules.reward-env.step_cost)
-    # The same ward from the book does not stack until the next rest.
-    learned = ward.replace(learned_spells=jnp.uint32(1 << row), mana=MANA)
-    assert not mask(learned)[rules.start+row] and mask(step(learned, jnp.int32(REST))[0])[rules.start+row]
+    # Not in the Legions book: no research or book cast; only the scroll knows it.
+    assert row >= rules.book_count and 'learn_g000ss0011' not in action_names(env.map_config)
     assert json.dumps(rules.metadata)

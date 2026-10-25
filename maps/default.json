@@ -102,7 +102,6 @@
   "equipment_requires_skills": true,
   "faction_recruitment": true,
   "territory": true,
-  "lord_type": "warrior",
   "spell_research": true,
   "spell_casting": true,
   "unit_swaps": true,
@@ -113,7 +112,8 @@
   "hero_hp": 150,
   "enemy_units": [1, 1, 1, 1, 1, 1, 5, 1, 3, 1, 2, 3, 3, 1, 3, 3, 4, 1, 2, 4, 2, 3, 1, 2, 2, 2, 3, 3, 3, 1, 1, 3, 4, 4, 2, 1, 3, 3, 2, 3, 2, 1, 2, 2, 1, 1, 4, 2, 1, 1, 3, 1, 2, 1, 6, 2, 3, 1, 1, 1, 2, 4, 1, 2, 2, 3, 1, 2, 2, 3, 3, 4, 2, 2, 1],
   "enemy_hp": [180, 300, 220, 420, 220, 350, 120, 300, 160, 180, 135, 50, 170, 220, 185, 50, 120, 300, 170, 120, 170, 250, 180, 180, 140, 200, 100, 200, 100, 220, 600, 225, 150, 120, 225, 210, 150, 120, 250, 150, 150, 65, 160, 150, 110, 370, 120, 140, 150, 170, 40, 200, 100, 300, 270, 120, 120, 170, 170, 170, 170, 170, 65, 100, 150, 270, 155, 170, 170, 200, 225, 170, 120, 200, 900],
-  "faction": "empire",
+  "faction": "legions",
+  "lord_type": "warrior",
   "enemy_rosters": [
     [null, "g000uu5039", null, null, null, null],
     [null, "g000uu5115", null, null, null, null],
@@ -191,7 +191,7 @@
     [null, "g000uu0091", null, null, "g000uu0084", null],
     [null, null, null, null, "g000uu3001", null]
   ],
-  "initial_potions": {},
+  "initial_potions": {"healing": 3, "restoration": 3, "life": 3},
   "initial_items": {},
   "chests": [
     {"position": [47, 29], "potions": {}, "items": {"banner_war": 1}},
@@ -224,11 +224,11 @@
   ],
   "spell_shop": {"name": "Лавка заклинаний Маллавиена", "position": [3, 43], "spells": [{"spell": "g000ss0019", "price": 1000, "stock": 1}, {"spell": "g000ss0117", "price": 1000, "stock": 1}]},
   "cities": [
-    {"name": "Стагириас", "position": [5, 7], "level": 1, "objective": false},
-    {"name": "Порт Бирмингем", "position": [41, 5], "level": 1, "objective": false},
-    {"name": "Кордилия", "position": [10, 41], "level": 2, "objective": false},
-    {"name": "Порт Полонис", "position": [34, 29], "level": 2, "objective": true},
-    {"name": "Соругирилла", "position": [26, 41], "level": 2, "objective": true}
+    {"name": "Стагириас", "position": [5, 7], "level": 1, "objective": false, "items": {}},
+    {"name": "Порт Бирмингем", "position": [41, 5], "level": 1, "objective": false, "items": {"unholy_chalice": 1}},
+    {"name": "Кордилия", "position": [10, 41], "level": 2, "objective": false, "items": {"staff_of_holiness": 1}},
+    {"name": "Порт Полонис", "position": [34, 29], "level": 2, "objective": true, "items": {"boots_speed": 1}},
+    {"name": "Соругирилла", "position": [26, 41], "level": 2, "objective": true, "items": {"zombie_talisman": 1}}
   ],
   "mines": [
     {"kind": "gold", "position": [32, 3]},
