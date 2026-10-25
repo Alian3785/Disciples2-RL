@@ -203,9 +203,24 @@ def test_battle_items_cannot_revive_summons(default_game, item_battle, item):
     assert mask(wounded)[action]
 
 
+@pytest.fixture(scope='module')
+def empire_item_battle():
+    """Default's geometry with the Empire: Patriarch rules exist only when the party can field one."""
+    from stoix.envs.number_grid import NumberGrid
+    env = NumberGrid(map_config={**DEFAULT, 'faction': 'empire'})
+    initial, _ = compiled_method(env, 'reset')(jax.random.PRNGKey(42))
+    step, mask = compiled_method(env, 'step'), compiled_method(env, 'action_mask')
+    battle, _ = step(initial.replace(position=jnp.array([28, 7], jnp.int32)), jnp.int32(NE))
+    assert battle.in_battle and battle.enemy == 11
+    battle = owned(env, battle, 'orb_of_life', 'zombie_talisman')
+    battle = slots(env, battle, 'orb_of_life', 'zombie_talisman').replace(
+        actor=jnp.int32(1), hp=battle.hp.at[0].set(0))
+    return env, step, mask, battle
+
+
 @pytest.mark.parametrize('owner,map_summon', [(3, False), (4, False), (-1, True)])
-def test_patriarch_cannot_revive_any_summon(default_game, item_battle, owner, map_summon):
-    env, _, step, mask = default_game
+def test_patriarch_cannot_revive_any_summon(empire_item_battle, owner, map_summon):
+    env, step, mask, item_battle = empire_item_battle
     ids = env.progression.ids
     patriarch, zombie = ids['patriarch'], ids['g000uu0087']
     state = item_battle.replace(actor=jnp.int32(4),
