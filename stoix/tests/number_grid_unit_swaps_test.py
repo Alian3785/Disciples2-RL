@@ -133,9 +133,10 @@ def test_a_big_unit_moves_its_whole_column(current_game):
 
 
 def test_default_map_and_manual_game(default_game, human_service):
+    """Default's swap actions move the hero's equipment role; the manual game uses the same pairs."""
     env, initial, step, mask = default_game
     rules = env.unit_swaps
-    assert rules.start == 256 and rules.pairs == swap_pairs(DEFAULT_PARTY)
+    assert rules.start == 291 and rules.pairs == swap_pairs(DEFAULT_PARTY)
     hero, cultist = int(initial.unit_ids[1]), int(initial.unit_ids[4])  # the hero has its own skill row
     assert env.equipment_heroes[hero] and env._equipment_hero(initial) == 1
     swapped, ts = step(initial, jnp.int32(rules.start+rules.pairs.index((1, 4))))

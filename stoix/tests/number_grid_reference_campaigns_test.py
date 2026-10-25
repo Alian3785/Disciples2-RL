@@ -91,6 +91,7 @@ def test_timeout_penalty_is_not_repeated(fortress):
 
 
 def test_siege_and_charmed_child_starting_rosters_and_goals():
+    """Siege and Charmed Child parties and goals; S117 capital potions and original garrisons."""
     siege = load_map('siege_train')
     assert siege['hero_roster'] == ['possessed', 'duke', 'possessed', None, 'cultist', None]
     assert siege['reference_enemy_ids'][siege['objective_enemy']] == 100
@@ -100,3 +101,8 @@ def test_siege_and_charmed_child_starting_rosters_and_goals():
     assert charmed_child['hero_roster'][0] == 'reference_g000uu0036'
     assert len(charmed_child['enemy_rosters']) == 71
     assert sum(c['objective'] for c in charmed_child['cities']) == 3
+    # Installed S117: the capital vault's potions; the Empire capital's Cleric and Hasser's Keep's Holy Avenger.
+    assert charmed_child['initial_potions'] == {'restoration': 3, 'life': 1}
+    assert charmed_child['enemy_rosters'][4][4] == 'cleric' and charmed_child['enemy_rosters'][7][5] == 'blade_master'
+    assert charmed_child['enemy_hp'][7] == 250 and not any(
+        key in r for r in charmed_child['enemy_rosters'] for key in ('priest', 'defender_of_faith'))

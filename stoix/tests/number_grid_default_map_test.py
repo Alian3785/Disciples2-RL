@@ -7,7 +7,7 @@ from stoix.envs.number_grid import DEFEND, NumberGrid, REST, WAIT, action_names,
 from stoix.envs.number_grid_battle_items import battle_item_action_names
 from stoix.envs.number_grid_combat import DAMAGE
 from stoix.envs.number_grid_lords import STARTING_PARTIES
-from stoix.envs.number_grid_casting import SPELL_CAST, SPELL_KILL, SUMMON_CAST
+from stoix.envs.number_grid_casting import SPELL_CAST, SPELL_KILL
 from stoix.envs.number_grid_progression import ProgressionRules
 from stoix.envs.number_grid_sites import BOUGHT, SPELL_BOUGHT, merchant_items
 from stoix.envs.number_grid_territory import CAPITAL_ARMOR
@@ -19,33 +19,56 @@ pytestmark = pytest.mark.core
 
 DEFAULT = load_map('default')
 SHOP = (4, 46)  # spell shop at [3, 43], approach offset (1, 3)
-ARMAGEDDON, VERDANT = 'g000ss0019', 'g000ss0117'
+# Twin Island Mages in the user's saves of the original: Ice Pillar, Plague, Stone Rain, Healing.
+TOWER = ('g000ss0028', 'g000ss0067', 'g000ss0070', 'g000ss0029')
+PLAGUE = 'g000ss0067'
 GUARD, DRAGON = 74, 30  # reference enemy ids 75 (Myzrael) and 31 (Green Dragon)
 DIRECTIONS = ((-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1))
 
 
 def test_default_map_layout_and_actions(default_game):
+    """Sizes, objects, action order, the original loot and units, and the Legions warrior start."""
     env, state, _, _ = default_game
     names = action_names(DEFAULT)
     assert DEFAULT['size'] == 50 and len(DEFAULT['opponent_positions']) == 75
-    assert env.num_actions == len(names) == 271 and env.observation_size == 2602
+    assert env.num_actions == len(names) == 306 and env.observation_size == 2661
     assert env.observation_version == 44 and state.item_charges_spent.shape == state.item_inventory.shape
     assert [s['kind'] for s in env.site_rules.sites] == [
         'merchant', 'merchant', 'trainer', 'mercenary', 'mercenary', 'spell_shop']
     assert env.territory.count == 5 and len(env.territory.mines) == 12 and env.ruins.count == 5
-    assert len(DEFAULT['chests']) == 18 and env.item_rules.capacity == 15+1+4  # loot + Alar's Runestone + city items
+    # Original .sg: 17 bags; the Zombie Talisman comes only from Соругирилла's vault.
+    assert len(DEFAULT['chests']) == 17 and env.item_rules.capacity == 14+1+4  # loot + Alar's Runestone + city items
+    assert not any('zombie_talisman' in c['items'] for c in DEFAULT['chests'])
+    # Same file: five Undead Warlocks (death attack), not the Legions Sorcerer ('warlock' key, fire).
+    assert sum('reference_g000uu0081' in r for r in DEFAULT['enemy_rosters']) == 5
+    assert not any('warlock' in r for r in DEFAULT['enemy_rosters'])
+    assert env.progression.rows[env.progression.ids['reference_g000uu0081']]['attack_type'] == 'death'
+    # Neutral Elf Rangers and Centaur Lancer, not the Elves' Scout and Lancer (stronger 165-HP centaur).
+    elves = DEFAULT['enemy_rosters'][63:65]
+    assert [[r[1], r[4]] for r in elves] == [['g000uu5005', 'g000uu5009'], ['g000uu5111', 'g000uu5009']]
+    assert DEFAULT['enemy_hp'][64] == 165 and not any(
+        key in r for r in DEFAULT['enemy_rosters'] for key in ('reference_g000uu8018', 'reference_g000uu8014'))
+    # Three chests and the Orc's stack stand on water, as in the original.
+    water = DEFAULT['terrain']['water']
+    assert DEFAULT['allow_water_objects'] and all(p in water for p in ([39, 37], [18, 44], [11, 35], [43, 15]))
     shop = env.site_rules
-    assert names[shop.spell_start:shop.end] == ('buy_spell_'+ARMAGEDDON, 'buy_spell_'+VERDANT)
-    # Legions book (17), both shop spells, then the Empire ward and healing known only from items.
-    assert names[env.casting.start:env.casting.hire_action][-1] == 'cast_'+VERDANT and env.casting.count == 21
+    assert names[shop.spell_start:shop.end] == tuple('buy_spell_'+spell for spell in TOWER)
+    # Legions book (17), the four tower spells, then the Empire ward and healing known only from items.
+    assert names[env.casting.start:env.casting.hire_action][-1] == 'cast_'+TOWER[-1] and env.casting.count == 23
     assert names[env.casting.hire_action:env.casting.end] == (
         'hire_scroll_mage', 'cast_mind_ward_scroll', 'cast_staff_of_holiness')  # staff: Кордилия's vault
     assert names[env.casting.end:env.unit_swaps.start] == battle_item_action_names(DEFAULT)  # docs/BATTLE_ITEMS.md
     assert names[env.unit_swaps.start:] == unit_swap_action_names(env.map_config)  # docs/UNIT_SWAPS.md
-    # Alar sells the reference potions, then the requested artifact; Tralar only buys valuables.
+    # Alar sells the reference potions, then the requested artifact; Tralar the original potions.
+    alar, tralar = DEFAULT['merchants']
     assert names[shop.buy_start:shop.train_start] == tuple(
-        'buy_'+k for k in [*DEFAULT['merchants'][0]['potions'], *DEFAULT['merchants'][0]['items']])
-    assert [int(i) for i in env.recruitment.offer_sites] == [3, 4, 4]
+        'buy_0_'+k for k in [*alar['potions'], *alar['items']]) + tuple('buy_1_'+k for k in tralar['potions'])
+    assert tralar['potions'] == {'life': 10, 'healing': 10, 'restoration': 10, 'ointment': 10,
+                                 'accuracy': 1, 'swiftness': 1, 'vigor': 1, 'bark': 1}
+    # Lytharos Camp: Barbarian Warrior; Erarick's Camp: a Wolf (original saves).
+    assert [int(i) for i in env.recruitment.offer_sites] == [3, 4]
+    assert [n for n in names if n.startswith('hire_mercenary_')] == [
+        'hire_mercenary_g000uu5040', 'hire_mercenary_g000uu5039']
     assert DEFAULT['enemy_rosters'][GUARD] == [None]*4+['g000uu3001', None]
     assert DEFAULT['enemy_capitals'][0]['position'] == DEFAULT['opponent_positions'][GUARD] == [11, 27]
     assert [int(i) for i in jnp.flatnonzero(env.territory.capital_guards)] == [GUARD]
@@ -55,7 +78,7 @@ def test_default_map_layout_and_actions(default_game):
     assert 'hero_roster' not in DEFAULT and env.map_config['hero_roster'] == STARTING_PARTIES['legions']['warrior']
     assert [rows[i]['key'] if i else None for i in state.unit_ids[:6].tolist()] == env.map_config['hero_roster']
     assert state.position.tolist() == [28, 6]
-    assert int(state.gold) == 0 and state.spell_stock.tolist() == [1, 1]
+    assert int(state.gold) == 0 and state.spell_stock.tolist() == [1, 1, 1, 1]
 
 
 def test_alar_sells_an_artifact(default_game):
@@ -63,8 +86,9 @@ def test_alar_sells_an_artifact(default_game):
     env, initial, step, mask = default_game
     shop, items, names = env.site_rules, env.item_rules, action_names(DEFAULT)
     assert DEFAULT['merchants'][0]['items'] == {'runestone': 1}
-    buy = names.index('buy_runestone')
-    assert buy == shop.train_start-1 and shop.metadata['buy'][-1]['price'] == 500  # GItem.VALUE
+    buy = names.index('buy_0_runestone')  # Alar is merchant 0; Tralar sells too
+    offer = buy-shop.buy_start
+    assert offer == 10 and shop.metadata['buy'][offer]['price'] == 500  # GItem.VALUE
     alar, tralar = (jnp.array(site['interaction_tiles'][0], jnp.int32) for site in shop.sites[:2])
     rich = initial.replace(gold=jnp.int32(600))
     assert mask(rich.replace(position=alar))[buy]
@@ -73,7 +97,7 @@ def test_alar_sells_an_artifact(default_game):
     # The warrior wears artifacts at once: the purchase is equipped in the same step.
     bought, _ = step(rich.replace(position=alar), jnp.int32(buy))
     stone = items.keys.index('runestone')
-    assert bought.last_event == BOUGHT and bought.gold == 100 and bought.merchant_stock[-1] == 0
+    assert bought.last_event == BOUGHT and bought.gold == 100 and bought.merchant_stock[offer] == 0
     assert bought.item_inventory[0] == stone and bought.equipped[0] == stone
     assert not mask(bought.replace(gold=jnp.int32(600)))[buy]  # one copy
     again, _ = step(bought.replace(gold=jnp.int32(600)), jnp.int32(buy))
@@ -91,36 +115,30 @@ def test_merchants_sell_any_priced_item_but_valuables():
             merchant_items({'items': stock})
 
 
-def test_spell_shop_sells_armageddon_and_verdant(default_game):
+def test_spell_shop_sells_the_original_tower_spells(default_game):
+    """Installed game (the user's saves, turn 11): Twin Island Mages sell four level II spells, 400 each."""
     env, initial, step, mask = default_game
     shop, casting = env.site_rules, env.casting
     ids = [row['id'] for row in casting.rows]
-    armageddon, verdant = ids.index(ARMAGEDDON), ids.index(VERDANT)
-    at_shop = initial.replace(position=jnp.array(SHOP, jnp.int32), gold=jnp.int32(1500))
-    assert mask(at_shop)[shop.spell_start] and mask(at_shop)[shop.spell_start+1]
-    assert not mask(initial.replace(gold=jnp.int32(1500)))[shop.spell_start]
-    bought, _ = step(at_shop, jnp.int32(shop.spell_start))
-    assert bought.last_event == SPELL_BOUGHT and bought.gold == 500
-    assert bought.spell_stock.tolist() == [0, 1] and bought.learned_spells == 1 << armageddon
-    assert not jnp.any(mask(bought)[shop.spell_start:shop.end])  # sold out / 500 < 1000
-    # Not in the Legions book, so no research; a bought copy is cast by any lord at full price.
-    cast = casting.start+armageddon
+    assert [o['price'] for o in shop.spell_offers] == [400]*4  # Gspells BUY_C
+    plague = ids.index(PLAGUE)
+    buy = jnp.int32(shop.spell_start+TOWER.index(PLAGUE))
+    at_shop = initial.replace(position=jnp.array(SHOP, jnp.int32), gold=jnp.int32(400))
+    assert jnp.all(mask(at_shop)[shop.spell_start:shop.end])
+    assert not mask(at_shop.replace(gold=jnp.int32(399)))[buy]
+    assert not mask(initial.replace(gold=jnp.int32(400)))[buy]
+    bought, _ = step(at_shop, buy)
+    assert bought.last_event == SPELL_BOUGHT and bought.gold == 0
+    assert bought.spell_stock.tolist() == [1, 0, 1, 1] and bought.learned_spells == 1 << plague
+    assert not jnp.any(mask(bought)[shop.spell_start:shop.end])  # one copy, and 0 < 400 gold
+    # Plague is not in the Legions book, so no research; the bought copy costs 200 death mana.
+    cast = casting.start+plague
     assert not mask(bought)[cast]
-    armed = bought.replace(mana=jnp.array([70, 250, 80, 100, 0], jnp.int32))
+    armed = bought.replace(mana=jnp.array([0, 0, 200, 0, 0], jnp.int32))
     assert mask(armed)[cast]
     struck, _ = step(armed, jnp.int32(cast))
     assert struck.last_event in (SPELL_CAST, SPELL_KILL) and not jnp.any(struck.mana)
     assert struck.last_spell_target >= 0 and casting.field[struck.last_spell_target]
-    # Verdant: a foreign shop spell gets its own cast action, one cast per day.
-    second, _ = step(at_shop.replace(gold=jnp.int32(1000)), jnp.int32(shop.spell_start+1))
-    assert second.learned_spells == 1 << verdant and second.gold == 0
-    cast = casting.start+verdant
-    assert not mask(second.replace(mana=jnp.array([5000]*4+[0], jnp.int32)))[cast]
-    ready = second.replace(mana=jnp.array([0, 110, 80, 50, 250], jnp.int32))
-    assert mask(ready)[cast]
-    summoned, _ = step(ready, jnp.int32(cast))
-    assert summoned.last_event == SUMMON_CAST and summoned.in_battle and not jnp.any(summoned.mana)
-    assert [env.progression.rows[int(i)]['game_id'] for i in summoned.unit_ids[:6] if i] == ['g000uu8039']
 
 
 def test_capital_guard_armor_and_regeneration(default_game):
