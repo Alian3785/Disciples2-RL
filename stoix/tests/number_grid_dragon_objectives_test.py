@@ -10,7 +10,7 @@ import jax.numpy as jnp
 import pytest
 
 from stoix.envs.number_grid import DEFEND, REST, SHOOT, WAIT, NumberGrid, action_names, load_map
-from stoix.envs.number_grid_casting import CAST_REWARD, SPELL_KILL
+from stoix.envs.number_grid_casting import CAST_REWARD, SPELL_KILL, SUMMON
 from stoix.envs.number_grid_combat import ACCURACY, AREA, DAMAGE, HP, INITIATIVE
 from stoix.tests.number_grid_fixtures import compiled_method
 
@@ -34,7 +34,7 @@ def test_default_variants_keep_layout_and_original_dragon_profiles(dragon_game, 
         assert config[key] == base[key]
     assert config['opponent_positions'][DRAGON] == [47, 31]
     assert action_names(config) == action_names(base)
-    assert env.observation_size == 2602+(env.num_opponents+1 if blue else 0)
+    assert env.observation_size == 2718+(env.num_opponents+1 if blue else 0)
     assert config.get('army_victory_level_reward', 0.) == (5. if blue else 0.)
     assert config.get('army_victory_level_objective_only', False) == blue
     uid = env.progression.enemy_ids[DRAGON, 1]
@@ -88,7 +88,7 @@ def test_target_regenerates_fully_each_day(dragon_game):
 def test_map_spell_kill_finishes_without_cities_and_obeys_bonus_rule(dragon_game):
     """Reference test_blue_dragon_objective_reward.py: map_spell is ineligible for blue."""
     env, initial, step, mask = dragon_game
-    spell = next(i for i, row in enumerate(env.casting.rows) if row['id'] == 'g000ss0019')
+    spell = next(i for i, row in enumerate(env.casting.rows) if row['id'] == 'g000ss0067')  # tower Plague
     maximum = int(env.casting.enemy_max_hp(initial)[DRAGON, 1])
     state = initial.replace(position=jnp.array([46, 31], jnp.int32),
                             enemy_wounds=initial.enemy_wounds.at[DRAGON, 1].set(maximum-1),
@@ -115,7 +115,7 @@ def test_hero_and_summon_victories_finish_with_the_correct_bonus(dragon_game, su
     prepared = initial.replace(enemy=jnp.int32(DRAGON), position=jnp.array([46, 31], jnp.int32))
     actor = 1
     if summon:
-        spell = next(i for i, row in enumerate(env.casting.rows) if row['id'] == 'g000ss0117')
+        spell = next(i for i in range(env.casting.book_count) if int(env.casting.kinds[i]) == SUMMON)
         prepared = compiled_method(env.casting, '_summon')(
             prepared, jnp.bool_(True), jnp.int32(spell), jnp.int32(DRAGON))
         actor = int(env.casting.summon_slots[spell])

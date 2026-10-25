@@ -215,14 +215,14 @@
   ],
   "merchants": [
     {"name": "Лавка Алара", "position": [35, 22], "potions": {"life": 10, "healing": 10, "restoration": 10, "ointment": 10, "might": 1, "fire_ward": 1, "earth_ward": 1, "water_ward": 1, "air_ward": 1, "celerity": 1}, "items": {"runestone": 1}},
-    {"name": "Лавка Тралара", "position": [2, 37], "potions": {}}
+    {"name": "Лавка Тралара", "position": [2, 37], "potions": {"life": 10, "healing": 10, "restoration": 10, "ointment": 10, "accuracy": 1, "swiftness": 1, "vigor": 1, "bark": 1}}
   ],
   "trainer": {"name": "Тренировочный лагерь", "position": [31, 39]},
   "mercenaries": [
     {"name": "Лагерь северных варваров", "position": [43, 10], "roster": [{"unit": "g000uu5040", "stock": 1}]},
-    {"name": "Пустой лагерь наёмников", "position": [2, 16], "roster": [{"unit": "goblin", "stock": 1}, {"unit": "goblin_archer", "stock": 1}]}
+    {"name": "Лагерь Эрарика", "position": [2, 16], "roster": [{"unit": "g000uu5039", "stock": 1}]}
   ],
-  "spell_shop": {"name": "Лавка заклинаний Маллавиена", "position": [3, 43], "spells": [{"spell": "g000ss0019", "price": 1000, "stock": 1}, {"spell": "g000ss0117", "price": 1000, "stock": 1}]},
+  "spell_shop": {"name": "Лавка заклинаний Маллавиена", "position": [3, 43], "spells": [{"spell": "g000ss0028", "price": 400, "stock": 1}, {"spell": "g000ss0067", "price": 400, "stock": 1}, {"spell": "g000ss0070", "price": 400, "stock": 1}, {"spell": "g000ss0029", "price": 400, "stock": 1}]},
   "cities": [
     {"name": "Стагириас", "position": [5, 7], "level": 1, "objective": false, "items": {}},
     {"name": "Порт Бирмингем", "position": [41, 5], "level": 1, "objective": false, "items": {"unholy_chalice": 1}},

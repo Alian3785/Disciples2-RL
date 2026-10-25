@@ -32,12 +32,21 @@ ITEMS = {
     'Orb of Life': 'orb_of_life', 'Lich Orb': 'lich_orb',
     'Zombie Talisman': 'zombie_talisman', 'Mind ward scroll': 'mind_ward_scroll',
 }
-# campaign_env_data.py MERCHANT_BUY_ITEMS: the Default map has no per-site
-# table, so Алар sells all of it and Тралар sells nothing (campaign_env_map.py).
+# campaign_env_data.py MERCHANT_BUY_ITEMS, the same as Allar's Shop in the original.
 ALAR = {'life': 10, 'healing': 10, 'restoration': 10, 'ointment': 10, 'might': 1,
         'fire_ward': 1, 'earth_ward': 1, 'water_ward': 1, 'air_ward': 1, 'celerity': 1}
 # User request: one artifact for sale as well (docs/MAP_SITES.md#предметы-у-торговца).
 ALAR_ITEMS = {'runestone': 1}
+# Installed game, the user's saves of this scenario (SaveGame/12345.sg, turn 11). The
+# reference .sg, a modified Russian copy, leaves these three sites empty.
+# Tralar's Shop:
+TRALAR = {'life': 10, 'healing': 10, 'restoration': 10, 'ointment': 10,
+          'accuracy': 1, 'swiftness': 1, 'vigor': 1, 'bark': 1}
+# Erarick's Camp: a Wolf (G000UU5039), level 1.
+ERARICK = [{'unit': 'g000uu5039', 'stock': 1}]
+# Twin Island Mages: four level II spells at their Gspells BUY_C, 400 gold each.
+TOWER_SPELLS = [{'spell': spell, 'price': 400, 'stock': 1}
+                for spell in ('g000ss0028', 'g000ss0067', 'g000ss0070', 'g000ss0029')]
 # Original Big_map/A Return To Simpler Times.sg: both CCapital inventories hold
 # 3x G000IG0005, 3x G000IG0006 and 3x G000IG0001; layout.json omits them.
 CAPITAL_POTIONS = {'healing': 3, 'restoration': 3, 'life': 3}
@@ -46,7 +55,8 @@ CAPITAL_POTIONS = {'healing': 3, 'restoration': 3, 'life': 3}
 # user request 2026-10-25: any faction gets it, like a vault item.
 CITY_ITEMS = {'Порт Бирмингем': {'unholy_chalice': 1}, 'Кордилия': {'staff_of_holiness': 1},
               'Порт Полонис': {'boots_speed': 1}, 'Соругирилла': {'zombie_talisman': 1}}
-# Requested shop: Armageddon and the strongest Ent summon (Verdant), 1000 gold each.
+# Small's requested shop (build_small_map.py): Armageddon and the strongest Ent summon
+# (Verdant), 1000 gold each. Default sells TOWER_SPELLS since 2026-10-25.
 SPELLS = [{'spell': 'g000ss0019', 'price': 1000, 'stock': 1},
           {'spell': 'g000ss0117', 'price': 1000, 'stock': 1}]
 GREEN_DRAGON = 31  # campaign_env_magic.py: heals fully every day.
@@ -157,12 +167,12 @@ def build(layout):
         initial_potions=CAPITAL_POTIONS,
         initial_items={},
         chests=chests,
-        merchants=[site('T1', potions=ALAR, items=ALAR_ITEMS), site('T2', potions={})],
+        merchants=[site('T1', potions=ALAR, items=ALAR_ITEMS), site('T2', potions=TRALAR)],
         trainer=site('U1'),
+        # The reference calls H2 an empty camp; the original Erarick's Camp hires a Wolf.
         mercenaries=[site('H1', roster=[{'unit': 'g000uu5040', 'stock': 1}]),
-                     site('H2', roster=[{'unit': 'goblin', 'stock': 1},
-                                        {'unit': 'goblin_archer', 'stock': 1}])],
-        spell_shop=site('M1', spells=SPELLS),
+                     dict(site('H2', roster=ERARICK), name='Лагерь Эрарика')],
+        spell_shop=site('M1', spells=TOWER_SPELLS),
         # Reference goal "cities": capture FINAL_OBJECTIVE_CITIES (Порт Полонис, Соругирилла).
         cities=[dict(name=c['name'], position=cell(c['position']), level=c['level'], objective=c['objective'],
                      items=CITY_ITEMS.get(c['name'], {}))
