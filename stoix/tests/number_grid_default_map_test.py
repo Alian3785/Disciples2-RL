@@ -27,6 +27,7 @@ DIRECTIONS = ((-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -
 
 
 def test_default_map_layout_and_actions(default_game):
+    """Sizes, objects, action order, the original loot and units, and the Legions warrior start."""
     env, state, _, _ = default_game
     names = action_names(DEFAULT)
     assert DEFAULT['size'] == 50 and len(DEFAULT['opponent_positions']) == 75

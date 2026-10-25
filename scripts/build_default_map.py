@@ -146,6 +146,7 @@ def restore_original_units(enemies, table):
 
 
 def build(layout, landmarks):
+    """JAX map from the reference layout, with the original shops, loot, units and landmark tiles."""
     stacks = sorted(restore_original_units(layout['enemies'], ORIGINAL_UNITS), key=lambda e: e['id'])
     if [e['id'] for e in stacks] != list(range(1, len(stacks)+1)):
         raise ValueError('Expected enemy ids 1..N')
@@ -260,6 +261,7 @@ def dump(game_map):
 
 
 def main():
+    """Read the reference layout and the landmark extract; write maps/default.json."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--reference', type=Path, required=True,
                         help='Python reference root (contains Big_map/) or its Big_map folder')

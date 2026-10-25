@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[2]
     ('the_charmed_child', 27, 35, [[14, 26], [16, 28]]),
 ])
 def test_landmarks_are_obstacles(name, count, tiles, corners):
+    """Every landmark tile of the extract is an obstacle of the map and never terrain."""
     source = ROOT/'docs/maps'/name/'landmarks.json'
     game_map = json.loads((ROOT/'maps'/f'{name}.json').read_text(encoding='utf-8'))
     cells = {tuple(cell(p)) for p in landmark_cells(source)}

@@ -91,6 +91,7 @@ def test_timeout_penalty_is_not_repeated(fortress):
 
 
 def test_siege_and_charmed_child_starting_rosters_and_goals():
+    """Siege and Charmed Child parties and goals; S117 capital potions and original garrisons."""
     siege = load_map('siege_train')
     assert siege['hero_roster'] == ['possessed', 'duke', 'possessed', None, 'cultist', None]
     assert siege['reference_enemy_ids'][siege['objective_enemy']] == 100

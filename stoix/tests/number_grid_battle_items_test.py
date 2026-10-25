@@ -468,6 +468,7 @@ def test_partial_talisman_charges_follow_inventory_compaction(default_game):
 
 @pytest.mark.core
 def test_returned_charges_survive_sales_scrolls_and_new_loot(default_game):
+    """Spent talisman charges survive a sale, a scroll cast and a fresh copy from a captured city."""
     env, initial, step, mask = default_game
     state = owned(env, initial, 'bronze_ring', 'mind_ward_scroll', 'zombie_talisman')
     state = state.replace(item_charges_spent=state.item_charges_spent.at[2].set(3),

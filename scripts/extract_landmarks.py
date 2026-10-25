@@ -47,6 +47,7 @@ def sg_landmarks(data):
 
 
 def write(path, scenario, sources, rows, kinds, names):
+    """Write one extract: (id, type, x, y) rows with GLmark sizes and names, and source SHA-256."""
     landmarks = []
     for lmark_id, kind, x, y in sorted(rows):
         row = kinds[kind.upper()]
@@ -63,6 +64,7 @@ def write(path, scenario, sources, rows, kinds, names):
 
 
 def main():
+    """Extract the Default (.sg) and The Charmed Child (Scens S117) landmarks."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--game', type=Path, required=True, help='Installed Rise of the Elves folder')
     parser.add_argument('--reference', type=Path, required=True,
