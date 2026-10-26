@@ -4,6 +4,7 @@ import jax.numpy as jnp
 from stoix.envs.number_grid_limits import MAX_HP
 
 from stoix.envs.number_grid_combat import can_revive
+from stoix.envs.number_grid_updates import set_column
 
 POTION_START, POTION_TARGETS = 63, 6
 POTION_HEAL, POTION_REVIVE, POTION_BUFF = 19, 20, 37
@@ -152,8 +153,9 @@ class PotionRules:
         with jax.enable_x64(True):
             factors=self.modifiers[(active >> 4) & 2047]
             grown=jnp.rint(values.astype(jnp.float64)*factors).astype(jnp.float32)
-        grown=grown.at[...,ARMOR].set(values[...,ARMOR]+factors[...,ARMOR].astype(jnp.float32))
-        grown=grown.at[...,ACCURACY].min(100).at[...,6].min(100)
+        grown=set_column(grown,ARMOR,values[...,ARMOR]+factors[...,ARMOR].astype(jnp.float32))
+        grown=set_column(grown,ACCURACY,jnp.minimum(grown[...,ACCURACY],100))
+        grown=set_column(grown,6,jnp.minimum(grown[...,6],100))
         return grown-values
 
     def available(self, state, max_hp, potion=None, slot=None):
@@ -223,9 +225,10 @@ class PotionRules:
         with jax.enable_x64(True):
             factors=jnp.array([1.15,1.1,1.1,1.,1.1,1.1,1.1],jnp.float64)
             grown=jnp.rint(intrinsic.astype(jnp.float64)*factors).astype(jnp.float32)
-        grown = grown.at[:,HP].set(jnp.maximum(intrinsic[:,HP]+1,grown[:,HP]))
-        grown = grown.at[:,ARMOR].set(intrinsic[:,ARMOR]+10)
-        grown = grown.at[:,ACCURACY].min(100).at[:,6].min(100)
+        grown = set_column(grown,HP,jnp.maximum(intrinsic[:,HP]+1,grown[:,HP]))
+        grown = set_column(grown,ARMOR,intrinsic[:,ARMOR]+10)
+        grown = set_column(grown,ACCURACY,jnp.minimum(grown[:,ACCURACY],100))
+        grown = set_column(grown,6,jnp.minimum(grown[:,6],100))
         return jnp.where(used,grown-intrinsic,0.)
 
     def observation(self, state):

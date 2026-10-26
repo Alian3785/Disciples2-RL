@@ -3,13 +3,14 @@ import jax.numpy as jnp
 from stoix.envs.number_grid_limits import MAX_HP
 from stoix.envs.number_grid_combat import HP, INITIATIVE
 from stoix.envs.number_grid_effects import source_protection, disable_attack_accuracy
+from stoix.envs.number_grid_updates import set_rows
 
 
 def transform_imp(env,state,used,slots,selected,long=True):
     """Apply an imp form without moving an attack already deferred by Wait."""
     first=selected & ~state.imp[slots] & (state.decay_form[slots]==0)
-    mask=jnp.zeros(12,bool).at[slots].set(selected)
-    first_mask=jnp.zeros(12,bool).at[slots].set(first)
+    mask=set_rows(jnp.zeros(12,bool),slots,selected)
+    first_mask=set_rows(jnp.zeros(12,bool),slots,first)
     state=env._capture_initiative_form(state,mask,first_mask)
     state=env._capture_ward_forms(state,mask,first_mask)
     state=env._capture_damage_forms(state,mask,first_mask)
@@ -20,11 +21,11 @@ def transform_imp(env,state,used,slots,selected,long=True):
                        jnp.where(sizes[slots]==2,50.,30.),state.priority[slots])
     state=_suspend_weakening(state,slots,selected,first)
     state=env._record_effect(state,slots,selected,4)
-    state=state.replace(transform_long=state.transform_long.at[slots].set(jnp.where(selected,long,state.transform_long[slots])),
-        imp=state.imp.at[slots].set(state.imp[slots]|selected),
-        imp_wards=state.imp_wards.at[slots].set(saved),
-        priority=state.priority.at[slots].set(priority))
-    return state,used.at[slots].set(jnp.where(selected,jnp.uint32(0),used[slots]))
+    state=state.replace(transform_long=set_rows(state.transform_long,slots,jnp.where(selected,long,state.transform_long[slots])),
+        imp=set_rows(state.imp,slots,state.imp[slots]|selected),
+        imp_wards=set_rows(state.imp_wards,slots,saved),
+        priority=set_rows(state.priority,slots,priority))
+    return state,set_rows(used,slots,jnp.where(selected,jnp.uint32(0),used[slots]))
 
 
 def transform_decay(env,state,hp,used,slots,selected):
@@ -38,24 +39,24 @@ def transform_form(env,state,hp,used,slots,selected,forms):
     selected &= forms>0
     first=selected & ~state.imp[slots] & (state.decay_form[slots]==0)
     old_max=env._combat_stats(state)[slots,HP]
-    mask=jnp.zeros(12,bool).at[slots].set(selected)
-    first_mask=jnp.zeros(12,bool).at[slots].set(first)
+    mask=set_rows(jnp.zeros(12,bool),slots,selected)
+    first_mask=set_rows(jnp.zeros(12,bool),slots,first)
     state=env._capture_initiative_form(state,mask,first_mask)
     state=env._capture_ward_forms(state,mask,first_mask)
     state=env._capture_damage_forms(state,mask,first_mask)
     native=env.progression.base_stats[forms]
     scaled=jnp.rint(hp[slots]/jnp.maximum(old_max,1)*native[:,HP]).astype(jnp.int32)
     scaled=jnp.where(hp[slots]>0,jnp.clip(scaled,1,MAX_HP),0)
-    hp=hp.at[slots].set(jnp.where(selected,scaled,hp[slots]))
+    hp=set_rows(hp,slots,jnp.where(selected,scaled,hp[slots]))
     saved=jnp.where(first,used[slots],state.imp_wards[slots])
     state=_suspend_weakening(state,slots,selected,first)
     state=state.replace(
-        decay_form=state.decay_form.at[slots].set(jnp.where(selected,forms,state.decay_form[slots])),
-        decay_shreds=state.decay_shreds.at[slots].set(jnp.where(selected,0,state.decay_shreds[slots])),
-        imp=state.imp.at[slots].set(state.imp[slots]&~selected),
-        imp_wards=state.imp_wards.at[slots].set(saved),
-        priority=state.priority.at[slots].set(jnp.where(selected & (state.turn_phase[slots]==0),native[:,INITIATIVE],state.priority[slots])))
-    return state,hp,used.at[slots].set(jnp.where(selected,jnp.uint32(0),used[slots])),selected
+        decay_form=set_rows(state.decay_form,slots,jnp.where(selected,forms,state.decay_form[slots])),
+        decay_shreds=set_rows(state.decay_shreds,slots,jnp.where(selected,0,state.decay_shreds[slots])),
+        imp=set_rows(state.imp,slots,state.imp[slots]&~selected),
+        imp_wards=set_rows(state.imp_wards,slots,saved),
+        priority=set_rows(state.priority,slots,jnp.where(selected & (state.turn_phase[slots]==0),native[:,INITIATIVE],state.priority[slots])))
+    return state,hp,set_rows(used,slots,jnp.where(selected,jnp.uint32(0),used[slots])),selected
 
 
 def _suspend_weakening(state,slots,selected,first):
@@ -63,8 +64,8 @@ def _suspend_weakening(state,slots,selected,first):
     update={}
     for name in ('weakened','item_weakened'):
         current,saved=getattr(state,name),getattr(state,'saved_'+name)
-        update['saved_'+name]=saved.at[slots].set(jnp.where(first,current[slots],saved[slots]))
-        update[name]=current.at[slots].set(current[slots]&~selected)
+        update['saved_'+name]=set_rows(saved,slots,jnp.where(first,current[slots],saved[slots]))
+        update[name]=set_rows(current,slots,current[slots]&~selected)
     return state.replace(**update)
 
 
@@ -80,7 +81,7 @@ def equipment_attack(env,state,hp,used,target,connected,inflicted,random_values)
     connected &= actor==hero
     if rules.has_drain:
         drain=connected & jnp.any(rules.value(state,'drain')[:2])
-        hp=hp.at[actor].set(jnp.where(drain,jnp.minimum(env.max_hp(state)[actor],hp[actor]+inflicted//4),hp[actor]))
+        hp=set_rows(hp,actor,jnp.where(drain,jnp.minimum(env.max_hp(state)[actor],hp[actor]+inflicted//4),hp[actor]))
     immune,warded=jnp.uint32(0),jnp.uint32(0)
     if not rules.status_items:
         return state,hp,used,immune,warded
@@ -109,15 +110,15 @@ def equipment_attack(env,state,hp,used,target,connected,inflicted,random_values)
         warded |= protected
         if 'paralysis' in supported:
             state=env._record_disable(state,slots,selected & (kind==1))
-            state=state.replace(paralyzed=state.paralyzed.at[target].set(state.paralyzed[target] | (selected[0] & (kind==1))))
+            state=state.replace(paralyzed=set_rows(state.paralyzed,target,state.paralyzed[target] | (selected[0] & (kind==1))))
         if 'poison' in supported:
             poisoned=selected[0] & (kind==2)
             duration=2
             state=env._record_effect(state,slots,poisoned[None],0)
             state=state.replace(
-                poison_mode=state.poison_mode.at[target].set(jnp.where(poisoned,duration,state.poison_mode[target])),
-                poison_damage=state.poison_damage.at[target].set(jnp.where(poisoned,damages[item+1],state.poison_damage[target])),
-                poison_source=state.poison_source.at[target].set(jnp.where(poisoned,actor,state.poison_source[target])))
+                poison_mode=set_rows(state.poison_mode,target,jnp.where(poisoned,duration,state.poison_mode[target])),
+                poison_damage=set_rows(state.poison_damage,target,jnp.where(poisoned,damages[item+1],state.poison_damage[target])),
+                poison_source=set_rows(state.poison_source,target,jnp.where(poisoned,actor,state.poison_source[target])))
         if 'imp' in supported:
             state,used=transform_imp(env,state,used,slots,selected & (kind==3))
         if 'decay' in supported:

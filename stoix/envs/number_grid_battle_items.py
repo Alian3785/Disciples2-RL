@@ -7,6 +7,7 @@ import jax.numpy as jnp
 
 from stoix.envs.number_grid_combat import HP, DAMAGE, ARMOR, INITIATIVE, UNITS, accuracy_hits, can_revive
 from stoix.envs.number_grid_effects import source_protection, vampiric_heal, disable_attack_accuracy
+from stoix.envs.number_grid_updates import set_rows
 
 SLOTS, TALISMAN_USES, TARGETS = 2, 5, 6
 ACTIONS = 2*SLOTS*TARGETS  # own slots 1..6 for both items, then enemy slots
@@ -275,8 +276,8 @@ class BattleItemRules:
         positions = self.inventory_positions(state)
         talismans = (state.battle_items >= 0) & self.talisman[jnp.maximum(state.battle_items, 0)]
         positions = jnp.where(talismans, positions, state.item_inventory.size)
-        return state.replace(item_charges_spent=state.item_charges_spent.at[positions].set(
-            TALISMAN_USES-state.battle_item_charges, mode='drop'))
+        return state.replace(item_charges_spent=set_rows(state.item_charges_spent, positions,
+            TALISMAN_USES-state.battle_item_charges))
 
     def equip(self, env, state, action):
         if not self.count:
@@ -469,7 +470,7 @@ class BattleItemRules:
             armor = jnp.clip(stats[target_slots, ARMOR], 0, 90).astype(jnp.int32)
             damage = env.progression.damage_rolls[amount, armor, state.defended[target_slots].astype(jnp.int32), bonus]
             removed = jnp.where(struck, jnp.minimum(damage, hp[target_slots]), 0)
-            hp = hp.at[target_slots].add(-removed)
+            hp = set_rows(hp, target_slots, hp[target_slots]+(-removed))
             credit = jnp.where(enemy, removed, 0)
             applied += jnp.sum(removed)
             if DRAIN in self.kinds:
@@ -486,10 +487,10 @@ class BattleItemRules:
                 turns, damage = getattr(state, name+'_mode'), getattr(state, name+'_damage')
                 applying = affected & (self.dot[kind] == dot)
                 state = env._record_effect(state,target_slots,applying,{'poison':0,'water':1,'burn':2}[name])
-                updates[name+'_mode'] = turns.at[target_slots].set(jnp.where(applying, duration, turns[target_slots]))
-                updates[name+'_damage'] = damage.at[target_slots].set(jnp.where(applying, amount, damage[target_slots]))
+                updates[name+'_mode'] = set_rows(turns, target_slots, jnp.where(applying, duration, turns[target_slots]))
+                updates[name+'_damage'] = set_rows(damage, target_slots, jnp.where(applying, amount, damage[target_slots]))
                 source = getattr(state, name+'_source')
-                updates[name+'_source'] = source.at[target_slots].set(jnp.where(applying, state.actor, source[target_slots]))
+                updates[name+'_source'] = set_rows(source, target_slots, jnp.where(applying, state.actor, source[target_slots]))
                 applied += jnp.sum(applying)*amount
             state = state.replace(**updates)
         if BUFF in self.kinds:
@@ -515,7 +516,7 @@ class BattleItemRules:
             status |= affected
             state = env._record_disable(state,target_slots,affected)
             # g000aa9139 is long paralysis, unlike the two finite equipment procs.
-            state = state.replace(long_paralyzed=state.long_paralyzed.at[target_slots].set(state.long_paralyzed[target_slots] | affected))
+            state = state.replace(long_paralyzed=set_rows(state.long_paralyzed, target_slots, state.long_paralyzed[target_slots] | affected))
         if FEAR in self.kinds:
             affected, used, blocked, ward = protect(FEAR, alive & ~state.retreating, used)
             immune |= blocked
@@ -524,9 +525,9 @@ class BattleItemRules:
             state = env._record_disable(state,target_slots,affected & protected)
             status |= affected & ~(protected & state.paralyzed[target_slots])
             state = state.replace(
-                paralyzed=state.paralyzed.at[target_slots].set(state.paralyzed[target_slots] | (affected & protected)),
-                retreating=state.retreating.at[target_slots].set(state.retreating[target_slots] | (affected & ~protected)),
-                feared=state.feared.at[target_slots].set(state.feared[target_slots] | (affected & ~protected)))
+                paralyzed=set_rows(state.paralyzed, target_slots, state.paralyzed[target_slots] | (affected & protected)),
+                retreating=set_rows(state.retreating, target_slots, state.retreating[target_slots] | (affected & ~protected)),
+                feared=set_rows(state.feared, target_slots, state.feared[target_slots] | (affected & ~protected)))
         if TRANSFORM in self.kinds:
             from stoix.envs.number_grid_item_combat import transform_imp
             # Like witches and Hag's Ring, reject guardians before spending wards.
@@ -547,7 +548,7 @@ class BattleItemRules:
                                                        jnp.full(6, self.summon[kind]))
             status |= selected
             state = env._record_effect(state,target_slots,selected,4)
-            state = state.replace(transform_long=state.transform_long.at[target_slots].set(state.transform_long[target_slots] | selected),lycanthrope=state.lycanthrope.at[target_slots].set(state.lycanthrope[target_slots] | selected))
+            state = state.replace(transform_long=set_rows(state.transform_long, target_slots, state.transform_long[target_slots] | selected),lycanthrope=set_rows(state.lycanthrope, target_slots, state.lycanthrope[target_slots] | selected))
         if WEAKEN in self.kinds:
             affected, used, blocked, ward = protect(WEAKEN, alive, used)
             immune |= blocked
@@ -557,13 +558,13 @@ class BattleItemRules:
             if env.has_powerups:
                 raw = env._combat_stats(state, cap=False)[target_slots, DAMAGE].astype(jnp.int32)
                 state = state.replace(
-                    primary_override=state.primary_override.at[target_slots].set(jnp.where(
+                    primary_override=set_rows(state.primary_override, target_slots, jnp.where(
                         newly, jnp.rint(raw-env._original_primary(state)[target_slots]*(1-self.multiplier[kind])).astype(jnp.int32), state.primary_override[target_slots])),
-                    preweak_damage=state.preweak_damage.at[target_slots].set(jnp.where(newly, raw, state.preweak_damage[target_slots])),
-                    powerup_layered=state.powerup_layered.at[target_slots].set(jnp.where(
+                    preweak_damage=set_rows(state.preweak_damage, target_slots, jnp.where(newly, raw, state.preweak_damage[target_slots])),
+                    powerup_layered=set_rows(state.powerup_layered, target_slots, jnp.where(
                         newly, state.powerup[target_slots], state.powerup_layered[target_slots])))
-            state = state.replace(weakened=state.weakened.at[target_slots].set(state.weakened[target_slots] | newly),
-                item_weakened=state.item_weakened.at[target_slots].set(state.item_weakened[target_slots] | newly))
+            state = state.replace(weakened=set_rows(state.weakened, target_slots, state.weakened[target_slots] | newly),
+                item_weakened=set_rows(state.item_weakened, target_slots, state.item_weakened[target_slots] | newly))
         applied += jnp.sum(status).astype(jnp.int32)
         state = self.consume(state, slot, kind, using)
         return state.replace(last_battle_item=jnp.where(using, kind, -1)), hp, used, dict(
@@ -590,8 +591,9 @@ class BattleItemRules:
             battle_item_used=state.battle_item_used | (mask & using & talisman & ~spent))
         potion = self.potion_index[kind]
         if self.potions.count:
-            state = state.replace(potions=state.potions.at[jnp.maximum(potion, 0)].add(
-                -(spent & (potion >= 0)).astype(jnp.int32)))
+            index = jnp.maximum(potion, 0)
+            state = state.replace(potions=set_rows(state.potions, index, state.potions[index]+(
+                -(spent & (potion >= 0)).astype(jnp.int32))))
         if self.equipment is not None and self.equipment.capacity:
             state = remove_items(state, remove)
         return state

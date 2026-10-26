@@ -9,6 +9,7 @@ import jax.numpy as jnp
 from stoix.envs.number_grid_battle_items import MAGIC_ITEMS, TALISMAN_USES
 from stoix.envs.number_grid_hero_skills import lore_levels
 from stoix.envs.number_grid_spell_items import SPELL_ITEMS
+from stoix.envs.number_grid_updates import set_column, set_rows
 
 ARTIFACT, BANNER, BOOK, BOOTS, VALUABLE, USABLE, SCROLL, STAFF = range(8)
 SLOT_NAMES = ('Артефакт 1', 'Артефакт 2', 'Знамя', 'Книга', 'Сапоги')
@@ -106,10 +107,10 @@ def remove_items(state, remove):
     inventory = state.item_inventory
     keep = (inventory >= 0) & ~remove
     destination = jnp.where(keep, jnp.cumsum(keep)-1, inventory.size)
-    changes = dict(item_inventory=jnp.full_like(inventory, -1).at[destination].set(inventory, mode='drop'))
+    changes = dict(item_inventory=set_rows(jnp.full_like(inventory, -1), destination, inventory))
     if state.item_charges_spent.size:
-        changes['item_charges_spent'] = jnp.zeros_like(state.item_charges_spent).at[destination].set(
-            state.item_charges_spent, mode='drop')
+        changes['item_charges_spent'] = set_rows(jnp.zeros_like(state.item_charges_spent), destination,
+            state.item_charges_spent)
     return state.replace(**changes)
 
 
@@ -212,7 +213,7 @@ class ItemRules:
         gained = collected[sources]
         offset = jnp.sum(state.item_inventory >= 0)
         destinations = jnp.where(gained,offset+jnp.cumsum(gained)-1,self.capacity)
-        inventory = state.item_inventory.at[destinations].set(tokens,mode='drop')
+        inventory = set_rows(state.item_inventory,destinations,tokens)
         loot = jnp.sum(jnp.where(collected[:,None],contents,0),axis=0)
         # Added, not replaced: a city capture and a chest may pay out on the same move.
         return state.replace(item_inventory=inventory,last_item_loot=state.last_item_loot+loot)
@@ -257,7 +258,7 @@ class ItemRules:
             artifact_initiative=jnp.prod(self.value(state,'initiative')[:2].astype(jnp.float64))
             factors=jnp.array([1.,artifact_damage,1.,1.,artifact_initiative,1.,1.],jnp.float64)
             artifacts=jnp.rint(values.astype(jnp.float64)*factors).astype(jnp.float32)
-        artifacts=artifacts.at[:,3].add(jnp.sum(self.value(state,'armor')[:2]))
+        artifacts=set_column(artifacts,3,artifacts[:,3]+jnp.sum(self.value(state,'armor')[:2]).astype(artifacts.dtype))
         values=jnp.where((slots==hero)[:,None],artifacts,values)
         with jax.enable_x64(True):
             factors=jnp.array([1.,self.value(state,'damage',2),1.,1.,self.value(state,'initiative',2),1.,1.],jnp.float64)
@@ -265,7 +266,8 @@ class ItemRules:
         # GmodifL POWER is a relative percentage, with integer truncation.
         accuracy=values[:,2].astype(jnp.int32)
         accuracy=accuracy+accuracy*self.value(state,'accuracy_percent',2)//100
-        banner=banner.at[:,2].set(jnp.minimum(100,accuracy)).at[:,3].add(self.value(state,'armor',2))
+        banner=set_column(banner,2,jnp.minimum(100,accuracy))
+        banner=set_column(banner,3,banner[:,3]+jnp.asarray(self.value(state,'armor',2)).astype(banner.dtype))
         values=jnp.where(((slots<6)&(state.unit_ids!=0))[:,None],banner,values)
         return values-intrinsic-state.potion_bonus-state.potion_temporary
 

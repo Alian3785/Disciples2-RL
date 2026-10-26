@@ -11,6 +11,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from stoix.envs.number_grid_combat import ATTACK_TYPES, HP
+from stoix.envs.number_grid_updates import set_rows
 from stoix.envs.number_grid_spell_items import (LORE_LEVEL, SCROLL_MAGE_COST, SCROLL_MAGE_HIRED,
                                                 scenario_spell_items, spell_item_action_names)
 from stoix.envs.number_grid_spells import SPELL_BY_ID, shop_spell_ids, spell_book
@@ -494,15 +495,15 @@ class SpellCastRules:
         restore = back & summon
         party = before.spell_party
         def restored(values, row):
-            return values.at[:6].set(jnp.where(restore, row, values[:6]))
+            return jnp.concatenate((jnp.where(restore, row, values[:6]).astype(values.dtype), values[6:]))
         if self.has_health:
             promoted = ((after.last_promoted >> jnp.arange(12, dtype=jnp.uint32)) & 1) != 0
             bonus = jnp.where(back & ~promoted, before.spell_mods[:, 0], 0.).astype(jnp.int32)
             after = after.replace(hp=jnp.maximum(after.hp - bonus, 0))
         return after.replace(
-            enemy_wounds=after.enemy_wounds.at[t].set(jnp.where(back, wounds, after.enemy_wounds[t])),
-            enemy_spell_effects=after.enemy_spell_effects.at[t].set(jnp.where(victory, jnp.uint32(0), after.enemy_spell_effects[t])),
-            summon_marks=after.summon_marks.at[t].set(after.summon_marks[t] & ~(victory & summon)),
+            enemy_wounds=set_rows(after.enemy_wounds, t, jnp.where(back, wounds, after.enemy_wounds[t])),
+            enemy_spell_effects=set_rows(after.enemy_spell_effects, t, jnp.where(victory, jnp.uint32(0), after.enemy_spell_effects[t])),
+            summon_marks=set_rows(after.summon_marks, t, after.summon_marks[t] & ~(victory & summon)),
             unit_ids=restored(after.unit_ids, party[0]), unit_levels=restored(after.unit_levels, party[1]),
             unit_xp=restored(after.unit_xp, party[2]), hp=restored(after.hp, party[3]),
             last_xp=jnp.where(restore & (jnp.arange(12) < 6), 0, after.last_xp),

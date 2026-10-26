@@ -315,7 +315,8 @@ class TerritoryRules:
         # city's own cell; later days keep using the normal independent growth.
         initial = jnp.minimum(1+(CITY_CAPTURE_PERCENT//100)*self.growth[state.city_levels],
                               self.reachable_counts[1:])
-        claims = state.territory_claims.at[1:].set(jnp.where(captured,initial,state.territory_claims[1:]))
+        claims = jnp.concatenate((state.territory_claims[:1],
+            jnp.where(captured,initial,state.territory_claims[1:]).astype(state.territory_claims.dtype)))
         state = state.replace(city_owned=state.city_owned|captured,territory_claims=claims,
             last_captured_cities=captured,last_event=jnp.where(jnp.any(captured),CITY_CAPTURED,state.last_event))
         if self.contested and self.count:

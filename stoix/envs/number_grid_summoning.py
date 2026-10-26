@@ -5,6 +5,7 @@ from stoix.envs.number_grid_limits import MAX_HP, cap_stats
 
 from stoix.envs.number_grid_effects import effect_breaks, SHORT
 from stoix.envs.number_grid_combat import HP, DAMAGE, ACCURACY, ARMOR, INITIATIVE, MELEE
+from stoix.envs.number_grid_updates import set_column, set_rows
 
 COPY_ALLY, COPY_ACTIONS = 57, 6
 COPIED, SUMMONED = 33, 34
@@ -56,12 +57,12 @@ def advance_linked_queue(hp, escaped, phases, priority, round_number, activated,
         before = jnp.maximum(health[candidate]-(jnp.cumsum(raw)-raw),0)
         tick &= before > 0
         loss = jnp.minimum(raw,before)
-        health = health.at[candidate].add(-jnp.sum(loss))
-        losses = losses.at[candidate].add(loss)
+        health = set_rows(health, candidate, health[candidate]+(-jnp.sum(loss)))
+        losses = set_rows(losses, candidate, losses[candidate]+loss)
         expires = tick & ((left[candidate] == SHORT) | effect_breaks(round_no,applied_rounds[candidate],
             removal_rolls[jnp.minimum(round_no-round_number,1),candidate]))
         remaining = jnp.where((first & immune & (before > 0)) | expires,0,left[candidate])
-        left = left.at[candidate].set(remaining)
+        left = set_rows(left, candidate, remaining)
         health = linked_summon_hp(health, escaped, summon_owner)
         dead = health <= 0
         deaths = jnp.where(enabled & (previous_hp > 0) & dead, index, deaths)
@@ -155,8 +156,8 @@ class Summoning:
         native_form = self._effective_ids(state)[target]
         traits = self.progression.traits[native_form]
         traits = jnp.where(state.copied[target] & (state.decay_form[target] == 0),state.copy_traits[target],traits)
-        traits = traits.at[0].set(jnp.where(state.fenrir[target],MELEE,traits[0]))
-        traits = traits.at[1].set(jnp.where(state.fenrir[target],1,traits[1]))
+        traits = set_column(traits, 0, jnp.where(state.fenrir[target],MELEE,traits[0]))
+        traits = set_column(traits, 1, jnp.where(state.fenrir[target],1,traits[1]))
         traits = jnp.where(state.imp[target],jnp.array([MELEE,1,0,0],jnp.uint32),traits)
         maximum = self._copy_form_stats(state,actor)[HP]
         hp = jnp.rint(state.hp[target] * state.hp[actor] / jnp.maximum(maximum, 1))
@@ -174,8 +175,14 @@ class Summoning:
         for name, value in (('native_ids', state.unit_ids[actor]),
                             ('native_levels', state.unit_levels[actor]), ('native_xp', state.unit_xp[actor])):
             updates[name] = jnp.where(state.copied[actor], getattr(state,name)[actor], value)
-        return state.replace(**{name: getattr(state,name).at[actor].set(
-            jnp.where(enabled, value, getattr(state,name)[actor])) for name,value in updates.items()})
+        # Same as field.at[actor].set(where(enabled, value, field[actor])); a slot mask fuses on
+        # the GPU instead of one scatter and buffer copy per field.
+        row = (self.slots == actor) & enabled
+
+        def put(field, value):
+            mask = row.reshape((12,)+(1,)*(field.ndim-1))
+            return jnp.where(mask, jnp.asarray(value).astype(field.dtype), field)
+        return state.replace(**{name: put(getattr(state,name), value) for name,value in updates.items()})
 
     def _copy_form_stats(self,state,slot):
         """Permanent current-form values, excluding temporary buffs/debuffs."""
@@ -183,18 +190,18 @@ class Summoning:
         raw = self.progression.raw_stats(uid,level)
         values = jnp.minimum(raw,self.progression.stat_caps[uid])
         if self.has_weakening or self.has_powerups or self.has_potion_buffs:
-            values = values.at[DAMAGE].set(raw[DAMAGE])
+            values = set_column(values, DAMAGE, raw[DAMAGE])
         values = self._potion_stats(state,values,slot=slot,temporary=False)
         values = jnp.where(state.copied[slot],state.copy_stats[slot],values)
         values = jnp.where(state.decay_form[slot] > 0,self.progression.base_stats[state.decay_form[slot]],values)
-        values = values.at[HP].set(jnp.where(state.fenrir[slot],275.,values[HP]))
-        values = values.at[DAMAGE].set(jnp.where(state.fenrir[slot],90.,values[DAMAGE]))
-        values = values.at[INITIATIVE].set(jnp.where(state.fenrir[slot],65.,values[INITIATIVE]))
+        values = set_column(values, HP, jnp.where(state.fenrir[slot],275.,values[HP]))
+        values = set_column(values, DAMAGE, jnp.where(state.fenrir[slot],90.,values[DAMAGE]))
+        values = set_column(values, INITIATIVE, jnp.where(state.fenrir[slot],65.,values[INITIATIVE]))
         big = self.progression.sizes[self._effective_ids(state)[slot]] == 2
-        values = values.at[DAMAGE].set(jnp.where(state.imp[slot],jnp.where(big,30.,20.),values[DAMAGE]))
-        values = values.at[ACCURACY].set(jnp.where(state.imp[slot],jnp.where(big,70.,80.),values[ACCURACY]))
-        values = values.at[ARMOR].set(jnp.where(state.imp[slot],0.,values[ARMOR]))
-        return cap_stats(values.at[INITIATIVE].set(jnp.where(state.imp[slot],jnp.where(big,50.,30.),values[INITIATIVE])))
+        values = set_column(values, DAMAGE, jnp.where(state.imp[slot],jnp.where(big,30.,20.),values[DAMAGE]))
+        values = set_column(values, ACCURACY, jnp.where(state.imp[slot],jnp.where(big,70.,80.),values[ACCURACY]))
+        values = set_column(values, ARMOR, jnp.where(state.imp[slot],0.,values[ARMOR]))
+        return cap_stats(set_column(values, INITIATIVE, jnp.where(state.imp[slot],jnp.where(big,50.,30.),values[INITIATIVE])))
 
     def _spawn_units(self, state, target, enabled, rolls):
         rules, actor = self.progression, state.actor
@@ -301,18 +308,21 @@ class Summoning:
             summon &= jnp.any(spawned)
         return state,jnp.where(copy | summon,DEFEND,action),jnp.where(copy,COPIED,jnp.where(summon,SUMMONED,-1))
 
-    def _prepare_copies(self, state, action, key, random_values):
+    def _prepare_copies(self, state, action, key, random_values, special=None):
+        """special: the _special_action result for this round-0 activation, if already computed."""
         actor = state.actor
-        action = jnp.where(actor >= 6,self._special_enemy_action(state,DEFEND,random_values[30:36]),action)
-        prepared, _, event = self._special_action(state,action,random_values)
-        pending = state.preparation.at[actor].set(False)
+        if special is None:
+            action = jnp.where(actor >= 6,self._special_enemy_action(state,DEFEND,random_values[30:36]),action)
+            special = self._special_action(state,action,random_values)
+        prepared, _, event = special
+        pending = set_rows(state.preparation, actor, False)
         remaining = jnp.any(pending & (prepared.hp > 0))
         priority = self._round_priority(random_values,state.enemy,prepared)
         next_actor = jnp.argmax(jnp.where(jnp.where(remaining,pending,prepared.hp > 0),priority,-1e9))
         # Copy preparation is a unit activation; only the outer decision spends max_steps.
         return prepared.replace(battle_key=key,preparation=pending,round=jnp.where(remaining,0,1),
             actor=next_actor.astype(jnp.int32),priority=priority,
-            activation_done=jnp.zeros(12,bool).at[next_actor].set(~remaining),
+            activation_done=set_rows(jnp.zeros(12,bool), next_actor, ~remaining),
             last_event=jnp.where(event >= 0,event,4).astype(jnp.int32),last_actor=actor,
             last_target=jnp.int32(-1),last_damage=jnp.int32(0),
             player_turns=state.player_turns+(actor < 6).astype(jnp.int32),
