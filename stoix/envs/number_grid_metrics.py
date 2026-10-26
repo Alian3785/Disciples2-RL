@@ -21,6 +21,7 @@ CAMPAIGN_FIELDS = (
     'capital_guardian_rounds', 'capital_guardian_battles',
     'capital_first_contacts', 'capital_entry_strength',
     'merchant_purchases', 'waves_completed', 'capital_guardian_bonuses',
+    'capital_bot_heroes_defeated',
 )
 EPISODE_WINDOW = 100
 
@@ -76,6 +77,11 @@ def campaign_events(env, before, world, after, action, valid, battle_counts):
         values['capital_first_contacts'] = first_contact
         values['capital_entry_strength'] = jnp.where(first_contact, after.capital_entry_strength, 0)
         values['capital_guardian_bonuses'] = after.capital_guardian_bonus_paid & ~before.capital_guardian_bonus_paid
+    if env.bot_attack.enabled:
+        # The Empire party lives only during its battle with the hero, so its
+        # disappearance is the hero's victory over the bot's hero Edwin.
+        enemy = env.bot_attack.enemy
+        values['capital_bot_heroes_defeated'] = before.alive[enemy] & ~after.alive[enemy]
     if env.capital_enabled:
         healing = world_action & (action >= HEAL_START) & (action < REVIVE_START)
         healed = jnp.sum(jnp.maximum(world.hp[:6] - before.hp[:6], 0))

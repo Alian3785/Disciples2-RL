@@ -42,8 +42,13 @@ def legacy():
 
 
 def defeat_armies(env, state, count, keep=(30,)):
-    """Mark `count` armies other than the guardian (and `keep`) as defeated this episode."""
-    others = [i for i in range(env.num_opponents) if i != env.objective_enemy and i not in keep][:count]
+    """Mark `count` present armies other than the guardian (and `keep`) as defeated this episode.
+
+    Since 2026-10-26 eleven armies (the Empire bot's victims and its own slot) are absent at reset.
+    """
+    others = [i for i in range(env.num_opponents) if i != env.objective_enemy and i not in keep
+              and bool(state.scenario_spawned[i])][:count]
+    assert len(others) == count
     return state.replace(alive=state.alive.at[jnp.array(others, jnp.int32)].set(False))
 
 
@@ -82,7 +87,7 @@ def test_legacy_rewards_keep_their_memory_observation(legacy):
     assert compiled_method(env, 'observation')(state).shape == (env.observation_size,)
 
 
-@pytest.mark.parametrize('defeated,expected', [(0, 0.), (50, 0.), (51, 10.), (73, 10.)])
+@pytest.mark.parametrize('defeated,expected', [(0, 0.), (50, 0.), (51, 10.), (62, 10.)])
 def test_guardian_battle_bonus_needs_more_than_50_defeated_armies(capital, defeated, expected):
     """Pay +10 on the hero army's entry only once 51 or more other armies are gone."""
     env, initial = capital

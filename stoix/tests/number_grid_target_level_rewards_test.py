@@ -230,7 +230,8 @@ def test_default_capital_preserves_simpler_times_and_blue_reward_settings(tmp_pa
                'objective_reward_hero_only', 'army_victory_level_reward',
                'army_victory_level_objective_only', 'scenario_events_enabled', 'cities', 'faction', 'lord_type',
                'capital_guardian_battle_reward', 'capital_guardian_battle_min_defeated',
-               'episode_timeout_penalty', 'battle_round_limit_penalty', 'recruitment_reward_faction_only'}
+               'episode_timeout_penalty', 'battle_round_limit_penalty', 'recruitment_reward_faction_only',
+               'enemy_rosters', 'enemy_units', 'enemy_hp', 'enemy_initial_levels', 'absent_enemies', 'bot_attack'}
     assert {k: v for k, v in capital.items() if k not in changed} == {
         k: v for k, v in base.items() if k not in changed}
     assert capital['cities'] == [{**city, 'objective': False} for city in base['cities']]
@@ -255,6 +256,20 @@ def test_default_capital_preserves_simpler_times_and_blue_reward_settings(tmp_pa
     assert capital['capital_guardian_battle_reward'] == 10.
     assert capital['capital_guardian_battle_min_defeated'] == 51
     assert capital['recruitment_reward_faction_only'] is True
+    # User request 2026-10-26: the armies the Empire hero Edwin destroyed by turn 21 of
+    # SaveGame/6789.sg are absent; the Wolf's slot 9 holds his party, attacking on day 23.
+    bot = 9
+    assert capital['bot_attack'] == {'enemy': bot, 'day': 23}
+    assert capital['absent_enemies'] == [9, 37, 41, 42, 44, 46, 47, 49, 50, 51, 52]
+    for key in ('enemy_rosters', 'enemy_units', 'enemy_hp'):
+        assert [v for i, v in enumerate(capital[key]) if i != bot] == [v for i, v in enumerate(base[key]) if i != bot]
+    assert base['enemy_rosters'][bot] == [None, 'g000uu5039', None, None, None, None]
+    assert capital['enemy_rosters'][bot] == ['g000uu0019', 'knight', 'knight', None, 'marksman', None]
+    assert (capital['enemy_units'][bot], capital['enemy_hp'][bot]) == (4, 150)
+    assert capital['enemy_initial_levels'][bot] == [2, 2, 2, 0, 2, 0]
+    assert len(capital['enemy_initial_levels']) == len(capital['enemy_rosters'])
+    for name in ('default', 'default-blue-dragon', 'default-green-dragon'):
+        assert not any(key in load_map(name) for key in ('bot_attack', 'absent_enemies', 'enemy_initial_levels'))
     assert action_names(capital) == action_names({**base, 'faction': 'legions', 'lord_type': 'warrior'})
     saved = tmp_path / 'map.json'
     saved.write_text(json.dumps(capital), encoding='utf-8')

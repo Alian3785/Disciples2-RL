@@ -45,6 +45,7 @@ from stoix.envs.number_grid_episode_reports import empty_event, episode_event
 from stoix.envs.number_grid_scenarios import ScenarioRules
 from stoix.envs.number_grid_script_events import ScriptEventRules
 from stoix.envs.number_grid_bot import ScriptedBotRules
+from stoix.envs.number_grid_bot_attack import BotAttackRules
 from stoix.envs.number_grid_target_rewards import TargetRewardRules
 from stoix.envs import number_grid_reference_rewards as reference_rewards
 from stoix.envs.number_grid_effects import effect_tables, effect_breaks, POISON, FROSTBITE, BLISTER, DISABLE, TRANSFORM, SHORT, LONG, armor_after_shreds, source_protection, advance_poison_queue, advance_periodic_queue, vampiric_heal
@@ -93,6 +94,19 @@ def load_map(name=None):
                         recruitment_reward_faction_only=True)
         for city in game_map['cities']:
             city['objective'] = False
+        # User request 2026-10-26: a minimal scripted Empire bot. By turn 21 of the user's
+        # save SaveGame/6789.sg the Empire hero Edwin had destroyed these armies
+        # (CMidStackDestroyed killer S001PL0001, matched by tile), so they start absent.
+        # The Wolf's slot 9 holds Edwin's party, which attacks the hero on day 23.
+        units = json.loads((_ROOT / 'stoix/envs/data/units.json').read_text(encoding='utf-8'))
+        bot = 9
+        game_map['enemy_rosters'][bot] = ['g000uu0019', 'knight', 'knight', None, 'marksman', None]
+        game_map['enemy_units'][bot] = 4
+        game_map['enemy_hp'][bot] = max(units[unit]['max_hp'] for unit in game_map['enemy_rosters'][bot] if unit)
+        levels = [[units[unit]['level'] if unit else 0 for unit in roster] for roster in game_map['enemy_rosters']]
+        levels[bot][0] = 2  # Edwin is level 2 in the save; Knights and the Marksman keep base level 2
+        game_map.update(absent_enemies=[9, 37, 41, 42, 44, 46, 47, 49, 50, 51, 52],
+                        bot_attack=dict(enemy=bot, day=23), enemy_initial_levels=levels)
         return game_map
     if name in DRAGON_MAPS:
         # Reference maps/default.py and enemy_configs.build_blue_dragon_enemy_configs:
@@ -743,6 +757,9 @@ class NumberGrid(Summoning, NumericNumberGrid):
             raise ValueError('Scripted bot requires territory, progression and persistent spell wounds')
         self.bot = ScriptedBotRules(game_map, self.territory if self.territory_enabled else None,
                                     self.progression if self.progression_enabled else None)
+        self.bot_attack = BotAttackRules(game_map)
+        if self.bot_attack.enabled and (self.bot.enabled or not self.territory_enabled):
+            raise ValueError('bot_attack requires territory and excludes the mobile scripted bot')
         self.scripted_bot_objective = game_map.get('campaign_objective') == 'scripted_bot'
         if self.scripted_bot_objective and not self.bot.enabled:
             raise ValueError('The scripted_bot objective requires an enabled bot')
@@ -765,7 +782,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
         if self.position_objective:
             point = game_map.get('objective_position')
             if (not self.progression_enabled or not self.territory_enabled or self.objective_enemy is not None
-                    or self.bot.enabled or self.scenario.enabled):
+                    or self.bot.enabled or self.scenario.enabled or self.bot_attack.enabled):
                 raise ValueError('Reach-position campaigns require progression and territory without another objective')
             if (not isinstance(point, (list, tuple)) or len(point) != 2
                     or any(type(v) is not int or not 0 < v < self.size-1 for v in point)
@@ -793,6 +810,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
             if type(self.objective_enemy) is not int or not 0 <= self.objective_enemy < len(self.opponent_positions):
                 raise ValueError('objective_enemy must be a valid zero-based enemy index')
             self.goal_enemies = jnp.arange(len(self.opponent_positions)) == self.objective_enemy
+            if self.objective_enemy in game_map.get('absent_enemies', []):
+                raise ValueError('objective_enemy cannot be one of absent_enemies')
         elif self.objective_reward_hero_only:
             raise ValueError('objective_reward_hero_only requires objective_enemy')
         elif game_map.get('campaign_objective') == 'waves':
@@ -887,6 +906,9 @@ class NumberGrid(Summoning, NumericNumberGrid):
         if self.basic_combat:
             self.terrain = TerrainRules(game_map, self.progression if self.progression_enabled else None)
         self.script_events = ScriptEventRules(game_map, self)
+        # Armies that attack the hero through queued encounters, outside its own moves.
+        self.encounters_enabled = (self.scenario.enabled or self.bot.enabled or self.script_events.enabled
+                                   or self.bot_attack.enabled)
         self.target_rewards = TargetRewardRules(self, game_map)
         self.reference_enemy_count = self.num_opponents - (
             len(game_map.get('scenario_event_enemies', [])) if not self.script_events.enabled else 0)
@@ -907,6 +929,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
         self.observation_size += self.scenario.observation_size
         self.observation_size += self.script_events.observation_size
         self.observation_size += self.bot.observation_size
+        self.observation_size += self.bot_attack.observation_size
         self.observation_size += 4 if self.position_objective else 0
         self.observation_size += self.capital_training.observation_size
         self.observation_size += self.num_opponents+1 if self.army_victory_level_reward else 0
@@ -1350,7 +1373,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
                 enemies = self.slots >= 6
                 values = set_column(values, ARMOR, jnp.where(
                     enemies, values[:,ARMOR]+state.battle_fort_armor.astype(values.dtype), values[:,ARMOR]))
-                if self.scenario.enabled or self.bot.enabled or self.script_events.enabled:
+                if self.encounters_enabled:
                     values = set_column(values, ARMOR, jnp.where(
                         enemies, values[:,ARMOR], values[:,ARMOR]+state.battle_hero_fort_armor.astype(values.dtype)))
             if self.has_copies:
@@ -1602,9 +1625,13 @@ class NumberGrid(Summoning, NumericNumberGrid):
 
         Snapshot the defending side at battle entry, independently of armour.
         Steam sub_5F5A4B; sources: docs/validation/fort-defenders-20261021.json.
+        The player cannot withdraw from Default Capital's scripted Empire attack either.
         """
-        return ~jnp.where(slots < 6, state.battle_fort_defender == FORT_BLUE,
-                          state.battle_fort_defender == FORT_RED)
+        blocked = jnp.where(slots < 6, state.battle_fort_defender == FORT_BLUE,
+                            state.battle_fort_defender == FORT_RED)
+        if self.bot_attack.enabled:
+            blocked |= (slots < 6) & (state.enemy == self.bot_attack.enemy)
+        return ~blocked
 
     def _fear_protected(self, state, target_slots):
         """Fear paralyses instead of routing: map teams, defended cities and ruins."""
@@ -1844,6 +1871,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
                 context=jnp.concatenate((context,self.script_events.observation(state)))
             if self.bot.enabled:
                 context=jnp.concatenate((context,self.bot.observation(state)))
+            if self.bot_attack.enabled:
+                context=jnp.concatenate((context,self.bot_attack.observation(state)))
             if self.position_objective:
                 context=jnp.concatenate((context, self.objective_position/(self.size-1),
                                          (self.objective_position-state.position)/(self.size-1)))
@@ -1990,7 +2019,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
         forced_action = jnp.where(controlled, RETREAT, CONTINUE)
         mask = jnp.where(self.round_limit_retreat(state), jnp.arange(self.num_actions) == forced_action, mask)
         mask = mask.at[RETREAT].set(mask[RETREAT] & self._can_retreat(state, state.actor))
-        if self.scenario.enabled or self.bot.enabled or self.script_events.enabled:
+        if self.encounters_enabled:
             mask = jnp.where(~state.in_battle & jnp.any(state.pending_encounters & state.alive),
                              jnp.arange(self.num_actions) == CONTINUE, mask)
         return jnp.where(state.done, jnp.arange(self.num_actions) == CONTINUE, mask)
@@ -2307,7 +2336,9 @@ class NumberGrid(Summoning, NumericNumberGrid):
             key, random_key = jax.random.split(next_state.battle_key)
             random_values = jax.random.uniform(random_key, (self.random_size,))
             next_state = next_state.replace(battle_key=key)
-        if self.scenario.enabled or self.bot.enabled or self.script_events.enabled:
+        if self.bot_attack.enabled:
+            next_state = self.bot_attack.spawn(next_state, resting)
+        if self.encounters_enabled:
             pending = next_state.pending_encounters & next_state.alive
             attacked = jnp.any(pending) & ~(engage | summon) & ~next_state.done
             enemy = jnp.argmax(pending)
@@ -2316,7 +2347,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
                     next_state.pending_encounters[enemy] & ~attacked))
             engage |= attacked
         next_state = jax.lax.cond(engage | summon, lambda s: self._begin_battle(s, key, random_values), lambda s: s, next_state)
-        if self.scenario.enabled or self.bot.enabled or self.script_events.enabled:
+        if self.encounters_enabled:
             inside_fort = (jnp.all(next_state.position == jnp.array(self.territory.capital))
                            | jnp.any(self.territory.city_at(next_state) & next_state.city_owned))
             fort = jnp.where(jnp.all(next_state.position == jnp.array(self.territory.capital)), 50,
@@ -3359,7 +3390,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
         battle_valid = jnp.where(self.round_limit_retreat(state),
                                  action == jnp.where(controlled, RETREAT, CONTINUE), battle_valid)
         battle_valid &= (action != RETREAT) | self._can_retreat(state, state.actor)
-        if self.scenario.enabled or self.bot.enabled or self.script_events.enabled:
+        if self.encounters_enabled:
             world_valid = jnp.where(jnp.any(state.pending_encounters & state.alive), action == CONTINUE, world_valid)
         valid = jnp.where(state.in_battle, battle_valid, world_valid) & ~state.done
         # Map actions can start a battle whose first activation belongs to RED.
