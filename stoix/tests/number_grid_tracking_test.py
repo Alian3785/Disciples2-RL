@@ -379,7 +379,7 @@ def test_comet_view_shows_requested_progress_and_omits_sold_item_count():
     assert sections[-1] == old['panels']['sections'][-1]  # preserve technical charts
     campaign = next(s for s in sections if s['title'] == 'campaign')
     names = [p['metricName'] for p in campaign['panels']]
-    assert len(names) == len(set(names)) == len(CAMPAIGN_CHARTS) == 47
+    assert len(names) == len(set(names)) == len(CAMPAIGN_CHARTS) == 48
     assert set(names) == set(CAMPAIGN_CHARTS)
     # First row: run-long win/defeat rates and the latest interval's win rate.
     first_row = [names[i] for i, item in enumerate(campaign['layout']) if item['y'] == 0]
@@ -451,7 +451,7 @@ def test_wandb_view_repeats_comet_sections_titles_and_axis(monkeypatch):
     assert updated['status'] == 'updated'
     assert saved[-1].auto_generate_panels is False and not saved[-1].settings.sort_panels_alphabetically
     assert [s.name for s in saved[-1].sections] == ['rollout', 'campaign', 'notes']
-    assert len(saved[-1].sections[1].panels) == updated['campaign_charts'] == 47
+    assert len(saved[-1].sections[1].panels) == updated['campaign_charts'] == 48
 
 
 @pytest.fixture

@@ -195,8 +195,10 @@ def test_unrelated_maps_keep_level_rewards_disabled():
     for name in ('default', 'default-green-dragon', 'super_last_stand', 'the_charmed_child', 'siege_train'):
         assert not load_map(name).get('army_victory_level_reward', 0.)
         assert not load_map(name).get('capital_entry_level_reward', 0.)
+        assert not load_map(name).get('capital_guardian_battle_reward', 0.)
         assert not load_map(name).get('recruitment_reward_faction_only', False)
     assert not load_map('default-blue-dragon').get('capital_entry_level_reward', 0.)
+    assert not load_map('default-blue-dragon').get('capital_guardian_battle_reward', 0.)
     assert not load_map('default-blue-dragon').get('recruitment_reward_faction_only', False)
     assert not load_map('trade_train').get('army_victory_level_objective_only', False)
 
@@ -227,9 +229,8 @@ def test_default_capital_preserves_simpler_times_and_blue_reward_settings(tmp_pa
     changed = {'name', 'display_name', 'campaign_objective', 'objective_enemy',
                'objective_reward_hero_only', 'army_victory_level_reward',
                'army_victory_level_objective_only', 'scenario_events_enabled', 'cities', 'faction', 'lord_type',
-               'capital_defense_acquisition_reward', 'capital_defense_effect_reward',
-               'capital_guardian_round_reward', 'episode_timeout_penalty', 'battle_round_limit_penalty',
-               'capital_entry_level_reward', 'recruitment_reward_faction_only'}
+               'capital_guardian_battle_reward', 'capital_guardian_battle_min_defeated',
+               'episode_timeout_penalty', 'battle_round_limit_penalty', 'recruitment_reward_faction_only'}
     assert {k: v for k, v in capital.items() if k not in changed} == {
         k: v for k, v in base.items() if k not in changed}
     assert capital['cities'] == [{**city, 'objective': False} for city in base['cities']]
@@ -246,7 +247,13 @@ def test_default_capital_preserves_simpler_times_and_blue_reward_settings(tmp_pa
     for key in ('objective_reward_hero_only', 'army_victory_level_reward', 'army_victory_level_objective_only'):
         assert capital[key] == blue[key]
     assert capital['faction'] == 'legions' and capital['lord_type'] == 'warrior'
-    assert capital['capital_entry_level_reward'] == 2.
+    # User request 2026-10-26: no Mizrael reward besides victory, except the +10 battle bonus
+    # once more than 50 other armies were defeated.
+    for key in ('capital_defense_acquisition_reward', 'capital_defense_effect_reward',
+                'capital_guardian_round_reward', 'capital_entry_level_reward'):
+        assert key not in capital
+    assert capital['capital_guardian_battle_reward'] == 10.
+    assert capital['capital_guardian_battle_min_defeated'] == 51
     assert capital['recruitment_reward_faction_only'] is True
     assert action_names(capital) == action_names({**base, 'faction': 'legions', 'lord_type': 'warrior'})
     saved = tmp_path / 'map.json'

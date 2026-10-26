@@ -20,7 +20,7 @@ CAMPAIGN_FIELDS = (
     'capital_defense_acquired', 'capital_defense_effects', 'capital_health_effects',
     'capital_guardian_rounds', 'capital_guardian_battles',
     'capital_first_contacts', 'capital_entry_strength',
-    'merchant_purchases', 'waves_completed',
+    'merchant_purchases', 'waves_completed', 'capital_guardian_bonuses',
 )
 EPISODE_WINDOW = 100
 
@@ -75,6 +75,7 @@ def campaign_events(env, before, world, after, action, valid, battle_counts):
         first_contact = (before.capital_entry_strength < 0) & (after.capital_entry_strength >= 0)
         values['capital_first_contacts'] = first_contact
         values['capital_entry_strength'] = jnp.where(first_contact, after.capital_entry_strength, 0)
+        values['capital_guardian_bonuses'] = after.capital_guardian_bonus_paid & ~before.capital_guardian_bonus_paid
     if env.capital_enabled:
         healing = world_action & (action >= HEAL_START) & (action < REVIVE_START)
         healed = jnp.sum(jnp.maximum(world.hp[:6] - before.hp[:6], 0))

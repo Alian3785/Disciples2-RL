@@ -76,6 +76,9 @@ def load_map(name=None):
         # User-requested Simpler Times variant (2026-10-16): keep the map,
         # including its green dragon and its Legions warrior, and pay the
         # blue-dragon rewards for Mizrael.
+        # User request 2026-10-26: no other Mizrael reward (bottles, effects, entry
+        # strength, rounds); a fixed +10 for a guardian battle once more than 50
+        # other armies have been defeated in the episode.
         game_map = load_map('default')
         target = game_map['enemy_capitals'][0]['guard']
         if game_map['enemy_rosters'][target] != [None, None, None, None, 'g000uu3001', None]:
@@ -85,9 +88,8 @@ def load_map(name=None):
                         objective_enemy=target, objective_reward_hero_only=True,
                         army_victory_level_reward=5., army_victory_level_objective_only=True,
                         scenario_events_enabled=False,
-                        capital_defense_acquisition_reward=3., capital_defense_effect_reward=2.,
-                        capital_guardian_round_reward=.5, episode_timeout_penalty=100.,
-                        battle_round_limit_penalty=100., capital_entry_level_reward=2.,
+                        capital_guardian_battle_reward=10., capital_guardian_battle_min_defeated=51,
+                        episode_timeout_penalty=100., battle_round_limit_penalty=100.,
                         recruitment_reward_faction_only=True)
         for city in game_map['cities']:
             city['objective'] = False
@@ -190,6 +192,7 @@ class BattleState(NumberGridState):
     capital_defense_peak: jax.Array  # peak simultaneous living potion recipients per kind at guardian
     capital_rounds_rewarded: jax.Array  # highest guardian round minus one, sticky across attempts
     capital_entry_strength: jax.Array  # -1 until first hero contact; then frozen living entry level sum
+    capital_guardian_bonus_paid: jax.Array  # the guardian battle bonus was paid this episode
     siege_rewarded_kills: jax.Array  # six original siege slots, sticky until episode reset
     army_victory_rewarded: jax.Array  # one victory payment per enemy, or empty when disabled
     army_battle_level_strength: jax.Array  # living permanent party's levels above 1 at battle entry
@@ -1035,6 +1038,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             capital_defense_peak=jnp.zeros(self.capital_training.count, jnp.int32),
             capital_rounds_rewarded=jnp.int32(0),
             capital_entry_strength=jnp.int32(-1),
+            capital_guardian_bonus_paid=jnp.bool_(False),
             reference_hp_milestones=jnp.array([False, False]),
             reference_potion_pending=jnp.bool_(False),
             siege_rewarded_kills=jnp.uint32(0),
@@ -2332,7 +2336,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             bonus += self._objective_reward(won, jnp.bool_(False))
         if self.reference_rewards:
             next_state, bonus = reference_rewards.world(self, before, next_state, action, resting)
-        if self.army_victory_level_reward or self.capital_training.entry_level_reward:
+        if self.army_victory_level_reward or self.capital_training.tracks_entry:
             # Snapshot before automatic enemy attacks. Wounded living fighters
             # still count; empty/dead slots and separate summoned armies do not.
             living = (next_state.hp[:6] > 0) & (next_state.unit_ids[:6] != 0)
@@ -2347,7 +2351,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
                 # This separate victory bonus keeps a fresh snapshot per attempt.
                 # Temporary transformations, battle losses and XP cannot change it.
                 next_state = next_state.replace(army_battle_level_strength=jnp.where(contact, strength, 0))
-            if self.capital_training.entry_level_reward:
+            if self.capital_training.tracks_entry:
                 next_state, entry_bonus = self.capital_training.enter(next_state, engage, strength)
                 bonus += entry_bonus
         return next_state, bonus

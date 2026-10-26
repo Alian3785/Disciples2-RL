@@ -16,7 +16,7 @@ CAMPAIGN_MECHANICS = (
     'battle_items_used', 'unit_swaps', 'enemy_squads_defeated', 'cities_captured', 'trainer_uses',
     'capital_defense_acquired', 'capital_defense_effects', 'capital_health_effects',
     'capital_guardian_rounds', 'capital_guardian_battles',
-    'capital_entry_strength',
+    'capital_entry_strength', 'capital_guardian_bonuses',
 )
 CAMPAIGN_CHARTS = (
     # First row (three per row): run-long win and defeat rates, then the
@@ -83,6 +83,7 @@ CHART_TITLES = {
     'campaign/window/capital_health_effects_when_reached_mean': 'Эффектов постоянного HP — в эпизодах с Мизраэлем (последние 100)',
     'campaign/window/capital_guardian_rounds_when_reached_mean': 'Новых раундов — в эпизодах с Мизраэлем (последние 100)',
     'campaign/completed/capital_entry_strength_mean': 'Сила армии при первом входе к Мизраэлю — на эпизод',
+    'campaign/completed/capital_guardian_bonuses_mean': 'Бой с Мизраэлем после 50+ побед (+10) — доля эпизодов',
     'campaign/window/capital_entry_strength_when_reached_mean': 'Сила армии при первом входе — среди дошедших (последние 100)',
     'rollout/ep_rew_mean': 'Средняя награда — последние 100 эпизодов',
     'rollout/ep_len_mean': 'Средняя длина — последние 100 эпизодов',
