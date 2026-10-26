@@ -30,7 +30,7 @@ from stoix.envs.number_grid_ruins import RuinRules
 from stoix.envs.number_grid_terrain import TerrainRules
 from stoix.envs.number_grid_spells import SpellResearchRules, research_action_names
 from stoix.envs.number_grid_casting import SpellCastRules, SUMMON_CAST, cast_action_names, casting_enabled
-from stoix.envs.number_grid_territory import TerritoryRules, OBSTACLE
+from stoix.envs.number_grid_territory import MANA_KINDS, TerritoryRules, OBSTACLE
 from stoix.envs.number_grid_item_combat import equipment_attack, transform_imp, transform_decay
 from stoix.envs import number_grid_battle_items as battle_items
 from stoix.envs import number_grid_hero_skills as hero_skills
@@ -374,10 +374,15 @@ class NumberGrid(Summoning, NumericNumberGrid):
         if type(self.starting_gold) is not int or self.starting_gold < 0:
             raise ValueError('starting_gold must be a nonnegative integer')
         self.starting_gold = min(self.starting_gold, MAX_RESOURCE)
-        # Removed with Empire-Alliance War; refuse instead of silently changing the start or loot.
-        for removed in ('starting_mana', 'enemy_loot'):
-            if removed in game_map:
-                raise ValueError(f'{removed} is no longer supported')
+        # A scenario player's BANK also holds mana (R infernal, Y life, E death, W runes, B grove).
+        starting_mana = game_map.get('starting_mana', {})
+        if (not isinstance(starting_mana, dict) or any(kind not in MANA_KINDS for kind in starting_mana)
+                or any(type(amount) is not int or amount < 0 for amount in starting_mana.values())):
+            raise ValueError('starting_mana must map mana kinds to nonnegative integers')
+        self.starting_mana = tuple(min(starting_mana.get(kind, 0), MAX_RESOURCE) for kind in MANA_KINDS)
+        # Removed with Empire-Alliance War; refuse instead of silently changing the loot.
+        if 'enemy_loot' in game_map:
+            raise ValueError('enemy_loot is no longer supported')
         self.combat_rules_version = game_map.get('combat_rules_version', 1)
         if type(self.combat_rules_version) is not int or self.combat_rules_version not in (1, 2):
             raise ValueError('Unsupported combat_rules_version')
@@ -1095,7 +1100,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             potion_temporary=jnp.zeros((12,7)),
             potion_active=jnp.zeros(12,jnp.uint32),potion_wards=jnp.zeros(12,jnp.uint32),
             learned_spells=jnp.uint32(0), spell_researched_today=jnp.bool_(False),
-            last_researched_spell=jnp.int32(-1), mana=jnp.zeros(5,jnp.int32),
+            last_researched_spell=jnp.int32(-1), mana=jnp.array(self.starting_mana,jnp.int32),
             spell_casts=jnp.zeros(self.casting.book_count if self.spell_casting_enabled else 0,jnp.int32),
             spell_effects=jnp.uint32(0),
             enemy_spell_effects=jnp.zeros(self.num_opponents if self.spell_casting_enabled else 0,jnp.uint32),

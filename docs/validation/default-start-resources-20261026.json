@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-26",
+  "mechanic": "Default starts with the original scenario's treasury: 400 gold and 200 infernal mana for the Legions player.",
+  "request": "User request 2026-10-26: give Default its starting gold and mana as in the original.",
+  "method": "Read the original scenario file and the user's save; no disassembler or original game was launched.",
+  "sources": [
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/A Return To Simpler Times.sg",
+      "records": {
+        "S001PL0002": "race G000RR0002 (Legions of the Damned), BANK G0400:R0200:Y0000:E0000:W0000",
+        "S001PL0001": "race G000RR0000 (Empire), BANK G0400:R0000:Y0200:E0000:W0000"
+      },
+      "bank_letters": "G gold, R infernal, Y life, E death, W runes"
+    },
+    {
+      "path": "SaveGame/12345.sg (the user's save of this scenario, turn 11)",
+      "records": {
+        "S001PL0002": "human player, BANK G1150:R0725:Y0000:E0000:W0000:B0000"
+      }
+    },
+    {
+      "path": "C:/Disciples 2 python reference/Big_map/maps/default/layout.json",
+      "note": "starting_gold 0.0 and no mana: the reference started without a treasury."
+    }
+  ],
+  "implementation": [
+    "scripts/build_default_map.py writes starting_gold 400 and starting_mana {\"infernal\": 200} into maps/default.json; Capital and both dragon modes inherit them through load_map.",
+    "NumberGrid accepts starting_mana again: a dict of MANA_KINDS names to nonnegative integers, capped at MAX_RESOURCE like starting_gold; reset puts it into state.mana. enemy_loot stays refused.",
+    "scripts/validate_reference_maps.py checks the reset mana against the map."
+  ],
+  "regression_tests": [
+    "stoix/tests/number_grid_default_map_test.py::test_default_map_layout_and_actions",
+    "stoix/tests/number_grid_limits_test.py::test_initial_profiles_and_starting_treasury_are_capped"
+  ],
+  "static_checks": ["Ruff"],
+  "tests_run": false,
+  "training_or_benchmarks_run": false,
+  "original_game_launched": false,
+  "disassembler_launched": false
+}

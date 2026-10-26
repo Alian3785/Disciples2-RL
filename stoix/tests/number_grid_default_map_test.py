@@ -78,7 +78,10 @@ def test_default_map_layout_and_actions(default_game):
     assert 'hero_roster' not in DEFAULT and env.map_config['hero_roster'] == STARTING_PARTIES['legions']['warrior']
     assert [rows[i]['key'] if i else None for i in state.unit_ids[:6].tolist()] == env.map_config['hero_roster']
     assert state.position.tolist() == [28, 6]
-    assert int(state.gold) == 0 and state.spell_stock.tolist() == [1, 1, 1, 1]
+    # Original S001PL0002 BANK G0400:R0200: 400 gold and 200 infernal mana.
+    assert DEFAULT['starting_gold'] == 400 and DEFAULT['starting_mana'] == {'infernal': 200}
+    assert int(state.gold) == 400 and state.mana.tolist() == [200, 0, 0, 0, 0]
+    assert state.spell_stock.tolist() == [1, 1, 1, 1]
 
 
 def test_alar_sells_an_artifact(default_game):

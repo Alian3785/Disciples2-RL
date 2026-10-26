@@ -49,6 +49,10 @@ ERARICK = [{'unit': 'g000uu5039', 'stock': 1}]
 # Twin Island Mages: four level II spells at their Gspells BUY_C, 400 gold each.
 TOWER_SPELLS = [{'spell': spell, 'price': 400, 'stock': 1}
                 for spell in ('g000ss0028', 'g000ss0067', 'g000ss0070', 'g000ss0029')]
+# Original Big_map/A Return To Simpler Times.sg: the Legions player S001PL0002 starts with
+# BANK G0400:R0200 (the Empire's S001PL0001 with G0400:Y0200). In the user's saves of this
+# scenario (SaveGame/12345.sg, turn 11) the human Legions player holds G1150:R0725.
+STARTING_GOLD, STARTING_MANA = 400, {'infernal': 200}
 # Original Big_map/A Return To Simpler Times.sg: both CCapital inventories hold
 # 3x G000IG0005, 3x G000IG0006 and 3x G000IG0001; layout.json omits them.
 CAPITAL_POTIONS = {'healing': 3, 'restoration': 3, 'life': 3}
@@ -210,6 +214,9 @@ def build(layout, landmarks):
         faction='legions',
         # The reference's warrior ruler; fixed here because the current map's own ruler is a mage.
         lord_type='warrior',
+        # Same .sg, S001PL0002's BANK G0400:R0200: 400 gold and 200 infernal mana at the start.
+        starting_gold=STARTING_GOLD,
+        starting_mana=STARTING_MANA,
         enemy_rosters=rosters,
         initial_potions=CAPITAL_POTIONS,
         initial_items={},
