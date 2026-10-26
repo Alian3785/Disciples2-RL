@@ -2489,20 +2489,24 @@ class NumberGrid(Summoning, NumericNumberGrid):
         state = state.replace(last_sale_gold=jnp.int32(0), last_sold_count=jnp.int32(0), last_trade_item=jnp.int32(-1))
         if not self.has_copies:
             return self._battle_step_regular(state,action,key,random_values,with_metrics=with_metrics)
-        # Round 0 prepares copies, later rounds resolve an activation. Batched environments
-        # evaluate both (a vmapped cond is a select), so both share one special-action call
-        # on the inputs of the environment's own round; each result is unchanged.
+        # Round 0 prepares copies, later rounds resolve an activation. Both sides need one
+        # special-action call; it is made once, on the inputs of the environment's own round.
+        # Batched environments evaluate both sides of the cond (a vmapped cond is a select)
+        # and share that call; a single environment runs only its own side.
         preparing = state.round == 0
         prelude = self._activation_prelude(state, action, random_values)
         prepare_action = jnp.where(state.actor >= 6,
                                    self._special_enemy_action(state, DEFEND, random_values[30:36]), action)
         special = self._special_action(jax.tree.map(lambda a, b: jnp.where(preparing, a, b), state, prelude[0]),
                                        jnp.where(preparing, prepare_action, prelude[1]), random_values)
-        prepared = self._prepare_copies(state, action, key, random_values, special)
-        if with_metrics:
-            prepared = (*prepared, jnp.zeros(4, jnp.int32))
-        regular = self._battle_step_regular(state, action, key, random_values, with_metrics, prelude, special)
-        return jax.tree.map(lambda a, b: jnp.where(preparing, a, b), prepared, regular)
+
+        def prepare(_):
+            prepared = self._prepare_copies(state, action, key, random_values, special)
+            return (*prepared, jnp.zeros(4, jnp.int32)) if with_metrics else prepared
+
+        def regular(_):
+            return self._battle_step_regular(state, action, key, random_values, with_metrics, prelude, special)
+        return jax.lax.cond(preparing, prepare, regular, None)
 
     def _activation_prelude(self, state, action, random_values):
         """The acting unit's skip/flee status and its effective command, before special actions."""

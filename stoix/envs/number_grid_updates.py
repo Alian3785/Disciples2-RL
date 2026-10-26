@@ -33,11 +33,12 @@ def set_column(values, column, new):
 
 
 def set_rows(values, rows, new):
-    """values.at[rows].set(new) for one row index or a short vector of distinct ones.
+    """values.at[rows].set(new) for one row index or a vector of distinct ones.
 
     Negative rows count from the end and out-of-range rows are dropped, as with .at[].set,
     but each row is an elementwise select: on the GPU the update fuses with its neighbours
-    instead of launching a scatter and a buffer copy.
+    instead of launching a scatter and a buffer copy. Vectors longer than 8 rows use one
+    comparison matrix while it stays small, and a scatter beyond that.
     """
     rows = jnp.asarray(rows)
     size = values.shape[0]
@@ -47,13 +48,18 @@ def set_rows(values, rows, new):
     if rows.ndim == 0:
         return jnp.where(index == rows, new, values)
     new = jnp.broadcast_to(new, rows.shape+values.shape[1:])
-    if rows.shape[0] > 8 and values.ndim == 1 and not jnp.issubdtype(values.dtype, jnp.floating):
-        # Long index vectors (inventory compaction): one comparison matrix instead of a chain;
-        # each row matches at most one index, so the masked sum is that index's value.
-        hits = index[:, None] == rows
-        if values.dtype == jnp.bool_:
-            return jnp.where(jnp.any(hits, axis=1), jnp.any(hits & new, axis=1), values)
-        return jnp.where(jnp.any(hits, axis=1), jnp.sum(jnp.where(hits, new, 0), axis=1, dtype=values.dtype), values)
+    if rows.shape[0] > 8:
+        if (values.ndim == 1 and not jnp.issubdtype(values.dtype, jnp.floating)
+                and size*rows.shape[0] <= 4096):
+            # Long index vectors (inventory compaction): one comparison matrix instead of a chain;
+            # each row matches at most one index, so the masked sum is that index's value.
+            hits = index[:, None] == rows
+            if values.dtype == jnp.bool_:
+                return jnp.where(jnp.any(hits, axis=1), jnp.any(hits & new, axis=1), values)
+            return jnp.where(jnp.any(hits, axis=1), jnp.sum(jnp.where(hits, new, 0), axis=1, dtype=values.dtype), values)
+        # Large custom inventories (capacity up to 1000) or other long updates: a plain scatter
+        # stays linear instead of building a size x rows matrix or a long chain of selects.
+        return values.at[rows].set(new)
     for j in range(rows.shape[0]):
         values = jnp.where(index == rows[j], new[j], values)
     return values
