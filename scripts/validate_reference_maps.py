@@ -28,6 +28,7 @@ def validate(name):
     assert bool(jnp.all(jnp.isfinite(env.observation(state))))
     assert not bool(state.done)
     assert int(state.gold) == game_map.get('starting_gold', 0)
+    assert tuple(int(v) for v in state.mana) == env.starting_mana
     assert bool(jnp.all(state.scenario_spawned == ~env.scenario.scheduled))
     for _ in range(3):
         assert bool(env.action_mask(state)[REST])

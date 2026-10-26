@@ -16,6 +16,7 @@ from stoix.envs.number_grid_combat import (
 )
 from stoix.envs.number_grid_buildings import CATALOG
 from stoix.envs.number_grid_effects import CAPITAL_GUARDS
+from stoix.envs.number_grid_updates import set_rows, take_rows
 from stoix.envs.number_grid_casting import cast_summon_keys
 from stoix.envs.number_grid_battle_items import battle_item_unit_keys
 from stoix.envs.number_grid_recruitment import OFFERS, mercenary_offers
@@ -360,7 +361,7 @@ class ProgressionRules:
     def raw_stats(self, ids, levels):
         levels = jnp.minimum(levels, MAX_LEVEL)
         anchor = jnp.minimum(levels, self.level_anchor)
-        return self.stat_levels[anchor, ids] + jnp.maximum(levels-self.level_anchor, 0)[..., None]*self.late[ids]
+        return take_rows(self.stat_levels, anchor, ids) + jnp.maximum(levels-self.level_anchor, 0)[..., None]*self.late[ids]
 
     def stats(self, ids, levels):
         return jnp.minimum(self.raw_stats(ids,levels), self.stat_caps[ids])
@@ -374,7 +375,7 @@ class ProgressionRules:
 
     def required_xp(self, ids, levels):
         levels = jnp.minimum(levels, MAX_LEVEL)
-        return self.required_levels[levels, ids]
+        return take_rows(self.required_levels, levels, ids)
 
     def missing_upgrade_building(self, state, ids, levels):
         """An own-faction, permitted evolution is waiting for its building."""
@@ -416,25 +417,25 @@ class ProgressionRules:
 
     def experience(self, ids, levels, current):
         levels = jnp.minimum(levels, MAX_LEVEL)
-        killed = self.kill_levels[levels, ids]
+        killed = take_rows(self.kill_levels, levels, ids)
         return jnp.stack((levels, killed, self.required_xp(ids, levels), current), axis=-1)
 
     def damage(self, state, actor, targets, guarded, bonuses, damage_value=None, armor_shreds=None, imps=None, armor_values=None):
         if damage_value is None:
             damage_value = self.stats(state.unit_ids, state.unit_levels)[actor, DAMAGE]
-        cap = self.stat_caps[state.unit_ids[actor], DAMAGE]
+        cap = self.stat_caps[:, DAMAGE][state.unit_ids[actor]]
         cap = jnp.where(state.imp[actor] | state.fenrir[actor], 300., cap)
         damage_value = jnp.minimum(damage_value, cap)
         bonuses = capped_damage_bonus(damage_value, bonuses, cap)
         levels, ids = jnp.minimum(state.unit_levels[targets], min(MAX_LEVEL, self.armor_max_level)), state.unit_ids[targets]
-        armor_ids = (self.armor_ids[levels, ids] if armor_shreds is None
-                     else self.shatter_armor_ids[levels, ids, jnp.minimum(armor_shreds[targets], 6)])
+        armor_ids = (take_rows(self.armor_ids, levels, ids) if armor_shreds is None
+                     else take_rows(self.shatter_armor_ids, levels, ids, jnp.minimum(armor_shreds[targets], 6)))
         if imps is not None:
             armor_ids = jnp.where(imps[targets], 0, armor_ids)
         if armor_values is not None:
             armor_ids = jnp.clip(armor_values,0,90).astype(jnp.int32)
-        return self.damage_rolls[damage_value.astype(jnp.int32), armor_ids,
-                                 guarded.astype(jnp.int32), bonuses]
+        return take_rows(self.damage_rolls, damage_value.astype(jnp.int32), armor_ids,
+                         guarded.astype(jnp.int32), bonuses)
 
     def accumulate(self, state, before_hp, hp, escaped, kill_xp, death_order=None):
         """Original sub_62618B/62632E: distribute each death packet immediately.
@@ -500,7 +501,7 @@ class ProgressionRules:
         xp = jnp.where(changed, 0, jnp.where(reached, required-1, xp))
         new_hp = jnp.where(changed, self.stats(ids, levels)[:, HP].astype(jnp.int32), hp)
         saved = jnp.stack((levels[6:], xp[6:]), axis=-1)
-        enemies = state.enemy_progress.at[state.enemy].set(
+        enemies = set_rows(state.enemy_progress, state.enemy,
             jnp.where(ended, saved, state.enemy_progress[state.enemy]))
         promoted = jnp.sum(jnp.where(changed, jnp.left_shift(jnp.uint32(1), jnp.arange(12, dtype=jnp.uint32)), jnp.uint32(0)))
         return ids, levels, xp, enemies, new_hp, gains, promoted

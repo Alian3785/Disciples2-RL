@@ -19,15 +19,20 @@ def require_gpu():
 
 
 def test_initial_profiles_and_starting_treasury_are_capped():
+    """Starting gold, mana and unit profiles are capped; malformed starting_mana is refused."""
     config = copy.deepcopy(BASIC_MAP)
     config['starting_gold'] = 2**40  # Cap before conversion to the state's int32.
+    config['starting_mana'] = {'infernal': 2**40, 'elves': 7}  # MANA_KINDS order
     config['hero_combat_stats'] = [dict(max_hp=20000, initiative=500, armor=100)
                                    for _ in range(config['hero_units'])]
     env = NumberGrid(map_config=config)
     state, _ = compiled_method(env, 'reset')(jax.random.PRNGKey(42))
     stats = compiled_method(env, 'unit_stats')(state)
     occupied = state.hp[:6] > 0
-    assert state.gold == 9999
+    assert state.gold == 9999 and state.mana.tolist() == [9999, 0, 0, 0, 7]
+    for invalid in ({'gold': 1}, {'infernal': -1}, {'infernal': 1.5}, [200]):
+        with pytest.raises(ValueError, match='starting_mana'):
+            NumberGrid(map_config={**BASIC_MAP, 'starting_mana': invalid})
     assert jnp.all(state.hp[:6][occupied] == 9999)
     assert jnp.all(stats[:6, INITIATIVE][occupied] == 150)
     assert jnp.all(stats[:6, ARMOR][occupied] == 90)

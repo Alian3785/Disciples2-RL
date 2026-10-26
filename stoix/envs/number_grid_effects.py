@@ -1,5 +1,6 @@
 """Fixed-shape, source-aware combat effects; all runtime work stays in JAX."""
 import jax.numpy as jnp
+from stoix.envs.number_grid_updates import set_rows
 
 CAPITAL_GUARDS = {'Ашган', 'Ашкаэль', 'Видар', 'Мизраэль', 'Иллюмиэлль'}
 
@@ -71,7 +72,7 @@ def source_protection(eligible, source, traits, used, slots):
     bit = jnp.where(source > 0, jnp.left_shift(jnp.uint32(1), jnp.maximum(source, 1)-1), jnp.uint32(0))
     immune = eligible & ((traits[slots, 2] & bit) != 0)
     warded = eligible & ~immune & ((traits[slots, 3] & ~used[slots] & bit) != 0)
-    used = used.at[slots].set(used[slots] | jnp.where(warded, bit, jnp.uint32(0)))
+    used = set_rows(used, slots, used[slots] | jnp.where(warded, bit, jnp.uint32(0)))
     bits = jnp.left_shift(jnp.uint32(1), slots.astype(jnp.uint32))
     return (eligible & ~immune & ~warded, used,
             jnp.sum(jnp.where(immune, bits, jnp.uint32(0))),
@@ -243,7 +244,7 @@ def vampiric_heal(hp, maximum, escaped, actor, pool, share_leftover):
     """Reference leech and equal capped integer shares, without a device loop."""
     maximum = maximum.astype(jnp.int32)
     self_heal = jnp.minimum(pool,jnp.maximum(maximum[actor]-hp[actor],0))
-    hp = hp.at[actor].add(self_heal)
+    hp = set_rows(hp, actor, hp[actor]+self_heal)
     allies = ((jnp.arange(12) < 6) == (actor < 6)) & (jnp.arange(12) != actor) & (hp > 0) & ~escaped
     needs = jnp.where(allies,jnp.maximum(maximum-hp,0),0)
     missing = jnp.where(actor < 6,needs[:6],needs[6:])
