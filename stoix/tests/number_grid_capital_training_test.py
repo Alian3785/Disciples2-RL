@@ -1,7 +1,10 @@
 """Extended GPU cases for user-requested Capital rewards; not part of core.
 
-Source: user request 2026-10-16 and docs/DEFAULT_MAP.md. These are RL rewards,
-not claims about original Disciples II mechanics. Run only on explicit request.
+Source: user requests 2026-10-16 and 2026-10-26, docs/DEFAULT_MAP.md. These are RL
+rewards, not claims about original Disciples II mechanics. Run only on explicit request.
+Default Capital now pays only the blue-dragon victory rewards plus a +10 guardian battle
+bonus after more than 50 defeated armies; the earlier bottle, effect, round and entry
+rewards stay available to other maps and are tested on a `legacy` configuration.
 """
 from copy import deepcopy
 
@@ -25,6 +28,34 @@ def capital():
     return env, compiled_method(env, 'reset')(jax.random.PRNGKey(42))[0]
 
 
+# The 2026-10-16 Capital rewards, removed from the map on 2026-10-26 but still supported,
+# with the Legions warrior party they were written for (Capital's own party changed 2026-10-26).
+LEGACY = dict(capital_defense_acquisition_reward=3., capital_defense_effect_reward=2.,
+              capital_guardian_round_reward=.5, capital_entry_level_reward=2.,
+              capital_guardian_battle_reward=0.,
+              hero_roster=['possessed', 'duke', 'possessed', None, 'cultist', None])
+# Capital's starting party since 2026-10-26: the Duke holds front slot 0.
+DUKE = 0
+
+
+@pytest.fixture(scope='module')
+def legacy():
+    assert jax.default_backend() == 'gpu', 'Use scripts/run_gpu.sh with CUDA'
+    env = NumberGrid(map_config={**load_map('default-capital'), **LEGACY})
+    return env, compiled_method(env, 'reset')(jax.random.PRNGKey(42))[0]
+
+
+def defeat_armies(env, state, count, keep=(30,)):
+    """Mark `count` present armies other than the guardian (and `keep`) as defeated this episode.
+
+    Since 2026-10-26 eleven armies (the Empire bot's victims and its own slot) are absent at reset.
+    """
+    others = [i for i in range(env.num_opponents) if i != env.objective_enemy and i not in keep
+              and bool(state.scenario_spawned[i])][:count]
+    assert len(others) == count
+    return state.replace(alive=state.alive.at[jnp.array(others, jnp.int32)].set(False))
+
+
 def defended_battle(env, initial):
     state = initial.replace(potions=jnp.full_like(initial.potions, 5))
     for key in ('invulnerability', 'highfather'):
@@ -34,12 +65,24 @@ def defended_battle(env, initial):
     return enter(env, near, action)[0]
 
 
-def test_reset_legions_and_reward_memory_observation(capital):
+def test_reset_legions_victory_only_rewards_and_battle_bonus_observation(capital):
     env, state = capital
+    rules = env.capital_training
     assert env.construction.faction == 'legions'
     assert env.construction.lord['id'] == 'warrior'
-    assert env.map_config['hero_roster'] == ['possessed', 'duke', 'possessed', None, 'cultist', None]
+    assert env.map_config['hero_roster'] == ['duke', None, 'possessed', 'cultist', None, 'cultist']
     assert env.round_limit_penalty == env.episode_timeout_penalty == 100.
+    assert env.army_victory_level_reward == 5. and env.objective_reward_hero_only
+    assert (rules.acquisition_reward, rules.effect_reward, rules.round_reward, rules.entry_level_reward) == (0,) * 4
+    assert rules.battle_reward == 10. and rules.min_defeated == 51
+    assert not rules.tracks_effects and rules.tracks_entry
+    assert not state.capital_guardian_bonus_paid and int(rules.defeated(state)) == 0
+    assert rules.observation(state).tolist() == [0., 0.] and rules.observation_size == 2
+    assert compiled_method(env, 'observation')(state).shape == (env.observation_size,)
+
+
+def test_legacy_rewards_keep_their_memory_observation(legacy):
+    env, state = legacy
     assert not state.capital_defense_acquired and not state.capital_rounds_rewarded
     assert not jnp.any(state.capital_defense_peak)
     assert int(state.capital_entry_strength) == -1
@@ -48,8 +91,73 @@ def test_reset_legions_and_reward_memory_observation(capital):
     assert compiled_method(env, 'observation')(state).shape == (env.observation_size,)
 
 
-def test_actual_chest_step_pays_acquisition_and_emits_metric(capital):
-    env, state = capital
+@pytest.mark.parametrize('defeated,expected', [(0, 0.), (50, 0.), (51, 10.), (62, 10.)])
+def test_guardian_battle_bonus_needs_more_than_50_defeated_armies(capital, defeated, expected):
+    """Pay +10 on the hero army's entry only once 51 or more other armies are gone."""
+    env, initial = capital
+    before, action = near_enemy(env, defeat_armies(env, initial, defeated), env.objective_enemy)
+    assert int(env.capital_training.defeated(before)) == defeated
+    assert compiled_method(env, 'action_mask')(before)[action]
+    battle, amount = enter(env, before, action)
+    _, plain = enter(env, before.replace(capital_guardian_bonus_paid=jnp.bool_(True)), action)
+    assert battle.in_battle and int(battle.enemy) == env.objective_enemy
+    assert float(amount-plain) == pytest.approx(expected)
+    assert bool(battle.capital_guardian_bonus_paid) == (expected > 0)
+    assert int(battle.capital_entry_strength) >= 0  # first contact still recorded for metrics
+    _, ts = compiled_method(env, 'step')(before, action)
+    assert ts.extras['campaign_events'][CAMPAIGN_FIELDS.index('capital_guardian_bonuses')] == (expected > 0)
+    assert env.capital_training.observation(battle).tolist() == pytest.approx(
+        [min(defeated/51, 1.), float(expected > 0)])
+
+
+def test_guardian_battle_bonus_waits_for_threshold_and_pays_once(capital):
+    """An early encounter does not consume the bonus; once paid, re-entry and losses never repay."""
+    env, initial = capital
+    before, action = near_enemy(env, defeat_armies(env, initial, 50), env.objective_enemy)
+    early, _ = enter(env, before, action)
+    assert not early.capital_guardian_bonus_paid
+    retreated, _ = finish(env, early, 'retreat')
+    before, action = near_enemy(env, defeat_armies(env, retreated, 51), env.objective_enemy)
+    paid, _ = enter(env, before, action)
+    assert paid.capital_guardian_bonus_paid
+    retreated, _ = finish(env, paid, 'retreat')
+    before, action = near_enemy(env, retreated, env.objective_enemy)
+    again, reward = enter(env, before, action)
+    _, unpaid = enter(env, before.replace(capital_guardian_bonus_paid=jnp.bool_(False)), action)
+    assert again.capital_guardian_bonus_paid and float(unpaid-reward) == pytest.approx(10.)
+    lost, _ = finish(env, again, 'defeat')
+    assert lost.done and lost.capital_guardian_bonus_paid
+    reset, _ = compiled_method(env, 'reset')(jax.random.PRNGKey(43))
+    assert not reset.capital_guardian_bonus_paid
+
+
+def test_guardian_battle_bonus_excludes_other_targets_summons_and_bots(capital):
+    env, initial = capital
+    ready = defeat_armies(env, initial, 51)
+    before, action = near_enemy(env, ready, 30)
+    other, _ = enter(env, before, action)
+    assert other.in_battle and int(other.enemy) == 30 and not other.capital_guardian_bonus_paid
+    before, action = near_enemy(env, ready, env.objective_enemy)
+    battle, _ = enter(env, before, action)
+    unclaimed = battle.replace(capital_guardian_bonus_paid=jnp.bool_(False))
+    for excluded in (unclaimed.replace(summon_battle=jnp.bool_(True)),
+                     unclaimed.replace(bot_autobattle=jnp.bool_(True)),
+                     unclaimed.replace(done=jnp.bool_(True)),
+                     unclaimed.replace(hp=unclaimed.hp.at[6:].set(0)),
+                     unclaimed.replace(hp=unclaimed.hp.at[:6].set(0))):
+        after, reward = env.capital_training.enter(excluded, jnp.bool_(True), jnp.int32(0))
+        assert not after.capital_guardian_bonus_paid and float(reward) == 0.
+
+
+@pytest.mark.parametrize('value', [-1, 1.5, True])
+def test_battle_bonus_threshold_must_be_a_nonnegative_integer(capital, value):
+    env, _ = capital
+    with pytest.raises(ValueError, match='capital_guardian_battle_min_defeated'):
+        CapitalTrainingRules(env, {**load_map('default-capital'), 'capital_guardian_battle_min_defeated': value})
+
+
+def test_actual_chest_step_pays_acquisition_and_emits_metric(legacy):
+    env, state = legacy
     chest = next(c for c in env.map_config['chests'] if c.get('potions', {}).get('invulnerability'))
     position = jnp.array(chest['position'], jnp.int32)
     blocked = env.territory.blocked_grid.reshape(env.size, env.size)
@@ -67,8 +175,8 @@ def test_actual_chest_step_pays_acquisition_and_emits_metric(capital):
     assert float(env.capital_training.acquire(after, healed)[1]) == 0.
 
 
-def test_effects_include_health_and_cannot_be_farmed_by_reentry(capital):
-    env, initial = capital
+def test_effects_include_health_and_cannot_be_farmed_by_reentry(legacy):
+    env, initial = legacy
     rules = env.capital_training
     battle = defended_battle(env, initial)
     reward = jax.jit(rules.battle)
@@ -84,8 +192,8 @@ def test_effects_include_health_and_cannot_be_farmed_by_reentry(capital):
     assert float(reward(swapped, swapped.hp, swapped.escaped, swapped.round)[1]) == 0.
 
 
-def test_dead_summoned_and_non_goal_effects_do_not_pay(capital):
-    env, initial = capital
+def test_dead_summoned_and_non_goal_effects_do_not_pay(legacy):
+    env, initial = legacy
     battle = defended_battle(env, initial)
     reward = jax.jit(env.capital_training.battle)
     for excluded in (battle.replace(enemy=jnp.int32(30)), battle.replace(summon_battle=jnp.bool_(True)),
@@ -96,8 +204,8 @@ def test_dead_summoned_and_non_goal_effects_do_not_pay(capital):
     assert float(reward(battle, battle.hp.at[1].set(0), battle.escaped, battle.round)[1]) == 4.
 
 
-def test_new_rounds_are_once_per_episode_and_never_pay_for_timeout(capital):
-    env, initial = capital
+def test_new_rounds_are_once_per_episode_and_never_pay_for_timeout(legacy):
+    env, initial = legacy
     near, action = near_enemy(env, initial, env.objective_enemy)
     battle = enter(env, near, action)[0]
     reward = jax.jit(env.capital_training.battle)
@@ -119,9 +227,9 @@ def test_episode_timeout_penalty(capital):
 
 @pytest.mark.parametrize('levels,expected', [([1, 1, 1, 1], 0.), ([2, 2, 3, 1], 8.),
                                           ([4, 4, 4, 4], 24.)])
-def test_first_guardian_entry_pays_strength_immediately(capital, levels, expected):
+def test_first_guardian_entry_pays_strength_immediately(legacy, levels, expected):
     """Pay on contact, not victory; even a zero payout consumes the first encounter."""
-    env, initial = capital
+    env, initial = legacy
     party = hero_roster_state(env, initial, ['possessed', 'duke', 'possessed', 'cultist', None, None])
     party = party.replace(unit_levels=party.unit_levels.at[:4].set(jnp.array(levels)))
     before, action = near_enemy(env, party, env.objective_enemy)
@@ -134,9 +242,9 @@ def test_first_guardian_entry_pays_strength_immediately(capital, levels, expecte
     assert float(env.capital_training.observation(battle)[-1]) == pytest.approx(expected/200.)
 
 
-def test_entry_counts_living_levels_and_emits_step_metrics(capital):
+def test_entry_counts_living_levels_and_emits_step_metrics(legacy):
     """A wounded level-5 elite counts; a dead mage, empty slot and potion HP do not."""
-    env, initial = capital
+    env, initial = legacy
     party = developed_party(env, initial)
     party = party.replace(hp=party.hp.at[0].set(1).at[3].set(0),
         unit_levels=party.unit_levels.at[2].set(99), potion_bonus=party.potion_bonus.at[0, 0].add(100))
@@ -152,8 +260,8 @@ def test_entry_counts_living_levels_and_emits_step_metrics(capital):
 
 
 @pytest.mark.parametrize('developed', [False, True])
-def test_retreat_reentry_and_later_levels_cannot_repeat_entry_reward(capital, developed):
-    env, initial = capital
+def test_retreat_reentry_and_later_levels_cannot_repeat_entry_reward(legacy, developed):
+    env, initial = legacy
     party = developed_party(env, initial) if developed else initial
     before, action = near_enemy(env, party, env.objective_enemy)
     battle, _ = enter(env, before, action)
@@ -170,8 +278,8 @@ def test_retreat_reentry_and_later_levels_cannot_repeat_entry_reward(capital, de
     assert int(reset.capital_entry_strength) == -1
 
 
-def test_other_armies_invalid_actions_and_separate_summons_cannot_claim_entry(capital):
-    env, initial = capital
+def test_other_armies_invalid_actions_and_separate_summons_cannot_claim_entry(legacy):
+    env, initial = legacy
     before, action = near_enemy(env, developed_party(env, initial), 30)
     other, _ = enter(env, before, action)
     assert int(other.capital_entry_strength) == -1
@@ -227,7 +335,7 @@ def test_regular_replacement_fills_reward_slot_without_mercenary_consuming_bonus
     env, initial = capital
     rules = env.recruitment
     # Level 3 unlocks a fourth companion; the original three already claimed their places.
-    party = initial.replace(unit_levels=initial.unit_levels.at[1].set(3))
+    party = initial.replace(unit_levels=initial.unit_levels.at[DUKE].set(3))
     offer = rules.keys.index('goblin_archer')
     hired, ts = compiled_method(env, 'step')(at_camp(env, party, offer), jnp.int32(rules.start + offer))
     slot = int(hired.last_target)
@@ -250,7 +358,7 @@ def test_regular_replacement_fills_reward_slot_without_mercenary_consuming_bonus
 def test_camp_origin_survives_promotion_swaps_battle_death_and_reset(capital):
     env, initial = capital
     rules = env.recruitment
-    party = initial.replace(unit_levels=initial.unit_levels.at[1].set(3))
+    party = initial.replace(unit_levels=initial.unit_levels.at[DUKE].set(3))
     offer = rules.keys.index('goblin_archer')
     hired, _ = compiled_method(env, 'step')(at_camp(env, party, offer), jnp.int32(rules.start + offer))
     slot = int(hired.last_target)
@@ -265,18 +373,19 @@ def test_camp_origin_survives_promotion_swaps_battle_death_and_reset(capital):
     assert promoted.unit_levels[slot] > hired.unit_levels[slot]
     assert promoted.mercenary_units[slot] and rules.reward_vacancies(promoted) == 1
     swaps = env.unit_swaps
-    swap = jnp.int32(swaps.start + swaps.pairs.index((0, slot)))
+    other = 2  # the Possessed; the hero keeps its slot
+    swap = jnp.int32(swaps.start + swaps.pairs.index(tuple(sorted((other, slot)))))
     moved, _ = compiled_method(env, 'step')(promoted, swap)
-    assert moved.mercenary_units[0] and not moved.mercenary_units[slot]
+    assert moved.mercenary_units[other] and not moved.mercenary_units[slot]
     assert rules.reward_vacancies(moved) == 1
-    assert rules.observation(moved)[-6:].tolist() == [1., 0., 0., 0., 0., 0.]
+    assert rules.observation(moved)[-6:].tolist() == [float(i == other) for i in range(6)]
     assert compiled_method(env, 'observation')(moved).shape == (env.observation_size,)
-    dead = moved.replace(hp=moved.hp.at[0].set(0))
+    dead = moved.replace(hp=moved.hp.at[other].set(0))
     assert rules.reward_vacancies(dead) == 1
     before, action = near_enemy(env, dead, env.objective_enemy)
     battle, _ = enter(env, before, action)
     lost, _ = finish(env, battle, 'defeat')
-    assert lost.mercenary_units[0] and rules.reward_vacancies(lost) == 1
+    assert lost.mercenary_units[other] and rules.reward_vacancies(lost) == 1
     reset, _ = compiled_method(env, 'reset')(jax.random.PRNGKey(44))
     assert not jnp.any(reset.mercenary_units)
 

@@ -16,7 +16,7 @@ CAMPAIGN_MECHANICS = (
     'battle_items_used', 'unit_swaps', 'enemy_squads_defeated', 'cities_captured', 'trainer_uses',
     'capital_defense_acquired', 'capital_defense_effects', 'capital_health_effects',
     'capital_guardian_rounds', 'capital_guardian_battles',
-    'capital_entry_strength',
+    'capital_entry_strength', 'capital_guardian_bonuses',
 )
 CAMPAIGN_CHARTS = (
     # First row (three per row): run-long win and defeat rates, then the
@@ -27,7 +27,7 @@ CAMPAIGN_CHARTS = (
     *(f'campaign/completed/{name}_mean' for name in CAMPAIGN_MECHANICS),
     'campaign/timeout_rate', 'campaign/window/battle_win_rate',
     'campaign/window/battle_victories_mean', 'campaign/window/unit_upgrades_mean',
-    'campaign/window/waves_completed_mean',
+    'campaign/window/experience_gained_mean', 'campaign/window/waves_completed_mean',
     'campaign/window/dragon_reached_episodes_rate', 'campaign/victories_total',
     'campaign/window/capital_defense_acquired_mean',
     'campaign/window/capital_guardian_reached_episodes_rate',
@@ -35,6 +35,7 @@ CAMPAIGN_CHARTS = (
     'campaign/window/capital_health_effects_when_reached_mean',
     'campaign/window/capital_guardian_rounds_when_reached_mean',
     'campaign/window/capital_entry_strength_when_reached_mean',
+    'campaign/window/capital_bot_heroes_defeated_mean',
 )
 CHART_TITLES = {
     'campaign/mean_seconds_per_million_steps': 'Секунд на 1 млн шагов — в среднем с начала запуска',
@@ -83,6 +84,9 @@ CHART_TITLES = {
     'campaign/window/capital_health_effects_when_reached_mean': 'Эффектов постоянного HP — в эпизодах с Мизраэлем (последние 100)',
     'campaign/window/capital_guardian_rounds_when_reached_mean': 'Новых раундов — в эпизодах с Мизраэлем (последние 100)',
     'campaign/completed/capital_entry_strength_mean': 'Сила армии при первом входе к Мизраэлю — на эпизод',
+    'campaign/completed/capital_guardian_bonuses_mean': 'Бой с Мизраэлем после 50+ побед (+10) — доля эпизодов',
+    'campaign/window/capital_bot_heroes_defeated_mean': 'Побед над героями бота Империи на эпизод — последние 100 эпизодов',
+    'campaign/window/experience_gained_mean': 'Опыт, полученный бойцами агента, на эпизод — последние 100 эпизодов',
     'campaign/window/capital_entry_strength_when_reached_mean': 'Сила армии при первом входе — среди дошедших (последние 100)',
     'rollout/ep_rew_mean': 'Средняя награда — последние 100 эпизодов',
     'rollout/ep_len_mean': 'Средняя длина — последние 100 эпизодов',

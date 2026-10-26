@@ -20,7 +20,8 @@ CAMPAIGN_FIELDS = (
     'capital_defense_acquired', 'capital_defense_effects', 'capital_health_effects',
     'capital_guardian_rounds', 'capital_guardian_battles',
     'capital_first_contacts', 'capital_entry_strength',
-    'merchant_purchases', 'waves_completed',
+    'merchant_purchases', 'waves_completed', 'capital_guardian_bonuses',
+    'capital_bot_heroes_defeated', 'experience_gained',
 )
 EPISODE_WINDOW = 100
 
@@ -63,6 +64,12 @@ def campaign_events(env, before, world, after, action, valid, battle_counts):
             + jnp.where(world_action & (action != REST), jnp.sum(before.alive & ~world.alive), 0))
     if env.basic_combat:
         values['buildings_built'] = jax.lax.population_count(world.buildings & ~before.buildings)
+    if env.progression_enabled:
+        # XP shares of the agent's fighters (last_xp, before level caps): at the end of a
+        # battle finished in this decision, not a map summon's, or bought from the trainer.
+        battle = world.in_battle & ~world.summon_battle
+        values['experience_gained'] = jnp.where(
+            ~after.in_battle & (battle | (world_action & ~world.in_battle)), jnp.sum(after.last_xp[:6]), 0)
     if env.capital_training.enabled:
         rules = env.capital_training
         effects = after.capital_defense_peak - before.capital_defense_peak
@@ -75,6 +82,10 @@ def campaign_events(env, before, world, after, action, valid, battle_counts):
         first_contact = (before.capital_entry_strength < 0) & (after.capital_entry_strength >= 0)
         values['capital_first_contacts'] = first_contact
         values['capital_entry_strength'] = jnp.where(first_contact, after.capital_entry_strength, 0)
+        values['capital_guardian_bonuses'] = after.capital_guardian_bonus_paid & ~before.capital_guardian_bonus_paid
+    if env.bot_attack.enabled:
+        # Every hero-army victory over Edwin's party or a later Empire raid.
+        values['capital_bot_heroes_defeated'] = after.bot_hero_victories-before.bot_hero_victories
     if env.capital_enabled:
         healing = world_action & (action >= HEAL_START) & (action < REVIVE_START)
         healed = jnp.sum(jnp.maximum(world.hp[:6] - before.hp[:6], 0))

@@ -1,7 +1,9 @@
-"""User-requested Capital training rewards (2026-10-16), not original game rules.
+"""User-requested Capital training rewards (2026-10-16, 2026-10-26), not original game rules.
 
 Defensive bottles include temporary/permanent armor, permanent HP and elemental
 wards. Sticky peaks prevent retreat/re-entry or slot swaps from farming rewards.
+The guardian battle bonus (2026-10-26) pays once per episode for a hero-army
+battle with the guardian that starts after enough other armies were defeated.
 """
 import math
 
@@ -13,13 +15,22 @@ from stoix.envs.number_grid_potions import ARMOR, HP
 class CapitalTrainingRules:
     def __init__(self, env, game_map):
         fields = ('capital_defense_acquisition_reward', 'capital_defense_effect_reward',
-                  'capital_guardian_round_reward', 'capital_entry_level_reward')
+                  'capital_guardian_round_reward', 'capital_entry_level_reward',
+                  'capital_guardian_battle_reward')
         values = [game_map.get(k, 0.) for k in fields]
-        self.acquisition_reward, self.effect_reward, self.round_reward, self.entry_level_reward = values
+        (self.acquisition_reward, self.effect_reward, self.round_reward, self.entry_level_reward,
+         self.battle_reward) = values
         for key, value in zip(fields, values):
             if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
                 raise ValueError(key + ' must be finite and nonnegative')
+        self.min_defeated = game_map.get('capital_guardian_battle_min_defeated', 0)
+        if type(self.min_defeated) is not int or self.min_defeated < 0:
+            raise ValueError('capital_guardian_battle_min_defeated must be a nonnegative integer')
         self.enabled = any(values)
+        # Defense peaks and rounds are observed only while they can still pay.
+        self.tracks_effects = bool(self.effect_reward or self.round_reward)
+        # Entry snapshots also feed the first-contact metrics.
+        self.tracks_entry = bool(self.entry_level_reward or self.battle_reward)
         self.count = 0
         self.observation_size = 0
         if not self.enabled:
@@ -41,21 +52,38 @@ class CapitalTrainingRules:
         self.permanent = potions.permanent[self.indices]
         self.stats = potions.stats[self.indices]
         self.health = self.permanent & (self.stats == HP)
-        self.observation_size = self.count + 1 + bool(self.entry_level_reward)
+        self.observation_size = ((self.count + 1) * self.tracks_effects + bool(self.entry_level_reward)
+                                 + 2 * bool(self.battle_reward))
         self.max_rounds = env.max_rounds
+        self.others = jnp.arange(env.num_opponents) != self.enemy
+        # Scripted Empire parties may attack repeatedly: each victory over them counts instead.
+        self.bot_victories = env.bot_attack.enabled
+        if self.bot_victories:
+            self.others &= ~env.bot_attack.mask
+
+    def defeated(self, state):
+        """Armies other than the guardian defeated this episode, by battle or map spell."""
+        defeated = jnp.sum(state.scenario_spawned & ~state.alive & self.others).astype(jnp.int32)
+        return defeated+state.bot_hero_victories if self.bot_victories else defeated
 
     def enter(self, state, engaged, strength):
-        """Pay for the first hero encounter, before automatic attacks, even if it is lost.
+        """Pay for hero encounters with the guardian, before automatic attacks, even if lost.
 
-        A zero-strength entry also consumes the encounter. Retreating, upgrading
-        or recruiting later never unlocks another payment in the same episode.
+        The entry-level bonus pays on the first encounter only; a zero-strength entry also
+        consumes it, and retreating, upgrading or recruiting later never unlocks another
+        payment. The battle bonus pays on the first encounter that starts with at least
+        `min_defeated` other armies defeated; earlier encounters leave it available.
         """
-        first = (engaged & state.in_battle & ~state.done & ~state.summon_battle & ~state.bot_autobattle
-                 & (state.enemy == self.enemy) & (state.capital_entry_strength < 0)
-                 & jnp.any(self.guard_slots & (state.hp[6:] > 0))
-                 & jnp.any((state.unit_ids[:6] != 0) & (state.hp[:6] > 0)))
-        return state.replace(capital_entry_strength=jnp.where(first, strength, state.capital_entry_strength)), (
-            self.entry_level_reward * jnp.where(first, strength, 0))
+        contact = (engaged & state.in_battle & ~state.done & ~state.summon_battle & ~state.bot_autobattle
+                   & (state.enemy == self.enemy)
+                   & jnp.any(self.guard_slots & (state.hp[6:] > 0))
+                   & jnp.any((state.unit_ids[:6] != 0) & (state.hp[:6] > 0)))
+        first = contact & (state.capital_entry_strength < 0)
+        battle = (contact & ~state.capital_guardian_bonus_paid & bool(self.battle_reward)
+                  & (self.defeated(state) >= self.min_defeated))
+        return state.replace(capital_entry_strength=jnp.where(first, strength, state.capital_entry_strength),
+                             capital_guardian_bonus_paid=state.capital_guardian_bonus_paid | battle), (
+            self.entry_level_reward * jnp.where(first, strength, 0) + self.battle_reward * battle)
 
     def acquire(self, before, after):
         acquired = jnp.sum(jnp.maximum(after.potions[self.indices] - before.potions[self.indices], 0))
@@ -97,9 +125,16 @@ class CapitalTrainingRules:
         return state.replace(capital_defense_peak=peak, capital_rounds_rewarded=rounds), reward
 
     def observation(self, state):
-        values = jnp.concatenate((state.capital_defense_peak / 6.,
-            jnp.asarray([state.capital_rounds_rewarded / max(self.max_rounds - 1, 1)], jnp.float32)))
+        values = jnp.zeros(0, jnp.float32)
+        if self.tracks_effects:
+            values = jnp.concatenate((state.capital_defense_peak / 6.,
+                jnp.asarray([state.capital_rounds_rewarded / max(self.max_rounds - 1, 1)], jnp.float32)))
         if self.entry_level_reward:
             # -0.01 means unseen; zero means encountered with only level-1 fighters.
             values = jnp.concatenate((values, jnp.asarray([state.capital_entry_strength / 100.], jnp.float32)))
+        if self.battle_reward:
+            # Progress towards the defeated-army threshold, then whether the bonus was paid.
+            progress = jnp.minimum(self.defeated(state) / max(self.min_defeated, 1), 1.)
+            values = jnp.concatenate((values, jnp.asarray(
+                [progress, state.capital_guardian_bonus_paid], jnp.float32)))
         return values

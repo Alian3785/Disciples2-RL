@@ -34,6 +34,28 @@ def validate(name):
         assert bool(env.action_mask(state)[REST])
         state, timestep = step(state, jnp.int32(REST))
         assert bool(jnp.isfinite(timestep.reward))
+    if env.bot_attack.enabled:
+        # Default Capital's scripted Empire party: absent at reset, then a real battle
+        # without withdrawal on the REST that begins its attack day.
+        rules = env.bot_attack
+        original, _ = reset(jax.random.PRNGKey(42))
+        assert not bool(original.alive[rules.enemy]) and not bool(original.scenario_spawned[rules.enemy])
+        quiet, _ = step(original.replace(day=jnp.int32(rules.day-2)), jnp.int32(REST))
+        assert not bool(quiet.alive[rules.enemy]) and not bool(quiet.in_battle)
+        attacked, ts = step(original.replace(day=jnp.int32(rules.day-1)), jnp.int32(REST))
+        assert bool(attacked.in_battle) or bool(attacked.done)
+        assert int(attacked.enemy) == rules.enemy and bool(attacked.scenario_spawned[rules.enemy])
+        assert bool(jnp.isfinite(ts.reward))
+        assert not bool(env._can_retreat(attacked, jnp.int32(0)))
+        if rules.raid_enemies:
+            # Later raids: one drawn party on every REST into first_day + k*interval, none between.
+            for day in (rules.first_day, rules.first_day+rules.interval):
+                raided, ts = step(original.replace(day=jnp.int32(day-1)), jnp.int32(REST))
+                assert bool(raided.in_battle) or bool(raided.done)
+                assert int(raided.enemy) in rules.raid_enemies and bool(jnp.isfinite(ts.reward))
+                assert not bool(env._can_retreat(raided, jnp.int32(0)))
+            calm, _ = step(original.replace(day=jnp.int32(rules.first_day)), jnp.int32(REST))
+            assert not bool(calm.in_battle) and not bool(jnp.any(calm.alive[rules.raids]))
     if env.scenario.enabled:
         event = env.scenario.events[0]
         original, _ = reset(jax.random.PRNGKey(42))
@@ -81,7 +103,8 @@ def validate(name):
                   scheduled_armies=len(env.scenario.events), actions=env.num_actions,
                   observation_size=env.observation_size, structural_passability=True,
                   preflight='passed', training_transitions=0,
-                  target_rewards=game_map.get('target_rewards'), optional_enemies=game_map.get('optional_enemies', []))
+                  target_rewards=game_map.get('target_rewards'), optional_enemies=game_map.get('optional_enemies', []),
+                  absent_enemies=game_map.get('absent_enemies', []), bot_attack=game_map.get('bot_attack'))
     print(json.dumps(result), flush=True)
     jax.clear_caches()
     return result

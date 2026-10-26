@@ -23,8 +23,7 @@ class TargetRewardRules:
         if not isinstance(config, dict):
             raise ValueError('target_rewards must be an object')
         if (not env.progression_enabled or not env.spell_casting_enabled
-                or env.reference_rewards or env.bot.enabled or env.scenario.enabled
-                or env.script_events.enabled):
+                or env.reference_rewards or env.encounters_enabled):
             raise ValueError('target_rewards require a static, non-reference campaign with spell casting')
         indices = config.get('enemies')
         if (not isinstance(indices, list) or not indices

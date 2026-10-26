@@ -41,7 +41,14 @@ class ScenarioRules:
             raise ValueError('Scheduled armies require unique enemy indices')
         if any(type(e[k]) is not int or e[k] < 1 for e in self.events for k in ('spawn_turn', 'moves_per_turn')):
             raise ValueError('Scheduled spawn turns and movement must be positive integers')
-        self.scheduled = jnp.array([i in enemies or i in game_map.get('scenario_event_enemies', [])
+        # User request 2026-10-26 (Default Capital): armies the Empire bot already
+        # destroyed are absent at reset; only bot_attack may bring one of the slots.
+        absent = game_map.get('absent_enemies', [])
+        if (not isinstance(absent, list) or len(set(absent)) != len(absent) or set(absent) & set(enemies)
+                or any(type(i) is not int or not 0 <= i < count for i in absent)):
+            raise ValueError('absent_enemies must list distinct valid unscheduled enemy indices')
+        # Armies missing at reset: not alive and not yet spawned.
+        self.scheduled = jnp.array([i in enemies or i in game_map.get('scenario_event_enemies', []) or i in absent
                                     for i in range(count)])
         self.indices = jnp.array(enemies, jnp.int32)
         self.spawn_turns = jnp.array([e['spawn_turn'] for e in self.events], jnp.int32)
