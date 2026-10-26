@@ -52,8 +52,10 @@ def test_internal_dot_victory_counts_once(current_game):
     assert not after.in_battle and not after.lost
     assert values['battle_victories'] == values['enemy_squads_defeated'] == 1
     assert values['victories'] == values['battle_defeats'] == 0
+    # The party's XP shares at the battle end (user request 2026-10-26), counted once.
+    assert values['experience_gained'] == pytest.approx(float(jnp.sum(after.last_xp[:6])))
     _, rested = step(after, jnp.int32(REST))
-    assert counters(rested)['battle_victories'] == 0
+    assert counters(rested)['battle_victories'] == counters(rested)['experience_gained'] == 0
 
 
 def test_summon_defeat_is_not_campaign_defeat(current_game):

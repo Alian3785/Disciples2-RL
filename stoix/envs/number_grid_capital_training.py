@@ -56,10 +56,15 @@ class CapitalTrainingRules:
                                  + 2 * bool(self.battle_reward))
         self.max_rounds = env.max_rounds
         self.others = jnp.arange(env.num_opponents) != self.enemy
+        # Scripted Empire parties may attack repeatedly: each victory over them counts instead.
+        self.bot_victories = env.bot_attack.enabled
+        if self.bot_victories:
+            self.others &= ~env.bot_attack.mask
 
     def defeated(self, state):
         """Armies other than the guardian defeated this episode, by battle or map spell."""
-        return jnp.sum(state.scenario_spawned & ~state.alive & self.others).astype(jnp.int32)
+        defeated = jnp.sum(state.scenario_spawned & ~state.alive & self.others).astype(jnp.int32)
+        return defeated+state.bot_hero_victories if self.bot_victories else defeated
 
     def enter(self, state, engaged, strength):
         """Pay for hero encounters with the guardian, before automatic attacks, even if lost.

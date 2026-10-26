@@ -47,6 +47,15 @@ def validate(name):
         assert int(attacked.enemy) == rules.enemy and bool(attacked.scenario_spawned[rules.enemy])
         assert bool(jnp.isfinite(ts.reward))
         assert not bool(env._can_retreat(attacked, jnp.int32(0)))
+        if rules.raid_enemies:
+            # Later raids: one drawn party on every REST into first_day + k*interval, none between.
+            for day in (rules.first_day, rules.first_day+rules.interval):
+                raided, ts = step(original.replace(day=jnp.int32(day-1)), jnp.int32(REST))
+                assert bool(raided.in_battle) or bool(raided.done)
+                assert int(raided.enemy) in rules.raid_enemies and bool(jnp.isfinite(ts.reward))
+                assert not bool(env._can_retreat(raided, jnp.int32(0)))
+            calm, _ = step(original.replace(day=jnp.int32(rules.first_day)), jnp.int32(REST))
+            assert not bool(calm.in_battle) and not bool(jnp.any(calm.alive[rules.raids]))
     if env.scenario.enabled:
         event = env.scenario.events[0]
         original, _ = reset(jax.random.PRNGKey(42))

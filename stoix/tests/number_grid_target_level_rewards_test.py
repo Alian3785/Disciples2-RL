@@ -231,7 +231,8 @@ def test_default_capital_preserves_simpler_times_and_blue_reward_settings(tmp_pa
                'army_victory_level_objective_only', 'scenario_events_enabled', 'cities', 'faction', 'lord_type',
                'capital_guardian_battle_reward', 'capital_guardian_battle_min_defeated',
                'episode_timeout_penalty', 'battle_round_limit_penalty', 'recruitment_reward_faction_only',
-               'enemy_rosters', 'enemy_units', 'enemy_hp', 'enemy_initial_levels', 'absent_enemies', 'bot_attack'}
+               'enemy_rosters', 'enemy_units', 'enemy_hp', 'enemy_initial_levels', 'absent_enemies', 'bot_attack',
+               'hero_roster'}
     assert {k: v for k, v in capital.items() if k not in changed} == {
         k: v for k, v in base.items() if k not in changed}
     assert capital['cities'] == [{**city, 'objective': False} for city in base['cities']]
@@ -258,19 +259,32 @@ def test_default_capital_preserves_simpler_times_and_blue_reward_settings(tmp_pa
     assert capital['recruitment_reward_faction_only'] is True
     # User request 2026-10-26: the armies the Empire hero Edwin destroyed by turn 21 of
     # SaveGame/6789.sg are absent; the Wolf's slot 9 holds his party, attacking on day 23.
+    # From day 31, every 8 days, one of the user's two Empire screenshot parties (slots 37, 41).
     bot = 9
-    assert capital['bot_attack'] == {'enemy': bot, 'day': 23}
+    assert capital['bot_attack'] == {'enemy': bot, 'day': 23,
+                                     'raids': {'enemies': [37, 41], 'first_day': 31, 'interval': 8}}
     assert capital['absent_enemies'] == [9, 37, 41, 42, 44, 46, 47, 49, 50, 51, 52]
     for key in ('enemy_rosters', 'enemy_units', 'enemy_hp'):
-        assert [v for i, v in enumerate(capital[key]) if i != bot] == [v for i, v in enumerate(base[key]) if i != bot]
+        assert ([v for i, v in enumerate(capital[key]) if i not in (bot, 37, 41)]
+                == [v for i, v in enumerate(base[key]) if i not in (bot, 37, 41)])
     assert base['enemy_rosters'][bot] == [None, 'g000uu5039', None, None, None, None]
     assert capital['enemy_rosters'][bot] == ['g000uu0019', 'knight', 'knight', None, 'marksman', None]
-    assert (capital['enemy_units'][bot], capital['enemy_hp'][bot]) == (4, 150)
+    assert capital['enemy_rosters'][37] == ['g000uu0020', None, 'squire', 'archer', None, 'apprentice']
+    assert capital['enemy_rosters'][41] == [None, 'squire', None, 'g000uu0020', 'acolyte', 'archer']
+    assert [(capital['enemy_units'][i], capital['enemy_hp'][i]) for i in (bot, 37, 41)] == [(4, 150), (4, 100), (4, 100)]
     assert capital['enemy_initial_levels'][bot] == [2, 2, 2, 0, 2, 0]
+    assert capital['enemy_initial_levels'][37] == [1, 0, 1, 1, 0, 1]
+    assert capital['enemy_initial_levels'][41] == [0, 1, 0, 1, 1, 1]
     assert len(capital['enemy_initial_levels']) == len(capital['enemy_rosters'])
     for name in ('default', 'default-blue-dragon', 'default-green-dragon'):
-        assert not any(key in load_map(name) for key in ('bot_attack', 'absent_enemies', 'enemy_initial_levels'))
-    assert action_names(capital) == action_names({**base, 'faction': 'legions', 'lord_type': 'warrior'})
+        assert not any(key in load_map(name) for key in ('bot_attack', 'absent_enemies', 'enemy_initial_levels',
+                                                         'hero_roster'))
+    # User request 2026-10-26: Capital's own warrior party, the Duke and a Possessed on the front
+    # edges and two Cultists on the back edges; unit-swap actions follow its slot order.
+    assert capital['hero_roster'] == ['duke', None, 'possessed', 'cultist', None, 'cultist']
+    assert action_names(capital) == action_names({**base, 'faction': 'legions', 'lord_type': 'warrior',
+                                                  'hero_roster': capital['hero_roster']})
+    assert len(action_names(capital)) == len(action_names(base))
     saved = tmp_path / 'map.json'
     saved.write_text(json.dumps(capital), encoding='utf-8')
     assert load_map(saved) == capital

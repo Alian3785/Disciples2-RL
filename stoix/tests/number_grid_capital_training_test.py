@@ -28,10 +28,14 @@ def capital():
     return env, compiled_method(env, 'reset')(jax.random.PRNGKey(42))[0]
 
 
-# The 2026-10-16 Capital rewards, removed from the map on 2026-10-26 but still supported.
+# The 2026-10-16 Capital rewards, removed from the map on 2026-10-26 but still supported,
+# with the Legions warrior party they were written for (Capital's own party changed 2026-10-26).
 LEGACY = dict(capital_defense_acquisition_reward=3., capital_defense_effect_reward=2.,
               capital_guardian_round_reward=.5, capital_entry_level_reward=2.,
-              capital_guardian_battle_reward=0.)
+              capital_guardian_battle_reward=0.,
+              hero_roster=['possessed', 'duke', 'possessed', None, 'cultist', None])
+# Capital's starting party since 2026-10-26: the Duke holds front slot 0.
+DUKE = 0
 
 
 @pytest.fixture(scope='module')
@@ -66,7 +70,7 @@ def test_reset_legions_victory_only_rewards_and_battle_bonus_observation(capital
     rules = env.capital_training
     assert env.construction.faction == 'legions'
     assert env.construction.lord['id'] == 'warrior'
-    assert env.map_config['hero_roster'] == ['possessed', 'duke', 'possessed', None, 'cultist', None]
+    assert env.map_config['hero_roster'] == ['duke', None, 'possessed', 'cultist', None, 'cultist']
     assert env.round_limit_penalty == env.episode_timeout_penalty == 100.
     assert env.army_victory_level_reward == 5. and env.objective_reward_hero_only
     assert (rules.acquisition_reward, rules.effect_reward, rules.round_reward, rules.entry_level_reward) == (0,) * 4
@@ -331,7 +335,7 @@ def test_regular_replacement_fills_reward_slot_without_mercenary_consuming_bonus
     env, initial = capital
     rules = env.recruitment
     # Level 3 unlocks a fourth companion; the original three already claimed their places.
-    party = initial.replace(unit_levels=initial.unit_levels.at[1].set(3))
+    party = initial.replace(unit_levels=initial.unit_levels.at[DUKE].set(3))
     offer = rules.keys.index('goblin_archer')
     hired, ts = compiled_method(env, 'step')(at_camp(env, party, offer), jnp.int32(rules.start + offer))
     slot = int(hired.last_target)
@@ -354,7 +358,7 @@ def test_regular_replacement_fills_reward_slot_without_mercenary_consuming_bonus
 def test_camp_origin_survives_promotion_swaps_battle_death_and_reset(capital):
     env, initial = capital
     rules = env.recruitment
-    party = initial.replace(unit_levels=initial.unit_levels.at[1].set(3))
+    party = initial.replace(unit_levels=initial.unit_levels.at[DUKE].set(3))
     offer = rules.keys.index('goblin_archer')
     hired, _ = compiled_method(env, 'step')(at_camp(env, party, offer), jnp.int32(rules.start + offer))
     slot = int(hired.last_target)
@@ -369,18 +373,19 @@ def test_camp_origin_survives_promotion_swaps_battle_death_and_reset(capital):
     assert promoted.unit_levels[slot] > hired.unit_levels[slot]
     assert promoted.mercenary_units[slot] and rules.reward_vacancies(promoted) == 1
     swaps = env.unit_swaps
-    swap = jnp.int32(swaps.start + swaps.pairs.index((0, slot)))
+    other = 2  # the Possessed; the hero keeps its slot
+    swap = jnp.int32(swaps.start + swaps.pairs.index(tuple(sorted((other, slot)))))
     moved, _ = compiled_method(env, 'step')(promoted, swap)
-    assert moved.mercenary_units[0] and not moved.mercenary_units[slot]
+    assert moved.mercenary_units[other] and not moved.mercenary_units[slot]
     assert rules.reward_vacancies(moved) == 1
-    assert rules.observation(moved)[-6:].tolist() == [1., 0., 0., 0., 0., 0.]
+    assert rules.observation(moved)[-6:].tolist() == [float(i == other) for i in range(6)]
     assert compiled_method(env, 'observation')(moved).shape == (env.observation_size,)
-    dead = moved.replace(hp=moved.hp.at[0].set(0))
+    dead = moved.replace(hp=moved.hp.at[other].set(0))
     assert rules.reward_vacancies(dead) == 1
     before, action = near_enemy(env, dead, env.objective_enemy)
     battle, _ = enter(env, before, action)
     lost, _ = finish(env, battle, 'defeat')
-    assert lost.mercenary_units[0] and rules.reward_vacancies(lost) == 1
+    assert lost.mercenary_units[other] and rules.reward_vacancies(lost) == 1
     reset, _ = compiled_method(env, 'reset')(jax.random.PRNGKey(44))
     assert not jnp.any(reset.mercenary_units)
 

@@ -98,15 +98,26 @@ def load_map(name=None):
         # save SaveGame/6789.sg the Empire hero Edwin had destroyed these armies
         # (CMidStackDestroyed killer S001PL0001, matched by tile), so they start absent.
         # The Wolf's slot 9 holds Edwin's party, which attacks the hero on day 23.
+        # Second request the same day: from day 31, every 8 days, one of two Empire parties from the
+        # user's screenshots, drawn anew each time, attacks the same way. They take the free absent
+        # slots 37 and 41. Godefroy's type is not shown; his 90 HP portrait means the Ranger.
         units = json.loads((_ROOT / 'stoix/envs/data/units.json').read_text(encoding='utf-8'))
-        bot = 9
-        game_map['enemy_rosters'][bot] = ['g000uu0019', 'knight', 'knight', None, 'marksman', None]
-        game_map['enemy_units'][bot] = 4
-        game_map['enemy_hp'][bot] = max(units[unit]['max_hp'] for unit in game_map['enemy_rosters'][bot] if unit)
+        bot, raids = 9, [37, 41]
+        parties = {bot: ['g000uu0019', 'knight', 'knight', None, 'marksman', None],
+                   37: ['g000uu0020', None, 'squire', 'archer', None, 'apprentice'],
+                   41: [None, 'squire', None, 'g000uu0020', 'acolyte', 'archer']}
+        for index, roster in parties.items():
+            game_map['enemy_rosters'][index] = roster
+            game_map['enemy_units'][index] = sum(unit is not None for unit in roster)
+            game_map['enemy_hp'][index] = max(units[unit]['max_hp'] for unit in roster if unit)
         levels = [[units[unit]['level'] if unit else 0 for unit in roster] for roster in game_map['enemy_rosters']]
         levels[bot][0] = 2  # Edwin is level 2 in the save; Knights and the Marksman keep base level 2
         game_map.update(absent_enemies=[9, 37, 41, 42, 44, 46, 47, 49, 50, 51, 52],
-                        bot_attack=dict(enemy=bot, day=23), enemy_initial_levels=levels)
+                        bot_attack=dict(enemy=bot, day=23, raids=dict(enemies=raids, first_day=31, interval=8)),
+                        enemy_initial_levels=levels)
+        # User request 2026-10-26: a warrior lord's fixed party for Capital only, instead of the
+        # Legions warrior party; the Duke and a Possessed hold the front edges, two Cultists the back.
+        game_map.update(lord_type='warrior', hero_roster=['duke', None, 'possessed', 'cultist', None, 'cultist'])
         return game_map
     if name in DRAGON_MAPS:
         # Reference maps/default.py and enemy_configs.build_blue_dragon_enemy_configs:
@@ -757,9 +768,11 @@ class NumberGrid(Summoning, NumericNumberGrid):
             raise ValueError('Scripted bot requires territory, progression and persistent spell wounds')
         self.bot = ScriptedBotRules(game_map, self.territory if self.territory_enabled else None,
                                     self.progression if self.progression_enabled else None)
-        self.bot_attack = BotAttackRules(game_map)
-        if self.bot_attack.enabled and (self.bot.enabled or not self.territory_enabled):
-            raise ValueError('bot_attack requires territory and excludes the mobile scripted bot')
+        self.bot_attack = BotAttackRules(game_map, self.progression.initial_enemies if self.progression_enabled else None)
+        if self.bot_attack.enabled and (self.bot.enabled or not self.territory_enabled or not self.progression_enabled
+                                        or not casting_enabled(game_map)):
+            raise ValueError('bot_attack requires territory, progression and spell wounds, '
+                             'and excludes the mobile scripted bot')
         self.scripted_bot_objective = game_map.get('campaign_objective') == 'scripted_bot'
         if self.scripted_bot_objective and not self.bot.enabled:
             raise ValueError('The scripted_bot objective requires an enabled bot')
@@ -1625,12 +1638,12 @@ class NumberGrid(Summoning, NumericNumberGrid):
 
         Snapshot the defending side at battle entry, independently of armour.
         Steam sub_5F5A4B; sources: docs/validation/fort-defenders-20261021.json.
-        The player cannot withdraw from Default Capital's scripted Empire attack either.
+        The player cannot withdraw from Default Capital's scripted Empire attacks either.
         """
         blocked = jnp.where(slots < 6, state.battle_fort_defender == FORT_BLUE,
                             state.battle_fort_defender == FORT_RED)
         if self.bot_attack.enabled:
-            blocked |= (slots < 6) & (state.enemy == self.bot_attack.enemy)
+            blocked |= (slots < 6) & (state.enemy >= 0) & self.bot_attack.mask[jnp.maximum(state.enemy, 0)]
         return ~blocked
 
     def _fear_protected(self, state, target_slots):
@@ -2337,7 +2350,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             random_values = jax.random.uniform(random_key, (self.random_size,))
             next_state = next_state.replace(battle_key=key)
         if self.bot_attack.enabled:
-            next_state = self.bot_attack.spawn(next_state, resting)
+            next_state = self.bot_attack.spawn(next_state, resting, key)
         if self.encounters_enabled:
             pending = next_state.pending_encounters & next_state.alive
             attacked = jnp.any(pending) & ~(engage | summon) & ~next_state.done
@@ -3183,7 +3196,10 @@ class NumberGrid(Summoning, NumericNumberGrid):
                 # The summon's growth is discarded with it; slot layers belong to the party.
                 promoted = jnp.where(summon_battle, promoted & jnp.uint32(0xFC0), promoted)
             if not self.reference_rewards:
-                progression_reward = self.progression.training_reward(state, gains, promoted, victory)
+                # Raid promotions keep their XP but earn no +2 (the wasted-XP charge stays).
+                paid = (jnp.where(self.bot_attack.raid_battle(state), jnp.uint32(0), promoted)
+                        if self.bot_attack.enabled else promoted)
+                progression_reward = self.progression.training_reward(state, gains, paid, victory)
             if self.has_potion_buffs:
                 intrinsic = self._potion_intrinsic(ids,levels)
                 changed = ((promoted >> self.slots.astype(jnp.uint32)) & 1) != 0
@@ -3240,6 +3256,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
             next_state = self.casting.finish_battle(state, next_state, hp, victory, back)
         if self.bot.enabled:
             next_state = self.bot.after_battle(state, next_state, victory, victory | withdrawal | lost)
+        if self.bot_attack.enabled:
+            next_state = self.bot_attack.after_battle(state, next_state, victory)
         if self.territory_enabled:
             next_state = self._capture_cities(next_state,victory & ~summon_battle)
             final_win = self._campaign_won(next_state)
@@ -3248,6 +3266,9 @@ class NumberGrid(Summoning, NumericNumberGrid):
         # Ordinary summon victories have no base bonus. Configured target rewards
         # replace the hero's +1 and pay every method at the public step boundary.
         ordinary_victory = victory & ~summon_battle & ~self.target_rewards.mask[jnp.maximum(state.enemy, 0)]
+        if self.bot_attack.enabled:
+            # User request 2026-10-26: Empire raids pay no +1, so they cannot be farmed.
+            ordinary_victory &= ~self.bot_attack.raid_battle(state)
         reward = (ordinary_victory.astype(jnp.float32)
                   + self._objective_reward(won, victory & ~summon_battle) - lost.astype(jnp.float32))
         reward -= jnp.where(round_limit_reached, self.round_limit_penalty, 0.)
