@@ -2,9 +2,10 @@
 
 Source: user requests 2026-10-16 and 2026-10-26, docs/DEFAULT_MAP.md. These are RL
 rewards, not claims about original Disciples II mechanics. Run only on explicit request.
-Default Capital now pays only the blue-dragon victory rewards plus a +10 guardian battle
-bonus after more than 50 defeated armies; the earlier bottle, effect, round and entry
-rewards stay available to other maps and are tested on a `legacy` configuration.
+Default Capital pays the blue-dragon victory rewards, a +10 guardian battle bonus after
+more than 70 defeated armies (Empire bot victories included), +3 per defensive bottle and
++25 per new Incubus; the earlier effect, round and entry rewards stay available to other
+maps and are tested on a `legacy` configuration.
 """
 from copy import deepcopy
 
@@ -12,9 +13,9 @@ import jax
 import jax.numpy as jnp
 import pytest
 
-from stoix.envs.number_grid import REST, NumberGrid, load_map
+from stoix.envs.number_grid import BUILD_START, DEFEND, REST, NumberGrid, load_map
 from stoix.envs.number_grid_capital_training import CapitalTrainingRules
-from stoix.envs.number_grid_metrics import CAMPAIGN_FIELDS
+from stoix.envs.number_grid_metrics import CAMPAIGN_FIELDS, campaign_events
 from stoix.envs.number_grid_potions import POTION_START
 from stoix.envs.number_grid_recruitment import RecruitmentRules
 from stoix.tests.number_grid_fixtures import compiled_method, hero_roster_state
@@ -32,7 +33,8 @@ def capital():
 # with the Legions warrior party they were written for (Capital's own party changed 2026-10-26).
 LEGACY = dict(capital_defense_acquisition_reward=3., capital_defense_effect_reward=2.,
               capital_guardian_round_reward=.5, capital_entry_level_reward=2.,
-              capital_guardian_battle_reward=0.,
+              capital_guardian_battle_reward=0., capital_incubus_reward=0., capital_incubus_building_reward=0.,
+              capital_guardian_rounds_bonus=0.,
               hero_roster=['possessed', 'duke', 'possessed', None, 'cultist', None])
 # Capital's starting party since 2026-10-26: the Duke holds front slot 0.
 DUKE = 0
@@ -56,6 +58,14 @@ def defeat_armies(env, state, count, keep=(30,)):
     return state.replace(alive=state.alive.at[jnp.array(others, jnp.int32)].set(False))
 
 
+def defeated_state(env, state, count, keep=(30,)):
+    """`count` defeated armies: present map armies first (62), then victories over Empire bot parties."""
+    present = sum(i != env.objective_enemy and i not in keep and bool(state.scenario_spawned[i])
+                  for i in range(env.num_opponents))
+    state = defeat_armies(env, state, min(count, present), keep)
+    return state.replace(bot_hero_victories=jnp.int32(max(count-present, 0)))
+
+
 def defended_battle(env, initial):
     state = initial.replace(potions=jnp.full_like(initial.potions, 5))
     for key in ('invulnerability', 'highfather'):
@@ -73,10 +83,13 @@ def test_reset_legions_victory_only_rewards_and_battle_bonus_observation(capital
     assert env.map_config['hero_roster'] == ['duke', None, 'possessed', 'cultist', None, 'cultist']
     assert env.round_limit_penalty == env.episode_timeout_penalty == 100.
     assert env.army_victory_level_reward == 5. and env.objective_reward_hero_only
-    assert (rules.acquisition_reward, rules.effect_reward, rules.round_reward, rules.entry_level_reward) == (0,) * 4
-    assert rules.battle_reward == 10. and rules.min_defeated == 51
+    assert (rules.acquisition_reward, rules.effect_reward, rules.round_reward, rules.entry_level_reward) == (3., 0, 0, 0)
+    assert rules.battle_reward == 10. and rules.min_defeated == 71 and rules.incubus_reward == 25.
+    assert rules.incubus_building_reward == 12.5
+    assert rules.rounds_bonus == 12.5 and rules.bonus_rounds == 10
     assert not rules.tracks_effects and rules.tracks_entry
     assert not state.capital_guardian_bonus_paid and int(rules.defeated(state)) == 0
+    assert int(state.capital_incubi_peak) == 0
     assert rules.observation(state).tolist() == [0., 0.] and rules.observation_size == 2
     assert compiled_method(env, 'observation')(state).shape == (env.observation_size,)
 
@@ -91,11 +104,11 @@ def test_legacy_rewards_keep_their_memory_observation(legacy):
     assert compiled_method(env, 'observation')(state).shape == (env.observation_size,)
 
 
-@pytest.mark.parametrize('defeated,expected', [(0, 0.), (50, 0.), (51, 10.), (62, 10.)])
-def test_guardian_battle_bonus_needs_more_than_50_defeated_armies(capital, defeated, expected):
-    """Pay +10 on the hero army's entry only once 51 or more other armies are gone."""
+@pytest.mark.parametrize('defeated,expected', [(0, 0.), (70, 0.), (71, 10.), (90, 10.)])
+def test_guardian_battle_bonus_needs_more_than_70_defeated_armies(capital, defeated, expected):
+    """Pay +10 on the hero army's entry only once 71 or more other armies are gone."""
     env, initial = capital
-    before, action = near_enemy(env, defeat_armies(env, initial, defeated), env.objective_enemy)
+    before, action = near_enemy(env, defeated_state(env, initial, defeated), env.objective_enemy)
     assert int(env.capital_training.defeated(before)) == defeated
     assert compiled_method(env, 'action_mask')(before)[action]
     battle, amount = enter(env, before, action)
@@ -107,17 +120,17 @@ def test_guardian_battle_bonus_needs_more_than_50_defeated_armies(capital, defea
     _, ts = compiled_method(env, 'step')(before, action)
     assert ts.extras['campaign_events'][CAMPAIGN_FIELDS.index('capital_guardian_bonuses')] == (expected > 0)
     assert env.capital_training.observation(battle).tolist() == pytest.approx(
-        [min(defeated/51, 1.), float(expected > 0)])
+        [min(defeated/71, 1.), float(expected > 0)])
 
 
 def test_guardian_battle_bonus_waits_for_threshold_and_pays_once(capital):
     """An early encounter does not consume the bonus; once paid, re-entry and losses never repay."""
     env, initial = capital
-    before, action = near_enemy(env, defeat_armies(env, initial, 50), env.objective_enemy)
+    before, action = near_enemy(env, defeated_state(env, initial, 70), env.objective_enemy)
     early, _ = enter(env, before, action)
     assert not early.capital_guardian_bonus_paid
     retreated, _ = finish(env, early, 'retreat')
-    before, action = near_enemy(env, defeat_armies(env, retreated, 51), env.objective_enemy)
+    before, action = near_enemy(env, defeated_state(env, retreated, 71), env.objective_enemy)
     paid, _ = enter(env, before, action)
     assert paid.capital_guardian_bonus_paid
     retreated, _ = finish(env, paid, 'retreat')
@@ -133,7 +146,7 @@ def test_guardian_battle_bonus_waits_for_threshold_and_pays_once(capital):
 
 def test_guardian_battle_bonus_excludes_other_targets_summons_and_bots(capital):
     env, initial = capital
-    ready = defeat_armies(env, initial, 51)
+    ready = defeated_state(env, initial, 71)
     before, action = near_enemy(env, ready, 30)
     other, _ = enter(env, before, action)
     assert other.in_battle and int(other.enemy) == 30 and not other.capital_guardian_bonus_paid
@@ -147,6 +160,93 @@ def test_guardian_battle_bonus_excludes_other_targets_summons_and_bots(capital):
                      unclaimed.replace(hp=unclaimed.hp.at[:6].set(0))):
         after, reward = env.capital_training.enter(excluded, jnp.bool_(True), jnp.int32(0))
         assert not after.capital_guardian_bonus_paid and float(reward) == 0.
+
+
+def test_each_new_incubus_pays_25_and_the_chart_keeps_the_peak(capital):
+    """User request 2026-10-26: +25 for every party fighter evolving into an Incubus."""
+    env, initial = capital
+    rules, progression = env.capital_training, env.progression
+    demonologist = progression.ids['demonologist']
+    choice = int(jnp.argmax(progression.targets[demonologist] == rules.incubus))
+    assert int(progression.targets[demonologist][choice]) == rules.incubus
+    party = hero_roster_state(env, initial, ['duke', 'demonologist', 'possessed', 'demonologist', None, 'cultist'])
+    party = party.replace(buildings=party.buildings | progression.building_bits[demonologist][choice])
+    before, action = near_enemy(env, party, 30)
+    battle, _ = enter(env, before, action)
+    slots = jnp.array([1, 3])
+    threshold = env.unit_experience(battle)[slots, 2]
+    ready = battle.replace(unit_xp=battle.unit_xp.at[slots].set(threshold-1),
+        native_xp=battle.native_xp.at[slots].set(threshold-1),
+        battle_earned_xp=battle.battle_earned_xp.at[slots].set(100))
+    won, reward = finish(env, ready)
+    _, plain = finish(env, battle)
+    assert won.unit_ids[slots].tolist() == [rules.incubus]*2
+    assert float(rules.new_incubi(ready, won.unit_ids, jnp.bool_(True))) == 50.
+    assert float(rules.new_incubi(ready, won.unit_ids, jnp.bool_(False))) == 0.
+    assert float(reward-plain) == pytest.approx(2*(25.+2.))  # +25 and the ordinary +2 per promotion
+    peak = rules.track_incubi(won)
+    assert int(rules.incubi(won)) == int(peak.capital_incubi_peak) == 2
+    fallen = rules.track_incubi(peak.replace(hp=peak.hp.at[1].set(0)))
+    assert int(rules.incubi(fallen)) == 1 and int(fallen.capital_incubi_peak) == 2
+    events = campaign_events(env, battle, battle, peak, jnp.int32(DEFEND), jnp.bool_(True), jnp.zeros(4, jnp.int32))
+    assert float(events[CAMPAIGN_FIELDS.index('capital_incubi')]) == 2.
+
+
+def test_accuracy_and_initiative_bottles_pay_like_defensive_ones(capital):
+    """User request 2026-10-26: +3 per accuracy or initiative bottle too; heal and damage bottles pay nothing."""
+    env, initial = capital
+    rules, keys = env.capital_training, env.potion_rules.keys
+    paid = [k for k in ('striking', 'accuracy', 'fortune', 'swiftness', 'speed', 'celerity', 'quicksilver',
+                        'invulnerability') if k in keys]
+    assert {'accuracy', 'swiftness'} <= set(paid)  # Tralar's stock on Default
+    for key in paid:
+        after, reward = rules.acquire(initial, initial.replace(potions=initial.potions.at[keys.index(key)].add(2)))
+        assert float(reward) == 6. and int(after.capital_defense_acquired) == 2
+    for key in (k for k in ('healing', 'strength', 'vigor') if k in keys):
+        assert float(rules.acquire(initial, initial.replace(potions=initial.potions.at[keys.index(key)].add(1)))[1]) == 0.
+    # The battle-effect peaks stay defensive.
+    assert keys.index('accuracy') not in rules.indices.tolist()
+
+
+def test_ten_survived_guardian_rounds_pay_one_bonus(capital):
+    """User request 2026-10-27: +12.5 once per episode when 10 rounds against Mizrael are survived."""
+    env, initial = capital
+    reward = jax.jit(env.capital_training.battle)
+    before, action = near_enemy(env, initial, env.objective_enemy)
+    battle, _ = enter(env, before, action)
+    nine = battle.replace(round=jnp.int32(9))
+    after, amount = reward(nine, nine.hp, nine.escaped, jnp.int32(10))
+    assert float(amount) == 0. and int(after.capital_rounds_rewarded) == 9
+    ten = after.replace(round=jnp.int32(10))
+    paid, amount = reward(ten, ten.hp, ten.escaped, jnp.int32(11))
+    assert float(amount) == pytest.approx(12.5) and int(paid.capital_rounds_rewarded) == 10
+    later = paid.replace(round=jnp.int32(11))
+    assert float(reward(later, later.hp, later.escaped, jnp.int32(12))[1]) == 0.
+    # Retreat and re-entry: the episode's maximum already passed the mark.
+    reentered = paid.replace(round=jnp.int32(10))
+    assert float(reward(reentered, reentered.hp, reentered.escaped, jnp.int32(11))[1]) == 0.
+    # The party must survive into the new round.
+    wiped = ten.replace(hp=ten.hp.at[:6].set(0))
+    assert float(reward(wiped, wiped.hp, wiped.escaped, jnp.int32(11))[1]) == 0.
+
+
+def test_hall_of_deception_pays_half_an_incubus_once(capital):
+    """User request 2026-10-26: +12.5 once for the building that evolves Demonologists into Incubi."""
+    env, initial = capital
+    rules, construction = env.capital_training, env.construction
+    names = [row['name'] for row in construction.rows]
+    slot = {name: names.index(name) for name in ('Аббатство оккультизма', 'Тёмное святилище', 'Зал Обмана', 'Шпиль')}
+    assert int(rules.incubus_building) == int(construction.bits[slot['Зал Обмана']])
+    ready = initial.replace(gold=jnp.int32(9999), buildings=initial.buildings
+        | construction.bits[slot['Аббатство оккультизма']] | construction.bits[slot['Тёмное святилище']])
+    hall = jnp.int32(BUILD_START+slot['Зал Обмана'])
+    assert compiled_method(env, 'action_mask')(ready)[hall]
+    built, ts = compiled_method(env, 'step')(ready, hall)
+    _, other = compiled_method(env, 'step')(ready, jnp.int32(BUILD_START+slot['Шпиль']))
+    assert int(built.buildings & rules.incubus_building) != 0
+    assert float(ts.reward-other.reward) == pytest.approx(12.5)  # same building reward otherwise
+    assert float(rules.incubus_hall(built, built)) == 0.
+    assert float(rules.incubus_hall(ready.replace(done=jnp.bool_(True)), built)) == 0.
 
 
 @pytest.mark.parametrize('value', [-1, 1.5, True])

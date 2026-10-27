@@ -121,7 +121,8 @@ class NumberGridTracking:
             'trainer_uses': 'successful XP purchases for individual fighters; completed-episode mean',
             'merchant_purchases': 'successful merchant purchases of potions or items (one stock unit each); completed-episode mean',
             'dragon_reached': 'hero army entered the objective dragon battle at least once in an episode',
-            'capital_defense': ('new defensive bottles acquired; peak simultaneous living recipients per potion kind '
+            'capital_defense': ('new defensive, accuracy and initiative bottles acquired; '
+                'peak simultaneous living recipients per defensive potion kind '
                 'during the guardian battle, including permanent HP; peaks and new rounds are counted once per episode'),
             'capital_entry_strength': ('sum of max(level-1, 0) over living permanent fighters at the first hero '
                 'encounter with the guardian; zero-strength contacts count, repeats do not'),

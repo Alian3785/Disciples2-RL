@@ -79,7 +79,7 @@ def load_map(name=None):
         # blue-dragon rewards for Mizrael.
         # User request 2026-10-26: no other Mizrael reward (bottles, effects, entry
         # strength, rounds); a fixed +10 for a guardian battle once more than 50
-        # other armies have been defeated in the episode.
+        # (later the same day 70) other armies have been defeated in the episode.
         game_map = load_map('default')
         target = game_map['enemy_capitals'][0]['guard']
         if game_map['enemy_rosters'][target] != [None, None, None, None, 'g000uu3001', None]:
@@ -89,7 +89,14 @@ def load_map(name=None):
                         objective_enemy=target, objective_reward_hero_only=True,
                         army_victory_level_reward=5., army_victory_level_objective_only=True,
                         scenario_events_enabled=False,
-                        capital_guardian_battle_reward=10., capital_guardian_battle_min_defeated=51,
+                        capital_guardian_battle_reward=10., capital_guardian_battle_min_defeated=71,
+                        # Later the same day: +3 per defensive bottle acquired again, +25 per new
+                        # Incubus, and the guardian battle bonus only after more than 70 defeated.
+                        capital_defense_acquisition_reward=3., capital_incubus_reward=25.,
+                        # Half of it once for building the Hall of Deception that evolves Incubi.
+                        capital_incubus_building_reward=12.5,
+                        # User request 2026-10-27: the same once per episode for 10 survived Mizrael rounds.
+                        capital_guardian_rounds_bonus=12.5, capital_guardian_rounds_bonus_rounds=10,
                         episode_timeout_penalty=100., battle_round_limit_penalty=100.,
                         recruitment_reward_faction_only=True)
         for city in game_map['cities']:
@@ -218,6 +225,7 @@ class BattleState(NumberGridState):
     capital_rounds_rewarded: jax.Array  # highest guardian round minus one, sticky across attempts
     capital_entry_strength: jax.Array  # -1 until first hero contact; then frozen living entry level sum
     capital_guardian_bonus_paid: jax.Array  # the guardian battle bonus was paid this episode
+    capital_incubi_peak: jax.Array  # most living Incubi in the hero's party at once this episode
     siege_rewarded_kills: jax.Array  # six original siege slots, sticky until episode reset
     army_victory_rewarded: jax.Array  # one victory payment per enemy, or empty when disabled
     army_battle_level_strength: jax.Array  # living permanent party's levels above 1 at battle entry
@@ -1074,7 +1082,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             capital_defense_peak=jnp.zeros(self.capital_training.count, jnp.int32),
             capital_rounds_rewarded=jnp.int32(0),
             capital_entry_strength=jnp.int32(-1),
-            capital_guardian_bonus_paid=jnp.bool_(False),
+            capital_guardian_bonus_paid=jnp.bool_(False), capital_incubi_peak=jnp.int32(0),
             reference_hp_milestones=jnp.array([False, False]),
             reference_potion_pending=jnp.bool_(False),
             siege_rewarded_kills=jnp.uint32(0),
@@ -3200,6 +3208,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
                 paid = (jnp.where(self.bot_attack.raid_battle(state), jnp.uint32(0), promoted)
                         if self.bot_attack.enabled else promoted)
                 progression_reward = self.progression.training_reward(state, gains, paid, victory)
+                if self.capital_training.incubus_reward:
+                    progression_reward += self.capital_training.new_incubi(state, ids, victory)
             if self.has_potion_buffs:
                 intrinsic = self._potion_intrinsic(ids,levels)
                 changed = ((promoted >> self.slots.astype(jnp.uint32)) & 1) != 0
@@ -3451,6 +3461,9 @@ class NumberGrid(Summoning, NumericNumberGrid):
         if self.capital_training.enabled:
             next_state, acquisition_reward = self.capital_training.acquire(state, next_state)
             reward += acquisition_reward
+            next_state = self.capital_training.track_incubi(next_state)
+            if self.capital_training.incubus_building_reward:
+                reward += self.capital_training.incubus_hall(state, next_state)
         if self.territory_enabled:
             bumped = (~valid & ~state.done & ~state.in_battle & (action>=0) & (action<8)
                 & jnp.all((destination>0)&(destination<self.size-1)) & self.territory.blocked(destination))

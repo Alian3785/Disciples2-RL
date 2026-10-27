@@ -20,7 +20,8 @@ def pair():
     # This suite isolates the old paired reward profiles, not the later potion shaping.
     current.update(capital_defense_acquisition_reward=0., capital_defense_effect_reward=0.,
                    capital_guardian_round_reward=0., capital_entry_level_reward=0.,
-                   capital_guardian_battle_reward=0.,
+                   capital_guardian_battle_reward=0., capital_incubus_reward=0., capital_incubus_building_reward=0.,
+                   capital_guardian_rounds_bonus=0.,
                    recruitment_reward_faction_only=False,
                    episode_timeout_penalty=0., battle_round_limit_penalty=1.)
     python = {**current, 'reward_profile': 'python_reference',
