@@ -306,8 +306,9 @@ def test_reference_campaign_charts_reach_both_backends_and_local_series(tmp_path
     assert data['campaign/victory_rate'] == .5
     assert data['campaign/timeout_rate'] == .5
     assert data['campaign/battle_win_rate'] == .8
-    assert data['campaign/completed/potions_used_mean'] == 3
-    assert data['campaign/completed/mercenaries_hired_mean'] == 1
+    assert data['campaign/window/potions_used_mean'] == 3
+    assert data['campaign/window/hired_units_mean'] == 1.5
+    assert data['campaign/window/mercenaries_hired_mean'] == 1
     assert data['campaign/completed/trainer_uses_mean'] == 4
     assert data['campaign/completed/merchant_purchases_mean'] == 5
     assert data['campaign/window/battle_victories_mean'] == 2
@@ -344,6 +345,9 @@ def test_reference_campaign_charts_reach_both_backends_and_local_series(tmp_path
         assert {key for key in data if key.startswith('campaign/')} <= set(CAMPAIGN_CHARTS)
         assert 'campaign/completed/sold_items_mean' not in data
         assert 'campaign/sold_items_total' not in data
+        for name in ('hired_units', 'mercenaries_hired', 'potions_used', 'capital_defense_acquired'):
+            assert f'campaign/completed/{name}_mean' not in data
+            assert f'campaign/completed/{name}_mean' in saved  # Raw history is retained.
     else:
         assert set(reference_keys['supported']) <= data.keys()
         assert data['campaign/completed/sold_items_mean'] == 2
@@ -379,7 +383,7 @@ def test_comet_view_shows_requested_progress_and_omits_sold_item_count():
     assert sections[-1] == old['panels']['sections'][-1]  # preserve technical charts
     campaign = next(s for s in sections if s['title'] == 'campaign')
     names = [p['metricName'] for p in campaign['panels']]
-    assert len(names) == len(set(names)) == len(CAMPAIGN_CHARTS) == 51
+    assert len(names) == len(set(names)) == len(CAMPAIGN_CHARTS) == 50
     assert set(names) == set(CAMPAIGN_CHARTS)
     # First row: run-long win/defeat rates and the latest interval's win rate.
     first_row = [names[i] for i, item in enumerate(campaign['layout']) if item['y'] == 0]
@@ -388,10 +392,14 @@ def test_comet_view_shows_requested_progress_and_omits_sold_item_count():
     assert not any('sold_items' in name for name in names)
     assert 'campaign/completed/merchant_sale_gold_mean' in names
     assert 'campaign/completed/merchant_purchases_mean' in names
-    for name in ('campaign/completed/potions_used_mean', 'campaign/window/battle_victories_mean',
+    for mechanic in ('hired_units', 'mercenaries_hired', 'potions_used', 'capital_defense_acquired'):
+        assert f'campaign/completed/{mechanic}_mean' not in names
+        assert names.count(f'campaign/window/{mechanic}_mean') == 1
+    for name in ('campaign/window/potions_used_mean', 'campaign/window/battle_victories_mean',
                  'campaign/window/unit_upgrades_mean', 'campaign/window/waves_completed_mean',
                  'campaign/window/dragon_reached_episodes_rate',
-                 'campaign/victories_total', 'campaign/completed/mercenaries_hired_mean',
+                 'campaign/victories_total', 'campaign/window/hired_units_mean',
+                 'campaign/window/mercenaries_hired_mean',
                  'campaign/completed/trainer_uses_mean'):
         panel = next(p for p in campaign['panels'] if p['metricName'] == name)
         assert panel['selectedXAxis'] == 'step' and panel['chartName'] != name
@@ -407,7 +415,7 @@ def test_comet_general_view_removes_guardian_panels_even_when_guardian_is_presen
     names = {p['metricName'] for p in campaign['panels']}
     assert not (names & CAPITAL_CHARTS)
     assert 'campaign/window/waves_completed_mean' in names
-    assert 'campaign/completed/potions_used_mean' in names  # General potion usage still applies.
+    assert 'campaign/window/potions_used_mean' in names  # General potion usage still applies.
     assert general['template_name'] != guardian['template_name']  # Shared templates cannot overwrite one another.
     assert any(p['metricName'] in CAPITAL_CHARTS for s in guardian['panels']['sections'] for p in s['panels'])
     data = dict.fromkeys(CAPITAL_CHARTS, 1.) | {'training_steps': 1_000_000, 'campaign/victory_rate': .5}
@@ -451,7 +459,7 @@ def test_wandb_view_repeats_comet_sections_titles_and_axis(monkeypatch):
     assert updated['status'] == 'updated'
     assert saved[-1].auto_generate_panels is False and not saved[-1].settings.sort_panels_alphabetically
     assert [s.name for s in saved[-1].sections] == ['rollout', 'campaign', 'notes']
-    assert len(saved[-1].sections[1].panels) == updated['campaign_charts'] == 51
+    assert len(saved[-1].sections[1].panels) == updated['campaign_charts'] == 50
 
 
 @pytest.fixture
