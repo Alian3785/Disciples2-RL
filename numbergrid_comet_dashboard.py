@@ -84,7 +84,7 @@ CHART_TITLES = {
     'campaign/window/capital_health_effects_when_reached_mean': 'Эффектов постоянного HP — в эпизодах с Мизраэлем (последние 100)',
     'campaign/window/capital_guardian_rounds_when_reached_mean': 'Новых раундов — в эпизодах с Мизраэлем (последние 100)',
     'campaign/completed/capital_entry_strength_mean': 'Сила армии при первом входе к Мизраэлю — на эпизод',
-    'campaign/completed/capital_guardian_bonuses_mean': 'Бой с Мизраэлем после 50+ побед (+10) — доля эпизодов',
+    'campaign/completed/capital_guardian_bonuses_mean': 'Бой с Мизраэлем после 70+ побед (+10) — доля эпизодов',
     'campaign/window/capital_bot_heroes_defeated_mean': 'Побед над героями бота Империи на эпизод — последние 100 эпизодов',
     'campaign/window/experience_gained_mean': 'Опыт, полученный бойцами агента, на эпизод — последние 100 эпизодов',
     'campaign/window/capital_incubi_mean': 'Инкубов в отряде — максимум за эпизод, последние 100 эпизодов',
