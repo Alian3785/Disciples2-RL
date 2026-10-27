@@ -196,6 +196,9 @@ def test_unrelated_maps_keep_level_rewards_disabled():
         assert not load_map(name).get('army_victory_level_reward', 0.)
         assert not load_map(name).get('capital_entry_level_reward', 0.)
         assert not load_map(name).get('capital_guardian_battle_reward', 0.)
+        assert not load_map(name).get('capital_incubus_reward', 0.)
+        assert not load_map(name).get('capital_incubus_building_reward', 0.)
+        assert not load_map(name).get('capital_guardian_rounds_bonus', 0.)
         assert not load_map(name).get('recruitment_reward_faction_only', False)
     assert not load_map('default-blue-dragon').get('capital_entry_level_reward', 0.)
     assert not load_map('default-blue-dragon').get('capital_guardian_battle_reward', 0.)
@@ -230,6 +233,8 @@ def test_default_capital_preserves_simpler_times_and_blue_reward_settings(tmp_pa
                'objective_reward_hero_only', 'army_victory_level_reward',
                'army_victory_level_objective_only', 'scenario_events_enabled', 'cities', 'faction', 'lord_type',
                'capital_guardian_battle_reward', 'capital_guardian_battle_min_defeated',
+               'capital_defense_acquisition_reward', 'capital_incubus_reward', 'capital_incubus_building_reward',
+               'capital_guardian_rounds_bonus', 'capital_guardian_rounds_bonus_rounds',
                'episode_timeout_penalty', 'battle_round_limit_penalty', 'recruitment_reward_faction_only',
                'enemy_rosters', 'enemy_units', 'enemy_hp', 'enemy_initial_levels', 'absent_enemies', 'bot_attack',
                'hero_roster'}
@@ -251,11 +256,14 @@ def test_default_capital_preserves_simpler_times_and_blue_reward_settings(tmp_pa
     assert capital['faction'] == 'legions' and capital['lord_type'] == 'warrior'
     # User request 2026-10-26: no Mizrael reward besides victory, except the +10 battle bonus
     # once more than 50 other armies were defeated.
-    for key in ('capital_defense_acquisition_reward', 'capital_defense_effect_reward',
-                'capital_guardian_round_reward', 'capital_entry_level_reward'):
+    for key in ('capital_defense_effect_reward', 'capital_guardian_round_reward', 'capital_entry_level_reward'):
         assert key not in capital
     assert capital['capital_guardian_battle_reward'] == 10.
-    assert capital['capital_guardian_battle_min_defeated'] == 51
+    # Later the same day: the bonus needs more than 70, +3 per defensive bottle again, +25 per new Incubus.
+    assert capital['capital_guardian_battle_min_defeated'] == 71
+    assert capital['capital_defense_acquisition_reward'] == 3. and capital['capital_incubus_reward'] == 25.
+    assert capital['capital_incubus_building_reward'] == 12.5
+    assert (capital['capital_guardian_rounds_bonus'], capital['capital_guardian_rounds_bonus_rounds']) == (12.5, 10)
     assert capital['recruitment_reward_faction_only'] is True
     # User request 2026-10-26: the armies the Empire hero Edwin destroyed by turn 21 of
     # SaveGame/6789.sg are absent; the Wolf's slot 9 holds his party, attacking on day 23.

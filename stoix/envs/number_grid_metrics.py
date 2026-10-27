@@ -21,7 +21,7 @@ CAMPAIGN_FIELDS = (
     'capital_guardian_rounds', 'capital_guardian_battles',
     'capital_first_contacts', 'capital_entry_strength',
     'merchant_purchases', 'waves_completed', 'capital_guardian_bonuses',
-    'capital_bot_heroes_defeated', 'experience_gained',
+    'capital_bot_heroes_defeated', 'experience_gained', 'capital_incubi',
 )
 EPISODE_WINDOW = 100
 
@@ -83,6 +83,8 @@ def campaign_events(env, before, world, after, action, valid, battle_counts):
         values['capital_first_contacts'] = first_contact
         values['capital_entry_strength'] = jnp.where(first_contact, after.capital_entry_strength, 0)
         values['capital_guardian_bonuses'] = after.capital_guardian_bonus_paid & ~before.capital_guardian_bonus_paid
+        # Rises of the episode's peak: their per-episode sum is the most living Incubi held at once.
+        values['capital_incubi'] = after.capital_incubi_peak-before.capital_incubi_peak
     if env.bot_attack.enabled:
         # Every hero-army victory over Edwin's party or a later Empire raid.
         values['capital_bot_heroes_defeated'] = after.bot_hero_victories-before.bot_hero_victories

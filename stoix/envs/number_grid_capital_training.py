@@ -1,9 +1,13 @@
 """User-requested Capital training rewards (2026-10-16, 2026-10-26), not original game rules.
 
 Defensive bottles include temporary/permanent armor, permanent HP and elemental
-wards. Sticky peaks prevent retreat/re-entry or slot swaps from farming rewards.
+wards; acquisition also counts accuracy and initiative bottles (2026-10-26).
+Sticky peaks prevent retreat/re-entry or slot swaps from farming rewards.
 The guardian battle bonus (2026-10-26) pays once per episode for a hero-army
 battle with the guardian that starts after enough other armies were defeated.
+The Incubus bonus (2026-10-26) pays for every party fighter that evolves into an
+Incubus, and once for building the hall that allows it; the most living Incubi
+held at once is kept for the charts.
 """
 import math
 
@@ -16,16 +20,20 @@ class CapitalTrainingRules:
     def __init__(self, env, game_map):
         fields = ('capital_defense_acquisition_reward', 'capital_defense_effect_reward',
                   'capital_guardian_round_reward', 'capital_entry_level_reward',
-                  'capital_guardian_battle_reward')
+                  'capital_guardian_battle_reward', 'capital_incubus_reward', 'capital_incubus_building_reward',
+                  'capital_guardian_rounds_bonus')
         values = [game_map.get(k, 0.) for k in fields]
         (self.acquisition_reward, self.effect_reward, self.round_reward, self.entry_level_reward,
-         self.battle_reward) = values
+         self.battle_reward, self.incubus_reward, self.incubus_building_reward, self.rounds_bonus) = values
         for key, value in zip(fields, values):
             if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
                 raise ValueError(key + ' must be finite and nonnegative')
         self.min_defeated = game_map.get('capital_guardian_battle_min_defeated', 0)
         if type(self.min_defeated) is not int or self.min_defeated < 0:
             raise ValueError('capital_guardian_battle_min_defeated must be a nonnegative integer')
+        self.bonus_rounds = game_map.get('capital_guardian_rounds_bonus_rounds', 10)
+        if type(self.bonus_rounds) is not int or self.bonus_rounds < 1:
+            raise ValueError('capital_guardian_rounds_bonus_rounds must be a positive integer')
         self.enabled = any(values)
         # Defense peaks and rounds are observed only while they can still pay.
         self.tracks_effects = bool(self.effect_reward or self.round_reward)
@@ -45,6 +53,11 @@ class CapitalTrainingRules:
         potions = env.potion_rules
         self.indices = jnp.array([i for i, p in enumerate(potions.items)
             if p['effect'] in ('armor', 'health') or p['effect'].startswith('ward_')], jnp.int32)
+        # Acquisition also pays for accuracy and initiative bottles (user request 2026-10-26);
+        # the effect peaks above stay defensive.
+        self.acquired = jnp.array([i for i, p in enumerate(potions.items)
+            if p['effect'] in ('armor', 'health', 'accuracy', 'initiative') or p['effect'].startswith('ward_')],
+            jnp.int32)
         self.keys = tuple(potions.keys[int(i)] for i in self.indices.tolist())
         self.count = len(self.keys)
         self.bits = potions.bits[self.indices]
@@ -60,6 +73,33 @@ class CapitalTrainingRules:
         self.bot_victories = env.bot_attack.enabled
         if self.bot_victories:
             self.others &= ~env.bot_attack.mask
+        self.incubus = env.progression.ids['incubus']
+        # The capital building that evolves a Demonologist into an Incubus (the Legions' Hall of Deception).
+        demonologist = env.progression.ids['demonologist']
+        self.incubus_building = jnp.sum(jnp.where(env.progression.targets[demonologist] == self.incubus,
+                                                  env.progression.building_bits[demonologist], 0)).astype(jnp.uint32)
+        if self.incubus_building_reward and not int(self.incubus_building):
+            raise ValueError('capital_incubus_building_reward needs a faction building that evolves Incubi')
+
+    def incubus_hall(self, before, after):
+        """Pay once per episode when the Incubus building is completed; buildings are never lost."""
+        bit = self.incubus_building
+        built = ((after.buildings & bit) == bit) & ((before.buildings & bit) != bit) & ~before.done
+        return self.incubus_building_reward * built.astype(jnp.float32)
+
+    def incubi(self, state):
+        """Living Incubi of the hero's own party; summons and copies do not count."""
+        return jnp.sum((state.unit_ids[:6] == self.incubus) & (state.hp[:6] > 0)
+                       & (state.summon_owner[:6] < 0) & ~state.copied[:6]).astype(jnp.int32)
+
+    def track_incubi(self, state):
+        """Keep the most living Incubi held at once this episode."""
+        return state.replace(capital_incubi_peak=jnp.maximum(state.capital_incubi_peak, self.incubi(state)))
+
+    def new_incubi(self, state, ids, victory):
+        """Pay for every party fighter evolving into an Incubus in a won battle (also in a raid)."""
+        evolved = jnp.sum((ids[:6] == self.incubus) & (state.unit_ids[:6] != self.incubus))
+        return self.incubus_reward * jnp.where(victory & ~state.summon_battle & ~state.bot_autobattle, evolved, 0)
 
     def defeated(self, state):
         """Armies other than the guardian defeated this episode, by battle or map spell."""
@@ -86,7 +126,7 @@ class CapitalTrainingRules:
             self.entry_level_reward * jnp.where(first, strength, 0) + self.battle_reward * battle)
 
     def acquire(self, before, after):
-        acquired = jnp.sum(jnp.maximum(after.potions[self.indices] - before.potions[self.indices], 0))
+        acquired = jnp.sum(jnp.maximum(after.potions[self.acquired] - before.potions[self.acquired], 0))
         acquired = jnp.where(before.done, 0, acquired)
         return after.replace(capital_defense_acquired=after.capital_defense_acquired + acquired), (
             self.acquisition_reward * acquired)
@@ -107,7 +147,8 @@ class CapitalTrainingRules:
         """Read effects before the activation, including a fatal first enemy hit.
 
         Round 0 is preparation; round 1 is entry and earns no survival bonus.
-        Only genuinely started rounds 2..max_rounds pay, once per episode.
+        Only genuinely started rounds 2..max_rounds pay, once per episode. Reaching
+        `bonus_rounds` survived rounds also pays `rounds_bonus` once per episode.
         """
         eligible = (state.in_battle & ~state.done & ~state.summon_battle & ~state.bot_autobattle
                     & (state.enemy == self.enemy) & (state.round > 0) & (state.post_victory == 0)
@@ -120,8 +161,11 @@ class CapitalTrainingRules:
                      & (round_number > state.round) & (round_number <= self.max_rounds))
         reached = jnp.where(new_round, jnp.maximum(round_number - 1, 0), 0)
         rounds = jnp.maximum(state.capital_rounds_rewarded, reached)
+        # One-off bonus (2026-10-27) when the episode's survived guardian rounds first reach the mark.
+        milestone = (state.capital_rounds_rewarded < self.bonus_rounds) & (rounds >= self.bonus_rounds)
         reward = (self.effect_reward * effect_gain
-                  + self.round_reward * (rounds - state.capital_rounds_rewarded))
+                  + self.round_reward * (rounds - state.capital_rounds_rewarded)
+                  + self.rounds_bonus * milestone)
         return state.replace(capital_defense_peak=peak, capital_rounds_rewarded=rounds), reward
 
     def observation(self, state):
