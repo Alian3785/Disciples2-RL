@@ -6,9 +6,9 @@ The chart catalog and Russian titles here also define the W&B view
 from copy import deepcopy
 from uuid import uuid4
 
-# Means include completed episodes only. Hiring and potion use show the last
+# Means include completed episodes only. Battle victories, hiring and potion use show the last
 # 100 episodes; the other mechanics retain their run-long means.
-RECENT_MECHANICS = frozenset(('hired_units', 'mercenaries_hired', 'potions_used'))
+RECENT_MECHANICS = frozenset(('battle_victories', 'hired_units', 'mercenaries_hired', 'potions_used'))
 CAMPAIGN_MECHANICS = (
     'battle_victories', 'battle_defeats', 'battle_retreats', 'unit_upgrades',
     'castle_heal_uses', 'castle_healed_hp', 'chests_collected', 'buildings_built',
@@ -28,7 +28,7 @@ CAMPAIGN_CHARTS = (
     *(f"campaign/{'window' if name in RECENT_MECHANICS else 'completed'}/{name}_mean"
       for name in CAMPAIGN_MECHANICS),
     'campaign/timeout_rate', 'campaign/window/battle_win_rate',
-    'campaign/window/battle_victories_mean', 'campaign/window/unit_upgrades_mean',
+    'campaign/window/unit_upgrades_mean',
     'campaign/window/experience_gained_mean', 'campaign/window/waves_completed_mean',
     'campaign/window/dragon_reached_episodes_rate', 'campaign/victories_total',
     'campaign/window/capital_defense_acquired_mean',
@@ -45,7 +45,6 @@ CHART_TITLES = {
     'campaign/defeat_rate': 'Доля поражений на карте — с начала обучения',
     'campaign/timeout_rate': 'Доля завершений по лимиту шагов — с начала обучения',
     'campaign/battle_win_rate': 'Доля побед в боях — с начала обучения',
-    'campaign/completed/battle_victories_mean': 'Побед в боях — в среднем на эпизод',
     'campaign/completed/battle_defeats_mean': 'Поражений в боях — в среднем на эпизод',
     'campaign/completed/battle_retreats_mean': 'Отступлений из боя — в среднем на эпизод',
     'campaign/completed/unit_upgrades_mean': 'Улучшений юнитов — в среднем на эпизод',
