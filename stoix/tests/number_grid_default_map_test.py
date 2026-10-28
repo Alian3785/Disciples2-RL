@@ -57,8 +57,8 @@ def test_default_map_layout_and_actions(default_game):
     assert names[env.casting.start:env.casting.hire_action][-1] == 'cast_'+TOWER[-1] and env.casting.count == 23
     assert names[env.casting.hire_action:env.casting.end] == (
         'hire_scroll_mage', 'cast_mind_ward_scroll', 'cast_staff_of_holiness')  # staff: Кордилия's vault
-    assert names[env.casting.end:env.unit_swaps.start] == battle_item_action_names(DEFAULT)  # docs/BATTLE_ITEMS.md
-    assert names[env.unit_swaps.start:] == unit_swap_action_names(env.map_config)  # docs/UNIT_SWAPS.md
+    assert names[env.casting.end:env.unit_swaps.start] == battle_item_action_names(DEFAULT)  # docs/ITEMS.md
+    assert names[env.unit_swaps.start:] == unit_swap_action_names(env.map_config)  # docs/UNITS.md
     # Alar sells the reference potions, then the requested artifact; Tralar the original potions.
     alar, tralar = DEFAULT['merchants']
     assert names[shop.buy_start:shop.train_start] == tuple(
@@ -73,7 +73,7 @@ def test_default_map_layout_and_actions(default_game):
     assert DEFAULT['enemy_capitals'][0]['position'] == DEFAULT['opponent_positions'][GUARD] == [11, 27]
     assert [int(i) for i in jnp.flatnonzero(env.territory.capital_guards)] == [GUARD]
     rows = env.progression.rows
-    # No fixed roster: the Legions warrior ruler's party (docs/STARTING_PARTIES.md).
+    # No fixed roster: the Legions warrior ruler's party (docs/UNITS.md).
     assert DEFAULT['faction'] == 'legions' and DEFAULT['lord_type'] == 'warrior'
     assert 'hero_roster' not in DEFAULT and env.map_config['hero_roster'] == STARTING_PARTIES['legions']['warrior']
     assert [rows[i]['key'] if i else None for i in state.unit_ids[:6].tolist()] == env.map_config['hero_roster']
@@ -247,7 +247,7 @@ def test_without_objective_cities_the_capital_guard_is_not_a_goal():
 
 
 def test_reference_hero_skills(default_game):
-    """docs/HERO_SKILLS.md: Pathfinding, the warrior's Might at 9, Weapon Master at 12, equipment lore."""
+    """docs/UNITS.md: Pathfinding, the warrior's Might at 9, Weapon Master at 12, equipment lore."""
     env, initial, step, _ = default_game
     progression, hero = env.progression, int(initial.unit_ids[1])
     row, plain = progression.rows[hero], progression.ids['duke']

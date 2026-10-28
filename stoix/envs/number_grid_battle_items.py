@@ -1,4 +1,4 @@
-"""Hero battle slots: orbs, talismans and battle potions. See docs/BATTLE_ITEMS.md.
+"""Hero battle slots: orbs, talismans and battle potions. See docs/ITEMS.md.
 
 Effects: Python reference campaign_env_inventory._battle_item_effect_definitions
 and battle_env hero-item actions. Item IDs and prices: installed GItem.dbf.

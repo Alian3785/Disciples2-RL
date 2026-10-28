@@ -1,4 +1,4 @@
-"""Hard limits requested for the JAX game; see docs/HARD_LIMITS.md."""
+"""Hard limits requested for the JAX game; see docs/COMBAT.md."""
 import jax.numpy as jnp
 
 MAX_LEVEL = 99

@@ -1,7 +1,7 @@
 """Extended GPU checks for the user's original-game experiment, 2026-10-17.
 
 Each permanent potion kind is allowed once per unit per episode. Different
-kinds can coexist. Source and scope: docs/MAP_POTIONS.md; run only on request.
+kinds can coexist. Source and scope: docs/ITEMS.md; run only on request.
 """
 import chex
 import jax.numpy as jnp

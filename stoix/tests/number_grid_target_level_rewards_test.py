@@ -2,7 +2,7 @@
 
 Extended CUDA regressions. Run only on explicit request through scripts/run_gpu.sh.
 These rewards are training rules, not original game rules. Sources: docs/DEFAULT_MAP.md
-(reference maps/default.py for Mizrael and the green dragon), docs/REFERENCE_CAMPAIGNS.md.
+(reference maps/default.py for Mizrael and the green dragon), docs/MAPS.md.
 """
 import json
 

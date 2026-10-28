@@ -77,7 +77,7 @@ def test_non_progression_recognizes_russian_unit_names():
     (70, 8347), (80, 9297), (90, 9847), (98, 9999), (99, 10000), (100, 10000),
 ])
 def test_two_roll_accuracy_matches_exhaustive_discrete_distribution(chance, count):
-    """Installed EXE 0x625F3F; independent discrete counts in BASIC_COMBAT.md."""
+    """Installed EXE 0x625F3F; independent discrete counts in docs/COMBAT.md."""
     values = (jnp.arange(100) + .25) / 100
     hits = jax.jit(accuracy_hits)(chance, values[:, None], values[None, :])
     assert int(jnp.sum(hits)) == count

@@ -1,6 +1,6 @@
 """Siege reward regressions; CUDA-only, run only on an explicit request.
 
-Source: user reward-design requests, 2026-10-13/14; docs/REFERENCE_CAMPAIGNS.md.
+Source: user reward-design requests, 2026-10-13/14; docs/MAPS.md.
 These rewards are not claims about original Disciples II mechanics.
 """
 from copy import copy

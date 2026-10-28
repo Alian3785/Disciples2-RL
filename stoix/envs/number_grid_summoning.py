@@ -1,4 +1,4 @@
-"""Copy preparation and fixed-slot summons. Sources: docs/UNIT_CATALOG.md."""
+"""Copy preparation and fixed-slot summons. Sources: docs/UNITS.md."""
 import jax
 import jax.numpy as jnp
 from stoix.envs.number_grid_limits import MAX_HP, cap_stats

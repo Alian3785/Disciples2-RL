@@ -54,7 +54,7 @@ WEAKEN_FACTOR = .67  # number_grid.py:_weakening_factor, GVars BATLOWERD2=33
 DOT_CLASSES = {12: 'poison', 13: 'water', 23: 'burn'}  # number_grid_effects.effect_tables
 DOT_SOURCES = {'poison': 'poison', 'water': 'water', 'burn': 'fire'}  # immunity masks 16/8/4
 DOT_FALLBACK = {'poison': 0, 'water': 10, 'burn': 10}  # advance_periodic_queue fallback damage
-DOT_BREAK_AGE1 = .21  # first removal check of a refreshed DOT, age 1 (ORIGINAL_EFFECTS.md)
+DOT_BREAK_AGE1 = .21  # first removal check of a refreshed DOT, age 1 (docs/COMBAT.md)
 # number_grid_progression.ProgressionRules: damage caps and zero-damage support types.
 HEAVY_STRIKE_IDS = {'g000uu0019', 'g000uu0020', 'g000uu0044', 'g000uu0045', 'g000uu0047', 'g000uu0070',
                     'g000uu0071', 'g000uu0096', 'g000uu8009', 'g000uu8011'}
@@ -88,10 +88,10 @@ RULES = {
         'number_grid_territory.py:CAPITAL_ARMOR, defender_armor; docs/DEFAULT_MAP.md', 'original'),
     'armor_cap': _rule(
         'Эффективная броня, включая Defend, не выше 90%', 'DBF/EXE',
-        'Discipl2.exe sub_5D35F3; GVars DFENDBONUS=50; docs/ARCHER_BATTLES.md', 'original'),
+        'Discipl2.exe sub_5D35F3; GVars DFENDBONUS=50; docs/COMBAT.md', 'original'),
     'damage_roll': _rule(
         'D = min(сила после модификаторов + 0…5, предел); урон = D − trunc(D × броня/100)', 'EXE',
-        'Discipl2.exe sub_5D3715, sub_65C047, sub_5840EC; docs/ARCHER_BATTLES.md', 'original'),
+        'Discipl2.exe sub_5D3715, sub_65C047, sub_5840EC; docs/COMBAT.md', 'original'),
     'pair_roll': _rule(
         'Попадание: два целых броска 0…99, успех при a + b < 2 × точность', 'Python-референс',
         'number_grid_combat.py:accuracy_hits', 'reference',
@@ -107,7 +107,7 @@ RULES = {
         'следствие initiative_roll', 'reference'),
     'short_disable': _rule(
         'Короткий паралич/окаменение: пропуск ближайшего хода цели и снятие; снимается и при следующем '
-        'ходе источника', 'DBF/EXE', 'docs/ORIGINAL_EFFECTS.md (EXE 0x626AA7); number_grid.py:_prepare_disable',
+        'ходе источника', 'DBF/EXE', 'docs/COMBAT.md (EXE 0x626AA7); number_grid.py:_prepare_disable',
         'original'),
     'long_disable': _rule(
         'Длительный паралич: перед ходом снимается с шансом 11, 21, … 100% по возрасту в раундах',
@@ -132,24 +132,24 @@ RULES = {
         'number_grid.py:_battle_step_regular (connected_status)', 'reference'),
     'dot_tick': _rule(
         'Яд, обморожение, ожог тикают перед действием цели, в том числе перед пропуском из-за паралича',
-        'DBF/EXE', 'docs/ORIGINAL_EFFECTS.md (EXE 0x628B60, 0x628D12, 0x628EC4)', 'original'),
+        'DBF/EXE', 'docs/COMBAT.md (EXE 0x628B60, 0x628D12, 0x628EC4)', 'original'),
     'dot_armor': _rule(
         'Тик DoT не уменьшается бронёй и Defend', 'Python-референс',
-        'number_grid_effects.py:advance_periodic_queue; docs/REFERENCE_UNIT_ACTIONS.md', 'reference',
+        'number_grid_effects.py:advance_periodic_queue; docs/COMBAT.md', 'reference',
         'Ожог Владыки по цели с бронёй 90: снимает ли полные 30/47 HP за тик.'),
     'dot_refresh': _rule(
-        'Повторный DoT обновляет урон и возраст без суммирования', 'DBF/EXE', 'docs/ORIGINAL_EFFECTS.md',
+        'Повторный DoT обновляет урон и возраст без суммирования', 'DBF/EXE', 'docs/COMBAT.md',
         'original'),
     'dot_potions': _rule(
         'Зелья и заклинания, как знамёна и артефакты, не меняют вторичную атаку: силу тика DoT и точность '
         'вторичных эффектов (окаменение, паралич, страх, ослабление); Python-референс усиливал обе атаки',
         'запрос пользователя 19.10.2026; DBF (один класс L_ATTACK) + D2ModdingToolset',
-        'number_grid_potions.py:SECONDARY_COLUMNS; number_grid.py:_secondary_stats; docs/MAP_POTIONS.md', 'open',
+        'number_grid_potions.py:SECONDARY_COLUMNS; number_grid.py:_secondary_stats; docs/ITEMS.md', 'open',
         'Тик ожога Владыки 5-го уровня (30) без бонусов, с Эликсиром энергии и со Знаменем мощи; доля '
         'окаменений Дьявола Бездны с Зельем точности и без.'),
     'weakening': _rule(
         'Ослабление: −33% урона цели до конца боя (BATLOWERD2=33)', 'DBF/EXE',
-        'docs/ORIGINAL_EFFECTS.md (EXE 0x65E591); number_grid.py:_weakening_factor', 'original'),
+        'docs/COMBAT.md (EXE 0x65E591); number_grid.py:_weakening_factor', 'original'),
     'transform_guard': _rule(
         'Превращение юнитами (Ведьма, Колдунья, Суккуб) и Hag\'s Ring не действует на стража столицы',
         'Python-референс', 'number_grid.py:2645-2646; number_grid_item_combat.py:103', 'open',
@@ -188,39 +188,39 @@ RULES = {
         'number_grid_potions.py:POTIONS', 'reference'),
     'equip_daily': _rule(
         'Боевой предмет кладётся в слот не чаще раза в день, снятия нет', 'Python-референс',
-        'docs/BATTLE_ITEMS.md; number_grid_battle_items.py:equip_available', 'reference'),
+        'docs/ITEMS.md; number_grid_battle_items.py:equip_available', 'reference'),
     'magic_access': _rule(
         'Сферы и талисманы — с 10-го уровня героя, у лорда-мага или с книгой в слоте книги', 'Python-референс',
         'number_grid_battle_items.py:access', 'reference'),
     'item_turn': _rule(
-        'Применение боевого предмета тратит ход героя', 'Python-референс', 'docs/BATTLE_ITEMS.md', 'reference'),
+        'Применение боевого предмета тратит ход героя', 'Python-референс', 'docs/ITEMS.md', 'reference'),
     'life_potion': _rule(
         'Зелье воскрешения в бою возвращает павшего с 1 HP, Сфера/талисман жизни — с 50% HP', 'Python-референс',
         'number_grid_battle_items.py:POTION_EFFECTS, EFFECTS', 'reference'),
     'summon_owner': _rule(
         'Призыв сферой исчезает при гибели или бегстве героя', 'проверка пользователя в игре 14.10.2026',
-        'docs/BATTLE_ITEMS.md', 'original'),
+        'docs/ITEMS.md', 'original'),
     'leadership': _rule(
         'Лидерство: 3 места, +1 на 3-м и 6-м уровне героя, не более 5; большой боец занимает 2',
         'Python-референс', 'number_grid_recruitment.py:composition', 'reference'),
     'hero_levels': _rule(
         'Герой: порог 150, +500 за уровень; Выносливость (HP ×1,2) на 4-м, Сила (урон ×1,25) на 5-м, '
-        'Мощь лорда-воина на 9-м', 'Python-референс', 'docs/LEGIONS_DUKE.md, docs/HERO_SKILLS.md', 'reference'),
+        'Мощь лорда-воина на 9-м', 'Python-референс', 'docs/UNITS.md#duke, docs/UNITS.md#skills', 'reference'),
     'equipment_skills': _rule(
         'Экипировка героя: знамя с 7-го, сапоги с 8-го, книга с 11-го уровня, артефакты у воина сразу; '
         'надевается самая дорогая вещь', 'Python-референс + автовыбор JAX',
         'number_grid_items.py:choose; number_grid_hero_skills.py:lore_levels', 'reference'),
     'trainer': _rule(
         'Тренер продаёт XP до порога − 1 по цене TRAINING_C; последний XP — из боя', 'DBF + руководство',
-        'docs/MAP_SITES.md', 'original'),
+        'docs/ECONOMY.md', 'original'),
     'promotion_once': _rule(
-        'Одно повышение за бой, избыток опыта не переносится', 'Python-референс', 'docs/UNIT_PROGRESSION.md',
+        'Одно повышение за бой, избыток опыта не переносится', 'Python-референс', 'docs/UNITS.md',
         'reference'),
     'xp_split': _rule(
         'Опыт боя делится поровну между живыми не отступившими победителями', 'Python-референс',
         'number_grid_progression.py:finish', 'reference'),
     'guard_no_xp': _rule(
-        'Стражи столиц не получают боевой опыт', 'запрос пользователя', 'docs/UNIT_PROGRESSION.md', 'user'),
+        'Стражи столиц не получают боевой опыт', 'запрос пользователя', 'docs/UNITS.md', 'user'),
     'round_limit': _rule(
         'После 75-го раунда отряд обязан отступить', 'Python-референс', 'number_grid.py:round_limit_retreat',
         'reference'),
@@ -412,7 +412,7 @@ class World:
         return None
 
     def train_price(self, key, level):
-        """Trainer gold per XP of a form at a level (docs/MAP_SITES.md, TRAINING_C)."""
+        """Trainer gold per XP of a form at a level (docs/ECONOMY.md, TRAINING_C)."""
         entry = self.training.get(UNITS[key].get('game_id'))
         if entry is None:
             return None
@@ -548,7 +548,7 @@ def unit_profile(key, level, permanent=(), temporary=(), worn=(None,) * 5, hero=
     stats[ACCURACY] = min(stats[ACCURACY], 100.)
     stats[DAMAGE] = min(enhanced[DAMAGE], cap)
     # _secondary_stats: form and level only; potions, spells, banners and artifacts
-    # change the primary attack alone (rule dot_potions, docs/MAP_POTIONS.md).
+    # change the primary attack alone (rule dot_potions, docs/ITEMS.md).
     secondary = tuple(base[c] for c in SECONDARY_COLUMNS)
     copy = tuple(base[:5][i] + bonus[i] for i in range(5))  # _copy_form_stats: permanent values only
     return dict(stats=tuple(stats), secondary=secondary, enhanced_damage=enhanced[DAMAGE], cap=cap, copy=copy)

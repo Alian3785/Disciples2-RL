@@ -1,4 +1,4 @@
-"""Original Steam 3.01 expiry contracts; evidence: docs/ORIGINAL_EFFECTS.md."""
+"""Original Steam 3.01 expiry contracts; evidence: docs/COMBAT.md."""
 import jax
 import jax.numpy as jnp
 import pytest

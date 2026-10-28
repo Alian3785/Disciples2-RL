@@ -1,6 +1,6 @@
 """Extended CUDA cases for the paired Capital experiment requested 2026-10-16.
 
-Sources: docs/CAPITAL_REWARD_COMPARISON.md, Python train_campaign.REWARD_CONFIG.
+Sources: docs/DEFAULT_MAP.md, Python train_campaign.REWARD_CONFIG.
 Run only on explicit request through scripts/run_gpu.sh; outside core.
 """
 import jax

@@ -202,7 +202,7 @@ This SLURM launcher is designed to assist with research, making it simple to sca
 
 ## Contributing 🤝
 
-Please read our [contributing docs](docs/CONTRIBUTING.md) for details on how to submit pull requests, our Contributor License Agreement and community guidelines.
+Please read our [contributing docs](CONTRIBUTING.md) for details on how to submit pull requests, our Contributor License Agreement and community guidelines.
 
 ## Roadmap 🛤️
 

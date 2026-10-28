@@ -1,4 +1,4 @@
-"""Territory, mine income and settlements. Sources: docs/TERRITORY_CITIES.md.
+"""Territory, mine income and settlements. Sources: docs/WORLD.md.
 
 Static BFS ranks are built once; runtime queries only gather the ranks needed.
 Each source grows independently, including overlap with another owned source.
@@ -17,7 +17,7 @@ RESOURCE_NAMES = ('Золото', 'Мана преисподней', 'Мана �
 CITY_CAPTURED, CITY_UPGRADED, OBSTACLE = 43, 44, 45
 CAPITAL_ARMOR, CAPITAL_REGENERATION = 50, 35  # GVars PROT_CAP and the capital REGEN bonus
 CITY_GROWTH = (0, 15, 15, 20, 20, 25)
-CITY_CAPTURE_PERCENT = 100  # Installed GVars T_CAPTURE; see docs/TERRITORY_CITIES.md.
+CITY_CAPTURE_PERCENT = 100  # Installed GVars T_CAPTURE; see docs/WORLD.md.
 CITY_BONUS = (0, 10, 15, 20, 25, 30)
 CITY_COST = (0, 150, 250, 500, 750, 0)
 

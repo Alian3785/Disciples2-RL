@@ -1,4 +1,4 @@
-"""Unit swaps: the player rearranges the hero's party on the map. See docs/UNIT_SWAPS.md.
+"""Unit swaps: the player rearranges the hero's party on the map. See docs/UNITS.md.
 
 Python reference campaign_env_economy.py: _build_blue_unit_swap_pairs,
 _can_swap_blue_unit_positions/_blue_unit_swap_action_mask_values,

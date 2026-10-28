@@ -182,13 +182,6 @@ bash scripts/run_gpu.sh -m pytest -m 'not core' stoix/tests/number_grid_mirror_m
 кеш для проверки этого бюджета. Обучение и замеры learner не входят в этот запуск.
 Проходимость перед запрошенным обучением проверяется отдельно согласно AGENTS.md.
 
-Проверено 14 октября 2026: **163 проверки `core` прошли**, включая все 11 случаев
-Mirror match. GTX 1660 Ti, CUDA, JAX 0.11.2, один процесс, пустой кеш:
-**403,56 с (6 мин 44 с)** от Windows-команды с WSL и компиляцией; pytest — 359,58 с.
-Подробности, длительности и хеши проверенных исходников:
-[validation/mirror-core-20261014.json](validation/mirror-core-20261014.json).
-Ruff и `git diff --check` прошли. Обучение и замеры learner не запускались.
-
 После ревью добавлена расширенная проверка
 `test_max_steps_truncates_without_victory_and_preserves_bootstrap`: последний
 разрешённый шаг даёт `TRUNCATED`, `discount=1` и конечное наблюдение для bootstrap.

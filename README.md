@@ -1,18 +1,48 @@
-So, this is the project to train a Superhuman bot for Disciples 2, popular turn-based strategy game. There are 3 stages:
+# Disciples2-RL на JAX
 
-1. **Single-player scenarios**
-   First, an agent is trained to complete individual single-player scenarios. Autoresearch is used to test multiple configurations.
-   [Preliminary roadmap](https://github.com/users/Alian3785/projects/2)
+Среда одиночных сценариев Disciples II: Rise of the Elves и обучение агента PPO на JAX/GPU. Ручная игра и обучение используют одну реализацию движения, боя, развития, экономики и магии. Браузер отображает состояние и отправляет команды.
 
-2. **Randomly generated and unseen maps**
-   Next, a more general agent is trained to play previously unseen maps, face randomly generated enemies, and handle a wider variety of situations.
+<a id="approach"></a>
+## Направление проекта
 
-3. **Self-play training**
-   Finally, an AlphaZero-like agent is trained through self-play, with the goal of competing against the best *Disciples II* players and eventually beating the champion—whoever that may be.
-   [Why not just use AlphaZero right away?](https://github.com/Alian3785/Disciples2-RL/blob/main/Why%20not%20just%20use%20AlphaZero.md)
+Развитие идёт от прохождения отдельных сценариев к незнакомым картам, затем к игре против другого агента. У Disciples II есть скрытая информация и длинные кампании; схема AlphaZero для полностью наблюдаемых настольных игр требует адаптации. [План проекта](https://github.com/users/Alian3785/projects/2).
 
-The project implements campaign movement, tactical battles, party progression, settlements, economy, magic, and items in Python. It remains an adaptation of the original game: known omissions include rod planters, recruiting additional heroes, thief gameplay, non-interactive map objects, scripted story events, and original visuals. Some spell mechanics, including illusions, are disabled.
+Реализация сочетает данные установленной Rise of the Elves, подтверждённые правила оригинала и согласованные адаптации Python-референса. Источники и ограничения каждой механики указаны в справочниках; сведения о покрытии нужно сверять с текущим кодом и тестами.
 
-The agent is being trained for *Disciples II: Rise of the Elves*:
-[Disciples II: Rise of the Elves on Steam](https://store.steampowered.com/app/1630/Disciples_II_Rise_of_the_Elves/)
+## Запуск
 
+Из корня проекта в WSL/Linux с NVIDIA GPU:
+
+```bash
+bash scripts/install_runtime.sh
+bash scripts/run_gpu.sh serve_number_grid.py --map trade_train --port 8769
+```
+
+На Windows: `open-numbergrid.cmd -Map trade_train`. Игра открывается по адресу http://127.0.0.1:8769/viewer.html.
+
+[Руководство по запуску, обучению, чекпойнтам и проверкам](docs/TRAINING.md). Обучения, замеры и тесты выполняются по явному запросу; правила работы — [AGENTS.md](AGENTS.md).
+
+<a id="documentation"></a>
+## Документация
+
+| Справочник | Содержание |
+|---|---|
+| [Бои](docs/COMBAT.md) | Атаки, очередь, эффекты, иммунитеты, направленная атака и ограничения |
+| [Юниты](docs/UNITS.md) | Каталог, опыт, герои, навыки, стартовые отряды и перестановки |
+| [Предметы](docs/ITEMS.md) | Экипировка, боевые предметы, зелья и сундуки |
+| [Магия](docs/MAGIC.md) | Исследование, применение, свитки и посохи |
+| [Экономика](docs/ECONOMY.md) | Строительство, храм, торговцы, тренеры, найм и руины |
+| [Мир](docs/WORLD.md) | Дни, отдых, движение, рельеф, земля, источники и города |
+| [Карты и кампании](docs/MAPS.md) | Реестр, сценарии, Проклятое дитя, текущая карта и целевые награды |
+| [Обучение](docs/TRAINING.md) | Runtime, команды, метрики, отчёты, методика скорости и проверки |
+| [Лаборатория стража](docs/GUARDIAN_LAB.md) | Поиск тактик, приближения и неподтверждённые правила |
+
+Подробные правила отдельных карт: [Default и драконы/столица](docs/DEFAULT_MAP.md), [Small](docs/SMALL_MAP.md), [Бегство Бетрезена](docs/BETHREZENS_RETREAT.md), [Trade Train](docs/TRADE_TRAIN.md), [Mirror Match](docs/MIRROR_MATCH.md).
+
+Актуальные команды и правила находятся в этих справочниках. Результаты конкретных запусков хранятся в `results/`; прошлые версии документации доступны в истории Git.
+
+## Исходники и лицензии
+
+JAX-реализация использует Stoix и Stoa. Обзор библиотеки — [README_STOIX.md](README_STOIX.md); описание Stoa — [stoa-src/README.md](stoa-src/README.md). Документация алгоритмов находится рядом с реализациями в `stoix/systems/`.
+
+Лицензии сохранены отдельно: [MIT проекта](LICENSE), [Apache-2.0 Stoix](LICENSE_STOIX), [лицензия Stoa](stoa-src/LICENSE). MIT-лицензия проекта не заменяет лицензии включённых библиотек. [Участие в разработке](CONTRIBUTING.md).

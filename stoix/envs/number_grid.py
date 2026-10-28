@@ -457,7 +457,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
         self.episode_reports = bool(episode_reports) and self.progression_enabled
         if self.progression_enabled and not self.basic_combat:
             raise ValueError('Unit progression requires basic combat')
-        # Reference skill ladder: Pathfinding, Weapon Master, the lord's Might (docs/HERO_SKILLS.md).
+        # Reference skill ladder: Pathfinding, Weapon Master, the lord's Might (docs/UNITS.md).
         self.hero_skills = hero_skills.enabled(game_map)
         if self.hero_skills and not self.progression_enabled:
             raise ValueError('Hero skills require unit progression')
@@ -1372,7 +1372,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
         """Secondary damage/accuracy of the current form, with growth but no buffs.
 
         Potions and spells, like banners and artifacts, modify only the primary
-        attack (user request 2026-10-19, docs/MAP_POTIONS.md).
+        attack (user request 2026-10-19, docs/ITEMS.md).
         """
         ids,levels=self._effective_ids(state)[slot],self._effective_levels(state)[slot]
         values=self.progression.secondary_stats(ids,levels)

@@ -1,11 +1,11 @@
-"""Map casts of researched spells. Sources: docs/SPELL_CASTING.md.
+"""Map casts of researched spells. Sources: docs/MAGIC.md.
 
 Python reference campaign_env_magic.py: offensive spells hit one nearest
 living stack (Chebyshev distance, then the lower stack index, no pathfinding).
 Damage and debuffs skip stacks on city/ruin sites; summons reach any stack and
 immediately start a separate battle of the summoned unit alone. Support spells
 affect the hero stack until the next REST. Every check is shared by mask/step.
-Scrolls and staves cast the same rows: docs/SCROLLS_AND_STAVES.md.
+Scrolls and staves cast the same rows: docs/MAGIC.md.
 """
 import jax.numpy as jnp
 import numpy as np

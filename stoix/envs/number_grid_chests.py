@@ -1,7 +1,7 @@
 """One-shot potion chests; Chebyshev pickup range from the Python reference.
 
 The current scenario collects on a successful map move, per the user request.
-See docs/MAP_CHESTS.md for sources and scenario choices.
+See docs/ITEMS.md for sources and scenario choices.
 """
 import jax.numpy as jnp
 
