@@ -105,9 +105,9 @@ def load_map(name=None):
         # save SaveGame/6789.sg the Empire hero Edwin had destroyed these armies
         # (CMidStackDestroyed killer S001PL0001, matched by tile), so they start absent.
         # The Wolf's slot 9 holds Edwin's party, which attacks the hero on day 23.
-        # Second request the same day: from day 31, every 8 days, one of two Empire parties from the
-        # user's screenshots, drawn anew each time, attacks the same way. They take the free absent
-        # slots 37 and 41. Godefroy's type is not shown; his 90 HP portrait means the Ranger.
+        # User request 2026-10-27: from day 31 one screenshot party waits beside the Empire
+        # capital and returns seven days after destruction. Slots 37 and 41 hold the two variants.
+        # Godefroy's type is not shown; his 90 HP portrait means the Ranger.
         units = json.loads((_ROOT / 'stoix/envs/data/units.json').read_text(encoding='utf-8'))
         bot, raids = 9, [37, 41]
         parties = {bot: ['g000uu0019', 'knight', 'knight', None, 'marksman', None],
@@ -120,7 +120,8 @@ def load_map(name=None):
         levels = [[units[unit]['level'] if unit else 0 for unit in roster] for roster in game_map['enemy_rosters']]
         levels[bot][0] = 2  # Edwin is level 2 in the save; Knights and the Marksman keep base level 2
         game_map.update(absent_enemies=[9, 37, 41, 42, 44, 46, 47, 49, 50, 51, 52],
-                        bot_attack=dict(enemy=bot, day=23, raids=dict(enemies=raids, first_day=31, interval=8)),
+                        bot_attack=dict(enemy=bot, day=23, raids=dict(
+                            enemies=raids, first_day=31, respawn_days=7, position=[10, 28])),
                         enemy_initial_levels=levels)
         # User request 2026-10-26: a warrior lord's fixed party for Capital only, instead of the
         # Legions warrior party; the Duke and a Possessed hold the front edges, two Cultists the back.
@@ -203,6 +204,7 @@ class BattleState(NumberGridState):
     bot_moves_spent: jax.Array
     bot_defeated_enemies: jax.Array
     bot_hero_victories: jax.Array
+    bot_respawn_day: jax.Array  # 0 while a stationary Empire party is alive; otherwise its next arrival day.
     bot_autobattle: jax.Array
     opponent_claims: jax.Array
     territory_owners: jax.Array
@@ -1064,6 +1066,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             bot_ids=self.bot.initial_ids if self.bot.enabled else jnp.zeros(0, jnp.int32),
             bot_mode=zero, bot_timer=zero, bot_target=jnp.int32(-1), bot_moves_spent=zero,
             bot_defeated_enemies=zero, bot_hero_victories=zero, bot_autobattle=jnp.bool_(False),
+            bot_respawn_day=jnp.int32(self.bot_attack.first_day if self.bot_attack.enabled else 0),
             opponent_claims=jnp.ones(len(self.territory.opponent_sources) if self.territory_enabled else 0, jnp.int32),
             territory_owners=self.territory.initial_owners if self.territory_enabled else jnp.zeros(0, jnp.int8),
             enemy_positions=self.opponent_positions,
@@ -1651,7 +1654,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
         blocked = jnp.where(slots < 6, state.battle_fort_defender == FORT_BLUE,
                             state.battle_fort_defender == FORT_RED)
         if self.bot_attack.enabled:
-            blocked |= (slots < 6) & (state.enemy >= 0) & self.bot_attack.mask[jnp.maximum(state.enemy, 0)]
+            blocked |= (slots < 6) & (state.enemy == self.bot_attack.enemy)
         return ~blocked
 
     def _fear_protected(self, state, target_slots):
@@ -2358,6 +2361,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             random_values = jax.random.uniform(random_key, (self.random_size,))
             next_state = next_state.replace(battle_key=key)
         if self.bot_attack.enabled:
+            next_state = self.bot_attack.schedule_respawn(before, next_state)
             next_state = self.bot_attack.spawn(next_state, resting, key)
         if self.encounters_enabled:
             pending = next_state.pending_encounters & next_state.alive

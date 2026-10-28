@@ -75,7 +75,7 @@ class TerritoryRules:
         """Prepare settlement, resource, obstacle, and faction growth tables from the map."""
         self.size = int(game_map['size'])
         self.moving_enemies = bool(game_map.get('scheduled_enemies') or game_map.get('scripted_bot')
-                                   or game_map.get('scenario_events'))
+                                   or game_map.get('scenario_events') or game_map.get('bot_attack'))
         self.capital = tuple(game_map.get('capital_position', game_map['agent_position']))
         self.cities = list(game_map.get('cities', []))
         self.count = len(self.cities)

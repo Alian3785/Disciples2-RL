@@ -267,10 +267,12 @@ def test_default_capital_preserves_simpler_times_and_blue_reward_settings(tmp_pa
     assert capital['recruitment_reward_faction_only'] is True
     # User request 2026-10-26: the armies the Empire hero Edwin destroyed by turn 21 of
     # SaveGame/6789.sg are absent; the Wolf's slot 9 holds his party, attacking on day 23.
-    # From day 31, every 8 days, one of the user's two Empire screenshot parties (slots 37, 41).
+    # From day 31 a stationary screenshot party waits near the Empire capital, respawning
+    # seven days after destruction (user request 2026-10-27).
     bot = 9
     assert capital['bot_attack'] == {'enemy': bot, 'day': 23,
-                                     'raids': {'enemies': [37, 41], 'first_day': 31, 'interval': 8}}
+                                     'raids': {'enemies': [37, 41], 'first_day': 31,
+                                               'respawn_days': 7, 'position': [10, 28]}}
     assert capital['absent_enemies'] == [9, 37, 41, 42, 44, 46, 47, 49, 50, 51, 52]
     for key in ('enemy_rosters', 'enemy_units', 'enemy_hp'):
         assert ([v for i, v in enumerate(capital[key]) if i not in (bot, 37, 41)]
