@@ -1,4 +1,4 @@
-"""CUDA contracts: the player rearranges the hero's party on the map (docs/UNIT_SWAPS.md).
+"""CUDA contracts: the player rearranges the hero's party on the map (docs/UNITS.md).
 
 Python reference campaign_env_economy.py: _build_blue_unit_swap_pairs,
 _can_swap_blue_unit_positions, _step_swap_blue_unit_positions,
@@ -19,7 +19,7 @@ from stoix.envs.number_grid_unit_swaps import (
 from stoix.tests.number_grid_fixtures import compiled_method, hero_roster_state
 
 DEFAULT = load_map('default')
-# Default starts with the reference party of a warrior ruler (docs/STARTING_PARTIES.md); since
+# Default starts with the reference party of a warrior ruler (docs/UNITS.md); since
 # map v88 the current map starts with a mage, whose occupied slots come first in its own order.
 CURRENT_PARTY = with_starting_party(MAP)['hero_roster']
 WARRIOR_PARTY = with_starting_party({**MAP, 'lord_type': 'warrior'})['hero_roster']

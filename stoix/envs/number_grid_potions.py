@@ -1,4 +1,4 @@
-"""All original potions; scenario-sized actions. Sources: docs/MAP_POTIONS.md."""
+"""All original potions; scenario-sized actions. Sources: docs/ITEMS.md."""
 import jax
 import jax.numpy as jnp
 from stoix.envs.number_grid_limits import MAX_HP

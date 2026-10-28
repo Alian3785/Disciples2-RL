@@ -1,4 +1,4 @@
-"""Original 3x3 sites, merchant inventory, training and spell shops. See docs/MAP_SITES.md."""
+"""Original 3x3 sites, merchant inventory, training and spell shops. See docs/ECONOMY.md."""
 import json
 from pathlib import Path
 

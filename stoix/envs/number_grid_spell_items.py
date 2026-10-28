@@ -1,4 +1,4 @@
-"""Scrolls and staves: hero items that cast a catalogue spell. See docs/SCROLLS_AND_STAVES.md.
+"""Scrolls and staves: hero items that cast a catalogue spell. See docs/MAGIC.md.
 
 Data: installed GItem.dbf (scripts/import_spell_items.py). Only items whose
 spell can be researched and cast (stoix/envs/data/spells.json) are included:

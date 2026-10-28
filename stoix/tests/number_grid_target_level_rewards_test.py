@@ -2,7 +2,7 @@
 
 Extended CUDA regressions. Run only on explicit request through scripts/run_gpu.sh.
 These rewards are training rules, not original game rules. Sources: docs/DEFAULT_MAP.md
-(reference maps/default.py for Mizrael and the green dragon), docs/REFERENCE_CAMPAIGNS.md.
+(reference maps/default.py for Mizrael and the green dragon), docs/MAPS.md.
 """
 import json
 
@@ -249,6 +249,9 @@ def test_default_capital_preserves_simpler_times_and_blue_reward_settings(tmp_pa
     assert capital['enemy_rosters'][30] == [None, 'g000uu5023', None, None, None, None]
     assert capital['enemy_full_regeneration'] == [30]
     assert capital['scenario_events_enabled'] is False
+    # User request 2026-10-28: Capital uses Blue Dragon's timeout and forced-retreat costs.
+    assert capital['episode_timeout_penalty'] == blue.get('episode_timeout_penalty', 0.) == 0.
+    assert capital['battle_round_limit_penalty'] == blue.get('battle_round_limit_penalty', 1.) == 1.
     assert not capital.get('scenario_events') and not capital.get('scheduled_enemies')
     assert not capital.get('scripted_bot')
     for key in ('objective_reward_hero_only', 'army_victory_level_reward', 'army_victory_level_objective_only'):
@@ -267,10 +270,12 @@ def test_default_capital_preserves_simpler_times_and_blue_reward_settings(tmp_pa
     assert capital['recruitment_reward_faction_only'] is True
     # User request 2026-10-26: the armies the Empire hero Edwin destroyed by turn 21 of
     # SaveGame/6789.sg are absent; the Wolf's slot 9 holds his party, attacking on day 23.
-    # From day 31, every 8 days, one of the user's two Empire screenshot parties (slots 37, 41).
+    # From day 31 a stationary screenshot party waits near the Empire capital, respawning
+    # seven days after destruction (user request 2026-10-27).
     bot = 9
     assert capital['bot_attack'] == {'enemy': bot, 'day': 23,
-                                     'raids': {'enemies': [37, 41], 'first_day': 31, 'interval': 8}}
+                                     'raids': {'enemies': [37, 41], 'first_day': 31,
+                                               'respawn_days': 7, 'position': [10, 28]}}
     assert capital['absent_enemies'] == [9, 37, 41, 42, 44, 46, 47, 49, 50, 51, 52]
     for key in ('enemy_rosters', 'enemy_units', 'enemy_hp'):
         assert ([v for i, v in enumerate(capital[key]) if i not in (bot, 37, 41)]

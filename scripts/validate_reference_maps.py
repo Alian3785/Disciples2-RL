@@ -48,14 +48,22 @@ def validate(name):
         assert bool(jnp.isfinite(ts.reward))
         assert not bool(env._can_retreat(attacked, jnp.int32(0)))
         if rules.raid_enemies:
-            # Later raids: one drawn party on every REST into first_day + k*interval, none between.
-            for day in (rules.first_day, rules.first_day+rules.interval):
-                raided, ts = step(original.replace(day=jnp.int32(day-1)), jnp.int32(REST))
-                assert bool(raided.in_battle) or bool(raided.done)
-                assert int(raided.enemy) in rules.raid_enemies and bool(jnp.isfinite(ts.reward))
-                assert not bool(env._can_retreat(raided, jnp.int32(0)))
-            calm, _ = step(original.replace(day=jnp.int32(rules.first_day)), jnp.int32(REST))
-            assert not bool(calm.in_battle) and not bool(jnp.any(calm.alive[rules.raids]))
+            # Later parties are ordinary stationary encounters, not forced attacks.
+            waiting, ts = step(original.replace(day=jnp.int32(rules.first_day-1)), jnp.int32(REST))
+            assert not bool(waiting.in_battle) and not bool(waiting.done)
+            assert bool(jnp.isfinite(ts.reward)) and not bool(jnp.any(waiting.pending_encounters))
+            assert int(jnp.sum(waiting.alive[rules.raids])) == 1
+            enemy = int(env.territory.enemy_at(waiting, rules.position))
+            assert enemy in rules.raid_enemies and not bool(env.territory.blocked(rules.position))
+            calm, _ = step(waiting.replace(day=jnp.int32(rules.first_day+7)), jnp.int32(REST))
+            assert not bool(calm.in_battle) and bool(jnp.all(calm.alive == waiting.alive))
+            destroyed = rules.schedule_respawn(calm, calm.replace(alive=calm.alive.at[enemy].set(False)))
+            assert int(destroyed.bot_respawn_day) == int(calm.day)+rules.respawn_days
+            early, _ = step(destroyed.replace(day=destroyed.bot_respawn_day-2), jnp.int32(REST))
+            assert not bool(jnp.any(early.alive[rules.raids]))
+            returned, _ = step(early, jnp.int32(REST))
+            assert int(jnp.sum(returned.alive[rules.raids])) == 1 and not bool(returned.in_battle)
+            assert not bool(jnp.any(returned.pending_encounters))
     if env.scenario.enabled:
         event = env.scenario.events[0]
         original, _ = reset(jax.random.PRNGKey(42))

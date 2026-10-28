@@ -1,7 +1,7 @@
 """Hero equipment catalogue, fixed inventory and automatic equipment selection.
 
 Data: installed Rise of the Elves GItem.dbf and Python reference
-campaign_env_data.py / campaign_env_inventory.py. See docs/HERO_ITEMS.md.
+campaign_env_data.py / campaign_env_inventory.py. See docs/ITEMS.md.
 """
 import jax
 import jax.numpy as jnp
@@ -121,10 +121,10 @@ class ItemRules:
         chest_count = len(inventories)-1
         inventories += [item_counts(r.get('items',{}),'Ruin items') for r in game_map.get('ruins',[])]
         ruin_end = len(inventories)
-        # City vault items go to the hero's inventory on capture (docs/TERRITORY_CITIES.md).
+        # City vault items go to the hero's inventory on capture (docs/WORLD.md).
         inventories += [item_counts(c.get('items',{}),'City items') for c in game_map.get('cities',[])]
         city_end = len(inventories)
-        # Scenario "on day N" item events (docs/HERO_ITEMS.md); day 1 would need a reset grant.
+        # Scenario "on day N" item events (docs/ITEMS.md); day 1 would need a reset grant.
         days = game_map.get('day_items', [])
         if not isinstance(days, list) or any(not isinstance(d, dict) or type(d.get('day')) is not int
                                              or d['day'] < 2 for d in days):

@@ -1,4 +1,4 @@
-"""Faction recruitment and leadership from the Python reference; see RECRUITMENT.md."""
+"""Faction recruitment and leadership from the Python reference; see docs/ECONOMY.md."""
 import jax
 import jax.numpy as jnp
 

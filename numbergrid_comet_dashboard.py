@@ -6,15 +6,16 @@ The chart catalog and Russian titles here also define the W&B view
 from copy import deepcopy
 from uuid import uuid4
 
-# One completed-episode mean per measured mechanic, without counting events
-# from unfinished episodes in the numerator.
+# Means include completed episodes only. Battle victories, hiring and potion use show the last
+# 100 episodes; the other mechanics retain their run-long means.
+RECENT_MECHANICS = frozenset(('battle_victories', 'hired_units', 'mercenaries_hired', 'potions_used'))
 CAMPAIGN_MECHANICS = (
     'battle_victories', 'battle_defeats', 'battle_retreats', 'unit_upgrades',
     'castle_heal_uses', 'castle_healed_hp', 'chests_collected', 'buildings_built',
     'ruins_cleared', 'potions_used', 'merchant_purchases', 'merchant_sale_gold', 'spells_learned',
     'spell_casts', 'summoned_units', 'hired_units', 'mercenaries_hired', 'battle_items_equipped',
     'battle_items_used', 'unit_swaps', 'enemy_squads_defeated', 'cities_captured', 'trainer_uses',
-    'capital_defense_acquired', 'capital_defense_effects', 'capital_health_effects',
+    'capital_defense_effects', 'capital_health_effects',
     'capital_guardian_rounds', 'capital_guardian_battles',
     'capital_entry_strength', 'capital_guardian_bonuses',
 )
@@ -24,9 +25,10 @@ CAMPAIGN_CHARTS = (
     'campaign/victory_rate', 'campaign/defeat_rate', 'campaign/window/victory_rate',
     'campaign/mean_seconds_per_million_steps',
     'campaign/battle_win_rate',
-    *(f'campaign/completed/{name}_mean' for name in CAMPAIGN_MECHANICS),
+    *(f"campaign/{'window' if name in RECENT_MECHANICS else 'completed'}/{name}_mean"
+      for name in CAMPAIGN_MECHANICS),
     'campaign/timeout_rate', 'campaign/window/battle_win_rate',
-    'campaign/window/battle_victories_mean', 'campaign/window/unit_upgrades_mean',
+    'campaign/window/unit_upgrades_mean',
     'campaign/window/experience_gained_mean', 'campaign/window/waves_completed_mean',
     'campaign/window/dragon_reached_episodes_rate', 'campaign/victories_total',
     'campaign/window/capital_defense_acquired_mean',
@@ -43,7 +45,6 @@ CHART_TITLES = {
     'campaign/defeat_rate': 'Доля поражений на карте — с начала обучения',
     'campaign/timeout_rate': 'Доля завершений по лимиту шагов — с начала обучения',
     'campaign/battle_win_rate': 'Доля побед в боях — с начала обучения',
-    'campaign/completed/battle_victories_mean': 'Побед в боях — в среднем на эпизод',
     'campaign/completed/battle_defeats_mean': 'Поражений в боях — в среднем на эпизод',
     'campaign/completed/battle_retreats_mean': 'Отступлений из боя — в среднем на эпизод',
     'campaign/completed/unit_upgrades_mean': 'Улучшений юнитов — в среднем на эпизод',
@@ -52,14 +53,14 @@ CHART_TITLES = {
     'campaign/completed/chests_collected_mean': 'Собрано сундуков — в среднем на эпизод',
     'campaign/completed/buildings_built_mean': 'Построено зданий — в среднем на эпизод',
     'campaign/completed/ruins_cleared_mean': 'Разграблено руин — в среднем на эпизод',
-    'campaign/completed/potions_used_mean': 'Использовано эликсиров — в среднем на эпизод',
+    'campaign/window/potions_used_mean': 'Использовано зелий на эпизод — последние 100 эпизодов',
     'campaign/completed/merchant_purchases_mean': 'Покупок у торговца — в среднем на эпизод',
     'campaign/completed/merchant_sale_gold_mean': 'Золото от продажи вещей — в среднем на эпизод',
     'campaign/completed/spells_learned_mean': 'Изучено заклинаний — в среднем на эпизод',
     'campaign/completed/spell_casts_mean': 'Применено заклинаний — в среднем на эпизод',
     'campaign/completed/summoned_units_mean': 'Призвано существ на карте — в среднем на эпизод',
-    'campaign/completed/hired_units_mean': 'Нанято бойцов — в среднем на эпизод',
-    'campaign/completed/mercenaries_hired_mean': 'Нанято наёмников — в среднем на эпизод',
+    'campaign/window/hired_units_mean': 'Нанято бойцов на эпизод — последние 100 эпизодов',
+    'campaign/window/mercenaries_hired_mean': 'Нанято наёмников на эпизод — последние 100 эпизодов',
     'campaign/completed/trainer_uses_mean': 'Обучений у тренера — в среднем на эпизод',
     'campaign/completed/battle_items_equipped_mean': 'Экипировано боевых предметов — в среднем на эпизод',
     'campaign/completed/battle_items_used_mean': 'Использовано боевых предметов — в среднем на эпизод',
@@ -73,7 +74,6 @@ CHART_TITLES = {
     'campaign/window/waves_completed_mean': 'Пройдено волн на эпизод — последние 100 эпизодов',
     'campaign/window/dragon_reached_episodes_rate': 'Доля эпизодов с боем против дракона — последние 100 эпизодов',
     'campaign/victories_total': 'Побед на карте — всего с начала обучения',
-    'campaign/completed/capital_defense_acquired_mean': 'Получено зелий защиты, HP, точности и инициативы — на эпизод',
     'campaign/completed/capital_defense_effects_mean': 'Защитных эффектов у Мизраэля, включая HP — на эпизод',
     'campaign/completed/capital_health_effects_mean': 'Эффектов постоянного HP у Мизраэля — на эпизод',
     'campaign/completed/capital_guardian_rounds_mean': 'Новых раундов с Мизраэлем — на эпизод',

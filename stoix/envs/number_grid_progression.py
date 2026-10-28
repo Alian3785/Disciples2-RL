@@ -1,6 +1,6 @@
 """Battle XP and building-backed promotions; fixed-shape JAX state, no host steps.
 
-Rules and source pointers are recorded in docs/UNIT_PROGRESSION.md.
+Rules and source pointers are recorded in docs/UNITS.md.
 """
 from functools import lru_cache
 import json

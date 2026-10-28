@@ -1,4 +1,4 @@
-"""Static combat profiles and pure JAX hit checks; see docs/ATTACK_PROTECTIONS.md."""
+"""Static combat profiles and pure JAX hit checks; see docs/COMBAT.md."""
 import json
 import math
 from pathlib import Path
@@ -15,7 +15,7 @@ ATTACK_LABELS = ('Оружие', 'Земля', 'Огонь', 'Вода', 'Яд',
 EMPTY, MELEE, RANGED, AREA, HEALER = range(5)
 ROLES = {'melee': MELEE, 'ranged': RANGED, 'area': AREA, 'healer': HEALER}
 UNITS = json.loads((Path(__file__).parent / 'data/units.json').read_text(encoding='utf-8'))
-DEFEND_BONUS = 50  # Installed GVars.dbf: DFENDBONUS; see docs/ARCHER_BATTLES.md.
+DEFEND_BONUS = 50  # Installed GVars.dbf: DFENDBONUS; see docs/COMBAT.md.
 PROFILE_FIELDS = set(STAT_NAMES) | {'size', 'role', 'attack_type', 'immunities', 'protections', 'exp_kill', 'exp_required', 'exp_current', 'hero',
                                   'secondary_attack_type', 'secondary_accuracy', 'secondary_damage'}
 # Installed GAttacks REACH (LAttR.dbf): 1 is L_ALL, 2 is L_ANY.

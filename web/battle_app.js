@@ -143,7 +143,7 @@
     }
     renderScrolls(snap,casting,quotes);
   }
-  // Scrolls and staves: docs/SCROLLS_AND_STAVES.md.
+  // Scrolls and staves: docs/MAGIC.md.
   function renderScrolls(snap,casting,quotes){
     const items=casting?.items||[],s=snap.state;
     $('scroll-section').hidden=!items.length;

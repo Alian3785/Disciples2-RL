@@ -1,6 +1,6 @@
 """Original landmarks block movement on Default and The Charmed Child.
 
-Sources: docs/DEFAULT_MAP.md#ориентиры and docs/REFERENCE_CAMPAIGNS.md («Ориентиры S117»).
+Sources: docs/DEFAULT_MAP.md#ориентиры and docs/MAPS.md («Ориентиры S117»).
 Reads the map JSON and the landmark extracts only; no environment or compilation.
 """
 import json

@@ -4,7 +4,7 @@ from stoix.envs.number_grid_updates import set_rows
 
 CAPITAL_GUARDS = {'Ашган', 'Ашкаэль', 'Видар', 'Мизраэль', 'Иллюмиэлль'}
 
-# Installed GVars.dbf; original Steam EXE 0x626CB3. See ORIGINAL_EFFECTS.md.
+# Installed GVars.dbf; original Steam EXE 0x626CB3. See docs/COMBAT.md.
 BAT_BREAK, BAT_BMODIF = 90, 10
 POISON, FROSTBITE, BLISTER, DISABLE, TRANSFORM = range(5)
 ABSENT, SHORT, LONG = range(3)
@@ -19,7 +19,7 @@ def disable_attack_allowed(disabling, round_number):
 def disable_attack_accuracy(accuracy, disabling, round_number):
     """Paralyze/petrify cannot hit after round 40, even with accuracy bonuses.
 
-    D2ModdingToolset baseSettings/getAttackPowerHooked; see ORIGINAL_EFFECTS.md.
+    D2ModdingToolset baseSettings/getAttackPowerHooked; see docs/COMBAT.md.
     This affects new attacks, not recovery from an already applied effect.
     """
     return jnp.where(disable_attack_allowed(disabling, round_number), accuracy, 0.)

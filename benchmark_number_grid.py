@@ -211,7 +211,7 @@ def run_training(args, tracking):
         raise RuntimeError('This measured profile requires exactly one CUDA GPU.')
     game_map = load_map(args.map) if args.map else MAP
     if args.no_unit_swaps:
-        # Training without party swaps: the map then has no swap actions at all (docs/UNIT_SWAPS.md).
+        # Training without party swaps: the map then has no swap actions at all (docs/UNITS.md).
         game_map = {**game_map, 'unit_swaps': False}
     config = make_config(total, seed, map_config=game_map)
     initial_steps, warm_start, warm_bytes = 0, None, None

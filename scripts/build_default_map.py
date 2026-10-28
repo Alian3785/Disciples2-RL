@@ -37,7 +37,7 @@ ITEMS = {
 # campaign_env_data.py MERCHANT_BUY_ITEMS, the same as Allar's Shop in the original.
 ALAR = {'life': 10, 'healing': 10, 'restoration': 10, 'ointment': 10, 'might': 1,
         'fire_ward': 1, 'earth_ward': 1, 'water_ward': 1, 'air_ward': 1, 'celerity': 1}
-# User request: one artifact for sale as well (docs/MAP_SITES.md#предметы-у-торговца).
+# User request: one artifact for sale as well (docs/ECONOMY.md#предметы-у-торговца).
 ALAR_ITEMS = {'runestone': 1}
 # Installed game, the user's saves of this scenario (SaveGame/12345.sg, turn 11). The
 # reference .sg, a modified Russian copy, leaves these three sites empty.
@@ -197,9 +197,9 @@ def build(layout, landmarks):
         opponent_numbers=[1]*len(stacks),
         # Default sets its own ruler below; the other builders keep copying it.
         **{key: CURRENT[key] for key in RULES if key != 'lord_type'},
-        # Reference hero battle slots: orbs, talismans and battle potions (docs/BATTLE_ITEMS.md).
+        # Reference hero battle slots: orbs, talismans and battle potions (docs/ITEMS.md).
         battle_items=True,
-        # Reference skill ladder: Pathfinding, Weapon Master, the lord's Might (docs/HERO_SKILLS.md).
+        # Reference skill ladder: Pathfinding, Weapon Master, the lord's Might (docs/UNITS.md).
         hero_skills=True,
         number_generation='Legacy labels; numbers do not affect battles.',
         reconstruction_note=('Python reference Default map "'+layout['title']+'" ('+layout['map_id']
@@ -207,7 +207,7 @@ def build(layout, landmarks):
         hero_hp=150,
         enemy_units=[len(u) for u in units],
         enemy_hp=[max(u) for u in units],
-        # No hero_roster: faction and lord_type choose the ruler's party (docs/STARTING_PARTIES.md).
+        # No hero_roster: faction and lord_type choose the ruler's party (docs/UNITS.md).
         # User request 2026-10-25: every Default mode plays the Legions of the Damned. In the
         # original .sg the hero's western capital S001FT0001 belongs to S001PL0002 (G000RR0002,
         # Legions); the eastern one with Mizrael to the Empire. The reference played the Empire.

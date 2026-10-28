@@ -207,7 +207,7 @@ def test_permanent_potion_keeps_equipment_and_revival_restores_it(current_game):
 
 
 def test_charmed_child_city_and_day_loot(current_game):
-    """Installed S117 vaults, Clans capture events and the day-6 relic (docs/REFERENCE_CAMPAIGNS.md)."""
+    """Installed S117 vaults, Clans capture events and the day-6 relic (docs/MAPS.md)."""
     from stoix.envs.number_grid import load_map
     from stoix.envs.number_grid_potions import PotionRules
     _,state,_,_=current_game

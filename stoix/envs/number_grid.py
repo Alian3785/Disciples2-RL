@@ -97,7 +97,8 @@ def load_map(name=None):
                         capital_incubus_building_reward=12.5,
                         # User request 2026-10-27: the same once per episode for 10 survived Mizrael rounds.
                         capital_guardian_rounds_bonus=12.5, capital_guardian_rounds_bonus_rounds=10,
-                        episode_timeout_penalty=100., battle_round_limit_penalty=100.,
+                        # User request 2026-10-28: the same timeout/round-limit costs as Blue Dragon.
+                        episode_timeout_penalty=0., battle_round_limit_penalty=1.,
                         recruitment_reward_faction_only=True)
         for city in game_map['cities']:
             city['objective'] = False
@@ -105,9 +106,9 @@ def load_map(name=None):
         # save SaveGame/6789.sg the Empire hero Edwin had destroyed these armies
         # (CMidStackDestroyed killer S001PL0001, matched by tile), so they start absent.
         # The Wolf's slot 9 holds Edwin's party, which attacks the hero on day 23.
-        # Second request the same day: from day 31, every 8 days, one of two Empire parties from the
-        # user's screenshots, drawn anew each time, attacks the same way. They take the free absent
-        # slots 37 and 41. Godefroy's type is not shown; his 90 HP portrait means the Ranger.
+        # User request 2026-10-27: from day 31 one screenshot party waits beside the Empire
+        # capital and returns seven days after destruction. Slots 37 and 41 hold the two variants.
+        # Godefroy's type is not shown; his 90 HP portrait means the Ranger.
         units = json.loads((_ROOT / 'stoix/envs/data/units.json').read_text(encoding='utf-8'))
         bot, raids = 9, [37, 41]
         parties = {bot: ['g000uu0019', 'knight', 'knight', None, 'marksman', None],
@@ -120,7 +121,8 @@ def load_map(name=None):
         levels = [[units[unit]['level'] if unit else 0 for unit in roster] for roster in game_map['enemy_rosters']]
         levels[bot][0] = 2  # Edwin is level 2 in the save; Knights and the Marksman keep base level 2
         game_map.update(absent_enemies=[9, 37, 41, 42, 44, 46, 47, 49, 50, 51, 52],
-                        bot_attack=dict(enemy=bot, day=23, raids=dict(enemies=raids, first_day=31, interval=8)),
+                        bot_attack=dict(enemy=bot, day=23, raids=dict(
+                            enemies=raids, first_day=31, respawn_days=7, position=[10, 28])),
                         enemy_initial_levels=levels)
         # User request 2026-10-26: a warrior lord's fixed party for Capital only, instead of the
         # Legions warrior party; the Duke and a Possessed hold the front edges, two Cultists the back.
@@ -203,6 +205,7 @@ class BattleState(NumberGridState):
     bot_moves_spent: jax.Array
     bot_defeated_enemies: jax.Array
     bot_hero_victories: jax.Array
+    bot_respawn_day: jax.Array  # 0 while a stationary Empire party is alive; otherwise its next arrival day.
     bot_autobattle: jax.Array
     opponent_claims: jax.Array
     territory_owners: jax.Array
@@ -454,7 +457,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
         self.episode_reports = bool(episode_reports) and self.progression_enabled
         if self.progression_enabled and not self.basic_combat:
             raise ValueError('Unit progression requires basic combat')
-        # Reference skill ladder: Pathfinding, Weapon Master, the lord's Might (docs/HERO_SKILLS.md).
+        # Reference skill ladder: Pathfinding, Weapon Master, the lord's Might (docs/UNITS.md).
         self.hero_skills = hero_skills.enabled(game_map)
         if self.hero_skills and not self.progression_enabled:
             raise ValueError('Hero skills require unit progression')
@@ -1064,6 +1067,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             bot_ids=self.bot.initial_ids if self.bot.enabled else jnp.zeros(0, jnp.int32),
             bot_mode=zero, bot_timer=zero, bot_target=jnp.int32(-1), bot_moves_spent=zero,
             bot_defeated_enemies=zero, bot_hero_victories=zero, bot_autobattle=jnp.bool_(False),
+            bot_respawn_day=jnp.int32(self.bot_attack.first_day if self.bot_attack.enabled else 0),
             opponent_claims=jnp.ones(len(self.territory.opponent_sources) if self.territory_enabled else 0, jnp.int32),
             territory_owners=self.territory.initial_owners if self.territory_enabled else jnp.zeros(0, jnp.int8),
             enemy_positions=self.opponent_positions,
@@ -1368,7 +1372,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
         """Secondary damage/accuracy of the current form, with growth but no buffs.
 
         Potions and spells, like banners and artifacts, modify only the primary
-        attack (user request 2026-10-19, docs/MAP_POTIONS.md).
+        attack (user request 2026-10-19, docs/ITEMS.md).
         """
         ids,levels=self._effective_ids(state)[slot],self._effective_levels(state)[slot]
         values=self.progression.secondary_stats(ids,levels)
@@ -1651,7 +1655,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
         blocked = jnp.where(slots < 6, state.battle_fort_defender == FORT_BLUE,
                             state.battle_fort_defender == FORT_RED)
         if self.bot_attack.enabled:
-            blocked |= (slots < 6) & (state.enemy >= 0) & self.bot_attack.mask[jnp.maximum(state.enemy, 0)]
+            blocked |= (slots < 6) & (state.enemy == self.bot_attack.enemy)
         return ~blocked
 
     def _fear_protected(self, state, target_slots):
@@ -2358,6 +2362,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             random_values = jax.random.uniform(random_key, (self.random_size,))
             next_state = next_state.replace(battle_key=key)
         if self.bot_attack.enabled:
+            next_state = self.bot_attack.schedule_respawn(before, next_state)
             next_state = self.bot_attack.spawn(next_state, resting, key)
         if self.encounters_enabled:
             pending = next_state.pending_encounters & next_state.alive

@@ -1,4 +1,4 @@
-"""Guarded 3x3 ruins with one-shot loot. Sources: docs/RUINS.md."""
+"""Guarded 3x3 ruins with one-shot loot. Sources: docs/ECONOMY.md."""
 import jax.numpy as jnp
 from stoix.envs.number_grid_limits import add_resource
 

@@ -2,7 +2,7 @@
 
 Campaign mechanics remain JAX mechanics. The reference's internal battle-step
 reward is summed over automatic activations inside one JAX player decision.
-See docs/REFERENCE_CAMPAIGNS.md for source functions and map-specific rewards.
+See docs/MAPS.md for source functions and map-specific rewards.
 """
 import jax
 import jax.numpy as jnp

@@ -7,7 +7,7 @@ name = "jaxrep-numbergrid"
 version = "1.0.0"
 description = "Reconstructed NumberGrid with Stoix feedforward PPO for a local NVIDIA GPU"
 requires-python = ">=3.12"
-readme = "README_JAX.md"
+readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE_STOIX"]
 dynamic = ["dependencies"]

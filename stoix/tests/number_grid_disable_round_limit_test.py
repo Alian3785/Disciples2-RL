@@ -1,4 +1,4 @@
-"""Core and extended GPU contracts for the round-40 limit; see ORIGINAL_EFFECTS.md.
+"""Core and extended GPU contracts for the round-40 limit; see docs/COMBAT.md.
 
 User request 2026-10-16; run only when explicitly requested, via scripts/run_gpu.sh.
 """

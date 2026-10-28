@@ -1,4 +1,4 @@
-"""CUDA contracts: scrolls and staves cast catalogue spells (docs/SCROLLS_AND_STAVES.md).
+"""CUDA contracts: scrolls and staves cast catalogue spells (docs/MAGIC.md).
 
 Python reference campaign_env_magic.py: _can_cast_scroll_spell, _can_cast_staff_spell,
 _step_unlock_scroll_magic. Data: GItem.dbf via scripts/import_spell_items.py.
