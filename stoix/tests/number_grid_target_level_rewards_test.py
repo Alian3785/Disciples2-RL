@@ -249,6 +249,9 @@ def test_default_capital_preserves_simpler_times_and_blue_reward_settings(tmp_pa
     assert capital['enemy_rosters'][30] == [None, 'g000uu5023', None, None, None, None]
     assert capital['enemy_full_regeneration'] == [30]
     assert capital['scenario_events_enabled'] is False
+    # User request 2026-10-28: Capital uses Blue Dragon's timeout and forced-retreat costs.
+    assert capital['episode_timeout_penalty'] == blue.get('episode_timeout_penalty', 0.) == 0.
+    assert capital['battle_round_limit_penalty'] == blue.get('battle_round_limit_penalty', 1.) == 1.
     assert not capital.get('scenario_events') and not capital.get('scheduled_enemies')
     assert not capital.get('scripted_bot')
     for key in ('objective_reward_hero_only', 'army_victory_level_reward', 'army_victory_level_objective_only'):

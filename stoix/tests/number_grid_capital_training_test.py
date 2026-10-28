@@ -1,6 +1,6 @@
 """Extended GPU cases for user-requested Capital rewards; not part of core.
 
-Source: user requests 2026-10-16 and 2026-10-26, docs/DEFAULT_MAP.md. These are RL
+Source: user requests 2026-10-16, 2026-10-26 and 2026-10-28, docs/DEFAULT_MAP.md. These are RL
 rewards, not claims about original Disciples II mechanics. Run only on explicit request.
 Default Capital pays the blue-dragon victory rewards, a +10 guardian battle bonus after
 more than 70 defeated armies (Empire bot victories included), +3 per defensive bottle and
@@ -81,7 +81,8 @@ def test_reset_legions_victory_only_rewards_and_battle_bonus_observation(capital
     assert env.construction.faction == 'legions'
     assert env.construction.lord['id'] == 'warrior'
     assert env.map_config['hero_roster'] == ['duke', None, 'possessed', 'cultist', None, 'cultist']
-    assert env.round_limit_penalty == env.episode_timeout_penalty == 100.
+    assert env.round_limit_penalty == 1.
+    assert env.episode_timeout_penalty == 0.
     assert env.army_victory_level_reward == 5. and env.objective_reward_hero_only
     assert (rules.acquisition_reward, rules.effect_reward, rules.round_reward, rules.entry_level_reward) == (3., 0, 0, 0)
     assert rules.battle_reward == 10. and rules.min_defeated == 71 and rules.incubus_reward == 25.
@@ -316,12 +317,13 @@ def test_new_rounds_are_once_per_episode_and_never_pay_for_timeout(legacy):
     assert float(reward(battle, battle.hp.at[:6].set(0), battle.escaped, jnp.int32(2))[1]) == 0.
 
 
-def test_episode_timeout_penalty(capital):
+def test_episode_timeout_has_no_extra_penalty(capital):
     env, initial = capital
+    _, ordinary = compiled_method(env, 'step')(initial, jnp.int32(REST))
     ending = initial.replace(step_count=jnp.int32(env.max_steps-1))
     after, ts = compiled_method(env, 'step')(ending, jnp.int32(REST))
     assert after.done and not after.lost and not after.won
-    assert float(ts.reward) <= -100.
+    assert float(ts.reward) == pytest.approx(float(ordinary.reward))
     assert float(compiled_method(env, 'step')(after, jnp.int32(REST))[1].reward) == 0.
 
 

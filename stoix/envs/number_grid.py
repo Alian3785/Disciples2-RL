@@ -97,7 +97,8 @@ def load_map(name=None):
                         capital_incubus_building_reward=12.5,
                         # User request 2026-10-27: the same once per episode for 10 survived Mizrael rounds.
                         capital_guardian_rounds_bonus=12.5, capital_guardian_rounds_bonus_rounds=10,
-                        episode_timeout_penalty=100., battle_round_limit_penalty=100.,
+                        # User request 2026-10-28: the same timeout/round-limit costs as Blue Dragon.
+                        episode_timeout_penalty=0., battle_round_limit_penalty=1.,
                         recruitment_reward_faction_only=True)
         for city in game_map['cities']:
             city['objective'] = False
