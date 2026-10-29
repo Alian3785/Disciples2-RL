@@ -1,0 +1,41 @@
+Результаты базового набора из шести карт
+Запуски от 28 октября 2026. Алгоритм: Stoix Anakin feedforward PPO. Seed: 42.
+
+| Карта | Шагов обучения | Лучший интервал побед | Reward | Секунд на 1 млн шагов | Графики |
+|---|---:|---:|---:|---:|---|
+| Default Blue Dragon | 50 млн | 96,12% | 92,22 | 28,23 | [Comet](https://www.comet.com/lentix/numbergrid/8886f95afa3d4a14b5c6aa13285970d9?viewId=dq511avba7siEjSzmZt8uSXL0) |
+| Default Capital | 50 млн | 0,00% | 135,18 | 25,96 | [Comet](https://www.comet.com/lentix/numbergrid/884be778870547799c8603fa48d7ace3?viewId=zcCWihXXIxiBdkcarPnxRDxUZ) |
+| Super Last Stand | 15 млн | 99,18% | 636,97 | 34,40 | [Comet](https://www.comet.com/lentix/numbergrid/7189457aa61945349a5b140e705c5f6f?viewId=dq511avba7siEjSzmZt8uSXL0) |
+| Trade Train | 50 млн | 93,14% | 384,60 | 20,43 | [Comet](https://www.comet.com/lentix/numbergrid/52c8712606a34e269ac6d42d91ce1ba1?viewId=dq511avba7siEjSzmZt8uSXL0) |
+| Проклятое дитя | 60 млн | 89,96% | 413,48 | 21,73 | [Comet](https://www.comet.com/lentix/numbergrid/8b6f95499ed64933b370473269f77845?viewId=dq511avba7siEjSzmZt8uSXL0) |
+| Бегство Бетрезена | 60 млн | 78,52% | 577,71 | 33,77 | [Comet](https://www.comet.com/lentix/numbergrid/9cbe5b18602e43efbb14c7112453a469?viewId=dq511avba7siEjSzmZt8uSXL0) |
+
+Определения показателей:
+- Лучший интервал побед: максимальная доля побед среди завершённых эпизодов
+  за один интервал логирования длиной 1 млн шагов обучения.
+- Reward: средняя суммарная награда за последние 100 завершённых эпизодов
+  в конце запуска; это не reward на лучшем интервале побед.
+- Секунд на 1 млн шагов: среднее время сбора траекторий и обновления PPO,
+  без компиляции, оценки, логирования и сохранения. Меньше — быстрее.
+- Шаги указаны суммарно по всем параллельным средам.
+- Бегство Бетрезена: 60 млн шагов суммарно, из них 55 млн в продолжении
+  с checkpoint 5 млн. Скорость рассчитана по этим 55 млн шагов.
+
+Отдельная оценка готовых моделей не проводилась.
+Результаты относятся к версии до добавления номера дня в наблюдение
+29 октября 2026. Сохранённые веса имеют прежнюю размерность входа
+и несовместимы с новым наблюдением.
+
+Источники: итоговые results.json и tracking.json каждого запуска:
+results/default-blue-dragon-seed42-50m-20261028/training/
+results/default-capital-blue-penalties-50m-20261028/training/
+results/super-last-stand-15m-20261028/training/
+results/trade-train-50m-20261028/training/
+results/the-charmed-child-60m-20261028/training/
+results/bethrezens-retreat-60m-resume5m-20261028/training/
+
+Поля results.json:
+training_steps; campaign_metrics/campaign/best_recent_victory_rate;
+campaign_metrics/campaign/window/episode_return_mean;
+campaign_metrics/campaign/mean_seconds_per_million_steps.
+Ссылки на графики взяты из tracking.json: url.
