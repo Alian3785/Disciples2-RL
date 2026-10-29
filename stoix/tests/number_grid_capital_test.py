@@ -57,7 +57,7 @@ def test_services_require_exact_capital_temple_money_and_correct_target(game):
         after, _ = advance(before, jnp.int32(action))
         for field in ('hp','gold','buildings','movement_points','day','recovery_balance','battle_key'):
             chex.assert_trees_all_equal(getattr(after,field), getattr(before,field))
-    assert compiled_method(env,'observation')(state).shape == (1843,) and env.num_actions == 244
+    assert compiled_method(env,'observation')(state).shape == (1844,) and env.num_actions == 244
     # Capital follows the actual scenario spawn, not a hard-coded (2, 2).
     other = CapitalRules(env.progression, env.construction, [4,4])
     assert not other.at_capital(state) and other.at_capital(state.replace(position=jnp.array([4,4])))

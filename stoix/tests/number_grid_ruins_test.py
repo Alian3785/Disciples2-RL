@@ -167,7 +167,7 @@ def test_ruin_validation_and_observable_metadata(current_game,human_service):
     with pytest.raises(ValueError):
         PotionRules(dict(initial_potions={},ruins=[dict(potions={'unknown':1})]))
     observation = compiled_method(env,'observation')
-    assert observation(s).shape == (1843,) and env.num_actions == 244
+    assert observation(s).shape == (1844,) and env.num_actions == 244
     assert not jnp.array_equal(observation(s),observation(s.replace(ruin_looted=jnp.array([True]))))
     game = human_service.create(42,'legions')
     assert game['ruins']['ruins'][0]['enemy'] == 45

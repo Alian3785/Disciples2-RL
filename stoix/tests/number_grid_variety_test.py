@@ -53,7 +53,7 @@ def test_48x48_map_with_51_squads_and_reference_profiles(env):
             if key and UNITS[key].get('size', 1) == 2:
                 assert slot < 3 and roster[slot+3] is None
     initial, ts = compiled_method(env,'reset')(jax.random.PRNGKey(1))
-    assert ts.observation.shape == (1843,) and env.num_actions == 244
+    assert ts.observation.shape == (1844,) and env.num_actions == 244
     chex.assert_trees_all_equal(ts.observation[441+5*env.num_opponents:453+5*env.num_opponents], jnp.array([.5]*4+[0]*8))
     state = battle(env, 21)
     obs = compiled_method(env,'observation')(state)

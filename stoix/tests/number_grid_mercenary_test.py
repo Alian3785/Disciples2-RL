@@ -97,7 +97,7 @@ def test_mercenary_lute_discount_nonstacking_and_observable_quotes(current_game)
     assert hired.gold == 0 and hired.last_service_cost == 765
     before = compiled_method(env,'observation')(base)
     after = compiled_method(env,'observation')(base.replace(mercenary_stock=jnp.zeros(2,jnp.int32)))
-    assert before.shape == (1843,) and jnp.all(jnp.isfinite(before))
+    assert before.shape == (1844,) and jnp.all(jnp.isfinite(before))
     assert not jnp.array_equal(before,after)
 
 

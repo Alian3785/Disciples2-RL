@@ -42,7 +42,7 @@ def test_initial_experience_and_observation_contract(env):
     enemy = battle(env, 11)
     chex.assert_trees_all_equal(compiled_method(env,'unit_experience')(enemy)[6:],
         jnp.array([[1,20,70,0],[1,20,80,0]]+[[1,20,70,0]]*4))
-    assert ts.observation.shape == (1843,) and env.observation_size == 1843
+    assert ts.observation.shape == (1844,) and env.observation_size == 1844
     encoded = ts.observation[160+5*env.num_opponents:220+5*env.num_opponents].reshape(12,5)
     chex.assert_trees_all_close(encoded[:4,2], jnp.array([.025,.06,.025,.02]))
     chex.assert_trees_all_equal(encoded[4:], jnp.zeros((8,5)))

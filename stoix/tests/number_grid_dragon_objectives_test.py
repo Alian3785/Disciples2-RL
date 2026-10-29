@@ -34,7 +34,7 @@ def test_default_variants_keep_layout_and_original_dragon_profiles(dragon_game, 
         assert config[key] == base[key]
     assert config['opponent_positions'][DRAGON] == [47, 31]
     assert action_names(config) == action_names(base)
-    assert env.observation_size == 2661+(env.num_opponents+1 if blue else 0)
+    assert env.observation_size == 2662+(env.num_opponents+1 if blue else 0)
     assert config.get('army_victory_level_reward', 0.) == (5. if blue else 0.)
     assert config.get('army_victory_level_objective_only', False) == blue
     uid = env.progression.enemy_ids[DRAGON, 1]

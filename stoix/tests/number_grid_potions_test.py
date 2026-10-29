@@ -28,7 +28,7 @@ def test_scenario_actions_only_include_obtainable_potions(current_game):
     # The five history columns identify permanent kinds, not a shared limit for all buffs.
     assert sorted(p['stat'] for p in POTIONS if p['duration']=='permanent')==list(range(5))
     assert env.potion_rules.count==18 and env.num_actions==244
-    assert env.observation_size==1843 and compiled_method(env,'observation')(state).shape==(1843,)
+    assert env.observation_size==1844 and compiled_method(env,'observation')(state).shape==(1844,)
     assert state.potions[:4].tolist()==[5,5,5,10] and not jnp.any(state.potions[4:])
     assert not {'protection','bark','striking','swiftness','speed','vigor'} & set(env.potion_rules.keys)
     rules=PotionRules(dict(initial_potions={'speed':0},chests=[dict(potions={'celerity':5})]))

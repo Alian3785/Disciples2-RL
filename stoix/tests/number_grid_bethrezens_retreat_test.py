@@ -133,7 +133,7 @@ def test_step_mask_arrival_terminal_observation_and_reset(retreat):
     assert int(jnp.sum(mask(after))) == 1 and bool(mask(after)[CONTINUE])
     obs = compiled_method(env, 'observation')(initial)
     assert obs.shape == (env.observation_size,)
-    assert jnp.allclose(obs[-4:], jnp.array([2, 30, -20, -6])/(env.size-1))
+    assert jnp.allclose(obs[-5:-1], jnp.array([2, 30, -20, -6])/(env.size-1))
     fresh, _ = compiled_method(env, 'reset')(jax.random.PRNGKey(102))
     assert not bool(fresh.done) and fresh.position.tolist() == [22, 36]
     # No movement points: mask and step both reject arrival and do not pay the goal.

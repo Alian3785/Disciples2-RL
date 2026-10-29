@@ -85,7 +85,7 @@ def test_victory_snapshot_is_observable_and_paid_only_on_victory(target_game):
     assert not jnp.any(arrived.army_victory_rewarded)
     observation = compiled_method(env, 'observation')(arrived)
     assert observation.shape == (env.observation_size,)
-    assert float(observation[-1]) == pytest.approx(.04)
+    assert float(observation[-2]) == pytest.approx(.04)
     won, reward = finish(env, arrived)
     _, plain = finish(env, claimed)
     assert won.won and won.done and not won.alive[target]

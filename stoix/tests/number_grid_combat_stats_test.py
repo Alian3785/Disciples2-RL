@@ -43,7 +43,7 @@ def attack(env, state, values, action=SHOOT):
 def test_default_stats_and_observation_are_individual_and_finite():
     env = basic_environment()
     state, ts = env.reset(jax.random.PRNGKey(0))
-    assert ts.observation.shape == env.observation_space().shape == (271,)
+    assert ts.observation.shape == env.observation_space().shape == (272,)
     np.testing.assert_array_equal(env.unit_stats(state)[:, HP], env.max_hp(state))
     np.testing.assert_array_equal(env.unit_stats(state)[1], [100, 25, 80, 0, 50])
     np.testing.assert_array_equal(env.unit_stats(state)[5], [45, 20, 80, 0, 60])
@@ -409,7 +409,7 @@ def test_versions_and_override_shapes_are_validated():
             NumberGrid(map_config={**MAP, **change})
     saved = json.loads((Path(__file__).resolve().parents[2] / 'maps/number_grid-24x24-v10-enemy-warriors.json').read_text())
     env = NumberGrid(map_config=saved)
-    assert not env.basic_combat and env.reset(jax.random.PRNGKey(0))[1].observation.shape == (178,)
+    assert not env.basic_combat and env.reset(jax.random.PRNGKey(0))[1].observation.shape == (179,)
 
 
 @pytest.mark.core

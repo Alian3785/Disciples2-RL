@@ -50,7 +50,7 @@ def test_reference_layout_and_objective(trade_game):
     assert not bool(env._goals_left(jnp.zeros_like(state.alive), state.scenario_spawned))
     assert env.num_actions == len(action_names(config)) == 195
     observation = compiled_method(env, 'observation')(state)
-    assert observation.shape == (1314,) and bool(jnp.all(jnp.isfinite(observation)))
+    assert observation.shape == (1315,) and bool(jnp.all(jnp.isfinite(observation)))
 
 
 def test_every_site_approach_is_reachable_without_a_forced_battle(trade_game):
@@ -265,7 +265,7 @@ def test_level_bonus_paid_only_on_victory_once_per_enemy(trade_game):
         # Sticky flags also block payment if an already claimed enemy resolves again.
         _, repeated = finish_trade_battle(env, claimed.replace(army_battle_level_strength=jnp.int32(100)))
         assert float(repeated) == pytest.approx(float(plain))
-    assert compiled_method(env, 'observation')(won)[-7:].tolist() == [1.]*6+[0.]
+    assert compiled_method(env, 'observation')(won)[-8:-1].tolist() == [1.]*6+[0.]
     reset, _ = compiled_method(env, 'reset')(jax.random.PRNGKey(44))
     assert reset.army_victory_rewarded.tolist() == [False]*6
     assert int(reset.army_battle_level_strength) == 0
@@ -282,7 +282,7 @@ def test_army_victory_bonus_uses_entry_levels_above_one(trade_game, levels, expe
         jax.random.PRNGKey(23), jnp.full(env.random_size, .5))
     assert not bool(arrived.army_victory_rewarded[5])
     observation = compiled_method(env, 'observation')(arrived)
-    assert float(observation[-1]) == pytest.approx(expected/5./100.)
+    assert float(observation[-2]) == pytest.approx(expected/5./100.)
     won, reward = finish_trade_battle(env, arrived)
     _, plain = finish_trade_battle(env, arrived.replace(
         army_victory_rewarded=arrived.army_victory_rewarded.at[5].set(True)))
