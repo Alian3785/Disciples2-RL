@@ -1,0 +1,104 @@
+{
+  "date": "2026-10-29",
+  "algorithm": "Stoix Anakin feedforward PPO",
+  "seed": 42,
+  "gpu": "NVIDIA GeForce RTX 3090 (24 GiB)",
+  "jax": "0.12.0.1",
+  "cuda_runtime": "13.4.92 (pip)",
+  "system_cuda_toolkit": "12.8",
+  "project_url": "https://www.comet.com/lentix/baseline-six-maps-50m-20261029-093143",
+  "training_metrics_only": true,
+  "runs": [
+    {
+      "map": "default-blue-dragon",
+      "name": "Default Blue Dragon",
+      "training_steps": 50000000,
+      "best_interval_victory_rate": 0.9124116260801257,
+      "final_interval_victory_rate": 0.8869327073552425,
+      "reward_last_100": 89.69867703676223,
+      "training_seconds": 794.3143448330811,
+      "seconds_per_million": 15.886286896661623,
+      "completed_episodes": 94825,
+      "won_episodes": 64120,
+      "charts_url": "https://www.comet.com/lentix/baseline-six-maps-50m-20261029-093143/b25b9e8243564f44a4787c320bfc3f0e?viewId=BaXoDwbRCl7Knm56IAF93UrVj"
+    },
+    {
+      "map": "default-capital",
+      "name": "Default Capital",
+      "training_steps": 50000000,
+      "best_interval_victory_rate": 0.0,
+      "final_interval_victory_rate": 0.0,
+      "reward_last_100": 130.2735168838501,
+      "training_seconds": 861.5692331629107,
+      "seconds_per_million": 17.231384663258215,
+      "completed_episodes": 44534,
+      "won_episodes": 0,
+      "charts_url": "https://www.comet.com/lentix/baseline-six-maps-50m-20261029-093143/b19194de6e204939ae6e8873d2d9aba6?viewId=IVcsazwMOIX41aadpMjV2xRoX"
+    },
+    {
+      "map": "super_last_stand",
+      "name": "Super Last Stand",
+      "training_steps": 15000000,
+      "best_interval_victory_rate": 0.9598885793871866,
+      "final_interval_victory_rate": 0.9556048834628191,
+      "reward_last_100": 618.935221862793,
+      "training_seconds": 275.67118820385076,
+      "seconds_per_million": 18.37807921359005,
+      "completed_episodes": 26685,
+      "won_episodes": 17927,
+      "charts_url": "https://www.comet.com/lentix/baseline-six-maps-50m-20261029-093143/8c7c92b04998434dac2649249f5c3a35?viewId=BaXoDwbRCl7Knm56IAF93UrVj"
+    },
+    {
+      "map": "trade_train",
+      "name": "Trade Train",
+      "training_steps": 60000000,
+      "best_interval_victory_rate": 0.74983119513842,
+      "final_interval_victory_rate": 0.7310137169621947,
+      "reward_last_100": 377.1957667541504,
+      "training_seconds": 666.2153243721696,
+      "seconds_per_million": 11.10358873953616,
+      "completed_episodes": 89049,
+      "won_episodes": 44447,
+      "charts_url": "https://www.comet.com/lentix/baseline-six-maps-50m-20261029-093143/0fd67e9e7afd4370a67fd16532ad4f2d?viewId=BaXoDwbRCl7Knm56IAF93UrVj"
+    },
+    {
+      "map": "the_charmed_child",
+      "name": "Проклятое дитя",
+      "training_steps": 60000000,
+      "best_interval_victory_rate": 0.8892988929889298,
+      "final_interval_victory_rate": 0.8892988929889298,
+      "reward_last_100": 375.99425018310546,
+      "training_seconds": 611.2922325346735,
+      "seconds_per_million": 10.188203875577893,
+      "completed_episodes": 91380,
+      "won_episodes": 46442,
+      "charts_url": "https://www.comet.com/lentix/baseline-six-maps-50m-20261029-093143/f69c879daccd4f78a7336c4d087f3422?viewId=BaXoDwbRCl7Knm56IAF93UrVj"
+    },
+    {
+      "map": "bethrezens_retreat",
+      "name": "Бегство Бетрезена",
+      "training_steps": 60000000,
+      "best_interval_victory_rate": 0.6856272219400711,
+      "final_interval_victory_rate": 0.6856272219400711,
+      "reward_last_100": 320.2186724853516,
+      "training_seconds": 1018.8214679803932,
+      "seconds_per_million": 16.980357799673218,
+      "completed_episodes": 108276,
+      "won_episodes": 37837,
+      "charts_url": "https://www.comet.com/lentix/baseline-six-maps-50m-20261029-093143/7aac9991032d4da18404e5753d59b9e2?viewId=BaXoDwbRCl7Knm56IAF93UrVj"
+    }
+  ],
+  "changes": [
+    "Strategic day / 100.0 added to observations before this series; old observation-size weights are incompatible.",
+    "Trade Train budget increased from 50M to 60M.",
+    "Bethrezens Retreat trained from scratch for 60M; previous baseline continued 55M from 5M.",
+    "Super Last Stand retains exact 15M checkpoint after budget correction; interrupted parent reported 16M and originally used a 50M learning-rate schedule.",
+    "Comet dashboard names scoped per project; separate guardian view and Russian chart titles.",
+    "Hardware/runtime and budgets differ from the historical series; speed differences do not isolate a single cause."
+  ],
+  "conclusions": [
+    "Time per million improved on all six maps; best interval victory rates were lower than the 2026-10-28 table.",
+    "Default Capital had no recorded map victories.",
+    "Results are training episode statistics, not an independent evaluation."
+  ]
+}

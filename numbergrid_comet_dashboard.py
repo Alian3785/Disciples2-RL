@@ -4,6 +4,7 @@ The chart catalog and Russian titles here also define the W&B view
 (numbergrid_wandb_dashboard.py). Comet selects panels for the map objective.
 """
 from copy import deepcopy
+import os
 from uuid import uuid4
 
 # Means include completed episodes only. Battle victories, hiring and potion use show the last
@@ -119,8 +120,10 @@ def comet_campaign_charts(game_map=None):
 
 
 def comet_view_name(game_map=None):
-    return (CAPITAL_VIEW_NAME if (game_map or {}).get('campaign_objective') == 'capital_guardian'
+    name = (CAPITAL_VIEW_NAME if (game_map or {}).get('campaign_objective') == 'capital_guardian'
             else VIEW_NAME)
+    scope = os.environ.get('NUMBERGRID_COMET_VIEW_SCOPE')
+    return f'{name} — {scope}' if scope else name
 
 
 def compact_comet_metrics(data, game_map=None):
@@ -196,7 +199,9 @@ def configure_comet_dashboard(api_experiment, game_map=None):
     """
     from comet_ml.api_objects.view import View
 
-    views = [v for v in api_experiment.get_views() if v.view_source == 'chart_template']
+    views = [v for v in api_experiment.get_views(
+        include_workspace_project_views=bool(os.environ.get('NUMBERGRID_COMET_VIEW_SCOPE')))
+        if v.view_source == 'chart_template']
     name = comet_view_name(game_map)
     charts = comet_campaign_charts(game_map)
     view = next((v for v in views if v.name == name and not v.unsaved_view), None)

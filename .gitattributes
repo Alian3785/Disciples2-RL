@@ -2,3 +2,4 @@
 *.cmd text eol=crlf
 *.png binary
 *.msgpack binary
+*.gpg binary
