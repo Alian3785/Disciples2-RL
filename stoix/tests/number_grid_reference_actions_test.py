@@ -228,7 +228,7 @@ def test_witch_small_and_large_forms_zero_damage_recovery_and_wait(current_game)
     # Retained permanent identity and footprint are visible with the status flags.
     chex.assert_trees_all_equal(second.unit_ids, start.unit_ids)
     obs = compiled_method(env,'observation')(second)
-    assert obs.shape == (1843,) and int(round(float(obs[460+5*env.num_opponents])*255)) & 1
+    assert obs.shape == (1844,) and int(round(float(obs[460+5*env.num_opponents])*255)) & 1
     ending = second.replace(actor=jnp.int32(4), hp=second.hp.at[6:].set(jnp.array([1,1,1,0,1,0])))
     ended, _ = attack(ending, jnp.int32(SHOOT), ending.battle_key, rolls)
     assert not ended.in_battle and not jnp.any(ended.imp)
@@ -1156,7 +1156,7 @@ def test_cliric_post_victory_restores_forms_and_heals_before_xp(current_game):
     assert not first.imp[3] and first.weakened[3] and first.paralyzed[3]
     mask = compiled_method(env,'action_mask')(first)
     assert mask[WAIT] and mask[SHOOT] and not mask[DEFEND]
-    assert compiled_method(env,'observation')(first).shape == (1843,)
+    assert compiled_method(env,'observation')(first).shape == (1844,)
     bad,_ = compiled_method(env,'step')(first,jnp.int32(DEFEND))
     chex.assert_trees_all_equal(bad.hp,first.hp)
     chex.assert_trees_all_equal(bad.battle_key,first.battle_key)

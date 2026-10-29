@@ -129,7 +129,7 @@ def test_damage_hits_nearest_field_stack_spends_mana_and_daily_limit(current_gam
     assert float(ts.reward) == pytest.approx(-env.step_cost)
     both, _ = step(burned, jnp.int32(rules.start+2))
     assert both.enemy_wounds[0, 0] == 30
-    tail = compiled_method(env, 'observation')(both)[-rules.observation_size-env.unit_swaps.observation_size:-env.unit_swaps.observation_size]
+    tail = compiled_method(env, 'observation')(both)[:-1][-rules.observation_size-env.unit_swaps.observation_size:-env.unit_swaps.observation_size]
     np.testing.assert_allclose(tail[:rules.count], np.eye(rules.count)[1]+np.eye(rules.count)[2])
     assert float(tail[2*rules.count]) == pytest.approx(.3)  # 30 of the Squire's 100 HP
     np.testing.assert_allclose(tail[-5:], [0, 1, 1, 6/47, 6/47], rtol=1e-6)

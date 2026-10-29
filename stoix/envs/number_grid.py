@@ -950,6 +950,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             raise ValueError('Warrior maps require battle_observation_version 3, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17 or 18')
         self.observation_size = (4 + 5 * self.num_opponents + (141 if self.basic_combat else 48) + 6 if self.observation_version in (2, 3, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45)
                                  else self.observation_size + 2 * self.num_opponents + 12 * 8 + 6)
+        self.observation_size += 1  # Strategic day, shared by every campaign and battle mode.
         self.observation_size += self.scenario.observation_size
         self.observation_size += self.script_events.observation_size
         self.observation_size += self.bot.observation_size
@@ -1777,6 +1778,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
         """Encode the current world and battle state into the configured flat feature vector."""
         if not self.battle_mode:
             return super().observation(state)
+        # One-based campaign day; no clipping, and no change during tactical rounds.
+        day = jnp.asarray([state.day / 100.], jnp.float32)
         context = jnp.asarray([
             state.in_battle, (state.enemy + 1) / self.num_opponents,
             state.round / self.max_rounds, state.actor / 11,
@@ -1909,14 +1912,14 @@ class NumberGrid(Summoning, NumericNumberGrid):
             return jnp.concatenate((state.position / (self.size-1),
                                     jnp.asarray([state.number / self.number_scale,
                                                  state.step_count / self.max_steps],jnp.float32),
-                                    world.reshape(-1), units.reshape(-1), context))
+                                    world.reshape(-1), units.reshape(-1), context, day))
         base = super().observation(state)
         units = jnp.stack((state.hp / self.hero_hp, self.max_hp(state) / self.hero_hp,
                            state.priority, state.turn_phase / 2, state.defended,
                            state.retreating, state.escaped,
                            (self.slots == state.actor) & state.in_battle), axis=1)
         return jnp.concatenate((base, self.enemy_counts / 6, self.enemy_health / self.hero_hp,
-                                units.reshape(-1), context))
+                                units.reshape(-1), context, day))
 
     def _melee_targets(self, state, enemy_side=False):
         """Same reachability for both sides; pending retreat still occupies a slot."""

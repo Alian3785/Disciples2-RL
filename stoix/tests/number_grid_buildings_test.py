@@ -52,7 +52,7 @@ def test_every_faction_building_cost_requirements_and_exclusions(env):
                          'legions': 25, 'elves': 23}[env.construction.faction]
     initial, ts = env.reset(jax.random.PRNGKey(42))
     assert initial.gold == initial.buildings == 0 and not initial.built_today
-    assert ts.observation.shape == (271,) and env.action_space().num_values == 44
+    assert ts.observation.shape == (272,) and env.action_space().num_values == 44
     # Supply precisely the prerequisites and exact gold for each of all 122
     # buildings. This covers each shared action slot, including service buildings.
     required = [sum(1 << j for j in ancestors(rows,i)) for i in range(len(rows))]

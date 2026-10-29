@@ -15,8 +15,8 @@ def test_initial_roster_leadership_and_observation(current_game):
     assert env.map_config['hero_roster'] == ['possessed', 'duke', 'possessed', 'cultist', None, None]
     assert int(jnp.sum(state.hp[:6] > 0)) == 4
     assert ACTIONS == len(ACTION_NAMES) == env.num_actions == 244
-    assert env.observation_size == 1843
-    assert compiled_method(env, 'observation')(state).shape == (1843,)
+    assert env.observation_size == 1844
+    assert compiled_method(env, 'observation')(state).shape == (1844,)
     composition = jax.jit(env.recruitment.composition)
     for level, capacity in ((1,3), (2,3), (3,4), (5,4), (6,5), (20,5)):
         s = state.replace(unit_levels=state.unit_levels.at[1].set(level))

@@ -41,7 +41,7 @@ def test_reference_layout_and_the_disabled_flag():
     off = {**MAP, 'unit_swaps': False}
     assert action_names(off) == names[:-15] and not any(n.startswith('swap_') for n in action_names(off))
     env = NumberGrid(map_config=off)
-    assert (env.num_actions, env.observation_size) == (229, 1827) and not hasattr(env, 'unit_swaps')
+    assert (env.num_actions, env.observation_size) == (229, 1828) and not hasattr(env, 'unit_swaps')
     with pytest.raises(ValueError, match='unit_swaps'):
         NumberGrid(map_config={**MAP, 'unit_swaps': 1})
     with pytest.raises(ValueError, match='version 42'):
@@ -88,7 +88,7 @@ def test_swaps_through_step_limit_and_rest(current_game):
     usable = check(swapped)
     assert not usable[0, 3] and usable[1, 3]  # each pair once per turn
     obs = observe(swapped)
-    assert obs.shape == (env.observation_size,) and obs[-16] == pytest.approx(1/3) and obs[-15+index] == 1
+    assert obs.shape == (env.observation_size,) and obs[-17] == pytest.approx(1/3) and obs[-16+index] == 1
 
     # A unit moves into an empty slot; then the formerly empty pair is open.
     moved, _ = step(swapped, jnp.int32(action[1, 4]))

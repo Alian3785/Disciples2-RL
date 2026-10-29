@@ -53,7 +53,7 @@ def test_complete_catalogue_and_scenario_inventory(current_game):
     assert [sum(p['category']==c for p in ITEMS) for c in range(8)]==[21,11,8,5,10,85,101,14]
     assert [sum(c['items'].values()) for c in MAP['chests']]==[3]*5
     assert env.item_rules.capacity==15 and env.item_rules.count==15
-    assert env.num_actions==244 and compiled_method(env,'observation')(state).shape==(1843,)
+    assert env.num_actions==244 and compiled_method(env,'observation')(state).shape==(1844,)
     assert not jnp.any(state.item_inventory>=0) and jnp.all(state.equipped==-1)
     valuables=[p for p in ITEMS if p['category']==VALUABLE]
     # Original Tglobal item descriptions give the merchant payout, not GItem.VALUE.

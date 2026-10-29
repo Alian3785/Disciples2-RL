@@ -81,7 +81,7 @@ def test_exact_three_purchase_actions_and_finite_stock(current_game):
     assert initial.merchant_stock.tolist()==[1,10,10]
     assert rules.buy_start==171 and rules.train_start==174
     assert env.num_actions==ACTIONS==244 and len(ACTION_NAMES)==244
-    assert env.observation_size==1843 and compiled_method(env,'observation')(initial).shape==(1843,)
+    assert env.observation_size==1844 and compiled_method(env,'observation')(initial).shape==(1844,)
     state=at_site(env,initial,'merchant').replace(movement_points=jnp.int32(0))
     before=state
     purchases=CAMPAIGN_FIELDS.index('merchant_purchases')

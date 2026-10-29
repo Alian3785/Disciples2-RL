@@ -31,7 +31,7 @@ def test_default_map_layout_and_actions(default_game):
     env, state, _, _ = default_game
     names = action_names(DEFAULT)
     assert DEFAULT['size'] == 50 and len(DEFAULT['opponent_positions']) == 75
-    assert env.num_actions == len(names) == 306 and env.observation_size == 2661
+    assert env.num_actions == len(names) == 306 and env.observation_size == 2662
     assert env.observation_version == 44 and state.item_charges_spent.shape == state.item_inventory.shape
     assert [s['kind'] for s in env.site_rules.sites] == [
         'merchant', 'merchant', 'trainer', 'mercenary', 'mercenary', 'spell_shop']

@@ -161,8 +161,8 @@ def test_water_excludes_land_but_not_travel_and_flight_cannot_cross_obstacles(cu
 def test_observation_reset_and_human_quotes(current_game,human_service):
     env, initial, _, _ = current_game
     observe = compiled_method(env,'observation')
-    assert observe(initial).shape == (1843,) and env.num_actions == 244
-    research_context = 3+env.spell_research.observation_size+env.casting.observation_size+env.unit_swaps.observation_size  # lord, research, casts, swaps
+    assert observe(initial).shape == (1844,) and env.num_actions == 244
+    research_context = 4+env.spell_research.observation_size+env.casting.observation_size+env.unit_swaps.observation_size  # lord, research, casts, swaps, day
     terrain_columns = slice(-35-research_context,-research_context)
     view = observe(initial)[terrain_columns]
     assert view[-2:].tolist() == [1.,0.]

@@ -217,14 +217,14 @@ def env():
 def test_ten_moves_exhaust_budget_without_income_or_automatic_turn(env):
     state, initial = compiled_method(env,'reset')(jax.random.PRNGKey(42))
     assert state.gold == state.map_steps == 0 and state.day == 1
-    chex.assert_trees_all_equal(initial.observation[-2:], jnp.array([0., 1.]))
+    chex.assert_trees_all_close(initial.observation[-3:], jnp.array([0., 1., .01]))
     actions = jnp.tile(jnp.array([2, 6], jnp.int32), 6)
     @jax.jit
     def rollout(start):
         def step(carry, action):
             following, ts = env.step(carry, action)
             return following, (following.movement_points, following.gold, following.day,
-                               ts.observation[-2:])
+                               ts.observation[-3:])
         return jax.lax.scan(step, start, actions)
     final, (points, gold, days, economy) = rollout(state)
     expected = jnp.maximum(20 - 2*jnp.arange(1, 13), 0)
@@ -232,6 +232,7 @@ def test_ten_moves_exhaust_budget_without_income_or_automatic_turn(env):
     chex.assert_trees_all_equal(gold, jnp.zeros(12, jnp.int32))
     chex.assert_trees_all_equal(days, jnp.ones(12, jnp.int32))
     chex.assert_trees_all_close(economy[:, 1], expected / 20.)
+    chex.assert_trees_all_close(economy[:, 2], jnp.full(12, .01))
     assert final.map_steps == 10 and not final.in_battle
     chex.assert_trees_all_equal(final.position, state.position)
     mask = compiled_method(env,'action_mask')(final)
@@ -275,6 +276,7 @@ def test_every_direction_costs_two_with_last_partial_move(env):
 
 def test_invalid_actions_battle_and_terminal_states_cannot_advance_the_day(env):
     world, _ = compiled_method(env,'reset')(jax.random.PRNGKey(42))
+    world = world.replace(day=jnp.int32(101))  # Day observations must not clip at 100.
     battle = compiled_method(env,'_begin_battle')(world.replace(enemy=jnp.int32(11))).replace(actor=jnp.int32(0))
     states = (
         world.replace(position=jnp.array([1, 1], jnp.int32)),
@@ -288,6 +290,7 @@ def test_invalid_actions_battle_and_terminal_states_cannot_advance_the_day(env):
     for field in ('gold', 'map_steps', 'day', 'movement_points', 'built_today'):
         chex.assert_trees_all_equal(getattr(following, field), getattr(batched, field))
     assert not jnp.any(ts.extras['turn_ended'])
+    chex.assert_trees_all_close(ts.observation[:, -1], jnp.full(len(states), 1.01))
     assert not compiled_method(env,'action_mask')(battle)[REST] and not compiled_method(env,'action_mask')(states[4])[REST]
     chex.assert_trees_all_equal(following.hp[-1], battle.hp)
     chex.assert_trees_all_equal(following.battle_key[-1], battle.battle_key)
@@ -338,6 +341,8 @@ def test_training_autoreset_rest_keeps_terminal_income_and_new_turn_observation(
     columns = jnp.concatenate((jnp.nonzero(delta > 0,size=1)[0],jnp.nonzero(delta < 0,size=1)[0]))
     chex.assert_trees_all_close(ts.extras['next_obs']['observation'][:, columns], jnp.array([[.1, 1.], [.1, 1.]]))
     chex.assert_trees_all_equal(ts.observation['observation'][:, columns], jnp.array([[0., 1.], [0., 1.]]))
+    chex.assert_trees_all_close(ts.extras['next_obs']['observation'][:, -1], jnp.full(2, .02))
+    chex.assert_trees_all_close(ts.observation['observation'][:, -1], jnp.full(2, .01))
     assert jnp.all(ts.observation['action_mask'][:, REST])
 
 
