@@ -32,6 +32,21 @@ def check_sources(manifest):
     assert not subprocess.check_output(['git', 'status', '--porcelain'], cwd=ROOT, text=True), 'Uncommitted source changes'
 
 
+def expected_metric_steps(rows, budget):
+    """Require every summary; episode statistics exist only when defined."""
+    all_steps = set(range(1_000_000, budget+1, 1_000_000))
+    assert {row['training_steps'] for row in rows} == all_steps, 'Missing local summaries'
+    metrics = ('rollout/ep_rew_mean', 'campaign/window/victory_rate',
+               'campaign/mean_seconds_per_million_steps')
+    for row in rows:
+        assert metrics[2] in row, 'A timing point must exist at every summary'
+        if metrics[0] not in row:
+            assert row['episodes/completed_total'] == 0, 'Missing defined rolling reward'
+        if metrics[1] not in row:
+            assert row['campaign/window/episodes'] == 0, 'Missing defined victory rate'
+    return {metric: {row['training_steps'] for row in rows if metric in row} for metric in metrics}
+
+
 def verify(job, manifest):
     output = Path(job['output'])
     status, result, tracking = [read(output / name) for name in ('status.json', 'results.json', 'tracking.json')]
@@ -50,28 +65,31 @@ def verify(job, manifest):
     assert tracking['status'] == 'finished' and tracking['project'] == manifest['project']
     assert tracking['dashboard']['status'] == 'saved'
     import comet_ml
-    expected = set(range(1_000_000, job['steps']+1, 1_000_000))
+    rows = [json.loads(line) for line in (output / 'charts.jsonl').read_text().splitlines()]
+    expected = expected_metric_steps(rows, job['steps'])
+    all_steps = set(range(1_000_000, job['steps']+1, 1_000_000))
     delivery = {}
     for attempt in range(3):
         experiment = comet_ml.API().get_experiment_by_key(tracking['id'])
-        for metric in ('rollout/ep_rew_mean', 'campaign/window/victory_rate',
-                       'campaign/mean_seconds_per_million_steps'):
+        for metric, expected_steps in expected.items():
             steps = {int(float(point['step'])) for point in experiment.get_metrics(metric) or []
                      if point.get('step') is not None}
-            delivery[metric] = {'points': len(steps), 'missing': sorted(expected-steps)}
+            delivery[metric] = {'points': len(steps), 'expected_points': len(expected_steps),
+                                'undefined_locally': sorted(all_steps-expected_steps),
+                                'missing': sorted(expected_steps-steps)}
         if all(not item['missing'] for item in delivery.values()):
             break
         if attempt < 2:
             time.sleep(5)
     save(output / 'comet-verified.json', {'checked_at': now(), 'metrics': delivery, 'url': tracking['url']})
     assert all(not item['missing'] for item in delivery.values()), delivery
-    chart = json.loads((output / 'charts.jsonl').read_text().splitlines()[-1])
+    chart = rows[-1]
     return {'map': job['map'], 'name': job['name'], 'training_steps': result['training_steps'],
             'training_seconds': result['training_seconds'], 'total_runner_seconds': result['total_runner_seconds'],
             'seconds_per_million': chart['campaign/mean_seconds_per_million_steps'],
-            'final_interval_victory_rate': chart['campaign/window/victory_rate'],
+            'final_interval_victory_rate': chart.get('campaign/window/victory_rate'),
             'best_interval_victory_rate': chart['campaign/best_recent_victory_rate'],
-            'reward_last_100': chart['rollout/ep_rew_mean'],
+            'reward_last_100': chart.get('rollout/ep_rew_mean'),
             'completed_episodes': result['completed_training_episodes'],
             'won_episodes': result['won_training_episodes'], 'charts_url': tracking['url'],
             'output': str(output)}
@@ -93,14 +111,19 @@ def main():
     def summarize():
         save(batch / 'summary.json', {'experiment': 'Brute', 'branch': 'experiment/brute',
                                      'source_commit': manifest['source_commit'], 'seed': manifest['seed'],
+                                     'training_source_commit': manifest.get('training_source_commit', manifest['source_commit']),
                                      'phase': state['phase'], 'runs': state['completed']})
         lines = ['Brute: PPO with constant zero observations and no legal-action information.',
                  'Equipment skills required on all six maps; training episode metrics only.', '']
         for row in state['completed']:
+            rate = row['final_interval_victory_rate']
+            rate_text = 'undefined (no completed episodes)' if rate is None else f'{rate:.2%}'
+            reward = row['reward_last_100']
+            reward_text = 'undefined (no completed episodes)' if reward is None else f'{reward:.3f}'
             lines += [f"{row['name']}: {row['training_steps']//1_000_000}M steps, "
                       f"{row['seconds_per_million']:.3f}s/M, "
-                      f"last-interval wins {row['final_interval_victory_rate']:.2%}, "
-                      f"reward/last 100 {row['reward_last_100']:.3f}.", row['charts_url'], '']
+                      f"last-interval wins {rate_text}, "
+                      f"reward/last 100 {reward_text}.", row['charts_url'], '']
         (batch / 'summary.txt').write_text('\n'.join(lines) + '\n')
 
     try:
@@ -119,9 +142,16 @@ def main():
                 continue
             check_sources(manifest)
             output = Path(job['output'])
-            assert not output.exists() or not any(output.iterdir()), f'Refusing to restart nonempty output: {output}'
+            if output.exists() and any(output.iterdir()):
+                # Recover a completed process if only the following chart check failed.
+                # A nonempty unfinished output is never trained again automatically.
+                assert state.get('current_map') == job['map'] and state.get('last_exit_code') == 0
+                state['completed'].append(verify(job, manifest))
+                report(phase='map_complete', recovered_completed_output=job['output'], error=None)
+                summarize()
+                continue
             report(phase='preflight', current_map=job['map'], current_index=job['index'],
-                   current_output=job['output'], total_maps=len(manifest['jobs']), child_pid=None)
+                   current_output=job['output'], total_maps=len(manifest['jobs']), child_pid=None, error=None)
             if job['map'] != 'bethrezens_retreat':
                 subprocess.run(['bash', 'scripts/run_gpu.sh', 'scripts/validate_reference_maps.py',
                                 '--map', job['map'], '--output', str(batch / f"{job['index']:02d}-preflight.json")],
