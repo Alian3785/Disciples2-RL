@@ -6,6 +6,8 @@ results/
 !/results/baseline-six-maps-20261028.txt
 !/results/baseline-six-maps-20261029.txt
 !/results/baseline-six-maps-20261029.json
+!/results/brute-six-maps-20261030.txt
+!/results/brute-six-maps-20261030.json
 pytest-cache-files-*/
 __pycache__/
 *.py[cod]

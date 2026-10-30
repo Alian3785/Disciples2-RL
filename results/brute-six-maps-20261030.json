@@ -1,0 +1,140 @@
+{
+  "experiment": "Brute",
+  "date": "2026-10-30",
+  "branch": "experiment/brute",
+  "phase": "complete",
+  "base_commit": "6253d780547b81c6b997235a53650494bcdf2e0a",
+  "training_source_commit": "dfa83bb0301f6f62999c16564b141a539d81f875",
+  "queue_source_commit": "c3402434c7c86a7699e5679848fb1821e7cea129",
+  "method": {
+    "algorithm": "Stoix Anakin feedforward PPO",
+    "recurrent": false,
+    "observation": "Constant zero vector for both actor and critic; original input dimensions retained.",
+    "action_mask": "All actions exposed; actual legality still enforced by the environment.",
+    "gym_retro_brute_action_tree": false,
+    "fresh_training": true,
+    "seed": 42,
+    "num_envs": 250,
+    "rollout_length": 100,
+    "equipment_requires_skills_all_six_maps": true
+  },
+  "runtime": {
+    "virtualenv": true,
+    "python": "3.12.15",
+    "gpu": "NVIDIA GeForce RTX 3090 (24 GiB)",
+    "jax": "0.12.0.1",
+    "cuda_runtime": "13.4.92 (pip, inside venv)"
+  },
+  "metrics": {
+    "reward_last_100": "Mean total reward of the last 100 completed training episodes.",
+    "victory_rates": "Rates among completed episodes per 1M-step logging interval.",
+    "seconds_per_million": "Synchronized rollout + PPO learner calls; excludes preparation, compilation, host logging and checkpoints.",
+    "undefined_episode_statistics": "Omitted when no episodes are available; generated local chart points verified against Comet."
+  },
+  "training_steps_total": 295000000,
+  "training_seconds_total": 1942.006902953086,
+  "seconds_per_million_weighted": 6.583074247298597,
+  "completed_episodes_total": 67953,
+  "won_episodes_total": 0,
+  "independent_evaluation": false,
+  "comet_custom_views": true,
+  "project_url": "https://www.comet.com/lentix/brute-six-maps-20261030-153250",
+  "validation": {
+    "gpu_observation_boundary_tests_passed": 3,
+    "chart_delivery_tests_passed": 4,
+    "exact_budgets_verified": true,
+    "weights_updated_and_checkpoint_integrity_verified": true,
+    "generated_comet_points_verified": true
+  },
+  "runs": [
+    {
+      "map": "default-blue-dragon",
+      "name": "Default Blue Dragon",
+      "training_steps": 50000000,
+      "training_seconds": 335.676529124612,
+      "seconds_per_million": 6.71353058249224,
+      "completed_episodes": 10003,
+      "won_episodes": 0,
+      "best_interval_victory_rate": 0.0,
+      "final_interval_victory_rate": 0.0,
+      "reward_last_100": 2.0420166348293423,
+      "charts_url": "https://www.comet.com/lentix/brute-six-maps-20261030-153250/0bb1f47d40ea4b3bb9e1dd9ab278aa44?viewId=ygNXWyotTBBEb7uvHHFIt5G3h"
+    },
+    {
+      "map": "default-capital",
+      "name": "Default Capital",
+      "training_steps": 50000000,
+      "training_seconds": 256.58678443398094,
+      "seconds_per_million": 5.131735688679619,
+      "completed_episodes": 11412,
+      "won_episodes": 0,
+      "best_interval_victory_rate": 0.0,
+      "final_interval_victory_rate": 0.0,
+      "reward_last_100": -2.0051020823186265,
+      "charts_url": "https://www.comet.com/lentix/brute-six-maps-20261030-153250/d2b546b365934436bee11cca3b582641?viewId=yfjOtDBoDv4kQToWDf3TDGU3B"
+    },
+    {
+      "map": "super_last_stand",
+      "name": "Super Last Stand",
+      "training_steps": 15000000,
+      "training_seconds": 134.63821913202992,
+      "seconds_per_million": 8.97588127546866,
+      "completed_episodes": 3158,
+      "won_episodes": 0,
+      "best_interval_victory_rate": 0.0,
+      "final_interval_victory_rate": 0.0,
+      "reward_last_100": -13.241688623428345,
+      "charts_url": "https://www.comet.com/lentix/brute-six-maps-20261030-153250/b8e87c77ce9f4edab655c2ccae46a28f?viewId=ygNXWyotTBBEb7uvHHFIt5G3h"
+    },
+    {
+      "map": "trade_train",
+      "name": "Trade Train",
+      "training_steps": 60000000,
+      "training_seconds": 185.26370600040536,
+      "seconds_per_million": 3.0877284333400894,
+      "completed_episodes": 12000,
+      "won_episodes": 0,
+      "best_interval_victory_rate": 0.0,
+      "final_interval_victory_rate": 0.0,
+      "reward_last_100": -156.53723978996277,
+      "charts_url": "https://www.comet.com/lentix/brute-six-maps-20261030-153250/04e8867d7f154596a30f6dac1eb62bc8?viewId=ygNXWyotTBBEb7uvHHFIt5G3h"
+    },
+    {
+      "map": "the_charmed_child",
+      "name": "Проклятое дитя",
+      "training_steps": 60000000,
+      "training_seconds": 274.79873723484343,
+      "seconds_per_million": 4.579978953914058,
+      "completed_episodes": 12002,
+      "won_episodes": 0,
+      "best_interval_victory_rate": 0.0,
+      "final_interval_victory_rate": 0.0,
+      "reward_last_100": -11.806628203392028,
+      "charts_url": "https://www.comet.com/lentix/brute-six-maps-20261030-153250/27be02b0e333472393a78b27fe8bf424?viewId=ygNXWyotTBBEb7uvHHFIt5G3h"
+    },
+    {
+      "map": "bethrezens_retreat",
+      "name": "Бегство Бетрезена",
+      "training_steps": 60000000,
+      "training_seconds": 755.0429270272143,
+      "seconds_per_million": 12.584048783786905,
+      "completed_episodes": 19378,
+      "won_episodes": 0,
+      "best_interval_victory_rate": 0.0,
+      "final_interval_victory_rate": 0.0,
+      "reward_last_100": 12.785529398918152,
+      "charts_url": "https://www.comet.com/lentix/brute-six-maps-20261030-153250/0c3fe16a7cd14040bf2b108cb428d93a?viewId=ygNXWyotTBBEb7uvHHFIt5G3h"
+    }
+  ],
+  "conclusions": [
+    "No map victories were recorded in 295M training transitions and 67953 completed episodes.",
+    "This run tested feedforward PPO with hidden observations and legal-action information. It did not implement the action-sequence tree used by Gym Retro Brute.",
+    "A single seed and training episode statistics do not establish the performance of other observation-free algorithms."
+  ],
+  "published_source_commits": {
+    "training": "39e3f17ac0a77dca3f6af0a9c89311909cd5e732",
+    "queue": "eca506bc8b8673aad93e2c14e94291f381f34d0a",
+    "git_trees_identical_to_recorded_local_commits": true
+  },
+  "source_commit_note": "training_source_commit and queue_source_commit record the original local commits; published equivalents contain identical Git trees."
+}
