@@ -272,7 +272,8 @@ def run_training(args, tracking):
                         'stoix/envs/data/units.json', 'stoix/envs/number_grid_effects.py', 'stoix/envs/number_grid_wards.py', 'stoix/envs/number_grid_summoning.py',
                         'stoix/envs/number_grid.py', 'stoix/envs/number_grid_combat.py', 'stoix/envs/number_grid_progression.py', 'stoix/envs/number_grid_capital.py', 'stoix/envs/number_grid_potions.py', 'stoix/envs/number_grid_chests.py', 'stoix/envs/number_grid_items.py', 'stoix/envs/number_grid_item_combat.py', 'stoix/envs/number_grid_sites.py', 'stoix/envs/number_grid_recruitment.py', 'stoix/envs/number_grid_territory.py', 'stoix/envs/number_grid_ruins.py', 'stoix/envs/number_grid_terrain.py', 'stoix/envs/data/training_prices.json', 'stoix/envs/number_grid_legacy.py',
                         'stoix/utils/make_env.py', 'stoix/wrappers/number_grid_metrics.py',
-                        'stoix/wrappers/number_grid_reset.py', 'stoix/systems/ppo/anakin/ff_ppo.py']
+                        'stoix/wrappers/number_grid_reset.py', 'stoix/wrappers/number_grid_brute.py',
+                        'stoix/systems/ppo/anakin/ff_ppo.py']
     source_hashes = {name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
                      for name in measured_sources if (ROOT / name).exists()}
     source_hashes['numbergrid_warm_start.py'] = hashlib.sha256((ROOT / 'numbergrid_warm_start.py').read_bytes()).hexdigest()
@@ -444,6 +445,8 @@ def run_training(args, tracking):
     source = ROOT / 'stoix/systems/ppo/anakin/ff_ppo.py'
     result = dict(
         environment=game_map['name'], algorithm='Stoix Anakin feedforward PPO', recurrent=False,
+        experiment='Brute', observation_mode=config.env.observation_mode,
+        action_mask_mode=config.env.action_mask_mode,
         device=jax.devices()[0].device_kind, backend=jax.default_backend(), jax=jax.__version__,
         cuda_runtime=(importlib.metadata.version('nvidia-cuda-runtime') if jax.default_backend() == 'gpu' else None), python=platform.python_version(),
         training_steps=total, initial_training_steps=initial_steps,
