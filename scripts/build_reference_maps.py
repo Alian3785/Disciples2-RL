@@ -148,6 +148,8 @@ def build(base, name):
         scheduled_enemies=[dict(enemy=index[e['id']], **{k:v for k,v in e['wave'].items() if k!='enemy_id'})
                            for e in stacks if e.get('wave')],
     )
+    if name in ('super_last_stand', 'trade_train', 'the_charmed_child'):
+        game_map['equipment_requires_skills'] = True
     if name == 'super_last_stand':
         # User-requested difficulty setting: the Temple must be built during play.
         game_map['starting_built_buildings'] = [
