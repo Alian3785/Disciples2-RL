@@ -167,6 +167,7 @@ def build(snapshot):
         reconstruction_note='Static original placement before intro events; see docs/BETHREZENS_RETREAT.md.',
     )
     game_map.update(lord_type='warrior', step_cost=0., exploration_bonus=.08, building_reward=0.,
+                    equipment_requires_skills=True,
                     max_building_level=limits['MAX_UNIT'], max_spell_level=limits['MAX_SPELL'],
                     max_hero_level=limits['MAX_LEADER'],
                     battle_observation_version=max(44, CURRENT['battle_observation_version']))
