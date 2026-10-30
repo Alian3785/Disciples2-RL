@@ -131,6 +131,7 @@ def build(snapshot):
         terrain[name] = [p for p in terrain[name] if tuple(p) not in roads]
     game_map = dict(
         name='NumberGrid-74x74-bethrezens_retreat', display_name='Бегство Бетрезена', size=snapshot['size']+2,
+        compact_observations=True,
         agent_position=cell(hero['source_position']), capital_position=cell(home['marker_position']),
         agent_number=1, opponent_positions=[cell(a['marker_position']) for a in enemies],
         opponent_numbers=[1]*len(enemies), **{k: CURRENT[k] for k in RULES},

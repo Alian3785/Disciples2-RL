@@ -72,7 +72,8 @@ class RuinRules:
         item_loot = items.ruin_loot[:,items.loot_kinds] if items is not None else jnp.zeros((self.count,0),jnp.int32)
         self.features = jnp.concatenate((jnp.array([r['position'] for r in self.ruins])/(game_map['size']-1),
             self.loot.astype(jnp.float32),item_loot.astype(jnp.float32),self.gold[:,None]/1000.),axis=1)
-        self.observation_size = (self.features.shape[1]+1)*self.count
+        self.compact_observations = bool(game_map.get('compact_observations', False))
+        self.observation_size = self.count if self.compact_observations else self.features.size+self.count
         self.metadata = dict(ruins=self.ruins, clear_reward=.25)
 
     def blocked(self, positions):
@@ -96,4 +97,6 @@ class RuinRules:
             gold=add_resource(state.gold,jnp.sum(jnp.where(collected,self.gold,0)))), .25*jnp.any(collected)
 
     def observation(self, state):
+        if self.compact_observations:
+            return state.ruin_looted.astype(jnp.float32)
         return jnp.concatenate((self.features,state.ruin_looted[:,None]),axis=1).reshape(-1)

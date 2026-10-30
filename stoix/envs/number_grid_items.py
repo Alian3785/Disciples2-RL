@@ -170,7 +170,10 @@ class ItemRules:
         # Chest and ruin loot features skip merchant- and city-only kinds: their columns are always zero.
         looted = {key for contents in inventories[:ruin_end] for key,count in contents.items() if count}
         self.loot_kinds = [i for i,key in enumerate(self.keys) if key in looted]
-        self.observation_size = self.capacity+5+chest_count*len(self.loot_kinds)+self.charge_capacity
+        self.compact_observations = bool(game_map.get('compact_observations', False))
+        self.observation_size = self.capacity+5+self.charge_capacity
+        if not self.compact_observations:
+            self.observation_size += chest_count*len(self.loot_kinds)
         self.loot_chests, self.loot_items, _ = self._tokens(inventories[1:chest_count+1])
         self.loot_ruins, self.ruin_items, self.ruin_loot = self._tokens(inventories[chest_count+1:ruin_end])
         self.loot_cities, self.city_items, self.city_loot = self._tokens(inventories[ruin_end:city_end])
@@ -275,9 +278,12 @@ class ItemRules:
         return jnp.sum(state.item_inventory[:,None]==jnp.arange(self.count)[None,:],axis=0)
 
     def observation(self,state):
-        return jnp.concatenate(((state.item_inventory+1)/max(1,self.count),
-                                (state.equipped+1)/max(1,self.count),self.chest_loot[:,self.loot_kinds].reshape(-1),
-                                state.item_charges_spent/float(TALISMAN_USES)))
+        parts = [(state.item_inventory+1)/max(1,self.count),
+                 (state.equipped+1)/max(1,self.count)]
+        if not self.compact_observations:
+            parts.append(self.chest_loot[:,self.loot_kinds].reshape(-1))
+        parts.append(state.item_charges_spent/float(TALISMAN_USES))
+        return jnp.concatenate(parts)
 
     @property
     def metadata(self):

@@ -980,7 +980,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
         if self.chests_enabled != (self.observation_version in (13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45)):
             raise ValueError('Map chests require observation version 13, 14, 15, 16, 17 or 18')
         if self.chests_enabled:
-            self.observation_size += (1+self.chest_rules.features.shape[1])*self.chest_rules.count
+            self.observation_size += self.chest_rules.observation_size
         if self.items_enabled:
             if self.item_rules.charge_capacity and self.observation_version < 43:
                 raise ValueError('Inventory talisman charges require observation version 43')

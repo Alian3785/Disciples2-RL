@@ -1,0 +1,119 @@
+{
+  "map": "bethrezens_retreat",
+  "branch": "experiment/compact-observations-bethrezen",
+  "base_commit": "6253d780547b81c6b997235a53650494bcdf2e0a",
+  "seed": 42,
+  "observation_before": 3914,
+  "observation_after": 2239,
+  "removed": 1675,
+  "reduction_percent": 42.79509453244762,
+  "removed_chests_and_ruins": 1599,
+  "removed_city_and_mine_constants": 76,
+  "paired_speed_change_percent": -12.113950199019518,
+  "historical_60m_speed_change_percent": 2.950130352795588,
+  "device": "NVIDIA GeForce RTX 3090",
+  "jax": "0.12.0.1",
+  "cuda_runtime": "13.4.92",
+  "source_files_changed": [
+    "stoix/envs/number_grid.py",
+    "stoix/envs/number_grid_chests.py",
+    "stoix/envs/number_grid_items.py",
+    "stoix/envs/number_grid_ruins.py",
+    "stoix/envs/number_grid_territory.py"
+  ],
+  "comet_delivery": {
+    "rollout/ep_rew_mean": {
+      "expected_points": 60,
+      "delivered_points": 60
+    },
+    "campaign/window/victory_rate": {
+      "expected_points": 60,
+      "delivered_points": 60
+    },
+    "campaign/mean_seconds_per_million_steps": {
+      "expected_points": 60,
+      "delivered_points": 60
+    }
+  },
+  "charts_url": "https://www.comet.com/lentix/baseline-six-maps-50m-20261029-093143/cc936e42d35746f3b73992e78055f8e5?viewId=BaXoDwbRCl7Knm56IAF93UrVj",
+  "historical_60m": {
+    "map": "bethrezens_retreat",
+    "name": "Бегство Бетрезена",
+    "training_steps": 60000000,
+    "best_interval_victory_rate": 0.6856272219400711,
+    "final_interval_victory_rate": 0.6856272219400711,
+    "reward_last_100": 320.2186724853516,
+    "training_seconds": 1018.8214679803932,
+    "seconds_per_million": 16.980357799673218,
+    "completed_episodes": 108276,
+    "won_episodes": 37837,
+    "charts_url": "https://www.comet.com/lentix/baseline-six-maps-50m-20261029-093143/7aac9991032d4da18404e5753d59b9e2?viewId=BaXoDwbRCl7Knm56IAF93UrVj"
+  },
+  "caveat": "One paired 1M training measurement per mode. Removing constant inputs changes network initialization and trajectories; speed differences include combat workload. The historical 60M run also preceded equipment-skill requirements.",
+  "timing": "Synchronized learner calls: rollout and PPO. Compilation, logging and saving are separate.",
+  "runs": {
+    "main-speed-1m": {
+      "training_steps": 1000000,
+      "observation_size": 3914,
+      "parameter_count": 1071126,
+      "training_seconds": 52.4890220729867,
+      "mean_steps_per_second": 19051.60280200089,
+      "ppo_compile_seconds": 79.05912595900008,
+      "total_runner_seconds": 188.0667560849688,
+      "completed_training_episodes": 12055,
+      "won_training_episodes": 0,
+      "combat_counts": {
+        "battle_transition": 805223,
+        "player_battle_transition": 339080,
+        "enemy_battle_transition": 411201,
+        "automatic_battle_transition": 466143,
+        "battle_victory": 43948
+      },
+      "checkpoint_sha256": "89a19db5de0cbbbe2d6377012fe9ba0a5f519e11c0aa029110550cf30c0eb7f7",
+      "seconds_per_million": 52.4890220729867
+    },
+    "compact-speed-1m": {
+      "training_steps": 1000000,
+      "observation_size": 2239,
+      "parameter_count": 642326,
+      "training_seconds": 59.723951857944485,
+      "mean_steps_per_second": 16743.701126451495,
+      "ppo_compile_seconds": 75.50205838901456,
+      "total_runner_seconds": 186.8365160760004,
+      "completed_training_episodes": 12540,
+      "won_training_episodes": 0,
+      "combat_counts": {
+        "battle_transition": 835716,
+        "player_battle_transition": 344936,
+        "enemy_battle_transition": 428837,
+        "automatic_battle_transition": 490780,
+        "battle_victory": 46096
+      },
+      "checkpoint_sha256": "8e7c8a0556e7aa4b93e451eb074e4a56dd1e9c54e071d7a12bbe020dc72d83e8",
+      "seconds_per_million": 59.72395185794449
+    },
+    "compact-60m": {
+      "training_steps": 60000000,
+      "observation_size": 2239,
+      "parameter_count": 642326,
+      "training_seconds": 989.6262049295474,
+      "mean_steps_per_second": 60628.9523267742,
+      "ppo_compile_seconds": 69.07116927299649,
+      "total_runner_seconds": 1118.5695607009693,
+      "completed_training_episodes": 81549,
+      "won_training_episodes": 19275,
+      "combat_counts": {
+        "battle_transition": 21607676,
+        "player_battle_transition": 12353553,
+        "enemy_battle_transition": 9044015,
+        "automatic_battle_transition": 9254123,
+        "battle_victory": 2528646
+      },
+      "checkpoint_sha256": "e6fbe48932cc3613f074308210220d7fe7c0e360fadc07e65aaaf89ef1fa490a",
+      "seconds_per_million": 16.493770082159124
+    }
+  },
+  "final_interval_victory_rate": 0.5949367088607594,
+  "best_interval_victory_rate": 0.6403985507246377,
+  "reward_last_100": 451.0649023246765
+}

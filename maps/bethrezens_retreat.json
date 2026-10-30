@@ -1,6 +1,7 @@
 {
   "name": "NumberGrid-74x74-bethrezens_retreat",
   "display_name": "Бегство Бетрезена",
+  "compact_observations": true,
   "size": 74,
   "agent_position": [22, 36],
   "capital_position": [18, 57],

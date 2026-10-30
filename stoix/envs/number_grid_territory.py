@@ -204,6 +204,9 @@ class TerritoryRules:
         # Mana, six income values, independent source growth, city and mine rows,
         # local 5x5 ownership/obstacle windows, fort/lord context.
         self.observation_size = 5+6+(1+self.count)+7*self.count+5*len(self.mines)+50+3
+        self.compact_observations = bool(game_map.get('compact_observations', False))
+        if self.compact_observations:
+            self.observation_size -= 2*self.count+4*len(self.mines)
         if self.contested:
             self.observation_size += 25+len(self.mines)+len(self.opponent_sources)
         self.metadata = dict(cities=[dict(c,action=start+i) for i,c in enumerate(self.cities)],
@@ -363,12 +366,17 @@ class TerritoryRules:
 
     def observation(self,state):
         """Encode land, resource ownership, and settlement state without changing territory."""
-        cities = jnp.concatenate((self.positions/(self.size-1),state.city_levels[:,None]/5.,state.city_owned[:,None],
+        city_state = (state.city_levels[:,None]/5.,state.city_owned[:,None],
             state.territory_claims[1:,None]/(self.size*self.size),
             self.remaining_defenders(state)[:,None]/2.,
-            self.costs[state.city_levels,None]/1000.),axis=1).reshape(-1)
-        mines = jnp.concatenate((self.mine_positions/(self.size-1),self.mine_kinds[:,None]/5.,
-            self.mine_ownership(state)[:,None],jnp.full((len(self.mines),1),.05)),axis=1).reshape(-1)
+            self.costs[state.city_levels,None]/1000.)
+        if self.compact_observations:
+            cities = jnp.concatenate(city_state,axis=1).reshape(-1)
+            mines = self.mine_ownership(state).astype(jnp.float32)
+        else:
+            cities = jnp.concatenate((self.positions/(self.size-1),*city_state),axis=1).reshape(-1)
+            mines = jnp.concatenate((self.mine_positions/(self.size-1),self.mine_kinds[:,None]/5.,
+                self.mine_ownership(state)[:,None],jnp.full((len(self.mines),1),.05)),axis=1).reshape(-1)
         local = state.position+self.local_offsets
         observation = jnp.concatenate((state.mana/1000.,self.income(state)/100.,state.territory_claims/(self.size*self.size),
             cities,mines,self.owned(state,local),self.blocked(local),

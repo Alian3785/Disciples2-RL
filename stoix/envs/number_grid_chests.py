@@ -35,6 +35,8 @@ class ChestRules:
         self.loot = jnp.asarray(loot, jnp.int32).reshape(self.count, rules.count)
         self.features = jnp.concatenate((self.positions/(game_map['size']-1),
                                         self.loot.astype(jnp.float32)), axis=1)
+        self.compact_observations = bool(game_map.get('compact_observations', False))
+        self.observation_size = self.count if self.compact_observations else self.features.size+self.count
         self.items = item_rules
 
     def collect(self, state, moved):
@@ -49,5 +51,7 @@ class ChestRules:
                              last_event=jnp.where(jnp.any(collected), CHEST_LOOT, state.last_event))
 
     def observation(self, state):
+        if self.compact_observations:
+            return state.chest_alive.astype(jnp.float32)
         # Coordinates, scenario-specific item counts, then the live/collected flag.
         return jnp.concatenate((self.features, state.chest_alive[:, None]), axis=1).reshape(-1)
