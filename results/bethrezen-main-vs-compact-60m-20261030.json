@@ -1,0 +1,117 @@
+{
+  "created_at": "2026-10-31T00:12:25.833602+00:00",
+  "map": "bethrezens_retreat",
+  "main_commit": "6253d780547b81c6b997235a53650494bcdf2e0a",
+  "compact_branch": "experiment/compact-observations-bethrezen",
+  "compact_commit": "4b0247543138cbc69d2534ec597a164e8ed2e31c",
+  "seed": 42,
+  "steps_each": 60000000,
+  "matching_training_configs_except_observation_flag": true,
+  "identical_packages": true,
+  "source_files_changed": [
+    "stoix/envs/number_grid.py",
+    "stoix/envs/number_grid_chests.py",
+    "stoix/envs/number_grid_items.py",
+    "stoix/envs/number_grid_ruins.py",
+    "stoix/envs/number_grid_territory.py"
+  ],
+  "runs": {
+    "main-60m": {
+      "training_steps": 60000000,
+      "observation_size": 3914,
+      "parameter_count": 1071126,
+      "training_seconds": 1015.0109756069724,
+      "mean_steps_per_second": 59112.66128341149,
+      "ppo_compile_seconds": 71.40354722598568,
+      "total_runner_seconds": 1154.9185617199983,
+      "completed_training_episodes": 87206,
+      "won_training_episodes": 38549,
+      "combat_counts": {
+        "battle_transition": 25932587,
+        "player_battle_transition": 15156502,
+        "enemy_battle_transition": 10514394,
+        "automatic_battle_transition": 10776085,
+        "battle_victory": 2987438
+      },
+      "rest_count": 4682265,
+      "device": "NVIDIA GeForce RTX 3090",
+      "jax": "0.12.0.1",
+      "cuda_runtime": "13.4.92",
+      "checkpoint_sha256": "3331f9e4c94bbb795b0cfd9d3a29329a54380a0515b3612255d08029a22079e2",
+      "seconds_per_million": 16.916849593449538,
+      "final_interval_victory_rate": 0.7772697583278902,
+      "best_interval_victory_rate": 0.7803583278035833,
+      "reward_last_100": 408.16456937789917,
+      "charts_url": "https://www.comet.com/lentix/baseline-six-maps-50m-20261029-093143/5720e3f5a64b4ac78d636916d049a460?viewId=BaXoDwbRCl7Knm56IAF93UrVj",
+      "comet_delivered_points": {
+        "rollout/ep_rew_mean": 60,
+        "campaign/window/victory_rate": 60,
+        "campaign/mean_seconds_per_million_steps": 60
+      }
+    },
+    "compact-60m": {
+      "training_steps": 60000000,
+      "observation_size": 2239,
+      "parameter_count": 642326,
+      "training_seconds": 989.6262049295474,
+      "mean_steps_per_second": 60628.9523267742,
+      "ppo_compile_seconds": 69.07116927299649,
+      "total_runner_seconds": 1118.5695607009693,
+      "completed_training_episodes": 81549,
+      "won_training_episodes": 19275,
+      "combat_counts": {
+        "battle_transition": 21607676,
+        "player_battle_transition": 12353553,
+        "enemy_battle_transition": 9044015,
+        "automatic_battle_transition": 9254123,
+        "battle_victory": 2528646
+      },
+      "rest_count": 4607233,
+      "device": "NVIDIA GeForce RTX 3090",
+      "jax": "0.12.0.1",
+      "cuda_runtime": "13.4.92",
+      "checkpoint_sha256": "e6fbe48932cc3613f074308210220d7fe7c0e360fadc07e65aaaf89ef1fa490a",
+      "seconds_per_million": 16.493770082159124,
+      "final_interval_victory_rate": 0.5949367088607594,
+      "best_interval_victory_rate": 0.6403985507246377,
+      "reward_last_100": 451.0649023246765,
+      "charts_url": "https://www.comet.com/lentix/baseline-six-maps-50m-20261029-093143/cc936e42d35746f3b73992e78055f8e5?viewId=BaXoDwbRCl7Knm56IAF93UrVj",
+      "comet_delivered_points": {
+        "rollout/ep_rew_mean": 60,
+        "campaign/window/victory_rate": 60,
+        "campaign/mean_seconds_per_million_steps": 60
+      }
+    }
+  },
+  "milestones": [
+    {
+      "training_steps": 1000000,
+      "main_seconds_per_million": 53.19037285895319,
+      "compact_seconds_per_million": 64.36354986595688
+    },
+    {
+      "training_steps": 5000000,
+      "main_seconds_per_million": 25.451413106557446,
+      "compact_seconds_per_million": 29.27745752376504
+    },
+    {
+      "training_steps": 15000000,
+      "main_seconds_per_million": 19.05994267373268,
+      "compact_seconds_per_million": 20.303372128175884
+    },
+    {
+      "training_steps": 30000000,
+      "main_seconds_per_million": 17.51993423587798,
+      "compact_seconds_per_million": 17.63456626315019
+    },
+    {
+      "training_steps": 60000000,
+      "main_seconds_per_million": 16.916849593449538,
+      "compact_seconds_per_million": 16.493770082159124
+    }
+  ],
+  "compact_speed_change_percent": 2.565086752046164,
+  "compact_time_change_percent": -2.500935584686159,
+  "compact_final_victory_change_percentage_points": -18.23330494671308,
+  "interpretation": "Paired 60M trainings at one seed, same GPU, software, PPO, rules and map. The observation flag and resulting network input shapes differ. Initialization and trajectories also differ; this measures total learner speed, not isolated observation/network cost."
+}
