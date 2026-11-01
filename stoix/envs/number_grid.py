@@ -53,7 +53,7 @@ from stoix.envs.number_grid_effects import disable_attack_accuracy, disable_atta
 from stoix.envs.number_grid_buildings import (
     BuildingRules, BUILD_START, BUILD_SLOTS, DAILY_GOLD,
 )
-from stoa import ArraySpace, DictSpace, DiscreteSpace
+from stoa import AddActionMaskWrapper, ArraySpace, DictSpace, DiscreteSpace
 from stoix.envs.number_grid_legacy import (
     DIRECTIONS, NumberGrid as NumericNumberGrid, NumberGridState,
 )
@@ -3519,6 +3519,6 @@ class NumberGrid(Summoning, NumericNumberGrid):
 
 
 def wrap_wall_action_mask(env):
-    """Brute branch: use the same hidden policy input for every map."""
+    """Hide game features after applying the original action-mask wrapper."""
     from stoix.wrappers.number_grid_brute import BruteObservation
-    return BruteObservation(env)
+    return BruteObservation(AddActionMaskWrapper(env) if env.mask_walls else env)

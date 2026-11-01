@@ -12,7 +12,7 @@ def make_config(total_timesteps=5_000_000, seed=42, chunk_updates=10, map_config
         'arch': {'seed': seed, 'num_envs': 250, 'update_batch_size': 1,
                  'num_updates_per_eval': chunk_updates},
         'env': {'env_name': 'number_grid', 'observation_mode': 'brute_constant_zero',
-                'action_mask_mode': 'all_actions',
+                'action_mask_mode': 'preserved_game_mask',
                 'scenario': {'name': f"NumberGrid-{game_map['size']}x{game_map['size']}"},
                 'kwargs': {'map_config': game_map}, 'use_cached_auto_reset': True},
         'logger': {'checkpointing': {'load_model': False}},

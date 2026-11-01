@@ -27,7 +27,7 @@ def now():
 
 
 def check_sources(manifest):
-    assert subprocess.check_output(['git', 'branch', '--show-current'], cwd=ROOT, text=True).strip() == 'experiment/brute'
+    assert subprocess.check_output(['git', 'branch', '--show-current'], cwd=ROOT, text=True).strip() == manifest['branch']
     assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip() == manifest['source_commit']
     assert not subprocess.check_output(['git', 'status', '--porcelain'], cwd=ROOT, text=True), 'Uncommitted source changes'
 
@@ -54,7 +54,7 @@ def verify(job, manifest):
     assert status['training_steps'] == result['training_steps'] == job['steps']
     assert result['seed'] == manifest['seed'] and result['initial_training_steps'] == 0
     assert result['experiment'] == 'Brute' and result['observation_mode'] == 'brute_constant_zero'
-    assert result['action_mask_mode'] == 'all_actions' and result['backend'] == 'gpu'
+    assert result['action_mask_mode'] == 'preserved_game_mask' and result['backend'] == 'gpu'
     assert result['weights_changed'] and result['checkpoint_roundtrip_verified']
     assert result['evaluation_status'] == 'not_requested'
     assert read(output / 'map.json')['equipment_requires_skills'] is True
@@ -109,11 +109,13 @@ def main():
         print(json.dumps(state, ensure_ascii=False), flush=True)
 
     def summarize():
-        save(batch / 'summary.json', {'experiment': 'Brute', 'branch': 'experiment/brute',
+        save(batch / 'summary.json', {'experiment': 'Brute', 'branch': manifest['branch'],
+                                     'observation_mode': 'brute_constant_zero',
+                                     'action_mask_mode': 'preserved_game_mask',
                                      'source_commit': manifest['source_commit'], 'seed': manifest['seed'],
                                      'training_source_commit': manifest.get('training_source_commit', manifest['source_commit']),
                                      'phase': state['phase'], 'runs': state['completed']})
-        lines = ['Brute: PPO with constant zero observations and no legal-action information.',
+        lines = ['Brute: PPO with constant zero game observations and original action masks.',
                  'Equipment skills required on all six maps; training episode metrics only.', '']
         for row in state['completed']:
             rate = row['final_interval_victory_rate']
@@ -132,7 +134,7 @@ def main():
         api = comet_ml.API()
         if api.get_project(manifest['workspace'], manifest['project']) is None:
             api.create_project(manifest['workspace'], manifest['project'],
-                               project_description='Brute observation ablation: six Disciples II maps, PPO, no game features or masks.',
+                               project_description='Brute observation ablation: six Disciples II maps, PPO, zero game features, original action masks.',
                                public=False)
         assert api.get_project(manifest['workspace'], manifest['project']) is not None
         save(batch / 'comet-project.json', {'verified': True, 'url': manifest['project_url']})
@@ -161,7 +163,7 @@ def main():
                        '--checkpoint-interval', '5000000', '--summary-interval', '1000000',
                        '--no-episode-reports', '--tracking', 'comet',
                        '--comet-workspace', manifest['workspace'], '--comet-project', manifest['project'],
-                       '--run-name', f"Brute {job['index']:02d} {job['name']} {job['steps']//1_000_000}M seed {manifest['seed']}",
+                       '--run-name', f"Brute masked {job['index']:02d} {job['name']} {job['steps']//1_000_000}M seed {manifest['seed']}",
                        '--output', job['output']]
             save(batch / f"{job['index']:02d}-command.json", command)
             report(phase='training', map_started_at=now())

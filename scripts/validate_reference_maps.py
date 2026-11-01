@@ -11,7 +11,7 @@ from pathlib import Path
 import jax
 import jax.numpy as jnp
 
-from stoix.envs.number_grid import NumberGrid, REST, action_names, load_map
+from stoix.envs.number_grid import NumberGrid, REST, action_names, load_map, wrap_wall_action_mask
 
 
 def validate(name):
@@ -20,9 +20,18 @@ def validate(name):
         raise RuntimeError('Map preflight requires CUDA')
     game_map = load_map(name)
     env = NumberGrid(map_config=game_map)
-    reset = jax.jit(env.reset)
-    step = jax.jit(env.step)
+    wrapped = wrap_wall_action_mask(env)
+    reset = jax.jit(wrapped.reset)
+    step = jax.jit(wrapped.step)
+
+    def check_policy_input(state, timestep):
+        assert bool(jnp.all(timestep.observation['observation'] == 0))
+        expected_mask = env.action_mask(state)
+        assert bool(jnp.all(timestep.observation['action_mask'] == expected_mask))
+        assert bool(jnp.all(timestep.extras['action_mask'] == expected_mask))
+
     state, timestep = reset(jax.random.PRNGKey(42))
+    check_policy_input(state, timestep)
     assert env.num_actions == len(action_names(game_map))
     assert env.observation(state).shape == (env.observation_size,)
     assert bool(jnp.all(jnp.isfinite(env.observation(state))))
@@ -33,6 +42,7 @@ def validate(name):
     for _ in range(3):
         assert bool(env.action_mask(state)[REST])
         state, timestep = step(state, jnp.int32(REST))
+        check_policy_input(state, timestep)
         assert bool(jnp.isfinite(timestep.reward))
     if env.bot_attack.enabled:
         # Default Capital's scripted Empire party: absent at reset, then a real battle
@@ -110,6 +120,7 @@ def validate(name):
     result = dict(map=name, gpu=str(jax.devices()[0]), armies=env.num_opponents,
                   scheduled_armies=len(env.scenario.events), actions=env.num_actions,
                   observation_size=env.observation_size, structural_passability=True,
+                  game_observation_hidden=True, action_mask_preserved=True,
                   preflight='passed', training_transitions=0,
                   target_rewards=game_map.get('target_rewards'), optional_enemies=game_map.get('optional_enemies', []),
                   absent_enemies=game_map.get('absent_enemies', []), bot_attack=game_map.get('bot_attack'))
