@@ -1,0 +1,252 @@
+{
+  "experiment": "Brute with original action masks",
+  "date": "2026-11-01",
+  "phase": "complete",
+  "branch": "experiment/brute-masked-actions",
+  "base_main_commit": "6253d780547b81c6b997235a53650494bcdf2e0a",
+  "training_source_commit": "7601c0635d8f15be92b1b86e3b171973172c9b4e",
+  "method": {
+    "algorithm": "Stoix Anakin feedforward PPO",
+    "recurrent": false,
+    "observation_mode": "brute_constant_zero",
+    "action_mask_mode": "preserved_game_mask",
+    "original_observation_dimensions_retained": true,
+    "original_action_space_and_masks_retained": true,
+    "game_rules_rewards_and_ppo_unchanged_from_base_main": true,
+    "gym_retro_brute_action_tree": false,
+    "fresh_training": true,
+    "seed": 42,
+    "num_envs": 250,
+    "rollout_length": 100,
+    "equipment_requires_skills_all_six_maps": true
+  },
+  "runtime": {
+    "gpu": "NVIDIA GeForce RTX 3090 (24 GiB)",
+    "python": "3.12.15",
+    "jax": "0.12.0.1",
+    "cuda_runtime": "13.4.92 (pip)",
+    "virtualenv": true
+  },
+  "metrics": {
+    "overall_victory_rate": "Map victories divided by all completed training episodes.",
+    "interval_victory_rates": "Map victories among completed episodes in each 1M-step interval.",
+    "reward_last_100": "Mean return of the last 100 completed training episodes.",
+    "seconds_per_million": "Synchronized rollout + PPO learner calls; excludes preparation, compilation, host logging and checkpoints."
+  },
+  "training_steps_total": 295000000,
+  "training_seconds_total": 7582.4604747728445,
+  "queue_elapsed_seconds": 8724.669145,
+  "seconds_per_million_weighted": 25.703255846687608,
+  "completed_episodes_total": 650126,
+  "won_episodes_total": 945,
+  "overall_victory_rate": 0.0014535643859805638,
+  "independent_evaluation": false,
+  "project_url": "https://www.comet.com/lentix/brute-masked-six-maps-20261101-105842",
+  "validation": {
+    "exact_budgets_and_fresh_training_verified": true,
+    "source_and_checkpoint_hashes_verified": true,
+    "weights_updated_and_checkpoint_roundtrip_verified": true,
+    "generated_comet_points_verified": true,
+    "comet_dashboard_saved_all_six": true,
+    "preflight_maps": [
+      "default-blue-dragon",
+      "default-capital",
+      "super_last_stand",
+      "trade_train",
+      "the_charmed_child"
+    ],
+    "preflight_zero_features_and_original_masks_verified": true,
+    "bethrezen_preflight": "not_requested",
+    "static_checks": [
+      "git diff --check",
+      "Python compileall",
+      "Ruff 0.17.1"
+    ],
+    "targeted_regression_tests": "Updated for preserved masks; not executed in this series."
+  },
+  "comparison": {
+    "historical_full_observation": "results/baseline-six-maps-20261029.json",
+    "historical_unmasked_brute": "results/brute-six-maps-20261030.json",
+    "historical_unmasked_brute_wins": 0,
+    "caveat": "Historical series ran before instance migration. Same GPU model and runtime do not isolate observation cost; policies and trajectories differ. Full-observation baseline predates the all-map equipment-skill update."
+  },
+  "conclusions": [
+    "Preserving original masks produced 943 wins on Super Last Stand and two on Default Blue Dragon; four maps had no victories.",
+    "Super Last Stand ended at 1.20% interval victory rate after a best interval of 11.50%; robust success was not reached.",
+    "Compared with the historical full-observation baseline, time per million increased on Blue Dragon, Capital and Bethrezen, was similar on Super Last Stand, and decreased on Trade Train and The Charmed Child.",
+    "This single-seed feedforward PPO ablation does not establish performance of algorithms with memory or action-sequence search; speed causes were not isolated by profiling."
+  ],
+  "runs": [
+    {
+      "map": "default-blue-dragon",
+      "name": "Default Blue Dragon",
+      "training_steps": 50000000,
+      "completed_episodes": 40703,
+      "won_episodes": 2,
+      "overall_victory_rate": 4.913642729037172e-05,
+      "best_interval_victory_rate": 0.0013568521031207597,
+      "final_interval_victory_rate": 0.0,
+      "reward_last_100": 6.565055170953274,
+      "training_seconds": 2274.582276892499,
+      "total_runner_seconds": 2401.2946630560327,
+      "seconds_per_million": 45.491645537849976,
+      "observation_size": 2738,
+      "parameter_count": 773811,
+      "charts_url": "https://www.comet.com/lentix/brute-masked-six-maps-20261101-105842/866a96b71e00421ba8e8b58008516c85?viewId=YlvgE0MtVoPwu9saLeMdMJwx1",
+      "comet_verified_points": {
+        "rollout/ep_rew_mean": 50,
+        "campaign/window/victory_rate": 50,
+        "campaign/mean_seconds_per_million_steps": 50
+      },
+      "historical_full_observation": {
+        "seconds_per_million": 15.886286896661623,
+        "current_to_historical_time_ratio": 2.863579503112819,
+        "best_interval_victory_rate": 0.9124116260801257,
+        "final_interval_victory_rate": 0.8869327073552425
+      }
+    },
+    {
+      "map": "default-capital",
+      "name": "Default Capital",
+      "training_steps": 50000000,
+      "completed_episodes": 134072,
+      "won_episodes": 0,
+      "overall_victory_rate": 0.0,
+      "best_interval_victory_rate": 0.0,
+      "final_interval_victory_rate": 0.0,
+      "reward_last_100": 16.389908065795897,
+      "training_seconds": 1493.5570154322777,
+      "total_runner_seconds": 1626.8666851799935,
+      "seconds_per_million": 29.871140308645554,
+      "observation_size": 2748,
+      "parameter_count": 776371,
+      "charts_url": "https://www.comet.com/lentix/brute-masked-six-maps-20261101-105842/68cf65b6ebe945e0b59bf174e3b9e739?viewId=e98MOYxhPFdBk62tnQiu8Ji95",
+      "comet_verified_points": {
+        "rollout/ep_rew_mean": 50,
+        "campaign/window/victory_rate": 50,
+        "campaign/mean_seconds_per_million_steps": 50
+      },
+      "historical_full_observation": {
+        "seconds_per_million": 17.231384663258215,
+        "current_to_historical_time_ratio": 1.733531047701499,
+        "best_interval_victory_rate": 0.0,
+        "final_interval_victory_rate": 0.0
+      }
+    },
+    {
+      "map": "super_last_stand",
+      "name": "Super Last Stand",
+      "training_steps": 15000000,
+      "completed_episodes": 29319,
+      "won_episodes": 943,
+      "overall_victory_rate": 0.032163443500801525,
+      "best_interval_victory_rate": 0.11498065229408513,
+      "final_interval_victory_rate": 0.011997913406364111,
+      "reward_last_100": 303.2745999908447,
+      "training_seconds": 270.7238216724945,
+      "total_runner_seconds": 399.61913493298925,
+      "seconds_per_million": 18.048254778166303,
+      "observation_size": 1769,
+      "parameter_count": 513363,
+      "charts_url": "https://www.comet.com/lentix/brute-masked-six-maps-20261101-105842/7c915be0fe0c45b38d26ba5537d702db?viewId=YlvgE0MtVoPwu9saLeMdMJwx1",
+      "comet_verified_points": {
+        "rollout/ep_rew_mean": 15,
+        "campaign/window/victory_rate": 15,
+        "campaign/mean_seconds_per_million_steps": 15
+      },
+      "historical_full_observation": {
+        "seconds_per_million": 18.37807921359005,
+        "current_to_historical_time_ratio": 0.9820533782888556,
+        "best_interval_victory_rate": 0.9598885793871866,
+        "final_interval_victory_rate": 0.9556048834628191
+      }
+    },
+    {
+      "map": "trade_train",
+      "name": "Trade Train",
+      "training_steps": 60000000,
+      "completed_episodes": 115797,
+      "won_episodes": 0,
+      "overall_victory_rate": 0.0,
+      "best_interval_victory_rate": 0.0,
+      "final_interval_victory_rate": 0.0,
+      "reward_last_100": 15.262486090660095,
+      "training_seconds": 543.481550916913,
+      "total_runner_seconds": 661.6652103740489,
+      "seconds_per_million": 9.058025848615216,
+      "observation_size": 1315,
+      "parameter_count": 395204,
+      "charts_url": "https://www.comet.com/lentix/brute-masked-six-maps-20261101-105842/2f6959631c834fc8b8298e077cd63f18?viewId=YlvgE0MtVoPwu9saLeMdMJwx1",
+      "comet_verified_points": {
+        "rollout/ep_rew_mean": 60,
+        "campaign/window/victory_rate": 60,
+        "campaign/mean_seconds_per_million_steps": 60
+      },
+      "historical_full_observation": {
+        "seconds_per_million": 11.10358873953616,
+        "current_to_historical_time_ratio": 0.8157746167563483,
+        "best_interval_victory_rate": 0.74983119513842,
+        "final_interval_victory_rate": 0.7310137169621947
+      }
+    },
+    {
+      "map": "the_charmed_child",
+      "name": "Проклятое дитя",
+      "training_steps": 60000000,
+      "completed_episodes": 88409,
+      "won_episodes": 0,
+      "overall_victory_rate": 0.0,
+      "best_interval_victory_rate": 0.0,
+      "final_interval_victory_rate": 0.0,
+      "reward_last_100": -12.014730327129364,
+      "training_seconds": 468.4260975631187,
+      "total_runner_seconds": 584.1517180750379,
+      "seconds_per_million": 7.8071016260519785,
+      "observation_size": 2614,
+      "parameter_count": 736004,
+      "charts_url": "https://www.comet.com/lentix/brute-masked-six-maps-20261101-105842/2a7fedeb5a7f4812a6e1f1f67932658e?viewId=YlvgE0MtVoPwu9saLeMdMJwx1",
+      "comet_verified_points": {
+        "rollout/ep_rew_mean": 60,
+        "campaign/window/victory_rate": 60,
+        "campaign/mean_seconds_per_million_steps": 60
+      },
+      "historical_full_observation": {
+        "seconds_per_million": 10.188203875577893,
+        "current_to_historical_time_ratio": 0.7662883194521023,
+        "best_interval_victory_rate": 0.8892988929889298,
+        "final_interval_victory_rate": 0.8892988929889298
+      }
+    },
+    {
+      "map": "bethrezens_retreat",
+      "name": "Бегство Бетрезена",
+      "training_steps": 60000000,
+      "completed_episodes": 241826,
+      "won_episodes": 0,
+      "overall_victory_rate": 0.0,
+      "best_interval_victory_rate": 0.0,
+      "final_interval_victory_rate": 0.0,
+      "reward_last_100": 21.104826774597168,
+      "training_seconds": 2531.6897122955415,
+      "total_runner_seconds": 2672.7945983540267,
+      "seconds_per_million": 42.19482853825903,
+      "observation_size": 3914,
+      "parameter_count": 1071126,
+      "charts_url": "https://www.comet.com/lentix/brute-masked-six-maps-20261101-105842/4154362eab9c48dcb170e318ecac7ff1?viewId=YlvgE0MtVoPwu9saLeMdMJwx1",
+      "comet_verified_points": {
+        "rollout/ep_rew_mean": 60,
+        "campaign/window/victory_rate": 60,
+        "campaign/mean_seconds_per_million_steps": 60
+      },
+      "historical_full_observation": {
+        "seconds_per_million": 16.980357799673218,
+        "current_to_historical_time_ratio": 2.4849198724817834,
+        "best_interval_victory_rate": 0.6856272219400711,
+        "final_interval_victory_rate": 0.6856272219400711
+      }
+    }
+  ],
+  "published_training_source_commit": "900260007f870eb42f765403f9e30bfbbaa49860",
+  "training_source_tree_sha": "643eb208fe296fe047eb581a491031bdf73c8c6f",
+  "publication_note": "Published training snapshot has the identical Git tree to the local training_source_commit; commit metadata differs."
+}
