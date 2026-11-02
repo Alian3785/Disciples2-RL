@@ -6,6 +6,7 @@ No planner trains the learner.
 """
 import hashlib
 import json
+from collections import deque
 from pathlib import Path
 
 import chex
@@ -51,6 +52,27 @@ def only_bot(env, state, position=(12, 12), hero=(12, 30)):
     return state.replace(alive=jnp.arange(env.num_opponents) == env.bot.enemy,
         position=jnp.array(hero, jnp.int32),
         enemy_positions=state.enemy_positions.at[env.bot.enemy].set(jnp.array(position, jnp.int32)))
+
+
+@pytest.mark.core
+def test_neutral_regeneration_only_on_neutral_land(mirror):
+    """Empire and agent land must both deny a neutral stack its racial +10 bonus."""
+    env, initial = mirror
+    enemy, slot = 0, 0  # Original goblin: 50 HP, 5% intrinsic regeneration.
+    assert env.progression.rows[int(env.casting.enemy_ids[enemy, slot])]['key'] == 'goblin'
+    assert int(env.casting.enemy_max_hp(initial)[enemy, slot]) == 50
+    assert int(env.casting.unit_regen[enemy, slot]) == 5
+    cell = env.territory._cells(initial.enemy_positions[enemy])
+    wounded = initial.replace(enemy_wounds=initial.enemy_wounds.at[enemy, slot].set(25)
+        .at[env.bot.enemy, 0].set(25))
+    cases = [wounded.replace(territory_owners=wounded.territory_owners.at[cell].set(owner))
+             for owner in (0, 1, 2, 2)]
+    states = jax.tree.map(lambda *xs: jnp.stack(xs), *cases)
+    healed = jax.jit(jax.vmap(env.casting.rest))(states, jnp.array([True, True, True, False]))
+    # Preserve the existing enemy HP rounding: only the land bonus changes.
+    chex.assert_trees_all_equal(healed.enemy_wounds[:, enemy, slot], jnp.array([17, 23, 23, 25]))
+    # Scripted bot healing remains exclusively its own return-home state machine.
+    chex.assert_trees_all_equal(healed.enemy_wounds[:, env.bot.enemy, 0], jnp.full(4, 25))
 
 
 @pytest.mark.core
@@ -152,6 +174,69 @@ def test_bfs_neutral_priority_budget_and_blockers(mirror, navigate):
     moved, target, fight = navigate(tied)
     assert target == 0 and fight
     assert jnp.max(jnp.abs(moved.enemy_positions[env.bot.enemy]-tied.enemy_positions[0])) == 1
+
+
+@pytest.mark.core
+def test_goal_search_preserves_fifo_paths_ties_and_unreachable_fallback(mirror):
+    """Compare goal-directed CUDA search with an independent, exhaustive FIFO queue."""
+    env, initial = mirror
+    bot = env.bot
+    tied = only_bot(env, initial, hero=(5, 30)).replace(
+        alive=initial.alive.at[:].set(False).at[bot.enemy].set(True).at[:2].set(True),
+        enemy_positions=initial.enemy_positions.at[bot.enemy].set(jnp.array([12, 12]))
+            .at[0].set(jnp.array([12, 14])).at[1].set(jnp.array([14, 12])))
+    cases = [initial, tied,
+             only_bot(env, initial).replace(bot_mode=jnp.int32(RETURNING)),
+             only_bot(env, initial),
+             only_bot(env, initial, hero=(43, 43)).replace(bot_mode=jnp.int32(RETURNING)),
+             only_bot(env, initial, hero=(0, 0)),  # Unreachable hero exhausts the component.
+             tied.replace(alive=tied.alive.at[1].set(False),
+                          enemy_positions=tied.enemy_positions.at[0].set(jnp.array([0, 0]))),
+             initial]
+    allow = [False, False, False, True, True, True, False, False]
+    active = [True] * 7 + [False]
+    states = jax.tree.map(lambda *xs: jnp.stack(xs), *cases)
+    parents, distances = jax.jit(jax.vmap(bot._search))(
+        states, jnp.array(allow), jnp.array(active))
+    passable = bot.passable.tolist()
+    offsets = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1),
+               (1, -1), (1, 0), (1, 1)]  # Established FIFO direction order, in row/column.
+    for index, state in enumerate(cases):
+        positions = [tuple(p) for p in state.enemy_positions.tolist()]
+        start_position, hero = positions[bot.enemy], tuple(state.position.tolist())
+        start = start_position[0] * bot.size + start_position[1]
+        occupied = {p for p, alive in zip(positions, state.alive.tolist(), strict=True) if alive}
+        occupied.discard(start_position)
+        parent, distance = {start: start}, {start: 0}
+        queue = deque([start_position] if active[index] else [])
+        while queue:
+            position = queue.popleft()
+            cell = position[0] * bot.size + position[1]
+            if position in occupied:
+                continue
+            for dr, dc in offsets:
+                neighbor = (position[0] + dr, position[1] + dc)
+                if not (0 <= neighbor[0] < bot.size and 0 <= neighbor[1] < bot.size):
+                    continue
+                other = neighbor[0] * bot.size + neighbor[1]
+                if (other in parent or not passable[other]
+                        or (neighbor == hero and not allow[index])):
+                    continue
+                parent[other], distance[other] = cell, distance[cell] + 1
+                queue.append(neighbor)
+        goals = [p for p, eligible, alive in zip(
+            positions, bot.eligible.tolist(), state.alive.tolist(), strict=True) if eligible and alive]
+        if int(state.bot_mode) == RETURNING:
+            goals = [tuple(bot.home.tolist())]
+        elif not goals:
+            goals = [hero]
+        goal_depth = min((distance.get(r * bot.size + c, bot.cells) for r, c in goals),
+                         default=bot.cells)
+        actual_parent, actual_distance = parents[index].tolist(), distances[index].tolist()
+        for cell in range(bot.cells):
+            reached = cell in distance and distance[cell] <= goal_depth
+            assert actual_parent[cell] == (parent[cell] if reached else -1), (index, cell)
+            assert actual_distance[cell] == (distance[cell] if reached else bot.cells), (index, cell)
 
 
 def test_pursuit_opens_agent_battle_and_home_return_does_not_overlap(mirror, navigate):

@@ -9,6 +9,21 @@ import pytest
 from stoix.tests.number_grid_fixtures import compiled_method
 
 
+@pytest.mark.core
+def test_current_requires_every_army_without_extra_city_capture(current_game):
+    """User's 51-army goal: remote kills need no subsequent visit to cleared cities."""
+    env, initial, _, _ = current_game
+    assert env.map_config['campaign_objective'] == 'all_enemies'
+    won = compiled_method(env, '_campaign_won')
+    cleared = initial.replace(alive=jnp.zeros_like(initial.alive))
+    assert not jnp.any(cleared.city_owned) and won(cleared)
+    for enemy in range(env.num_opponents):
+        pending = cleared.replace(alive=cleared.alive.at[enemy].set(True),
+                                  city_owned=jnp.ones_like(initial.city_owned))
+        assert not won(pending)
+    assert not won(cleared.replace(lost=jnp.bool_(True)))
+
+
 @pytest.fixture(scope='module')
 def rewards(current_game):
     env = current_game[0]
