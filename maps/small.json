@@ -60,7 +60,7 @@
   "rest_penalty_per_point": 0.001,
   "unit_progression": true,
   "capital_services": true,
-  "battle_engagement": "A directional command targeting a living enemy stack starts combat from the current tile. Passing beside a stack is safe. Entry costs ceil(half the full movement allowance), capped at remaining points; zero points forbids attack. Victory and retreat keep the attacker on its original tile.",
+  "battle_engagement": "A directional command targeting a living enemy stack starts combat from the current tile. Original zone of control: a step onto a tile beside a living stack outside a city, capital or ruin stops there and starts combat with it; a hero already beside such a stack attacks it instead of stepping to another tile beside it; entering a city or the capital is exempt. Entry costs ceil(half the full movement allowance), capped at remaining points; only a step into a zone also pays that step, under the same cap; zero points forbids attack. Victory and retreat keep the attacker on the tile it fought from. Chests open only after a step that starts no combat.",
   "equipment_auto_equip": "price",
   "equipment_requires_skills": true,
   "faction_recruitment": true,

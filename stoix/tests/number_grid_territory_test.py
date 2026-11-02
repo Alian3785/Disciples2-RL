@@ -350,20 +350,19 @@ def test_fort_fear_skips_one_activation_but_attackers_escape(current_game, fort_
     assert not following.retreating[target]
 
 
-def test_map_victory_requires_entry_into_both_cities_and_reset_clears_resources(current_game):
+@pytest.mark.core
+def test_current_victory_needs_no_city_visit_and_reset_clears_resources(current_game):
     env,s,step,_ = current_game
     s = s.replace(alive=jnp.zeros_like(s.alive),position=env.territory.positions[1]+jnp.array([1,0]),
                   city_owned=jnp.array([True,False]))
-    waiting,_ = step(s,jnp.int32(REST))
-    assert not waiting.done and not waiting.won
-    won,ts = step(waiting,jnp.int32(0))
-    assert won.done and won.won and won.city_owned.tolist() == [True,True]
-    assert float(ts.reward) == pytest.approx(3.009)
+    won,ts = step(s,jnp.int32(REST))
+    assert won.done and won.won and won.city_owned.tolist() == [True,False]
+    assert float(ts.discount) == 0 and jnp.isfinite(ts.reward)
     reset,_ = compiled_method(env,'reset')(jax.random.PRNGKey(7))
     assert not jnp.any(reset.mana) and not jnp.any(reset.city_owned)
     assert reset.territory_claims.tolist() == [1,0,0]
     obs = compiled_method(env,'observation')(reset)
-    assert obs.shape == (1844,) and jnp.all(jnp.isfinite(obs))
+    assert obs.shape == (env.observation_size,) and jnp.all(jnp.isfinite(obs))
 
 
 def test_cell_lookup_matches_coordinate_oracle_for_every_tile(current_game):

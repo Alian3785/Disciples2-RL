@@ -91,7 +91,11 @@ class TerritoryRules:
         self.lord = lord['id']
         self.lord_regen = lord['regeneration']
         faction_mana = dict(legions=0, empire=1, undead_hordes=2, mountain_clans=3, elves=4)
-        self.base_income = jnp.array([100]+[25 if i == faction_mana[game_map['faction']] else 0 for i in range(5)], jnp.int32)
+        self.passive_mana_income = game_map.get('passive_mana_income_enabled', True)
+        if type(self.passive_mana_income) is not bool:
+            raise ValueError('passive_mana_income_enabled must be a boolean')
+        self.base_income = jnp.array([100]+[25 if self.passive_mana_income and
+            i == faction_mana[game_map['faction']] else 0 for i in range(5)], jnp.int32)
         self.heroes = jnp.array([bool(r.get('hero')) for r in progression.rows])
         self.regen = jnp.array([int(r.get('regeneration',r.get('game_data',{}).get('REGEN',0)) or 0) for r in progression.rows],jnp.int32)
         self.growth = jnp.array(CITY_GROWTH,jnp.int32)
@@ -138,7 +142,17 @@ class TerritoryRules:
             for ruin in ruin_rules.ruins:
                 if not any(ranks[0][r*self.size+c] < self.size*self.size for r,c in ruin['interaction_tiles']):
                     raise ValueError('Ruin has no reachable approach: '+ruin['name'])
-        for p in reserved:
+        enforce_enemies = game_map.get('enforce_enemy_reachability', True)
+        if type(enforce_enemies) is not bool:
+            raise ValueError('enforce_enemy_reachability must be a boolean')
+        # A focused magic scenario can enclose armies, while every service and
+        # resource must still be reachable. Casting validates its own targets.
+        exempt = set() if enforce_enemies else {tuple(p) for p in game_map['opponent_positions']}
+        exempt -= {self.capital, tuple(game_map['agent_position']),
+                   *(tuple(c['position']) for c in self.cities),
+                   *(tuple(m['position']) for m in self.mines),
+                   *(tuple(c['position']) for c in game_map.get('chests', []))}
+        for p in reserved - exempt:
             if ranks[0][p[0]*self.size+p[1]] == self.size*self.size:
                 raise ValueError('Map object is unreachable from capital: '+str(p))
         self.initial_claims = jnp.array([1]+[0]*self.count,jnp.int32)
@@ -179,7 +193,7 @@ class TerritoryRules:
         self.objective_cities = any(c.get('objective',False) for c in self.cities)
         if self.objective_cities:
             self.goal_cities = jnp.array([c.get('objective',False) for c in self.cities])
-        if game_map.get('objective_enemy') is not None or game_map.get('campaign_objective') in ('waves', 'reach_position'):
+        if game_map.get('objective_enemy') is not None or game_map.get('campaign_objective') in ('waves', 'reach_position', 'all_enemies'):
             # Army/location objectives leave cities usable without requiring capture.
             self.objective_cities = False
             self.goal_cities = jnp.zeros(self.count, bool)
@@ -292,7 +306,8 @@ class TerritoryRules:
         return self.owned(state,self.mine_positions)
 
     def income(self,state):
-        return self.base_income+50*jnp.sum(self.mine_onehot*self.mine_ownership(state)[:,None],axis=0)
+        income = self.base_income+50*jnp.sum(self.mine_onehot*self.mine_ownership(state)[:,None],axis=0)
+        return income if self.passive_mana_income else income.at[1:].set(0)
 
     def next_turn(self,state):
         """Grow both factions, resolve ownership, and credit resources from the resulting land."""

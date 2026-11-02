@@ -4,12 +4,33 @@ Campaign mechanics remain JAX mechanics. The reference's internal battle-step
 reward is summed over automatic activations inside one JAX player decision.
 See docs/MAPS.md for source functions and map-specific rewards.
 """
+import math
 import jax
 import jax.numpy as jnp
 
 from stoix.envs.number_grid_capital import CAPITAL_HEAL, CAPITAL_REVIVE
 from stoix.envs.number_grid_combat import HP
 from stoix.envs.number_grid_unit_swaps import UNITS_SWAPPED
+
+
+def validate_overrides(game_map):
+    """Reject malformed focused-map rewards instead of silently training with them."""
+    keys = ('battle_item_equip_reward', 'battle_item_use_reward', 'leadership_step_penalty',
+            'turn_penalty', 'spell_cast_reward', 'new_cell_reward', 'rest_with_moves_penalty',
+            'timeout_reward', 'magic_enemy_defeat_reward', 'campaign_victory_reward')
+    for key in keys:
+        if key in game_map:
+            value = game_map[key]
+            if (type(value) not in (int, float) or not math.isfinite(value)
+                    or (key != 'timeout_reward' and value < 0)):
+                raise ValueError(f'{key} must be a finite reward coefficient')
+    pickups = game_map.get('item_pickup_rewards', {})
+    if not isinstance(pickups, dict) or any(type(v) not in (int, float) or not math.isfinite(v) or v < 0
+                                          for v in pickups.values()):
+        raise ValueError('item_pickup_rewards must map item keys to finite nonnegative rewards')
+    chest_keys = {k for chest in game_map.get('chests', []) for k in chest.get('items', {})}
+    if set(pickups) - chest_keys:
+        raise ValueError('item_pickup_rewards must name chest items')
 
 
 def _wave_bonus(env, before, after):
@@ -41,7 +62,8 @@ def world(env, before, after, action, rest):
         nonempty |= jnp.any(before.chest_alive & jnp.all(positions == after.position, axis=1))
     if env.sites_enabled:
         nonempty |= jnp.any(jnp.all(env.site_rules.approach_tiles == after.position, axis=-1))
-    reward = -.002*directional + moved*(.01+.081*fresh+nonempty*(.05+.10*fresh))
+    reward = -.002*directional + moved*(.01+(env.map_config.get('new_cell_reward', .08)+.001)*fresh
+                                       +nonempty*(.05+.10*fresh))
     penalty = jnp.minimum(.08, .015*visits)+.03*jnp.all(after.position == before.reference_previous)
     reward -= moved*penalty
     reward -= rest*env.rest_penalty(before)
@@ -67,7 +89,8 @@ def world(env, before, after, action, rest):
             after, bonus = _siege_kills(env, after, dead)
             reward += bonus
     if env.spell_casting_enabled:
-        reward += .005*(after.last_cast_spell >= 0)
+        reward += env.map_config.get('spell_cast_reward', .005)*(after.last_cast_spell >= 0)
+        reward += env.map_config.get('magic_enemy_defeat_reward', 0.)*jnp.sum(before.alive & ~after.alive)
         reward += .05*engage*before.summon_marks[jnp.maximum(after.enemy, 0)]
     reward += (jax.lax.population_count(after.learned_spells & ~before.learned_spells)).astype(jnp.float32)
     reward += 12.*(after.hire_rewarded_capacity > before.hire_rewarded_capacity)
@@ -78,7 +101,13 @@ def world(env, before, after, action, rest):
     reward += .05*after.last_sold_count
     reward -= .004*(after.last_event == UNITS_SWAPPED)
     if env.battle_items_enabled:
-        reward += .02*(after.battle_item_equipped_today & ~before.battle_item_equipped_today)
+        reward += env.map_config.get('battle_item_equip_reward', .02)*(after.battle_item_equipped_today
+                                                                     & ~before.battle_item_equipped_today)
+    if env.map_config.get('item_pickup_rewards'):
+        pickups = env.map_config['item_pickup_rewards']
+        rewards = jnp.array([sum(pickups.get(k, 0.)*n for k, n in chest.get('items', {}).items())
+                             for chest in env.map_config['chests']], jnp.float32)
+        reward += jnp.sum(rewards*(before.chest_alive & ~after.chest_alive))
     temporary = jnp.array([p['duration'] == 'temporary' for p in env.potion_rules.items], bool)
     used = jnp.any((after.potions < before.potions) & temporary)
     # Only chest pickups grant this bonus; merchant purchases/ruin rewards do not.
@@ -104,7 +133,8 @@ def battle(env, before, after, hp, victory, lost, withdrawal, item_using, base_r
     multiplier = (jnp.where(before.enemy == env.objective_enemy,
                            env.siege_rewards['victory_multiplier'], 1.) if env.siege_rewards else 1.)
     reward = jnp.where(ended, jnp.where(victory, jnp.where(summon, 0., .5*multiplier), -.25), .0025)
-    reward += .05*item_using
+    reward += env.map_config.get('battle_item_use_reward', .05)*item_using
+    reward += env.map_config.get('magic_enemy_defeat_reward', 0.)*(victory & summon)
     real_victory = victory & ~summon
     ids = before.unit_ids[:6]
     present = ids != 0
@@ -144,7 +174,8 @@ def battle(env, before, after, hp, victory, lost, withdrawal, item_using, base_r
 def finish(env, before, after):
     """Once per decision: city/episode completion and permanent HP milestones."""
     terminal = after.done & ~before.done
-    reward = -6.*(after.lost & ~before.lost) - 8.*(terminal & ~after.won & ~after.lost)
+    reward = (-6.*(after.lost & ~before.lost)
+              + env.map_config.get('timeout_reward', -8.)*(terminal & ~after.won & ~after.lost))
     reward += terminal*5.*jnp.sum(after.reference_defeated)/max(1, env.reference_enemy_count)
     if env.territory.objective_cities:
         old = jnp.sum(before.city_owned & env.territory.goal_cities)

@@ -1,5 +1,6 @@
 {
-  "name": "NumberGrid-48x48-v89-three-target-rewards",
+  "name": "NumberGrid-48x48-v90-all-armies-objective",
+  "campaign_objective": "all_enemies",
   "size": 48,
   "agent_position": [
     2,
@@ -271,7 +272,7 @@
   "mask_walls": true,
   "map_seed": 42,
   "number_generation": "Historical labels retained and copied with added squads. Numbers do not affect battles.",
-  "reconstruction_note": "48x48: 41 field armies plus two cities, each with a guard and garrison on its entrance tile. Static obstacles leave accessible approaches. Five mana types and one gold mine use territorial ownership. One 3x3 ruin at [7,23] holds Troll and Goblin Archer and grants one Potion of Strength; cleared ruins remain blocked. Terrain: 26 road cells, 32 forest cells, and one connected empty 50-cell lake at rows 13-18 / columns 2-11. Living flight costs 2 everywhere; dead leaders double terrain costs. v88: armies 47-51 add Doppelganger, Summoner, Occultmaster, Lyf and Dark Laclaan; Laclaan is optional for victory; the default ruler is a Legions mage. See scripts/add_current_map_unit_types.py.",
+  "reconstruction_note": "48x48: 41 field armies plus two cities, each with a guard and garrison on its entrance tile. Static obstacles leave accessible approaches. Five mana types and one gold mine use territorial ownership. One 3x3 ruin at [7,23] holds Troll and Goblin Archer and grants one Potion of Strength; cleared ruins remain blocked. Terrain: 26 road cells, 32 forest cells, and one connected empty 50-cell lake at rows 13-18 / columns 2-11. Living flight costs 2 everywhere; dead leaders double terrain costs. v88: armies 47-51 add Doppelganger, Summoner, Occultmaster, Lyf and Dark Laclaan; v89 makes Laclaan mandatory; v90 requires all 51 armies without additional city ownership. The default ruler is a Legions mage. See scripts/add_current_map_unit_types.py.",
   "battle_mode": true,
   "hero_hp": 120,
   "battle_max_rounds": 75,
@@ -808,7 +809,7 @@
     "ointment": 5,
     "life": 10
   },
-  "battle_engagement": "A directional command targeting a living enemy stack starts combat from the current tile. Passing beside a stack is safe. Entry costs ceil(half the full movement allowance), capped at remaining points; zero points forbids attack. Victory and retreat keep the attacker on its original tile.",
+  "battle_engagement": "A directional command targeting a living enemy stack starts combat from the current tile. Original zone of control: a step onto a tile beside a living stack outside a city, capital or ruin stops there and starts combat with it; a hero already beside such a stack attacks it instead of stepping to another tile beside it; entering a city or the capital is exempt. Entry costs ceil(half the full movement allowance), capped at remaining points; only a step into a zone also pays that step, under the same cap; zero points forbids attack. Victory and retreat keep the attacker on the tile it fought from. Chests open only after a step that starts no combat.",
   "chests": [
     {
       "position": [

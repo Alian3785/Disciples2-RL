@@ -467,16 +467,23 @@
     }
     $('potion-targets').replaceChildren(...cards);
   }
+  // JAX DIRECTIONS: a command either hits the stack on its tile or steps into its zone.
+  function commandHitsTile(snap,action,enemy){
+    const p=(snap.state.enemy_positions||currentMap().opponent_positions)[enemy];
+    const [dr,dc]=[[-1,0],[-1,1],[0,1],[1,1],[1,0],[1,-1],[0,-1],[-1,-1]][action];
+    return p[0]===snap.state.position[0]+dr&&p[1]===snap.state.position[1]+dc;
+  }
   function renderMapCommands(snap){
     const attacks=[];
     for(const [action,command] of (snap.map_commands||[]).entries()){
       const [enemy,cost]=command, direction=document.querySelector('.dpad [data-action="'+action+'"]');
+      const verb=enemy>=0&&!commandHitsTile(snap,action,enemy)?'Зона отряда № '+(enemy+1)+': бой':'Атаковать отряд № '+(enemy+1);
       direction.classList.toggle('attack-direction',enemy>=0);
       let badge=direction.querySelector('small');if(!badge){badge=document.createElement('small');direction.append(badge);}badge.textContent=cost;
-      direction.title=enemy>=0?'Атаковать отряд № '+(enemy+1)+' · '+cost+' очков':'Перемещение · '+cost+' очк.';
-      if(enemy<0)continue;
+      direction.title=enemy>=0?verb+' · '+cost+' очков':'Перемещение · '+cost+' очк.';
+      if(enemy<0||!snap.action_mask[action])continue;
       const button=document.createElement('button');button.dataset.action=action;
-      button.textContent='Атаковать отряд № '+(enemy+1)+' · '+enemyParty(currentMap(),enemy)+' · '+cost+' очков';
+      button.textContent=verb+' · '+enemyParty(currentMap(),enemy)+' · '+cost+' очков';
       button.dataset.agentAction=action;button.onclick=()=>sendAction(action);attacks.push(button);
     }
     $('map-targets').replaceChildren(...attacks);
@@ -868,7 +875,7 @@
     if(isSummoner(s.actor))$('attack-hint').textContent='Призыв: выберите свободную клетку своего отряда. Большое существо занимает переднюю и заднюю клетки линии.';
     const winText=map.campaign_objective==='reach_position'?'Победа! Герой достиг цели ⚑.'
       :targetEnemy!==null?'Победа! Цель повержена: '+targetName+'.':goalCities.length?'Победа! Целевые города захвачены.':'Победа! Карта очищена.';
-    const message=s.won?winText:s.lost?'Ваш отряд погиб. Начните новую игру.':s.done?'Достигнут лимит. Начните новую игру.':s.in_battle?'Выбирайте цели и берегите свой отряд.':!s.movement_points?'Очки перемещения закончились. Можно использовать зелья, строить или отдохнуть.':'Шаг на клетку врага — атака. Рядом с отрядом можно пройти без боя.';
+    const message=s.won?winText:s.lost?'Ваш отряд погиб. Начните новую игру.':s.done?'Достигнут лимит. Начните новую игру.':s.in_battle?'Выбирайте цели и берегите свой отряд.':!s.movement_points?'Очки перемещения закончились. Можно использовать зелья, строить или отдохнуть.':'Шаг на клетку врага — атака. Шаг рядом с отрядом на открытой местности тоже начинает бой (зона контроля).';
     $('message').textContent=message;
     $('map-controls').hidden=s.in_battle||capitalOpen||potionsOpen||spellsOpen;$('battle-controls').hidden=!s.in_battle||capitalOpen||potionsOpen||spellsOpen;
     $('continue').hidden=!s.in_battle||!mask[17];
@@ -977,8 +984,10 @@
     const ruin=ruinInfo()?.ruins.find((r,i)=>!snap.state.ruin_looted[i]&&r.footprint.some(p=>p[0]===row&&p[1]===col));
     const enemy=ruin?.enemy??(snap.state.enemy_positions||map.opponent_positions).findIndex((p,i)=>snap.state.alive[i]&&p[0]===row&&p[1]===col);
     if(enemy<0)return;
-    const action=(snap.map_commands||[]).findIndex(command=>command[0]===enemy);
-    if(action>=0&&snap.action_mask[action])sendAction(action);
+    const commands=snap.map_commands||[],fights=action=>commands[action]?.[0]===enemy&&snap.action_mask[action];
+    const direct=commands.findIndex((command,action)=>fights(action)&&commandHitsTile(snap,action,enemy));
+    const action=direct>=0?direct:commands.findIndex((command,action)=>fights(action));
+    if(action>=0)sendAction(action);
   };
   $('manual-tab').onclick=()=>setMode('manual');$('replay-tab').onclick=()=>setMode('replay');$('replay-tab').disabled=!records.length;
   $('world-view').onclick=()=>{capitalOpen=false;potionsOpen=false;spellsOpen=false;render();};$('capital-view').onclick=()=>{capitalOpen=true;potionsOpen=false;spellsOpen=false;render();};
