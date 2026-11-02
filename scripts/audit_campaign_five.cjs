@@ -1,7 +1,9 @@
 // Compare the five scenarios directly with the installed original game's DBF tables.
 const fs = require('fs'), path = require('path'), crypto = require('crypto');
 const root = path.resolve(__dirname, '..');
-const game = 'C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals';
+// DISCIPLES2_GLOBALS overrides the Steam path, e.g. /mnt/c/... under WSL.
+const game = process.env.DISCIPLES2_GLOBALS
+  || 'C:/Program Files (x86)/Steam/steamapps/common/Disciples II Rise of the Elves/Globals';
 const output = process.argv[2];
 if (!output) throw Error('Specify the output JSON path');
 const read = p => JSON.parse(fs.readFileSync(path.join(root, p), 'utf8'));
