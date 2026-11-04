@@ -1,6 +1,6 @@
-"""S101 source fidelity and reach-position objective; extended, CUDA-only.
+"""S101 source fidelity and reach-position objective; CUDA-only.
 
-Run only on an explicit user request, through scripts/run_gpu.sh.
+Tests without the core mark run only on an explicit user request, through scripts/run_gpu.sh.
 Sources and intentional adaptations: docs/BETHREZENS_RETREAT.md.
 """
 import json
@@ -29,6 +29,7 @@ def retreat():
     return env, state
 
 
+@pytest.mark.core
 def test_native_armies_and_unique_large_fighters():
     from scripts.build_bethrezens_retreat import formation
     snapshot = json.loads((ROOT/'docs/maps/bethrezens_retreat/layout.json').read_text(encoding='utf-8'))
@@ -47,6 +48,7 @@ def test_native_armies_and_unique_large_fighters():
     assert config['scheduled_enemies'] == []
 
 
+@pytest.mark.core
 def test_initial_party_lord_and_separate_capital(retreat):
     env, state = retreat
     assert state.position.tolist() == [22, 36]
@@ -66,6 +68,7 @@ def test_initial_party_lord_and_separate_capital(retreat):
     assert int(jnp.sum(env.territory.capital_guards)) == 2
 
 
+@pytest.mark.core
 def test_living_bethrezen_flies_and_dead_one_does_not(retreat):
     """Installed GMabi.dbf gives G000UU6001 M_ABILITY 0, 1, 3, like Pegasus Knight."""
     env, state = retreat
@@ -74,6 +77,7 @@ def test_living_bethrezen_flies_and_dead_one_does_not(retreat):
     assert costs(state.replace(hp=state.hp.at[4].set(0))).tolist() == [4, 2, 8, 12]
 
 
+@pytest.mark.core
 def test_exit_centre_requires_living_genuine_bethrezen(retreat):
     env, initial = retreat
     won = compiled_method(env, '_campaign_won')
@@ -96,6 +100,7 @@ def test_exit_centre_requires_living_genuine_bethrezen(retreat):
     assert bool(env._goals_left(jnp.zeros_like(state.alive), state.scenario_spawned))
 
 
+@pytest.mark.core
 def test_goal_reward_is_once_and_preserves_reference_terminal_rewards(retreat):
     env, before = retreat
     assert env.reference_rewards and env.siege_rewards is None
@@ -125,6 +130,7 @@ def test_quest_totem_survives_merchant_autosale(retreat):
     assert int(sold.gold-state.gold) == 120 and int(sold.last_sold_count) == 1
 
 
+@pytest.mark.core
 def test_step_mask_arrival_terminal_observation_and_reset(retreat):
     env, initial = retreat
     # The source tile immediately south of the goal is clear. No route/actions

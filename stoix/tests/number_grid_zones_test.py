@@ -18,6 +18,7 @@ def placed(state, armies):
     return state.replace(alive=alive, enemy_positions=positions)
 
 
+@pytest.mark.core
 def test_first_holder_follows_the_original_neighbour_order(current_game):
     env, initial, _, _ = current_game
     resolve = compiled_method(env.zones, 'resolve')
@@ -34,6 +35,7 @@ def test_first_holder_follows_the_original_neighbour_order(current_game):
     assert resolve(state, jnp.array([20, 19]), jnp.bool_(True))[1] == -1
 
 
+@pytest.mark.core
 def test_hero_beside_holders_fights_unless_it_steps_out_of_their_zones(current_game):
     env, initial, _, _ = current_game
     resolve = compiled_method(env.zones, 'resolve')

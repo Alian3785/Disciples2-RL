@@ -57,8 +57,14 @@ def test_focused_source_contracts():
     assert scrolls == {s['key']: 1 for s in SPELL_ITEMS if s['category'] == 'scroll'}
     assert len(scrolls) == 101
     assert load_map('hire_train')['objective_enemy'] == 0
-    assert load_map('hire_train')['hero_roster'] == [None, 'duke', None, None, None, None]
+    assert load_map('hire_train')['hero_roster'] == [None, 'g000uu0019', None, None, None, None]
     assert load_map('formation_train')['leadership_step_penalty'] == .06
+    # Mines block movement: the hero walks out past the four sources, which touch the capital's walls.
+    magic = load_map('magic_train')
+    sources = [mine['position'] for mine in magic['mines']]
+    assert len(sources) == 4
+    assert len(reachable({**magic, 'obstacles': magic['obstacles']+sources})) > 2000
+    assert all(any(max(abs(r-y), abs(c-x)) == 1 for y, x in magic['capital_footprint']) for r, c in sources)
 
 
 @pytest.fixture(scope='module', params=NAMES)
@@ -86,10 +92,6 @@ def test_public_reset_rest_and_legal_move(focused):
         assert np.array_equal(np.asarray(rested.mana), np.zeros(5))
         assert np.array_equal(income[1:], np.zeros(5))
     moves = [i for i in range(8) if bool(env.action_mask(rested)[i])]
-    if name == 'magic_train':
-        # Every exit from the start tile is a mana source, impassable as in the original.
-        assert not moves
-        return
     legal_move = moves[0]
     moved, _ = step(rested, jnp.int32(legal_move))
     assert not np.array_equal(np.asarray(moved.position), np.asarray(rested.position))

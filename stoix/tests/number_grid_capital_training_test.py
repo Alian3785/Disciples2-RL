@@ -1,7 +1,7 @@
-"""Extended GPU cases for user-requested Capital rewards; not part of core.
+"""GPU cases for user-requested Capital rewards; three are in core, the rest are extended.
 
 Source: user requests 2026-10-16, 2026-10-26 and 2026-10-28, docs/DEFAULT_MAP.md. These are RL
-rewards, not claims about original Disciples II mechanics. Run only on explicit request.
+rewards, not claims about original Disciples II mechanics. Extended cases run only on explicit request.
 Default Capital pays the blue-dragon victory rewards, a +10 guardian battle bonus after
 more than 70 defeated armies (Empire bot victories included), +3 per defensive bottle and
 +25 per new Incubus; the earlier effect, round and entry rewards stay available to other
@@ -124,6 +124,7 @@ def test_guardian_battle_bonus_needs_more_than_70_defeated_armies(capital, defea
         [min(defeated/71, 1.), float(expected > 0)])
 
 
+@pytest.mark.core
 def test_guardian_battle_bonus_waits_for_threshold_and_pays_once(capital):
     """An early encounter does not consume the bonus; once paid, re-entry and losses never repay."""
     env, initial = capital
@@ -163,6 +164,7 @@ def test_guardian_battle_bonus_excludes_other_targets_summons_and_bots(capital):
         assert not after.capital_guardian_bonus_paid and float(reward) == 0.
 
 
+@pytest.mark.core
 def test_each_new_incubus_pays_25_and_the_chart_keeps_the_peak(capital):
     """User request 2026-10-26: +25 for every party fighter evolving into an Incubus."""
     env, initial = capital
@@ -193,6 +195,7 @@ def test_each_new_incubus_pays_25_and_the_chart_keeps_the_peak(capital):
     assert float(events[CAMPAIGN_FIELDS.index('capital_incubi')]) == 2.
 
 
+@pytest.mark.core
 def test_accuracy_and_initiative_bottles_pay_like_defensive_ones(capital):
     """User request 2026-10-26: +3 per accuracy or initiative bottle too; heal and damage bottles pay nothing."""
     env, initial = capital

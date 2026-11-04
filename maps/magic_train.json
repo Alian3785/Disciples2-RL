@@ -109,10 +109,10 @@
   "ruins": [],
   "cities": [],
   "mines": [
-    {"kind": "life", "position": [27, 7]},
-    {"kind": "runes", "position": [28, 7]},
-    {"kind": "infernal", "position": [29, 7]},
-    {"kind": "death", "position": [28, 8]}
+    {"kind": "life", "position": [26, 7]},
+    {"kind": "runes", "position": [25, 4]},
+    {"kind": "infernal", "position": [30, 7]},
+    {"kind": "death", "position": [31, 4]}
   ],
   "campaign_objective": "all_enemies",
   "reward_profile": "python_reference",

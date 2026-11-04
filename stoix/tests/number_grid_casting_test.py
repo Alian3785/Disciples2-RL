@@ -176,6 +176,7 @@ def test_immunity_and_ward_block_spell_damage_but_not_other_units(current_game):
     assert blocks[0] & 4 and blocks[0] & 64
 
 
+@pytest.mark.core
 def test_damage_skips_cities_and_ruins_summons_reach_them(current_game):
     env, initial, _, _ = current_game
     quotes = jax.jit(env.cast_quotes)
@@ -189,6 +190,7 @@ def test_damage_skips_cities_and_ruins_summons_reach_them(current_game):
     assert target[0] == 45 and target[1] == 13 and not bool(env.casting.field[45])
 
 
+@pytest.mark.core
 def test_debuffs_change_the_next_battle_of_that_stack_only(current_game):
     env, initial, step, _ = current_game
     rules = env.casting

@@ -640,6 +640,10 @@ class NumberGrid(Summoning, NumericNumberGrid):
             self.hero_full = self.stats_table[0, :6, HP].astype(jnp.int32)
         if self.progression_enabled:
             self.progression = ProgressionRules(game_map, self.construction)
+            if 'hero_initial_levels' in game_map:
+                # A party above its catalogue levels starts with those levels' health.
+                self.hero_full = self.progression.stats(self.progression.initial_ids[:6],
+                                                        self.progression.initial_levels[:6])[:, HP].astype(jnp.int32)
             self.has_healers = self.progression.has_healers
             self.has_copies = self.progression.has_copies
             self.has_summons = self.progression.has_summons
