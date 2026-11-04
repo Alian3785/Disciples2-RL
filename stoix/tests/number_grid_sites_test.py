@@ -143,7 +143,8 @@ def test_no_manual_sales_and_retained_inventory(current_game):
     rested, _ = advance(state, jnp.int32(REST))
     for key in ('item_inventory', 'equipped', 'potions'):
         chex.assert_trees_all_equal(getattr(rested,key), getattr(state,key))
-    assert rested.gold == state.gold+100 and rested.last_sold_count == 0
+    # The capital's ten new tiles touch the gold mine that same day.
+    assert rested.gold == state.gold+150 and rested.last_sold_count == 0
 
 
 def test_autosale_all_valuables_once_and_pickup_after_compaction(current_game):
@@ -159,7 +160,7 @@ def test_autosale_all_valuables_once_and_pickup_after_compaction(current_game):
     again,_=advance(sold,jnp.int32(4))
     assert again.gold==100 and again.last_sale_gold==0
     # Collect chest 1 after selling holes in the inventory: keep the old runestone.
-    picked,_=advance(again.replace(position=jnp.array([5,2])),jnp.int32(2))
+    picked,_=advance(again.replace(position=jnp.array([6,2])),jnp.int32(2))
     assert jnp.sum(picked.item_inventory>=0)==4
     assert env.item_rules.counts(picked)[env.item_rules.keys.index('runestone')]==2
     trainer=at_site(env,state,'trainer')

@@ -11,7 +11,7 @@ import pytest
 
 from stoix.envs.number_grid import NumberGrid, REST, action_names, load_map
 from stoix.envs.number_grid_sites import TRAINED
-from stoix.envs.number_grid_territory import growth_ranks
+from stoix.envs.number_grid_territory import reachable_tiles
 from stoix.tests.number_grid_fixtures import compiled_method
 
 VARIANTS = ('small', 'small-green-dragon', 'small-blue-dragon')
@@ -69,9 +69,9 @@ def test_small_geometry_and_observations(small_game):
     loot = [tuple(c['position']) for c in config['chests']+config['mines']]
     assert len(set(loot)) == len(loot)
     assert not set(loot) & set(map(tuple, config['opponent_positions']))
-    ranks = growth_ranks(env.size, (tuple(config['agent_position']),), env.territory.obstacle_cells)[0]
+    walkable = reachable_tiles(env.size, tuple(config['agent_position']), env.territory.impassable_cells)
     for site in env.site_rules.sites+env.ruins.ruins:
-        assert any(ranks[r*env.size+c] < env.size**2 for r, c in site['interaction_tiles'])
+        assert any((r, c) in walkable for r, c in site['interaction_tiles'])
     target = config['reference_enemy_ids'].index(31)
     if config['campaign_objective'] == 'cities':
         assert env.territory.goal_cities.tolist() == [True, True]

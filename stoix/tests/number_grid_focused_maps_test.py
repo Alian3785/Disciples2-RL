@@ -85,7 +85,12 @@ def test_public_reset_rest_and_legal_move(focused):
     if name in ('scroll_train', 'item_train'):
         assert np.array_equal(np.asarray(rested.mana), np.zeros(5))
         assert np.array_equal(income[1:], np.zeros(5))
-    legal_move = next(i for i in range(8) if bool(env.action_mask(rested)[i]))
+    moves = [i for i in range(8) if bool(env.action_mask(rested)[i])]
+    if name == 'magic_train':
+        # Every exit from the start tile is a mana source, impassable as in the original.
+        assert not moves
+        return
+    legal_move = moves[0]
     moved, _ = step(rested, jnp.int32(legal_move))
     assert not np.array_equal(np.asarray(moved.position), np.asarray(rested.position))
     batch = jax.tree.map(lambda x: jnp.stack([x, x]), rested)

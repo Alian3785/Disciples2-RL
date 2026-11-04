@@ -32,6 +32,8 @@ def test_betrezen_identity_and_starting_assets(fortress):
     # User-requested SLS starting setup (2026-10-22): no prebuilt Temple.
     assert not bool(env.capital.temple_built(state))
     assert env.item_rules.skill_levels[:2] == (1, 1)
+    # Installed GMabi.dbf: G000UU6001 flies, so every passable tile costs 2.
+    assert jax.jit(env.travel_costs)(state).tolist() == [2, 2, 2, 2]
 
 
 def test_future_waves_are_not_targets_or_completed_goals(fortress):

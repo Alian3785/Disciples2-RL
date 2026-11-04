@@ -638,7 +638,7 @@ def test_summon_win_with_dead_party_is_defeat():
     use = rules.use_start+empty  # item slot 1 -> own empty cell
     assert compiled_method(env, 'action_mask')(battle)[use]
     summoned, _ = battle_step(battle, jnp.int32(use), jax.random.PRNGKey(2), jnp.zeros(env.random_size))
-    assert int(summoned.summon_owner[empty]) == empty and int(summoned.hp[empty]) > 0
+    assert int(summoned.summon_owner[empty]) == hero and int(summoned.hp[empty]) > 0
     target = int(jnp.argmax(summoned.hp[6:] > 0))
     # Every permanent fighter has fallen; the Angel finishes the last enemy (1 HP).
     hp = jnp.where(summoned.summon_owner >= 0, summoned.hp, 0).at[6+target].set(1)

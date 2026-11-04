@@ -10,12 +10,13 @@ from stoix.envs.number_grid_sites import site_entries
 PLAIN, ROAD, FOREST, WATER = range(4)
 KINDS = ('plain', 'road', 'forest', 'water')
 COSTS = (2, 1, 4, 6)
-# Installed Gmabi.dbf gives Duke, Counselor, Dryad and Death Knight the same
-# movement abilities as Pegasus Knight. Source records and regression coverage:
-# docs/validation/leader-flight-20261021.json, death-knight-flight-20261020.json.
+# Installed Gmabi.dbf gives Duke, Counselor, Dryad, Death Knight and Bethrezen
+# (g000uu6001) the same movement abilities as Pegasus Knight. Source records and
+# regression coverage: docs/validation/leader-flight-20261021.json,
+# death-knight-flight-20261020.json, docs/WORLD.md#terrain.
 FLYING_HERO_IDS = frozenset((
     'g000uu0019', 'g000uu0022', 'g000uu0070', 'g000uu0071',
-    'g000uu0072', 'g000uu0096', 'g000uu0099', 'g000uu8010',
+    'g000uu0072', 'g000uu0096', 'g000uu0099', 'g000uu8010', 'g000uu6001',
 ))
 
 

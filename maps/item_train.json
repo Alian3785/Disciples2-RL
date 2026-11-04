@@ -95,5 +95,28 @@
   "item_pickup_rewards": {"angel_orb": 1.0, "elder_vampire_talisman": 1.0},
   "battle_item_equip_reward": 1.0,
   "battle_item_use_reward": 2.0,
-  "enemy_capitals": []
+  "enemy_capitals": [],
+  "capital_footprint": [
+    [12, 1],
+    [12, 2],
+    [12, 3],
+    [13, 1],
+    [13, 2],
+    [13, 3],
+    [14, 1],
+    [14, 2],
+    [14, 3]
+  ],
+  "starting_land": [
+    [12, 1],
+    [12, 2],
+    [12, 3],
+    [13, 1],
+    [13, 2],
+    [13, 3],
+    [14, 1],
+    [14, 2],
+    [14, 3]
+  ],
+  "land_blocked": []
 }

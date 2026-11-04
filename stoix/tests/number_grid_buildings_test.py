@@ -190,10 +190,11 @@ def test_capital_survives_battle_recovery_and_resets_on_new_episode():
 def test_training_autoreset_retains_final_build_in_terminal_observation(current_game, training_autoreset):
     training, _, advance = training_autoreset
     state, _ = training.reset(jax.random.split(jax.random.PRNGKey(7), 2))
+    start = state.buildings  # the current map's mage lord starts with the tower
     state = replace_base_state(state, gold=jnp.full(2,200,jnp.int32))
     state, ts = advance(state, jnp.full(2, BUILD_START, jnp.int32))
     assert jnp.all(ts.truncated())
-    chex.assert_trees_all_equal(state.buildings, jnp.zeros(2, jnp.uint32))
+    chex.assert_trees_all_equal(state.buildings, start)
     chex.assert_trees_all_equal(state.built_today, jnp.zeros(2, jnp.bool_))
     env, initial, _, _ = current_game
     built = initial.replace(buildings=jnp.uint32(1), built_today=jnp.bool_(True))
@@ -224,7 +225,7 @@ def test_human_sessions_build_with_shared_actions_and_isolate_factions(human_ser
             # second fresh session verifies factory routing and isolation;
             # only one full human transition graph is needed for this test.
             assert state.day == 1
-            assert service.sessions[sessions[0]][1].gold == 100
+            assert service.sessions[sessions[0]][1].gold == 150
             assert service.sessions[sessions[0]][1].day == 2
             continue
         service.sessions[token] = (stored_faction, state.replace(gold=jnp.int32(200)), total)
@@ -234,7 +235,7 @@ def test_human_sessions_build_with_shared_actions_and_isolate_factions(human_ser
         assert built['total_reward'] == pytest.approx(.05-service.env.step_cost)
         rested = service.act(token, REST)
         assert rested['snapshot']['state']['day'] == 2
-        assert rested['snapshot']['state']['gold'] == 100
+        assert rested['snapshot']['state']['gold'] == 150
         assert not rested['snapshot']['state']['built_today']
         assert rested['snapshot']['rest_penalty'] == pytest.approx(.02)
         assert rested['events'][0]['reward'] == pytest.approx(-.02)

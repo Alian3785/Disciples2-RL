@@ -250,6 +250,8 @@ def build(layout, landmarks):
         raise ValueError('Capital guard is not on the capital')
     if set(CITY_ITEMS) - {c['name'] for c in layout['cities']}:
         raise ValueError('City items name a city missing from the layout')
+    from scripts.land_data import scenario_land
+    scenario_land(game_map, 'default')
     return game_map
 
 

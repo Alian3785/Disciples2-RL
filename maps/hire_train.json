@@ -81,7 +81,7 @@
   "chests": [],
   "ruins": [],
   "cities": [
-    {"name": "Учебный город", "position": [7, 13], "level": 1, "objective": false}
+    {"name": "Учебный город", "position": [7, 13], "level": 1, "objective": false, "footprint": [[5, 11], [5, 12], [5, 13], [6, 11], [6, 12], [6, 13], [7, 11], [7, 12], [7, 13]]}
   ],
   "mines": [],
   "campaign_objective": "orc",
@@ -94,5 +94,28 @@
   "enforce_enemy_reachability": true,
   "reference_sha256": {"hire_train.py": "44629d6260abc4301e7995daef491a25b01c9f63446cb8b05df6b0dd5111e75d", "hire_train/layout.json": "8fa7fca07f15f14b512b93460200affbd8d57ed98b4515c1e71a96d656d49488"},
   "objective_enemy": 0,
-  "enemy_capitals": []
+  "enemy_capitals": [],
+  "capital_footprint": [
+    [13, 1],
+    [13, 2],
+    [13, 3],
+    [14, 1],
+    [14, 2],
+    [14, 3],
+    [15, 1],
+    [15, 2],
+    [15, 3]
+  ],
+  "starting_land": [
+    [13, 1],
+    [13, 2],
+    [13, 3],
+    [14, 1],
+    [14, 2],
+    [14, 3],
+    [15, 1],
+    [15, 2],
+    [15, 3]
+  ],
+  "land_blocked": []
 }

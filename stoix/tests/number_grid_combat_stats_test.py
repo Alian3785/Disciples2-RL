@@ -424,7 +424,7 @@ def test_every_current_squad_is_reachable_for_an_attack(current_game):
     env, initial, _, _ = current_game
     position = tuple(env.map_config['agent_position'])
     opponents = [tuple(p) for p in env.map_config['opponent_positions']]
-    blocked = set(env.territory.obstacle_cells)
+    blocked = set(env.territory.impassable_cells)
     ruin_approaches = {tuple(r['entrance']): set(r['interaction_tiles']) for r in env.ruins.ruins}
     remaining = set(range(len(opponents)))
     origins, actions, enemies, living = [], [], [], []
@@ -475,7 +475,7 @@ def test_current_map_full_route_through_step_combat_and_rest(current_game):
     initial = initial.replace(alive=initial.alive.at[jnp.array(unreachable)].set(False))
     position = tuple(env.map_config['agent_position'])
     opponents = [tuple(p) for p in env.map_config['opponent_positions']]
-    blocked = set(env.territory.obstacle_cells)
+    blocked = set(env.territory.impassable_cells)
     ruin_approaches = {tuple(r['entrance']): set(r['interaction_tiles']) for r in env.ruins.ruins}
     # Zone of control (docs/COMBAT.md#zones): a step beside a holder fights the first one
     # around the new tile; entering a fort is exempt. The armies here never move.
@@ -523,9 +523,7 @@ def test_current_map_full_route_through_step_combat_and_rest(current_game):
         goals.extend([-1]*(len(path)-1)+[enemy])
         remaining.remove(enemy)
         if opponents[enemy] in {tuple(c['position']) for c in env.map_config.get('cities',[])} and all(opponents[i] != opponents[enemy] for i in remaining):
-            route.append(path[-1])  # Enter only after both defending armies are gone.
-            goals.append(-1)
-            position = opponents[enemy]
+            position = opponents[enemy]  # The last defender's fall takes the city and moves the party in.
     route, goals = jnp.array(route, jnp.int32), jnp.array(goals, jnp.int32)
     steps = jnp.array(DIRECTIONS, jnp.int32)
     # A private shallow copy preserves current_game's immutable shared JIT cache.

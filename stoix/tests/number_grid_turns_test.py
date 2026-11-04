@@ -339,7 +339,8 @@ def test_training_autoreset_rest_keeps_terminal_income_and_new_turn_observation(
     base_env, base_state, _, _ = current_game
     delta = compiled_method(base_env,'observation')(base_state.replace(gold=jnp.int32(100),movement_points=jnp.int32(0)))-compiled_method(base_env,'observation')(base_state)
     columns = jnp.concatenate((jnp.nonzero(delta > 0,size=1)[0],jnp.nonzero(delta < 0,size=1)[0]))
-    chex.assert_trees_all_close(ts.extras['next_obs']['observation'][:, columns], jnp.array([[.1, 1.], [.1, 1.]]))
+    # 100 gold of the capital and 50 of the mine the land touches that day.
+    chex.assert_trees_all_close(ts.extras['next_obs']['observation'][:, columns], jnp.array([[.15, 1.], [.15, 1.]]))
     chex.assert_trees_all_equal(ts.observation['observation'][:, columns], jnp.array([[0., 1.], [0., 1.]]))
     chex.assert_trees_all_close(ts.extras['next_obs']['observation'][:, -1], jnp.full(2, .02))
     chex.assert_trees_all_close(ts.observation['observation'][:, -1], jnp.full(2, .01))

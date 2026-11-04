@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.build_default_map import (CURRENT, RULES, UNITS, cell, dump, landmark_cells,
                                        restore_original_units, roster, site_cells)
+from scripts.land_data import layout_land, scenario_land
 from stoix.envs.number_grid_items import ITEMS
 from stoix.envs.number_grid_potions import POTIONS
 from stoix.envs.number_grid_spell_items import SPELL_ITEMS
@@ -241,6 +242,10 @@ def build(base, name):
     game_map['enemy_capitals'] = [dict(name=c['name'], position=cell(c['position']),
         guard=next(i for i,e in enumerate(stacks) if e['position']==c['position']),
         footprint=[cell(p) for p in c['footprint']]) for c in capitals]
+    if name == 'the_charmed_child':
+        scenario_land(game_map, name)
+    else:
+        layout_land(game_map, layout)
     return game_map
 
 

@@ -172,8 +172,8 @@ def test_capital_guard_armor_and_regeneration(default_game):
 def test_enemy_regeneration_uses_own_regen_and_place(default_game):
     """Original getUnitRegen (D2ModdingToolset unitutils.cpp): Gunits REGEN + place."""
     _, initial, step, _ = default_game
-    nobody = initial.replace(territory_claims=jnp.zeros_like(initial.territory_claims))
-    everywhere = initial.replace(territory_claims=jnp.full_like(initial.territory_claims, DEFAULT['size']**2))
+    nobody = initial.replace(territory_owners=jnp.zeros_like(initial.territory_owners))
+    everywhere = initial.replace(territory_owners=jnp.ones_like(initial.territory_owners))
     # (stack, slot, max HP): the Troll (REGEN 50), a Squire in a level 1 city, an Orc guarding a ruin.
     troll, city, ruin = (5, 1, 350), (21, 0, 100), (69, 0, 200)
 

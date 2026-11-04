@@ -10,7 +10,7 @@ import jax
 import jax.numpy as jnp
 import pytest
 
-from stoix.envs.number_grid import DEFEND, REST, NumberGrid, action_names, load_map
+from stoix.envs.number_grid import CONTINUE, DEFEND, REST, NumberGrid, action_names, load_map
 from stoix.envs.number_grid_casting import SUMMON
 from stoix.tests.number_grid_fixtures import compiled_method, hero_roster_state
 
@@ -43,10 +43,15 @@ def enter(env, before, action):
 
 def finish(env, battle, outcome='victory'):
     """Resolve a prepared victory, retreat, or defeat without pending healing turns."""
+    if outcome == 'retreat':
+        # As the combat loop leaves it: the whole party has fled and the next activation exits.
+        fled = jnp.arange(12) < 6
+        battle = battle.replace(actor=jnp.int32(0), round=jnp.int32(1), escaped=fled, retreating=fled,
+                                pending_healers=jnp.zeros(12, bool))
+        return compiled_method(env, '_battle_step')(battle, jnp.int32(CONTINUE),
+            jax.random.PRNGKey(20), jnp.full(env.random_size, .5))
     if outcome == 'victory':
         battle = battle.replace(hp=battle.hp.at[6:].set(0))
-    elif outcome == 'retreat':
-        battle = battle.replace(escaped=battle.escaped.at[:6].set(True))
     else:
         battle = battle.replace(hp=battle.hp.at[:6].set(0))
     battle = battle.replace(actor=jnp.int32(1), round=jnp.int32(1),
@@ -157,15 +162,9 @@ def test_summoned_army_cannot_earn_target_level_bonus(target_game):
     spell = next(i for i in range(env.casting.book_count) if int(env.casting.kinds[i]) == SUMMON)
     near = near.replace(learned_spells=jnp.uint32(1 << spell), mana=jnp.full(5, 5000, jnp.int32))
     action = jnp.int32(env.casting.start+spell)
-    if not bool(env.casting.field[env.objective_enemy]):
-        # Capital guardians remain protected from map spells and separate summons.
-        near = near.replace(alive=jnp.zeros_like(near.alive).at[env.objective_enemy].set(True))
-        assert not compiled_method(env, 'action_mask')(near)[action]
-        after, _ = compiled_method(env, 'step')(near, action)
-        assert not after.in_battle and not after.won and not after.done
-        assert after.alive.tolist() == near.alive.tolist()
-        assert not jnp.any(after.army_victory_rewarded)
-        return
+    # A summon reaches any stack, a capital guardian too (docs/DEFAULT_MAP.md); it earns no bonus.
+    near = near.replace(alive=jnp.zeros_like(near.alive).at[env.objective_enemy].set(True))
+    assert compiled_method(env, 'action_mask')(near)[action]
     battle, _ = enter(env, near, action)
     assert battle.summon_battle and int(battle.enemy) == env.objective_enemy
     assert int(battle.army_battle_level_strength) == 0
@@ -221,7 +220,7 @@ def test_target_bonus_grows_with_entry_levels(target_game, levels, expected):
     assert float(reward-plain) == pytest.approx(expected)
     assert float(reward) == pytest.approx(4.+expected)
     assert bool(won.army_victory_rewarded[env.objective_enemy])
-    assert not jnp.any(compiled_method(env, 'action_mask')(won))
+    assert jnp.flatnonzero(compiled_method(env, 'action_mask')(won)).tolist() == [CONTINUE]
     again, ts = compiled_method(env, 'step')(won, jnp.int32(REST))
     assert again.won and again.done and float(ts.reward) == 0.
 

@@ -69,7 +69,8 @@ def site_layout(game_map):
         sites.append(dict(kind=kind, name=value.get('name', names[kind]), position=list(anchor),
                           size=[3, 3], footprint=cells,
                           interaction_tiles=[(r+i, c+j) for i, j in APPROACH_OFFSETS]))
-    blocked = ruin_cells | {p for site in sites for p in site['footprint']} | {tuple(p) for p in game_map.get('obstacles', [])}
+    blocked = (ruin_cells | {p for site in sites for p in site['footprint']} | {tuple(p) for p in game_map.get('obstacles', [])}
+               | {tuple(m['position']) for m in game_map.get('mines', [])})
     for site in sites:
         site['interaction_tiles'] = [p for p in site['interaction_tiles'] if p not in blocked]
         if not site['interaction_tiles']:

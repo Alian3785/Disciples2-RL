@@ -27,7 +27,7 @@ def assert_repeat_rejected(env, state, key, slot):
     for field in ('hp','potions','potion_doses','potion_bonus','potion_temporary',
                   'potion_active','potion_wards'):
         chex.assert_trees_all_equal(getattr(after,field),getattr(state,field))
-    assert after.last_potion==-1 and float(ts.reward)<=0.
+    assert after.last_potion==state.last_potion and float(ts.reward)<=0.
     return after
 
 

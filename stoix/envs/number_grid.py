@@ -813,7 +813,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
                 raise ValueError('Reach-position campaigns require progression and territory without another objective')
             if (not isinstance(point, (list, tuple)) or len(point) != 2
                     or any(type(v) is not int or not 0 < v < self.size-1 for v in point)
-                    or tuple(point) in self.territory.obstacle_cells
+                    or tuple(point) in self.territory.impassable_cells
                     or list(point) == list(game_map['agent_position'])):
                 raise ValueError('Objective position must be a passable interior cell distinct from the start')
             if (type(self.objective_position_reward) not in (int, float)
@@ -1084,7 +1084,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             bot_mode=zero, bot_timer=zero, bot_target=jnp.int32(-1), bot_moves_spent=zero,
             bot_defeated_enemies=zero, bot_hero_victories=zero, bot_autobattle=jnp.bool_(False),
             bot_respawn_day=jnp.int32(self.bot_attack.first_day if self.bot_attack.enabled else 0),
-            opponent_claims=jnp.ones(len(self.territory.opponent_sources) if self.territory_enabled else 0, jnp.int32),
+            opponent_claims=self.territory.initial_opponent_claims if self.territory_enabled else jnp.zeros(0, jnp.int32),
             territory_owners=self.territory.initial_owners if self.territory_enabled else jnp.zeros(0, jnp.int8),
             enemy_positions=self.opponent_positions,
             scenario_spawned=~self.scenario.scheduled,
@@ -1990,7 +1990,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
             return super().action_mask(state)
         destination = state.position[None] + self.directions
         if self.territory_enabled:
-            movement = self.territory.movement_mask(state) & ~state.in_battle
+            movement = (self.territory.movement_mask(state) & ~state.in_battle
+                        & ~self.territory.city_attack_refused(state, destination))
         else:
             movement = super().action_mask(state) & ~state.in_battle
             if self.sites_enabled:
@@ -2105,9 +2106,9 @@ class NumberGrid(Summoning, NumericNumberGrid):
         alive = alive | ~spawned
         return jnp.any(alive if self.goal_enemies is None else alive & self.goal_enemies)
 
-    def _capture_cities(self, state, entered):
+    def _capture_cities(self, state, entered, conquest=False):
         """Capture a cleared city; its vault items and potions go to the party at once."""
-        state = self.territory.capture(state, entered)
+        state = self.territory.capture(state, entered, conquest)
         if self.items_enabled:
             state = self.item_rules.collect_cities(state, state.last_captured_cities)
         if self.potions_enabled and self.territory.count:
@@ -2319,7 +2320,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             bonus -= jnp.where(resting, self.rest_penalty(state), 0.)
         summon = jnp.bool_(False)
         if self.territory_enabled:
-            next_state = jax.lax.cond(resting,self.territory.next_turn,lambda s:s,next_state)
+            next_state = self.territory.next_turn(next_state,resting)
             if self.spell_casting_enabled:
                 next_state = self.casting.rest(next_state, resting)
                 next_state, cast_bonus, summon = self.casting.apply(
@@ -3308,7 +3309,9 @@ class NumberGrid(Summoning, NumericNumberGrid):
         if self.bot_attack.enabled:
             next_state = self.bot_attack.after_battle(state, next_state, victory)
         if self.territory_enabled:
-            next_state = self._capture_cities(next_state,victory & ~summon_battle)
+            own_victory = victory & ~summon_battle
+            conquest = self.territory.conquered(next_state, own_victory & (state.battle_fort_defender == FORT_RED))
+            next_state = self._capture_cities(next_state, own_victory, conquest)
             final_win = self._campaign_won(next_state)
             next_state = next_state.replace(won=final_win,done=next_state.done|final_win)
             won = final_win
@@ -3368,7 +3371,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
         world_valid = ((action >= 0) & (action < 8)
                        & jnp.all((destination > 0) & (destination < self.size - 1)))
         if self.territory_enabled:
-            world_valid &= ~self.territory.blocked(destination)
+            world_valid &= ~self.territory.blocked(destination) & ~self.territory.city_attack_refused(state, destination)
         elif self.sites_enabled:
             world_valid &= ~self.site_rules.blocked(destination)
         if self.ruins_enabled:
@@ -3494,6 +3497,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
         fallback = state.replace(step_count=steps,
                                  done=state.done | (steps >= self.max_steps))
         next_state = jax.tree.map(lambda new, old: jnp.where(valid, new, old), next_state, fallback)
+        if self.territory_enabled:
+            next_state = self.territory.grow_captured(next_state, next_state.city_owned & ~state.city_owned)
         rested = valid & ~state.in_battle & (action == REST)
         # REST replaces the ordinary step cost with the unused-movement penalty.
         reward = jnp.where(valid, reward, 0.) - jnp.where(decision & ~rested, jnp.float32(self.step_cost), 0.)

@@ -90,5 +90,28 @@
   "enforce_enemy_reachability": true,
   "reference_sha256": {"scroll_train.py": "7f3dc4769cc0648c7bbbd65120d97aaffcf68ce8a5ab70332c87783801b6d1ca", "scroll_train/layout.json": "4202c80588cca81585ca307966f8b3312d239bc172c9a2d4cf99a778e19a66ac"},
   "turn_penalty": 0.03,
-  "enemy_capitals": []
+  "enemy_capitals": [],
+  "capital_footprint": [
+    [12, 1],
+    [12, 2],
+    [12, 3],
+    [13, 1],
+    [13, 2],
+    [13, 3],
+    [14, 1],
+    [14, 2],
+    [14, 3]
+  ],
+  "starting_land": [
+    [12, 1],
+    [12, 2],
+    [12, 3],
+    [13, 1],
+    [13, 2],
+    [13, 3],
+    [14, 1],
+    [14, 2],
+    [14, 3]
+  ],
+  "land_blocked": []
 }

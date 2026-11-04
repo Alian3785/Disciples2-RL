@@ -58,12 +58,20 @@ def test_initial_party_lord_and_separate_capital(retreat):
     assert state.hp[:6].tolist() == [170, 0, 170, 0, 300, 0]
     assert int(state.gold) == 300 and int(state.buildings) == 0
     assert env.map_config['lord_type'] == 'warrior'
-    # Original unit regen 5% + warrior lord 15%, away from owned land/fort.
-    assert int(env.territory.regeneration_percent(state, 0)[4]) == 20
+    # Original unit regen 5% + warrior lord 15% + 10% on the land the scenario paints as his.
+    assert int(env.territory.regeneration_percent(state, 0)[4]) == 30
     assert env.recruitment.composition(state)[:3].tolist() == [3, 3, 0]
     assert not env.scenario.enabled and not env.bot.enabled
     assert not env.territory.objective_cities
     assert int(jnp.sum(env.territory.capital_guards)) == 2
+
+
+def test_living_bethrezen_flies_and_dead_one_does_not(retreat):
+    """Installed GMabi.dbf gives G000UU6001 M_ABILITY 0, 1, 3, like Pegasus Knight."""
+    env, state = retreat
+    costs = compiled_method(env, 'travel_costs')
+    assert costs(state).tolist() == [2, 2, 2, 2]
+    assert costs(state.replace(hp=state.hp.at[4].set(0))).tolist() == [4, 2, 8, 12]
 
 
 def test_exit_centre_requires_living_genuine_bethrezen(retreat):

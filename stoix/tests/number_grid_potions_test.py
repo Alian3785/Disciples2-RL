@@ -211,7 +211,7 @@ def test_secondary_attacks_copy_and_transformed_stat_layers(current_game):
     original=round(round(512*1.1)*1.5)
     veteran=veteran.replace(weakened=veteran.weakened.at[1].set(True))
     assert env._original_primary(veteran)[1]==original
-    assert env._combat_stats(veteran,cap=False)[1,1]==round(original*.68)
+    assert env._combat_stats(veteran,cap=False)[1,1]==round(original*.67)
     assert compiled_method(env,'_combat_stats')(veteran)[1,1]==400  # Duke's original heavy-strike cap.
 
 

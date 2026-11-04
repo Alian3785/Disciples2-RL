@@ -97,7 +97,7 @@ class ScriptEventRules:
         self.observation_size += len(movers)
         self.order_slot = {m['enemy']: i for i, m in enumerate(movers)}
         if self.enabled:
-            self.distances = path_distances(self.size, env.territory.obstacle_cells)
+            self.distances = path_distances(self.size, env.territory.impassable_cells)
         for kind in ('MOVE_STACK', 'CREATE_STACK', 'MOVE_BESIDE'):
             rows = self.effects.get(kind, [])
             if rows:

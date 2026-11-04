@@ -10,7 +10,7 @@ from stoix.envs.number_grid import NumberGrid, REST, SHOOT
 from stoix.envs.number_grid_combat import HP, ACCURACY, ARMOR, INITIATIVE
 from stoix.envs.number_grid_limits import add_resource
 from stoix.envs.number_grid_potions import POTIONS, POTION_START, PotionRules
-from stoix.tests.number_grid_fixtures import MAP as BASIC_MAP, compiled_method
+from stoix.tests.number_grid_fixtures import MAP as BASIC_MAP, compiled_method, full_land
 
 
 @pytest.fixture(autouse=True)
@@ -74,9 +74,9 @@ def test_enemy_levels_and_lower_scenario_ceiling(current_game):
     state = state.replace(enemy=jnp.int32(0),
         unit_ids=state.unit_ids.at[6:8].set(ids),
         unit_levels=state.unit_levels.at[6:8].set(99),
-        hp=state.hp.at[:].set(0).at[6:8].set(10))
-    result = jax.jit(rules.finish)(state, state.hp, state.escaped, False, True, False,
-                                   jnp.array([100000, 0]))
+        hp=state.hp.at[:].set(0).at[6:8].set(10),
+        battle_earned_xp=state.battle_earned_xp.at[6:8].set(100000))
+    result = jax.jit(rules.finish)(state, state.hp, state.escaped, False, True, False)
     _, levels, _, enemies, hp, gains, promoted = result
     assert levels[6:8].tolist() == [99, 99]
     assert enemies[0, :2, 0].tolist() == [99, 99]
@@ -142,7 +142,7 @@ def test_stacked_potions_final_stats_and_health(current_game):
 
 def test_income_caps_gold_and_each_mana_and_does_not_bank_overflow(current_game):
     env, state, advance, _ = current_game
-    before = state.replace(territory_claims=env.territory.reachable_counts,
+    before = full_land(env, state).replace(
         gold=jnp.int32(9990), mana=jnp.array([9990, 9999, 9980, 0, 9998], jnp.int32))
     after, _ = advance(before, jnp.int32(REST))
     assert after.gold == 9999 and after.mana.tolist() == [9999, 9999, 9999, 50, 9999]

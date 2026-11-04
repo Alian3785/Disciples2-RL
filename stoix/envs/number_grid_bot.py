@@ -33,7 +33,7 @@ class ScriptedBotRules:
                        for v in (self.budget, self.respawn_turns, self.battle_decisions))):
             raise ValueError('Invalid scripted bot index or positive integer budgets')
         if (list(spec['home']) != list(game_map['opponent_positions'][self.enemy])
-                or tuple(spec['home']) in territory.obstacle_cells):
+                or tuple(spec['home']) in territory.impassable_cells):
             raise ValueError('Scripted bot must start on its passable home tile')
         if game_map.get('cities'):
             raise ValueError('This scripted bot supports city-free maps such as Mirror match')
@@ -48,7 +48,7 @@ class ScriptedBotRules:
         # Reference offsets in (x,y), converted to row/column.
         offsets = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1),
                    (1, -1), (1, 0), (1, 1)]
-        blocked = set(territory.obstacle_cells)
+        blocked = set(territory.impassable_cells)
         # A step in direction k enters cell n from predecessors[n, k]; it is
         # legal exactly when n is an interior cell without an obstacle.
         self.passable = jnp.array([0 < r < self.size-1 and 0 < c < self.size-1 and (r, c) not in blocked

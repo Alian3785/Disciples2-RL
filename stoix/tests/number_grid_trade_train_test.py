@@ -11,7 +11,8 @@ import jax
 import jax.numpy as jnp
 import pytest
 
-from stoix.envs.number_grid import DEFEND, NumberGrid, action_names, load_map
+from stoix.envs.number_grid import CONTINUE, DEFEND, NumberGrid, action_names, load_map
+from stoix.envs.number_grid_casting import SUMMON
 from stoix.envs.number_grid_recruitment import RecruitmentRules
 from stoix.tests.number_grid_fixtures import compiled_method, hero_roster_state
 
@@ -213,10 +214,15 @@ def test_scenario_price_validation_and_catalogue_fallback(trade_game):
 
 def finish_trade_battle(env, battle, outcome='victory'):
     """End an otherwise prepared battle through the actual combat transition."""
+    if outcome == 'retreat':
+        # As the combat loop leaves it: the whole party has fled and the next activation exits.
+        fled = jnp.arange(12) < 6
+        battle = battle.replace(actor=jnp.int32(0), round=jnp.int32(1), escaped=fled, retreating=fled,
+                                pending_healers=jnp.zeros(12, bool))
+        return compiled_method(env, '_battle_step')(battle, jnp.int32(CONTINUE),
+            jax.random.PRNGKey(19), jnp.full(env.random_size, .5))
     if outcome == 'victory':
         battle = battle.replace(hp=battle.hp.at[6:].set(0))
-    elif outcome == 'retreat':
-        battle = battle.replace(escaped=battle.escaped.at[:6].set(True))
     else:
         battle = battle.replace(hp=battle.hp.at[:6].set(0))
     # Complete post-battle healing; no eligible healer may postpone resolution.
@@ -319,7 +325,8 @@ def test_unsuccessful_battle_discards_bonus_without_claiming_enemy(trade_game, o
 def test_summons_and_invalid_moves_do_not_claim_victory_level_bonus(trade_game):
     env, initial, step, _ = trade_game
     near = initial.replace(position=initial.enemy_positions[0]-jnp.array([0, 1]))
-    spell = next(i for i, row in enumerate(env.casting.rows) if row['id'] == 'g000ss0058')
+    spell = next(i for i in range(env.casting.book_count)
+                 if int(env.casting.kinds[i]) == SUMMON and bool(env.casting.allowed[i]))
     prepared = near.replace(learned_spells=jnp.uint32(1 << spell), mana=jnp.full(5, 5000, jnp.int32))
     battle, _ = compiled_method(env, '_world_step')(prepared, jnp.int32(env.casting.start+spell),
         jax.random.PRNGKey(22), jnp.full(env.random_size, .5))

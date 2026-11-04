@@ -4,16 +4,36 @@ import jax
 import jax.numpy as jnp
 import pytest
 from stoix.envs.number_grid import (
-    MAP, REST, SHOOT, DEFEND, RETREAT, CONTINUE, HEAL_START, REVIVE_START,
+    load_map, MAP, REST, SHOOT, DEFEND, RETREAT, CONTINUE, HEAL_START, REVIVE_START,
     FORT_NONE, FORT_BLUE, FORT_RED, ROUND_LIMIT_RETREAT,
 )
-from stoix.envs.number_grid_territory import TerritoryRules, CITY_CAPTURED, CITY_UPGRADED, OBSTACLE
+from stoix.envs.number_grid_territory import (
+    TerritoryRules, CITY_CAPTURED, CITY_UPGRADED, OBSTACLE, fort_center, land_order,
+)
 from stoix.envs.number_grid_combat import ARMOR
-from stoix.tests.number_grid_fixtures import compiled_method, hero_roster_state, enemy_roster_state
+from stoix.tests.number_grid_fixtures import compiled_method, full_land, hero_roster_state, enemy_roster_state
 
 
 def cleared_city(env, state, index=0):
     return state.replace(alive=state.alive & ~env.territory.city_enemies[index])
+
+
+def land_count(state):
+    return int(jnp.sum(state.territory_owners == 1))
+
+
+def take_city(rules):
+    """Capture as env.step does: the city first, its land at the end of the step."""
+    def run(state, entered):
+        after = rules.capture(state, entered)
+        return rules.grow_captured(after, after.city_owned & ~state.city_owned)
+    return jax.jit(run)
+
+
+def painted_up_to(rules, state, count):
+    """The capital's front has painted its first count tiles, and no mine yet."""
+    return state.replace(territory_owners=state.territory_owners.at[rules.land_order[0,:count]].set(1),
+                         territory_claims=state.territory_claims.at[0].set(count))
 
 
 @pytest.mark.core
@@ -21,28 +41,37 @@ def test_growth_income_acquisition_and_obstacles(current_game):
     """Daily land growth acquires mine income without crossing blocked cells."""
     env,s,step,_ = current_game
     rules = env.territory
-    assert s.territory_claims.tolist() == [1,0,0] and s.mana.tolist() == [0]*5
+    assert s.territory_claims.tolist() == [0,0,0] and s.mana.tolist() == [0]*5
+    assert land_count(s) == 1
     assert rules.income(s).tolist() == [100,25,0,0,0,0]
     assert len(rules.mines) == 6 and len(set(m['kind'] for m in rules.mines)) == 6
     turn = compiled_method(rules,'next_turn')
+    start = s
     s = turn(s)
-    assert s.territory_claims.tolist() == [11,0,0] and s.gold == 100
-    assert s.mana.tolist() == [25,0,0,0,0]
-    assert jnp.sum(rules.quotes(s)['territory']) == 11
-    # A mine starts paying on the same turn that growth reaches it. No visit.
+    # Ten new tiles touch the gold mine and the infernal source: their rings come outside the quota.
+    assert s.territory_claims.tolist() == [10,0,0] and s.gold == 150
+    assert s.mana.tolist() == [75,0,0,0,0]
+    assert rules.mine_ownership(s).tolist() == [True,True,False,False,False,False]
+    assert jnp.sum(rules.quotes(s)['territory']) == 27
+    # A mine starts paying on the same turn that the front touches it. No visit.
+    touching = rules.touch_bits[rules.land_order[0,:rules.land_lengths[0]]]
     for i in range(6):
-        rank = rules.ranks[0,rules.mine_cells[i]]
-        before = s.replace(territory_claims=jnp.array([rank,0,0]),gold=jnp.int32(0),mana=jnp.zeros(5,jnp.int32))
+        rank = int(jnp.argmax(touching == 1 << i))
+        assert touching[rank] == 1 << i
+        before = painted_up_to(rules,start,rank).replace(gold=jnp.int32(0),mana=jnp.zeros(5,jnp.int32))
         assert not rules.mine_ownership(before)[i]
         after = turn(before)
         assert rules.mine_ownership(after)[i]
         assert after.gold == rules.income(after)[0]
         chex.assert_trees_all_equal(after.mana,rules.income(after)[1:])
         chex.assert_trees_all_equal(after.position,s.position)
-    full = turn(s.replace(territory_claims=rules.reachable_counts))
+    full = full_land(env,s)
     assert rules.income(full).tolist() == [150,75,50,50,50,50]
-    assert not jnp.any(rules.owned(full,jnp.array(rules.obstacle_cells)))
-    chex.assert_trees_all_equal(full.territory_claims,rules.reachable_counts)
+    # Only a mine's ring paints the map's obstacles; sites do not stop the land at all.
+    others = jnp.array([p for p in env.map_config['obstacles'] if rules.paint_bits[p[0]*env.size+p[1]] == 0])
+    assert not jnp.any(rules.owned(full,others))
+    assert jnp.any(rules.owned(full,jnp.array(env.site_rules.sites[0]['footprint'])))
+    chex.assert_trees_all_equal(turn(full).territory_owners,full.territory_owners)
     mask = compiled_method(env,'action_mask')(s)
     assert not mask[0] and not mask[6] and mask[2] and mask[3]
     bumped,ts = step(s,jnp.int32(0))
@@ -51,6 +80,26 @@ def test_growth_income_acquisition_and_obstacles(current_game):
     assert bumped.movement_points == s.movement_points
     diagonal,_ = step(s,jnp.int32(3))
     assert diagonal.position.tolist() == [3,3]
+
+
+def test_mines_block_movement_but_land_still_reaches_them(current_game):
+    """Original Crystal tiles are impassable, for gold mines and mana sources alike."""
+    env,s,step,_ = current_game
+    rules = env.territory
+    assert {m['kind'] for m in rules.mines} >= {'gold','infernal'}
+    assert jnp.all(rules.mine_ownership(full_land(env,s)))
+    mask = compiled_method(env,'action_mask')
+    for i, mine in enumerate(rules.mines):
+        tile = tuple(mine['position'])
+        assert tile in rules.impassable_cells and tile not in rules.obstacle_cells
+        assert not jnp.any(rules.land_order[0,:rules.land_lengths[0]] == rules.mine_cells[i])
+        # Stand north of the mine: action 4 steps south.
+        start =s.replace(position=jnp.array([tile[0]-1,tile[1]]),movement_points=jnp.int32(20))
+        assert not mask(start)[4]
+        bumped,ts = step(start,jnp.int32(4))
+        assert bumped.last_event == OBSTACLE and float(ts.reward) == pytest.approx(-.251)
+        chex.assert_trees_all_equal(bumped.position,start.position)
+        assert bumped.movement_points == 20
 
 
 @pytest.mark.parametrize('faction,mana', [('legions',0),('empire',1),('undead_hordes',2),('mountain_clans',3),('elves',4)])
@@ -65,33 +114,52 @@ def test_faction_native_mana_and_lord_data(current_game,faction,mana):
 
 
 @pytest.mark.core
-def test_two_city_armies_capture_live_hero_and_no_remote_capture(current_game):
-    """Only entering a cleared city with a living original hero captures it."""
+def test_last_defender_takes_the_city_and_moves_the_party_in(current_game):
+    """CBattleResultVillage: the battle clearing a city captures it, even if the leader fell."""
     env,s,step,fight = current_game
     city = env.territory.positions[0]
-    s = s.replace(position=city+jnp.array([1,0]))
-    for enemy in (41,42):
-        assert env.map_commands(s)[0,0] == enemy
-        battle,_ = step(s,jnp.int32(0))
+    outside = city+jnp.array([1,0])
+
+    def beat(state, enemy, leader_falls=False):
+        """Enter the fight and land one deterministic final blow (normal casualty/XP cleanup)."""
+        assert env.map_commands(state)[0,0] == enemy
+        battle,_ = step(state,jnp.int32(0))
         assert battle.in_battle and battle.enemy == enemy and battle.battle_fort_armor == 10
         assert not battle.city_owned[0]
         target = int(jnp.argmax(battle.hp[6:]>0))
-        battle = battle.replace(actor=jnp.int32(0),hp=battle.hp.at[6:].set(0).at[6+target].set(1))
-        # One deterministic final blow exercises normal casualty/XP cleanup.
-        s,_ = fight(battle,jnp.int32(SHOOT+target),battle.battle_key,jnp.zeros(env.random_size))
-        assert not s.alive[enemy] and not s.in_battle and not s.city_owned[0]
-        assert s.position.tolist() == (city+jnp.array([1,0])).tolist()
-        if enemy == 41:
-            assert s.alive[42]
-        s = s.replace(movement_points=jnp.int32(20))
-    entered,_ = step(s,jnp.int32(0))
-    assert entered.city_owned.tolist() == [True,False]
-    assert entered.territory_claims.tolist() == [1,16,0]
-    assert entered.last_event == CITY_CAPTURED and entered.position.tolist() == city.tolist()
-    assert env.territory.owned(entered,city+jnp.array([1,0]))
-    assert entered.day == s.day and entered.gold == s.gold
-    chex.assert_trees_all_equal(entered.mana,s.mana)
-    # A dead leader cannot capture; resurrection/rest on the tile is not entry.
+        hp = battle.hp.at[6:].set(0).at[6+target].set(1)
+        battle = battle.replace(actor=jnp.int32(0),hp=hp.at[1].set(0) if leader_falls else hp)
+        after,_ = fight(battle,jnp.int32(SHOOT+target),battle.battle_key,jnp.zeros(env.random_size))
+        assert not after.alive[enemy] and not after.in_battle
+        return after.replace(movement_points=jnp.int32(20))
+
+    first = beat(s.replace(position=outside),41)
+    assert first.alive[42] and not first.city_owned[0] and first.position.tolist() == outside.tolist()
+    points = first.movement_points
+    taken = beat(first,42)
+    assert taken.city_owned.tolist() == [True,False]
+    assert taken.last_event == CITY_CAPTURED and taken.position.tolist() == city.tolist()
+    # env.step grows the city's land once, at the end of the public step.
+    grown = compiled_method(env.territory,'grow_captured')(taken,taken.city_owned & ~first.city_owned)
+    assert grown.territory_claims[1] == 15 and land_count(grown) >= land_count(first)+15
+    assert env.territory.owned(grown,outside)
+    assert taken.day == first.day and taken.gold == first.gold
+    chex.assert_trees_all_equal(taken.mana,first.mana)
+    # The leader falling in that same battle changes nothing about the capture.
+    fallen = beat(first,42,leader_falls=True)
+    assert fallen.hp[1] == 0 and fallen.city_owned[0] and fallen.position.tolist() == city.tolist()
+    # A dead leader cannot start a fight with city defenders; field armies stay open to him.
+    mask = compiled_method(env,'action_mask')
+    leaderless = first.replace(hp=first.hp.at[1].set(0),movement_points=points)
+    assert not mask(leaderless)[0]
+    refused,_ = step(leaderless,jnp.int32(0))
+    assert not refused.in_battle and refused.position.tolist() == outside.tolist()
+    assert refused.movement_points == points
+    field = int(jnp.argmax(env.territory.enemy_city<0))
+    assert not env.territory.city_attack_refused(leaderless,leaderless.enemy_positions[field])
+    assert mask(first)[0]
+    # Defenders gone without a fight of the party (a summon): entry needs a living hero.
+    s = first.replace(alive=first.alive.at[42].set(False))
     dead = s.replace(hp=s.hp.at[1].set(0))
     inside,_ = step(dead,jnp.int32(0))
     assert not inside.city_owned[0]
@@ -100,7 +168,7 @@ def test_two_city_armies_capture_live_hero_and_no_remote_capture(current_game):
     assert not rested.city_owned[0]
     outside,_ = step(rested,jnp.int32(4))
     captured,_ = step(outside,jnp.int32(0))
-    assert captured.city_owned[0]
+    assert captured.city_owned[0] and captured.territory_claims[1] == 15
     capture = compiled_method(env.territory,'capture')
     for bad in (revived.replace(unit_ids=revived.unit_ids.at[1].set(0)),
                 revived.replace(summon_owner=revived.summon_owner.at[1].set(0)),
@@ -120,10 +188,9 @@ def test_city_capture_spreads_once_before_the_next_day(current_game,level,budget
     before = cleared_city(env,initial).replace(position=rules.positions[0],
         city_levels=initial.city_levels.at[0].set(level),gold=jnp.int32(173),
         mana=jnp.arange(5,dtype=jnp.int32))
-    capture = compiled_method(rules,'capture')
+    capture = take_city(rules)
     captured = capture(before,jnp.bool_(True))
-    # The reference grid counts the city's own cell separately from the budget.
-    assert captured.territory_claims.tolist() == [1,1+budget,0]
+    assert captured.territory_claims.tolist() == [0,budget,0]
     assert rules.owned(captured,rules.positions[0]+jnp.array([1,0]))
     assert captured.last_captured_cities.tolist() == [True,False]
     for name in ('gold','mana','day','movement_points','opponent_claims','hp'):
@@ -133,7 +200,8 @@ def test_city_capture_spreads_once_before_the_next_day(current_game,level,budget
     assert not jnp.any(repeated.last_captured_cities)
     # Daily growth remains an additional budget, not a delayed capture bonus.
     tomorrow = compiled_method(rules,'next_turn')(repeated)
-    assert tomorrow.territory_claims.tolist() == [11,1+2*budget,0]
+    assert tomorrow.territory_claims[0] == 10 and tomorrow.territory_claims[1] > budget
+    assert land_count(tomorrow) >= land_count(repeated)+10+budget
 
 
 def capture_land_case(env,initial,contested=False,island=False):
@@ -151,10 +219,11 @@ def capture_land_case(env,initial,contested=False,island=False):
         city_owned=jnp.zeros(1,bool),city_levels=rules.initial_levels,
         territory_claims=rules.initial_claims,last_captured_cities=jnp.zeros(1,bool),
         territory_owners=rules.initial_owners,
-        opponent_claims=rules.opponent_counts if contested else jnp.zeros(0,jnp.int32),
+        opponent_claims=rules.initial_opponent_claims,
         gold=jnp.int32(173),mana=jnp.arange(5,dtype=jnp.int32))
     if contested:
-        state = compiled_method(rules,'repaint')(state)
+        # The opposing source has painted everything its front reaches.
+        state = compiled_method(rules,'_spread')(state,jnp.array([0,0,81]))
     return rules,state,jnp.array(water)
 
 
@@ -163,46 +232,151 @@ def test_capture_connects_mine_immediately_without_income_or_other_source_growth
     """Capture claims nearby mines immediately but pays their income the next day."""
     env,initial,_,_ = current_game
     rules,before,water = capture_land_case(env,initial,contested)
-    capture = compiled_method(rules,'capture')
+    capture = take_city(rules)
     assert not rules.mine_ownership(before)[0] and rules.income(before)[0] == 100
     rejected = capture(before,jnp.bool_(False))
     for name in ('territory_claims','territory_owners','opponent_claims'):
         chex.assert_trees_all_equal(getattr(rejected,name),getattr(before,name))
     after = capture(before,jnp.bool_(True))
-    assert after.territory_claims.tolist() == [1,16]
-    assert rules.mine_ownership(after)[0] and rules.income(after)[0] == 150
+    assert after.territory_claims[0] == before.territory_claims[0] and rules.mine_ownership(after)[0]
+    assert rules.income(after)[0] == 150
     assert not jnp.any(rules.owned(after,water))
-    assert not rules.owned(after,jnp.array([3,3]))  # obstacle
+    # Discipl2.exe 0x60c411 paints the mine's whole ring, obstacles included, outside the quota.
+    assert rules.owned(after,jnp.array([3,3]))
     assert not rules.owned(after,jnp.array([0,4]))  # outer border
     for name in ('gold','mana','day','movement_points','opponent_claims'):
         chex.assert_trees_all_equal(getattr(after,name),getattr(before,name))
     if contested:
-        # A closer new city source wins immediately; equal distances retain
-        # the existing owner, and the opposing source itself is not repainted.
+        # A new front repaints foreign land at once; the opposing source's own tile keeps its owner.
         assert rules.owner(before,jnp.array([4,3])) == 2
-        assert rules.owner(after,jnp.array([4,4])) == 1
-        assert rules.owner(after,jnp.array([4,5])) == 2
+        assert rules.owner(after,jnp.array([4,3])) == 1
         assert rules.owner(after,jnp.array([4,6])) == 2
+    # Income is paid after every front has grown: the opposing one takes the mine back that day.
     tomorrow = compiled_method(rules,'next_turn')(after)
-    assert tomorrow.gold == after.gold+150
+    assert tomorrow.gold == after.gold+(100 if contested else 150)
 
 
 def test_capture_growth_is_clamped_to_reachable_land(current_game):
-    """A city on an island cannot spend its capture budget across water."""
+    """A city on an island cannot spend its capture budget across water: 0x5e1408 walks four ways."""
     env,initial,_,_ = current_game
     rules,before,water = capture_land_case(env,initial,island=True)
     before = before.replace(city_levels=jnp.array([5],jnp.int32))
-    after = compiled_method(rules,'capture')(before,jnp.bool_(True))
-    assert rules.reachable_counts[1] == 2 and after.territory_claims.tolist() == [1,2]
-    assert rules.mine_ownership(after)[0] and not jnp.any(rules.owned(after,water))
+    after = take_city(rules)(before,jnp.bool_(True))
+    assert rules.reachable_counts[1] == 0 and after.territory_claims.tolist() == [0,0]
+    assert not rules.mine_ownership(after)[0] and not jnp.any(rules.owned(after,water))
     tomorrow = compiled_method(rules,'next_turn')(after)
-    assert tomorrow.territory_claims[1] == 2
+    assert tomorrow.territory_claims[1] == 0
+
+
+def land_rules(env,**extra):
+    """A 12x12 map with its capital in the corner; the tests place the other objects."""
+    return TerritoryRules({**dict(size=12,capital_position=[1,1],agent_position=[1,1],faction='legions',
+        lord_type='warrior',opponent_positions=[[10,10]],obstacles=[],mines=[],cities=[]),**extra},env.progression,193)
+
+
+def land_state(rules,initial):
+    return initial.replace(territory_owners=rules.initial_owners,territory_claims=rules.initial_claims,
+                           opponent_claims=rules.initial_opponent_claims,city_owned=jnp.zeros(rules.count,bool),
+                           city_levels=rules.initial_levels,last_captured_cities=jnp.zeros(rules.count,bool))
+
+
+def test_land_order_follows_the_original_heap():
+    """Discipl2.exe 0x5e1499: four directions, by depth, with the MSVC heap's order among equals."""
+    assert land_order(5,(1,1),frozenset()) == tuple(5*r+c for r,c in (
+        (2,1),(1,2),(2,2),(1,3),(3,1),(2,3),(3,2),(3,3)))
+    # A rejected tile is neither painted nor spread through.
+    assert land_order(5,(1,1),frozenset({(1,2),(2,1)})) == ()
+    assert 5*3+1 not in land_order(5,(1,1),frozenset({(2,1),(2,2),(1,3)}))
+    assert fort_center({(r,c) for r in range(3,8) for c in range(4,9)}) == (5,6)
+    assert fort_center({(r,c) for r in range(3,7) for c in range(4,8)}) == (5,6)
+    assert fort_center({(3,4)}) == (3,4)
+
+
+def test_daily_quota_counts_new_tiles_only(current_game):
+    """Own tiles cost a front nothing, so painted land does not waste the day's growth."""
+    env,initial,_,_ = current_game
+    rules = land_rules(env,starting_land=[[1,1],[1,2],[2,1],[2,2],[1,3],[3,1]])
+    state = land_state(rules,initial)
+    assert land_count(state) == 6 and state.territory_claims[0] > 0
+    turn = compiled_method(rules,'next_turn')
+    state = turn(state)
+    assert land_count(state) == 16
+    assert land_count(turn(state)) == 26
+
+
+@pytest.mark.parametrize('blocker,stops',[('land_blocked',True),('water',True),('real_fort',True),
+                                          ('neutral_city',False),('foreign_land',False)])
+def test_what_stops_the_land_front(current_game,blocker,stops):
+    """0x5e119b: water, mountains and real players' forts stop it; neutral cities and foreign paint do not."""
+    env,initial,_,_ = current_game
+    wall = [[r,3] for r in range(1,11)]
+    if blocker in ('real_fort','neutral_city'):
+        rules = land_rules(env,land_blocked=[p for p in wall if p != [5,3]],cities=[dict(position=[5,3],level=1,
+            footprint=[[5,3]],neutral=blocker == 'neutral_city')])
+    else:
+        rules = land_rules(env,**(dict(terrain=dict(water=wall)) if blocker == 'water' else {blocker:wall}))
+    amounts = jnp.zeros(rules.land_order.shape[0],jnp.int32).at[0].set(144)
+    full = compiled_method(rules,'_spread')(land_state(rules,initial),amounts)
+    assert bool(rules.owned(full,jnp.array([5,6]))) == (not stops)
+
+
+def owned_cells(state):
+    return {int(c) for c in jnp.nonzero(state.territory_owners == 1)[0]}
+
+
+def test_touched_mine_paints_its_ring_outside_the_quota(current_game):
+    """0x60c3b5/0x60c411: the mine and the eight tiles around it, as soon as the front is beside it."""
+    env,initial,_,_ = current_game
+    rules = land_rules(env,mines=[dict(position=[1,4],kind='gold')])
+    state = land_state(rules,initial)
+    order = [int(c) for c in rules.land_order[0,:rules.land_lengths[0]]]
+    assert int(rules.mine_cells[0]) not in order  # The mine itself stops the front.
+    first = next(i for i,c in enumerate(order) if rules.touch_bits[c] == 1)
+    grow = compiled_method(rules,'_spread')
+    assert not rules.mine_ownership(grow(state,jnp.array([first])))[0]
+    touched = grow(state,jnp.array([first+1]))
+    assert touched.territory_claims[0] == first+1
+    assert owned_cells(touched) == {12+1} | set(order[:first+1]) | {r*12+c for r in (1,2) for c in (3,4,5)}
+
+
+@pytest.mark.parametrize('capital,chained',[([1,10],True),([1,1],False)],ids=['from-east','from-west'])
+def test_a_mine_ring_can_touch_the_next_mine(current_game,capital,chained):
+    """0x60c2ff walks the set while 0x60c411 grows it; a tile takes the first mine of table 0x6f1690, westmost."""
+    env,initial,_,_ = current_game
+    rules = land_rules(env,capital_position=capital,agent_position=capital,opponent_positions=[[10,5]],
+                       mines=[dict(position=[1,4],kind='gold'),dict(position=[1,6],kind='life')])
+    state = land_state(rules,initial)
+    order = rules.land_order[0,:rules.land_lengths[0]]
+    first = int(jnp.argmax(rules.touch_bits[order] != 0))
+    after = compiled_method(rules,'_spread')(state,jnp.array([first+1]))
+    assert rules.mine_ownership(after).tolist() == ([True,True] if chained else [True,False])
+
+
+@pytest.mark.parametrize('name,start,capital,union,never',[
+    ('default',140,139,902,{(5,25),(12,7),(17,26),(41,30),(47,30),(47,42)}),
+    ('the_charmed_child',190,287,1140,{(17,34)}),
+    ('bethrezens_retreat',259,177,2322,{(11,4),(19,6),(40,22),(69,29)}),
+])
+def test_original_scenarios_paint_the_start_and_reach_what_the_exe_reaches(current_game,name,start,capital,union,never):
+    """Pinned from an independent model of 0x5e1499 on the scenarios' own tiles."""
+    env,initial,_,_ = current_game
+    config = load_map(name)
+    rules = TerritoryRules(config,env.progression,193)
+    state = land_state(rules,initial)
+    assert land_count(state) == start and rules.land_lengths[0] == capital
+    reach = {int(c) for s,length in enumerate(rules.land_lengths[:1+rules.count])
+             for c in rules.land_order[s,:length]}
+    assert len(reach) == union
+    # Sites and ordinary landmarks do not stop the land, so the front covers some of them.
+    full = compiled_method(rules,'_spread')(state,jnp.full(rules.land_order.shape[0],config['size']**2))
+    owned = rules.mine_ownership(full)
+    assert {tuple(m['position']) for m,o in zip(rules.mines,owned.tolist()) if not o} == never
 
 
 def test_city_upgrade_remote_costs_growth_history_and_masks(current_game):
     env,s,step,_ = current_game
     rules = env.territory
-    s = s.replace(city_owned=jnp.array([True,False]),territory_claims=jnp.array([11,1,0]),gold=jnp.int32(3000))
+    s = s.replace(city_owned=jnp.array([True,False]),gold=jnp.int32(3000))
     mask = compiled_method(env,'action_mask')
     assert mask(s)[193] and not mask(s)[194]
     for level,cost in ((2,150),(3,250),(4,500),(5,750)):
@@ -215,15 +389,16 @@ def test_city_upgrade_remote_costs_growth_history_and_masks(current_game):
     failed,_ = step(s,jnp.int32(193))
     assert failed.gold == s.gold and failed.city_levels[0] == 5
     rested,_ = step(s,jnp.int32(REST))
-    assert rested.territory_claims.tolist() == [21,26,0]
+    assert rested.territory_claims.tolist() == [10,25,0]
     for invalid in (s.replace(city_owned=jnp.zeros(2,bool)),s.replace(city_levels=jnp.array([1,3]),gold=jnp.int32(149))):
         assert not mask(invalid)[193]
         out,_ = step(invalid,jnp.int32(193))
         chex.assert_trees_all_equal(out.city_levels,invalid.city_levels)
         assert out.gold == invalid.gold
-    # Independent sources count their overlaps rather than spending them elsewhere.
-    assert rules.ranks.shape == (3,48*48)
-    assert jnp.all(rules.ranks[jnp.arange(3),jnp.array([2*48+2,14*48+16,32*48+36])] == 0)
+    # Each fort's front starts at its own middle, which it never paints itself.
+    assert rules.land_order.shape[0] == 3
+    for source,cell in enumerate((2*48+2,14*48+16,32*48+36)):
+        assert not jnp.any(rules.land_order[source,:rules.land_lengths[source]] == cell)
 
 
 @pytest.mark.core
@@ -234,19 +409,20 @@ def test_regeneration_uses_original_fort_instead_of_land_and_does_not_revive(cur
     assert regen(s).tolist() == [55,55,55,55,0,0,0,0,0,0,0,0]
     neutral = s.replace(position=jnp.array([8,9]))
     assert regen(neutral)[0] == 20
-    own = neutral.replace(territory_claims=jnp.array([2304,0,0]))
+    own = neutral.replace(territory_owners=jnp.ones_like(neutral.territory_owners))
     assert regen(own)[0] == 30
     for level,percent in ((1,30),(2,35),(3,40),(4,45),(5,50)):
-        city = s.replace(position=rules.positions[0],city_owned=jnp.array([True,False]),
-                         territory_claims=jnp.array([2304,1,0]),city_levels=jnp.array([level,3]))
+        city = own.replace(position=rules.positions[0],city_owned=jnp.array([True,False]),
+                           city_levels=jnp.array([level,3]))
         assert regen(city)[0] == percent and regen(city,1)[0] == percent+10
     injured = s.replace(hp=s.hp.at[:4].set(jnp.array([1,50,44,0])))
     rested,_ = step(injured,jnp.int32(REST))
     assert rested.hp[:6].tolist() == [67,133,110,0,0,0]
-    assert rested.gold == 100 and rested.mana.tolist() == [25,0,0,0,0]
+    assert rested.gold == 150 and rested.mana.tolist() == [75,0,0,0,0]
     # Regen uses the land before growth, while income uses newly grown land.
     cell = neutral.position[0]*MAP['size']+neutral.position[1]
-    before = neutral.replace(territory_claims=jnp.array([rules.ranks[0,cell],0,0]),hp=neutral.hp.at[0].set(1))
+    rank = int(jnp.argmax(rules.land_order[0] == cell))
+    before = painted_up_to(rules,neutral,rank).replace(hp=neutral.hp.at[0].set(1))
     after,_ = step(before,jnp.int32(REST))
     assert rules.owned(after,after.position) and after.hp[0] == 25
 
@@ -360,7 +536,7 @@ def test_current_victory_needs_no_city_visit_and_reset_clears_resources(current_
     assert float(ts.discount) == 0 and jnp.isfinite(ts.reward)
     reset,_ = compiled_method(env,'reset')(jax.random.PRNGKey(7))
     assert not jnp.any(reset.mana) and not jnp.any(reset.city_owned)
-    assert reset.territory_claims.tolist() == [1,0,0]
+    assert reset.territory_claims.tolist() == [0,0,0] and land_count(reset) == 1
     obs = compiled_method(env,'observation')(reset)
     assert obs.shape == (env.observation_size,) and jnp.all(jnp.isfinite(obs))
 
@@ -377,9 +553,11 @@ def test_cell_lookup_matches_coordinate_oracle_for_every_tile(current_game):
         expected = jnp.where(jnp.any(matches,axis=-1),jnp.argmax(matches,axis=-1),-1)
         movement = jax.vmap(lambda p:env.territory.movement_mask(s.replace(position=p)))(positions)
         permitted = ~env.territory.blocked(positions[:,None,:]+env.directions[None,:,:])
-        claims = jnp.array([[1,0,0],[11,25,0],[900,0,70],[2304,2304,2304]])
-        owned = jax.vmap(lambda c:env.territory.owned(s.replace(territory_claims=c),positions))(claims)
-        expected_owned = jnp.any(env.territory.ranks[None,:,:] < claims[:,:,None],axis=1)
+        grids = jnp.stack((jnp.zeros_like(s.territory_owners),jnp.ones_like(s.territory_owners),
+                           (jnp.arange(env.size**2)%3).astype(jnp.int8),s.territory_owners))
+        owned = jax.vmap(lambda o:env.territory.owned(s.replace(territory_owners=o),positions))(grids)
+        inside = jnp.all((positions > 0) & (positions < env.size-1),axis=-1)
+        expected_owned = (grids == 1) & inside
         return actual,expected,movement,permitted,owned,expected_owned
     actual,expected,movement,permitted,owned,expected_owned = compare(alive)
     chex.assert_trees_all_equal(actual,expected)

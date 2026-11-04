@@ -101,5 +101,28 @@
   "mercenaries": [
     {"name": "Элитный лагерь наёмников", "position": [12, 18], "roster": [{"unit": "defender_of_faith", "price": 2500, "stock": 1}, {"unit": "white_mage", "price": 2000, "stock": 1}, {"unit": "g000uu0039", "price": 2500, "stock": 1}, {"unit": "archdruid", "price": 1800, "stock": 1}, {"unit": "g000uu0089", "price": 2000, "stock": 1}, {"unit": "g000uu0176", "price": 2500, "stock": 1}, {"unit": "centaur_savage", "price": 1800, "stock": 1}, {"unit": "watcher", "price": 1800, "stock": 1}]}
   ],
-  "enemy_capitals": []
+  "enemy_capitals": [],
+  "capital_footprint": [
+    [13, 1],
+    [13, 2],
+    [13, 3],
+    [14, 1],
+    [14, 2],
+    [14, 3],
+    [15, 1],
+    [15, 2],
+    [15, 3]
+  ],
+  "starting_land": [
+    [13, 1],
+    [13, 2],
+    [13, 3],
+    [14, 1],
+    [14, 2],
+    [14, 3],
+    [15, 1],
+    [15, 2],
+    [15, 3]
+  ],
+  "land_blocked": []
 }

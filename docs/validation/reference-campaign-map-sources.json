@@ -650,7 +650,7 @@
       "sha256": {
         "definition": "9a9a1922dc016e305b54bdf64ebe3805dd57a0a58326fd9cc61da284768e8be6",
         "layout": "a17d0166783fe964bbf21d08dd20367b979a08523b541dfcd9f294d7b9487fba",
-        "jax_map": "bf9cf43b0133c971d3604abef40250f834c010207e3bbfe11d3857d390277cb2"
+        "jax_map": "2e082e2f8777a5b83942d773d95795fbd90d0a4c51ad33f98fb5890dffe7f9c5"
       },
       "armies": 40,
       "fighters": 189,
@@ -664,7 +664,7 @@
       "sha256": {
         "definition": "b0adb55c6164ab9dd59964e87fc11cef09be180c4218eef6c6e128f3fdd28187",
         "layout": "6c459dc941bf12e13112dc4e0a330c40af32ecf8d88e3627790c8efa9e4d377d",
-        "jax_map": "05aeddf94a08fcbff7f45ab4351318d8a1aab19a33533fc4564416e4ef78ced2"
+        "jax_map": "1cdc90340a7c14a826e2c136113652f1563b300faad9b671aff24641ade08f79"
       },
       "armies": 33,
       "fighters": 106,
@@ -678,7 +678,7 @@
       "sha256": {
         "definition": "f46faada955bf1ac79942beab7835c024e51a12cdfc7ca68b5e8d8524842e3b7",
         "layout": "05c9bcb05532ca6e581f06d273b58e41ecebcd4733e7dbb6216c61c3797e97a1",
-        "jax_map": "7dca8ec045cde2cc4e5b23da2daf9fe894ac5203cb6ee6c08124ff2638144d98"
+        "jax_map": "7eea1b58506da64231eb0cf4925439278bb74dfb9aed95d26eaaedf6eb72d8ff"
       },
       "armies": 71,
       "fighters": 149,

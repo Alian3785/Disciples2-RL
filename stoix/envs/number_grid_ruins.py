@@ -53,6 +53,7 @@ class RuinRules:
             ruin['gold'], ruin['enemy'] = gold, at[0]
             indices.append(at[0])
         blocked = {tuple(p) for p in game_map.get('obstacles',[])}
+        blocked.update(tuple(m['position']) for m in game_map.get('mines',[]))
         blocked.update(p for ruin in self.ruins for p in ruin['footprint'])
         if sites is not None:
             blocked.update(p for site in sites.sites for p in site['footprint'])

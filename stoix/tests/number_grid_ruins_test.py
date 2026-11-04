@@ -112,7 +112,8 @@ def test_ruin_no_loot_before_victory_or_on_defeat_and_terminal_loot(current_game
     chex.assert_trees_all_equal(lost.potions,s.potions)
     last = at_ruin(env,s).replace(alive=jnp.zeros_like(s.alive).at[45].set(True),city_owned=jnp.ones(2,bool))
     won,reward = finish(env,last,fight)
-    assert won.won and won.done and won.ruin_looted[0] and reward == pytest.approx(4.25)
+    # The Cultist's share of the Troll stops at 74 of 75 XP without his building: -.05.
+    assert won.won and won.done and won.ruin_looted[0] and reward == pytest.approx(4.2)
     assert won.potions[env.potion_rules.keys.index('strength')] == 1
     # The hero may fall during a victorious fight; surviving companions keep loot.
     leaderless = at_ruin(env,s).replace(hp=s.hp.at[1].set(0))

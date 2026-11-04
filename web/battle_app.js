@@ -972,7 +972,7 @@
     }
     if(mineIndex>=0){
       const mine=territory.mines[mineIndex],kind=territory.resource_kinds.indexOf(mine.kind);
-      canvas.title=territory.resource_names[kind]+' · +50 за ход на своей земле · '+(snap.territory_quotes?.mine_owned[mineIndex]?'Ваш источник':'Нейтральный источник');return;
+      canvas.title=territory.resource_names[kind]+' · +50 за ход на своей земле · '+(snap.territory_quotes?.mine_owned[mineIndex]?'Ваш источник':'Нейтральный источник')+' · непроходим';return;
     }
     const kind=terrainGrid(map)[row*map.size+col]||0;
     const terrainTip=terrainNames[kind]+' · '+(snap.travel_costs||[2,1,4,6])[kind]+' очков движения';
