@@ -6,7 +6,7 @@ import pytest
 from stoix.envs.number_grid import MAP, REST
 from stoix.envs.number_grid_items import ItemRules
 from stoix.envs.number_grid_terrain import TerrainRules
-from stoix.tests.number_grid_fixtures import compiled_method, hero_roster_state
+from stoix.tests.number_grid_fixtures import compiled_method, full_land, hero_roster_state
 
 
 def test_lake_connected_empty_and_terrain_validated(current_game):
@@ -145,7 +145,7 @@ def test_death_revival_and_rest_restore_correct_movement(current_game, leader_ke
 @pytest.mark.core
 def test_water_excludes_land_but_not_travel_and_flight_cannot_cross_obstacles(current_game):
     env, initial, _, _ = current_game
-    flooded = initial.replace(territory_claims=jnp.full_like(initial.territory_claims,env.size**2))
+    flooded = full_land(env,initial)
     water = jnp.array(MAP['terrain']['water'])
     @jax.jit
     def check(s):

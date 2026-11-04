@@ -194,6 +194,8 @@ def build(snapshot):
     from scripts.build_bethrezens_retreat_events import add_events
     add_events(game_map, snapshot, catalog, UNIT_KEYS, UNITS)
     validate_geometry(game_map)
+    from scripts.land_data import scenario_land
+    scenario_land(game_map, 'bethrezens_retreat')
     return game_map
 
 

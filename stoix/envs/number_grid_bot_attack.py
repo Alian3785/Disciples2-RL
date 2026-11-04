@@ -47,7 +47,8 @@ class BotAttackRules:
         if self.raid_enemies and (
                 not isinstance(position, list) or len(position) != 2
                 or any(type(v) is not int or not 0 < v < game_map['size']-1 for v in position)
-                or position in game_map.get('obstacles', [])):
+                or position in game_map.get('obstacles', [])
+                or any(m['position'] == position for m in game_map.get('mines', []))):
             raise ValueError('bot_attack raids need a passable interior position')
         self.position = jnp.array(position, jnp.int32)
         self.slots = [self.enemy, *self.raid_enemies]

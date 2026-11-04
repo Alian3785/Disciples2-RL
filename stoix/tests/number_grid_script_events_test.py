@@ -191,8 +191,13 @@ def test_one_day_walk_past_ambush_cannot_finish_even_at_centre(campaign):
     for point in path:
         delta = [p-int(q) for p, q in zip(point, state.position)]
         action = directions.index(delta)
+        # A visible army's zone of control would stop the walk; this test is about the finish,
+        # so armies beside the path step aside for the move and pursue after it.
+        beside = state.alive & (jnp.max(jnp.abs(state.enemy_positions-jnp.array(point)), axis=1) <= 1)
+        state = state.replace(alive=state.alive & ~beside)
         assert bool(mask(state)[action])
         state, _ = step(state, jnp.int32(action))
+        state = state.replace(alive=state.alive | beside)
         assert state.position.tolist() == point and not bool(state.won)
         assert not bool(state.script_objective_ready)
     assert int(state.day) == int(initial.day)

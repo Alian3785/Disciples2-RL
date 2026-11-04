@@ -69,10 +69,10 @@ def test_default_hired_apprentice_promotes_and_summons():
     for current, promoted in [('apprentice', 'mage'), ('mage', 'elementalist')]:
         uid = rules.ids[current]
         choice = UNITS[current]['upgrades'].index(promoted)
-        state = state.replace(buildings=rules.building_bits[uid, choice])
+        state = state.replace(buildings=rules.building_bits[uid, choice],
+                              battle_earned_xp=state.battle_earned_xp.at[slot].set(100000))
         ids, levels, xp, enemies, hp, _, _ = finish(
-            state, state.hp, state.escaped, jnp.bool_(True), jnp.bool_(False),
-            jnp.bool_(False), jnp.array([0, 100000], jnp.int32))
+            state, state.hp, state.escaped, jnp.bool_(True), jnp.bool_(False), jnp.bool_(False))
         state = state.replace(unit_ids=ids, unit_levels=levels, unit_xp=xp,
                               enemy_progress=enemies, hp=hp)
         assert state.unit_ids[slot] == rules.ids[promoted]

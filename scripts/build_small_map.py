@@ -103,6 +103,8 @@ def build(layout):
     )
     game_map['battle_observation_version'] = 44
     game_map['equipment_requires_skills'] = True
+    from scripts.land_data import layout_land
+    layout_land(game_map, layout)
     return game_map
 
 

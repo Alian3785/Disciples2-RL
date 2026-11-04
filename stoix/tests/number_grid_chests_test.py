@@ -54,7 +54,7 @@ def test_eight_adjacent_tiles_collect_all_contents_once(current_game):
 
 def test_pickup_makes_new_type_usable_and_nonmovement_does_not_collect(current_game):
     env,state,advance,_=current_game
-    beside=state.replace(position=jnp.array([5,2]))
+    beside=state.replace(position=jnp.array([6,2]))
     picked,_=advance(beside,jnp.int32(2))
     kind=env.potion_rules.keys.index('might')
     action=POTION_START+6*kind
@@ -62,7 +62,7 @@ def test_pickup_makes_new_type_usable_and_nonmovement_does_not_collect(current_g
     used,_=advance(picked,jnp.int32(action))
     assert used.potions[kind]==0 and compiled_method(env,'unit_stats')(used)[0,1]==38
     for action in (REST,-1,POTION_START):
-        before=state.replace(position=jnp.array([5,3]),hp=state.hp.at[0].set(1))
+        before=state.replace(position=jnp.array([6,3]),hp=state.hp.at[0].set(1))
         after,_=advance(before,jnp.int32(action))
         chex.assert_trees_all_equal(after.chest_alive,before.chest_alive)
         assert not jnp.any(after.last_loot)

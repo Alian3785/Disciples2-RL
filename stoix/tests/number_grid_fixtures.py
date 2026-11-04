@@ -42,6 +42,15 @@ def batch_layout(count, capacity):
     return pad, trim
 
 
+def full_land(env, state):
+    """The state after the capital's land front has reached everything it can."""
+    import jax
+    import jax.numpy as jnp
+    rules = env.territory
+    amounts = jnp.zeros(rules.land_order.shape[0], jnp.int32).at[0].set(env.size**2)
+    return jax.jit(rules._spread)(state, amounts)
+
+
 def compiled_method(env, name, batched=False):
     """Keep a stable JIT function identity for immutable test environments."""
     import jax

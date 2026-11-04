@@ -19,7 +19,7 @@ def all_items(current_game):
     env.item_rules=ItemRules(dict(initial_items={p['key']:1 for p in ITEMS}))
     state=state.replace(item_inventory=jnp.full(len(ITEMS),-1,jnp.int32),
                         last_item_loot=jnp.zeros(len(ITEMS),jnp.int32))
-    env.random_size=84
+    env.random_size=max(original.random_size,84)
     env.has_copies=True
     refresh=jax.jit(env._refresh_equipment)
     attack=jax.jit(lambda s,target,connected,damage,rolls:equipment_attack(
@@ -48,14 +48,16 @@ def test_boot_percentages_scale_with_base_movement(all_items):
 
 def test_complete_catalogue_and_scenario_inventory(current_game):
     env,state,_,_=current_game
-    assert len(ITEMS)==255 and len({p['key'] for p in ITEMS})==255
+    assert len(ITEMS)==258 and len({p['key'] for p in ITEMS})==258
     # Usable: 44 orbs, 41 talismans (number_grid_battle_items); 101 scrolls, 14 staves.
-    assert [sum(p['category']==c for p in ITEMS) for c in range(8)]==[21,11,8,5,10,85,101,14]
+    assert [sum(p['category']==c for p in ITEMS) for c in range(8)]==[21,11,8,5,13,85,101,14]
     assert [sum(c['items'].values()) for c in MAP['chests']]==[3]*5
     assert env.item_rules.capacity==15 and env.item_rules.count==15
     assert env.num_actions==244 and compiled_method(env,'observation')(state).shape==(1844,)
     assert not jnp.any(state.item_inventory>=0) and jnp.all(state.equipped==-1)
-    valuables=[p for p in ITEMS if p['category']==VALUABLE]
+    # Three scenario trophies share the category; the quest totem has no sale price at all.
+    trophies=('sanctuera_scroll','agshlisga_totem','illudere_terra_scroll')
+    valuables=[p for p in ITEMS if p['category']==VALUABLE and p['key'] not in trophies]
     # Original Tglobal item descriptions give the merchant payout, not GItem.VALUE.
     assert [p['sell_price'] for p in valuables]==[50,100,150,200,250,300,350,400,500,1000]
     assert all(p['price']==p['sell_price']*5 for p in valuables)
@@ -160,15 +162,14 @@ def test_banner_health_regeneration_and_instant_retreat(all_items):
     env=copy.copy(env)
     env._test_jit_methods={}
     env.chests_enabled=False
-    env.random_size=84
     state=refresh(inventory(env,state,'banner_health','rusted_shackles'))
     state=state.replace(hp=state.hp.at[3].set(1))
-    resting_hp=jax.jit(lambda s:env._world_step(s,jnp.int32(REST),s.battle_key,jnp.zeros(84))[0].hp)(state)
+    resting_hp=jax.jit(lambda s:env._world_step(s,jnp.int32(REST),s.battle_key,jnp.zeros(env.random_size))[0].hp)(state)
     assert resting_hp[3]==31  # ceil(45*65%) = 30 HP; capital + warrior lord + banner, rounded once
     start=compiled_method(env,'_begin_battle')(state.replace(enemy=jnp.int32(0))).replace(actor=jnp.int32(1))
     @jax.jit
     def retreat(s):
-        result=env._battle_step(s,jnp.int32(RETREAT),s.battle_key,jnp.zeros(84))[0]
+        result=env._battle_step(s,jnp.int32(RETREAT),s.battle_key,jnp.zeros(env.random_size))[0]
         return result.escaped[1],result.retreating[1],result.last_event
     escaped,retreating,event=retreat(start)
     assert escaped and not retreating and event==ESCAPE
@@ -180,7 +181,7 @@ def test_banner_health_regeneration_and_instant_retreat(all_items):
 @pytest.mark.core
 def test_chests_equip_boots_restore_movement_and_keep_loot_once(current_game):
     env,state,advance,_=current_game
-    picked,_=advance(state.replace(position=jnp.array([5,2])),jnp.int32(2))
+    picked,_=advance(state.replace(position=jnp.array([6,2])),jnp.int32(2))
     assert env.movement_cap(picked)==24 and picked.movement_points==22
     assert jnp.sum(picked.last_item_loot)==3 and jnp.sum(picked.item_inventory>=0)==3
     assert compiled_method(env,'unit_stats')(picked)[1,3]==compiled_method(env,'unit_stats')(state)[1,3]+10

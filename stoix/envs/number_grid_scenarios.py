@@ -59,7 +59,7 @@ class ScenarioRules:
         self.wave_numbers = jnp.array(sorted({e.get('wave_index', 0) for e in self.events}), jnp.int32)
         self.max_turn = max((e['spawn_turn'] for e in self.events), default=1)
         if self.enabled:
-            self.distances = path_distances(self.size, territory.obstacle_cells)
+            self.distances = path_distances(self.size, territory.impassable_cells)
             # Reference tie order is x first, y second, after three greedy choices.
             self.directions = jnp.array([(dy, dx) for dx in (-1, 0, 1) for dy in (-1, 0, 1)
                                          if dx or dy], jnp.int32)

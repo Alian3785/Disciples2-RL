@@ -17,22 +17,21 @@ def batch(state, count):
 
 
 @pytest.mark.core
-def test_passing_beside_enemy_and_map_services_do_not_start_combat(current_game):
+def test_step_beside_enemy_fights_but_map_services_beside_it_do_not(current_game):
     env, initial, advance, _ = current_game
-    state = initial.replace(position=jnp.array([2,6]), hp=initial.hp.at[0].set(60))
-    for col in (7,8,9):
-        state, ts = advance(state,jnp.int32(2))
-        assert not state.in_battle and state.enemy == initial.enemy
-        chex.assert_trees_all_equal(state.position,jnp.array([2,col]))
-        chex.assert_trees_all_equal(state.battle_key,initial.battle_key)
-        chex.assert_trees_all_equal(state.alive,initial.alive)
-        assert float(ts.reward) == pytest.approx(env.exploration_bonus-env.step_cost)
+    # Enemy 0 stands at [3,8]; [2,7] is in its zone of control (docs/COMBAT.md#zones).
+    entered, _ = advance(initial.replace(position=jnp.array([2,6])), jnp.int32(2))
+    assert entered.in_battle and entered.enemy == 0 and entered.last_event == ENGAGE
+    chex.assert_trees_all_equal(entered.position, jnp.array([2,7]))
+    chex.assert_trees_all_equal(entered.origin, jnp.array([2,7]))
+    assert entered.map_steps == 1 and entered.movement_points == 20-2-10
     # Rest and a potion alongside the enemy are still ordinary map actions.
+    state = initial.replace(position=jnp.array([2,7]), hp=initial.hp.at[0].set(60))
     state, _ = advance(state,jnp.int32(POTION_START))
     assert not state.in_battle and state.hp[0] == 110
     state, _ = advance(state,jnp.int32(REST))
     assert not state.in_battle and state.hp[0] == 120
-    assert state.map_steps == 3 and state.day == 2 and state.movement_points == 20
+    assert state.map_steps == 0 and state.day == 2 and state.movement_points == 20
     chex.assert_trees_all_equal(state.battle_key,initial.battle_key)
 
 
@@ -117,28 +116,42 @@ def test_victory_and_retreat_stay_at_origin_and_cleared_tile_needs_separate_move
     assert escaped.last_event==WITHDRAW and not escaped.in_battle and escaped.alive[0]
     chex.assert_trees_all_equal(escaped.position,ready.position)
     assert escaped.movement_points==10 and escaped.map_steps==0
-    passed,_=advance(escaped,jnp.int32(0))
+    # Still beside enemy 0: a step to [2,7], also beside it, attacks it without moving.
+    held,_=advance(escaped,jnp.int32(0))
+    assert held.in_battle and held.enemy==0 and held.movement_points==0 and held.map_steps==0
+    chex.assert_trees_all_equal(held.position,ready.position)
+    passed,_=advance(escaped,jnp.int32(6))
     assert not passed.in_battle and passed.movement_points==6  # Dead Duke: plain costs 4.
-    chex.assert_trees_all_equal(passed.position,jnp.array([2,7]))
+    chex.assert_trees_all_equal(passed.position,jnp.array([3,6]))
 
 
-def test_human_server_uses_jax_target_and_cost_and_does_not_auto_attack_neighbours(current_game):
+def test_human_server_uses_jax_targets_and_costs_for_attacks_and_zone_steps(current_game):
     from serve_number_grid import GameService
     env,initial,advance,_=current_game
     service=GameService.__new__(GameService)
     service.lock=threading.Lock()
     key=(env.construction.faction,env.construction.lord['id'])
     service.environments={key:(env,compiled_method(env,'reset'),advance)}
-    service.sessions=OrderedDict({'attack':(key,initial.replace(position=jnp.array([2,6])),0.)})
-    result=service.act('attack',2)['snapshot']
-    assert result['state']['position']==[2,7] and not result['state']['in_battle']
-    assert result['map_commands'][3]==[0,10] and result['action_mask'][3]
+    service.sessions=OrderedDict({'attack':(key,initial.replace(position=jnp.array([2,7])),0.),
+                                  'zone':(key,initial.replace(position=jnp.array([2,6])),0.)})
+    # [2,6] is outside every zone; east steps into enemy 0's zone: a step and the entry.
+    quotes=compiled_method(env,'map_commands')
+    assert quotes(initial.replace(position=jnp.array([2,6]))).tolist()[2]==[0,12]
+    assert quotes(initial.replace(position=jnp.array([2,6]))).tolist()[6]==[-1,2]
+    stepped=service.act('zone',2)
+    assert stepped['events'][0]['state']['last_event']==ENGAGE
+    assert stepped['snapshot']['state']['in_battle'] and stepped['snapshot']['state']['enemy']==0
+    assert stepped['snapshot']['state']['position']==[2,7]
+    assert stepped['snapshot']['state']['movement_points']==8
+    # Beside enemy 0, south-east hits its tile; east (also beside it) fights it from here.
+    commands=quotes(initial.replace(position=jnp.array([2,7]))).tolist()
+    assert commands[3]==[0,10] and commands[2]==[0,10]
     attacked=service.act('attack',3)
     assert attacked['events'][0]['state']['last_event']==ENGAGE
     assert attacked['snapshot']['state']['in_battle']
     assert attacked['snapshot']['state']['enemy']==0
     assert attacked['snapshot']['state']['position']==[2,7]
-    assert attacked['snapshot']['state']['movement_points']==8
+    assert attacked['snapshot']['state']['movement_points']==10
 
 
 def test_expanded_map_edges_and_exploration_bits(current_game):

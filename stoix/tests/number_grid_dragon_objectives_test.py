@@ -9,7 +9,7 @@ import jax
 import jax.numpy as jnp
 import pytest
 
-from stoix.envs.number_grid import DEFEND, REST, SHOOT, WAIT, NumberGrid, action_names, load_map
+from stoix.envs.number_grid import CONTINUE, DEFEND, REST, SHOOT, WAIT, NumberGrid, action_names, load_map
 from stoix.envs.number_grid_casting import CAST_REWARD, SPELL_KILL, SUMMON
 from stoix.envs.number_grid_combat import ACCURACY, AREA, DAMAGE, HP, INITIATIVE
 from stoix.tests.number_grid_fixtures import compiled_method
@@ -103,7 +103,7 @@ def test_map_spell_kill_finishes_without_cities_and_obeys_bonus_rule(dragon_game
     bonus = 0 if env.objective_reward_hero_only else 3
     penalty = .05*float(env.recruitment.composition(after)[2])
     assert float(ts.reward) == pytest.approx(CAST_REWARD+bonus-env.step_cost-penalty)
-    assert not jnp.any(mask(after))
+    assert jnp.flatnonzero(mask(after)).tolist() == [CONTINUE]
     again, ts = step(after, jnp.int32(REST))
     assert again.done and not again.alive[DRAGON] and float(ts.reward) == 0
 
@@ -120,10 +120,11 @@ def test_hero_and_summon_victories_finish_with_the_correct_bonus(dragon_game, su
             prepared, jnp.bool_(True), jnp.int32(spell), jnp.int32(DRAGON))
         actor = int(env.casting.summon_slots[spell])
     battle = compiled_method(env, '_begin_battle')(prepared)
-    battle = battle.replace(actor=jnp.int32(actor), hp=battle.hp.at[7].set(1))
+    # The first summon cannot hurt the Green Dragon, so its fight starts already won.
+    battle = battle.replace(actor=jnp.int32(actor), hp=battle.hp.at[7].set(0 if summon else 1))
     advance = compiled_method(env, '_battle_step')
     draws = jnp.zeros(env.random_size, jnp.float32)  # deterministic successful attack
-    after, reward = advance(battle, jnp.int32(SHOOT+1), jax.random.PRNGKey(7), draws)
+    after, reward = advance(battle, jnp.int32(DEFEND if summon else SHOOT+1), jax.random.PRNGKey(7), draws)
     for key in range(8, 14):  # post-victory healing turns, only while a healer is alive
         if not after.in_battle:
             break

@@ -33,7 +33,7 @@ class ScriptedBotRules:
                        for v in (self.budget, self.respawn_turns, self.battle_decisions))):
             raise ValueError('Invalid scripted bot index or positive integer budgets')
         if (list(spec['home']) != list(game_map['opponent_positions'][self.enemy])
-                or tuple(spec['home']) in territory.obstacle_cells):
+                or tuple(spec['home']) in territory.impassable_cells):
             raise ValueError('Scripted bot must start on its passable home tile')
         if game_map.get('cities'):
             raise ValueError('This scripted bot supports city-free maps such as Mirror match')
@@ -48,7 +48,7 @@ class ScriptedBotRules:
         # Reference offsets in (x,y), converted to row/column.
         offsets = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1),
                    (1, -1), (1, 0), (1, 1)]
-        blocked = set(territory.obstacle_cells)
+        blocked = set(territory.impassable_cells)
         # A step in direction k enters cell n from predecessors[n, k]; it is
         # legal exactly when n is an interior cell without an obstacle.
         self.passable = jnp.array([0 < r < self.size-1 and 0 < c < self.size-1 and (r, c) not in blocked
@@ -92,15 +92,24 @@ class ScriptedBotRules:
         One loop pass expands a whole distance layer instead of one queued cell.
         Each layer keeps its cells' dense FIFO ranks; a new cell takes the
         smallest (rank, direction) among its discoverers, which is the queue
-        order and parent of the one-cell FIFO search. With ``active`` false the
-        search is skipped and only the start is reached: vmapped callers whose
-        result is discarded then add no loop passes.
+        order and parent of the one-cell FIFO search. Stop after the first
+        complete layer containing a usable goal: home when returning, any
+        eligible neutral when hunting, otherwise the hero. Completing the layer
+        preserves source-ID ties and every parent on the selected route. With
+        no reachable goal the search still exhausts the component, preserving
+        the unreachable-target fallback. Inactive callers add no loop passes.
         """
         start = self._cell(state.enemy_positions[self.enemy])
         hero = self._cell(state.position)
         occupied = jnp.zeros(self.cells, jnp.int32).at[self._cell(state.enemy_positions)].max(
             state.alive.astype(jnp.int32)) > 0
         occupied = occupied.at[start].set(False)
+        targets = self.eligible & state.alive
+        cells = jnp.arange(self.cells)
+        neutral_goals = jnp.zeros(self.cells, jnp.int32).at[self._cell(state.enemy_positions)].max(
+            targets.astype(jnp.int32)) > 0
+        goal = jnp.where(state.bot_mode == RETURNING, cells == self._cell(self.home),
+                         jnp.where(jnp.any(targets), neutral_goals, cells == hero))
         parent = jnp.full(self.cells, -1, jnp.int32).at[start].set(start)
         distance = jnp.full(self.cells, self.cells, jnp.int32).at[start].set(0)
         enterable = self.passable & ((jnp.arange(self.cells) != hero) | allow_hero)
@@ -125,7 +134,7 @@ class ScriptedBotRules:
             return depth+1, fresh, rank, parent, distance
 
         _, _, _, parent, distance = jax.lax.while_loop(
-            lambda carry: jnp.any(carry[1]), layer,
+            lambda carry: jnp.any(carry[1]) & ~jnp.any(carry[1] & goal), layer,
             (jnp.int32(0), frontier, jnp.zeros(self.cells, dtype), parent, distance))
         return parent, distance
 
@@ -222,7 +231,7 @@ class ScriptedBotRules:
             unit_levels=state.unit_levels.at[:6].set(progress[:, 0]),
             unit_xp=state.unit_xp.at[:6].set(progress[:, 1]), hp=state.hp.at[:6].set(hp),
             done=jnp.bool_(False), won=jnp.bool_(False), lost=jnp.bool_(False),
-            summon_battle=jnp.bool_(False), spell_effects=jnp.uint32(0),
+            summon_battle=jnp.bool_(False), spell_effects=jnp.zeros_like(state.spell_effects),
             potion_bonus=jnp.zeros_like(state.potion_bonus), potion_doses=jnp.zeros_like(state.potion_doses),
             potion_temporary=jnp.zeros_like(state.potion_temporary), potion_active=jnp.zeros_like(state.potion_active),
             potion_wards=jnp.zeros_like(state.potion_wards),

@@ -4,6 +4,7 @@ Only reads reference map definitions and layout snapshots; never runs its enviro
 Run with scripts/run_gpu.sh and --reference pointing to the reference directory.
 """
 import argparse
+import hashlib
 import importlib
 import json
 import sys
@@ -13,10 +14,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.build_default_map import (CURRENT, RULES, UNITS, cell, dump, landmark_cells,
                                        restore_original_units, roster, site_cells)
+from scripts.land_data import layout_land, scenario_land
 from stoix.envs.number_grid_items import ITEMS
 from stoix.envs.number_grid_potions import POTIONS
+from stoix.envs.number_grid_spell_items import SPELL_ITEMS
 
 NAMES = ('super_last_stand', 'siege_train', 'the_charmed_child', 'trade_train')
+FOCUSED_NAMES = ('scroll_train', 'magic_train', 'item_train', 'hire_train', 'orc_duel', 'formation_train')
 SOURCE_NAMES = {'the_charmed_child': 'wotans_retribution'}  # Legacy Python-reference filename.
 # Installed Scens SLmark, extracted by scripts/extract_landmarks.py; the layout omits landmarks.
 LANDMARKS = {'the_charmed_child': ROOT/'docs/maps/the_charmed_child/landmarks.json'}
@@ -97,7 +101,7 @@ def build(base, name):
             if ids and ids[0] in by_id}
     hero = [None]*6
     overrides = {}
-    for slot, unit in config.starting_roster.items():
+    for slot, unit in (config.starting_roster or {}).items():
         hero[slot-7] = keys[unit]
         override = dict((config.starting_unit_overrides or {}).get(slot, {}))
         if 'dynamic_level_exp_increment' in override:
@@ -105,6 +109,13 @@ def build(base, name):
         override.pop('next_level_exp', None)
         overrides[slot-7] = override
     potions, items = loot(config.starting_hero_items)
+    if config.starting_scroll_items:
+        from scroll_spell_data import SCROLL_ITEM_DEFINITIONS
+        reference_scrolls = {item['item_name']: item for item in SCROLL_ITEM_DEFINITIONS}
+        scroll_keys = {item['spell']: item['key'] for item in SPELL_ITEMS if item['category'] == 'scroll'}
+        for name_in_inventory in config.starting_scroll_items:
+            key = scroll_keys[reference_scrolls[name_in_inventory]['spell_id'].lower()]
+            items[key] = items.get(key, 0)+1
     removed = set().union(*(site_cells(s['position']) for s in layout['sites']),
                           *(site_cells(r['ruin_pos']) for r in layout['ruins']))
     landmarks = landmark_cells(LANDMARKS[name]) if name in LANDMARKS else set()
@@ -124,7 +135,8 @@ def build(base, name):
         agent_position=cell(layout['hero']), agent_number=1,
         opponent_positions=[cell(e['position']) for e in stacks], opponent_numbers=[1]*len(stacks),
         **{k: CURRENT[k] for k in RULES}, battle_items=True, hero_skills=True,
-        faction={1:'empire', 2:'legions', 3:'mountain_clans', 4:'undead_hordes', 5:'elves'}[config.starting_capital_id],
+        faction={1:'empire', 2:'legions', 3:'mountain_clans', 4:'undead_hordes', 5:'elves'}[
+            config.starting_capital_id or config.default_capital_id],
         hero_roster=hero, hero_units=sum(k is not None for k in hero), hero_hp=150,
         hero_combat_stats=[overrides[i] for i, k in enumerate(hero) if k],
         starting_gold=int(config.starting_gold or 0),
@@ -164,8 +176,27 @@ def build(base, name):
             city.update(potions=vault.get('potions', {}), items=vault.get('items', {}))
         for key, count in CHARMED_CAPITAL_POTIONS.items():
             game_map['initial_potions'][key] = game_map['initial_potions'].get(key, 0)+count
-    game_map['lord_type'] = {1:'warrior', 2:'mage', 3:'guildmaster'}[config.starting_lord_type]
+    game_map['lord_type'] = {1:'warrior', 2:'mage', 3:'guildmaster'}[config.starting_lord_type or 1]
+    if config.starting_roster is None:
+        for key in ('hero_roster', 'hero_units', 'hero_combat_stats'):
+            game_map.pop(key)
     game_map.update(step_cost=0., exploration_bonus=.08, building_reward=0., battle_observation_version=44)
+    if name in FOCUSED_NAMES:
+        game_map.update(display_name=layout['title'], equipment_requires_skills=True,
+                        passive_mana_income_enabled=config.passive_mana_income_enabled,
+                        enforce_enemy_reachability=config.enforce_enemy_reachability)
+        game_map['reference_sha256'] = {
+            suffix: hashlib.sha256((base/'maps'/suffix).read_bytes()).hexdigest()
+            for suffix in (name+'.py', name+'/layout.json')}
+        for key in ('item_pickup_rewards', 'battle_item_equip_reward', 'battle_item_use_reward',
+                    'leadership_step_penalty', 'turn_penalty', 'spell_cast_reward', 'new_cell_reward',
+                    'rest_with_moves_penalty', 'timeout_reward', 'magic_enemy_defeat_reward'):
+            value = getattr(config, key)
+            if value is not None:
+                game_map[key] = ({item_key(k): v for k, v in value.items()}
+                                 if key == 'item_pickup_rewards' else value)
+        if config.all_enemies_reward is not None:
+            game_map['campaign_victory_reward'] = config.all_enemies_reward
     if layout.get('objective_enemy_id') is not None:
         game_map['objective_enemy'] = index[layout['objective_enemy_id']]
     if name == 'siege_train':
@@ -211,13 +242,17 @@ def build(base, name):
     game_map['enemy_capitals'] = [dict(name=c['name'], position=cell(c['position']),
         guard=next(i for i,e in enumerate(stacks) if e['position']==c['position']),
         footprint=[cell(p) for p in c['footprint']]) for c in capitals]
+    if name == 'the_charmed_child':
+        scenario_land(game_map, name)
+    else:
+        layout_land(game_map, layout)
     return game_map
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--reference', type=Path, required=True)
-    parser.add_argument('--map', action='append', choices=NAMES, dest='maps',
+    parser.add_argument('--map', action='append', choices=NAMES+FOCUSED_NAMES, dest='maps',
                         help='Only rebuild the selected map(s); by default rebuild all reference campaigns')
     args = parser.parse_args()
     base = args.reference/'Big_map' if (args.reference/'Big_map').is_dir() else args.reference

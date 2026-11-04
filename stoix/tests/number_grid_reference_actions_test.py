@@ -283,11 +283,11 @@ def test_warrior_reference_peasant_melee_tiers_and_script(current_game):
     masks = compiled_method(env,'action_mask',batched=True)(mirror)[:,SHOOT:SHOOT+6]
     chex.assert_trees_all_equal(masks, jnp.array([[1,1,0,0,0,0], [0,0,1,0,0,0],
         [0,0,0,1,1,0], [0,0,0,0,0,1], [0,0,0,0,0,0], [1,1,0,0,0,0]], jnp.bool_))
-    # Accuracy uses two integer draws: mean 74 hits, mean 75 misses.
+    # Accuracy uses two integer draws: at accuracy 75 a mean of 75 hits, 76 misses.
     sample = jax.tree.map(lambda a:a[0], states)
     sample = sample.replace(unit_levels=jnp.ones(12, jnp.int32))
-    hit, _ = attack(sample, jnp.int32(CONTINUE), sample.battle_key, jnp.zeros(env.random_size).at[12:24].set(.74))
-    miss, _ = attack(sample, jnp.int32(CONTINUE), sample.battle_key, jnp.zeros(env.random_size).at[12:24].set(.75))
+    hit, _ = attack(sample, jnp.int32(CONTINUE), sample.battle_key, jnp.zeros(env.random_size).at[12:24].set(.75))
+    miss, _ = attack(sample, jnp.int32(CONTINUE), sample.battle_key, jnp.zeros(env.random_size).at[12:24].set(.76))
     assert hit.last_target == 1 and hit.last_damage == 15
     assert miss.last_target == 1 and miss.last_damage == 0
 
@@ -410,7 +410,7 @@ def test_death_poison_uses_own_accuracy_source_and_multiple_targets(elemental_at
     states = jax.tree.map(lambda a: jnp.broadcast_to(a, (7,)+a.shape), start)
     actions = jnp.array([SHOOT,SHOOT+1,SHOOT+2,SHOOT+3,SHOOT+4,SHOOT+5,SHOOT+4],jnp.int32)
     rolls = jnp.zeros((7,env.random_size)).at[:,36].set(.99).at[:,37:49].set(.74).at[:,49:55].set(.99)
-    rolls = rolls.at[4,12:24].set(.99).at[5,37:49].set(.75)
+    rolls = rolls.at[4,12:24].set(.99).at[5,37:49].set(.76)
     result, _ = scalar_attack_cases(env,states,actions,rolls)
     chex.assert_trees_all_equal(result.last_damage,jnp.array([60,60,0,60,0,60,60]))
     chex.assert_trees_all_equal(jnp.sum(result.poison_mode,axis=1),jnp.array([0,0,0,2,0,0,2]))
@@ -457,7 +457,7 @@ def test_wight_secondary_roll_devolution_recovery_and_battle_cleanup():
     states = jax.tree.map(lambda a:jnp.broadcast_to(a,(7,)+a.shape),start)
     actions = jnp.array([SHOOT,SHOOT+1,SHOOT+2,SHOOT+3,SHOOT+4,SHOOT+5,SHOOT+3],jnp.int32)
     rolls = jnp.zeros((7,env.random_size)).at[:,36].set(.99).at[:,37:49].set(.79)
-    rolls = rolls.at[5,37:49].set(.8).at[6,12:24].set(.99)
+    rolls = rolls.at[5,37:49].set(.81).at[6,12:24].set(.99)
     out,_ = scalar_attack_cases(env,states,actions,rolls)
     chex.assert_trees_all_equal(out.last_damage,jnp.array([75,75,75,75,75,75,0]))
     chex.assert_trees_all_equal(jnp.sum(out.decay_form>0,axis=1),jnp.array([0,0,0,1,0,0,0]))
@@ -494,7 +494,8 @@ def test_wight_secondary_roll_devolution_recovery_and_battle_cleanup():
                           escaped=imp.escaped.at[:6].set(True).at[1].set(False))
     ended,_ = attack(limited,jnp.int32(CONTINUE),limited.battle_key,rolls[3])
     assert not ended.in_battle and not jnp.any(ended.decay_form) and not jnp.any(ended.imp)
-    assert ended.hp[9] == 224 and ended.unit_levels[9] == start.unit_levels[9]
+    # Enemy HP leaves the battle slots with the fight; the form's HP is checked on `final` above.
+    assert not jnp.any(ended.hp[6:]) and ended.unit_levels[9] == start.unit_levels[9]
     corpse = limited.replace(hp=limited.hp.at[9].set(0))
     dead,_ = attack(corpse,jnp.int32(CONTINUE),corpse.battle_key,rolls[3])
     assert dead.hp[9] == 0 and not jnp.any(dead.decay_form)
@@ -560,7 +561,7 @@ def test_sentry_and_watcher_secondary_source_accuracy_and_refresh(
         kind+'_damage':getattr(states,kind+'_damage').at[7,10].set(7)})
     actions = jnp.array([SHOOT,SHOOT+1,SHOOT+2,SHOOT+3,SHOOT+4,SHOOT+5,SHOOT+4,SHOOT+4,SHOOT+5],jnp.int32)
     rolls = jnp.zeros((9,env.random_size)).at[:,36].set(.99).at[:,37:49].set(.69).at[:,49:55].set(.99)
-    rolls = rolls.at[4,12:24].set(.99).at[5,37:49].set(.70)
+    rolls = rolls.at[4,12:24].set(.99).at[5,37:49].set(.71)
     result,_ = scalar_battle(env)(states,actions,states.battle_key,rolls)
     chex.assert_trees_all_equal(result.last_damage,jnp.array([primary,primary,0,primary,0,primary,primary,primary,primary+6]))
     targets = actions-SHOOT+6
@@ -746,7 +747,7 @@ def test_ghost_primary_paralysis_and_gast_long_effect(elemental_attack_game):
     states = jax.tree.map(lambda x:jnp.broadcast_to(x,(7,)+x.shape),start)
     states = states.replace(unit_ids=states.unit_ids.at[5,3].set(env.progression.ids['dark_elf_gast']))
     actions = jnp.array([SHOOT,SHOOT+1,SHOOT+2,SHOOT+3,SHOOT+4,SHOOT+5,SHOOT+5])
-    rolls = jnp.zeros((7,env.random_size)).at[:,12:24].set(.64).at[:,36].set(.99).at[4,12:24].set(.65)
+    rolls = jnp.zeros((7,env.random_size)).at[:,12:24].set(.64).at[:,36].set(.99).at[4,12:24].set(.66)
     out,_ = scalar_battle(env)(states,actions,states.battle_key,rolls)
     chex.assert_trees_all_equal(out.hp,states.hp)
     targets = actions-SHOOT+6
@@ -798,7 +799,7 @@ def test_shadow_independent_area_paralysis_preserves_wards_on_existing_effect(el
     start = start.replace(actor=jnp.int32(3),unit_ids=start.unit_ids.at[3].set(env.progression.ids['shadow']),
         unit_levels=start.unit_levels.at[3].set(env.progression.base_levels[env.progression.ids['shadow']]),
         paralyzed=start.paralyzed.at[6].set(True))
-    rolls = jnp.zeros(env.random_size).at[12:24].set(.49).at[16].set(.50).at[22].set(.50).at[36].set(.99)
+    rolls = jnp.zeros(env.random_size).at[12:24].set(.49).at[16].set(.51).at[22].set(.51).at[36].set(.99)
     out,_ = compiled_method(env,'_battle_step')(start,jnp.int32(SHOOT),start.battle_key,rolls)
     chex.assert_trees_all_equal(out.hp,start.hp)
     chex.assert_trees_all_equal(out.paralyzed[6:],jnp.array([1,0,1,1,0,1],bool))
@@ -810,7 +811,7 @@ def test_succub_area_transform_primary_rolls_secondary_source_and_guard_exclusio
     assert MAP['enemy_rosters'][23][5] == 'succubus'
     start = start.replace(actor=jnp.int32(3),unit_ids=start.unit_ids.at[3].set(env.progression.ids['succubus']),
         unit_levels=start.unit_levels.at[3].set(4))
-    rolls = jnp.zeros(env.random_size).at[12:24].set(.39).at[16].set(.40).at[22].set(.40).at[36].set(.99)
+    rolls = jnp.zeros(env.random_size).at[12:24].set(.39).at[16].set(.41).at[22].set(.41).at[36].set(.99)
     out,_ = compiled_method(env,'_battle_step')(start,jnp.int32(SHOOT),start.battle_key,rolls)
     chex.assert_trees_all_equal(out.hp,start.hp)
     chex.assert_trees_all_equal(out.imp[6:],jnp.array([0,0,1,1,0,1],bool))
@@ -840,7 +841,7 @@ def test_betrezen_independent_primary_and_secondary_sources(elemental_attack_gam
     actions = jnp.array([SHOOT,SHOOT+1,SHOOT+2,SHOOT+3,SHOOT+4,SHOOT+5,SHOOT+4,SHOOT])
     states = states.replace(long_paralyzed=states.long_paralyzed.at[7,6].set(True))
     rolls = jnp.zeros((8,env.random_size)).at[:,36].set(.99).at[:,67].set(.99)
-    rolls = rolls.at[5,37:49].set(.90).at[6,12:24].set(.90)
+    rolls = rolls.at[5,37:49].set(.91).at[6,12:24].set(.91)
     out,_ = scalar_battle(env)(states,actions,states.battle_key,rolls)
     chex.assert_trees_all_equal(out.last_damage,jnp.array([100,100,0,0,100,100,0,100]))
     targets = actions-SHOOT+6
@@ -888,7 +889,7 @@ def test_uter_melee_secondary_paralysis_only_after_primary_survivor(elemental_at
     states = jax.tree.map(lambda x:jnp.broadcast_to(x,(5,)+x.shape),start)
     states = states.replace(hp=states.hp.at[3,8].set(1))
     actions = jnp.array([SHOOT,SHOOT+1,SHOOT+2,SHOOT+2,SHOOT+2])
-    rolls = jnp.zeros((5,env.random_size)).at[:,36].set(.99).at[:,67].set(.99).at[4,12:24].set(.75)
+    rolls = jnp.zeros((5,env.random_size)).at[:,36].set(.99).at[:,67].set(.99).at[4,12:24].set(.76)
     out,_ = scalar_battle(env)(states,actions,states.battle_key,rolls)
     chex.assert_trees_all_equal(out.last_damage,jnp.array([35,35,35,1,0]))
     targets = actions-SHOOT+6
@@ -913,7 +914,7 @@ def test_uter_demon_area_secondary_finite_mermaid_and_long_demon(elemental_attac
     states = states.replace(unit_ids=states.unit_ids.at[:,2].set(jnp.array([env.progression.ids['mermaid'],env.progression.ids['uter_demon']])),
         unit_levels=states.unit_levels.at[:,2].set(1))
     rolls = jnp.zeros((2,env.random_size)).at[:,36].set(.99).at[:,67].set(.99)
-    rolls = rolls.at[0,16].set(.60).at[0,22].set(.60).at[1,16].set(.90).at[1,22].set(.90)
+    rolls = rolls.at[0,16].set(.61).at[0,22].set(.61).at[1,16].set(.91).at[1,22].set(.91)
     rolls = rolls.at[:,42].set(.99).at[:,48].set(.99)
     out,_ = scalar_battle(env)(states,jnp.full(2,SHOOT),states.battle_key,rolls)
     chex.assert_trees_all_equal(out.hp[:,6:],jnp.array([[300,300,280,280,300,280],[300,300,150,150,300,150]]))
@@ -928,7 +929,7 @@ def test_tiamat_area_weaken_has_independent_source_accuracy_and_no_stack(element
     assert MAP['enemy_rosters'][32][1] == 'tiamat'
     start = start.replace(actor=jnp.int32(1),unit_ids=start.unit_ids.at[1].set(env.progression.ids['tiamat']),
         unit_levels=start.unit_levels.at[1].set(5),priority=jnp.zeros(12).at[0].set(10000.))
-    rolls = jnp.zeros(env.random_size).at[36].set(.99).at[41].set(.80).at[47].set(.80)
+    rolls = jnp.zeros(env.random_size).at[36].set(.99).at[41].set(.81).at[47].set(.81)
     out,_ = compiled_method(env,'_battle_step')(start,jnp.int32(SHOOT),start.battle_key,rolls)
     chex.assert_trees_all_equal(out.hp[6:],jnp.array([200,200,300,200,200,200]))
     chex.assert_trees_all_equal(out.weakened[6:],jnp.array([0,0,0,1,0,1],bool))
@@ -1007,7 +1008,7 @@ def test_baroness_interior_fear_is_finite_paralysis_after_source_checks(elementa
     start = start.replace(actor=jnp.int32(3),unit_ids=start.unit_ids.at[3].set(env.progression.ids['baroness']),
         unit_levels=start.unit_levels.at[3].set(1))
     states = jax.tree.map(lambda x:jnp.broadcast_to(x,(4,)+x.shape),start)
-    rolls = jnp.zeros((4,env.random_size)).at[:,36].set(.99).at[:,67].set(.99).at[3,12:24].set(.8)
+    rolls = jnp.zeros((4,env.random_size)).at[:,36].set(.99).at[:,67].set(.99).at[3,12:24].set(.81)
     out,_ = scalar_battle(env)(states,jnp.array([SHOOT,SHOOT+1,SHOOT+2,SHOOT+3]),states.battle_key,rolls)
     chex.assert_trees_all_equal(out.hp,states.hp)
     chex.assert_trees_all_equal(out.paralyzed[jnp.arange(4),jnp.arange(4)+6],jnp.array([0,0,1,0],bool))
@@ -1061,7 +1062,8 @@ def test_baroness_hero_growth_keeps_zero_damage_and_reference_milestones(current
     chex.assert_trees_all_equal(stats[:,9],jnp.array([
         [100,0,80,0,20],[156,0,83,0,20],[231,0,89,0,30],[236,0,100,0,30],[241,0,100,20,30]],jnp.float32))
     xp = compiled_method(env,'unit_experience',batched=True)(states)
-    chex.assert_trees_all_equal(xp[:,9,2],jnp.array([120,1020,3720,4020,4320]))
+    # GDynUpgr: +300 XP_NEXT per level up to 10 (g000DU0073), then 0 (g002DU0073).
+    chex.assert_trees_all_equal(xp[:,9,2],jnp.array([120,1020,2820,2820,2820]))
 
 
 def test_incub_independent_area_paralysis_preserves_wards_on_existing_effect(elemental_attack_game):
@@ -1070,7 +1072,7 @@ def test_incub_independent_area_paralysis_preserves_wards_on_existing_effect(ele
     start = start.replace(actor=jnp.int32(3),unit_ids=start.unit_ids.at[3].set(env.progression.ids['medusa']),
         unit_levels=start.unit_levels.at[3].set(env.progression.base_levels[env.progression.ids['medusa']]),
         paralyzed=start.paralyzed.at[6].set(True))
-    rolls = jnp.zeros(env.random_size).at[12:24].set(.59).at[16].set(.60).at[22].set(.60).at[36].set(.99)
+    rolls = jnp.zeros(env.random_size).at[12:24].set(.59).at[16].set(.61).at[22].set(.61).at[36].set(.99)
     out,_ = compiled_method(env,'_battle_step')(start,jnp.int32(SHOOT),start.battle_key,rolls)
     chex.assert_trees_all_equal(out.hp,start.hp)
     chex.assert_trees_all_equal(out.paralyzed[6:],jnp.array([1,0,1,1,0,1],bool))
@@ -1101,7 +1103,7 @@ def test_abyss_devil_finite_secondary_paralysis_and_ordinary_melee_script(elemen
     start = start.replace(unit_ids=start.unit_ids.at[1].set(env.progression.ids['abyss_devil']),
         unit_levels=start.unit_levels.at[1].set(5),priority=jnp.zeros(12).at[0].set(10000.))
     states = jax.tree.map(lambda x:jnp.broadcast_to(x,(4,)+x.shape),start)
-    rolls = jnp.zeros((4,env.random_size)).at[:,36].set(.99).at[:,67].set(.99).at[3,37:49].set(.50)
+    rolls = jnp.zeros((4,env.random_size)).at[:,36].set(.99).at[:,67].set(.99).at[3,37:49].set(.51)
     out,_ = scalar_battle(env)(states,jnp.array([SHOOT,SHOOT+1,SHOOT+2,SHOOT+2]),states.battle_key,rolls)
     chex.assert_trees_all_equal(out.last_damage,jnp.full(4,140))
     chex.assert_trees_all_equal(out.paralyzed[jnp.arange(4),jnp.array([6,7,8,8])],jnp.array([0,0,1,0],bool))
@@ -1353,7 +1355,8 @@ def test_travnitsa_transformed_original_buff_expires_with_imp_turn(current_game)
     assert not imp.powerup[1] and compiled_method(env,'unit_stats')(imp)[1,DAMAGE] == 30
     spent,_ = attack(imp.replace(actor=jnp.int32(1)),jnp.int32(DEFEND),imp.battle_key,rolls)
     assert not spent.saved_powerup[1] and spent.saved_primary_override[1] == 170
-    restored = compiled_method(env,'_start_activation')(spent.replace(actor=jnp.int32(1),activation_done=jnp.zeros(12,bool)),jnp.float32(0))
+    # The witch's transformation is long (GAttacks INFINITE=T): it ends on a recovery roll.
+    restored = compiled_method(env,'_start_activation')(spent.replace(actor=jnp.int32(1),activation_done=jnp.zeros(12,bool)),jnp.float32(.99))
     assert not restored.imp[1] and compiled_method(env,'unit_stats')(restored)[1,DAMAGE] == 170
 
 
@@ -1617,7 +1620,9 @@ def test_drulliaan_life_area_and_independent_uncached_water_effect(elemental_att
     result,_ = compiled_method(env,'_battle_step')(state,jnp.int32(SHOOT),state.battle_key,rolls)
     chex.assert_trees_all_equal(result.hp[6:],jnp.full(6,125,jnp.int32))
     chex.assert_trees_all_equal(result.water_mode[6:],jnp.array([0,0,2,2,2,2]))
-    assert jnp.all(result.water_source == -1) and jnp.all(result.water_damage[8:] == 30)
+    # The source is tracked for experience, as with the Death's poison, without a target lock.
+    assert jnp.all(result.water_source[:8] == -1) and jnp.all(result.water_source[8:] == 3)
+    assert jnp.all(result.water_damage[8:] == 30)
     # Miss the separate status roll while retaining the primary Life damage.
     miss_rolls = rolls.at[37:49].set(.99)
     miss,_ = compiled_method(env,'_battle_step')(state,jnp.int32(SHOOT),state.battle_key,miss_rolls)

@@ -70,6 +70,8 @@ def make_evaluator(actor, episodes=1024, seed=1042, greedy=True, map_config=None
                 remaining = jnp.where(in_target_battle, jnp.sum(states.hp[:, 6:], axis=-1), target_hp-wounds)
                 fraction = jnp.clip(1.-remaining/jnp.maximum(1, target_hp), 0., 1.)
                 fraction = jnp.where(states.alive[:, target], fraction, 1.)
+                # Scheduled armies are also not alive before their first spawn.
+                fraction = jnp.where(states.scenario_spawned[:, target], fraction, 0.)
                 damage = jnp.maximum(damage, fraction)
             return states, ts, returns + ts.reward, key, reached, damage
         states, ts, returns, _, reached, damage = jax.lax.while_loop(
@@ -532,7 +534,7 @@ if __name__ == '__main__':
                    help='Checkpoint interval in total transitions (default: 5,000,000); independent of summary-interval')
     p.add_argument('--select-best', action='store_true',
                    help='Opt in to evaluation and checkpoint selection: save at checkpoint boundaries, select on 128 fixed episodes, evaluate final and best on 1024 other episodes')
-    p.add_argument('--map', help='current, default, default-green-dragon, default-blue-dragon, default-capital, small, small-green-dragon, small-blue-dragon, super_last_stand, siege_train, the_charmed_child, trade_train, mirror_match (mirrow_match), bethrezens_retreat, or a saved map JSON')
+    p.add_argument('--map', help='Named campaign, including scroll_train, magic_train, item_train, hire_train, orc_duel, formation_train, or a saved map JSON')
     p.add_argument('--no-unit-swaps', action='store_true',
                    help='Remove the party swap actions and features from the map (unit_swaps: false)')
     reports = p.add_mutually_exclusive_group()

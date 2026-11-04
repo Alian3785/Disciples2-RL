@@ -438,7 +438,7 @@ def test_regular_replacement_fills_reward_slot_without_mercenary_consuming_bonus
     rules = env.recruitment
     # Level 3 unlocks a fourth companion; the original three already claimed their places.
     party = initial.replace(unit_levels=initial.unit_levels.at[DUKE].set(3))
-    offer = rules.keys.index('goblin_archer')
+    offer = rules.keys.index('g000uu5040')
     hired, ts = compiled_method(env, 'step')(at_camp(env, party, offer), jnp.int32(rules.start + offer))
     slot = int(hired.last_target)
     assert rules.composition(hired)[2] == 0 and rules.reward_vacancies(hired) == 1
@@ -461,7 +461,7 @@ def test_camp_origin_survives_promotion_swaps_battle_death_and_reset(capital):
     env, initial = capital
     rules = env.recruitment
     party = initial.replace(unit_levels=initial.unit_levels.at[DUKE].set(3))
-    offer = rules.keys.index('goblin_archer')
+    offer = rules.keys.index('g000uu5040')
     hired, _ = compiled_method(env, 'step')(at_camp(env, party, offer), jnp.int32(rules.start + offer))
     slot = int(hired.last_target)
     before, action = near_enemy(env, hired, 30)

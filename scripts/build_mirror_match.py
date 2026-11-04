@@ -60,6 +60,8 @@ def build(layout, source_hash):
     )
     result.update(step_cost=0., exploration_bonus=.08, building_reward=0., lord_type='warrior',
                   battle_observation_version=45)
+    from scripts.land_data import layout_land
+    layout_land(result, layout)
     return result
 
 

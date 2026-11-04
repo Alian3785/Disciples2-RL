@@ -29,7 +29,8 @@ def default_game():
 def human_service(current_game):
     from collections import OrderedDict
     import threading
-    from serve_number_grid import GameService
+    from serve_number_grid import DEFAULT_FACTION, GameService
+    from stoix.tests.number_grid_fixtures import SCENARIO_LORD
     env, _, step, _ = current_game
     # Serialize the real accessors through the same cached GPU functions as the
     # mechanics tests. Eager snapshot assembly otherwise compiles hundreds of
@@ -51,6 +52,8 @@ def human_service(current_game):
     service.environments = {(env.construction.faction, env.construction.lord['id']):(view,compiled_method(env,'reset'),step)}
     service.sessions = OrderedDict()
     service.lock = threading.Lock()
+    create = service.create
+    service.create = lambda seed, faction=DEFAULT_FACTION, lord_type=SCENARIO_LORD: create(seed, faction, lord_type)
     return service
 
 
