@@ -77,6 +77,8 @@ def test_laclaan_army_is_required_for_victory(env):
     for changes in ({'optional_enemies': [51]}, {'optional_enemies': [0], 'objective_enemy': 0}):
         with pytest.raises(ValueError, match='optional_enemies'):
             NumberGrid(map_config={**MAP, **changes})
+    with pytest.raises(ValueError, match='all_enemies cannot be combined with objective_enemy'):
+        NumberGrid(map_config={**MAP, 'objective_enemy': 0})
 
 
 def test_large_unit_formation_rejects_overlap_and_rear_anchors():

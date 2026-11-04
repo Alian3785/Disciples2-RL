@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -49,8 +50,10 @@ def prepare(batch, project, workspace, series='focused-six'):
             raise ValueError('Campaign CUDA preflight must cover all five maps')
     else:
         evidence += ['focused-tests.log', 'magic-win.log']
-        for name, count in (('focused-tests.log', '8 passed'), ('magic-win.log', '1 passed')):
-            if count not in (batch/name).read_text():
+        for name, count in (('focused-tests.log', 8), ('magic-win.log', 1)):
+            # The whole count must match ("18 passed" is not "8 passed"); any failure rejects the log.
+            text = (batch/name).read_text()
+            if not re.search(rf'(?<!\d){count} passed', text) or re.search(r'\b\d+ (failed|errors?)\b', text):
                 raise ValueError('Focused preflight did not pass: '+name)
     snapshot = batch/'source'
     snapshot.mkdir(exist_ok=False)

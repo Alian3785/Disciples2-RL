@@ -854,6 +854,9 @@ class NumberGrid(Summoning, NumericNumberGrid):
         optional = game_map.get('optional_enemies', [])
         if game_map.get('campaign_objective') == 'all_enemies' and optional:
             raise ValueError('all_enemies requires optional_enemies to be empty')
+        # objective_enemy would narrow goal_enemies to one army and end the map early.
+        if game_map.get('campaign_objective') == 'all_enemies' and self.objective_enemy is not None:
+            raise ValueError('all_enemies cannot be combined with objective_enemy')
         count = len(self.opponent_positions)
         if (not isinstance(optional, list) or len(set(optional)) != len(optional)
                 or any(type(i) is not int or not 0 <= i < count for i in optional)):

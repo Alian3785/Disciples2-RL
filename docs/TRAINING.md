@@ -43,8 +43,13 @@ bash scripts/run_gpu.sh benchmark_number_grid.py \
 Продолжение от 31.10.2026: `--series campaign-five` готовит `mirror_match`,
 `siege_train`, `default`, `default-green-dragon`, `current`, строго по **50 млн**
 решений (250 млн всего). Перед подготовкой нужны `core-gpu/results.json`,
-`campaign-preflight.json` от `scripts/validate_campaign_five.py` и
-`original-game-audit.json` от `scripts/audit_campaign_five.cjs`. Последний
+`campaign-preflight.json` от `scripts/validate_campaign_five.py`,
+`original-game-audit.json` от `scripts/audit_campaign_five.cjs` и
+`tracking-preflight.json`. Каждый из трёх последних файлов должен содержать
+`"passed": true`. `tracking-preflight.json` отдельным скриптом не создаётся: это
+запись ручной проверки доступа к Comet перед серией (`service`, `workspace`,
+`project`, `accessible_views`). Путь к `Globals` игры для аудита задаёт
+`DISCIPLES2_GLOBALS`; по умолчанию — установка Steam в Windows. Аудит
 сравнивает данные напрямую с DBF установленной Disciples II; Python-референс
 не используется как источник правильности. Специальные атаки проверяются по
 исходным полям эффектов, а их исполнение — CUDA-регрессиями.
