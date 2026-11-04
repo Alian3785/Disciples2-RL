@@ -1,7 +1,7 @@
-"""Extended CUDA cases; sources and reward differences: docs/DEFAULT_MAP.md.
+"""CUDA cases; sources and reward differences: docs/DEFAULT_MAP.md.
 
-Run only on explicit request, through scripts/run_gpu.sh. These two full Default
-variants deliberately stay outside core to preserve its compilation budget.
+Core covers finishing the hunt and losing to the target. The rest of these two full Default
+variants stays outside core to preserve its compilation budget; it runs only on explicit request.
 """
 import json
 
@@ -108,6 +108,7 @@ def test_map_spell_kill_finishes_without_cities_and_obeys_bonus_rule(dragon_game
     assert again.done and not again.alive[DRAGON] and float(ts.reward) == 0
 
 
+@pytest.mark.core
 @pytest.mark.parametrize('summon', [False, True])
 def test_hero_and_summon_victories_finish_with_the_correct_bonus(dragon_game, summon):
     """Hero gets +3 in both modes; a separate summon gets it only against green."""
@@ -142,6 +143,7 @@ def test_hero_and_summon_victories_finish_with_the_correct_bonus(dragon_game, su
         assert after.hp[:6].tolist() == initial.hp[:6].tolist()
 
 
+@pytest.mark.core
 def test_losing_to_the_target_is_defeat(dragon_game):
     env, initial, _, _ = dragon_game
     battle = compiled_method(env, '_begin_battle')(initial.replace(enemy=jnp.int32(DRAGON)))

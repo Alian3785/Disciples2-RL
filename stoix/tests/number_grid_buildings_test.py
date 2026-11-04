@@ -123,6 +123,7 @@ def test_build_mask_and_indexed_rule_reject_every_restriction_and_unused_slot(en
     assert not jnp.any(ts.extras['building_constructed'])
 
 
+@pytest.mark.core
 def test_one_build_per_turn_until_explicit_rest_and_branch_lock():
     env = basic_environment()
     state, _ = env.reset(jax.random.PRNGKey(7))
@@ -169,6 +170,7 @@ def test_scenario_locks_close_descendants_and_bad_settings_fail():
             BuildingRules({**MAP, **change})
 
 
+@pytest.mark.core
 def test_capital_survives_battle_recovery_and_resets_on_new_episode():
     env = basic_environment()
     start, _ = env.reset(jax.random.PRNGKey(42))

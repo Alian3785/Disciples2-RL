@@ -1294,6 +1294,7 @@
   "day_items": [
     {"day": 6, "items": {"ancient_relic": 1}}
   ],
+  "hero_initial_levels": [1, 2, 0, 1, 1, 0],
   "merchants": [
     {"name": "S117SI0002", "position": [20, 10], "potions": {"life": 10, "swiftness": 1, "bark": 1, "healing": 10, "restoration": 10, "water_ward": 1}, "items": {"angel_orb": 1}, "prices": {"life": 400, "swiftness": 200, "bark": 450, "healing": 150, "restoration": 300, "water_ward": 400, "angel_orb": 800}},
     {"name": "S117SI0006", "position": [29, 45], "potions": {"life": 10, "healing": 9, "restoration": 6, "protection": 3, "swiftness": 2}, "items": {"seafaring_scroll": 1, "ice_storm_scroll": 1, "ice_shield_scroll": 1}, "prices": {"life": 400, "healing": 150, "restoration": 300, "seafaring_scroll": 400, "protection": 200, "swiftness": 200, "ice_storm_scroll": 200, "ice_shield_scroll": 200}}

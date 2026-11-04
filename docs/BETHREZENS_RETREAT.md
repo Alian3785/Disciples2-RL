@@ -312,7 +312,7 @@ python scripts/build_bethrezens_retreat.py
 Добавлен расширенный тестовый файл `stoix/tests/number_grid_bethrezens_retreat_test.py`:
 исходные армии и крупные бойцы; единственный герой, воин и отдельная столица;
 точная клетка, живой оригинальный Бетрезен; однократность +102 и общие терминальные
-награды; согласованность маски и шага, наблюдение и сброс. В `core` не включён.
+награды; согласованность маски и шага, наблюдение и сброс. Эти проверки входят в `core`.
 Также добавлен `stoix/tests/number_grid_script_events_test.py`: шаблоны с
 повторяющимися малыми бойцами, вступление, календарные дни, однократность засады,
 обмен тотема, одинаковые размеры режимов, семь исходных приказов, преследование
@@ -320,7 +320,7 @@ python scripts/build_bethrezens_retreat.py
 Только по отдельному запросу, на CUDA:
 
 ```bash
-bash scripts/run_gpu.sh -m pytest -m 'not core' stoix/tests/number_grid_bethrezens_retreat_test.py stoix/tests/number_grid_script_events_test.py
+bash scripts/run_gpu.sh -m pytest -m 'core or not core' stoix/tests/number_grid_bethrezens_retreat_test.py stoix/tests/number_grid_script_events_test.py
 ```
 
 15.10.2026 **до исправления исходного преследования**, перед запрошенным обучением, выполнен отдельный проверочный маршрут

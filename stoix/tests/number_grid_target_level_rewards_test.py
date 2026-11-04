@@ -1,6 +1,6 @@
 """Target-only level rewards, requested 2026-10-14; Default Capital added 2026-10-16.
 
-Extended CUDA regressions. Run only on explicit request through scripts/run_gpu.sh.
+CUDA regressions; two are in core, the rest run only on explicit request through scripts/run_gpu.sh.
 These rewards are training rules, not original game rules. Sources: docs/DEFAULT_MAP.md
 (reference maps/default.py for Mizrael and the green dragon), docs/MAPS.md.
 """
@@ -67,6 +67,7 @@ def developed_party(env, initial):
         ['defender_of_faith', 'duke', None, 'white_mage', None, None])
 
 
+@pytest.mark.core
 def test_victory_snapshot_is_observable_and_paid_only_on_victory(target_game):
     """Freeze living entry levels, expose the snapshot, and pay it exactly once on target victory."""
     env, initial = target_game
@@ -155,6 +156,7 @@ def test_other_armies_and_invalid_moves_cannot_earn_target_bonus(target_game):
     assert int(invalid.army_battle_level_strength) == 0
 
 
+@pytest.mark.core
 def test_summoned_army_cannot_earn_target_level_bonus(target_game):
     """Exclude spell-created armies from the hero's objective-level victory reward."""
     env, initial = target_game

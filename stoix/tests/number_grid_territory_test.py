@@ -82,6 +82,7 @@ def test_growth_income_acquisition_and_obstacles(current_game):
     assert diagonal.position.tolist() == [3,3]
 
 
+@pytest.mark.core
 def test_mines_block_movement_but_land_still_reaches_them(current_game):
     """Original Crystal tiles are impassable, for gold mines and mana sources alike."""
     env,s,step,_ = current_game
@@ -227,6 +228,7 @@ def capture_land_case(env,initial,contested=False,island=False):
     return rules,state,jnp.array(water)
 
 
+@pytest.mark.core
 @pytest.mark.parametrize('contested', [False,True])
 def test_capture_connects_mine_immediately_without_income_or_other_source_growth(current_game,contested):
     """Capture claims nearby mines immediately but pays their income the next day."""
@@ -256,6 +258,7 @@ def test_capture_connects_mine_immediately_without_income_or_other_source_growth
     assert tomorrow.gold == after.gold+(100 if contested else 150)
 
 
+@pytest.mark.core
 def test_capture_growth_is_clamped_to_reachable_land(current_game):
     """A city on an island cannot spend its capture budget across water: 0x5e1408 walks four ways."""
     env,initial,_,_ = current_game
@@ -280,6 +283,7 @@ def land_state(rules,initial):
                            city_levels=rules.initial_levels,last_captured_cities=jnp.zeros(rules.count,bool))
 
 
+@pytest.mark.core
 def test_land_order_follows_the_original_heap():
     """Discipl2.exe 0x5e1499: four directions, by depth, with the MSVC heap's order among equals."""
     assert land_order(5,(1,1),frozenset()) == tuple(5*r+c for r,c in (
@@ -292,6 +296,7 @@ def test_land_order_follows_the_original_heap():
     assert fort_center({(3,4)}) == (3,4)
 
 
+@pytest.mark.core
 def test_daily_quota_counts_new_tiles_only(current_game):
     """Own tiles cost a front nothing, so painted land does not waste the day's growth."""
     env,initial,_,_ = current_game
@@ -304,6 +309,7 @@ def test_daily_quota_counts_new_tiles_only(current_game):
     assert land_count(turn(state)) == 26
 
 
+@pytest.mark.core
 @pytest.mark.parametrize('blocker,stops',[('land_blocked',True),('water',True),('real_fort',True),
                                           ('neutral_city',False),('foreign_land',False)])
 def test_what_stops_the_land_front(current_game,blocker,stops):
@@ -324,6 +330,7 @@ def owned_cells(state):
     return {int(c) for c in jnp.nonzero(state.territory_owners == 1)[0]}
 
 
+@pytest.mark.core
 def test_touched_mine_paints_its_ring_outside_the_quota(current_game):
     """0x60c3b5/0x60c411: the mine and the eight tiles around it, as soon as the front is beside it."""
     env,initial,_,_ = current_game
@@ -339,6 +346,7 @@ def test_touched_mine_paints_its_ring_outside_the_quota(current_game):
     assert owned_cells(touched) == {12+1} | set(order[:first+1]) | {r*12+c for r in (1,2) for c in (3,4,5)}
 
 
+@pytest.mark.core
 @pytest.mark.parametrize('capital,chained',[([1,10],True),([1,1],False)],ids=['from-east','from-west'])
 def test_a_mine_ring_can_touch_the_next_mine(current_game,capital,chained):
     """0x60c2ff walks the set while 0x60c411 grows it; a tile takes the first mine of table 0x6f1690, westmost."""
@@ -352,6 +360,7 @@ def test_a_mine_ring_can_touch_the_next_mine(current_game,capital,chained):
     assert rules.mine_ownership(after).tolist() == ([True,True] if chained else [True,False])
 
 
+@pytest.mark.core
 @pytest.mark.parametrize('name,start,capital,union,never',[
     ('default',140,139,902,{(5,25),(12,7),(17,26),(41,30),(47,30),(47,42)}),
     ('the_charmed_child',190,287,1140,{(17,34)}),

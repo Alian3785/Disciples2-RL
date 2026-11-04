@@ -33,6 +33,7 @@ def test_chest_loot_and_observation_contract(current_game):
             ChestRules({**MAP,'chests':chests})
 
 
+@pytest.mark.core
 def test_eight_adjacent_tiles_collect_all_contents_once(current_game):
     env,state,advance,_=current_game
     chest=MAP['chests'][4]['position']
@@ -52,6 +53,7 @@ def test_eight_adjacent_tiles_collect_all_contents_once(current_game):
         assert not jnp.any(repeated.last_loot)
 
 
+@pytest.mark.core
 def test_pickup_makes_new_type_usable_and_nonmovement_does_not_collect(current_game):
     env,state,advance,_=current_game
     beside=state.replace(position=jnp.array([6,2]))

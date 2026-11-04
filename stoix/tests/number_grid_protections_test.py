@@ -83,6 +83,7 @@ def test_all_nine_immunities_block_repeated_hits_before_consuming_wards():
     assert jnp.all(compiled_method(env,'action_mask',batched=True)(states)[:, SHOOT])
 
 
+@pytest.mark.core
 def test_all_nine_wards_absorb_one_hit_misses_do_not_consume_and_rounds_do_not_restore():
     env, states = source_cases()
     missed = attack_batch(env, states, jnp.full(env.random_size, .999))
@@ -172,6 +173,7 @@ def test_human_api_reports_named_units_sources_and_current_ward_state(human_serv
     assert created['snapshot']['state']['hp'][:6] == [120, 150, 120, 45, 0, 0]
 
 
+@pytest.mark.core
 def test_unrelated_sources_bypass_protection_and_immunity():
     env,states = source_cases(target=2)
     result = attack_batch(env, states)

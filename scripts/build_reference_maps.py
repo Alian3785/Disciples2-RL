@@ -62,6 +62,14 @@ CHARMED_CAPITAL_POTIONS = {'restoration': 3, 'life': 1}
 # (225, 30, 70, 125 once). No other S117 stack holds either replaced id.
 CHARMED_ORIGINAL_UNITS = {5: {'g000uu0012': 'g000uu0016'}, 8: {'g000uu0156': 'g000uu0155'}}
 ORIGINAL_UNITS = {'the_charmed_child': CHARMED_ORIGINAL_UNITS}
+# User request 2026-11-05: the hero starts at level 2; S117 SUnit records S117UN0003 at level 1.
+CHARMED_HERO_LEVEL = 2
+# User request 2026-11-05. Mines block movement as in the original, and the reference puts all
+# four sources on the capital's east exit, which would lock the hero in. Here they touch its walls.
+MAGIC_MANA_SOURCES = {'life': [26, 7], 'infernal': [30, 7], 'runes': [25, 4], 'death': [31, 4]}
+# User request 2026-11-05: Hire plays the Empire, so its hero is the Empire warrior's Pegasus
+# Knight, not the reference's Duke of the Legions. Same statistics, and both fly.
+HIRE_HERO = 'g000uu0019'
 
 
 def item_key(name):
@@ -176,6 +184,12 @@ def build(base, name):
             city.update(potions=vault.get('potions', {}), items=vault.get('items', {}))
         for key, count in CHARMED_CAPITAL_POTIONS.items():
             game_map['initial_potions'][key] = game_map['initial_potions'].get(key, 0)+count
+        game_map['hero_initial_levels'] = [(CHARMED_HERO_LEVEL if UNITS[key].get('hero') else UNITS[key]['level']) if key else 0
+                                           for key in hero]
+    if name == 'magic_train':
+        game_map['mines'] = [dict(kind=m['kind'], position=MAGIC_MANA_SOURCES[m['kind']]) for m in game_map['mines']]
+    if name == 'hire_train':
+        game_map['hero_roster'] = [HIRE_HERO if key else None for key in hero]
     game_map['lord_type'] = {1:'warrior', 2:'mage', 3:'guildmaster'}[config.starting_lord_type or 1]
     if config.starting_roster is None:
         for key in ('hero_roster', 'hero_units', 'hero_combat_stats'):

@@ -25,6 +25,7 @@ def trade_game():
     return env, state, compiled_method(env, 'step'), compiled_method(env, 'action_mask')
 
 
+@pytest.mark.core
 def test_reference_layout_and_objective(trade_game):
     env, state, _, _ = trade_game
     config = load_map('trade_train')
@@ -54,6 +55,7 @@ def test_reference_layout_and_objective(trade_game):
     assert observation.shape == (1315,) and bool(jnp.all(jnp.isfinite(observation)))
 
 
+@pytest.mark.core
 def test_every_site_approach_is_reachable_without_a_forced_battle(trade_game):
     env, state, _, _ = trade_game
     blocked = set(map(tuple, load_map('trade_train')['obstacles']))
@@ -140,6 +142,7 @@ def test_leadership_limits_the_elite_army(trade_game):
     assert int(after.unit_ids[2]) == 0 and int(after.gold) == 2000
 
 
+@pytest.mark.core
 def test_merchant_prices_stock_and_delivery(trade_game):
     env, initial, step, mask = trade_game
     rules = env.site_rules

@@ -40,6 +40,7 @@ def test_victory_and_withdrawal_preserve_dead_and_wounded_units(env):
     assert float(units[1, 0]) == pytest.approx(0.)
 
 
+@pytest.mark.core
 def test_rest_heals_living_units_once_caps_hp_and_never_revives(env):
     state, _ = compiled_method(env,'reset')(jax.random.PRNGKey(42))
     state = state.replace(hp=state.hp.at[:6].set(jnp.array([1, 91, 44, 0, 20, 45])))
@@ -85,6 +86,7 @@ def test_movement_building_invalid_and_battle_rest_do_not_heal(env):
     chex.assert_trees_all_equal(following.day, states.day)
 
 
+@pytest.mark.core
 def test_total_defeat_and_forced_retreat_do_not_resurrect(env):
     state, _ = compiled_method(env,'reset')(jax.random.PRNGKey(42))
     state = compiled_method(env,'_begin_battle')(state.replace(enemy=jnp.int32(0)))

@@ -83,6 +83,7 @@ def test_enemy_levels_and_lower_scenario_ceiling(current_game):
     assert hp[6:8].tolist() == [10, 10] and not jnp.any(gains) and promoted == 0
 
 
+@pytest.mark.core
 def test_all_catalogue_growth_obeys_limits(current_game):
     env = current_game[0]
     rules = env.progression
@@ -140,6 +141,7 @@ def test_stacked_potions_final_stats_and_health(current_game):
     assert restored[1] == 5000
 
 
+@pytest.mark.core
 def test_income_caps_gold_and_each_mana_and_does_not_bank_overflow(current_game):
     env, state, advance, _ = current_game
     before = full_land(env, state).replace(

@@ -1,4 +1,4 @@
-"""Extended regressions for reference maps; run only on explicit request via run_gpu.sh.
+"""Regressions for reference maps, all in the core set.
 
 Sources: Python reference map definitions (The Charmed Child uses the legacy source module);
 campaign_env_territory.py scheduled armies; train_campaign.py REWARD_CONFIG.
@@ -18,6 +18,7 @@ def fortress():
     return env, env.reset(jax.random.PRNGKey(7))[0]
 
 
+@pytest.mark.core
 def test_betrezen_identity_and_starting_assets(fortress):
     env, state = fortress
     row = env.progression.rows[int(state.unit_ids[4])]
@@ -36,6 +37,7 @@ def test_betrezen_identity_and_starting_assets(fortress):
     assert jax.jit(env.travel_costs)(state).tolist() == [2, 2, 2, 2]
 
 
+@pytest.mark.core
 def test_future_waves_are_not_targets_or_completed_goals(fortress):
     env, state = fortress
     assert int(jnp.sum(state.alive)) == 7
@@ -45,6 +47,7 @@ def test_future_waves_are_not_targets_or_completed_goals(fortress):
     assert not bool(env._goals_left(jnp.zeros_like(state.alive), jnp.ones_like(state.scenario_spawned)))
 
 
+@pytest.mark.core
 def test_spawn_turn_and_pursuit(fortress):
     env, state = fortress
     advance = jax.jit(env.scenario.advance)
@@ -55,6 +58,7 @@ def test_spawn_turn_and_pursuit(fortress):
     assert bool(jnp.any(after.enemy_positions[enemy] != state.enemy_positions[enemy]))
 
 
+@pytest.mark.core
 def test_queued_attack_is_the_only_world_action(fortress):
     env, state = fortress
     enemy = env.scenario.indices[0]
@@ -64,6 +68,7 @@ def test_queued_attack_is_the_only_world_action(fortress):
     assert bool(env.action_mask(queued)[CONTINUE])
 
 
+@pytest.mark.core
 def test_wave_bonus_requires_every_member_and_is_paid_once(fortress):
     env, state = fortress
     members = env.scenario.indices[:3]
@@ -85,6 +90,7 @@ def test_wave_bonus_requires_every_member_and_is_paid_once(fortress):
     assert float(count_waves(two, complete.replace(done=jnp.bool_(True), won=jnp.bool_(True)))) == 1
 
 
+@pytest.mark.core
 def test_timeout_penalty_is_not_repeated(fortress):
     env, state = fortress
     terminal, reward = rewards.finish(env, state, state.replace(done=jnp.bool_(True)))
@@ -92,6 +98,25 @@ def test_timeout_penalty_is_not_repeated(fortress):
     assert float(rewards.finish(env, terminal, terminal)[1]) == 0
 
 
+@pytest.mark.core
+def test_charmed_child_hero_starts_at_level_two():
+    """User request 2026-11-05, though S117 SUnit records level 1: level-2 stats at full health."""
+    env = NumberGrid(map_config=load_map('the_charmed_child'))
+    rules = env.progression
+    assert rules.initial_levels[:6].tolist() == [1, 2, 0, 1, 1, 0]
+    assert env.restored_hp[:6].tolist() == [150, 240, 0, 65, 60, 0]
+    hero = rules.initial_ids[1]
+    assert rules.stats(hero, jnp.int32(2)).tolist()[:2] == [240, 70]
+    assert int(rules.required_xp(hero, jnp.int32(2))) == 775
+
+
+@pytest.mark.parametrize('levels', [[1, 2], [0, 2, 0, 1, 1, 0], [1, 2, 1, 1, 1, 0], [1, 100, 0, 1, 1, 0], [1, 2., 0, 1, 1, 0]])
+def test_invalid_hero_initial_levels_are_rejected(levels):
+    with pytest.raises(ValueError, match='Hero starting levels'):
+        NumberGrid(map_config={**load_map('the_charmed_child'), 'hero_initial_levels': levels})
+
+
+@pytest.mark.core
 def test_siege_and_charmed_child_starting_rosters_and_goals():
     """Siege and Charmed Child parties and goals; S117 capital potions and original garrisons."""
     siege = load_map('siege_train')
@@ -101,6 +126,7 @@ def test_siege_and_charmed_child_starting_rosters_and_goals():
     assert sum(siege['initial_potions'].values()) == 20
     charmed_child = load_map('the_charmed_child')
     assert charmed_child['hero_roster'][0] == 'reference_g000uu0036'
+    assert charmed_child['hero_initial_levels'] == [1, 2, 0, 1, 1, 0]
     assert len(charmed_child['enemy_rosters']) == 71
     assert sum(c['objective'] for c in charmed_child['cities']) == 3
     # Installed S117: the capital vault's potions; the Empire capital's Cleric and Hasser's Keep's Holy Avenger.

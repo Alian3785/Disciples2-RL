@@ -222,6 +222,13 @@ class ProgressionRules:
         self.base_levels = jnp.array(levels, jnp.int32)
         self.initial_ids = jnp.array(hero+[0]*6, jnp.int32)
         self.initial_levels = self.base_levels[self.initial_ids]
+        if 'hero_initial_levels' in game_map:
+            starting_levels = game_map['hero_initial_levels']
+            if (len(starting_levels) != len(hero)
+                    or any(type(level) is not int or level < levels[unit] or level > MAX_LEVEL
+                           or (unit == 0 and level != 0) for unit, level in zip(hero, starting_levels))):
+                raise ValueError('Hero starting levels must match the roster and be at least the base level')
+            self.initial_levels = jnp.array(starting_levels+[0]*6, jnp.int32)
         initial_xp = jnp.array([r.get('exp_current', 0) for r in rows], jnp.int32)
         self.initial_xp = initial_xp[self.initial_ids]
         enemy_ids = jnp.array(enemies, jnp.int32)
