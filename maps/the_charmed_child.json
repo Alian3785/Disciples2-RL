@@ -114,7 +114,7 @@
     {},
     {}
   ],
-  "starting_gold": 100,
+  "starting_gold": 250,
   "starting_built_buildings": [],
   "starting_hero_abilities": [],
   "starting_scroll_magic_unlocked": false,
@@ -1294,6 +1294,7 @@
   "day_items": [
     {"day": 6, "items": {"ancient_relic": 1}}
   ],
+  "starting_mana": {"runes": 75},
   "hero_initial_levels": [1, 2, 0, 1, 1, 0],
   "merchants": [
     {"name": "S117SI0002", "position": [20, 10], "potions": {"life": 10, "swiftness": 1, "bark": 1, "healing": 10, "restoration": 10, "water_ward": 1}, "items": {"angel_orb": 1}, "prices": {"life": 400, "swiftness": 200, "bark": 450, "healing": 150, "restoration": 300, "water_ward": 400, "angel_orb": 800}},

@@ -142,7 +142,9 @@ def build(snapshot):
         enemy_rosters=list(rosters), enemy_initial_levels=list(levels),
         enemy_units=[sum(k is not None for k in roster) for roster in rosters],
         enemy_hp=[max(UNITS[k]['max_hp'] for k in roster if k) for roster in rosters],
-        starting_gold=300, starting_built_buildings=[], starting_hero_abilities=[],
+        # Treasury on turn 1 of S101: SPlayer BANK G0300 plus the income the game credits before the
+        # first move (save at CUR_TURN 1: BANK G0450:R0025). docs/validation/first-turn-treasury-20261106.json.
+        starting_gold=450, starting_mana={'infernal': 25}, starting_built_buildings=[], starting_hero_abilities=[],
         initial_potions=inventory(HERO)['potions'], initial_items=inventory(HERO)['items'],
         obstacles=sorted(cell(p) for p in blocked), terrain=terrain, allow_water_objects=True,
         campaign_objective='reach_position', objective_position=cell(snapshot['goal']['position']),

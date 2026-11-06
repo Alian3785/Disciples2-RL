@@ -64,6 +64,9 @@ CHARMED_ORIGINAL_UNITS = {5: {'g000uu0012': 'g000uu0016'}, 8: {'g000uu0156': 'g0
 ORIGINAL_UNITS = {'the_charmed_child': CHARMED_ORIGINAL_UNITS}
 # User request 2026-11-05: the hero starts at level 2; S117 SUnit records S117UN0003 at level 1.
 CHARMED_HERO_LEVEL = 2
+# Treasury on turn 1 of S117: SPlayer BANK G0100 plus the income the game credits before the first
+# move (saves at CUR_TURN 1: BANK G0250:W0075). Source: docs/validation/first-turn-treasury-20261106.json.
+CHARMED_TREASURY = dict(starting_gold=250, starting_mana={'runes': 75})
 # User request 2026-11-05. Mines block movement as in the original, and the reference puts all
 # four sources on the capital's east exit, which would lock the hero in. Here they touch its walls.
 MAGIC_MANA_SOURCES = {'life': [26, 7], 'infernal': [30, 7], 'runes': [25, 4], 'death': [31, 4]}
@@ -176,7 +179,7 @@ def build(base, name):
             building for building in game_map['starting_built_buildings'] if building != 'Храм']
     if name == 'the_charmed_child':
         game_map.update(display_name='Проклятое дитя', original_name='The Charmed Child',
-                        scenario_id='S117SC0000', day_items=CHARMED_DAY_ITEMS)
+                        scenario_id='S117SC0000', day_items=CHARMED_DAY_ITEMS, **CHARMED_TREASURY)
         if set(CHARMED_CITY_LOOT) - {c['name'] for c in game_map['cities']}:
             raise ValueError('Charmed Child loot names a city missing from the layout')
         for city in game_map['cities']:

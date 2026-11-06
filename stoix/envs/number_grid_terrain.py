@@ -1,7 +1,8 @@
 """Strategic terrain costs; Python reference campaign_env_map.py:134-200.
 
 Road/plain/forest/water: 1/2/4/6. Living flying leader: always 2.
-A dead leader doubles tile cost and disables flight/terrain boots.
+A dead leader pays 4/4/8/12: it gets no road discount (Discipl2.exe 0x603337)
+and no flight or terrain boots.
 """
 import jax.numpy as jnp
 
@@ -91,7 +92,8 @@ class TerrainRules:
             forest, water = spells
             costs = costs.at[FOREST].set(jnp.where(forest, jnp.minimum(costs[FOREST], 2), costs[FOREST]))
             costs = costs.at[WATER].set(jnp.where(water, jnp.minimum(costs[WATER], 2), costs[WATER]))
-        return jnp.where(flying, 2, costs*jnp.where(dead,2,1))
+        costs = jnp.where(dead, costs.at[ROAD].set(costs[PLAIN])*2, costs)
+        return jnp.where(flying, 2, costs)
 
     def move_cost(self, state, positions, item_rules=None, spells=None):
         return self.costs(state, item_rules, spells)[self.kinds(positions)]

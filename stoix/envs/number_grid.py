@@ -336,6 +336,7 @@ class BattleState(NumberGridState):
     city_levels: jax.Array
     last_captured_cities: jax.Array
     last_upgraded_city: jax.Array
+    city_upgraded_today: jax.Array  # per city: already upgraded since the last REST
     battle_fort_armor: jax.Array
     hire_rewarded_capacity: jax.Array
     mercenary_units: jax.Array  # permanent camp-hire provenance, attached to the twelve roster slots
@@ -1189,7 +1190,9 @@ class NumberGrid(Summoning, NumericNumberGrid):
             city_owned=jnp.zeros(self.territory.count if self.territory_enabled else 0,bool),
             city_levels=self.territory.initial_levels if self.territory_enabled else jnp.zeros(0,jnp.int32),
             last_captured_cities=jnp.zeros(self.territory.count if self.territory_enabled else 0,bool),
-            last_upgraded_city=jnp.int32(-1),battle_fort_armor=zero,
+            last_upgraded_city=jnp.int32(-1),
+            city_upgraded_today=jnp.zeros(self.territory.count if self.territory_enabled else 0,bool),
+            battle_fort_armor=zero,
             hire_rewarded_capacity=zero,
             mercenary_units=jnp.zeros(12, bool),
             mercenary_stock=(self.recruitment.initial_stock if self.recruitment_enabled else jnp.zeros(0, jnp.int32)),

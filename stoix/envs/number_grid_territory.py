@@ -251,7 +251,7 @@ class TerritoryRules:
         self.local_offsets = jnp.array(offsets,jnp.int32)
         # Mana, six income values, independent source growth, city and mine rows,
         # local 5x5 ownership/obstacle windows, fort/lord context.
-        self.observation_size = 5+6+(1+self.count)+7*self.count+5*len(self.mines)+50+3
+        self.observation_size = 5+6+(1+self.count)+8*self.count+5*len(self.mines)+50+3
         if self.contested:
             self.observation_size += 25+len(self.mines)+len(self.opponent_sources)
         self.metadata = dict(cities=[dict(c,action=start+i) for i,c in enumerate(self.cities)],
@@ -475,7 +475,8 @@ class TerritoryRules:
             jnp.where(state.city_owned,self.growth[state.city_levels],0), self.opponent_growth)), 0))
         income = self.income(state)
         return state.replace(gold=jnp.where(resting,add_resource(state.gold,income[0]),state.gold),
-                             mana=jnp.where(resting,add_resource(state.mana,income[1:]),state.mana))
+                             mana=jnp.where(resting,add_resource(state.mana,income[1:]),state.mana),
+                             city_upgraded_today=jnp.where(resting,False,state.city_upgraded_today))
 
     def leader_alive(self,state):
         return jnp.any(self.heroes[state.unit_ids[:6]] & (state.hp[:6]>0) & (state.summon_owner[:6]<0) & ~state.copied[:6])
@@ -520,7 +521,9 @@ class TerritoryRules:
         return jnp.all(state.city_owned | ~self.goal_cities)
 
     def available(self,state):
-        return ~state.in_battle & ~state.done & state.city_owned & (state.city_levels<5) & (state.gold>=self.costs[state.city_levels])
+        """Each city gains at most one level per game turn, as in the original game."""
+        return (~state.in_battle & ~state.done & state.city_owned & ~state.city_upgraded_today
+                & (state.city_levels<5) & (state.gold>=self.costs[state.city_levels]))
 
     def upgrade(self,state,action):
         if not self.count:
@@ -529,6 +532,7 @@ class TerritoryRules:
         valid = (action>=self.start)&(action<self.end)&self.available(state)[index]
         cost = jnp.where(valid,self.costs[state.city_levels[index]],0)
         return state.replace(city_levels=state.city_levels.at[index].add(valid.astype(jnp.int32)),gold=state.gold-cost,
+            city_upgraded_today=state.city_upgraded_today|(valid&(jnp.arange(self.count)==index)),
             last_upgraded_city=jnp.where(valid,index,-1),last_service_cost=jnp.where(valid,cost,state.last_service_cost),
             last_event=jnp.where(valid,CITY_UPGRADED,state.last_event))
 
@@ -554,7 +558,7 @@ class TerritoryRules:
         cities = jnp.concatenate((self.positions/(self.size-1),state.city_levels[:,None]/5.,state.city_owned[:,None],
             state.territory_claims[1:,None]/(self.size*self.size),
             self.remaining_defenders(state)[:,None]/2.,
-            self.costs[state.city_levels,None]/1000.),axis=1).reshape(-1)
+            self.costs[state.city_levels,None]/1000.,state.city_upgraded_today[:,None]),axis=1).reshape(-1)
         mines = jnp.concatenate((self.mine_positions/(self.size-1),self.mine_kinds[:,None]/5.,
             self.mine_ownership(state)[:,None],jnp.full((len(self.mines),1),.05)),axis=1).reshape(-1)
         local = state.position+self.local_offsets

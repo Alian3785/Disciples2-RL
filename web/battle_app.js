@@ -209,7 +209,7 @@
       const status=document.createElement('p');status.textContent='Клетка '+city.position.join(', ')+' · '+(s.city_owned[i]?'Ваш город':count?'Защитников: '+count+' отряда':'Для захвата войдите с живым героем');
       const detail=document.createElement('small');detail.textContent='Рост земли +'+info.city_growth[s.city_levels[i]]+' клеток/ход · регенерация и броня +'+info.city_bonus[s.city_levels[i]]+'%';
       const button=document.createElement('button');button.dataset.action=city.action;button.onclick=()=>sendAction(city.action);
-      button.textContent=!s.city_owned[i]?'Сначала захватите город':s.city_levels[i]>=5?'Максимальный уровень':'Улучшить · '+fmt(q.city_costs[i])+' золота';
+      button.textContent=!s.city_owned[i]?'Сначала захватите город':s.city_levels[i]>=5?'Максимальный уровень':s.city_upgraded_today[i]?'Уже улучшен в этом ходу':'Улучшить · '+fmt(q.city_costs[i])+' золота';
       card.append(heading,status,detail,button);return card;
     }));
   }
