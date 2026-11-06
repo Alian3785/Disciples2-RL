@@ -383,21 +383,24 @@ def test_original_scenarios_paint_the_start_and_reach_what_the_exe_reaches(curre
 
 
 def test_city_upgrade_remote_costs_growth_history_and_masks(current_game):
-    env,s,step,_ = current_game
+    env,start,step,_ = current_game
     rules = env.territory
-    s = s.replace(city_owned=jnp.array([True,False]),gold=jnp.int32(3000))
+    start = start.replace(city_owned=jnp.array([True,False]),gold=jnp.int32(3000))
     mask = compiled_method(env,'action_mask')
-    assert mask(s)[193] and not mask(s)[194]
+    assert mask(start)[193] and not mask(start)[194]
+    s = start
     for level,cost in ((2,150),(3,250),(4,500),(5,750)):
         before = s
         s,_ = step(s,jnp.int32(193))
         assert s.city_levels[0] == level and s.gold == before.gold-cost and s.last_event == CITY_UPGRADED
         chex.assert_trees_all_equal(s.territory_claims,before.territory_claims)
         assert s.movement_points == before.movement_points and s.day == before.day
-    assert not mask(s)[193]
+        s,_ = step(s,jnp.int32(REST))  # the next level has to wait for the next turn
+    # The turn's limit is clear here, so only the level cap closes the action.
+    assert not s.city_upgraded_today[0] and not mask(s)[193]
     failed,_ = step(s,jnp.int32(193))
     assert failed.gold == s.gold and failed.city_levels[0] == 5
-    rested,_ = step(s,jnp.int32(REST))
+    rested,_ = step(start.replace(city_levels=s.city_levels),jnp.int32(REST))
     assert rested.territory_claims.tolist() == [10,25,0]
     for invalid in (s.replace(city_owned=jnp.zeros(2,bool)),s.replace(city_levels=jnp.array([1,3]),gold=jnp.int32(149))):
         assert not mask(invalid)[193]
@@ -408,6 +411,39 @@ def test_city_upgrade_remote_costs_growth_history_and_masks(current_game):
     assert rules.land_order.shape[0] == 3
     for source,cell in enumerate((2*48+2,14*48+16,32*48+36)):
         assert not jnp.any(rules.land_order[source,:rules.land_lengths[source]] == cell)
+
+
+@pytest.mark.core
+def test_city_upgrade_once_per_turn_for_each_city(current_game):
+    """Each city gains one level per turn: another city stays open and REST starts the next turn."""
+    env,start,step,_ = current_game
+    mask = compiled_method(env,'action_mask')
+    observe = compiled_method(env,'observation')
+    s = start.replace(city_owned=jnp.array([True,True]),gold=jnp.int32(3000))
+    assert s.city_levels.tolist() == [1,3] and not jnp.any(s.city_upgraded_today)
+    assert mask(s)[193] and mask(s)[194]
+    first,_ = step(s,jnp.int32(193))
+    assert first.city_levels.tolist() == [2,3] and first.city_upgraded_today.tolist() == [True,False]
+    assert not mask(first)[193] and mask(first)[194]
+    # A repeat in the same turn changes nothing and costs nothing.
+    repeat,_ = step(first,jnp.int32(193))
+    assert repeat.city_levels.tolist() == [2,3] and repeat.gold == first.gold
+    assert repeat.city_upgraded_today.tolist() == [True,False]
+    second,_ = step(first,jnp.int32(194))
+    assert second.city_levels.tolist() == [2,4] and second.gold == s.gold-150-500
+    assert not mask(second)[193] and not mask(second)[194]
+    # A refused attempt does not use up the turn's upgrade.
+    poor = s.replace(gold=jnp.int32(149))
+    refused,_ = step(poor,jnp.int32(193))
+    assert refused.city_levels.tolist() == [1,3] and not jnp.any(refused.city_upgraded_today)
+    rested,_ = step(second,jnp.int32(REST))
+    assert rested.day == second.day+1 and not jnp.any(rested.city_upgraded_today)
+    assert mask(rested)[193] and mask(rested)[194]
+    next_turn,_ = step(rested,jnp.int32(193))
+    assert next_turn.city_levels.tolist() == [3,4]
+    # The agent sees the limit: exactly one feature tells the two states apart.
+    delta = observe(s.replace(city_upgraded_today=jnp.array([True,False])))-observe(s)
+    assert jnp.count_nonzero(delta) == 1 and jnp.sum(delta) == 1
 
 
 @pytest.mark.core

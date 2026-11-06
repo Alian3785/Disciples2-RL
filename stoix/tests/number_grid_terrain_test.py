@@ -75,7 +75,7 @@ def test_actual_step_mask_quotes_and_last_partial_move(current_game, leader_key,
                     s = s.replace(hp=s.hp.at[1].set(0))
                 cases.append(s)
                 actions.append(action)
-                price = cost*2 if dead else (2 if flying else cost)
+                price = max(cost,2)*2 if dead else (2 if flying else cost)
                 expected.append(min(points,price))
                 destinations.append(jnp.array(position)+env.directions[action]*(points>0))
     if not compare_batch:
@@ -161,7 +161,7 @@ def test_water_excludes_land_but_not_travel_and_flight_cannot_cross_obstacles(cu
 def test_observation_reset_and_human_quotes(current_game,human_service):
     env, initial, _, _ = current_game
     observe = compiled_method(env,'observation')
-    assert observe(initial).shape == (1844,) and env.num_actions == 244
+    assert observe(initial).shape == (1846,) and env.num_actions == 244
     research_context = 4+env.spell_research.observation_size+env.casting.observation_size+env.unit_swaps.observation_size  # lord, research, casts, swaps, day
     terrain_columns = slice(-35-research_context,-research_context)
     view = observe(initial)[terrain_columns]

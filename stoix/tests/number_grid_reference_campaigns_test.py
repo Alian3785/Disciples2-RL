@@ -131,6 +131,8 @@ def test_siege_and_charmed_child_starting_rosters_and_goals():
     assert sum(c['objective'] for c in charmed_child['cities']) == 3
     # Installed S117: the capital vault's potions; the Empire capital's Cleric and Hasser's Keep's Holy Avenger.
     assert charmed_child['initial_potions'] == {'restoration': 3, 'life': 1}
+    # S117 BANK G0100 plus the income credited before the first move, as in the saves at turn 1.
+    assert charmed_child['starting_gold'] == 250 and charmed_child['starting_mana'] == {'runes': 75}
     assert charmed_child['enemy_rosters'][4][4] == 'cleric' and charmed_child['enemy_rosters'][7][5] == 'blade_master'
     assert charmed_child['enemy_hp'][7] == 250 and not any(
         key in r for r in charmed_child['enemy_rosters'] for key in ('priest', 'defender_of_faith'))

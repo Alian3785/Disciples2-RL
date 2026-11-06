@@ -1,0 +1,58 @@
+{
+  "date": "2026-11-06",
+  "mechanic": "The Charmed Child and Bethrezen's Retreat start with the treasury the player holds on turn 1: the scenario BANK plus one day's income.",
+  "request": "User request 2026-11-06, after comparing the first turn with the original.",
+  "method": "Read Scens/Splayer.DBF and saves at CUR_TURN 1. The land count compares the player's terrain code in the save's map blocks with territory_owners at reset. No disassembler or original game was launched.",
+  "bank_letters": "G gold, R infernal, Y life, E death, W runes",
+  "sources": [
+    {
+      "path": "Scens/Splayer.DBF",
+      "sha256": "aa3856f6804470d909db5285677d2d7f32cb5da89fea6ed0d1badaee22b97e92",
+      "records": {
+        "S117PL000a": "Mountain Clans, BANK G0100:R0000:Y0000:E0000:W0000",
+        "S101PL0001": "Legions of the Damned, BANK G0300:R0000:Y0000:E0000:W0000"
+      }
+    },
+    {
+      "path": "SaveGame/Campaign Start (Mountain Clans).sg",
+      "note": "Byte-identical to SaveGame/charmed child.sg, so the two files count as one source.",
+      "sha256": "7ec7ed9db7546578f157d8e287375c975f754831658ef8b6aa573bb84ddedebc",
+      "cur_turn": 1,
+      "bank": "G0250:R0000:Y0000:E0000:W0075:B0000",
+      "player_land_tiles": 190
+    },
+    {
+      "path": "SaveGame/rl mission 2.sg",
+      "note": "The user's save of S101. The only turn-1 save of this scenario that was found.",
+      "sha256": "caebb566954331b0acefacad5792181ce74a7ef17163f598e5cd7995b70e20d5",
+      "cur_turn": 1,
+      "bank": "G0450:R0025:Y0000:E0000:W0000:B0000",
+      "player_land_tiles": 259
+    }
+  ],
+  "first_day_income_in_jax": {
+    "the_charmed_child": {"gold": 150, "runes": 75},
+    "bethrezens_retreat": {"gold": 150, "infernal": 25}
+  },
+  "values_at_reset": {
+    "the_charmed_child": {"gold": 250, "mana": {"runes": 75}, "land": 190, "after_first_rest": {"gold": 400, "runes": 150, "land": 200}},
+    "bethrezens_retreat": {"gold": 450, "mana": {"infernal": 25}, "land": 259, "after_first_rest": {"gold": 600, "infernal": 50, "land": 269}}
+  },
+  "not_covered": [
+    "Default keeps 400 gold and 200 infernal mana: no save of it at turn 1 was found, so the same rule is not confirmed there.",
+    "Only the first turn was compared; later turns of the original were not checked against the environment."
+  ],
+  "implementation": [
+    "scripts/build_reference_maps.py: CHARMED_TREASURY.",
+    "scripts/build_bethrezens_retreat.py: starting_gold and starting_mana.",
+    "Both maps were rebuilt by these scripts; the map diff holds only the treasury fields."
+  ],
+  "regression_tests": [
+    "stoix/tests/number_grid_bethrezens_retreat_test.py::test_initial_party_lord_and_separate_capital",
+    "stoix/tests/number_grid_reference_campaigns_test.py::test_siege_and_charmed_child_starting_rosters_and_goals"
+  ],
+  "tests_run": false,
+  "training_or_benchmarks_run": false,
+  "original_game_launched": false,
+  "disassembler_launched": false
+}

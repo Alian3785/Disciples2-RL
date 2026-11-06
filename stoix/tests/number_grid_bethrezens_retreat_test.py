@@ -58,7 +58,8 @@ def test_initial_party_lord_and_separate_capital(retreat):
     assert [i for i, row in enumerate(rows) if row.get('hero')] == [4]
     assert rows[4]['name'] == 'Бетрезен' and rows[4]['exp_required'] == 5750
     assert state.hp[:6].tolist() == [170, 0, 170, 0, 300, 0]
-    assert int(state.gold) == 300 and int(state.buildings) == 0
+    # S101 BANK G0300 plus the income credited before the first move, as in a save at turn 1.
+    assert int(state.gold) == 450 and state.mana.tolist() == [25, 0, 0, 0, 0] and int(state.buildings) == 0
     assert env.map_config['lord_type'] == 'warrior'
     # Original unit regen 5% + warrior lord 15% + 10% on the land the scenario paints as his.
     assert int(env.territory.regeneration_percent(state, 0)[4]) == 30
