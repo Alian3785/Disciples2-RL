@@ -90,6 +90,8 @@ CHART_TITLES = {
     'campaign/window/experience_gained_mean': 'Опыт, полученный бойцами агента, на эпизод — последние 100 эпизодов',
     'campaign/window/capital_incubi_mean': 'Инкубов в отряде — максимум за эпизод, последние 100 эпизодов',
     'campaign/window/capital_entry_strength_when_reached_mean': 'Сила армии при первом входе — среди дошедших (последние 100)',
+    'campaign/window/objective_item_episodes_rate': 'Доля эпизодов с полученным руническим ключом — последние 100 эпизодов',
+    'campaign/window/tracked_enemy_episodes_rate': 'Доля эпизодов с победой над Зелёным драконом у земель гномов — последние 100 эпизодов',
     'rollout/ep_rew_mean': 'Средняя награда — последние 100 эпизодов',
     'rollout/ep_len_mean': 'Средняя длина — последние 100 эпизодов',
 }
@@ -110,17 +112,31 @@ VIEW_NAME = 'Disciples II'
 CAPITAL_VIEW_NAME = 'Disciples II — Мизраэль'
 CAPITAL_CHARTS = frozenset(name for name in CAMPAIGN_CHARTS
                          if name.rsplit('/', 1)[-1].startswith('capital_'))
+# Comet only, for maps with a quest item (objective_item) or a charted army (tracked_enemy),
+# both S103 so far. They follow the first row; W&B keeps the shared catalogue and still logs them.
+OBJECTIVE_ITEM_CHARTS = ('campaign/window/objective_item_episodes_rate',)
+TRACKED_ENEMY_CHARTS = ('campaign/window/tracked_enemy_episodes_rate',)
+
+
+def map_charts(game_map):
+    return ((OBJECTIVE_ITEM_CHARTS if game_map.get('objective_item') else ())
+            + (TRACKED_ENEMY_CHARTS if game_map.get('tracked_enemy') is not None else ()))
 
 
 def comet_campaign_charts(game_map=None):
     """The presence of a guardian on the map is not enough: it must be the goal."""
-    if (game_map or {}).get('campaign_objective') == 'capital_guardian':
+    game_map = game_map or {}
+    if game_map.get('campaign_objective') == 'capital_guardian':
         return CAMPAIGN_CHARTS
-    return tuple(name for name in CAMPAIGN_CHARTS if name not in CAPITAL_CHARTS)
+    charts = tuple(name for name in CAMPAIGN_CHARTS if name not in CAPITAL_CHARTS)
+    return charts[:3] + map_charts(game_map) + charts[3:]
 
 
 def comet_view_name(game_map=None):
-    name = (CAPITAL_VIEW_NAME if (game_map or {}).get('campaign_objective') == 'capital_guardian'
+    """Maps with their own charts get their own shared template, named after the map."""
+    game_map = game_map or {}
+    name = (CAPITAL_VIEW_NAME if game_map.get('campaign_objective') == 'capital_guardian'
+            else f"{VIEW_NAME} — {game_map.get('display_name') or game_map.get('name')}" if map_charts(game_map)
             else VIEW_NAME)
     scope = os.environ.get('NUMBERGRID_COMET_VIEW_SCOPE')
     return f'{name} — {scope}' if scope else name

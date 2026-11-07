@@ -137,6 +137,12 @@ def build(snapshot):
         reconstruction_note='S103 static map with selected pursuit/ambush events and capital defense; victory requires the Runic Key at the gate.',
     )
     info = snapshot['scenario']
+    # KC0027's Ghosts and Shade can paralyse a lone Doppelganger copying its weapon-immune
+    # Werewolf for 40 rounds (~245 automatic activations). Cap them per step so one lane
+    # does not stall the batch; docs/COMBAT.md#automatic-turn-limit.
+    game_map.update(battle_automatic_turn_limit=16)
+    # Telemetry only: the Mountain Clans' Green Dragon guarding the way into the dwarf lands.
+    game_map.update(tracked_enemy=game_map['reference_enemy_ids'].index('S103KC002B'))
     game_map.update(lord_type='warrior', step_cost=0., exploration_bonus=.08, building_reward=0.,
         equipment_requires_skills=True, max_building_level=int(info['MAX_UNIT']),
         max_spell_level=int(info['MAX_SPELL']), max_hero_level=int(info['MAX_LEADER']))

@@ -12,6 +12,7 @@ PARTICIPATION_NAMES = {
     'unit_swaps': 'unit_swap', 'trainer_uses': 'trainer_use', 'merchant_purchases': 'merchant_purchase',
     'potions_used': 'potion_use', 'dragon_battles': 'dragon_reached',
     'capital_guardian_battles': 'capital_guardian_reached',
+    'objective_item_acquired': 'objective_item', 'tracked_enemy_defeated': 'tracked_enemy',
 }
 
 
@@ -80,6 +81,11 @@ class CampaignMetrics:
             dragon = CAMPAIGN_FIELDS.index('dragon_battles')
             data['campaign/window/dragon_reached_episodes_rate'] = sum(
                 record[dragon] > 0 for record in self.recent) / len(self.recent)
+            for name, alias in (('objective_item_acquired', 'objective_item'),
+                                ('tracked_enemy_defeated', 'tracked_enemy')):
+                index = CAMPAIGN_FIELDS.index(name)
+                data[f'campaign/window/{alias}_episodes_rate'] = sum(
+                    record[index] > 0 for record in self.recent) / len(self.recent)
             guardian = CAMPAIGN_FIELDS.index('capital_guardian_battles')
             reached = [record for record in self.recent if record[guardian] > 0]
             data['campaign/window/capital_guardian_reached_episodes_rate'] = len(reached) / len(self.recent)
