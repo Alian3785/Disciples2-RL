@@ -44,6 +44,7 @@ from stoix.envs.number_grid_metrics import campaign_events, empty_campaign_count
 from stoix.envs.number_grid_episode_reports import empty_event, episode_event
 from stoix.envs.number_grid_scenarios import ScenarioRules
 from stoix.envs.number_grid_script_events import ScriptEventRules
+from stoix.envs.number_grid_capital_defense import CapitalDefenseRules
 from stoix.envs.number_grid_bot import ScriptedBotRules
 from stoix.envs.number_grid_bot_attack import BotAttackRules
 from stoix.envs.number_grid_target_rewards import TargetRewardRules
@@ -64,7 +65,7 @@ _ROOT = Path(__file__).resolve().parents[2]
 MAP_FILES = {'current': _ROOT / 'number_grid_map.json', 'default': _ROOT / 'maps/default.json'}
 MAP_FILES.update({name: _ROOT / 'maps' / (name+'.json')
                  for name in ('small', 'super_last_stand', 'siege_train', 'the_charmed_child', 'trade_train',
-                              'mirror_match', 'bethrezens_retreat', 'scroll_train', 'magic_train',
+                              'mirror_match', 'bethrezens_retreat', 'the_salty_dungeon', 'scroll_train', 'magic_train',
                               'item_train', 'hire_train', 'orc_duel', 'formation_train')})
 MAP_FILES['mirrow_match'] = MAP_FILES['mirror_match']
 MAP_FILES['mirror-match'] = MAP_FILES['mirror_match']
@@ -213,6 +214,7 @@ class BattleState(NumberGridState):
     territory_owners: jax.Array
     enemy_positions: jax.Array
     scenario_spawned: jax.Array
+    capital_defender_hp: jax.Array
     script_events_fired: jax.Array
     script_objective_ready: jax.Array
     script_orders: jax.Array
@@ -806,10 +808,11 @@ class NumberGrid(Summoning, NumericNumberGrid):
         self.goal_enemies = None
         self.objective_enemy = game_map.get('objective_enemy')
         self.position_objective = game_map.get('campaign_objective') == 'reach_position'
+        self.objective_item = None
         self.objective_position_reward = game_map.get('objective_position_reward', 8.)
         if not self.position_objective and any(k in game_map for k in (
                 'objective_position', 'objective_radius', 'objective_position_reward', 'objective_hero',
-                'objective_after_event')):
+                'objective_after_event', 'objective_item')):
             raise ValueError('Position objective fields require campaign_objective=reach_position')
         if self.position_objective:
             point = game_map.get('objective_position')
@@ -835,6 +838,11 @@ class NumberGrid(Summoning, NumericNumberGrid):
             if not any(eligible[int(i)] for i in self.progression.initial_ids[:6]):
                 raise ValueError('Position objective requires its hero in the starting party')
             self.objective_heroes = jnp.array(eligible, bool)
+            if 'objective_item' in game_map:
+                item = game_map['objective_item']
+                if not self.items_enabled or item not in self.item_rules.keys:
+                    raise ValueError('Objective item must be available in the map item catalogue')
+                self.objective_item = self.item_rules.keys.index(item)
         self.objective_reward_hero_only = game_map.get('objective_reward_hero_only', False)
         if type(self.objective_reward_hero_only) is not bool:
             raise ValueError('objective_reward_hero_only must be true or false')
@@ -945,6 +953,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
         if self.basic_combat:
             self.terrain = TerrainRules(game_map, self.progression if self.progression_enabled else None)
         self.script_events = ScriptEventRules(game_map, self)
+        self.capital_defense = CapitalDefenseRules(game_map, self.progression if self.progression_enabled else None)
         # Armies that attack the hero through queued encounters, outside its own moves.
         self.encounters_enabled = (self.scenario.enabled or self.bot.enabled or self.script_events.enabled
                                    or self.bot_attack.enabled)
@@ -957,6 +966,15 @@ class NumberGrid(Summoning, NumericNumberGrid):
         self.reference_enemy_count = self.num_opponents - (
             len(game_map.get('scenario_event_enemies', [])) if not self.script_events.enabled else 0)
         self.restored_hp = jnp.concatenate((self.hero_full, jnp.zeros(6, jnp.int32)))
+        self.initial_hp = self.restored_hp
+        if 'hero_initial_hp' in game_map:
+            hp = game_map['hero_initial_hp']
+            if (not self.progression_enabled or not isinstance(hp, list) or len(hp) != 6
+                    or any(type(value) is not int or not 0 <= value <= int(maximum)
+                           for value, maximum in zip(hp, self.hero_full))
+                    or not any(hp)):
+                raise ValueError('Hero initial HP must be six integers within the starting maximum HP')
+            self.initial_hp = jnp.array(hp+[0]*6, jnp.int32)
         # User-defined prototype rule: ceil(10% max HP) once per strategic rest.
         self.rest_healing = jnp.concatenate(((self.hero_full + 9) // 10, jnp.zeros(6, jnp.int32)))
         self.observation_version = int(game_map.get('battle_observation_version', 1))
@@ -973,9 +991,11 @@ class NumberGrid(Summoning, NumericNumberGrid):
         self.observation_size += 1  # Strategic day, shared by every campaign and battle mode.
         self.observation_size += self.scenario.observation_size
         self.observation_size += self.script_events.observation_size
+        self.observation_size += self.capital_defense.observation_size
         self.observation_size += self.bot.observation_size
         self.observation_size += self.bot_attack.observation_size
         self.observation_size += 4 if self.position_objective else 0
+        self.observation_size += int(self.objective_item is not None)
         self.observation_size += self.capital_training.observation_size
         self.observation_size += self.num_opponents+1 if self.army_victory_level_reward else 0
 
@@ -1093,6 +1113,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             territory_owners=self.territory.initial_owners if self.territory_enabled else jnp.zeros(0, jnp.int8),
             enemy_positions=self.opponent_positions,
             scenario_spawned=~self.scenario.scheduled,
+            capital_defender_hp=self.capital_defense.maximum,
             script_events_fired=jnp.zeros(self.script_events.count, bool),
             script_objective_ready=jnp.bool_(False),
             script_orders=self.script_events.initial_orders,
@@ -1157,7 +1178,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             water_source=jnp.full(12,-1,jnp.int32), last_water_damage=jnp.zeros(12,jnp.int32),
             burn_mode=jnp.zeros(12,jnp.int32),burn_damage=jnp.zeros(12,jnp.int32),
             burn_source=jnp.full(12,-1,jnp.int32),last_burn_damage=jnp.zeros(12,jnp.int32),
-            hp=self.restored_hp, wards_used=jnp.zeros(12, jnp.uint32),
+            hp=self.initial_hp, wards_used=jnp.zeros(12, jnp.uint32),
             last_immune=jnp.uint32(0), last_ward=jnp.uint32(0), priority=jnp.zeros(12), turn_phase=jnp.zeros(12, jnp.int32),
             defended=jnp.zeros(12, bool), retreating=jnp.zeros(12, bool), escaped=jnp.zeros(12, bool),
             actor=zero, round=zero, last_event=jnp.int32(MOVE), last_actor=jnp.int32(-1),
@@ -1925,6 +1946,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
                 context=jnp.concatenate((context,self.scenario.observation(state)))
             if self.script_events.configured:
                 context=jnp.concatenate((context,self.script_events.observation(state)))
+            if self.capital_defense.enabled:
+                context=jnp.concatenate((context,self.capital_defense.observation(state)))
             if self.bot.enabled:
                 context=jnp.concatenate((context,self.bot.observation(state)))
             if self.bot_attack.enabled:
@@ -1932,6 +1955,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
             if self.position_objective:
                 context=jnp.concatenate((context, self.objective_position/(self.size-1),
                                          (self.objective_position-state.position)/(self.size-1)))
+                if self.objective_item is not None:
+                    context=jnp.concatenate((context, jnp.asarray([self._has_objective_item(state)], jnp.float32)))
             if self.capital_training.enabled:
                 context=jnp.concatenate((context, self.capital_training.observation(state)))
             if self.army_victory_level_reward:
@@ -2123,13 +2148,20 @@ class NumberGrid(Summoning, NumericNumberGrid):
             state = state.replace(potions=state.potions+loot, last_loot=state.last_loot+loot)
         return state
 
+    def _has_objective_item(self, state):
+        """The permanent party must actually carry the required quest item."""
+        if self.objective_item is None:
+            return jnp.bool_(True)
+        return jnp.any(state.item_inventory == self.objective_item)
+
     def _campaign_won(self, state):
         """Check the configured army, city, location or bot objective without awarding rewards."""
         if self.position_objective:
             alive = (self.objective_heroes[state.unit_ids[:6]] & (state.hp[:6] > 0)
                      & (state.summon_owner[:6] < 0) & ~state.copied[:6])
             return ((jnp.max(jnp.abs(state.position-self.objective_position)) <= self.objective_radius) & jnp.any(alive)
-                    & self.script_events.objective_ready(state) & ~jnp.any(state.pending_encounters & state.alive)
+                    & self._has_objective_item(state) & self.script_events.objective_ready(state)
+                    & ~jnp.any(state.pending_encounters & state.alive)
                     & ~state.in_battle & ~state.summon_battle & ~state.lost)
         if self.scripted_bot_objective:
             return (state.bot_hero_victories > 0) & ~state.lost & ~state.bot_autobattle
@@ -2393,6 +2425,13 @@ class NumberGrid(Summoning, NumericNumberGrid):
         if self.script_events.enabled:
             next_state = jax.lax.cond(resting & ~next_state.done,
                                       self.script_events.advance, lambda s: s, next_state)
+        if self.capital_defense.enabled:
+            next_state = jax.lax.cond(resting, self.capital_defense.regenerate, lambda s: s, next_state)
+            next_state = jax.lax.cond(resting & ~next_state.done,
+                lambda s: self.capital_defense.advance(self, s, resting & ~before.in_battle), lambda s: s, next_state)
+            key, random_key = jax.random.split(next_state.battle_key)
+            random_values = jax.random.uniform(random_key, (self.random_size,))
+            next_state = next_state.replace(battle_key=key)
         if self.bot.enabled:
             # Under vmap the cond runs for every environment; only a real map
             # REST may enter the bot's search and auto-battle loops.
@@ -3527,6 +3566,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
             next_state, completion_reward = reference_rewards.finish(self, state, next_state)
             reward += completion_reward
         if self.script_events.enabled:
+            if self.script_events.has_kill_triggers:
+                next_state = self.script_events.process(self, next_state, locations=False)
             next_state = self.script_events.outcome(next_state)
         timed_out = ~state.done & next_state.done & ~next_state.won & ~next_state.lost
         reward -= self.episode_timeout_penalty * timed_out

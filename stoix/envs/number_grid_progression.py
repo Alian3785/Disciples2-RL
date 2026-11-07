@@ -82,7 +82,11 @@ class ProgressionRules:
                     # Scenario-promoted heroes (Betrezen) take the same stat ladder.
                     bonuses = next(r['level_bonuses'] for r in UNITS.values()
                                    if r.get('game_id') == 'g000uu0044')
-                result = dict(override, hero_skills=skills, level_bonuses=sorted(
+                # Scenario portraits may specify a different stat-skill history
+                # (S103's level-4 Duke has 195 HP, without Endurance).
+                omitted = ({b['level'] for b in UNITS[key].get('level_bonuses', [])}
+                           - {b['level'] for b in bonuses}) if 'level_bonuses' in override else set()
+                result = dict(override, hero_skills=[s for s in skills if s['level'] not in omitted], level_bonuses=sorted(
                     bonuses+[might], key=lambda b: b['level']))
                 if row['level'] >= might['level']:
                     # Growth starts above the row's level, so a hero starting past Might gets it now.
@@ -151,6 +155,8 @@ class ProgressionRules:
         self.cached_poisoners = jnp.array([(r['name'] == 'Ниддог' or r.get('unit_type') in ('Dregazul','Spider')) for r in rows])
         self.poisoners = jnp.array([(r['name'] == 'Ниддог' or r.get('unit_type') in ('Dregazul','Spider')) or r.get('unit_type') in ('Death','Dead dragon') for r in rows])
         used_ids = set(hero) | {i for squad in enemies for i in squad}
+        if game_map.get('capital_defender'):
+            used_ids.add(self.ids[game_map['capital_defender']['unit']])
         # Feature pruning must include every recruit and its later promotions.
         # This host-only closure runs at construction, never in the JAX step.
         reached = set(hero)

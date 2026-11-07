@@ -280,7 +280,8 @@ class ScriptedBotRules:
             bot_defeated_enemies=state.bot_defeated_enemies+victory.astype(jnp.int32))
         return jax.lax.cond(victory, lambda s: s, self.mark_defeated, updated)
 
-    def blue_action(self, env, state):
+    @staticmethod
+    def blue_action(env, state):
         """Reference scripted blue: lowest HP target, wounded ally for healers."""
         from stoix.envs.number_grid import SHOOT, DEFEND, WAIT
         mask = env.action_mask(state)

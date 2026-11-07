@@ -44,12 +44,12 @@ def test_living_flying_heroes_and_dead_leader_prices(current_game):
     for key in keys:
         living = hero_roster_state(env,initial,['possessed',key,None,'cultist',None,None])
         cases += [living,living.replace(hp=living.hp.at[1].set(0))]
-        expected += [[2,1,4,6] if key=='g000uu0044' else [2]*4,[4,2,8,12]]
+        expected += [[2,1,4,6] if key=='g000uu0044' else [2]*4,[4,4,8,12]]
     batch = jax.tree.map(lambda *xs:jnp.stack(xs),*cases)
     chex.assert_trees_all_equal(compiled_method(env,'travel_costs',batched=True)(batch),jnp.array(expected))
     fake = cases[1].replace(unit_ids=cases[1].unit_ids.at[3].set(env.progression.ids['g000uu0022']),
         copied=cases[1].copied.at[3].set(True))
-    assert compiled_method(env,'travel_costs')(fake).tolist() == [4,2,8,12]
+    assert compiled_method(env,'travel_costs')(fake).tolist() == [4,4,8,12]
     no_hero = initial.replace(unit_ids=initial.unit_ids.at[1].set(0))
     assert compiled_method(env,'travel_costs')(no_hero).tolist() == [2,1,4,6]
 
@@ -113,7 +113,7 @@ def test_terrain_boots_require_living_leader_and_flight_stays_two(current_game):
     for key, expected in (('elven_boots',[2,1,2,6]),('elemental_boots',[2,1,4,2])):
         s = initial.replace(equipped=initial.equipped.at[4].set(items.keys.index(key)))
         assert costs(s).tolist() == expected
-        assert costs(s.replace(hp=s.hp.at[1].set(0))).tolist() == [4,2,8,12]
+        assert costs(s.replace(hp=s.hp.at[1].set(0))).tolist() == [4,4,8,12]
         flyer = hero_roster_state(env,s,['possessed','duke',None,'cultist',None,None])
         assert costs(flyer).tolist() == [2]*4
 
@@ -132,7 +132,7 @@ def test_death_revival_and_rest_restore_correct_movement(current_game, leader_ke
     equipped = compiled_method(env,'_refresh_equipment')(initial.replace(item_inventory=initial.item_inventory.at[0].set(boot)))
     dead = compiled_method(env,'_refresh_equipment')(equipped.replace(hp=equipped.hp.at[1].set(0)))
     assert env.movement_cap(dead) == 20 and dead.equipped[4] == -1
-    assert compiled_method(env,'travel_costs')(dead).tolist() == [4,2,8,12]
+    assert compiled_method(env,'travel_costs')(dead).tolist() == [4,4,8,12]
     rested,_ = advance(dead,jnp.int32(REST))
     assert rested.movement_points == 20 and rested.hp[1] == 0
     revive = env.potion_rules.metadata()[env.potion_rules.keys.index('life')]['action_start']+1
