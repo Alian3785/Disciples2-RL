@@ -426,6 +426,7 @@
     const city=territoryInfo()?.cities.find((c,i)=>s.city_owned[i]&&c.position.every((v,j)=>v===s.position[j]));
     const temple=snap.building_status?.[info.temple_action-18]===1;
     $('capital-location').textContent=city?city.name+' · ваш город':'Столица · клетка '+info.position.join(', ');
+    if(snap.capital_defense&&!city){const guard=snap.capital_defense;$('capital-location').textContent+=' · '+guard.name+' '+guard.hp+'/'+guard.max_hp+' HP';}
     $('service-status').textContent=s.done?'Эпизод завершён.':s.in_battle?'Услуги доступны после боя.':!atCapital?'Войдите в столицу или захваченный город, чтобы лечить и воскрешать бойцов.':!temple?'Постройте Храм в столице за 300 золота, чтобы открыть лечение и воскрешение.':'Храм открыт; услуги не расходуют очки перемещения и не завершают ход.';
     const cards=[];
     for(let i=0;i<6;i++){
@@ -834,6 +835,11 @@
     if(map.campaign_objective==='reach_position'){
       $('remaining').textContent=Number(!s.won);
       $('remaining-label').textContent='цель: привести живого героя '+(map.objective_radius?'в зону ⚑ радиуса '+map.objective_radius:'к ⚑')+' · строка '+map.objective_position[0]+', столбец '+map.objective_position[1];
+      if(map.objective_item){
+        const key=equipmentInfo()?.items?.findIndex(item=>item.key===map.objective_item);
+        const carried=key>=0&&(s.item_inventory||[]).includes(key);
+        $('remaining-label').textContent+=' · '+(carried?'рунический ключ получен':'сначала получите рунический ключ');
+      }
       if(map.objective_after_event&&map.scenario_events_enabled!==false){
         const event=map.scenario_events.findIndex(e=>e.id===map.objective_after_event);
         const responded=s.script_events_fired?.[event]&&s.script_objective_ready;
@@ -873,9 +879,9 @@
     $('attack-hint').textContent=profile(s.actor)?.unit_type==='Succub'?'Массовое превращение в бесов без урона: выберите любого доступного живого противника.':profile(s.actor)?.unit_type==='Witch'?'Превращение: выберите живого противника.':profile(s.actor)?.unit_type==='Alchemist'?'Дополнительный ход: выберите живого союзника, кроме алхимика и отступающего.':profile(s.actor)?.unit_type==='Patriach'?'Выберите союзника: лечение живого или однократное воскрешение погибшего с 50% HP.':isPowerSupport(s.actor)?(['Dwarfdruid','Arhidruid'].includes(profile(s.actor)?.unit_type)?'Выберите союзника для усиления и очищения; себя — только для очищения.':'Усиление: выберите другого живого союзника.'):isMassHealer(s.actor)?'Действует на всех живых союзников, включая самого лекаря. Выберите любую доступную карточку.':isHealer(s.actor)?'Лечение: выберите живого союзника.':isMage(s.actor)?'Массовая атака: выберите любого живого врага.':isWarrior(s.actor)?(mask.slice(8,14).some(Boolean)?'Ход воина: выберите подсвеченного врага для удара мечом.':'Воин не достаёт до врагов. Можно защищаться, ждать или отступить.'):'Нажмите на живого противника, чтобы выстрелить.';
     if(isCopier(s.actor))$('attack-hint').textContent='Копирование: выберите доступного бойца любой стороны. Большие юниты и стражи недоступны.';
     if(isSummoner(s.actor))$('attack-hint').textContent='Призыв: выберите свободную клетку своего отряда. Большое существо занимает переднюю и заднюю клетки линии.';
-    const winText=map.campaign_objective==='reach_position'?'Победа! Герой достиг цели ⚑.'
+    const winText=map.campaign_objective==='reach_position'?(map.objective_item?'Победа! Герой доставил рунический ключ ко входу в темницу.':'Победа! Герой достиг цели ⚑.')
       :targetEnemy!==null?'Победа! Цель повержена: '+targetName+'.':goalCities.length?'Победа! Целевые города захвачены.':'Победа! Карта очищена.';
-    const message=s.won?winText:s.lost?'Ваш отряд погиб. Начните новую игру.':s.done?'Достигнут лимит. Начните новую игру.':s.in_battle?'Выбирайте цели и берегите свой отряд.':!s.movement_points?'Очки перемещения закончились. Можно использовать зелья, строить или отдохнуть.':'Шаг на клетку врага — атака. Шаг рядом с отрядом на открытой местности тоже начинает бой (зона контроля).';
+    const message=s.won?winText:s.lost?(map.capital_defender&&s.capital_defender_hp<=0?'Ашкаэль погиб. Столица потеряна. Начните новую игру.':'Ваш отряд погиб. Начните новую игру.'):s.done?'Достигнут лимит. Начните новую игру.':s.in_battle?'Выбирайте цели и берегите свой отряд.':!s.movement_points?'Очки перемещения закончились. Можно использовать зелья, строить или отдохнуть.':'Шаг на клетку врага — атака. Шаг рядом с отрядом на открытой местности тоже начинает бой (зона контроля).';
     $('message').textContent=message;
     $('map-controls').hidden=s.in_battle||capitalOpen||potionsOpen||spellsOpen;$('battle-controls').hidden=!s.in_battle||capitalOpen||potionsOpen||spellsOpen;
     $('continue').hidden=!s.in_battle||!mask[17];

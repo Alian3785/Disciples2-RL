@@ -21,6 +21,10 @@ def _item(key, name, gid, category, price, label, **effects):
 
 
 ITEMS = (
+    _item('runic_key', 'Рунический ключ', '7114', VALUABLE, 0,
+          'Ключ от Соляной темницы: доставьте его ко входу; не продаётся'),
+    _item('shadow_scroll', 'Свиток: Тень', '5068', VALUABLE, 400,
+          'Свиток невидимости: трофей, продажа за 80 золота', sell_price=80),
     # S101 trophies: invisibility is not implemented; the zero-value quest totem
     # must survive automatic sales until its scripted exchange.
     _item('sanctuera_scroll', 'Sanctuera scroll', '5051', VALUABLE, 600,

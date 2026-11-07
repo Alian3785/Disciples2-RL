@@ -14,6 +14,12 @@ bash scripts/run_gpu.sh serve_number_grid.py --map trade_train --port 8769
 
 Windows-обёртка: `open-numbergrid.cmd -Map trade_train`. Страница — http://127.0.0.1:8769/viewer.html. Параметр `--model results/RUN` подключает совместимую готовую модель; карта должна совпадать с сохранённой. Один сервер обслуживает выбранную карту.
 
+Для [«Соляной темницы»](MAPS.md#salty-dungeon):
+`open-numbergrid.cmd -Map the_salty_dungeon` либо
+`bash scripts/run_gpu.sh serve_number_grid.py --map the_salty_dungeon --port 8769`.
+Сценарий доступен и через `benchmark_number_grid.py --map the_salty_dungeon`;
+автоматически в базовую серию шести карт он не добавлен, бюджет обучения не задан.
+
 `scripts/run_gpu.sh` выбирает виртуальное окружение CUDA, устанавливает пути проекта и требует GPU. CPU-fallback для обучения и тестов не используется. Путь окружения можно задать через `NUMBERGRID_VENV`.
 
 <a id="training"></a>

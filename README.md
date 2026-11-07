@@ -37,7 +37,7 @@ bash scripts/run_gpu.sh serve_number_grid.py --map trade_train --port 8769
 | [Обучение](docs/TRAINING.md) | Runtime, команды, метрики, отчёты, методика скорости и проверки |
 | [Лаборатория стража](docs/GUARDIAN_LAB.md) | Поиск тактик, приближения и неподтверждённые правила |
 
-Подробные правила отдельных карт: [Default и драконы/столица](docs/DEFAULT_MAP.md), [Small](docs/SMALL_MAP.md), [Бегство Бетрезена](docs/BETHREZENS_RETREAT.md), [Trade Train](docs/TRADE_TRAIN.md), [Mirror Match](docs/MIRROR_MATCH.md).
+Подробные правила отдельных карт: [Default и драконы/столица](docs/DEFAULT_MAP.md), [Small](docs/SMALL_MAP.md), [Бегство Бетрезена](docs/BETHREZENS_RETREAT.md), [Соляная темница](docs/MAPS.md#salty-dungeon), [Trade Train](docs/TRADE_TRAIN.md), [Mirror Match](docs/MIRROR_MATCH.md).
 
 Актуальные команды и правила находятся в этих справочниках. Результаты конкретных запусков хранятся в `results/`; прошлые версии документации доступны в истории Git.
 

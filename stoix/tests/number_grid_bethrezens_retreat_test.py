@@ -75,7 +75,7 @@ def test_living_bethrezen_flies_and_dead_one_does_not(retreat):
     env, state = retreat
     costs = compiled_method(env, 'travel_costs')
     assert costs(state).tolist() == [2, 2, 2, 2]
-    assert costs(state.replace(hp=state.hp.at[4].set(0))).tolist() == [4, 2, 8, 12]
+    assert costs(state.replace(hp=state.hp.at[4].set(0))).tolist() == [4, 4, 8, 12]
 
 
 @pytest.mark.core

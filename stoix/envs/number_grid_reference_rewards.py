@@ -28,9 +28,10 @@ def validate_overrides(game_map):
     if not isinstance(pickups, dict) or any(type(v) not in (int, float) or not math.isfinite(v) or v < 0
                                           for v in pickups.values()):
         raise ValueError('item_pickup_rewards must map item keys to finite nonnegative rewards')
-    chest_keys = {k for chest in game_map.get('chests', []) for k in chest.get('items', {})}
-    if set(pickups) - chest_keys:
-        raise ValueError('item_pickup_rewards must name chest items')
+    loot_keys = {k for kind in ('chests', 'ruins') for source in game_map.get(kind, [])
+                 for k, count in source.get('items', {}).items() if count > 0}
+    if set(pickups) - loot_keys:
+        raise ValueError('item_pickup_rewards must name chest or ruin items')
 
 
 def _wave_bonus(env, before, after):
@@ -177,6 +178,13 @@ def finish(env, before, after):
     reward = (-6.*(after.lost & ~before.lost)
               + env.map_config.get('timeout_reward', -8.)*(terminal & ~after.won & ~after.lost))
     reward += terminal*5.*jnp.sum(after.reference_defeated)/max(1, env.reference_enemy_count)
+    # Ruins are collected at the end of battle. Pay for
+    # the one-shot source transition, never for inventory changes or purchases.
+    pickups = env.map_config.get('item_pickup_rewards', {})
+    if pickups and env.ruins_enabled:
+        amounts = jnp.array([sum(pickups.get(k, 0.)*n for k, n in source.get('items', {}).items())
+                             for source in env.map_config['ruins']], jnp.float32)
+        reward += jnp.sum(amounts*(after.ruin_looted & ~before.ruin_looted))
     if env.territory.objective_cities:
         old = jnp.sum(before.city_owned & env.territory.goal_cities)
         new = jnp.sum(after.city_owned & env.territory.goal_cities)

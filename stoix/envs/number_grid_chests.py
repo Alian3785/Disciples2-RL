@@ -15,8 +15,9 @@ class ChestRules:
         chests = game_map['chests']
         if not isinstance(chests, list):
             raise ValueError('chests must be a list')
-        positions, loot = [], []
-        occupied = {tuple(p) for p in game_map['opponent_positions']}
+        positions, loot, guards = [], [], []
+        enemies = game_map['opponent_positions']
+        occupied = set()
         occupied.add(tuple(game_map['agent_position']))
         occupied.add(tuple(game_map.get('capital_position', game_map['agent_position'])))
         for chest in chests:
@@ -28,6 +29,12 @@ class ChestRules:
                     or tuple(position) in occupied):
                 raise ValueError('Chest positions must be distinct, inside the map and unoccupied')
             occupied.add(tuple(position))
+            defenders = chest.get('guards', [])
+            if (not isinstance(defenders, list) or len(set(defenders)) != len(defenders)
+                    or any(type(i) is not int or not 0 <= i < len(enemies) for i in defenders)
+                    or set(defenders) != {i for i, p in enumerate(enemies) if list(p) == list(position)}):
+                raise ValueError('A guarded cache must name every army on its tile; ordinary chests cannot overlap armies')
+            guards.append([i in defenders for i in range(len(enemies))])
             positions.append(position)
             loot.append([contents.get(key,0) for key in rules.keys])
         self.count = len(chests)
@@ -36,10 +43,16 @@ class ChestRules:
         self.features = jnp.concatenate((self.positions/(game_map['size']-1),
                                         self.loot.astype(jnp.float32)), axis=1)
         self.items = item_rules
+        self.has_guards = any(c.get('guards') for c in chests)
+        self.guards = jnp.array(guards, bool).reshape(self.count, len(enemies))
+        if self.has_guards:
+            self.features = jnp.concatenate((self.features, jnp.any(self.guards, axis=1)[:, None]), axis=1)
 
     def collect(self, state, moved):
         nearby = jnp.max(jnp.abs(self.positions-state.position), axis=1) <= 1
         collected = state.chest_alive & nearby & moved
+        if self.has_guards:
+            collected &= ~jnp.any(self.guards & state.alive[None, :], axis=1)
         loot = jnp.sum(jnp.where(collected[:, None], self.loot, 0), axis=0)
         if self.items is not None:
             state=self.items.collect(state,collected)

@@ -1,12 +1,12 @@
-"""Functional S101 events on device, with fixed army/inventory capacity.
+"""Functional campaign events on device, with fixed army/inventory capacity.
 
 Source, supported effects and current JAX adaptations are documented in
-docs/BETHREZENS_RETREAT.md. No host callbacks or source parsing during step.
+docs/BETHREZENS_RETREAT.md and docs/MAPS.md. No host callbacks or source parsing during step.
 """
 import jax
 import jax.numpy as jnp
 
-from stoix.envs.number_grid_combat import ATTACK_TYPES
+from stoix.envs.number_grid_combat import ATTACK_TYPES, HP
 from stoix.envs.number_grid_items import remove_items
 from stoix.envs.number_grid_scenarios import path_distances
 from stoix.envs.number_grid_spells import SPELL_BY_ID
@@ -50,10 +50,11 @@ class ScriptEventRules:
         self.directions = jnp.array([(r, c) for r in (-1, 0, 1) for c in (-1, 0, 1) if r or c], jnp.int32)
         self.offsets = jnp.concatenate((jnp.zeros((1, 2), jnp.int32), self.directions))
         # Source conditions are conjunctions. Unused columns carry neutral values.
-        days, positions, radii, leaders, items, exists, ends = [], [], [], [], [], [], []
+        days, positions, radii, leaders, items, exists, killed, ends = [], [], [], [], [], [], [], []
         self.effects = {}
         for index, event in enumerate(self.events):
             day, position, radius, leader, item, enemy, end = 0, [0, 0], -1, False, -1, -1, 0
+            killed_enemy = -1
             for condition in event['conditions']:
                 kind = condition['kind']
                 if kind == 'FREQUENCY':
@@ -66,7 +67,10 @@ class ScriptEventRules:
                 elif kind == 'STACK_EXISTS':
                     enemy = condition['enemy']
                 elif kind == 'KILL_STACK':
-                    end = -1
+                    if 'enemy' in condition:
+                        killed_enemy = condition['enemy']
+                    else:
+                        end = -1  # Legacy native condition: the player's hero died.
                 else:
                     raise ValueError('Unknown script condition: '+kind)
             for effect in event['effects']:
@@ -80,6 +84,7 @@ class ScriptEventRules:
             leaders.append(leader)
             items.append(item)
             exists.append(enemy)
+            killed.append(killed_enemy)
             ends.append(end)
         self.days = jnp.array(days, jnp.int32)
         self.positions = jnp.array(positions, jnp.int32)
@@ -88,6 +93,8 @@ class ScriptEventRules:
         self.items = jnp.array(items, jnp.int32)
         self.exists = jnp.array(exists, jnp.int32)
         self.ends = jnp.array(ends, jnp.int32)
+        self.killed = jnp.array(killed, jnp.int32)
+        self.has_kill_triggers = any(i >= 0 for i in killed)
         movers = list(game_map['scenario_order_armies'])
         movers += [dict(enemy=e['enemy'], order=0, moves=e['moves']) for e in self.effects.get('CREATE_STACK', [])]
         self.movers = jnp.array([m['enemy'] for m in movers], jnp.int32)
@@ -96,6 +103,15 @@ class ScriptEventRules:
         self.max_moves = max((m['moves'] for m in movers), default=0)
         self.observation_size += len(movers)
         self.order_slot = {m['enemy']: i for i, m in enumerate(movers)}
+        if len(self.order_slot) != len(movers) or any(m['moves'] <= 0 for m in movers):
+            raise ValueError('Script movers must be unique with positive movement budgets')
+        self.movement_points = game_map.get('scenario_movement_points', False)
+        self.capital = jnp.array(env.territory.capital, jnp.int32)
+        if self.movement_points:
+            self.progression = env.progression
+            self.terrain = env.terrain
+            self.enemy_ids = env.progression.enemy_ids[self.movers]
+
         if self.enabled:
             self.distances = path_distances(self.size, env.territory.impassable_cells)
         for kind in ('MOVE_STACK', 'CREATE_STACK', 'MOVE_BESIDE'):
@@ -133,10 +149,15 @@ class ScriptEventRules:
                             & ~state.copied[:6] & (state.summon_owner[:6] < 0))
         frequency = (self.days > 0) & new_day & (state.day % jnp.maximum(self.days, 1) == 0)
         spatial = (self.radii >= 0) & locations & in_zone
-        due = ((frequency | spatial) & ((self.items < 0) | has_item)
+        killed = (self.killed >= 0) & ~state.alive[jnp.maximum(0, self.killed)]
+        # Unlike end-of-campaign KILL_STACK, a named enemy's death activates
+        # another army, including deaths caused by a strategic spell.
+        due = ((frequency | spatial | killed)
+               & ((self.days == 0) | frequency) & ((self.radii < 0) | spatial)
+               & ((self.killed < 0) | killed) & ((self.items < 0) | has_item)
                & (~self.leaders | has_leader)
                & ((self.exists < 0) | state.alive[jnp.maximum(0, self.exists)])
-               & (self.ends == 0) & ~state.script_events_fired & ~state.lost)
+               & (self.ends == 0) & ~state.script_events_fired & ~state.done & ~state.in_battle)
         state = jax.lax.cond(jnp.any(due), lambda s: self._apply(env, s, due), lambda s: s, state)
         return state.replace(script_events_fired=state.script_events_fired | due)
 
@@ -193,6 +214,13 @@ class ScriptEventRules:
                 active = due[effect['event']] & state.alive[effect['enemy']]
                 state = state.replace(script_orders=state.script_orders.at[slot].set(jnp.where(
                     active, effect['order'], state.script_orders[slot])))
+        for effect in self.effects.get('BATTLE', []):
+            enemy = effect['enemy']
+            active = due[effect['event']] & state.alive[enemy]
+            # The world-step encounter queue begins this fight in the same
+            # player action; it does not wait for an enemy movement turn.
+            state = state.replace(pending_encounters=state.pending_encounters.at[enemy].set(
+                state.pending_encounters[enemy] | active))
         for effect in self.effects.get('CAST_SPELL', []):
             spell = SPELL_BY_ID[effect['spell']]['cast']
             bit = jnp.uint32(1 << ATTACK_TYPES.index(spell['element']))
@@ -232,28 +260,54 @@ class ScriptEventRules:
         return state
 
     def advance(self, state):
-        """Existing JAX wave pursuit, activated by native orders 4 / optional 1.
+        """Shortest-path pursuit, with optional terrain movement-point budgets.
 
-        Order 9 guards the encounter location and stays there. Ordinary AI is
-        explicitly configurable; it is not an implementation of native AI.
+        Order 6 targets the player capital. Other active orders target the hero.
+        Armies on S103 spend road/plain/forest/water points like ordinary travel;
+        existing S101 scripts retain their established cells-per-turn budgets.
         """
         indices = self.movers
-        active = state.alive[indices] & ((state.script_orders == 4)
-                    | ((state.script_orders == 1) & (self.normal_ai == 'pursuit')))
-        distance = self.distances[state.position[0]*self.size+state.position[1]]
+        if not indices.size:
+            return state
+        capital_attack = state.script_orders == 6
+        active = state.alive[indices] & ~state.pending_encounters[indices] & (
+            capital_attack | (state.script_orders == 4)
+            | ((state.script_orders == 1) & (self.normal_ai == 'pursuit')))
+        targets = jnp.where(capital_attack[:, None], self.capital, state.position)
+        distance = self.distances[targets[:, 0]*self.size+targets[:, 1]]
+        rows = jnp.arange(indices.size)
+        travel_costs = jnp.ones((indices.size, 4), jnp.int32)
+        if self.movement_points:
+            heroes = self.terrain.heroes[self.enemy_ids]
+            leader = jnp.argmax(heroes, axis=1)
+            maximum = self.progression.stats(self.enemy_ids, state.enemy_progress[indices, :, 0])[..., HP]
+            dead = jnp.any(heroes, axis=1) & (state.enemy_wounds[indices][rows, leader] >= maximum[rows, leader])
+            flying = jnp.any(heroes, axis=1) & ~dead & self.terrain.flying[self.enemy_ids[rows, leader]]
+            base = jnp.broadcast_to(self.terrain.base_costs, (indices.size, 4))
+            walking = jnp.where(dead[:, None], base.at[:, 1].set(base[:, 0])*2, base)
+            travel_costs = jnp.where(flying[:, None], 2, walking)
 
-        def move(step, positions):
+        def move(step, carry):
+            positions, remaining, contact = carry
             candidates = positions[:, None, :]+self.directions
             clipped = jnp.clip(candidates, 0, self.size-1)
-            costs = distance[clipped[..., 0]*self.size+clipped[..., 1]]
-            current = distance[positions[:, 0]*self.size+positions[:, 1]]
+            costs = distance[rows[:, None], clipped[..., 0]*self.size+clipped[..., 1]]
+            current = distance[rows, positions[:, 0]*self.size+positions[:, 1]]
             allowed = jnp.all((candidates > 0) & (candidates < self.size-1), axis=-1) & (costs < current[:, None])
-            choice = candidates[jnp.arange(indices.size), jnp.argmin(jnp.where(allowed, costs, 65535), axis=1)]
-            moving = active & (step < self.moves) & jnp.any(allowed, axis=1)
-            return jnp.where(moving[:, None], choice, positions)
+            choice = candidates[rows, jnp.argmin(jnp.where(allowed, costs, 65535), axis=1)]
+            moving = active & ~contact & (remaining > 0) & jnp.any(allowed, axis=1)
+            nominal = (travel_costs[rows, self.terrain.kinds(choice)] if self.movement_points
+                       else jnp.ones_like(remaining))
+            positions = jnp.where(moving[:, None], choice, positions)
+            # Existing JAX travel permits the final step with a partial budget.
+            remaining -= jnp.where(moving, jnp.minimum(remaining, nominal), 0)
+            contact |= active & jnp.all(positions == state.position, axis=1)
+            return positions, remaining, contact
 
-        positions = jax.lax.fori_loop(0, self.max_moves, move, state.enemy_positions[indices])
+        positions = state.enemy_positions[indices]
         contact = active & jnp.all(positions == state.position, axis=1)
+        positions, _, contact = jax.lax.fori_loop(0, self.max_moves, move,
+                                                  (positions, self.moves, contact))
         responded = (state.script_events_fired[self.objective_event]
                      if self.objective_event >= 0 else jnp.bool_(False))
         return state.replace(enemy_positions=state.enemy_positions.at[indices].set(positions),

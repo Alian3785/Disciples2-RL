@@ -17,7 +17,7 @@ ROLES = {'melee': MELEE, 'ranged': RANGED, 'area': AREA, 'healer': HEALER}
 UNITS = json.loads((Path(__file__).parent / 'data/units.json').read_text(encoding='utf-8'))
 DEFEND_BONUS = 50  # Installed GVars.dbf: DFENDBONUS; see docs/COMBAT.md.
 PROFILE_FIELDS = set(STAT_NAMES) | {'size', 'role', 'attack_type', 'immunities', 'protections', 'exp_kill', 'exp_required', 'exp_current', 'hero',
-                                  'secondary_attack_type', 'secondary_accuracy', 'secondary_damage'}
+                                  'secondary_attack_type', 'secondary_accuracy', 'secondary_damage', 'growth', 'level_bonuses'}
 # Installed GAttacks REACH (LAttR.dbf): 1 is L_ALL, 2 is L_ANY.
 REACH_ALL = '1'
 BESTOW_WARDS = '24'  # LattC.dbf L_BESTOW_WARDS
@@ -188,6 +188,30 @@ def build_combat_tables(game_map):
             index += 1
             if not isinstance(override, dict) or set(override) - (PROFILE_FIELDS | {'exp_increment', 'name'}):
                 raise ValueError('Unknown combat profile fields')
+            if 'growth' in override:
+                growth = override['growth']
+                if (not isinstance(growth, dict) or set(growth) != set(defaults.get('growth', {}))
+                        or type(growth.get('threshold')) is not int or not 1 <= growth['threshold'] <= 99):
+                    raise ValueError('Growth override must preserve the native growth schema')
+                for field, value in growth.items():
+                    width = 5 if field in ('early', 'late') else 2 if field.startswith('secondary_') else 0
+                    numbers = value if width else [value]
+                    if (width and (not isinstance(value, list) or len(value) != width)
+                            or any(type(v) not in (int, float) or not math.isfinite(v) or v < 0 for v in numbers)):
+                        raise ValueError('Invalid growth override: '+field)
+            if 'level_bonuses' in override:
+                bonuses = override['level_bonuses']
+                if not isinstance(bonuses, list):
+                    raise ValueError('Level bonuses must be a list')
+                for bonus in bonuses:
+                    if (not isinstance(bonus, dict)
+                            or set(bonus) != {'level', 'name', 'stat', 'multiplier', 'bonus', 'rounding'}
+                            or type(bonus['level']) is not int or not 2 <= bonus['level'] <= 99
+                            or not isinstance(bonus['name'], str) or not bonus['name']
+                            or bonus['stat'] not in STAT_NAMES or bonus['rounding'] not in ('even', 'half_up')
+                            or any(type(bonus[k]) not in (int, float) or not math.isfinite(bonus[k])
+                                   or bonus[k] < 0 for k in ('multiplier', 'bonus'))):
+                        raise ValueError('Invalid level bonus override')
             values = {**defaults, **override}
             if not isinstance(values['name'], str) or not values['name'].strip():
                 raise ValueError('Combat name must be a nonempty string')

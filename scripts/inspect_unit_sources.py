@@ -5,7 +5,7 @@ from pathlib import Path
 import struct
 
 
-def dbf(path):
+def dbf(path, encoding='cp1251'):
     data = path.read_bytes()
     count, header, stride = struct.unpack_from('<IHH', data, 4)
     fields, offset = [], 1
@@ -16,7 +16,7 @@ def dbf(path):
         width = data[cursor+16]
         fields.append((name, offset, width))
         offset += width
-    return [{name: data[header+i*stride+start:header+i*stride+start+width].decode('cp1251').strip()
+    return [{name: data[header+i*stride+start:header+i*stride+start+width].decode(encoding).strip()
              for name, start, width in fields}
             for i in range(count) if data[header+i*stride] != 42]
 
