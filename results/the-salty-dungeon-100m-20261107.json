@@ -1,0 +1,125 @@
+{
+  "map": "the_salty_dungeon",
+  "run": "results/the-salty-dungeon-100m-20261107b",
+  "algorithm": "Stoix Anakin feedforward PPO",
+  "seed": 42,
+  "device": "NVIDIA GeForce GTX 1660 Ti",
+  "jax": "0.12.0.1",
+  "cuda_runtime": "13.4.92",
+  "num_envs": 250,
+  "rollout_length": 100,
+  "observation_size": 3895,
+  "training_steps": 100000000,
+  "training_seconds": 5837.1,
+  "mean_steps_per_second": 17132,
+  "seconds_per_million_steps": 58.37,
+  "episodes": 125044,
+  "victories": 38393,
+  "last_interval": {
+    "victory_rate": 0.8069,
+    "defeat_rate": 0.1931,
+    "key_rate_last_100": 0.95,
+    "reward_last_100": 521.4,
+    "episode_length_last_100": 775.2,
+    "armies_defeated_last_100": 43.49
+  },
+  "curve_every_10m": [
+    {
+      "steps": 10000000,
+      "victory_rate": 0.0,
+      "key_rate_last_100": 0.0,
+      "reward_last_100": 111.27,
+      "steps_per_second": 17614
+    },
+    {
+      "steps": 20000000,
+      "victory_rate": 0.0,
+      "key_rate_last_100": 0.01,
+      "reward_last_100": 203.97,
+      "steps_per_second": 16272
+    },
+    {
+      "steps": 30000000,
+      "victory_rate": 0.0,
+      "key_rate_last_100": 0.75,
+      "reward_last_100": 295.88,
+      "steps_per_second": 15699
+    },
+    {
+      "steps": 40000000,
+      "victory_rate": 0.0,
+      "key_rate_last_100": 0.75,
+      "reward_last_100": 333.91,
+      "steps_per_second": 17825
+    },
+    {
+      "steps": 50000000,
+      "victory_rate": 0.035,
+      "key_rate_last_100": 0.81,
+      "reward_last_100": 360.42,
+      "steps_per_second": 17589
+    },
+    {
+      "steps": 60000000,
+      "victory_rate": 0.4912,
+      "key_rate_last_100": 0.94,
+      "reward_last_100": 471.09,
+      "steps_per_second": 17461
+    },
+    {
+      "steps": 70000000,
+      "victory_rate": 0.6494,
+      "key_rate_last_100": 0.89,
+      "reward_last_100": 463.71,
+      "steps_per_second": 17345
+    },
+    {
+      "steps": 80000000,
+      "victory_rate": 0.7091,
+      "key_rate_last_100": 0.96,
+      "reward_last_100": 506.99,
+      "steps_per_second": 17081
+    },
+    {
+      "steps": 90000000,
+      "victory_rate": 0.7524,
+      "key_rate_last_100": 0.93,
+      "reward_last_100": 510.93,
+      "steps_per_second": 17279
+    },
+    {
+      "steps": 100000000,
+      "victory_rate": 0.8069,
+      "key_rate_last_100": 0.95,
+      "reward_last_100": 521.4,
+      "steps_per_second": 17390
+    }
+  ],
+  "checkpoint_sha256": "6277abf1a22876192faa97f5eb228955025b9c4cd3272d2c9482a5fc8b25bb8d",
+  "charts": "https://www.comet.com/lentix/baseline-six-maps-50m-20261029-093143/c1b3130b7d4c47dea451305a2534518d?viewId=AnEOVZpktZ8sJjsdTsoySUlD1",
+  "final_weights_32_episodes": {
+    "victories": 26,
+    "shown_seed": 66,
+    "shown_day": 61,
+    "shown_reward": 579.2
+  },
+  "sampled_250_episodes": {
+    "victories": 199,
+    "defeats": 51,
+    "median_day": 58,
+    "max_day": 298
+  },
+  "checkpoint_5m_32_episodes": {
+    "victories": 0,
+    "key_taken": 0
+  },
+  "uniform_random_32_episodes": {
+    "victories": 0,
+    "key_taken": 0
+  },
+  "stopped_first_run": {
+    "run": "results/the-salty-dungeon-100m-20261107",
+    "stopped_at_steps": 8000000,
+    "reason": "KC0027 stalemate: up to ~245 automatic activations per env.step, 16.5k -> 2.3k steps/s"
+  }
+}

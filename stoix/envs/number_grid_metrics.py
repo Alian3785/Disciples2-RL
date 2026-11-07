@@ -22,6 +22,7 @@ CAMPAIGN_FIELDS = (
     'capital_first_contacts', 'capital_entry_strength',
     'merchant_purchases', 'waves_completed', 'capital_guardian_bonuses',
     'capital_bot_heroes_defeated', 'experience_gained', 'capital_incubi',
+    'objective_item_acquired', 'tracked_enemy_defeated',
 )
 EPISODE_WINDOW = 100
 
@@ -101,6 +102,13 @@ def campaign_events(env, before, world, after, action, valid, battle_counts):
         # the dragon kills the party on its first automatic activation.
         values['dragon_battles'] = (world_action & world.in_battle & ~world.summon_battle
                                     & (world.enemy == env.objective_enemy))
+    if env.objective_item is not None:
+        # The goal's quest item (S103's Runic Key) entering the party inventory,
+        # from ruin loot or a cache; it cannot be sold or spent afterwards.
+        values['objective_item_acquired'] = ~env._has_objective_item(before) & env._has_objective_item(after)
+    if env.tracked_enemy is not None:
+        # The charted army destroyed in this decision, in battle or by a strategic spell.
+        values['tracked_enemy_defeated'] = before.alive[env.tracked_enemy] & ~after.alive[env.tracked_enemy]
     if env.chests_enabled:
         values['chests_collected'] = jnp.sum(before.chest_alive & ~world.chest_alive)
     if env.ruins_enabled:

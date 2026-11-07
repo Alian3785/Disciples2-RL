@@ -34,6 +34,21 @@ def validate(name):
         assert bool(env.action_mask(state)[REST])
         state, timestep = step(state, jnp.int32(REST))
         assert bool(jnp.isfinite(timestep.reward))
+        if env.capital_defense.enabled and bool(state.in_battle):
+            # The Salty Dungeon: the human armies reach the capital at the end of day 1,
+            # and a hero resting there defends it in an ordinary battle.
+            assert int(state.enemy) in env.capital_defense.attackers.tolist()
+            break
+    if env.capital_defense.enabled:
+        # Away from the capital the hero is not attacked; the guardian fights the arrivals.
+        rules = env.capital_defense
+        original, _ = reset(jax.random.PRNGKey(42))
+        away = original.replace(position=jnp.array(game_map['objective_position'], jnp.int32))
+        for _ in range(3):
+            away, ts = step(away, jnp.int32(REST))
+            assert not bool(away.in_battle) and bool(jnp.isfinite(ts.reward))
+        assert (int(away.capital_defender_hp) < int(rules.maximum)
+                or not bool(jnp.any(away.alive[rules.attackers])))
     if env.bot_attack.enabled:
         # Default Capital's scripted Empire party: absent at reset, then a real battle
         # without withdrawal on the REST that begins its attack day.

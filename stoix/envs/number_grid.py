@@ -525,6 +525,13 @@ class NumberGrid(Summoning, NumericNumberGrid):
                 or not 0 <= self.warrior_accuracy <= 1):
             raise ValueError('Invalid warrior battle configuration')
         self.max_rounds = int(game_map.get('battle_max_rounds', 75))
+        # Optional cap on battle activations resolved inside one env.step. Under vmap a whole
+        # batch waits for its longest automatic run; the rest continues on the next steps,
+        # where only the forced action is legal and no decision is counted (docs/COMBAT.md).
+        self.automatic_turn_limit = game_map.get('battle_automatic_turn_limit')
+        if self.automatic_turn_limit is not None and (
+                type(self.automatic_turn_limit) is not int or self.automatic_turn_limit < 1):
+            raise ValueError('battle_automatic_turn_limit must be a positive integer')
         self.round_limit_penalty = game_map.get('battle_round_limit_penalty', 1.)
         if (type(self.round_limit_penalty) not in (int, float)
                 or not math.isfinite(self.round_limit_penalty) or self.round_limit_penalty < 0):
@@ -846,6 +853,11 @@ class NumberGrid(Summoning, NumericNumberGrid):
         self.objective_reward_hero_only = game_map.get('objective_reward_hero_only', False)
         if type(self.objective_reward_hero_only) is not bool:
             raise ValueError('objective_reward_hero_only must be true or false')
+        # Telemetry only: an army whose destruction is charted (S103's Green Dragon). No reward.
+        self.tracked_enemy = game_map.get('tracked_enemy')
+        if self.tracked_enemy is not None and (type(self.tracked_enemy) is not int
+                                               or not 0 <= self.tracked_enemy < len(game_map['opponent_positions'])):
+            raise ValueError('tracked_enemy must index an opponent army')
         if self.objective_enemy is not None:
             if type(self.objective_enemy) is not int or not 0 <= self.objective_enemy < len(self.opponent_positions):
                 raise ValueError('objective_enemy must be a valid zero-based enemy index')
@@ -3522,8 +3534,12 @@ class NumberGrid(Summoning, NumericNumberGrid):
         world_state = next_state
 
         def pending(carry):
-            current, _, first, _ = carry
-            return first | (valid & self.automatic_battle_turn(current))
+            current, _, first, counts = carry
+            more = valid & self.automatic_battle_turn(current)
+            if self.automatic_turn_limit is not None:
+                # The battle key lives in the state, so a split run draws the same rolls.
+                more &= counts[0] < self.automatic_turn_limit
+            return first | more
 
         def advance(carry):
             current, total_reward, first, counts = carry
