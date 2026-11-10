@@ -7,21 +7,27 @@ JAX campaign map, extended to the capital by user request (2026-11-08):
   column, two cells. The capital keeps its guardian in the rear middle cell (user rule) and
   up to five more cells. The guardian is the map's capital_defender, else the faction's own
   guardian at level 1: Мизраэль, Видар, Ашкаэль, Ашган or Иллюмиэлль.
-- Five actions per garrison hire the faction's five recruits remotely, as in the reference:
+- Five shared actions hire the faction's five recruits into the selected garrison remotely:
   gold, the capital building that party recruitment needs, room in the garrison and a free cell
   in the unit's row (warriors in front, the others behind; a large unit needs a free column).
   The first such cell is taken; the reference draws one at random. No reward.
 - Living garrison units regenerate on every REST before armies move: the unit's REGEN, the
   lord's bonus and the city level bonus (35 in the capital), as Discipl2.exe getFortRegen;
-  terrain and the hero's items do not count. A city's dead leave after its battle.
-- The capital keeps its dead in their cells (user rule 2026-11-09). Six remote actions revive
-  them once the Temple stands, for the unit's REVIVE_C gold as in the party's revival, at 1 HP
-  and without a reward. A dead guardian may be revived too.
-- With the party at the capital entrance, twelve actions move units between the party and the
-  capital garrison, as in Disciples II: alive or dead, with level, experience, HP, permanent
+  terrain and the hero's items do not count. Owned settlements keep their dead in their cells
+  for paid revival (capital: 2026-11-09, cities: 2026-11-10); losing a city clears its garrison.
+- One selection action per city and capital chooses the garrison for remote hiring, recovery and
+  formation swaps. Selection starts at the capital, persists independently of party movement,
+  and falls back to the capital if the selected city is lost. Only owned sites can be selected.
+- The same six revival and six healing actions serve that selected garrison. Both need the
+  capital's Temple and gold at the unit's
+  REVIVE_C / HEAL_C rates. Revival gives 1 HP; healing buys whole HP and keeps change.
+  Neither gives a reward. A dead guardian may be revived too.
+- With the party at an owned city or capital entrance, the same twelve actions move units
+  between the party and that garrison: alive or dead, with level, experience, HP, permanent
   potions and the mercenary mark. Leaders and the guardian stay. A unit takes its own cell when
   it is free, else the first free cell of its row, then of the other row; a large unit needs a
-  free column. The party's leadership limits units taken in. Temporary potion effects end.
+  free column. The city's level limits stored units; the party's leadership limits units taken
+  in. Temporary potion effects end. Transfer action names stay the same.
 - An enemy army that ends its move on an owned city or capital entrance while the hero's party
   is not there attacks the garrison in a battle the agent plays: the party is stashed, the
   garrison stands in its cells with its own permanent potions, the fort's armour applies and
@@ -45,13 +51,14 @@ GUARDIANS = dict(empire='g000uu3001', mountain_clans='g000uu3002', legions='g000
 GUARDIAN_SLOT = 4  # rear middle cell, user rule 2026-11-08
 OFFERS = 5
 GARRISON_HIRED, CITY_LOST, GARRISON_REVIVED, UNIT_STORED, UNIT_TAKEN = 58, 59, 60, 61, 62
-GARRISON_SWAPPED, GARRISON_HEALED = 67, 68
+GARRISON_SWAPPED, GARRISON_HEALED, GARRISON_SELECTED = 67, 68, 69
 DOSES = 5  # permanent potion kinds, one column of potion_doses each
-# Capital garrison swaps, as the hero party's (number_grid_unit_swaps): every pair of the five
-# cells beside the guardian, each pair once a day, at most three a day, a small penalty each.
+# Every garrison has its own daily swap limit and used pairs. Keep the original ten pairs
+# first, then add the five pairs involving cell 4 for cities; the capital guardian stays.
 SWAP_LIMIT, SWAP_PENALTY = 3, .004
 SWAP_CELLS = tuple(c for c in range(6) if c != GUARDIAN_SLOT)
-SWAP_PAIRS = tuple((a, b) for i, a in enumerate(SWAP_CELLS) for b in SWAP_CELLS[i+1:])
+SWAP_PAIRS = (tuple((a, b) for i, a in enumerate(SWAP_CELLS) for b in SWAP_CELLS[i+1:])
+              + tuple((a, b) for a in range(6) for b in range(a+1, 6) if GUARDIAN_SLOT in (a, b)))
 
 
 def garrisons_enabled(game_map):
@@ -68,16 +75,17 @@ def guardian_spec(game_map, faction):
 
 
 def garrison_action_names(game_map):
-    """Hires for every garrison, the capital's revivals (with capital services), then transfers."""
+    """Hires, shared recovery and transfers, shared swaps, then one selection per settlement."""
     if not garrisons_enabled(game_map) or not game_map.get('faction_recruitment'):
         return ()
     sites = [f'city_{i}' for i in range(len(game_map.get('cities', [])))] + ['capital']
-    names = [f'garrison_{site}_hire_{k}' for site in sites for k in range(OFFERS)]
+    names = [f'garrison_hire_{k}' for k in range(OFFERS)]
     if game_map.get('capital_services'):
         names += [f'garrison_capital_revive_{c}' for c in range(6)]
         names += [f'garrison_capital_heal_{c}' for c in range(6)]
     names += [f'party_to_capital_{s}' for s in range(6)] + [f'capital_to_party_{c}' for c in range(6)]
     names += [f'capital_swap_{a}_{b}' for a, b in SWAP_PAIRS]
+    names += [f'select_{site}' for site in sites]
     return tuple(names)
 
 
@@ -147,42 +155,44 @@ class GarrisonRules:
         self.attackers = attackers
         self.capital = capital
         names = [c['name'] for c in game_map.get('cities', [])]+['Столица']
-        self.metadata = dict(start=start, offers_per_site=0, sites=names, guardian_slot=GUARDIAN_SLOT, offers=[],
+        self.metadata = dict(start=start, hire_count=0, sites=names, guardian_slot=GUARDIAN_SLOT, offers=[],
                              guardian=progression.rows[unit]['name'], revive_start=None, store_start=None,
-                             take_start=None, dead_stay='capital')
+                             take_start=None, select_start=None, dead_stay='owned')
         if recruitment is not None:
             self.offer_ids = recruitment.ids[:OFFERS]
             self.offer_costs = recruitment.costs[:OFFERS]
             self.offer_sizes = recruitment.sizes[:OFFERS]
             self.offer_front = recruitment.front[:OFFERS]
             self.offer_required = recruitment.required[:OFFERS]
-            self.hire_end = start+self.count*OFFERS
+            self.hire_end = start+OFFERS
             self.revive_count = 6 if capital is not None else 0
             self.heal_start = self.hire_end+self.revive_count
             self.store_start = self.heal_start+self.revive_count
             self.take_start = self.store_start+6
             self.swap_start = self.take_start+6
-            self.end = self.swap_start+len(SWAP_PAIRS)
+            self.select_start = self.swap_start+len(SWAP_PAIRS)
+            self.end = self.select_start+self.count
             self.action_count = self.end-start
             pairs = np.array(SWAP_PAIRS)
             self.swap_a, self.swap_b = jnp.array(pairs[:, 0]), jnp.array(pairs[:, 1])
             small, big = np.tile(np.arange(6), (len(pairs), 1)), np.tile(np.arange(6), (len(pairs), 1))
             for i, (a, b) in enumerate(SWAP_PAIRS):
                 small[i, [a, b]] = b, a
-                # A big unit moves its whole column; the guardian's column never moves.
+                # A big unit moves its whole column; the capital's guardian is masked below.
                 ca, cb = a % 3, b % 3
                 big[i, [ca, ca+3, cb, cb+3]] = cb, cb+3, ca, ca+3
             self.swap_small, self.swap_big = jnp.array(small), jnp.array(big)
             self.swap_bits = jnp.left_shift(jnp.uint32(1), jnp.arange(len(pairs), dtype=jnp.uint32))
-            self.metadata.update(offers_per_site=OFFERS, offers=[dict(
+            self.metadata.update(hire_count=OFFERS, offers=[dict(
                 key=recruitment.keys[i], name=progression.rows[int(recruitment.ids[i])]['name'],
                 cost=int(recruitment.costs[i]), size=int(recruitment.sizes[i]),
                 row='front' if bool(recruitment.front[i]) else 'back') for i in range(OFFERS)],
                 revive_start=self.hire_end if capital is not None else None,
                 heal_start=self.heal_start if capital is not None else None,
                 store_start=self.store_start, take_start=self.take_start, swap_start=self.swap_start,
+                select_start=self.select_start,
                 swap_pairs=[list(p) for p in SWAP_PAIRS], swap_limit=SWAP_LIMIT, swap_penalty=SWAP_PENALTY)
-        self.observation_size = self.count*(5+6*4)+(1+len(SWAP_PAIRS) if self.action_count else 0)
+        self.observation_size = self.count*(5+6*4)+(self.count*(2+len(SWAP_PAIRS)) if self.action_count else 0)
 
     # Tables ------------------------------------------------------------
     def potion_bonus(self, ids, levels, doses):
@@ -231,8 +241,16 @@ class GarrisonRules:
     def ready(self, state):
         return ~state.in_battle & ~state.done & ~jnp.any(state.garrison_pending & state.alive)
 
-    def at_capital(self, state):
-        return self.has_party(state) & jnp.all(state.position == self.positions[self.capital_index])
+    def transfer_site(self, state):
+        """The owned settlement at the party's entrance, or -1 away from an owned settlement."""
+        site = self.site(state.position)
+        owned = self.owned(state)[jnp.maximum(site, 0)]
+        return jnp.where((site >= 0) & owned & self.has_party(state), site, -1)
+
+    def selected_site(self, state):
+        """The explicitly selected owned garrison, independently of the party's position."""
+        site = jnp.clip(state.selected_garrison, 0, self.count-1)
+        return jnp.where(self.owned(state)[site], site, self.capital_index)
 
     # Hiring --------------------------------------------------------------
     def targets(self, state):
@@ -249,23 +267,30 @@ class GarrisonRules:
 
     # Transfers -------------------------------------------------------------
     def store_targets(self, state):
-        """[6] capital cell each party slot's unit would take, -1 when it does not fit."""
+        """[6] local garrison cell each party unit would take, respecting settlement capacity."""
+        site = self.transfer_site(state)
+        safe = jnp.maximum(site, 0)
         ids = state.unit_ids[:6]
-        free = ~self.occupied(state.garrison_ids[self.capital_index])
-        return place(free, self.progression.sizes[ids] == 2, jnp.arange(6))
+        free = ~self.occupied(state.garrison_ids[safe])
+        sizes = self.progression.sizes[ids]
+        room = jnp.sum(~free)+sizes <= self.capacity(state)[safe]
+        cells = place(free, sizes == 2, jnp.arange(6))
+        return jnp.where((site >= 0) & room, cells, -1)
 
     def take_targets(self, state):
-        """[6] party slot each capital cell's unit would take, -1 when it does not fit."""
-        ids = state.garrison_ids[self.capital_index]
+        """[6] party slot each local garrison unit would take, -1 when it does not fit."""
+        site = self.transfer_site(state)
+        ids = state.garrison_ids[jnp.maximum(site, 0)]
         free = ~self.occupied(state.unit_ids[:6])
-        return place(free, self.progression.sizes[ids] == 2, jnp.arange(6))
+        cells = place(free, self.progression.sizes[ids] == 2, jnp.arange(6))
+        return jnp.where(site >= 0, cells, -1)
 
     def revive_price(self, state):
-        return self.capital.prices[state.garrison_ids[self.capital_index], 1]
+        return self.capital.prices[state.garrison_ids[self.selected_site(state)], 1]
 
     def heal_price(self, state):
         """Gold per HP, as the party's Temple healing (HEAL_C)."""
-        return self.capital.prices[state.garrison_ids[self.capital_index], 0]
+        return self.capital.prices[state.garrison_ids[self.selected_site(state)], 0]
 
     def available(self, state):
         if not self.action_count:
@@ -273,19 +298,22 @@ class GarrisonRules:
         ready = self.ready(state)
         bits = jnp.left_shift(jnp.uint32(1), jnp.maximum(self.offer_required, 0).astype(jnp.uint32))
         built = (self.offer_required < 0) | ((state.buildings & bits) != 0)
-        hire = (ready & self.owned(state)[:, None] & (built & (state.gold >= self.offer_costs))[None]
-                & (self.targets(state) >= 0)).reshape(-1)
-        cap = self.capital_index
-        gids = state.garrison_ids[cap]
+        selected = self.selected_site(state)
+        hire = (ready & self.owned(state)[selected] & built & (state.gold >= self.offer_costs)
+                & (self.targets(state)[selected] >= 0))
         parts = [hire]
         if self.revive_count:
-            dead = (gids != 0) & (state.garrison_hp[cap] <= 0)
+            recovery = self.selected_site(state)
+            gids = state.garrison_ids[recovery]
+            dead = (gids != 0) & (state.garrison_hp[recovery] <= 0)
             temple = ready & self.capital.temple_built(state)
             parts.append(temple & dead & (state.gold >= self.revive_price(state)))
             # Healing: a living wounded unit and gold for at least one HP; masked otherwise.
-            hp, maximum = state.garrison_hp[cap], self.garrison_max_hp(state)[cap]
+            hp, maximum = state.garrison_hp[recovery], self.garrison_max_hp(state)[recovery]
             parts.append(temple & (gids != 0) & (hp > 0) & (hp < maximum) & (state.gold >= self.heal_price(state)))
-        here = ready & self.at_capital(state)
+        site = self.transfer_site(state)
+        here = ready & (site >= 0)
+        gids = state.garrison_ids[jnp.maximum(site, 0)]
         ids = state.unit_ids[:6]
         heroes = self.progression.heroes
         parts.append(here & (ids != 0) & ~heroes[ids] & (state.summon_owner[:6] < 0) & (self.store_targets(state) >= 0))
@@ -294,13 +322,16 @@ class GarrisonRules:
         parts.append(here & leader & (gids != 0) & ~self.progression.capital_guards[gids] & room
                      & (self.take_targets(state) >= 0))
         possible, _ = self.swap_pairs(state)
-        unused = (state.garrison_swaps_used & self.swap_bits) == 0
-        parts.append(ready & possible & unused & (state.garrison_swaps_today < SWAP_LIMIT))
+        selected = self.selected_site(state)
+        unused = (state.garrison_swaps_used[selected] & self.swap_bits) == 0
+        parts.append(ready & possible & unused & (state.garrison_swaps_today[selected] < SWAP_LIMIT))
+        parts.append(ready & self.owned(state) & (jnp.arange(self.count) != selected))
         return jnp.concatenate(parts)
 
     def swap_pairs(self, state):
-        """Per pair: can the two capital cells be exchanged, and does a big unit move a whole column."""
-        ids = state.garrison_ids[self.capital_index]
+        """Legal pairs of the selected garrison, protecting the capital's guardian and its column."""
+        site = self.selected_site(state)
+        ids = state.garrison_ids[site]
         cells = jnp.arange(6)
         column = cells % 3
         real = ids != 0  # a dead unit keeps its cell and can be moved
@@ -309,11 +340,14 @@ class GarrisonRules:
         big = (owner >= 0) & (self.progression.sizes[ids[jnp.maximum(owner, 0)]] == 2)
         columns = big[self.swap_a] | big[self.swap_b]
         ca, cb, fixed = column[self.swap_a], column[self.swap_b], GUARDIAN_SLOT % 3
-        possible = jnp.where(columns, (ca != cb) & (ca != fixed) & (cb != fixed), real[self.swap_a] | real[self.swap_b])
+        possible = jnp.where(columns, ca != cb, real[self.swap_a] | real[self.swap_b])
+        guardian_safe = jnp.where(columns, (ca != fixed) & (cb != fixed),
+                                  (self.swap_a != GUARDIAN_SLOT) & (self.swap_b != GUARDIAN_SLOT))
+        possible &= (site != self.capital_index) | guardian_safe
         return possible, columns
 
     def apply(self, env, state, action, resting):
-        """One garrison action of a validated world step: hire, revive, store, take or swap.
+        """One garrison action of a validated world step, including explicit settlement selection.
 
         Returns the state and the swap penalty; REST clears the day's swap counters.
         """
@@ -327,30 +361,38 @@ class GarrisonRules:
             state = self._heal(state, action, valid & (action >= self.heal_start) & (action < self.store_start))
         state = self._store(env, state, action, valid & (action >= self.store_start) & (action < self.take_start))
         state = self._take(env, state, action, valid & (action >= self.take_start) & (action < self.swap_start))
-        return self._swap(state, action, valid & (action >= self.swap_start), resting)
+        state, penalty = self._swap(state, action,
+            valid & (action >= self.swap_start) & (action < self.select_start), resting)
+        selecting = valid & (action >= self.select_start)
+        return state.replace(
+            selected_garrison=jnp.where(selecting, jnp.clip(action-self.select_start, 0, self.count-1),
+                                         state.selected_garrison),
+            last_event=jnp.where(selecting, GARRISON_SELECTED, state.last_event)), penalty
 
     def _swap(self, state, action, valid, resting):
-        """Exchange two capital cells (a big unit's column moves whole), as the party's swaps."""
-        cap = self.capital_index
+        """Exchange two selected garrison cells; counters belong to each settlement."""
+        site = self.selected_site(state)
         pair = jnp.clip(action-self.swap_start, 0, len(SWAP_PAIRS)-1)
         _, columns = self.swap_pairs(state)
         order = jnp.where(valid, jnp.where(columns[pair], self.swap_big[pair], self.swap_small[pair]), jnp.arange(6))
 
         def moved(values):
-            return values.at[cap].set(values[cap][order])
+            return values.at[site].set(values[site][order])
+        counts = state.garrison_swaps_today.at[site].add(valid.astype(jnp.int32))
+        used = state.garrison_swaps_used.at[site].set(state.garrison_swaps_used[site]
+            | jnp.where(valid, self.swap_bits[pair], jnp.uint32(0)))
         state = state.replace(garrison_ids=moved(state.garrison_ids), garrison_levels=moved(state.garrison_levels),
             garrison_xp=moved(state.garrison_xp), garrison_hp=moved(state.garrison_hp),
             garrison_doses=moved(state.garrison_doses), garrison_mercenary=moved(state.garrison_mercenary),
-            garrison_swaps_today=jnp.where(resting, 0, state.garrison_swaps_today+valid.astype(jnp.int32)),
-            garrison_swaps_used=jnp.where(resting, jnp.uint32(0), state.garrison_swaps_used
-                                          | jnp.where(valid, self.swap_bits[pair], jnp.uint32(0))),
+            garrison_swaps_today=jnp.where(resting, 0, counts),
+            garrison_swaps_used=jnp.where(resting, jnp.uint32(0), used),
             last_target=jnp.where(valid, pair, state.last_target),
             last_event=jnp.where(valid, GARRISON_SWAPPED, state.last_event))
         return state, jnp.where(valid, -SWAP_PENALTY, 0.).astype(jnp.float32)
 
     def _hire(self, state, action, valid):
-        index = jnp.clip(action-self.start, 0, self.count*OFFERS-1)
-        site, offer = index // OFFERS, index % OFFERS
+        offer = jnp.clip(action-self.start, 0, OFFERS-1)
+        site = self.selected_site(state)
         cell = self.targets(state)[site, offer]
         uid = self.offer_ids[offer]
         level = self.progression.base_levels[uid]
@@ -367,9 +409,10 @@ class GarrisonRules:
             last_event=jnp.where(valid, GARRISON_HIRED, state.last_event))
 
     def _revive(self, state, action, valid):
-        """The Temple raises a dead capital defender at 1 HP, as the party's revival."""
+        """The Temple raises a dead defender in the selected settlement at 1 HP."""
+        site = self.selected_site(state)
         cell = jnp.clip(action-self.hire_end, 0, 5)
-        put = valid & (jnp.arange(self.count)[:, None] == self.capital_index) & (jnp.arange(6) == cell)
+        put = valid & (jnp.arange(self.count)[:, None] == site) & (jnp.arange(6) == cell)
         cost = jnp.where(valid, self.revive_price(state)[cell], 0)
         return state.replace(garrison_hp=jnp.where(put, 1, state.garrison_hp), gold=state.gold-cost,
             last_service_cost=jnp.where(valid, cost, state.last_service_cost),
@@ -377,14 +420,14 @@ class GarrisonRules:
             last_event=jnp.where(valid, GARRISON_REVIVED, state.last_event))
 
     def _heal(self, state, action, valid):
-        """The Temple heals a wounded capital defender, as the party's healing: whole HP the gold
+        """The Temple heals a selected settlement's wounded defender: whole HP the gold
         pays for, up to the maximum; the change is kept. No reward."""
-        cap = self.capital_index
+        site = self.selected_site(state)
         cell = jnp.clip(action-self.heal_start, 0, 5)
         price = jnp.maximum(self.heal_price(state)[cell], 1)
-        missing = jnp.maximum(self.garrison_max_hp(state)[cap, cell]-state.garrison_hp[cap, cell], 0)
+        missing = jnp.maximum(self.garrison_max_hp(state)[site, cell]-state.garrison_hp[site, cell], 0)
         healed = jnp.where(valid, jnp.minimum(missing, state.gold // price), 0)
-        put = valid & (jnp.arange(self.count)[:, None] == cap) & (jnp.arange(6) == cell)
+        put = valid & (jnp.arange(self.count)[:, None] == site) & (jnp.arange(6) == cell)
         cost = healed*price
         return state.replace(garrison_hp=jnp.where(put, state.garrison_hp+healed, state.garrison_hp), gold=state.gold-cost,
             last_service_cost=jnp.where(valid, cost, state.last_service_cost),
@@ -392,11 +435,12 @@ class GarrisonRules:
             last_event=jnp.where(valid, GARRISON_HEALED, state.last_event))
 
     def _store(self, env, state, action, valid):
-        """Party slot -> capital cell; the slot is cleared like a dismissal."""
+        """Party slot -> local garrison cell; the slot is cleared like a dismissal."""
+        site = self.transfer_site(state)
         slot = jnp.clip(action-self.store_start, 0, 5)
         cell = self.store_targets(state)[slot]
         uid = state.unit_ids[slot]
-        put = valid & (jnp.arange(self.count)[:, None] == self.capital_index) & (jnp.arange(6) == cell)
+        put = valid & (jnp.arange(self.count)[:, None] == site) & (jnp.arange(6) == cell)
         moved = state.replace(garrison_ids=jnp.where(put, uid, state.garrison_ids),
             garrison_levels=jnp.where(put, state.unit_levels[slot], state.garrison_levels),
             garrison_xp=jnp.where(put, state.unit_xp[slot], state.garrison_xp),
@@ -410,13 +454,13 @@ class GarrisonRules:
         return env._clear_roster_slots(moved, affected)
 
     def _take(self, env, state, action, valid):
-        """Capital cell -> party slot, with the unit's permanent potions and mercenary mark."""
-        cap = self.capital_index
+        """Local garrison cell -> party slot, with permanent potions and mercenary mark."""
+        site = jnp.maximum(self.transfer_site(state), 0)
         cell = jnp.clip(action-self.take_start, 0, 5)
         slot = self.take_targets(state)[cell]
-        uid, level = state.garrison_ids[cap, cell], state.garrison_levels[cap, cell]
-        xp, hp = state.garrison_xp[cap, cell], state.garrison_hp[cap, cell]
-        doses, mercenary = state.garrison_doses[cap, cell], state.garrison_mercenary[cap, cell]
+        uid, level = state.garrison_ids[site, cell], state.garrison_levels[site, cell]
+        xp, hp = state.garrison_xp[site, cell], state.garrison_hp[site, cell]
+        doses, mercenary = state.garrison_doses[site, cell], state.garrison_mercenary[site, cell]
         slots = jnp.arange(12)
         affected = valid & ((slots == slot) | ((self.progression.sizes[uid] == 2) & (slots == slot+3)))
         state = env._clear_roster_slots(state, affected)
@@ -432,7 +476,7 @@ class GarrisonRules:
                       mercenary_units=at(state.mercenary_units, mercenary))
         if self.potion_rules is not None:
             fields['potion_bonus'] = at(state.potion_bonus, self.potion_bonus(uid[None], level[None], doses[None])[0])
-        clear = valid & (jnp.arange(self.count)[:, None] == cap) & (jnp.arange(6) == cell)
+        clear = valid & (jnp.arange(self.count)[:, None] == site) & (jnp.arange(6) == cell)
         return state.replace(**fields, garrison_ids=jnp.where(clear, 0, state.garrison_ids),
             garrison_levels=jnp.where(clear, 0, state.garrison_levels), garrison_xp=jnp.where(clear, 0, state.garrison_xp),
             garrison_hp=jnp.where(clear, 0, state.garrison_hp),
@@ -460,6 +504,8 @@ class GarrisonRules:
             defeat |= cities[self.defended]
         clear = jnp.concatenate((cities, jnp.zeros(1, bool)))[:, None]
         return state.replace(city_owned=state.city_owned & ~cities,
+            selected_garrison=jnp.where(jnp.any(sites & (jnp.arange(self.count) == state.selected_garrison)),
+                                         self.capital_index, state.selected_garrison),
             garrison_ids=jnp.where(clear, 0, state.garrison_ids), garrison_levels=jnp.where(clear, 0, state.garrison_levels),
             garrison_xp=jnp.where(clear, 0, state.garrison_xp), garrison_hp=jnp.where(clear, 0, state.garrison_hp),
             garrison_doses=jnp.where(clear[..., None], 0, state.garrison_doses),
@@ -535,12 +581,12 @@ class GarrisonRules:
     def finish(self, before, after, ended, lost):
         """Save the garrison, return the party, and give a fallen city away.
 
-        A city's dead leave; the capital keeps its dead in their cells for the Temple.
+        Dead defenders keep their cells for the Temple while the settlement stays owned.
         """
         closing = before.garrison_battle & ended
         g = jnp.maximum(before.garrison_site, 0)
         ids, hp = after.unit_ids[:6], jnp.maximum(after.hp[:6], 0)
-        keep = (ids != 0) & ((hp > 0) | (g == self.capital_index))
+        keep = ids != 0
         row = closing & (jnp.arange(self.count) == g)[:, None]
 
         def save(values, current):
@@ -597,12 +643,13 @@ class GarrisonRules:
         sites = jnp.concatenate((head, cells.reshape(self.count, -1)), axis=1).reshape(-1)
         if not self.action_count:
             return sites
-        swaps = jnp.concatenate((jnp.atleast_1d(state.garrison_swaps_today/SWAP_LIMIT),
-                                 ((state.garrison_swaps_used & self.swap_bits) != 0).astype(jnp.float32)))
-        return jnp.concatenate((sites, swaps))
+        swaps = jnp.concatenate((state.garrison_swaps_today[:, None]/SWAP_LIMIT,
+            ((state.garrison_swaps_used[:, None] & self.swap_bits) != 0).astype(jnp.float32)), axis=1).reshape(-1)
+        selected = (jnp.arange(self.count) == self.selected_site(state)).astype(jnp.float32)
+        return jnp.concatenate((sites, swaps, selected))
 
     def snapshot(self, state):
-        """UI: each garrison's owner, room and units; the capital's transfer and revive offers."""
+        """UI: local settlement transfers and the selected garrison's paid recovery offers."""
         maximum = self.garrison_max_hp(state)
         sites = [dict(name=self.metadata['sites'][g], owned=bool(self.owned(state)[g]),
                       capacity=int(self.capacity(state)[g]),
@@ -615,19 +662,27 @@ class GarrisonRules:
         if not self.action_count:
             return sites
         mask = jax.device_get(self.available(state))
-        cap = sites[self.capital_index]
-        prices = jax.device_get(self.revive_price(state)) if self.revive_count else None
-        for unit in cap['units']:
-            c = unit['cell']
-            unit['take'] = bool(mask[self.take_start-self.start+c])
-            unit['take_slot'] = int(self.take_targets(state)[c])
-            if self.revive_count:
-                unit['revive'] = bool(mask[self.hire_end-self.start+c])
-                unit['revive_cost'] = int(prices[c])
-                unit['heal'] = bool(mask[self.heal_start-self.start+c])
-                unit['heal_price'] = int(self.heal_price(state)[c])
-        cap['store'] = [bool(mask[self.store_start-self.start+s]) for s in range(6)]
-        cap['store_cells'] = [int(v) for v in jax.device_get(self.store_targets(state))]
-        cap['swaps'] = [bool(mask[self.swap_start-self.start+k]) for k in range(len(SWAP_PAIRS))]
-        cap['swaps_today'] = int(state.garrison_swaps_today)
+        transfer_site = int(self.transfer_site(state))
+        recovery_site = int(self.selected_site(state))
+        prices = jax.device_get(self.capital.prices[state.garrison_ids]) if self.revive_count else None
+        store = jax.device_get(self.store_targets(state)).tolist()
+        take = jax.device_get(self.take_targets(state)).tolist()
+        for g, site in enumerate(sites):
+            here = g == transfer_site
+            site['at_party'] = here
+            site['selected'] = site['recovery'] = g == recovery_site
+            site['select'] = bool(mask[self.select_start-self.start+g])
+            site['store'] = [here and bool(mask[self.store_start-self.start+s]) for s in range(6)]
+            site['store_cells'] = store if here else [-1]*6
+            for unit in site['units']:
+                c = unit['cell']
+                unit['take'] = here and bool(mask[self.take_start-self.start+c])
+                unit['take_slot'] = int(take[c]) if here else -1
+                if self.revive_count:
+                    unit['revive'] = site['recovery'] and bool(mask[self.hire_end-self.start+c])
+                    unit['revive_cost'] = int(prices[g, c, 1])
+                    unit['heal'] = site['recovery'] and bool(mask[self.heal_start-self.start+c])
+                    unit['heal_price'] = int(prices[g, c, 0])
+            site['swaps'] = [site['selected'] and bool(mask[self.swap_start-self.start+k]) for k in range(len(SWAP_PAIRS))]
+            site['swaps_today'] = int(state.garrison_swaps_today[g])
         return sites
