@@ -231,7 +231,7 @@ class BattleState(NumberGridState):
     garrison_ids: jax.Array  # [cities+1, 6] reserves of each city, then the capital (its guardian included)
     garrison_levels: jax.Array
     garrison_xp: jax.Array
-    garrison_hp: jax.Array  # 0 for the capital's dead, who keep their cells
+    garrison_hp: jax.Array  # dead defenders keep their cells at 0 HP while the settlement stays owned
     garrison_doses: jax.Array  # [cities+1, 6, 5] permanent potion kinds each garrison unit drank
     garrison_mercenary: jax.Array  # camp-hire mark of units moved in from the party
     garrison_battle: jax.Array  # the blue side is a city's or the capital's garrison
@@ -239,8 +239,9 @@ class BattleState(NumberGridState):
     garrison_pending: jax.Array  # armies waiting to attack a garrison
     garrison_party: jax.Array  # [4,6] stashed party ids/levels/xp/hp during a garrison battle
     garrison_party_layers: jax.Array  # [6,7] uint32 stashed potion doses, temporary bits, potion wards
-    garrison_swaps_today: jax.Array  # capital garrison swaps since the last REST (at most 3)
-    garrison_swaps_used: jax.Array  # uint32 bits: capital swap pairs used since the last REST
+    selected_garrison: jax.Array  # selected city/capital for remote hiring, recovery and formation swaps
+    garrison_swaps_today: jax.Array  # [cities+1] swaps since the last REST (at most 3 per settlement)
+    garrison_swaps_used: jax.Array  # [cities+1] uint32 bits: swap pairs used since the last REST
     capital_captor: jax.Array  # telemetry: the army that took the capital, -1 while it stands
     rod_planter: jax.Array  # the Baroness is hired (number_grid_rods.py)
     mine_rods: jax.Array  # [mines] a rod pays the source's income as if the land covered it
@@ -1021,7 +1022,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
                                                   self.territory if self.territory_enabled else None)
         self.num_actions = self.attacker_spells.end
         # Then: hire a new leader after the party's destruction (defeat 'capital'), and the
-        # five recruits of every city and capital garrison.
+        # five shared hire actions for the selected city/capital garrison.
         leader_action = self.num_actions
         self.num_actions += len(leader_hire_names(game_map))
         garrison_start = self.num_actions
@@ -1219,7 +1220,9 @@ class NumberGrid(Summoning, NumericNumberGrid):
             garrison_battle=jnp.bool_(False), garrison_site=jnp.int32(-1),
             garrison_pending=jnp.zeros(self.num_opponents if self.garrison_control else 0, bool),
             garrison_party=jnp.zeros((4, 6), jnp.int32), garrison_party_layers=jnp.zeros((6, 7), jnp.uint32),
-            garrison_swaps_today=jnp.int32(0), garrison_swaps_used=jnp.uint32(0), capital_captor=jnp.int32(-1),
+            selected_garrison=jnp.int32(self.garrisons.capital_index if self.garrison_control else -1),
+            garrison_swaps_today=jnp.zeros(self.garrisons.count, jnp.int32),
+            garrison_swaps_used=jnp.zeros(self.garrisons.count, jnp.uint32), capital_captor=jnp.int32(-1),
             rod_planter=jnp.bool_(False), thief_attempts_today=jnp.int32(0), thief_alive=jnp.bool_(False),
             party_losses=jnp.int32(0), party_level_record=jnp.int32(0),
             party_reward_multiplier=jnp.float32(1), defense_raw_return=jnp.float32(0),
