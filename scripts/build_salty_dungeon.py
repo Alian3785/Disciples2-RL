@@ -247,8 +247,8 @@ def add_army_events(game_map, snapshot):
         scenario_normal_ai='pursuit', scenario_hero='duke', scenario_movement_points=True,
         scenario_order_armies=[dict(enemy=ids.index(gid), order=0 if gid in humans else int(stacks[gid]['ORDER']),
                                     moves=int(stacks[gid]['MOVE'])) for gid in sorted(movers)],
-        capital_defender=dict(unit=UNIT_KEYS['G000UU3003'], level=1,
-                              attackers=[ids.index(gid) for gid in humans]))
+        # Any army on the capital entrance attacks its garrison (docs/WORLD.md#garrisons).
+        capital_defender=dict(unit=UNIT_KEYS['G000UU3003'], level=1))
 
 def validate_geometry(game_map):
     """Validate source conversion only; this does not execute a JAX environment."""

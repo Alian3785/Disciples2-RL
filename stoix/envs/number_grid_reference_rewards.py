@@ -10,19 +10,22 @@ import jax.numpy as jnp
 
 from stoix.envs.number_grid_capital import CAPITAL_HEAL, CAPITAL_REVIVE
 from stoix.envs.number_grid_combat import HP
+from stoix.envs.number_grid_spells import newly_learned
 from stoix.envs.number_grid_unit_swaps import UNITS_SWAPPED
+from stoix.envs.number_grid_garrisons import GARRISON_SWAPPED, SWAP_PENALTY
 
 
 def validate_overrides(game_map):
     """Reject malformed focused-map rewards instead of silently training with them."""
     keys = ('battle_item_equip_reward', 'battle_item_use_reward', 'leadership_step_penalty',
             'turn_penalty', 'spell_cast_reward', 'new_cell_reward', 'rest_with_moves_penalty',
-            'timeout_reward', 'magic_enemy_defeat_reward', 'campaign_victory_reward')
+            'timeout_reward', 'magic_enemy_defeat_reward', 'campaign_victory_reward', 'defeat_reward')
     for key in keys:
         if key in game_map:
             value = game_map[key]
             if (type(value) not in (int, float) or not math.isfinite(value)
-                    or (key != 'timeout_reward' and value < 0)):
+                    or (key not in ('timeout_reward', 'defeat_reward') and value < 0)
+                    or (key == 'defeat_reward' and value > 0)):
                 raise ValueError(f'{key} must be a finite reward coefficient')
     pickups = game_map.get('item_pickup_rewards', {})
     if not isinstance(pickups, dict) or any(type(v) not in (int, float) or not math.isfinite(v) or v < 0
@@ -51,7 +54,10 @@ def _siege_kills(env, state, killed):
 def world(env, before, after, action, rest):
     """Calculate strategic shaping, including the one-time living-level bonus when a siege spawns."""
     moved = jnp.any(before.position != after.position)
-    engage = after.in_battle & ~after.summon_battle
+    # Being attacked in the home capital is not an engagement of the hero's party.
+    engage = after.in_battle & ~after.summon_battle & ~after.garrison_battle
+    if env.defense_rewards.suppress_attacker_rewards:
+        engage &= env.defense_rewards.rewardable[jnp.maximum(after.enemy, 0)]
     directional = (action >= 0) & (action < 8)
     cell = after.position[0]*env.size+after.position[1]
     visits = before.reference_visits[cell]
@@ -90,10 +96,16 @@ def world(env, before, after, action, rest):
             after, bonus = _siege_kills(env, after, dead)
             reward += bonus
     if env.spell_casting_enabled:
-        reward += env.map_config.get('spell_cast_reward', .005)*(after.last_cast_spell >= 0)
-        reward += env.map_config.get('magic_enemy_defeat_reward', 0.)*jnp.sum(before.alive & ~after.alive)
+        cast_rewarded = after.last_cast_spell >= 0
+        destroyed = before.alive & ~after.alive
+        if env.defense_rewards.suppress_attacker_rewards:
+            target = after.last_spell_target
+            cast_rewarded &= (target < 0) | env.defense_rewards.rewardable[jnp.maximum(target, 0)]
+            destroyed &= env.defense_rewards.rewardable
+        reward += env.map_config.get('spell_cast_reward', .005)*cast_rewarded
+        reward += env.map_config.get('magic_enemy_defeat_reward', 0.)*jnp.sum(destroyed)
         reward += .05*engage*before.summon_marks[jnp.maximum(after.enemy, 0)]
-    reward += (jax.lax.population_count(after.learned_spells & ~before.learned_spells)).astype(jnp.float32)
+    reward += newly_learned(before.learned_spells, after.learned_spells).astype(jnp.float32)
     reward += 12.*(after.hire_rewarded_capacity > before.hire_rewarded_capacity)
     healing = jnp.maximum(0, jnp.sum(after.hp[:6]-before.hp[:6]))
     reward += jnp.where(after.last_event == CAPITAL_HEAL,
@@ -101,6 +113,10 @@ def world(env, before, after, action, rest):
     reward += .5*((after.last_event == CAPITAL_REVIVE) & (before.recovery_balance[1] > 0))
     reward += .05*after.last_sold_count
     reward -= .004*(after.last_event == UNITS_SWAPPED)
+    reward -= SWAP_PENALTY*(after.last_event == GARRISON_SWAPPED)  # capital garrison swaps, the same cost
+    if env.rods.enabled:
+        # User request 2026-11-09: a small one-off reward per planted rod, at most once per source.
+        reward += env.rods.reward*jnp.sum(after.mine_rods & ~before.mine_rods)
     if env.battle_items_enabled:
         reward += env.map_config.get('battle_item_equip_reward', .02)*(after.battle_item_equipped_today
                                                                      & ~before.battle_item_equipped_today)
@@ -133,9 +149,14 @@ def battle(env, before, after, hp, victory, lost, withdrawal, item_using, base_r
     ended = victory | lost | withdrawal
     multiplier = (jnp.where(before.enemy == env.objective_enemy,
                            env.siege_rewards['victory_multiplier'], 1.) if env.siege_rewards else 1.)
-    reward = jnp.where(ended, jnp.where(victory, jnp.where(summon, 0., .5*multiplier), -.25), .0025)
-    reward += env.map_config.get('battle_item_use_reward', .05)*item_using
-    reward += env.map_config.get('magic_enemy_defeat_reward', 0.)*(victory & summon)
+    repeat = (env.defense_rewards.repeat_factor(env, before, before.enemy)
+              if env.defense_rewards.enabled else jnp.float32(1.))
+    rewarded = (env.defense_rewards.rewardable[jnp.maximum(before.enemy, 0)]
+                if env.defense_rewards.suppress_attacker_rewards else jnp.bool_(True))
+    reward = jnp.where(ended, jnp.where(victory, jnp.where(summon, 0., .5*multiplier*repeat)*rewarded, -.25),
+                       .0025*rewarded)
+    reward += env.map_config.get('battle_item_use_reward', .05)*item_using*rewarded
+    reward += env.map_config.get('magic_enemy_defeat_reward', 0.)*(victory & summon)*rewarded
     real_victory = victory & ~summon
     ids = before.unit_ids[:6]
     present = ids != 0
@@ -144,7 +165,7 @@ def battle(env, before, after, hp, victory, lost, withdrawal, item_using, base_r
     survival = (.4*jnp.sum(present & (hp[:6] > 0)) +
                 .4*jnp.sum(jnp.where(present, jnp.clip(hp[:6]/jnp.maximum(1, maximum), 0., 1.), 0.)))/denominator
     experience = after.battle_xp[1].astype(jnp.float32)
-    reward += real_victory*(4.*multiplier+.2*experience/(experience+100.)+survival)
+    reward += real_victory*(4.*multiplier+.2*experience/(experience+100.)+survival)*repeat*rewarded
     hero = env.territory.heroes[after.unit_ids[:6]]
     changed = (after.last_promoted & jnp.left_shift(jnp.uint32(1), jnp.arange(6, dtype=jnp.uint32))) != 0
     levels = after.unit_levels[:6]
@@ -161,7 +182,7 @@ def battle(env, before, after, hp, victory, lost, withdrawal, item_using, base_r
         after, bonus = _siege_kills(env, after, killed)
         reward += bonus
     defeated = before.reference_defeated.at[before.enemy].set(
-        before.reference_defeated[before.enemy] | real_victory)
+        before.reference_defeated[before.enemy] | (real_victory & rewarded))
     if env.reference_preserve_target_reward:
         # Paired Capital experiment: preserve the complete tactical target reward,
         # including +1 for victory and +3 for the objective. Level shaping is
@@ -175,9 +196,12 @@ def battle(env, before, after, hp, victory, lost, withdrawal, item_using, base_r
 def finish(env, before, after):
     """Once per decision: city/episode completion and permanent HP milestones."""
     terminal = after.done & ~before.done
-    reward = (-6.*(after.lost & ~before.lost)
+    reward = (env.map_config.get('defeat_reward', -6.)*(after.lost & ~before.lost)
               + env.map_config.get('timeout_reward', -8.)*(terminal & ~after.won & ~after.lost))
-    reward += terminal*5.*jnp.sum(after.reference_defeated)/max(1, env.reference_enemy_count)
+    defeated = after.reference_defeated
+    if env.defense_rewards.suppress_attacker_rewards:
+        defeated &= env.defense_rewards.rewardable
+    reward += terminal*5.*jnp.sum(defeated)/max(1, env.reference_enemy_count)
     # Ruins are collected at the end of battle. Pay for
     # the one-shot source transition, never for inventory changes or purchases.
     pickups = env.map_config.get('item_pickup_rewards', {})

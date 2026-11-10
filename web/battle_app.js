@@ -123,7 +123,9 @@
     }));
     // Spells of another faction bought in a spell shop: no research, one cast per day.
     $('spell-list').append(...(casting?.spells||[]).slice(info.spells.length).filter(c=>!c.item_only).map((cast,k)=>{
-      const i=info.spells.length+k,learned=(snap.state.learned_spells>>>i)&1;
+      const i=info.spells.length+k,book=snap.state.learned_spells;
+      // One uint32 up to 32 book spells, else 32-bit words (wide spellbooks).
+      const learned=Array.isArray(book)?(book[i>>5]>>>(i&31))&1:(book>>>i)&1;
       const card=document.createElement('article');card.className='spell-card'+(learned?' is-learned':'');
       card.hidden=$('spell-level').value!=='all'&&Number($('spell-level').value)!==cast.level;
       const title=document.createElement('h3');title.textContent=cast.name+' · '+['','I','II','III','IV','V'][cast.level];
@@ -213,6 +215,16 @@
       card.append(heading,status,detail,button);return card;
     }));
   }
+  function leaderCard(snap){
+    // defeat 'capital' maps: a destroyed party is replaced by a new leader hired in the capital.
+    const leader=snap.leader_hire;if(!leader||leader.party)return null;
+    const card=document.createElement('article');card.className='site-offer';
+    const name=document.createElement('b');name.textContent='Новый лидер: '+leader.name+' · уровень '+leader.level;
+    const detail=document.createElement('small');detail.textContent='Отряд уничтожен. Поражение — только потеря столицы.';
+    const b=document.createElement('button');b.dataset.action=leader.action;b.onclick=()=>sendAction(leader.action);
+    b.textContent='Нанять · '+fmt(leader.cost)+' золота';b.disabled=mode!=='manual'||busy||!session||!leader.available;
+    card.append(name,detail,b);return card;
+  }
   function renderRecruitment(snap){
     const info=recruitmentInfo(),s=snap.state,q=snap.recruitment_quotes;
     $('recruitment-services').hidden=!info;$('leadership').hidden=!info;
@@ -233,6 +245,24 @@
       const reason=document.createElement('small');reason.textContent=blocked?'Постройка не открыта':free<offer.size?'Недостаточно лидерства':q.targets[i]<0?'Нет места в нужном ряду':s.gold<offer.cost?'Недостаточно золота':'';
       card.append(name,detail,b,reason);return card;
     }).filter(Boolean));
+    const leader=leaderCard(snap);if(leader)$('recruitment-offers').prepend(leader);
+    // City and capital garrisons: remote hire, five recruits per owned settlement.
+    const garrisons=snap.garrisons;
+    (garrisons?.sites||[]).forEach((site,g)=>{
+      if(!site.owned||!garrisons.offers.length)return;
+      const card=document.createElement('article');card.className='site-offer';
+      const name=document.createElement('b');name.textContent='Охрана: '+site.name+' · до '+site.capacity+' клеток';
+      const units=document.createElement('small');
+      units.textContent=site.units.length?site.units.map(u=>u.name+' '+u.hp+'/'+u.max_hp+(u.hp?'':' (погиб)')).join(' · '):'Охраны нет';
+      card.append(name,units);
+      garrisons.offers.forEach((offer,k)=>{
+        const action=garrisons.start+g*garrisons.offers_per_site+k;
+        const b=document.createElement('button');b.dataset.action=action;b.onclick=()=>sendAction(action);
+        b.textContent=offer.name+' · '+fmt(offer.cost);
+        b.disabled=mode!=='manual'||busy||!session||!snap.action_mask[action];card.append(b);
+      });
+      $('recruitment-offers').append(card);
+    });
   }
   const movementCap=snap=>snap.movement_cap;
   const closedShopGroups=new Set();
@@ -280,7 +310,8 @@
     $('spell-shop-offers').replaceChildren(...(info.spells||[]).map((offer,i)=>{
       const card=document.createElement('article');card.className='site-offer';
       const stock=s.spell_stock?.[i]??0,index=book.findIndex(c=>c.id===offer.spell),cast=book[index];
-      const learned=index>=0&&((s.learned_spells>>>index)&1);
+      const words=s.learned_spells;
+      const learned=index>=0&&(Array.isArray(words)?(words[index>>5]>>>(index&31))&1:(words>>>index)&1);
       const name=document.createElement('b');name.textContent=offer.name+' · '+['','I','II','III','IV','V'][cast?.level||0]+' · осталось '+stock;
       const detail=document.createElement('small');detail.textContent=cast?castEffect(cast)+' Применение: '+cast.cast_mana.map((n,j)=>n?manaNames[j]+' '+fmt(n):null).filter(Boolean).join(' · ')+'.':'';
       const reason=document.createElement('small');reason.textContent=!stock?'Продано':learned?'Уже изучено':s.gold<offer.price?'Недостаточно золота':'';
@@ -426,9 +457,15 @@
     const city=territoryInfo()?.cities.find((c,i)=>s.city_owned[i]&&c.position.every((v,j)=>v===s.position[j]));
     const temple=snap.building_status?.[info.temple_action-18]===1;
     $('capital-location').textContent=city?city.name+' · ваш город':'Столица · клетка '+info.position.join(', ');
-    if(snap.capital_defense&&!city){const guard=snap.capital_defense;$('capital-location').textContent+=' · '+guard.name+' '+guard.hp+'/'+guard.max_hp+' HP';}
+    const capitalGarrison=snap.garrisons?.sites?.[snap.garrisons.sites.length-1];
+    const guard=capitalGarrison?.units.find(u=>u.cell===snap.garrisons.guardian_slot);
+    if(guard&&!city)$('capital-location').textContent+=' · '+guard.name+' '+guard.hp+'/'+guard.max_hp+' HP';
     $('service-status').textContent=s.done?'Эпизод завершён.':s.in_battle?'Услуги доступны после боя.':!atCapital?'Войдите в столицу или захваченный город, чтобы лечить и воскрешать бойцов.':!temple?'Постройте Храм в столице за 300 золота, чтобы открыть лечение и воскрешение.':'Храм открыт; услуги не расходуют очки перемещения и не завершают ход.';
     const cards=[];
+    // Capital garrison: transfers at the capital entrance, Temple revival of its dead from anywhere.
+    const garrisons=snap.garrisons,capital=garrisons?.sites?.[garrisons.sites.length-1];
+    const garrisonButton=(text,action)=>{const b=document.createElement('button');b.dataset.action=action;b.textContent=text;
+      b.onclick=()=>sendAction(action);b.disabled=mode!=='manual'||busy||!session||!snap.action_mask[action];return b;};
     for(let i=0;i<6;i++){
       if(!snap.max_hp[i])continue;
       const q=snap.capital_quotes?.[i];if(!q)continue;
@@ -440,6 +477,26 @@
       const button=document.createElement('button');button.dataset.action=action;
       button.textContent=!s.hp[i]?'Воскресить · '+q[4]+' золота':q[1]===0?'Здоровье полное':q[2]>0?'Лечить +'+q[2]+' HP · '+q[3]+' золота':'Не хватает золота';
       button.dataset.agentAction=action;button.onclick=()=>sendAction(action);card.append(button);
+      if(garrisons?.store_start!=null&&capital?.store?.[i]!=null)card.append(garrisonButton('В гарнизон столицы',garrisons.store_start+i));
+      cards.push(card);
+    }
+    if(garrisons?.take_start!=null&&capital)for(const u of capital.units){
+      const guardian=u.cell===garrisons.guardian_slot;
+      const card=document.createElement('article');card.className='recovery-card'+(!u.hp?' fallen':'');
+      const name=document.createElement('h3');name.textContent='Столица · '+u.name+(guardian?' (страж)':'');card.append(name);
+      const hp=document.createElement('p');hp.className='recovery-health';hp.textContent=u.hp+' / '+u.max_hp+' HP · уровень '+u.level+(!u.hp?' · погиб':'');card.append(hp);
+      if(!u.hp&&garrisons.revive_start!=null)card.append(garrisonButton('Воскресить · '+fmt(u.revive_cost)+' золота',garrisons.revive_start+u.cell));
+      if(!guardian)card.append(garrisonButton('В отряд',garrisons.take_start+u.cell));
+      cards.push(card);
+    }
+    if(garrisons?.swap_start!=null&&capital?.swaps){
+      // Capital garrison swaps: three a day, each pair once, a penalty each; the guardian stays.
+      const card=document.createElement('article');card.className='recovery-card';
+      const name=document.createElement('h3');name.textContent='Перестановка гарнизона столицы';card.append(name);
+      const note=document.createElement('p');note.className='recovery-price';
+      note.textContent='Сегодня осталось '+(garrisons.swap_limit-capital.swaps_today)+' из '+garrisons.swap_limit
+        +' · штраф −'+fmt(garrisons.swap_penalty)+' · страж остаётся на месте';card.append(note);
+      garrisons.swap_pairs.forEach(([a,b],k)=>{if(capital.swaps[k])card.append(garrisonButton(swapCell(a)+' ⇄ '+swapCell(b),garrisons.swap_start+k));});
       cards.push(card);
     }
     $('recovery-list').replaceChildren(...cards);
@@ -751,6 +808,14 @@
       case 55:return swapText(s);
       case 56:return 'Превышен лимит '+(snapshot.battle_max_rounds??currentMap().battle_max_rounds??75)+' раундов: весь отряд отступает. Штраф −'+fmt(snapshot.battle_round_limit_penalty??currentMap().battle_round_limit_penalty??1)+'.';
       case 54:return 'Нанят маг для чтения свитков · −'+fmt(castInfo()?.hire_cost??500)+' золота. Свитки и посохи доступны до конца игры.';
+      case 57:return 'Нанят новый лидер · −'+fmt(snapshot.leader_hire?.cost??0)+' золота. Отряд снова в столице.';
+      case 58:return 'Нанят боец в охрану · −'+fmt(s.last_service_cost)+' золота.';
+      case 59:return 'Город потерян: охрана не удержала его.';
+      case 60:return 'Храм воскресил бойца гарнизона столицы · −'+fmt(s.last_service_cost)+' золота. У него 1 HP.';
+      case 61:return 'Боец перешёл из отряда в гарнизон столицы.';
+      case 62:return t+' перешёл из гарнизона столицы в отряд.';
+      case 67:{const [a,b]=snapshot.garrisons?.swap_pairs?.[s.last_target]||[];
+        return a==null?null:'Перестановка в гарнизоне столицы: '+swapCell(a)+' ⇄ '+swapCell(b)+'. Штраф −'+fmt(snapshot.garrisons.swap_penalty)+'.';}
       case 43:{const loot=[...(s.last_loot||[]).map((n,i)=>n?(potionInfo()?.[i]?.name+' × '+n):''),
           ...(s.last_item_loot||[]).map((n,i)=>n?(equipmentInfo()?.items?.[i]?.name+' × '+n):'')].filter(Boolean);
         return 'Город захвачен: '+(territoryInfo()?.cities||[]).filter((c,i)=>s.last_captured_cities[i]).map(c=>c.name).join(', ')+'. Доступны найм, храм и рост земли.'+(loot.length?' Предметы города получены: '+loot.join(', ')+'.':'');}
@@ -881,7 +946,9 @@
     if(isSummoner(s.actor))$('attack-hint').textContent='Призыв: выберите свободную клетку своего отряда. Большое существо занимает переднюю и заднюю клетки линии.';
     const winText=map.campaign_objective==='reach_position'?(map.objective_item?'Победа! Герой доставил рунический ключ ко входу в темницу.':'Победа! Герой достиг цели ⚑.')
       :targetEnemy!==null?'Победа! Цель повержена: '+targetName+'.':goalCities.length?'Победа! Целевые города захвачены.':'Победа! Карта очищена.';
-    const message=s.won?winText:s.lost?(map.capital_defender&&s.capital_defender_hp<=0?'Ашкаэль погиб. Столица потеряна. Начните новую игру.':'Ваш отряд погиб. Начните новую игру.'):s.done?'Достигнут лимит. Начните новую игру.':s.in_battle?'Выбирайте цели и берегите свой отряд.':!s.movement_points?'Очки перемещения закончились. Можно использовать зелья, строить или отдохнуть.':'Шаг на клетку врага — атака. Шаг рядом с отрядом на открытой местности тоже начинает бой (зона контроля).';
+    const capitalUnits=snap.garrisons?.sites?.[snap.garrisons.sites.length-1]?.units||[];
+    const capitalFallen=snap.garrisons&&!capitalUnits.some(u=>u.hp>0);
+    const message=s.won?winText:s.lost?(capitalFallen?'Гарнизон столицы погиб. Столица потеряна. Начните новую игру.':'Ваш отряд погиб. Начните новую игру.'):s.done?'Достигнут лимит. Начните новую игру.':s.in_battle?'Выбирайте цели и берегите свой отряд.':!s.movement_points?'Очки перемещения закончились. Можно использовать зелья, строить или отдохнуть.':'Шаг на клетку врага — атака. Шаг рядом с отрядом на открытой местности тоже начинает бой (зона контроля).';
     $('message').textContent=message;
     $('map-controls').hidden=s.in_battle||capitalOpen||potionsOpen||spellsOpen;$('battle-controls').hidden=!s.in_battle||capitalOpen||potionsOpen||spellsOpen;
     $('continue').hidden=!s.in_battle||!mask[17];

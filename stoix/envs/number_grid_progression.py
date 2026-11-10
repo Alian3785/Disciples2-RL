@@ -101,6 +101,12 @@ class ProgressionRules:
                                       [[{} for _ in range(n)] for n in game_map['enemy_units']])
         enemies = [roster_ids(roster, overrides) for roster, overrides in
                    zip(game_map['enemy_rosters'], enemy_overrides)]
+        # Every campaign capital has a guardian (docs/WORLD.md#garrisons); a native one may
+        # carry instance modifiers (S143's weakened Ashkael).
+        from stoix.envs.number_grid_garrisons import garrisons_enabled, guardian_spec
+        defender = guardian_spec(game_map, construction.faction) if garrisons_enabled(game_map) else None
+        self.capital_defender_id = (roster_ids([defender['unit']], [defender['combat_stats']])[0]
+                                    if defender else None)
         levels = [r['level'] for r in rows]
         if any(type(level) is not int or not 1 <= level <= MAX_LEVEL for level in levels[1:]):
             raise ValueError('Unit and hero base levels must be between 1 and 99')
@@ -155,8 +161,8 @@ class ProgressionRules:
         self.cached_poisoners = jnp.array([(r['name'] == 'Ниддог' or r.get('unit_type') in ('Dregazul','Spider')) for r in rows])
         self.poisoners = jnp.array([(r['name'] == 'Ниддог' or r.get('unit_type') in ('Dregazul','Spider')) or r.get('unit_type') in ('Death','Dead dragon') for r in rows])
         used_ids = set(hero) | {i for squad in enemies for i in squad}
-        if game_map.get('capital_defender'):
-            used_ids.add(self.ids[game_map['capital_defender']['unit']])
+        if self.capital_defender_id is not None:
+            used_ids.add(self.capital_defender_id)
         # Feature pruning must include every recruit and its later promotions.
         # This host-only closure runs at construction, never in the JAX step.
         reached = set(hero)

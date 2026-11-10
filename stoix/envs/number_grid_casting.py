@@ -14,7 +14,7 @@ from stoix.envs.number_grid_combat import ATTACK_TYPES, HP
 from stoix.envs.number_grid_updates import set_rows
 from stoix.envs.number_grid_spell_items import (LORE_LEVEL, SCROLL_MAGE_COST, SCROLL_MAGE_HIRED,
                                                 scenario_spell_items, spell_item_action_names)
-from stoix.envs.number_grid_spells import SPELL_BY_ID, shop_spell_ids, spell_book
+from stoix.envs.number_grid_spells import SPELL_BY_ID, book_bits, book_shape, knows, shop_spell_ids, spell_book
 from stoix.envs.number_grid_territory import CAPITAL_REGENERATION, CITY_BONUS
 
 SPELL_CAST, SPELL_KILL, SUMMON_CAST = 48, 49, 50
@@ -81,16 +81,14 @@ class SpellCastRules:
         self.item_start = self.hire_action + 1
         self.end = self.item_start + self.item_count if self.item_count else self.hire_action
         self.limit = 2 if construction.lord['id'] == 'mage' else 1
-        if self.book_count > 32:
-            raise ValueError('At most 32 researched/shop spells fit the spellbook bitset')
-        # Item-only spells do not need research bits. Effects use as many words
+        # Item-only spells do not need research bits. The book and the effects use as many words
         # as the scenario needs; small maps retain their compact scalar state.
         self.effect_shape = () if self.count <= 32 else ((self.count+31)//32,)
         def words(value):
             return ([value >> (32*w) & 0xffffffff for w in range(self.effect_shape[0])]
                     if self.effect_shape else value)
         self.bits = jnp.array([words(1 << i) for i in range(self.count)], jnp.uint32)
-        self.book_bits = jnp.left_shift(jnp.uint32(1), jnp.arange(self.book_count, dtype=jnp.uint32))
+        self.book_bits = book_bits(range(self.book_count), book_shape(game_map))
         sold = set(shop_spell_ids(game_map))
         if sold:
             # A purchase bypasses the ruler's level limit for casting, never research
@@ -272,7 +270,7 @@ class SpellCastRules:
 
     def _book(self, state, index=None):
         sel = (lambda x: x) if index is None else (lambda x: x[index])
-        learned = (state.learned_spells & sel(self.book_bits)) != 0
+        learned = knows(state.learned_spells, sel(self.book_bits))
         limits = self.limits if isinstance(self.limits, int) else sel(self.limits)
         return (sel(self.allowed) & learned & (sel(state.spell_casts) < limits)
                 & jnp.all(state.mana >= sel(self.costs), axis=-1))
@@ -342,7 +340,7 @@ class SpellCastRules:
 
     def status(self, state, effect):
         """0 ready, 1 unknown, 2 used today, 3 mana, 4 no target/effect, 5 battle, 6 done."""
-        learned = self.allowed & ((state.learned_spells & self.book_bits) != 0)
+        learned = self.allowed & knows(state.learned_spells, self.book_bits)
         code = jnp.where(effect[:self.book_count], 0, 4)
         code = jnp.where(jnp.all(state.mana >= self.costs, axis=-1), code, 3)
         code = jnp.where(state.spell_casts < self.limits, code, 2)
@@ -470,9 +468,19 @@ class SpellCastRules:
             enemy_wounds=jnp.where(recovering, jnp.maximum(wounds - heal, 0), wounds),
             spell_casts=jnp.where(resting, 0, state.spell_casts),
             spell_effects=jnp.where(resting, jnp.uint32(0), state.spell_effects),
-            enemy_spell_effects=jnp.where(resting, jnp.uint32(0), state.enemy_spell_effects),
             summon_marks=state.summon_marks & ~resting,
             last_cast_spell=jnp.int32(-1), last_spell_target=jnp.int32(-1), last_spell_amount=jnp.int32(0))
+
+    def end_curses(self, state, resting, attacking):
+        """REST, after the enemy turn: curses on enemy stacks end with the caster's day, except on
+        the armies that attack in this enemy turn (user rule 09.11.2026, as in the original: a curse
+        lasts until the caster's next turn). Theirs last through that battle; finish_battle ends them.
+        """
+        keep = attacking.reshape(attacking.shape + (1,)*(state.enemy_spell_effects.ndim-1))
+        effects = jnp.where(resting & ~keep, jnp.uint32(0), state.enemy_spell_effects)
+        cursed = jnp.any(effects != 0, axis=-1) if self.effect_shape else effects != 0
+        return state.replace(enemy_spell_effects=effects,
+                             enemy_curse_carried=jnp.where(resting, attacking & cursed, state.enemy_curse_carried))
 
     # Battles -------------------------------------------------------------
     def modifiers(self, bits):
@@ -484,7 +492,8 @@ class SpellCastRules:
     def begin_battle(self, state, hp):
         """Fix per-slot modifiers once: living hero units (never a summon) and the stack's own units."""
         neutral = jnp.array(NEUTRAL, jnp.float32)
-        buffed = jnp.concatenate(((hp[:6] > 0) & ~state.summon_battle, jnp.zeros(6, bool)))
+        # Map spells stay with the hero's party, not with a summon or the home garrison.
+        buffed = jnp.concatenate(((hp[:6] > 0) & ~state.summon_battle & ~state.garrison_battle, jnp.zeros(6, bool)))
         debuffed = (jnp.arange(12) >= 6) & (state.unit_ids != 0)
         blue = self.modifiers(state.spell_effects)
         red = self.modifiers(state.enemy_spell_effects[jnp.maximum(state.enemy, 0)])
@@ -512,9 +521,13 @@ class SpellCastRules:
             promoted = ((after.last_promoted >> jnp.arange(12, dtype=jnp.uint32)) & 1) != 0
             bonus = jnp.where(back & ~promoted, before.spell_mods[:, 0], 0.).astype(jnp.int32)
             after = after.replace(hp=jnp.maximum(after.hp - bonus, 0))
+        # A curse carried into the enemy turn ends with the battle it was kept for.
+        carried = back & after.enemy_curse_carried[t]
         return after.replace(
             enemy_wounds=set_rows(after.enemy_wounds, t, jnp.where(back, wounds, after.enemy_wounds[t])),
-            enemy_spell_effects=set_rows(after.enemy_spell_effects, t, jnp.where(victory, jnp.uint32(0), after.enemy_spell_effects[t])),
+            enemy_spell_effects=set_rows(after.enemy_spell_effects, t, jnp.where(victory | carried, jnp.uint32(0),
+                                                                                 after.enemy_spell_effects[t])),
+            enemy_curse_carried=after.enemy_curse_carried.at[t].set(after.enemy_curse_carried[t] & ~back),
             summon_marks=set_rows(after.summon_marks, t, after.summon_marks[t] & ~(victory & summon)),
             unit_ids=restored(after.unit_ids, party[0]), unit_levels=restored(after.unit_levels, party[1]),
             unit_xp=restored(after.unit_xp, party[2]), hp=restored(after.hp, party[3]),

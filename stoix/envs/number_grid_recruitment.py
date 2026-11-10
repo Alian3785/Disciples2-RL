@@ -72,8 +72,9 @@ class RecruitmentRules:
         self.costs = jnp.array(costs, jnp.int32)
         self.sizes = progression.sizes[self.ids]
         self.front = jnp.array([r['role'] == 'melee' for r in rows])
-        if any(r.get('hero') or r.get('size', 1) != 1 for r in rows[5:]):
-            raise ValueError('Reference mercenary camps only hire small non-hero units')
+        # Large mercenaries take a whole free column and two leadership points (S143's dragons).
+        if any(r.get('hero') for r in rows[5:]):
+            raise ValueError('Mercenary camps hire non-hero units')
         buildings = {r['original_id'].lower(): i for i, r in enumerate(construction.rows)}
         required = [buildings.get(r['game_data']['ENROLL_B'].lower(), -1) if i < 5 else -1 for i, r in enumerate(rows)]
         self.required = jnp.array(required, jnp.int32)

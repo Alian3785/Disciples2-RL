@@ -7,6 +7,7 @@ translations. Casting is implemented separately in number_grid_casting.
 import json
 from pathlib import Path
 
+import jax
 import jax.numpy as jnp
 
 from stoix.envs.number_grid_buildings import DEFAULT_FACTION
@@ -37,9 +38,36 @@ def spell_book(game_map):
     rows = CATALOG['factions'][game_map.get('faction', DEFAULT_FACTION)]
     own = {row['id'] for row in rows}
     extras = [SPELL_BY_ID[i] for i in shop_spell_ids(game_map) if i not in own]
-    if len(rows) + len(extras) > 32:
-        raise ValueError('At most 32 spells fit the learned-spell bitset')
     return rows, extras
+
+
+def book_shape(game_map):
+    """learned_spells: one uint32 up to 32 book spells, else enough words (like spell effects).
+
+    Small books keep the scalar state; S143's two towers bring the book to 34 spells.
+    """
+    count = sum(map(len, spell_book(game_map)))
+    return () if count <= 32 else ((count+31)//32,)
+
+
+def book_bits(indices, shape):
+    """The learned bit of each book index: uint32 values, or [n, words] for a wide book."""
+    if not shape:
+        return jnp.array([1 << i for i in indices], jnp.uint32).reshape(-1)
+    return jnp.array([[(1 << i) >> (32*w) & 0xffffffff for w in range(shape[0])] for i in indices],
+                     jnp.uint32).reshape(-1, shape[0])
+
+
+def knows(learned, bits):
+    """Whether learned holds each bit (bits from book_bits, or one row of them)."""
+    if learned.ndim == 0:
+        return (learned & bits) != 0
+    return jnp.any((learned & bits) != 0, axis=-1)
+
+
+def newly_learned(before, after):
+    """Number of spells learned between two states."""
+    return jnp.sum(jax.lax.population_count(after & ~before))
 
 
 def research_action_names(game_map):
@@ -53,7 +81,7 @@ class SpellResearchRules:
         self.rows = CATALOG['factions'][construction.faction]
         self.count = len(self.rows)
         self.start, self.end = start, start + self.count
-        self.bits = jnp.left_shift(jnp.uint32(1), jnp.arange(self.count, dtype=jnp.uint32))
+        self.bits = book_bits(range(self.count), book_shape(game_map))
         self.levels = jnp.array([r['level'] for r in self.rows], jnp.int32)
         self.costs = jnp.array([r['research_mana'] for r in self.rows], jnp.int32) // construction.lord['research_divisor']
         self.scenario_max_level = game_map.get('max_spell_level', 5)
@@ -71,7 +99,7 @@ class SpellResearchRules:
         bits, costs, allowed = self.bits, self.costs, self.allowed
         if index is not None:
             bits, costs, allowed = bits[index], costs[index], allowed[index]
-        return (allowed & ((state.learned_spells & bits) == 0)
+        return (allowed & ~knows(state.learned_spells, bits)
                 & ((state.buildings & self.tower_bit) != 0)
                 & jnp.all(state.mana >= costs, axis=-1) & ~state.spell_researched_today
                 & ~state.in_battle & ~state.done)
@@ -87,7 +115,7 @@ class SpellResearchRules:
             last_event=jnp.where(valid, SPELL_LEARNED, state.last_event)), valid.astype(jnp.float32)
 
     def observation(self, state):
-        return jnp.concatenate((((state.learned_spells & self.bits) != 0).astype(jnp.float32),
+        return jnp.concatenate((knows(state.learned_spells, self.bits).astype(jnp.float32),
                                 jnp.array([state.spell_researched_today], jnp.float32)))
 
     def status(self, state):
@@ -98,4 +126,4 @@ class SpellResearchRules:
         code = jnp.where((state.buildings & self.tower_bit) == 0, 3, code)
         code = jnp.where(self.allowed, code, 2)
         code = jnp.where(self.levels > self.scenario_max_level, 8, code)
-        return jnp.where((state.learned_spells & self.bits) != 0, 1, code)
+        return jnp.where(knows(state.learned_spells, self.bits), 1, code)

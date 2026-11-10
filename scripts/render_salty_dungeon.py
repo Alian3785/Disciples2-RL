@@ -267,7 +267,7 @@ def render(game_map, source, report, blocked):
     for i,label in enumerate(rows):
         text(margin+(i//half)*1060,y+(i%half)*34,label,small,MUTED)
     y += half*34+40
-    text(margin,y,'Источник: maps/the_salty_dungeon.json + снимок Scens/Globals S103; 07.11.2026.',small,MUTED)
+    text(margin,y,'Источник: maps/the_salty_dungeon.json + снимок Scens/Globals S103; 08.11.2026.',small,MUTED)
     text(margin,y+34,'Показаны стартовые позиции текущей JAX-версии; активируемые отряды позднее перемещаются.',small,MUTED)
     text(side,top,'ВРАЖЕСКИЕ ОТРЯДЫ И ГАРНИЗОНЫ JAX',font(29,True))
     text(side,top+45,'Номер → состав · объект. Крупный юнит считается один раз.',small,MUTED)
@@ -297,7 +297,7 @@ def main():
     game_map = json.loads((ROOT/'maps/the_salty_dungeon.json').read_text(encoding='utf-8'))
     source = json.loads((OUTPUT/'source.json').read_text(encoding='utf-8'))
     report,blocked,_ = audit(game_map)
-    report_file = ROOT/'results/the-salty-dungeon-route-audit-20261107.json'
+    report_file = ROOT/'results/the-salty-dungeon-route-audit-20261108.json'
     report_file.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     size = render(game_map,source,report,blocked)
     print(json.dumps(dict(layout=str(OUTPUT/'layout.png'),size=size,report=str(report_file),
