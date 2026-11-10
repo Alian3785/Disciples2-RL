@@ -3,8 +3,9 @@ import jax
 import jax.numpy as jnp
 
 from stoix.envs.number_grid_capital import HEAL_START, REVIVE_START
-from stoix.envs.number_grid_casting import SUMMON
+from stoix.envs.number_grid_casting import SPELL_KILL, SUMMON
 from stoix.envs.number_grid_potions import POTION_START
+from stoix.envs.number_grid_spells import newly_learned
 from stoix.envs.number_grid_battle_items import SLOTS, TARGETS, ACTIONS as ITEM_ACTIONS
 
 # Fixed layout keeps telemetry a single small array in the rollout/state tree.
@@ -23,6 +24,20 @@ CAMPAIGN_FIELDS = (
     'merchant_purchases', 'waves_completed', 'capital_guardian_bonuses',
     'capital_bot_heroes_defeated', 'experience_gained', 'capital_incubi',
     'objective_item_acquired', 'tracked_enemy_defeated',
+    'garrison_hires', 'garrison_battles', 'cities_lost',
+    # Day an episode ended on; 1 + index of the army that took the capital (0 if it stood);
+    # thief attempts and successful poisonings; rods planted (Wild Mountains, 09.11.2026).
+    'days_survived', 'capital_captor', 'thief_attempts', 'thief_poisonings', 'rods_planted',
+    # Spells cast at the capital's next attacker, and such casts that destroyed it.
+    'attacker_spell_casts', 'attacker_spell_kills',
+    # Destructions of the leader's party (defeat 'capital' maps).
+    'party_losses',
+    # defense_rewards maps: destroyed armies sent to the capital and all others; the party's
+    # levels above the first at the episode's end.
+    'capital_attackers_destroyed', 'map_armies_defeated', 'party_levels',
+    'party_level_record', 'party_reward_multiplier', 'mana_guards_defeated',
+    'party_field_victories', 'party_level2_achieved', 'party_level3_achieved', 'repeated_weak_waves_defeated',
+    'party_upgrades', 'party_day20_achieved', 'party_day50_achieved', 'party_day80_achieved',
 )
 EPISODE_WINDOW = 100
 
@@ -125,7 +140,7 @@ def campaign_events(env, before, world, after, action, valid, battle_counts):
             # One successful purchase for one fighter, regardless of XP bought.
             values['trainer_uses'] = world_action & (action >= start) & (action < start + 6)
     if env.spell_research_enabled:
-        values['spells_learned'] = jax.lax.population_count(world.learned_spells & ~before.learned_spells)
+        values['spells_learned'] = newly_learned(before.learned_spells, world.learned_spells)
     if env.spell_casting_enabled:
         cast = world_action & (world.last_cast_spell >= 0)
         values['spell_casts'] = cast
@@ -150,6 +165,56 @@ def campaign_events(env, before, world, after, action, valid, battle_counts):
         values['unit_swaps'] = world_action & (action >= env.unit_swaps.start) & (action < env.unit_swaps.end)
     if env.territory_enabled:
         values['cities_captured'] = jnp.sum(~before.city_owned & after.city_owned)
+        values['cities_lost'] = jnp.sum(before.city_owned & ~after.city_owned)
+    if env.garrisons.enabled:
+        # A hire action of a valid world step; transfers and revivals are not hires.
+        rules = env.garrisons
+        values['garrison_hires'] = (world_action & (action >= rules.start) & (action < rules.hire_end)
+                                    if rules.action_count else jnp.bool_(False))
+        values['garrison_battles'] = world_action & world.garrison_battle & ~before.garrison_battle
+        values['capital_captor'] = jnp.where(terminal & (after.capital_captor >= 0), after.capital_captor+1, 0)
+    if env.basic_combat:
+        values['days_survived'] = jnp.where(terminal, after.day, 0)
+    if env.thief.enabled:
+        attempt = world_action & (action == env.thief.action)
+        values['thief_attempts'] = attempt
+        values['thief_poisonings'] = attempt & world.thief_alive  # the thief survives only a success
+    if env.rods.enabled:
+        values['rods_planted'] = jnp.sum(world.mine_rods & ~before.mine_rods)
+    if env.attacker_spells.enabled:
+        strike = world_action & env.attacker_spells.contains(action) & (world.last_cast_spell >= 0)
+        values['attacker_spell_casts'] = strike
+        values['attacker_spell_kills'] = strike & (world.last_event == SPELL_KILL)
+    if env.leader_hire.enabled:
+        values['party_losses'] = after.party_losses - before.party_losses
+    if env.defense_rewards.enabled:
+        rules = env.defense_rewards
+        destroyed = before.alive & ~after.alive
+        bound = rules.capital_bound(env, before)
+        values['capital_attackers_destroyed'] = jnp.sum(destroyed & bound)
+        values['map_armies_defeated'] = jnp.sum(destroyed & ~bound)
+        # Final map states hold the restored permanent party. A timeout mid-battle reports
+        # its stashed party for garrison/summon battles, excluding temporary battle forms.
+        ids, levels, hp = after.unit_ids[:6], after.unit_levels[:6], after.hp[:6]
+        for flag, party in ((after.garrison_battle, after.garrison_party),
+                            (after.summon_battle, after.spell_party)):
+            ids, levels, hp = (jnp.where(flag, party[i], current)
+                               for i, current in zip((0, 1, 3), (ids, levels, hp)))
+        values['party_levels'] = jnp.where(terminal,
+            jnp.sum(jnp.where((ids != 0) & (hp > 0), jnp.maximum(levels-1, 0), 0)), 0.)
+        values['party_level_record'] = jnp.where(terminal, after.party_level_record, 0.)
+        values['party_reward_multiplier'] = jnp.where(terminal, after.party_reward_multiplier, 0.)
+        values['mana_guards_defeated'] = jnp.sum(after.mana_guards_rewarded & ~before.mana_guards_rewarded)
+        values['party_field_victories'] = after.party_field_victories-before.party_field_victories
+        milestones = after.party_level_milestones & ~before.party_level_milestones
+        values['party_level2_achieved'], values['party_level3_achieved'] = milestones[0], milestones[1]
+        values['repeated_weak_waves_defeated'] = jnp.sum(
+            destroyed & (rules.repeat_factor(env, before) < 1.))
+        if rules.day_count:
+            values['party_upgrades'] = after.party_upgrade_count-before.party_upgrade_count
+            earned = after.party_day_milestones & ~before.party_day_milestones
+            for day in (20, 50, 80):
+                values[f'party_day{day}_achieved'] = jnp.any(earned & (rules.days == day))
     return jnp.stack([jnp.asarray(values[name], jnp.float32) for name in CAMPAIGN_FIELDS])
 
 

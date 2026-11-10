@@ -158,6 +158,12 @@ class TerritoryRules:
             raise ValueError('Settlement entrances must be distinct')
         if any(type(c.get('level',1)) is not int or not 1<=c.get('level',1)<=5 for c in self.cities):
             raise ValueError('City level must be 1..5')
+        # city_defence_train: the player owns the empty city at reset.
+        if any(type(c.get('owned', False)) is not bool for c in self.cities):
+            raise ValueError('City owned must be true or false')
+        if any(c.get('owned', False) and tuple(c['position']) in {tuple(p) for p in game_map['opponent_positions']}
+               for c in self.cities):
+            raise ValueError('A city owned at reset cannot hold an army')
         # All 3x3 sites share the same impassable footprint and entrance rules.
         if site_rules is not None:
             obstacles.update(tuple(p) for site in site_rules.sites for p in site['footprint'])
@@ -460,7 +466,8 @@ class TerritoryRules:
         return jnp.where(state.unit_ids!=0,jnp.clip(self.regen[state.unit_ids]+self.lord_regen+place+10*banner,0,100),0)
 
     def mine_ownership(self,state):
-        return self.owned(state,self.mine_positions)
+        # A planted rod pays as if the land covered its source (number_grid_rods.py).
+        return self.owned(state,self.mine_positions) | state.mine_rods
 
     def income(self,state):
         income = self.base_income+50*jnp.sum(self.mine_onehot*self.mine_ownership(state)[:,None],axis=0)
@@ -547,6 +554,10 @@ class TerritoryRules:
         armor = jnp.int32(0)
         if self.count:
             index = self.enemy_city[jnp.maximum(state.enemy,0)]
+            if self.moving_enemies:
+                # An army that took a city from the player defends it like its own garrison.
+                match = jnp.all(self.positions == state.enemy_positions[jnp.maximum(state.enemy,0)], axis=1)
+                index = jnp.where(jnp.any(match), jnp.argmax(match), -1)
             armor = jnp.where((state.enemy>=0)&(index>=0)&~state.city_owned[jnp.maximum(index,0)],self.fort_bonus[state.city_levels[jnp.maximum(index,0)]],0)
         if self.has_capital_guards:
             # Reference _resolve_settlement_defender_armor_bonus: the capital tile's guard.

@@ -16,9 +16,23 @@ PARTICIPATION_NAMES = {
 }
 
 
+CAPTOR_PREFIX = 'campaign/window/capital_captor/'
+
+
+def captor_metric_names(game_map):
+    """{enemy index: metric} for the scripted armies that can walk into the agent's capital."""
+    events = (game_map or {}).get('campaign_events')
+    if not events:
+        return {}
+    ids = game_map['reference_enemy_ids']
+    return {army['enemy']: CAPTOR_PREFIX+f"{ids[army['enemy']][4:]} {army.get('name', '')}".strip()
+            for army in events['armies']}
+
+
 class CampaignMetrics:
-    def __init__(self, waves_enabled=False):
+    def __init__(self, waves_enabled=False, captors=None):
         self.waves_enabled = waves_enabled
+        self.captors = captors or {}
         self.total = dict.fromkeys(CAMPAIGN_FIELDS, 0.)
         self.window = dict.fromkeys(CAMPAIGN_FIELDS, 0.)
         self.participation = dict.fromkeys(CAMPAIGN_FIELDS, 0.)
@@ -93,6 +107,13 @@ class CampaignMetrics:
                 for name in ('capital_defense_effects', 'capital_health_effects', 'capital_guardian_rounds'):
                     index = CAMPAIGN_FIELDS.index(name)
                     data[f'campaign/window/{name}_when_reached_mean'] = sum(r[index] for r in reached) / len(reached)
+            if self.captors:
+                # Who took the capital: share of the last 100 episodes per scripted army.
+                index = CAMPAIGN_FIELDS.index('capital_captor')
+                taken = [int(record[index])-1 for record in self.recent if record[index] > 0]
+                data['campaign/window/capital_lost_episodes_rate'] = len(taken) / len(self.recent)
+                for enemy, metric in self.captors.items():
+                    data[metric] = taken.count(enemy) / len(self.recent)
             first = CAMPAIGN_FIELDS.index('capital_first_contacts')
             contacts = [record for record in self.recent if record[first] > 0]
             if contacts:

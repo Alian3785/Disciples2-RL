@@ -7,7 +7,7 @@ import jax
 import jax.numpy as jnp
 import pytest
 
-from stoix.envs.number_grid import REST, NumberGrid, load_map
+from stoix.envs.number_grid import CONTINUE, REST, NumberGrid, load_map
 from stoix.envs import number_grid_reference_rewards as rewards
 from stoix.tests.number_grid_fixtures import compiled_method
 
@@ -61,9 +61,11 @@ def test_screenshot_party_and_capital_potions(dungeon):
     assert int(jnp.sum(state.potions)) == 3
     assert int(state.gold) == 650 and state.mana.tolist() == [25, 0, 0, 0, 0]
     assert env.recruitment.composition(state)[:3].tolist() == [4, 4, 0]
-    assert env.script_events.enabled and env.capital_defense.enabled
+    assert env.script_events.enabled and env.garrisons.enabled
     assert not env.scenario.enabled and not env.bot.enabled
-    assert int(state.capital_defender_hp) == 900
+    capital = env.garrisons.capital_index
+    assert int(state.garrison_ids[capital, 4]) == env.garrisons.guardian  # Ashkael, rear middle
+    assert int(state.garrison_hp[capital, 4]) == 900 and int(jnp.sum(state.garrison_ids != 0)) == 1
     assert not env.territory.objective_cities
     assert not any(s['key'] == 'endurance' for s in env.progression.rows[int(state.unit_ids[1])]['hero_skills'])
 
@@ -143,10 +145,17 @@ def enemy_index(env, gid):
     return env.map_config['reference_enemy_ids'].index(gid)
 
 
+HUMANS = ('S103KC0057', 'S103KC0058', 'S103KC0059', 'S103KC005A')
+
+
+def humans_of(env):
+    return jnp.array([enemy_index(env, gid) for gid in HUMANS])
+
+
 def test_humans_start_once_and_walk_to_capital_not_remote_hero(dungeon):
     env, initial = dungeon
     rules = env.script_events
-    humans = env.capital_defense.attackers
+    humans = humans_of(env)
     assert jnp.all(initial.script_orders[jnp.array([rules.order_slot[int(i)] for i in humans])] == 6)
     assert jnp.array_equal(initial.enemy_positions, jnp.array(env.map_config['opponent_positions']))
     assert int(jnp.sum(initial.script_events_fired)) == 1
@@ -217,52 +226,48 @@ def test_pursuers_attack_on_rest_and_ignore_dead_armies(dungeon):
     assert jnp.array_equal(dead.enemy_positions, before.enemy_positions)
 
 
-def test_capital_autobattle_does_not_touch_hero_or_grant_rewards(dungeon):
+def test_capital_garrison_queues_arrivals_without_the_hero(dungeon):
     env, initial = dungeon
-    attackers = env.capital_defense.attackers
+    humans = humans_of(env)
+    capital = env.garrisons.positions[env.garrisons.capital_index]
     before = initial.replace(position=env.objective_position,
-        enemy_positions=initial.enemy_positions.at[attackers].set(env.capital_defense.capital))
-    resolve = jax.jit(lambda s: env.capital_defense.advance(env, s))
-    after = resolve(before)
-    assert not bool(jnp.any(after.alive[attackers]))
-    assert int(after.capital_defender_hp) > 0 and not bool(after.lost | after.done)
-    for name in ('hp', 'unit_ids', 'unit_levels', 'unit_xp', 'potions', 'item_inventory',
-                 'gold', 'mana', 'reference_defeated', 'recovery_balance', 'position'):
+        enemy_positions=initial.enemy_positions.at[humans].set(capital))
+    after = jax.jit(lambda s: env.garrisons.advance(s))(before)
+    # Every human army waits for a garrison battle the agent plays; nothing is resolved yet.
+    assert bool(jnp.all(after.garrison_pending[humans])) and not bool(after.lost | after.done)
+    for name in ('hp', 'unit_ids', 'alive', 'garrison_hp', 'battle_key', 'position'):
         assert jnp.array_equal(getattr(after, name), getattr(before, name)), name
-    assert not jnp.array_equal(after.battle_key, before.battle_key)
-    again = resolve(after)
-    assert jnp.array_equal(again.battle_key, after.battle_key)
-    assert int(again.capital_defender_hp) == int(after.capital_defender_hp)
+    legal = compiled_method(env, 'action_mask')(after)
+    assert bool(legal[CONTINUE]) and int(jnp.sum(legal)) == 1
+    battle, _ = compiled_method(env, 'step')(after, jnp.int32(CONTINUE))
+    assert bool(battle.in_battle & battle.garrison_battle) and int(battle.enemy) in humans.tolist()
+    assert int(battle.unit_ids[4]) == env.garrisons.guardian and int(battle.battle_hero_fort_armor) == 50
 
 
 def test_capital_present_hero_uses_normal_encounter_queue(dungeon):
     env, initial = dungeon
-    humans = env.capital_defense.attackers
-    before = initial.replace(enemy_positions=initial.enemy_positions.at[humans].set(env.capital_defense.capital))
+    humans = humans_of(env)
+    capital = env.garrisons.positions[env.garrisons.capital_index]
+    before = initial.replace(enemy_positions=initial.enemy_positions.at[humans].set(capital))
     moved = jax.jit(env.script_events.advance)(before)
     assert bool(jnp.all(moved.pending_encounters[humans]))
-    after = jax.jit(lambda s: env.capital_defense.advance(env, s))(moved)
-    assert jnp.array_equal(after.alive, moved.alive)
+    after = jax.jit(lambda s: env.garrisons.advance(s))(moved)
+    assert not bool(jnp.any(after.garrison_pending))  # the party defends first
     assert jnp.array_equal(after.hp, moved.hp)
-    assert jnp.array_equal(after.battle_key, moved.battle_key)
 
 
 def test_capital_loss_and_vmapped_inactive_lane(dungeon):
     env, initial = dungeon
-    enemy = int(env.capital_defense.attackers[0])
-    before = initial.replace(position=env.objective_position, capital_defender_hp=jnp.int32(1),
-        enemy_positions=initial.enemy_positions.at[enemy].set(env.capital_defense.capital))
-    # Guarantee the test attacker acts first and can kill the wounded guardian.
-    progress = before.enemy_progress.at[enemy, :, 0].set(jnp.where(env.progression.enemy_ids[enemy] > 0, 99, 0))
-    before = before.replace(enemy_progress=progress)
+    g = env.garrisons
+    enemy = int(humans_of(env)[0])
+    # A capital with a dead guardian and no other defender falls at once.
+    before = initial.replace(position=env.objective_position,
+        garrison_hp=initial.garrison_hp.at[g.capital_index].set(0),
+        enemy_positions=initial.enemy_positions.at[enemy].set(g.positions[g.capital_index]))
     batch = jax.tree.map(lambda x: jnp.stack((x, x)), before)
-    result = jax.jit(jax.vmap(lambda s, active: env.capital_defense.advance(env, s, active)))(
-        batch, jnp.array([True, False]))
-    assert bool(result.lost[0] & result.done[0]) and int(result.capital_defender_hp[0]) == 0
-    assert not bool(result.lost[1])
-    assert jnp.array_equal(result.hp, batch.hp)
-    assert jnp.array_equal(result.alive[1], before.alive)
-    assert jnp.array_equal(result.battle_key[1], before.battle_key)
+    result = jax.jit(jax.vmap(lambda s, active: g.advance(s, active)))(batch, jnp.array([True, False]))
+    assert bool(result.lost[0] & result.done[0])
+    assert not bool(result.lost[1]) and not bool(jnp.any(result.garrison_pending[1]))
 
 
 @pytest.mark.parametrize('kind,steps', [(0, 10), (1, 20), (2, 5), (3, 4)])

@@ -7179,5 +7179,5 @@
     {"enemy": 78, "order": 3, "moves": 20},
     {"enemy": 86, "order": 2, "moves": 20}
   ],
-  "capital_defender": {"unit": "g000uu3003", "level": 1, "attackers": [51, 52, 53, 54]}
+  "capital_defender": {"unit": "g000uu3003", "level": 1}
 }

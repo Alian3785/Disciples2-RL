@@ -92,6 +92,28 @@ CHART_TITLES = {
     'campaign/window/capital_entry_strength_when_reached_mean': 'Сила армии при первом входе — среди дошедших (последние 100)',
     'campaign/window/objective_item_episodes_rate': 'Доля эпизодов с полученным руническим ключом — последние 100 эпизодов',
     'campaign/window/tracked_enemy_episodes_rate': 'Доля эпизодов с победой над Зелёным драконом у земель гномов — последние 100 эпизодов',
+    'campaign/window/days_survived_mean': 'Дней продержались — день конца эпизода, последние 100 эпизодов',
+    'campaign/window/capital_lost_episodes_rate': 'Доля эпизодов со взятой столицей — последние 100 эпизодов',
+    'campaign/window/thief_attempts_mean': 'Попыток вора на эпизод — последние 100 эпизодов',
+    'campaign/window/thief_poisonings_mean': 'Отравлений вором на эпизод — последние 100 эпизодов',
+    'campaign/window/rods_planted_mean': 'Поставлено жезлов на эпизод — последние 100 эпизодов',
+    'campaign/window/attacker_spell_casts_mean': 'Заклинаний по отряду, идущему на столицу, на эпизод — последние 100 эпизодов',
+    'campaign/window/attacker_spell_kills_mean': 'Таких отрядов уничтожено магией на эпизод — последние 100 эпизодов',
+    'campaign/window/party_losses_mean': 'Гибелей отряда героя на эпизод — последние 100 эпизодов',
+    'campaign/window/capital_attackers_destroyed_mean': 'Уничтожено армий, шедших на столицу, на эпизод — последние 100 эпизодов',
+    'campaign/window/map_armies_defeated_mean': 'Уничтожено остальных армий карты на эпизод — последние 100 эпизодов',
+    'campaign/window/party_levels_mean': 'Уровней отряда героя сверх первого к концу эпизода — последние 100 эпизодов',
+    'campaign/window/party_level_record_mean': 'Рекорд суммы уровней живого отряда — последние 100 эпизодов',
+    'campaign/window/party_reward_multiplier_mean': 'Множитель награды эпизода за уровни отряда — последние 100 эпизодов',
+    'campaign/window/mana_guards_defeated_mean': 'Уничтожено отрядов у источников маны для жезлов — последние 100 эпизодов',
+    'campaign/window/party_field_victories_mean': 'Первых личных побед герцога вне столицы — последние 100 эпизодов',
+    'campaign/window/party_level2_achieved_mean': 'Доля эпизодов с уровнем 2 у всего отряда — последние 100 эпизодов',
+    'campaign/window/party_level3_achieved_mean': 'Доля эпизодов с уровнем 3 у всего отряда — последние 100 эпизодов',
+    'campaign/window/party_upgrades_mean': 'Повышений бойцов отряда Герцога на эпизод — последние 100 эпизодов',
+    'campaign/window/party_day20_achieved_mean': 'Доля эпизодов с 4 повышениями к дню 20 — последние 100 эпизодов',
+    'campaign/window/party_day50_achieved_mean': 'Доля эпизодов с 8 повышениями к дню 50 — последние 100 эпизодов',
+    'campaign/window/party_day80_achieved_mean': 'Доля эпизодов с 12 повышениями к дню 80 — последние 100 эпизодов',
+    'campaign/window/repeated_weak_waves_defeated_mean': 'Повторных слабых волн с уменьшенной наградой — последние 100 эпизодов',
     'rollout/ep_rew_mean': 'Средняя награда — последние 100 эпизодов',
     'rollout/ep_len_mean': 'Средняя длина — последние 100 эпизодов',
 }
@@ -116,11 +138,40 @@ CAPITAL_CHARTS = frozenset(name for name in CAMPAIGN_CHARTS
 # both S103 so far. They follow the first row; W&B keeps the shared catalogue and still logs them.
 OBJECTIVE_ITEM_CHARTS = ('campaign/window/objective_item_episodes_rate',)
 TRACKED_ENEMY_CHARTS = ('campaign/window/tracked_enemy_episodes_rate',)
+# Maps with scripted capital attacks (campaign_events, S143): survival, captors, thief and rods.
+CAPTOR_CHART = 'Кто взял столицу — доля эпизодов, последние 100 эпизодов'
+CAMPAIGN_EVENT_CHARTS = ('campaign/window/days_survived_mean', 'campaign/window/capital_lost_episodes_rate')
+SABOTAGE_CHARTS = ('campaign/window/thief_attempts_mean', 'campaign/window/thief_poisonings_mean')
+ROD_CHARTS = ('campaign/window/rods_planted_mean',)
+ATTACKER_SPELL_CHARTS = ('campaign/window/attacker_spell_casts_mean', 'campaign/window/attacker_spell_kills_mean')
+PARTY_LOSS_CHARTS = ('campaign/window/party_losses_mean',)
+DEFENSE_CHARTS = ('campaign/window/capital_attackers_destroyed_mean', 'campaign/window/map_armies_defeated_mean',
+                  'campaign/window/party_levels_mean', 'campaign/window/party_level_record_mean',
+                  'campaign/window/party_reward_multiplier_mean', 'campaign/window/mana_guards_defeated_mean',
+                  'campaign/window/party_field_victories_mean', 'campaign/window/party_level2_achieved_mean',
+                  'campaign/window/party_level3_achieved_mean', 'campaign/window/repeated_weak_waves_defeated_mean')
+PARTY_DAY_CHARTS = ('campaign/window/party_upgrades_mean', 'campaign/window/party_day20_achieved_mean',
+                   'campaign/window/party_day50_achieved_mean', 'campaign/window/party_day80_achieved_mean')
 
 
 def map_charts(game_map):
+    """Map-specific panels: a name is one metric; a (title, metrics) pair is one multi-line panel."""
+    from numbergrid_campaign import captor_metric_names
+    captors = tuple(captor_metric_names(game_map).values())
     return ((OBJECTIVE_ITEM_CHARTS if game_map.get('objective_item') else ())
-            + (TRACKED_ENEMY_CHARTS if game_map.get('tracked_enemy') is not None else ()))
+            + (TRACKED_ENEMY_CHARTS if game_map.get('tracked_enemy') is not None else ())
+            + (CAMPAIGN_EVENT_CHARTS+((CAPTOR_CHART, captors),) if captors else ())
+            + (SABOTAGE_CHARTS if game_map.get('thief_poison') else ())
+            + (ROD_CHARTS if game_map.get('rod_planter') else ())
+            + (ATTACKER_SPELL_CHARTS if game_map.get('attacker_spells') else ())
+            + (PARTY_LOSS_CHARTS if game_map.get('leader_hire') else ())
+            + (DEFENSE_CHARTS if game_map.get('defense_rewards') else ())
+            + (PARTY_DAY_CHARTS if game_map.get('party_day_rewards') else ()))
+
+
+def chart_metrics(charts):
+    """Every metric name the panels show, multi-line panels included."""
+    return {metric for chart in charts for metric in ((chart,) if isinstance(chart, str) else chart[1])}
 
 
 def comet_campaign_charts(game_map=None):
@@ -143,16 +194,19 @@ def comet_view_name(game_map=None):
 
 
 def compact_comet_metrics(data, game_map=None):
-    charts = comet_campaign_charts(game_map)
+    charts = chart_metrics(comet_campaign_charts(game_map))
     return {key: value for key, value in data.items()
             if not key.startswith('campaign/') or key in charts}
 
 
-def line_panel(metric):
+def line_panel(chart):
+    """A metric name, or a (title, metrics) pair drawn as several lines on one panel."""
+    title, metrics = (CHART_TITLES.get(chart, chart), [chart]) if isinstance(chart, str) else (chart[0], list(chart[1]))
+    metric = metrics[0]
     return {
-        'chartId': uuid4().hex, 'chartName': CHART_TITLES.get(metric, metric), 'chartType': 'line',
+        'chartId': uuid4().hex, 'chartName': title, 'chartType': 'line',
         'metricName': metric, 'autoGenerated': False, 'selectedXAxis': 'step',
-        'selectedYAxis': metric, 'metricNames': [metric],
+        'selectedYAxis': metric, 'metricNames': metrics,
         'selectedOutliers': 'show', 'selectedLegendKeys': [
             {'value': 'Name', 'label': 'Name', 'source': 'log_other'}],
         'transformX': None, 'transformY': None, 'smoothingY': 0, 'sampleSize': 500,
@@ -240,4 +294,5 @@ def configure_comet_dashboard(api_experiment, game_map=None):
     return {'status': 'saved', 'name': name, 'view_id': saved.template_id,
             'first_section': 'rollout',
             'first_metric': ROLLOUT_CHARTS[0], 'campaign_charts': len(charts),
-            'campaign_window_charts': sum(metric.startswith('campaign/window/') for metric in charts)}
+            'campaign_window_charts': sum(isinstance(chart, tuple) or chart.startswith('campaign/window/')
+                                          for chart in charts)}

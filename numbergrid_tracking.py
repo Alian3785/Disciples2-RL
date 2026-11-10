@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import time
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
-from numbergrid_campaign import CampaignMetrics
+from numbergrid_campaign import CampaignMetrics, captor_metric_names
 from numbergrid_comet_dashboard import compact_comet_metrics, configure_comet_dashboard
 from numbergrid_wandb_dashboard import configure_wandb_dashboard
 
@@ -106,6 +106,7 @@ class NumberGridTracking:
         """Auto: W&B cloud, then Comet, then offline W&B; explicit choices never fall back."""
         self.output = Path(output)
         self.campaign.waves_enabled = game_map.get('campaign_objective') == 'waves'
+        self.campaign.captors = captor_metric_names(game_map)
         requested = self.args.tracking
         self.metadata = {'requested': requested, 'service': None, 'mode': 'disabled', 'url': None,
                          'skipped': [], 'status': 'running', 'summary_interval': self.summary_interval}

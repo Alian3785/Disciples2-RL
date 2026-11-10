@@ -156,9 +156,12 @@ class GameService:
                 'movement_cap': int(env.movement_cap(state)),
                 'travel_costs': np.asarray(env.travel_costs(state)).tolist(),
                 'capital_quotes': np.asarray(env.capital.quotes(state, env.max_hp(state))).tolist(),
-                'capital_defense': (dict(name=env.progression.rows[int(env.capital_defense.ids[1])]['name'],
-                    max_hp=int(env.capital_defense.maximum), hp=int(state.capital_defender_hp))
-                    if env.capital_defense.enabled else None),
+                'garrisons': (dict(env.garrisons.metadata, sites=env.garrisons.snapshot(state),
+                                   battle=bool(state.garrison_battle), site=int(state.garrison_site))
+                              if env.garrisons.enabled else None),
+                'leader_hire': (dict(env.leader_hire.metadata, party=bool(env.leader_hire.has_party(state)),
+                                     available=bool(env.leader_hire.available(state)))
+                                if env.leader_hire.enabled else None),
                 'potion_quotes': np.asarray(env.potion_rules.quotes(state, env.max_hp(state))).tolist(),
                 'recruitment_quotes': ({k: np.asarray(v).tolist() for k,v in env.recruitment.quotes(state).items()}
                                       if env.recruitment_enabled else None),
@@ -310,7 +313,7 @@ def make_handler(service, port):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port', type=int, default=8769)
-    parser.add_argument('--map', help='current, default, default-green-dragon, default-blue-dragon, default-capital, small, small-green-dragon, small-blue-dragon, super_last_stand, siege_train, the_charmed_child, trade_train, mirror_match (mirrow_match), bethrezens_retreat, the_salty_dungeon, or a map JSON path')
+    parser.add_argument('--map', help='current, default, default-green-dragon, default-blue-dragon, default-capital, small, small-green-dragon, small-blue-dragon, super_last_stand, siege_train, the_charmed_child, trade_train, mirror_match (mirrow_match), bethrezens_retreat, the_salty_dungeon, wild_mountains, or a map JSON path')
     parser.add_argument('--model', help='Results folder with params.msgpack: enables agent hints and moves')
     parser.add_argument('--allow-cpu', action='store_true', help='Run human mode on the JAX CPU backend')
     args = parser.parse_args()

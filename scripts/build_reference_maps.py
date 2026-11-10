@@ -20,7 +20,10 @@ from stoix.envs.number_grid_potions import POTIONS
 from stoix.envs.number_grid_spell_items import SPELL_ITEMS
 
 NAMES = ('super_last_stand', 'siege_train', 'the_charmed_child', 'trade_train')
-FOCUSED_NAMES = ('scroll_train', 'magic_train', 'item_train', 'hire_train', 'orc_duel', 'formation_train')
+FOCUSED_NAMES = ('scroll_train', 'magic_train', 'item_train', 'hire_train', 'orc_duel', 'formation_train',
+                 'city_defence_train')
+# Reference campaign_env_city_defence.py: the scripted bot walks ten plain tiles a day.
+CITY_DEFENCE_MOVES, CITY_DEFENCE_RESPAWN_DAYS = 10, 2
 SOURCE_NAMES = {'the_charmed_child': 'wotans_retribution'}  # Legacy Python-reference filename.
 # Installed Scens SLmark, extracted by scripts/extract_landmarks.py; the layout omits landmarks.
 LANDMARKS = {'the_charmed_child': ROOT/'docs/maps/the_charmed_child/landmarks.json'}
@@ -263,7 +266,40 @@ def build(base, name):
         scenario_land(game_map, name)
     else:
         layout_land(game_map, layout)
+    if name == 'city_defence_train':
+        add_city_assaults(game_map, module, keys)
     return game_map
+
+
+def add_city_assaults(game_map, module, keys):
+    """Two assaults on the player's empty level-5 city (maps/city_defence_train.py).
+
+    The reference's scripted bot becomes two scheduled armies with the city as their target:
+    the first appears on the first REST and walks ten tiles a day; the second appears two
+    RESTs after the first is destroyed. Win: both destroyed; loss: the city falls.
+    """
+    city = next(c for c in game_map['cities'] if c['name'] == module.CITY_NAME)
+    city.update(owned=True, defended=True)
+    for wave, roster_by_position in enumerate(module.ASSAULT_ROSTERS):
+        squad = [None]*6
+        for position, unit_name in roster_by_position.items():
+            squad[position-7] = keys[unit_name]  # blue 7..12 become red 1..6 in the city battle
+        game_map['opponent_positions'].append(cell(module.BOT_SPAWN_TILE))
+        game_map['opponent_numbers'].append(1)
+        game_map['enemy_rosters'].append(squad)
+        game_map['enemy_units'].append(sum(k is not None for k in squad))
+        game_map['enemy_hp'].append(max(UNITS[k]['max_hp'] for k in squad if k))
+        game_map['enemy_initial_levels'].append([UNITS[k]['level'] if k else 0 for k in squad])
+        game_map['reference_enemy_ids'].append(f'assault_{wave+1}')
+        event = dict(enemy=len(game_map['opponent_positions'])-1, moves_per_turn=CITY_DEFENCE_MOVES,
+                     target=city['position'])
+        if wave == 0:
+            event['spawn_turn'] = 0
+        else:
+            event['after'] = dict(enemy=event['enemy']-1, days=CITY_DEFENCE_RESPAWN_DAYS)
+        game_map['scheduled_enemies'].append(event)
+    game_map.update(campaign_objective='waves', city_defence=dict(
+        city=module.CITY_NAME, factions=list(module.ASSAULT_FACTIONS)))
 
 
 def main():

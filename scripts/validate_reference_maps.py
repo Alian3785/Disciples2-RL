@@ -34,21 +34,86 @@ def validate(name):
         assert bool(env.action_mask(state)[REST])
         state, timestep = step(state, jnp.int32(REST))
         assert bool(jnp.isfinite(timestep.reward))
-        if env.capital_defense.enabled and bool(state.in_battle):
+        if bool(state.in_battle):
             # The Salty Dungeon: the human armies reach the capital at the end of day 1,
-            # and a hero resting there defends it in an ordinary battle.
-            assert int(state.enemy) in env.capital_defense.attackers.tolist()
+            # and a hero resting there defends it in an ordinary battle, not its garrison.
+            assert not bool(state.garrison_battle)
             break
-    if env.capital_defense.enabled:
-        # Away from the capital the hero is not attacked; the guardian fights the arrivals.
-        rules = env.capital_defense
+        if bool(state.done):
+            # city_defence_train: the first wave takes the empty defended city on day 2.
+            break
+    if game_map.get('removed_capital_armies'):
+        # The no-capital-attacks variant keeps party rewards and the Gumtik objective.
+        assert not set(game_map['removed_capital_armies']).intersection(
+            source.upper() for source in game_map['reference_enemy_ids'])
+        assert env.defense_rewards.capital_target is None
+        assert not bool(jnp.any(env.defense_rewards.capital_bound(env, state)))
+        assert not bool(jnp.any(env.thief.attackers(env, state)))
         original, _ = reset(jax.random.PRNGKey(42))
-        away = original.replace(position=jnp.array(game_map['objective_position'], jnp.int32))
-        for _ in range(3):
-            away, ts = step(away, jnp.int32(REST))
-            assert not bool(away.in_battle) and bool(jnp.isfinite(ts.reward))
-        assert (int(away.capital_defender_hp) < int(rules.maximum)
-                or not bool(jnp.any(away.alive[rules.attackers])))
+        city = next(i for i, c in enumerate(game_map['cities']) if c['objective'])
+        gumtik = game_map['reference_enemy_ids'].index('S143TM0015')
+        holding = original.replace(city_owned=original.city_owned.at[city].set(True))
+        # Absence before his creation must not satisfy "defeat Gumtik".
+        assert not bool(env.campaign_events.won(holding))
+        response = jax.jit(lambda s: env.campaign_events.process(s, False))(holding)
+        assert bool(response.alive[gumtik] & response.scenario_spawned[gumtik])
+        assert not bool(env.campaign_events.won(response))
+        defeated = response.replace(alive=response.alive.at[gumtik].set(False))
+        assert bool(env.campaign_events.won(defeated))
+        assert not bool(env.campaign_events.won(
+            defeated.replace(city_owned=defeated.city_owned.at[city].set(False))))
+    if game_map.get('defeat') == 'party_or_capital':
+        # Preflight of the requested revised S143 training: its terminal path,
+        # conditional day rewards and exclusion of capital attackers must be active.
+        from stoix.envs import number_grid_reference_rewards as reference_rewards
+        original, _ = reset(jax.random.PRNGKey(42))
+        assert env.leader_hire.terminal_party_loss and not env.leader_hire.can_hire
+        assert 'hire_leader' not in action_names(game_map)
+        killed = jax.jit(lambda s: env.campaign_events._cast(
+            env, s, jnp.bool_(True), dict(amount=99999, bit=0)))(original)
+        assert bool(killed.done & killed.lost) and int(killed.party_losses) == 1
+        assert int(killed.capital_captor) == -1 and not bool(env.leader_hire.available(killed))
+        _, penalty = reference_rewards.finish(env, original, killed)
+        assert float(penalty) == -10.
+        rules = env.defense_rewards
+        assert rules.suppress_attacker_rewards and rules.attacker_xp == 0.
+        apply_rewards = jax.jit(lambda before, after: rules.apply(env, before, after))
+        for milestone in game_map['party_day_rewards']:
+            before = original.replace(day=jnp.int32(milestone['day']-1),
+                                      party_upgrade_count=jnp.int32(milestone['upgrades']))
+            earned, bonus = apply_rewards(before, before.replace(day=jnp.int32(milestone['day'])))
+            assert float(bonus) == milestone['reward']
+            _, again = apply_rewards(earned, earned)
+            assert float(again) == 0.
+            short = before.replace(party_upgrade_count=before.party_upgrade_count-1)
+            _, missed = apply_rewards(short, short.replace(day=jnp.int32(milestone['day'])))
+            assert float(missed) == 0.
+        attacker = game_map['reference_enemy_ids'].index('S143KC0092')
+        assert not bool(rules.rewardable[attacker])
+        battle = original.replace(enemy=jnp.int32(attacker), in_battle=jnp.bool_(True))
+        scored, bonus = reference_rewards.battle(env, battle, battle, battle.hp,
+            jnp.bool_(True), jnp.bool_(False), jnp.bool_(False), jnp.bool_(False))
+        assert float(bonus) == 0. and not bool(scored.reference_defeated[attacker])
+    if env.garrisons.enabled:
+        # Every campaign capital has its guardian in the rear middle cell. An army on the
+        # capital entrance while the hero is away starts the agent's garrison battle.
+        rules = env.garrisons
+        original, _ = reset(jax.random.PRNGKey(42))
+        capital = rules.positions[rules.capital_index]
+        # Scheduled armies walk to their targets before the garrison check (city_defence_train's
+        # first wave heads for the city), so use the first attacker still on the entrance after REST.
+        for enemy in (int(i) for i in jnp.flatnonzero(rules.attackers)):
+            away = original.replace(position=original.position+jnp.array([4, 0], jnp.int32),
+                                    alive=original.alive.at[enemy].set(True),
+                                    enemy_positions=original.enemy_positions.at[enemy].set(capital))
+            attacked, ts = step(away, jnp.int32(REST))
+            if bool(jnp.all(attacked.enemy_positions[enemy] == capital)):
+                break
+        else:
+            raise AssertionError('Every attacker leaves the capital entrance on REST')
+        assert bool(attacked.in_battle & attacked.garrison_battle) and int(attacked.enemy) == enemy
+        assert int(attacked.unit_ids[4]) == rules.guardian
+        assert not bool(env._can_retreat(attacked, jnp.int32(0))) and bool(jnp.isfinite(ts.reward))
     if env.bot_attack.enabled:
         # Default Capital's scripted Empire party: absent at reset, then a real battle
         # without withdrawal on the REST that begins its attack day.
