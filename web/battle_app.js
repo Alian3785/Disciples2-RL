@@ -486,6 +486,7 @@
       const name=document.createElement('h3');name.textContent='Столица · '+u.name+(guardian?' (страж)':'');card.append(name);
       const hp=document.createElement('p');hp.className='recovery-health';hp.textContent=u.hp+' / '+u.max_hp+' HP · уровень '+u.level+(!u.hp?' · погиб':'');card.append(hp);
       if(!u.hp&&garrisons.revive_start!=null)card.append(garrisonButton('Воскресить · '+fmt(u.revive_cost)+' золота',garrisons.revive_start+u.cell));
+      if(u.hp&&u.hp<u.max_hp&&garrisons.heal_start!=null)card.append(garrisonButton('Лечить · '+fmt(u.heal_price)+' золота / HP',garrisons.heal_start+u.cell));
       if(!guardian)card.append(garrisonButton('В отряд',garrisons.take_start+u.cell));
       cards.push(card);
     }
@@ -948,7 +949,9 @@
       :targetEnemy!==null?'Победа! Цель повержена: '+targetName+'.':goalCities.length?'Победа! Целевые города захвачены.':'Победа! Карта очищена.';
     const capitalUnits=snap.garrisons?.sites?.[snap.garrisons.sites.length-1]?.units||[];
     const capitalFallen=snap.garrisons&&!capitalUnits.some(u=>u.hp>0);
-    const message=s.won?winText:s.lost?(capitalFallen?'Гарнизон столицы погиб. Столица потеряна. Начните новую игру.':'Ваш отряд погиб. Начните новую игру.'):s.done?'Достигнут лимит. Начните новую игру.':s.in_battle?'Выбирайте цели и берегите свой отряд.':!s.movement_points?'Очки перемещения закончились. Можно использовать зелья, строить или отдохнуть.':'Шаг на клетку врага — атака. Шаг рядом с отрядом на открытой местности тоже начинает бой (зона контроля).';
+    const defendedCity=(map.cities||[]).findIndex(c=>c.defended);
+    const cityFallen=defendedCity>=0&&s.city_owned!=null&&!s.city_owned[defendedCity];
+    const message=s.won?winText:s.lost?(capitalFallen?'Гарнизон столицы погиб. Столица потеряна. Начните новую игру.':cityFallen?'Защищаемый город потерян. Начните новую игру.':'Ваш отряд погиб. Начните новую игру.'):s.done?'Достигнут лимит. Начните новую игру.':s.in_battle?'Выбирайте цели и берегите свой отряд.':!s.movement_points?'Очки перемещения закончились. Можно использовать зелья, строить или отдохнуть.':'Шаг на клетку врага — атака. Шаг рядом с отрядом на открытой местности тоже начинает бой (зона контроля).';
     $('message').textContent=message;
     $('map-controls').hidden=s.in_battle||capitalOpen||potionsOpen||spellsOpen;$('battle-controls').hidden=!s.in_battle||capitalOpen||potionsOpen||spellsOpen;
     $('continue').hidden=!s.in_battle||!mask[17];

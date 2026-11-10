@@ -39,6 +39,9 @@ def validate(name):
             # and a hero resting there defends it in an ordinary battle, not its garrison.
             assert not bool(state.garrison_battle)
             break
+        if bool(state.done):
+            # city_defence_train: the first wave takes the empty defended city on day 2.
+            break
     if game_map.get('removed_capital_armies'):
         # The no-capital-attacks variant keeps party rewards and the Gumtik objective.
         assert not set(game_map['removed_capital_armies']).intersection(
@@ -96,12 +99,18 @@ def validate(name):
         # capital entrance while the hero is away starts the agent's garrison battle.
         rules = env.garrisons
         original, _ = reset(jax.random.PRNGKey(42))
-        enemy = int(jnp.argmax(rules.attackers))
         capital = rules.positions[rules.capital_index]
-        away = original.replace(position=original.position+jnp.array([4, 0], jnp.int32),
-                                alive=original.alive.at[enemy].set(True),
-                                enemy_positions=original.enemy_positions.at[enemy].set(capital))
-        attacked, ts = step(away, jnp.int32(REST))
+        # Scheduled armies walk to their targets before the garrison check (city_defence_train's
+        # first wave heads for the city), so use the first attacker still on the entrance after REST.
+        for enemy in (int(i) for i in jnp.flatnonzero(rules.attackers)):
+            away = original.replace(position=original.position+jnp.array([4, 0], jnp.int32),
+                                    alive=original.alive.at[enemy].set(True),
+                                    enemy_positions=original.enemy_positions.at[enemy].set(capital))
+            attacked, ts = step(away, jnp.int32(REST))
+            if bool(jnp.all(attacked.enemy_positions[enemy] == capital)):
+                break
+        else:
+            raise AssertionError('Every attacker leaves the capital entrance on REST')
         assert bool(attacked.in_battle & attacked.garrison_battle) and int(attacked.enemy) == enemy
         assert int(attacked.unit_ids[4]) == rules.guardian
         assert not bool(env._can_retreat(attacked, jnp.int32(0))) and bool(jnp.isfinite(ts.reward))

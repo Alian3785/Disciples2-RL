@@ -8,7 +8,8 @@ import pytest
 
 from stoix.envs.number_grid import CONTINUE, DEFEND, REST, SHOOT, NumberGrid, action_names, load_map
 from stoix.envs.number_grid_combat import ACCURACY, ARMOR, DAMAGE, HP, INITIATIVE
-from stoix.envs.number_grid_casting import DAMAGE as DAMAGE_SPELL, SUMMON as SUMMON_SPELL
+from stoix.envs.number_grid_casting import DAMAGE as DAMAGE_SPELL, DEBUFF, SUMMON as SUMMON_SPELL
+from stoix.envs.number_grid_spells import knows
 from stoix.envs.number_grid_thief import THIEF_FAILED, THIEF_POISONED
 from stoix.envs import number_grid_reference_rewards as reference_rewards
 from stoix.tests.number_grid_fixtures import compiled_method
@@ -94,6 +95,27 @@ def test_start_party_potions_treasury_and_guardian(mountains):
     assert int(jnp.sum(state.garrison_ids[:capital] != 0)) == 0 and g.cities == 8
     assert env.territory.objective_cities and not env.script_events.enabled and env.campaign_events.enabled
     assert state.learned_spells.shape == (2,)  # 17 Legions spells + 17 tower spells
+
+
+def test_tower_spell_past_index_31_is_learned_in_the_second_word(mountains):
+    """SiteRules and SpellCastRules share the book order, also beyond the first 32 spells."""
+    env, state = mountains
+    shop, casting = env.site_rules, env.casting
+    step, mask = compiled_method(env, 'step'), compiled_method(env, 'action_mask')
+    wide = [k for k, o in enumerate(shop.spell_offers) if casting_row(casting, o['spell']) >= 32]
+    assert wide
+    for k in wide:
+        offer = shop.spell_offers[k]
+        index = casting_row(casting, offer['spell'])
+        assert index < casting.book_count
+        at_shop = state.replace(position=shop.approach_tiles[offer['site'], 0], gold=jnp.int32(offer['price']))
+        assert not bool(knows(at_shop.learned_spells, casting.book_bits[index]))
+        buy = jnp.int32(shop.spell_start+k)
+        assert bool(mask(at_shop)[buy])
+        bought, _ = step(at_shop, buy)
+        assert (bought.learned_spells ^ at_shop.learned_spells).tolist() == [0, 1 << (index-32)]
+        assert bool(knows(bought.learned_spells, casting.book_bits[index]))
+        assert not bool(mask(bought)[buy])
 
 
 def test_undead_capital_is_passive_and_weakened(mountains):
@@ -723,7 +745,7 @@ def test_thief_poisons_the_next_capital_attacker():
 
 
 def test_spells_strike_the_next_capital_attacker():
-    """Damage and summons may target the army the thief would poison, one turn before its attack."""
+    """Damage, curses and summons may target the army the thief would poison, one turn before its attack."""
     game_map = load_map('wild_mountains')
     goblins = game_map['reference_enemy_ids'].index('S143KC0033')
     game_map['scheduled_enemies'] = [dict(enemy=goblins, moves_per_turn=4, spawn_turn=0,
@@ -734,7 +756,7 @@ def test_spells_strike_the_next_capital_attacker():
         names[rules.start+j] == names[int(base)]+'_at_attacker' for j, base in enumerate(rules.bases.tolist()))
     kinds = {int(casting.kinds[int(base)-casting.start if int(base) < casting.hire_action
                                else int(casting.item_rows[int(base)-casting.item_start])]) for base in rules.bases}
-    assert kinds <= {DAMAGE_SPELL, SUMMON_SPELL}  # curses end on REST, before the attack
+    assert kinds == {DAMAGE_SPELL, DEBUFF, SUMMON_SPELL}  # curses last through the enemy turn
     step, mask = compiled_method(env, 'step'), compiled_method(env, 'action_mask')
     state, _ = compiled_method(env, 'reset')(jax.random.PRNGKey(143))
     def ready(s):
