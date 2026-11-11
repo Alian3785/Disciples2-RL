@@ -33,8 +33,8 @@ def mountains():
 
 @pytest.fixture(scope='module')
 def mountains_rehire():
-    """The separate no-capital-attacks variant still allows replacing a destroyed party."""
-    env = NumberGrid(map_config=load_map('wild_mountains_no_capital_attacks'))
+    """Exercise the engine's optional leader recruitment rule."""
+    env = NumberGrid(map_config={**load_map('wild_mountains'), 'defeat': 'capital'})
     state, _ = compiled_method(env, 'reset')(jax.random.PRNGKey(143))
     return env, state
 
