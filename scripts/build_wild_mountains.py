@@ -4,15 +4,15 @@ User request 2026-11-08: no thieves. The agent plays the Legions (Duke level 1, 
 and Cultist start in Vayrest) with the capital's potions, the original treasury and the
 weakened guardian Ashkael. An army that reaches the capital while the Duke's party is
 elsewhere fights Ashkael in a battle the agent controls; with the party inside, the party
-defends first, as in the original. With capital attacks, losing the Duke's whole party or
-the capital ends the episode (2026-11-10). The no-attacks variant allows re-hiring a Duke
-after a party loss. The Undead (Vaast) do not act: Sentinel keeps its
+defends first, as in the original. Losing the Duke's whole party or the capital ends
+the episode in both variants. The Undead (Vaast) do not act: Sentinel keeps its
 weakened Ashgan, its garrison and the Death Knight as a passive enemy capital.
 
 User request 2026-11-09: the scenario's events on the Legions' side (scouts, waves against
 Vayrest and captured cities, blockades, magic, land and ruin events). Armies walk the
-shortest path around obstacles and ignore other neutrals. Victory as in the original: hold
-Shornhelm and destroy Sir Allemon and Gumtik, who appear when the Legions take it.
+shortest path around obstacles and ignore other neutrals. With capital attacks, victory
+requires holding Shornhelm and defeating Sir Allemon and Gumtik. The variant without
+capital attacks uses Default's rewards and ends on capture of Shornhelm.
 
 No JAX backend, training, game process or scenario event is executed.
 """
@@ -142,14 +142,9 @@ def without_capital_attacks(snapshot):
     for event in snapshot['events']:
         references = [c for c in event['conditions'] if c.get('id_stack', '').upper() in removed]
         victory = any(e['category'] == WIN and e.get('id_player1') == LEGIONS for e in event['effects'])
-        if references and not victory:
-            continue  # Reconnaissance cannot trigger an order for a removed army.
-        if victory:
-            # Allemon no longer spawns: hold Shornhelm and defeat the surviving Gumtik.
-            event['conditions'] = [c for c in event['conditions'] if c not in references]
-            event['conditions'] = [dict(category=KILL_STACK, id_stack=c['id_stack'])
-                                   if c['category'] == EXISTS and c['misc_int'] == 1 else c
-                                   for c in event['conditions']]
+        if references or victory:
+            # The city objective replaces the scripted win; removed armies cannot trigger orders.
+            continue
         event['effects'] = [e for e in event['effects']
                             if not (e['category'] == CREATE and e['id_stktemp'].upper() in removed)
                             and not (e['category'] == ORDER and e['id_stack'].upper() in removed)]
@@ -446,7 +441,7 @@ def build(snapshot, *, no_capital_attacks=False):
         starting_built_buildings=[], starting_hero_abilities=[],
         initial_potions=loot(home['inventory'])['potions'], initial_items=loot(home['inventory'])['items'],
         obstacles=sorted(cell(p) for p in blocked), terrain=terrain, allow_water_objects=True,
-        reward_profile='python_reference', scheduled_enemies=[],
+        scheduled_enemies=[],
         cities=[dict(source_id=f['source_id'], name=f['name'], position=cell(f['marker_position']),
                      level=f['level'], objective=f['source_id'] == GOAL_CITY, **loot(f['inventory']),
                      footprint=sorted(cell(p) for p in footprint(f)),
@@ -461,12 +456,15 @@ def build(snapshot, *, no_capital_attacks=False):
         reference_enemy_ids=ids,
         reference_source='nevendaar.3dn.ru load 393, Exports/393_QRI.sg; docs/maps/wild_mountains/source.json',
         reconstruction_note=('S143 with the Legions-side scripted events, without thieves; armies walk the '
-                             'shortest path to capitals and cities; agent-controlled garrison defense; original '
-                             'victory: hold Shornhelm, destroy Sir Allemon and Gumtik.'))
+                             'shortest path to capitals and cities; agent-controlled garrison defense; '+
+                             ('victory: capture Shornhelm. Rewards as on Default.' if no_capital_attacks else
+                              'original victory: hold Shornhelm, destroy Sir Allemon and Gumtik.')))
     # Category 1 of the scenario's lord G000LR0007 is L_WARRIOR.
-    game_map.update(lord_type='warrior', step_cost=0., exploration_bonus=.08, building_reward=0.,
+    game_map.update(lord_type='warrior',
         equipment_requires_skills=True, max_building_level=int(info['MAX_UNIT']),
         max_spell_level=int(info['MAX_SPELL']), max_hero_level=int(info['MAX_LEADER']))
+    if not no_capital_attacks:
+        game_map.update(reward_profile='python_reference', step_cost=0., exploration_bonus=.08, building_reward=0.)
     for site in sites:
         entry = dict(source_id=site['source_id'], name=site['name'], position=cell(site['position']))
         if site['kind'] == 'merchant':
@@ -511,27 +509,13 @@ def build(snapshot, *, no_capital_attacks=False):
     # rear middle cell (docs/WORLD.md#garrisons). The garrison battle is the agent's.
     game_map['capital_defender'] = dict(unit=UNIT_KEYS[guardian['game_id']], level=guardian['level'],
                                         combat_stats=guardian_stats)
-    # User rule 2026-11-08: only the capital's fall is a defeat. A destroyed party is replaced
-    # by hiring a new level-1 Duke in the capital, as a new leader in the original. User rule
-    # 2026-11-09: no reward of its own for the party's destruction (it was -5, then -1).
-    game_map.update(defeat='capital', leader_hire=dict(unit='duke'))
-    # User request 2026-11-09 (defense rewards): holding the capital to the decision limit pays +10
-    # instead of -8 and is never worse than its loss (-10, was -6); every capital-bound army that is
-    # destroyed pays 0.01 per point of its kill experience. New party level records pay +2 per
-    # level; all-party levels 2/3 multiply the episode return by 1.5/2. Mana guards pay +0.5 once.
-    # Personal field victories pay +5 (+10 for mana guards), and whole-party levels 2/3
-    # immediately pay +10/+20 once each. Repeated weak templates (kill XP <=1500) pay 10%.
-    game_map.update(timeout_reward=10., defeat_reward=-10.,
-                    defense_rewards=dict(attacker_xp=.01, party_level_record=2., mana_guard=.5,
-                                         level2_multiplier=1.5, level3_multiplier=2.,
-                                         party_victory=5., party_guard_victory=10.,
-                                         level2_bonus=10., level3_bonus=20.,
-                                         repeat_wave_multiplier=.1, repeat_wave_max_xp=1500.))
+    game_map.update(defeat='party_or_capital', leader_hire=dict(unit='duke'))
     # User rule 2026-11-09: the gold mine beside the capital and the mana sources lie beyond
     # the land. A Baroness hired once for 300 gold plants a rod for 150 gold (sites below);
     # the source then pays as if Legions land covered it (stoix/envs/number_grid_rods.py).
-    # Each planted rod pays a small one-off reward (user request 2026-11-09), once per source.
-    game_map['rod_planter'] = dict(name='Баронесса', cost=300, rod_cost=150, reward=1.0)
+    game_map['rod_planter'] = dict(name='Баронесса', cost=300, rod_cost=150)
+    if not no_capital_attacks:
+        game_map['rod_planter']['reward'] = 1.0
     # User rule 2026-11-09: a hired thief tries to poison, with a 50% chance, the army that
     # attacks the capital next turn; a successful first try grants one free repeat that day.
     # A failed or spent thief can be replaced for 200 gold while strictly more than 200 remains;
@@ -541,8 +525,7 @@ def build(snapshot, *, no_capital_attacks=False):
     # User request 2026-11-09: damage and summoning spells may also target that same army, one
     # turn before its attack (number_grid_attacker_spells.py).
     game_map['attacker_spells'] = True
-    # User request 2026-11-09: the scenario's events, with the original victory (hold Shornhelm,
-    # destroy Sir Allemon and Gumtik). Shornhelm stays the objective city for reward shaping.
+    # The full map uses the original scripted victory. The variant uses the objective city.
     add_campaign_events(game_map, snapshot, enemies, templates)
     # User rule 2026-11-09: rods only on the five nearest mana sources, each after its guard falls.
     game_map['rod_planter'].update(rod_sites(game_map))
@@ -551,16 +534,19 @@ def build(snapshot, *, no_capital_attacks=False):
                         display_name='Дикие горы — без атак на столицу',
                         removed_capital_armies=removed)
         game_map['reconstruction_note'] += (
-            '; 2026-11-10 variant: capital attackers, scouts and nearby blockades removed; '
-            'victory requires Shornhelm and Gumtik, without the removed Sir Allemon')
+            ' Capital attackers, scouts and nearby blockades removed.')
     else:
         # 2026-11-10: defending the capital is not a source of farming rewards.
         # The three day checks instead require actual promotions in the Duke's party.
-        game_map.update(capital_attacker_rewards=False, timeout_reward=0., defeat='party_or_capital',
+        game_map.update(defeat_reward=-10., timeout_reward=0., capital_attacker_rewards=False,
+                        defense_rewards=dict(attacker_xp=0., party_level_record=2., mana_guard=.5,
+                                             level2_multiplier=1.5, level3_multiplier=2.,
+                                             party_victory=5., party_guard_victory=10.,
+                                             level2_bonus=10., level3_bonus=20.,
+                                             repeat_wave_multiplier=.1, repeat_wave_max_xp=1500.),
                         party_day_rewards=[dict(day=20, upgrades=4, reward=10.),
                                            dict(day=50, upgrades=8, reward=20.),
                                            dict(day=80, upgrades=12, reward=30.)])
-        game_map['defense_rewards']['attacker_xp'] = 0.
     validate_geometry(game_map)
     return game_map
 

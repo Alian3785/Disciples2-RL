@@ -1,0 +1,90 @@
+{
+  "date": "2026-11-11",
+  "map": "wild_mountains_no_capital_attacks",
+  "objective_city": "S143FT0006",
+  "objective_city_name": "Шорнхельм",
+  "reward_profile": "default",
+  "algorithm": "Stoix Anakin feedforward PPO",
+  "seed": 42,
+  "parallel_environments": 250,
+  "rollout_length": 100,
+  "device": "NVIDIA GeForce GTX 1660 Ti",
+  "observation_size": 9099,
+  "actions": 416,
+  "continuation": "actor and critic weights; optimizer and episode state reset",
+  "runs": [
+    {
+      "initial_steps": 0,
+      "total_steps": 50000000,
+      "training_seconds": 4084.87,
+      "steps_per_second": 12240,
+      "completed_episodes": 65871,
+      "scenario_wins": 0,
+      "city_captures": 0,
+      "last_million_scenario_win_rate": 0,
+      "last_100_episodes_mean": {
+        "reward": 44.05,
+        "battle_wins": 18.5,
+        "battle_losses": 22.6,
+        "unit_upgrades": 6.93,
+        "party_experience": 3943.92,
+        "days": 76.47
+      },
+      "tracking_url": "https://wandb.ai/sergey3784/numbergrid/runs/973i2zq8"
+    },
+    {
+      "initial_steps": 50000000,
+      "total_steps": 100000000,
+      "training_seconds": 4140.77,
+      "steps_per_second": 12075,
+      "completed_episodes": 67994,
+      "scenario_wins": 0,
+      "city_captures": 25,
+      "last_million_scenario_win_rate": 0,
+      "last_100_episodes_mean": {
+        "reward": 62.6,
+        "battle_wins": 29.66,
+        "battle_losses": 13.96,
+        "unit_upgrades": 9.83,
+        "party_experience": 8325.17,
+        "days": 98.35
+      },
+      "tracking_url": "https://wandb.ai/sergey3784/numbergrid/runs/ycx2pppo"
+    },
+    {
+      "initial_steps": 100000000,
+      "total_steps": 150000000,
+      "training_seconds": 4024.31,
+      "steps_per_second": 12424,
+      "completed_episodes": 49247,
+      "scenario_wins": 0,
+      "city_captures": 93,
+      "last_million_scenario_win_rate": 0,
+      "last_100_episodes_mean": {
+        "reward": 81.06,
+        "battle_wins": 38.65,
+        "battle_losses": 7.04,
+        "unit_upgrades": 12.45,
+        "party_experience": 13207.16,
+        "days": 131.27
+      },
+      "tracking_url": "https://wandb.ai/sergey3784/numbergrid/runs/bg824ctq"
+    }
+  ],
+  "replay": {
+    "url": "https://disciples-wild-mountains-replays-20261111.alian3785.chatgpt.site",
+    "checkpoint_steps": [0, 20000000, 150000000],
+    "final_checkpoint_attempts": 32,
+    "final_checkpoint_victories": 0,
+    "displayed_final_episode": {
+      "seed": 73,
+      "policy": "sample",
+      "steps": 2853,
+      "frames": 3109,
+      "day": 245,
+      "defeated": 66,
+      "outcome": "defeat",
+      "reward": 122.08
+    }
+  }
+}

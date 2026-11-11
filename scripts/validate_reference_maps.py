@@ -11,7 +11,8 @@ from pathlib import Path
 import jax
 import jax.numpy as jnp
 
-from stoix.envs.number_grid import NumberGrid, REST, action_names, load_map
+from stoix.envs import number_grid_reference_rewards as reference_rewards
+from stoix.envs.number_grid import CONTINUE, DEFEND, REST, NumberGrid, action_names, load_map
 
 
 def validate(name):
@@ -43,38 +44,62 @@ def validate(name):
             # city_defence_train: the first wave takes the empty defended city on day 2.
             break
     if game_map.get('removed_capital_armies'):
-        # The no-capital-attacks variant keeps party rewards and the Gumtik objective.
+        # The variant uses Default's city victory and base rewards.
         assert not set(game_map['removed_capital_armies']).intersection(
             source.upper() for source in game_map['reference_enemy_ids'])
-        assert env.defense_rewards.capital_target is None
-        assert not bool(jnp.any(env.defense_rewards.capital_bound(env, state)))
+        assert not env.reference_rewards and not env.defense_rewards.enabled
+        assert not env.campaign_events.win_configured
         assert not bool(jnp.any(env.thief.attackers(env, state)))
+        default = load_map('default')
+        for key in ('step_cost', 'exploration_bonus', 'building_reward', 'rest_penalty_per_point'):
+            assert game_map[key] == default[key]
         original, _ = reset(jax.random.PRNGKey(42))
-        city = next(i for i, c in enumerate(game_map['cities']) if c['objective'])
-        gumtik = game_map['reference_enemy_ids'].index('S143TM0015')
+        city, = (i for i, c in enumerate(game_map['cities']) if c['objective'])
+        assert game_map['cities'][city]['source_id'] == 'S143FT0006'
+        assert not bool(env._campaign_won(original))
         holding = original.replace(city_owned=original.city_owned.at[city].set(True))
-        # Absence before his creation must not satisfy "defeat Gumtik".
-        assert not bool(env.campaign_events.won(holding))
-        response = jax.jit(lambda s: env.campaign_events.process(s, False))(holding)
-        assert bool(response.alive[gumtik] & response.scenario_spawned[gumtik])
-        assert not bool(env.campaign_events.won(response))
-        defeated = response.replace(alive=response.alive.at[gumtik].set(False))
-        assert bool(env.campaign_events.won(defeated))
-        assert not bool(env.campaign_events.won(
-            defeated.replace(city_owned=defeated.city_owned.at[city].set(False))))
+        won = env._campaign_won(holding)
+        assert bool(won) and float(env._objective_reward(won, jnp.bool_(False))) == 3.
     if game_map.get('defeat') == 'party_or_capital':
-        # Preflight of the requested revised S143 training: its terminal path,
-        # conditional day rewards and exclusion of capital attackers must be active.
-        from stoix.envs import number_grid_reference_rewards as reference_rewards
         original, _ = reset(jax.random.PRNGKey(42))
-        assert env.leader_hire.terminal_party_loss and not env.leader_hire.can_hire
+        leader = env.leader_hire
+        assert leader.terminal_party_loss and not leader.can_hire
         assert 'hire_leader' not in action_names(game_map)
         killed = jax.jit(lambda s: env.campaign_events._cast(
             env, s, jnp.bool_(True), dict(amount=99999, bit=0)))(original)
         assert bool(killed.done & killed.lost) and int(killed.party_losses) == 1
-        assert int(killed.capital_captor) == -1 and not bool(env.leader_hire.available(killed))
-        _, penalty = reference_rewards.finish(env, original, killed)
-        assert float(penalty) == -10.
+        assert int(killed.capital_captor) == -1 and not bool(leader.available(killed))
+        if env.reference_rewards:
+            _, penalty = reference_rewards.finish(env, original, killed)
+            assert float(penalty) == -10.
+
+    if game_map.get('removed_capital_armies') and game_map.get('defeat') == 'party_or_capital':
+        # Exercise both lethal paths with the Duke wounded and a surviving fighter.
+        wounded = original.replace(hp=original.hp.at[leader.slot].set(1))
+        after_spell = jax.jit(lambda s: env.campaign_events._cast(
+            env, s, jnp.bool_(True), dict(amount=1, bit=0)))(wounded)
+        assert int(after_spell.hp[leader.slot]) == 0 and bool(jnp.any(after_spell.hp[:6] > 0))
+        assert not bool(after_spell.done | after_spell.lost) and int(after_spell.party_losses) == 0
+
+        wounded = wounded.replace(hp=wounded.hp.at[0].set(400))
+        dragons = game_map['reference_enemy_ids'].index('S143KC0052')
+        battle = jax.jit(env._begin_battle)(wounded.replace(enemy=jnp.int32(dragons)))
+        survived_leader = False
+        for _ in range(24):
+            command = CONTINUE if bool(env.automatic_battle_turn(battle)) else DEFEND
+            battle, timestep = step(battle, jnp.int32(command))
+            if bool(battle.done):
+                break
+            if int(battle.hp[leader.slot]) == 0 and bool(jnp.any(battle.hp[:6] > 0)):
+                survived_leader = True
+                assert not bool(battle.lost) and int(battle.party_losses) == 0
+        assert survived_leader
+        assert bool(battle.done & battle.lost) and not bool(battle.in_battle | battle.won)
+        assert not bool(jnp.any(battle.hp[:6] > 0))
+        assert int(battle.party_losses) == 1 and float(timestep.reward) < 0.
+
+    if game_map.get('defeat') == 'party_or_capital' and game_map.get('party_day_rewards'):
+        # The capital-attacks variant uses conditional day rewards and excludes attacker farming.
         rules = env.defense_rewards
         assert rules.suppress_attacker_rewards and rules.attacker_xp == 0.
         apply_rewards = jax.jit(lambda before, after: rules.apply(env, before, after))
