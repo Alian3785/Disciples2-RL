@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.build_default_map import (
     ALAR, ALAR_ITEMS, CAPITAL_GUARD, CURRENT, GREEN_DRAGON, ROLES, RULES,
-    SPELLS, UNITS, cell, dump, loot, roster, site_cells,
+    SPELLS, UNITS, cell, dump, loot, restore_original_formations, roster, site_cells,
 )
 
 # Reference (x, y). Keep the existing JAX 3x3 objects and southeast approaches.
@@ -105,6 +105,7 @@ def build(layout):
     game_map['equipment_requires_skills'] = True
     from scripts.land_data import layout_land
     layout_land(game_map, layout)
+    restore_original_formations(game_map, 'default', game_map['reference_enemy_ids'])
     return game_map
 
 

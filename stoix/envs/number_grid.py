@@ -93,7 +93,7 @@ def load_map(name=None):
         # (later the same day 70) other armies have been defeated in the episode.
         game_map = load_map('default')
         target = game_map['enemy_capitals'][0]['guard']
-        if game_map['enemy_rosters'][target] != [None, None, None, None, 'g000uu3001', None]:
+        if [unit for unit in game_map['enemy_rosters'][target] if unit] != ['g000uu3001']:
             raise ValueError('Default Capital objective must be the Mizrael guard stack')
         game_map.update(name=f"NumberGrid-{game_map['size']}x{game_map['size']}-default-capital",
                         display_name='Default — Capital', campaign_objective='capital_guardian',
@@ -1568,11 +1568,14 @@ class NumberGrid(Summoning, NumericNumberGrid):
 
     def _combat_stats(self, state, cap=True):
         """Combine unit progression, battle modifiers, and applicable fortification armor."""
+        damage_modifiers = (self.has_weakening or self.has_powerups or self.has_potion_buffs
+                            or self.items_enabled or self.has_spell_mods)
         if self.progression_enabled:
             # Lowered forms always have their native level. Fetching their
             # base row avoids a dependent level lookup through the growth table.
             values = self.progression.stats(state.unit_ids, state.unit_levels)
-            if self.has_weakening or self.has_powerups or self.has_potion_buffs or self.items_enabled or self.has_spell_mods:
+            healing = values[:, DAMAGE]
+            if damage_modifiers:
                 values = set_column(values, DAMAGE, self.progression.raw_stats(state.unit_ids,state.unit_levels)[:,DAMAGE])
             values = self._potion_stats(state,values)
             if self.territory_enabled:
@@ -1590,10 +1593,13 @@ class NumberGrid(Summoning, NumericNumberGrid):
                 alternate_accuracy = jnp.minimum(100.,self.progression.raw_stats(state.unit_ids,state.unit_levels)[:,ACCURACY]-20)
                 values = set_column(values, ACCURACY, jnp.where(fallback,alternate_accuracy,values[:,ACCURACY]))
             if self.has_wights:
-                values = jnp.where((state.decay_form > 0)[:, None],
-                                   self.progression.base_stats[state.decay_form], values)
+                lowered = self.progression.base_stats[state.decay_form]
+                values = jnp.where((state.decay_form > 0)[:, None], lowered, values)
+                if self.has_healers and damage_modifiers:
+                    healing = jnp.where(state.decay_form > 0, lowered[:, DAMAGE], healing)
         else:
             values = self.stats_table[jnp.maximum(state.enemy, 0)]
+            healing = values[:, DAMAGE]
         if self.has_wolf_lord:
             values = set_column(values, HP, jnp.where(state.fenrir, 275, values[:, HP]))
             values = set_column(values, DAMAGE, jnp.where(state.fenrir, 90, values[:, DAMAGE]))
@@ -1607,14 +1613,19 @@ class NumberGrid(Summoning, NumericNumberGrid):
             values = set_column(values, ACCURACY, jnp.where(state.imp, jnp.where(big, 70, 80), values[:, ACCURACY]))
             values = set_column(values, ARMOR, jnp.where(state.imp, 0, values[:, ARMOR]))
             values = set_column(values, INITIATIVE, jnp.where(state.imp, jnp.where(big, 50, 30), values[:, INITIATIVE]))
-        if self.has_weakening or self.has_powerups or self.has_potion_buffs or self.items_enabled or self.has_spell_mods:
+        if damage_modifiers:
             damage = jnp.rint(values[:,DAMAGE]*jnp.where(state.weakened,self._weakening_factor(state),1.))
             caps = (self.progression.stat_caps[:,DAMAGE][self._effective_ids(state)] if self.progression_enabled
                     else self.damage_caps[state.enemy])
             caps = jnp.where(state.imp | state.fenrir,300.,caps)
             if self.has_powerups:
                 damage = jnp.where(state.primary_override >= 0,state.primary_override,damage)
-            values = set_column(values, DAMAGE, jnp.minimum(damage,caps) if cap else damage)
+            damage = jnp.minimum(damage,caps) if cap else damage
+            if self.has_healers:
+                # QTY_HEAL shares the catalogue's primary amount column with QTY_DAM.
+                # Current form and level set healing, before any damage modifiers.
+                damage = jnp.where(self._primary_is_healing(state), healing, damage)
+            values = set_column(values, DAMAGE, damage)
         if self.has_hermits:
             values = set_column(values, INITIATIVE, jnp.where(
                 state.initiative_override >= 0,state.initiative_override,values[:,INITIATIVE]))
@@ -1624,7 +1635,19 @@ class NumberGrid(Summoning, NumericNumberGrid):
             values = set_column(values, ACCURACY, disable_attack_accuracy(values[:,ACCURACY], disabling, state.round))
         return cap_stats(values)
 
+    def _primary_is_healing(self, state, saved=False):
+        if self.progression_enabled:
+            ids = state.unit_ids if saved else self._effective_ids(state)
+            healing = self.progression.traits[ids, 0] == HEALER
+            if self.has_copies:
+                copied = state.copied & ((state.decay_form == 0) | saved)
+                healing = jnp.where(copied, state.copy_traits[:, 0] == HEALER, healing)
+        else:
+            healing = self.combat_traits[jnp.maximum(state.enemy, 0), :, 0] == HEALER
+        return healing if saved else healing & ~state.imp & ~state.fenrir
+
     def _original_primary(self,state,saved=False):
+        """Primary damage before combat boosts and weakness, for damage effects."""
         if self.progression_enabled:
             ids = state.unit_ids if saved else self._effective_ids(state)
             levels = state.unit_levels if saved else self._effective_levels(state)
@@ -1646,6 +1669,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
         if not saved and self.has_witches:
             big = (self.progression.sizes[self._effective_ids(state)] if self.progression_enabled else self.size_table[state.enemy]) == 2
             amount = jnp.where(state.imp,jnp.where(big,30,20),amount)
+        if self.has_healers:
+            amount = jnp.where(self._primary_is_healing(state, saved), 0, amount)
         # Fenrir retains the Wolf Lord original_damage field in the reference.
         return amount.astype(jnp.int32)
 
@@ -2742,6 +2767,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             if self.has_powerups:
                 living = (state.hp[6:] > 0) & ~state.escaped[6:] & (self.slots[6:] != state.actor)
                 raw = self._combat_stats(state,cap=False)[6:,DAMAGE]
+                raw = jnp.where(traits[6:, 0] == HEALER, 0., raw)
                 score = jnp.where(living,-raw+random_values[:6]*.5,1e9)
                 buff = jnp.where(jnp.any(living),SHOOT+jnp.argmin(score),DEFEND)
                 action = jnp.where(self._actor_power_factor(state) > 0,buff,action)

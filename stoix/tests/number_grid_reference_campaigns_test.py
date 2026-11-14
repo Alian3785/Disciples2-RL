@@ -103,14 +103,15 @@ def test_charmed_child_hero_starts_at_level_two():
     """User request 2026-11-05, though S117 SUnit records level 1: level-2 stats at full health."""
     env = NumberGrid(map_config=load_map('the_charmed_child'))
     rules = env.progression
-    assert rules.initial_levels[:6].tolist() == [1, 2, 0, 1, 1, 0]
-    assert env.restored_hp[:6].tolist() == [150, 240, 0, 65, 60, 0]
+    assert rules.initial_levels[:6].tolist() == [1, 2, 0, 2, 1, 0]
+    assert env.restored_hp[:6].tolist() == [150, 240, 0, 110, 60, 0]
     hero = rules.initial_ids[1]
     assert rules.stats(hero, jnp.int32(2)).tolist()[:2] == [240, 70]
     assert int(rules.required_xp(hero, jnp.int32(2))) == 775
 
 
-@pytest.mark.parametrize('levels', [[1, 2], [0, 2, 0, 1, 1, 0], [1, 2, 1, 1, 1, 0], [1, 100, 0, 1, 1, 0], [1, 2., 0, 1, 1, 0]])
+@pytest.mark.parametrize('levels', [[1, 2], [0, 2, 0, 2, 1, 0], [1, 2, 1, 2, 1, 0],
+                                    [1, 100, 0, 2, 1, 0], [1, 2., 0, 2, 1, 0], [1, 2, 0, 1, 1, 0]])
 def test_invalid_hero_initial_levels_are_rejected(levels):
     with pytest.raises(ValueError, match='Hero starting levels'):
         NumberGrid(map_config={**load_map('the_charmed_child'), 'hero_initial_levels': levels})
@@ -125,14 +126,15 @@ def test_siege_and_charmed_child_starting_rosters_and_goals():
     assert siege['scheduled_enemies'][0]['spawn_turn'] == 27
     assert sum(siege['initial_potions'].values()) == 20
     charmed_child = load_map('the_charmed_child')
-    assert charmed_child['hero_roster'][0] == 'reference_g000uu0036'
-    assert charmed_child['hero_initial_levels'] == [1, 2, 0, 1, 1, 0]
+    assert charmed_child['hero_roster'] == ['reference_g000uu0036', 'g000uu0044', None, 'g000uu0027', 'travnitsa', None]
+    assert charmed_child['hero_initial_levels'] == [1, 2, 0, 2, 1, 0]
     assert len(charmed_child['enemy_rosters']) == 71
     assert sum(c['objective'] for c in charmed_child['cities']) == 3
     # Installed S117: the capital vault's potions; the Empire capital's Cleric and Hasser's Keep's Holy Avenger.
     assert charmed_child['initial_potions'] == {'restoration': 3, 'life': 1}
     # S117 BANK G0100 plus the income credited before the first move, as in the saves at turn 1.
     assert charmed_child['starting_gold'] == 250 and charmed_child['starting_mana'] == {'runes': 75}
-    assert charmed_child['enemy_rosters'][4][4] == 'cleric' and charmed_child['enemy_rosters'][7][5] == 'blade_master'
+    assert charmed_child['enemy_rosters'][4] == [None, 'g000uu3001', 'cleric', None, 'witch_hunter', 'imperial_assassin']
+    assert charmed_child['enemy_rosters'][7] == [None, 'modeus', 'dark_paladin', None, None, 'blade_master']
     assert charmed_child['enemy_hp'][7] == 250 and not any(
         key in r for r in charmed_child['enemy_rosters'] for key in ('priest', 'defender_of_faith'))
