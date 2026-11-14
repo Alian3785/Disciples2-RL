@@ -2765,11 +2765,15 @@ class NumberGrid(Summoning, NumericNumberGrid):
             heal = jnp.where(self._actor_mass_healer(state),SHOOT,heal)
             action = jnp.where(self._actor_is_healer(state), heal, action)
             if self.has_powerups:
-                living = (state.hp[6:] > 0) & ~state.escaped[6:] & (self.slots[6:] != state.actor)
+                living = (state.hp[6:] > 0) & ~state.escaped[6:]
                 raw = self._combat_stats(state,cap=False)[6:,DAMAGE]
-                raw = jnp.where(traits[6:, 0] == HEALER, 0., raw)
-                score = jnp.where(living,-raw+random_values[:6]*.5,1e9)
-                buff = jnp.where(jnp.any(living),SHOOT+jnp.argmin(score),DEFEND)
+                damage_targets = living & (self.slots[6:] != state.actor) & (traits[6:, 0] != HEALER) & (raw > 0)
+                cure_targets = living & self._actor_power_cures(state) & (
+                    (state.poison_mode[6:] > 0) | (state.water_mode[6:] > 0) | (state.burn_mode[6:] > 0)
+                    | state.paralyzed[6:] | state.long_paralyzed[6:] | state.imp[6:] | state.lycanthrope[6:])
+                candidates = damage_targets | cure_targets
+                score = jnp.where(candidates, -jnp.where(damage_targets, raw, 0.)+random_values[:6]*.5, 1e9)
+                buff = jnp.where(jnp.any(candidates),SHOOT+jnp.argmin(score),DEFEND)
                 action = jnp.where(self._actor_power_factor(state) > 0,buff,action)
         if self.has_patriarchs:
             valid = self._patriarch_targets(state)[6:]

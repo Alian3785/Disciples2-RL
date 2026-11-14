@@ -211,3 +211,19 @@ def test_native_buff_duration_and_weakness_survive_replacement(current_game):
     spent,_ = attack(second.replace(actor=jnp.int32(0)),jnp.int32(DEFEND),second.battle_key,rolls)
     assert not spent.powerup[0] and spent.weakened[0]
     assert compiled_method(env,'_combat_stats')(spent)[0,1] == jnp.rint(base*.67)
+
+
+def test_enemy_damage_support_can_cure_but_cannot_buff_a_healer(current_game):
+    env, state, _ = battle(current_game)
+    state = enemy_roster_state(env, state, ['travnitsa', 'medium', None, None, None, None])
+    state = state.replace(actor=jnp.int32(6), paralyzed=state.paralyzed.at[7].set(True))
+    choose = compiled_method(env, '_enemy_action')
+    rolls = jnp.zeros(6)
+    assert choose(state, rolls) == DEFEND
+
+    druid = state.replace(unit_ids=state.unit_ids.at[6].set(env.progression.ids['dwarfdruid']))
+    assert choose(druid, rolls) == SHOOT+1
+    assert choose(druid.replace(paralyzed=druid.paralyzed.at[7].set(False)), rolls) == DEFEND
+
+    armed = enemy_roster_state(env, state, ['travnitsa', 'medium', 'archer', None, None, None])
+    assert choose(armed, rolls) == SHOOT+2
