@@ -31,7 +31,7 @@ from stoix.envs.number_grid_terrain import TerrainRules
 from stoix.envs.number_grid_spells import SpellResearchRules, book_shape, research_action_names
 from stoix.envs.number_grid_casting import SpellCastRules, SUMMON_CAST, cast_action_names, casting_enabled
 from stoix.envs.number_grid_territory import MANA_KINDS, TerritoryRules, OBSTACLE
-from stoix.envs.number_grid_item_combat import equipment_attack, transform_imp, transform_decay
+from stoix.envs.number_grid_item_combat import ARTIFACT_ROLL_END, equipment_attack, transform_imp, transform_decay
 from stoix.envs import number_grid_battle_items as battle_items
 from stoix.envs import number_grid_hero_skills as hero_skills
 from stoix.envs.number_grid_battle_items import (BattleItemRules, battle_item_action_names, battle_items_enabled,
@@ -802,7 +802,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
         if self.has_copies or self.has_summons:
             self.random_size = 80
         if self.items_enabled and self.item_rules.status_items:
-            self.random_size = max(self.random_size,80)+4
+            self.random_size = max(self.random_size,ARTIFACT_ROLL_END)
         if self.has_poisoners or self.has_water or self.has_fire or self.has_summons:
             # Independent removal draws for 12 targets x 3 DOTs x two rounds.
             self.random_size = max(self.random_size,156)
@@ -2950,11 +2950,13 @@ class NumberGrid(Summoning, NumericNumberGrid):
             targets = ((area_attack | (target_slots == target))
                        & (state.hp[target_slots] > 0) & ~state.escaped[target_slots])
             accuracy = stats[actor, ACCURACY]
+            accuracy_falloff = jnp.bool_(False)
             if self.has_aoe_accuracy_falloff:
                 falloff = (self.progression.aoe_accuracy_falloff[effective_ids[actor]]
                            if self.progression_enabled else self.aoe_accuracy_falloff[state.enemy, actor])
+                accuracy_falloff = area_attack & falloff
                 index = jnp.maximum(jnp.cumsum(targets.astype(jnp.int32))-1, 0)
-                accuracy = jnp.maximum(0., accuracy-jnp.where(area_attack & falloff, index*10, 0))
+                accuracy = jnp.maximum(0., accuracy-jnp.where(accuracy_falloff, index*10, 0))
             hits = accuracy_hits(accuracy, random_values[12:18], random_values[18:24])
             bonuses = jnp.minimum((random_values[24:30] * 6).astype(jnp.int32), 5)
             if self.progression_enabled:
@@ -3224,9 +3226,9 @@ class NumberGrid(Summoning, NumericNumberGrid):
                         burn_damage=set_rows(state.burn_damage, target_slots, jnp.where(burning,secondary_stats[0].astype(jnp.int32),state.burn_damage[target_slots])),
                         burn_source=set_rows(state.burn_source, target_slots, jnp.where(burning,actor,state.burn_source[target_slots])))
             if self.items_enabled and (self.item_rules.status_items or self.item_rules.has_drain):
-                connected=attack & ~area_attack & jnp.any(effective)
                 state,hp,wards_used,item_immune,item_ward=equipment_attack(
-                    self,state,hp,wards_used,target,connected,applied,random_values)
+                    self,state,hp,wards_used,target_slots,targets,connected,removed,
+                    accuracy_falloff,random_values)
                 immune_slots |= item_immune
                 ward_slots |= item_ward
         elif self.mage_slot >= 0:
