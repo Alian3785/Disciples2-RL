@@ -246,7 +246,7 @@ def test_default_capital_preserves_simpler_times_and_blue_reward_settings(tmp_pa
     assert capital['display_name'] == 'Default — Capital'
     assert capital['objective_enemy'] == capital['enemy_capitals'][0]['guard'] == 74
     assert capital['opponent_positions'][74] == [11, 27]
-    assert capital['enemy_rosters'][74] == [None, None, None, None, 'g000uu3001', None]
+    assert capital['enemy_rosters'][74] == [None, 'g000uu3001', None, None, None, None]
     assert capital['enemy_rosters'][30] == [None, 'g000uu5023', None, None, None, None]
     assert capital['enemy_full_regeneration'] == [30]
     assert capital['scenario_events_enabled'] is False

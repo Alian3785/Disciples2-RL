@@ -678,7 +678,7 @@
       "sha256": {
         "definition": "f46faada955bf1ac79942beab7835c024e51a12cdfc7ca68b5e8d8524842e3b7",
         "layout": "05c9bcb05532ca6e581f06d273b58e41ecebcd4733e7dbb6216c61c3797e97a1",
-        "jax_map": "47099a40e0e63052d395795152bd1803c4fa1f550111977455d78833bdd85fe9"
+        "jax_map": "639a34dd64741dc4574fba01295a2d88a4732bdea1536c6b8413ac8323f6a4a6"
       },
       "armies": 71,
       "fighters": 149,

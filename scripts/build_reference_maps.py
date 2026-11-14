@@ -13,7 +13,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.build_default_map import (CURRENT, RULES, UNITS, cell, dump, landmark_cells,
-                                       restore_original_units, roster, site_cells)
+                                       restore_original_formations, restore_original_units, roster,
+                                       site_cells)
 from scripts.land_data import layout_land, scenario_land
 from stoix.envs.number_grid_items import ITEMS
 from stoix.envs.number_grid_potions import POTIONS
@@ -122,6 +123,11 @@ def build(base, name):
             override['exp_increment'] = override.pop('dynamic_level_exp_increment')
         override.pop('next_level_exp', None)
         overrides[slot-7] = override
+    if name == 'the_charmed_child':
+        # S117FT0001's S117UN00EC is a level-2 Crossbowman with 110 HP.
+        # The reference put a level-1 Axe Thrower in the party's rear slot 3.
+        hero[3] = by_id['g000uu0027']
+        overrides[3] = {}
     potions, items = loot(config.starting_hero_items)
     if config.starting_scroll_items:
         from scroll_spell_data import SCROLL_ITEM_DEFINITIONS
@@ -264,6 +270,7 @@ def build(base, name):
         footprint=[cell(p) for p in c['footprint']]) for c in capitals]
     if name == 'the_charmed_child':
         scenario_land(game_map, name)
+        restore_original_formations(game_map, name, game_map['reference_enemy_ids'])
     else:
         layout_land(game_map, layout)
     if name == 'city_defence_train':

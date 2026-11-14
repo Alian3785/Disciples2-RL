@@ -69,7 +69,7 @@ def test_default_map_layout_and_actions(default_game):
     assert [int(i) for i in env.recruitment.offer_sites] == [3, 4]
     assert [n for n in names if n.startswith('hire_mercenary_')] == [
         'hire_mercenary_g000uu5040', 'hire_mercenary_g000uu5039']
-    assert DEFAULT['enemy_rosters'][GUARD] == [None]*4+['g000uu3001', None]
+    assert DEFAULT['enemy_rosters'][GUARD] == [None, 'g000uu3001', None, None, None, None]
     assert DEFAULT['enemy_capitals'][0]['position'] == DEFAULT['opponent_positions'][GUARD] == [11, 27]
     assert [int(i) for i in jnp.flatnonzero(env.territory.capital_guards)] == [GUARD]
     rows = env.progression.rows
@@ -164,9 +164,9 @@ def test_capital_guard_armor_and_regeneration(default_game):
         enemy_positions=initial.enemy_positions.at[0].set(jnp.array(guard,jnp.int32)))
     assert compiled_method(env.territory,'defender_in_fort')(visitor)
     # Rest: Myzrael's own 50% +35% capital of 900; the Green Dragon heals fully.
-    wounds = initial.enemy_wounds.at[GUARD, 4].set(800).at[DRAGON, 1].set(500)
+    wounds = initial.enemy_wounds.at[GUARD, 1].set(800).at[DRAGON, 1].set(500)
     rested, _ = step(initial.replace(enemy_wounds=wounds), jnp.int32(REST))
-    assert rested.enemy_wounds[GUARD, 4] == 35 and rested.enemy_wounds[DRAGON, 1] == 0
+    assert rested.enemy_wounds[GUARD, 1] == 35 and rested.enemy_wounds[DRAGON, 1] == 0
 
 
 def test_enemy_regeneration_uses_own_regen_and_place(default_game):

@@ -11,6 +11,7 @@ docs/DEFAULT_MAP.md for every difference from the reference.
     python scripts/build_default_map.py --reference "C:/Disciples 2 python reference"
 """
 import argparse
+from collections import Counter
 import json
 from pathlib import Path
 
@@ -149,6 +150,52 @@ def restore_original_units(enemies, table):
                            for u in e['units']]) for e in enemies]
 
 
+def restore_original_formations(game_map, source, army_ids):
+    """Use native cells and keep each imported profile and its starting level."""
+    path = ROOT/'docs/maps'/source/'formations.json'
+    original = json.loads(path.read_text(encoding='utf-8'))['armies']
+    names = {row['game_id'].upper(): row['name'].casefold().replace('ё', 'е').replace('-', ' ')
+             for row in UNITS.values()}
+    if source == 'default':
+        for old, new in ((SORCERER, WARLOCK), (SCOUT, RANGER), (LANCER, NEUTRAL_LANCER)):
+            names[old.upper()] = names[new.upper()]
+    rosters = game_map['enemy_rosters']
+    levels = game_map.get('enemy_initial_levels')
+    for index, army_id in enumerate(army_ids):
+        group = original[str(army_id)]
+        slots = group['slots']
+        if source == 'default' and army_id == CAPITAL_GUARD:
+            # Default modes use the solo Mizrael encounter from the Python campaign.
+            slots = [unit if unit and unit[0] == 'G000UU3001' else None for unit in slots]
+        previous = rosters[index]
+        available = {i: UNITS[key]['game_id'].upper() for i, key in enumerate(previous) if key}
+        target = {i: unit for i, unit in enumerate(slots) if unit}
+        if Counter(names[uid] for uid in available.values()) != Counter(names[uid] for uid, _ in target.values()):
+            raise ValueError(f"{source} army {army_id} differs in composition from {group['source_id']}")
+        roster, reordered_levels = [None]*6, [0]*6
+        # Assign exact profiles first so a name alias cannot take another unit's slot.
+        for exact in (True, False):
+            for slot in list(target):
+                game_id, native_level = target[slot]
+                candidates = [i for i, imported_id in available.items()
+                              if (imported_id == game_id if exact else names[imported_id] == names[game_id])]
+                if not candidates:
+                    continue
+                old = min(candidates, key=lambda i: levels is not None and
+                          levels[index][i] != max(native_level, UNITS[previous[i]]['level']))
+                roster[slot] = previous[old]
+                if levels is not None:
+                    reordered_levels[slot] = levels[index][old]
+                del available[old]
+                del target[slot]
+        if target or available or any(key and UNITS[key]['size'] == 2 and
+                                      (i >= 3 or roster[i+3]) for i, key in enumerate(roster)):
+            raise ValueError(f"Invalid original formation for {source} army {army_id}")
+        rosters[index] = roster
+        if levels is not None:
+            levels[index] = reordered_levels
+
+
 def build(layout, landmarks):
     """JAX map from the reference layout, with the original shops, loot, units and landmark tiles."""
     stacks = sorted(restore_original_units(layout['enemies'], ORIGINAL_UNITS), key=lambda e: e['id'])
@@ -252,6 +299,7 @@ def build(layout, landmarks):
         raise ValueError('City items name a city missing from the layout')
     from scripts.land_data import scenario_land
     scenario_land(game_map, 'default')
+    restore_original_formations(game_map, 'default', [e['id'] for e in stacks])
     return game_map
 
 

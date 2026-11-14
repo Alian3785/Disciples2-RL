@@ -1128,7 +1128,11 @@ def test_cliric_minimum_unit_point_heal_and_enemy_script(current_game):
     state = compiled_method(env,'_begin_battle')(initial.replace(enemy=jnp.int32(11)))
     state = hero_roster_state(env,state,['possessed','duke','possessed','medium','cultist',None])
     state = state.replace(actor=jnp.int32(3),hp=state.hp.at[0].set(60),
-        priority=jnp.zeros(12).at[0].set(10000.),defended=state.defended.at[0].set(True))
+        priority=jnp.zeros(12).at[0].set(10000.),defended=state.defended.at[0].set(True),
+        potion_bonus=state.potion_bonus.at[3,1].set(3),
+        potion_temporary=state.potion_temporary.at[3,1].set(8),
+        equipment_bonus=state.equipment_bonus.at[3,1].set(5),
+        spell_mods=state.spell_mods.at[3,1].set(1.5))
     rolls = jnp.full(env.random_size,.99)
     healed,_ = attack(state,jnp.int32(SHOOT),state.battle_key,rolls)
     assert healed.hp[0] == 85 and healed.last_damage == 25
@@ -1163,7 +1167,7 @@ def test_cliric_post_victory_restores_forms_and_heals_before_xp(current_game):
     chex.assert_trees_all_equal(bad.hp,first.hp)
     chex.assert_trees_all_equal(bad.battle_key,first.battle_key)
     healed,_ = attack(first,jnp.int32(SHOOT),first.battle_key,rolls)
-    assert healed.hp[0] == 22 and healed.actor == 4 and healed.post_victory == 1
+    assert healed.hp[0] == 30 and healed.actor == 4 and healed.post_victory == 1
     assert not jnp.any(healed.last_xp)
     done,reward = attack(healed,jnp.int32(WAIT),healed.battle_key,rolls)
     assert not done.in_battle and done.post_victory == 0 and done.last_event == VICTORY
@@ -1209,6 +1213,8 @@ def test_profit_mass_heal_includes_self_and_only_named_forms_cure(elemental_atta
     ids = jnp.array([env.progression.ids[key] for key in names])
     states = jax.tree.map(lambda x:jnp.broadcast_to(x,(4,)+x.shape),start)
     states = states.replace(unit_ids=states.unit_ids.at[:,3].set(ids),unit_levels=states.unit_levels.at[:,3].set(env.progression.base_levels[ids]))
+    states = states.replace(primary_override=states.primary_override.at[:,3].set(99),
+        powerup=states.powerup.at[:,3].set(True), powerup_long=states.powerup_long.at[:,3].set(True))
     rolls = jnp.full((4,env.random_size),.99)
     out,_ = scalar_battle(env)(states,jnp.full(4,SHOOT+3),states.battle_key,rolls)
     chex.assert_trees_all_equal(out.hp[:,0],jnp.array([70,90,120,110]))
