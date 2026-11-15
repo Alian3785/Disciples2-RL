@@ -492,7 +492,7 @@ class GarrisonRules:
         maximum = self.garrison_max_hp(state)
         place_bonus = jnp.concatenate((self.territory.fort_bonus[state.city_levels], jnp.array([CAPITAL_REGENERATION])))
         percent = jnp.clip(self.territory.regen[ids]+self.territory.lord_regen+place_bonus[:, None], 0, 100)
-        heal = jnp.maximum(1, jnp.rint(maximum*percent/100.).astype(jnp.int32))
+        heal = maximum*percent//100  # 0x5840ec: the fraction is dropped, as for the party
         healing = resting & self.owned(state)[:, None] & (ids != 0) & (hp > 0) & (hp < maximum)
         return state.replace(garrison_hp=jnp.where(healing, jnp.minimum(maximum, hp+heal), hp))
 

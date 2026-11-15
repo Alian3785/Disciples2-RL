@@ -216,7 +216,7 @@ def test_terminal_form_growth_and_regeneration_use_new_maximum(env):
     assert compiled_method(env,'unit_experience')(out)[0,2] == 1725  # terminal form keeps its XP threshold
     hurt = out.replace(hp=out.hp.at[0].set(1))
     rest, _ = compiled_method(env,'step')(hurt,jnp.int32(REST))
-    assert rest.hp[0] == 1+(max_hp*70+99)//100  # native 20 + warrior 15 + capital 35
+    assert rest.hp[0] == 1+max_hp*70//100  # native 20 + warrior 15 + capital 35, fraction dropped
     next_battle = compiled_method(env,'_begin_battle')(rest.replace(enemy=jnp.int32(1)))
     assert next_battle.unit_ids[0] == out.unit_ids[0] and next_battle.hp[0] == rest.hp[0]
     fresh, _ = compiled_method(env,'reset')(jax.random.PRNGKey(43))
@@ -404,7 +404,7 @@ def test_duke_levelups_need_no_building_heal_once_and_use_original_threshold(env
     won = jax.tree.map(lambda x:x[0],win(env,stack(begun)))
     assert won.unit_levels[1] == 2 and won.unit_xp[1] == 160 and won.hp[1] == 10
     rested, _ = compiled_method(env,'step')(won,jnp.int32(REST))
-    assert rested.hp[1] == 101  # 10 + ceil(165*55%); new maximum, capital and warrior lord
+    assert rested.hp[1] == 100  # 10 + 165*55//100; new maximum, capital and warrior lord
 
 
 def test_duke_damage_cap_and_passive_armor_affect_real_attacks(env):

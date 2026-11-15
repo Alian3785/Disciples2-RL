@@ -69,8 +69,8 @@ def test_neutral_regeneration_only_on_neutral_land(mirror):
              for owner in (0, 1, 2, 2)]
     states = jax.tree.map(lambda *xs: jnp.stack(xs), *cases)
     healed = jax.jit(jax.vmap(env.casting.rest))(states, jnp.array([True, True, True, False]))
-    # Preserve the existing enemy HP rounding: only the land bonus changes.
-    chex.assert_trees_all_equal(healed.enemy_wounds[:, enemy, slot], jnp.array([17, 23, 23, 25]))
+    # 50 HP: 15% heals 7 and 5% heals 2, the fraction dropped as in the original (0x5840ec).
+    chex.assert_trees_all_equal(healed.enemy_wounds[:, enemy, slot], jnp.array([18, 23, 23, 25]))
     # Scripted bot healing remains exclusively its own return-home state machine.
     chex.assert_trees_all_equal(healed.enemy_wounds[:, env.bot.enemy, 0], jnp.full(4, 25))
 

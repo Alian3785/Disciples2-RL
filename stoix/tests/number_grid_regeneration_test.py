@@ -110,7 +110,7 @@ def test_human_service_uses_the_same_regeneration_and_reports_current_health(hum
     created = service.create(42)
     session, env = created['session'], service.env
     assert created['turn_rules']['regeneration_percent'] is None
-    assert created['turn_rules']['regeneration_rounding'] == 'ceil'
+    assert created['turn_rules']['regeneration_rounding'] == 'floor'  # catalogue map: as the original
     assert created['turn_rules']['automatic_revive'] is False
     faction, state, reward = service.sessions[session]
     state = state.replace(hp=state.hp.at[:6].set(jnp.array([1, 50, 44, 0, 0, 0])))

@@ -462,7 +462,7 @@ def test_regeneration_uses_original_fort_instead_of_land_and_does_not_revive(cur
         assert regen(city)[0] == percent and regen(city,1)[0] == percent+10
     injured = s.replace(hp=s.hp.at[:4].set(jnp.array([1,50,44,0])))
     rested,_ = step(injured,jnp.int32(REST))
-    assert rested.hp[:6].tolist() == [67,133,110,0,0,0]
+    assert rested.hp[:6].tolist() == [67,132,110,0,0,0]  # 55%: 66 of 120 HP, 82 of 150 (82.5 dropped)
     assert rested.gold == 150 and rested.mana.tolist() == [75,0,0,0,0]
     # Regen uses the land before growth, while income uses newly grown land.
     cell = neutral.position[0]*MAP['size']+neutral.position[1]

@@ -457,7 +457,7 @@ class SpellCastRules:
             place = jnp.where(self.territory.capital_guards, CAPITAL_REGENERATION, place)
         percent = jnp.where((self.enemy_ruin >= 0)[:, None], RUIN_REGENERATION,
                             jnp.clip(self.unit_regen + place[:, None], 0, 100))
-        heal = jnp.maximum(1, jnp.rint(maximum * percent / 100.).astype(jnp.int32))
+        heal = maximum*percent//100  # 0x5840ec: the fraction is dropped; 0% heals nothing
         if self.full_regeneration is not None:
             heal = jnp.where(self.full_regeneration[:, None], maximum, heal)
         recovering = resting & state.alive[:, None] & self.occupied & (current > 0) & (wounds > 0)
