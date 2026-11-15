@@ -35,18 +35,22 @@
     }
   },
   "battle_step_ms_250_fixed_battles": {
-    "note": "microbench.py: best of 5 series of 300 calls, one process per measurement; the spread between sessions is about 2%",
-    "before": [6.403, 6.371, 6.501, 6.440],
+    "note": "microbench.py: best of 5 series of 300 calls, one process per measurement; values of one session stand at the same position in each list where both were measured",
+    "before": [6.403, 6.371, 6.501, 6.440, 5.784, 5.816, 5.890],
     "after": [7.090],
-    "after2": [6.466, 6.465, 6.493]
+    "after2": [6.466, 6.465, 6.493, 6.232, 5.930],
+    "after_review_fixes": [6.090, 6.115, 5.962],
+    "final_against_before_by_session_percent": [1.5, -0.6, 0.8, 5.3, 3.5],
+    "final_against_before_mean_percent": 2
   },
+  "review_fixes_20261115": "After the 15M runs: a Wolf Lord in Fenrir's form is judged by the Spirit of Fenrir's attack, and the Doppelganger's twelve candidates get independent coins. The command is unchanged on the same 60000 random states and 28394 real enemy activations; the battle step costs the same as after2. No new training run.",
   "equivalence_of_after2_and_after": {
     "random_states": "60000 states, command and Doppelganger target equal in all (equivalence.py, three modes)",
     "real_battles": "28394 enemy activations against all 75 armies, equal in all (realstates.py)"
   },
   "reading": [
     "after and after2 choose identically, yet their trainings diverged (5.39M against 4.21M battle transitions): a training run is not reproduced bit for bit once the compiled code changes, and how often the policy fights moves steps per second by tens of percent.",
-    "The code cost of one battle activation is back within the measurement spread of the previous rule.",
+    "The code cost of one battle activation is about 2% above the previous rule: between -0.6% and +5.3% across five measurement sessions.",
     "The remaining -6.1% of after2 goes with 3.5% more battle transitions than before; a single pair of runs cannot split it further."
   ],
   "not_done": "The project's test suite was not run; tests of the previous rule need updating."

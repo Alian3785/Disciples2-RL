@@ -94,13 +94,17 @@ class EnemyAI:
         self.has_sap = L_DRAIN_LEVEL in seconds
         self.has_crack = L_SHATTER in seconds
         self.has_scare = L_FEAR in seconds
+        # A Wolf Lord in Fenrir's form keeps its unit type in the state; its attack is the spirit's.
+        self.fenrir = int(progression.fenrir_copy_id)
+        self.has_fenrir = any(rows[i].get('unit_type') == 'Wolf Lord' for i in present)
         self.cell = jnp.array(CELL, jnp.int32)
         self.shoot, self.defend = shoot, defend
 
     def _forms(self, env, state):
         """Unit types and packed attributes of every slot's current form."""
         ids = env._effective_ids(state)
-        return ids, jnp.where(state.imp, IMP, self.form[ids])
+        form = self.form[jnp.where(state.fenrir, self.fenrir, ids) if self.has_fenrir else ids]
+        return ids, jnp.where(state.imp, IMP, form)
 
     def action(self, env, state, random_values):
         """The acting enemy's command: SHOOT+target or DEFEND."""
@@ -173,6 +177,10 @@ class EnemyAI:
         worth = jnp.where(melee, -foe_effective, score)
         flips = melee & foe_summoned
         # 0x5cf317/0x5cf569: with a special second attack the target follows that attack first.
+        # Unlike the damage rules, the original's finders for paralysis, fear, transformation,
+        # drain level and shatter never ask for the target's immunity (no IUsSoldier +0x40/+0x44
+        # call in them; the all-immune test 0x5cf62f guards only attacks on everyone), so an
+        # immune unit can be chosen and the action is then lost, as in the game.
         if self.has_periodic:  # 0x5d2a42: to a target that does not carry the effect yet
             carried = jnp.where(own_second == L_POISON, state.poison_mode[blue] > 0, jnp.where(
                 own_second == L_FROSTBITE, state.water_mode[blue] > 0, state.burn_mode[blue] > 0))
@@ -302,6 +310,9 @@ class EnemyAI:
         # The sorted list holds the own side from its last cell to the first, then the other side.
         cells = self.cell[env.slots % 6]
         rank = jnp.where(own, 5-cells, 6+cells)
-        coins = jnp.tile(random_values[:6] < .5, 2)
+        # Twelve candidates need twelve coins: the first two binary digits of each of the six
+        # rolls are independent, one for the unit in that cell on either side.
+        rolls = random_values[:6]
+        coins = jnp.concatenate((rolls < .5, (jnp.floor(rolls*4).astype(jnp.int32) & 1) == 1))
         group = jnp.where(liked, 1, jnp.where(useful, 2, 3))
         return select(valid, group, self.base_xp[ids], jnp.ones(12, bool), rank, coins)[0]
