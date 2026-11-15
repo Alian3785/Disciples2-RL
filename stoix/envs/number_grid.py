@@ -1069,7 +1069,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
                     or not any(hp)):
                 raise ValueError('Hero initial HP must be six integers within the starting maximum HP')
             self.initial_hp = jnp.array(hp+[0]*6, jnp.int32)
-        # User-defined prototype rule: ceil(10% max HP) once per strategic rest.
+        # User-defined prototype rule for maps without the unit catalogue: ceil(10% max HP) once
+        # per strategic rest. Catalogue maps follow the original instead (see _world_step).
         self.rest_healing = jnp.concatenate(((self.hero_full + 9) // 10, jnp.zeros(6, jnp.int32)))
         self.observation_version = int(game_map.get('battle_observation_version', 1))
         if (self.bot.enabled or (self.territory_enabled and self.territory.contested)) and self.observation_version < 45:
@@ -1474,7 +1475,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
                  "terrain_costs": dict(plain=2, road=1, forest=4, water=6),
                  "flying_cost": 2, "dead_hero_cost_multiplier": 2, "last_partial_move": True,
                 "income": DAILY_GOLD, "rest_action": REST,
-                "regeneration_percent": None if self.territory_enabled else 10, "regeneration_rounding": "ceil", "automatic_revive": False,
+                "regeneration_percent": None if self.territory_enabled else 10,
+                "regeneration_rounding": "floor" if self.progression_enabled else "ceil", "automatic_revive": False,
                 "fenrir_action": FENRIR}
 
     def _spell_terrain(self, state):
@@ -2522,13 +2524,15 @@ class NumberGrid(Summoning, NumericNumberGrid):
         bonus = jnp.float32(0)
         if self.basic_combat:
             rest_max = self.max_hp(state) if self.progression_enabled else self.restored_hp
-            rest_healing = (rest_max+9)//10 if self.progression_enabled else self.rest_healing
+            # Catalogue units heal as in Discipl2.exe (0x5840ec): max HP * percent / 100, the
+            # fraction dropped, no minimum. The same rule serves garrisons and map stacks.
+            rest_healing = rest_max//10 if self.progression_enabled else self.rest_healing
             if self.items_enabled:
-                rest_healing = (rest_max*(1+self.item_rules.value(state,'regeneration',2))+9)//10
+                rest_healing = rest_max*(1+self.item_rules.value(state,'regeneration',2))//10
             if self.territory_enabled:
                 banner = self.item_rules.value(state,'regeneration',2) if self.items_enabled else 0
                 percent = self.territory.regeneration_percent(state,banner)
-                rest_healing = (rest_max*percent+99)//100
+                rest_healing = rest_max*percent//100
             building = jnp.clip(action - BUILD_START, 0, BUILD_SLOTS - 1)
             building_action = (action >= BUILD_START) & (action < REST)
             next_state = next_state.replace(

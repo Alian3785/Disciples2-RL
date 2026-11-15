@@ -165,7 +165,7 @@ def test_banner_health_regeneration_and_instant_retreat(all_items):
     state=refresh(inventory(env,state,'banner_health','rusted_shackles'))
     state=state.replace(hp=state.hp.at[3].set(1))
     resting_hp=jax.jit(lambda s:env._world_step(s,jnp.int32(REST),s.battle_key,jnp.zeros(env.random_size))[0].hp)(state)
-    assert resting_hp[3]==31  # ceil(45*65%) = 30 HP; capital + warrior lord + banner, rounded once
+    assert resting_hp[3]==30  # 45*65//100 = 29 HP; capital + warrior lord + banner, fraction dropped
     start=compiled_method(env,'_begin_battle')(state.replace(enemy=jnp.int32(0))).replace(actor=jnp.int32(1))
     @jax.jit
     def retreat(s):
