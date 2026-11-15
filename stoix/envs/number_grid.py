@@ -55,6 +55,7 @@ from stoix.envs.number_grid_bot import ScriptedBotRules
 from stoix.envs.number_grid_bot_attack import BotAttackRules
 from stoix.envs.number_grid_target_rewards import TargetRewardRules
 from stoix.envs.number_grid_zones import ZoneRules
+from stoix.envs.number_grid_enemy_ai import EnemyAI
 from stoix.envs import number_grid_reference_rewards as reference_rewards
 from stoix.envs.number_grid_effects import effect_tables, effect_breaks, POISON, FROSTBITE, BLISTER, DISABLE, TRANSFORM, SHORT, LONG, armor_after_shreds, source_protection, advance_poison_queue, advance_periodic_queue, vampiric_heal
 from stoix.envs.number_grid_effects import disable_attack_accuracy, disable_attack_allowed
@@ -694,8 +695,12 @@ class NumberGrid(Summoning, NumericNumberGrid):
             near = jnp.abs(unit_slots[None, :] % 3 - unit_slots[:, None] % 3) <= 1
             self.all_melee_tiers = (unit_slots[None, :] // 3) * 2 + (~near).astype(jnp.int32)
             self.hero_full = self.stats_table[0, :6, HP].astype(jnp.int32)
+        # Catalogue units fight with the original game's target choice (number_grid_enemy_ai.py).
+        self.enemy_ai = None
         if self.progression_enabled:
             self.progression = ProgressionRules(game_map, self.construction)
+            if self.basic_combat:
+                self.enemy_ai = EnemyAI(self.progression, SHOOT, DEFEND)
             if 'hero_initial_levels' in game_map:
                 # A party above its catalogue levels starts with those levels' health.
                 self.hero_full = self.progression.stats(self.progression.initial_ids[:6],
@@ -2713,6 +2718,12 @@ class NumberGrid(Summoning, NumericNumberGrid):
         return next_state, bonus
 
     def _enemy_action(self, state, random_values):
+        if self.enemy_ai is not None:
+            action = self.enemy_ai.action(self, state, random_values)
+            if self.has_copies or self.has_summons:
+                action = self._special_enemy_action(state, action, random_values)
+            return action
+        # Saved numeric maps and fixed test squads without the unit catalogue.
         valid = (state.hp[:6] > 0) & ~state.escaped[:6]
         base_damage = self.damage
         if self.basic_combat:
