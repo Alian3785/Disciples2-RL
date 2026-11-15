@@ -127,9 +127,12 @@ class Summoning:
     def _special_enemy_action(self, state, action, random_values):
         if self.has_copies:
             valid = self._copy_targets(state)
-            # The reference prefers the largest HP pool, including allies.
-            scores = jnp.where(valid, -state.hp+ jnp.tile(random_values, 2)*.5, 1e9)
-            target = jnp.argmin(scores)
+            if getattr(self, 'enemy_ai', None) is not None:
+                target = self.enemy_ai.copy_target(self, state, valid, random_values)
+            else:
+                # The reference prefers the largest HP pool, including allies.
+                scores = jnp.where(valid, -state.hp+ jnp.tile(random_values, 2)*.5, 1e9)
+                target = jnp.argmin(scores)
             copy_action = jnp.where(target < 6, SHOOT+target, COPY_ALLY+target-6)
             action = jnp.where(self._actor_copies(state), copy_action, action)
         if self.has_summons:
