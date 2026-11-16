@@ -1,14 +1,14 @@
 """GPU equipment regressions; reuse current-map transitions and small kernels."""
-from stoix.tests.number_grid_fixtures import compiled_method, hero_roster_state
+from stoix.tests.number_grid_fixtures import compiled_method, enemy_roster_state, hero_roster_state
 import copy
 import chex
 import jax
 import jax.numpy as jnp
 import pytest
 
-from stoix.envs.number_grid import MAP, REST, POTION_START
+from stoix.envs.number_grid import MAP, REST, POTION_START, SHOOT
 from stoix.envs.number_grid_items import ITEMS, ItemRules, VALUABLE
-from stoix.envs.number_grid_item_combat import equipment_attack
+from stoix.envs.number_grid_item_combat import ARTIFACT_ROLL_START, ARTIFACT_ROLL_END, equipment_attack
 
 
 @pytest.fixture(scope='module')
@@ -19,11 +19,12 @@ def all_items(current_game):
     env.item_rules=ItemRules(dict(initial_items={p['key']:1 for p in ITEMS}))
     state=state.replace(item_inventory=jnp.full(len(ITEMS),-1,jnp.int32),
                         last_item_loot=jnp.zeros(len(ITEMS),jnp.int32))
-    env.random_size=max(original.random_size,84)
+    env.random_size=max(original.random_size,ARTIFACT_ROLL_END)
     env.has_copies=True
     refresh=jax.jit(env._refresh_equipment)
-    attack=jax.jit(lambda s,target,connected,damage,rolls:equipment_attack(
-        env,s,s.hp,s.wards_used,target,connected,damage,rolls))
+    attack=jax.jit(lambda s,connected,damage,rolls,accuracy_falloff=False,primary_targets=None:equipment_attack(
+        env,s,s.hp,s.wards_used,jnp.arange(6,12),connected if primary_targets is None else primary_targets,
+        connected,damage,accuracy_falloff,rolls))
     return env,state,refresh,attack
 
 
@@ -255,20 +256,22 @@ def test_artifact_statuses_respect_sources_and_duplicate_names(all_items):
            ('hags_ring','imp',64))
     for key,field,source in cases:
         before=refresh(inventory(env,start,key,key)).replace(actor=jnp.int32(1))
-        zeros=jnp.zeros(84)
-        affected,hp,used,immune,ward=attack(before,jnp.int32(6),jnp.bool_(True),jnp.int32(10),zeros)
+        zeros=jnp.zeros(env.random_size)
+        connected=jnp.arange(6)==0
+        damage=jnp.where(connected,10,0).astype(jnp.int32)
+        affected,hp,used,immune,ward=attack(before,connected,damage,zeros)
         assert getattr(affected,field)[6] and not immune and not ward
         # Grant a native book/potion-style ward via copied traits of the target.
         traits=compiled_method(env,'_combat_traits')(before).at[6,3].set(jnp.uint32(source))
         protected=before.replace(copied=before.copied.at[6].set(True),copy_traits=traits,
                                  copy_stats=compiled_method(env,'_combat_stats')(before))
-        blocked,_,used,_,ward=attack(protected,jnp.int32(6),jnp.bool_(True),jnp.int32(10),zeros)
+        blocked,_,used,_,ward=attack(protected,connected,damage,zeros)
         assert not getattr(blocked,field)[6] and (used[6]&source) and (ward&(1<<6))
         immune_state=protected.replace(copy_traits=traits.at[6,2].set(jnp.uint32(source)))
-        blocked,_,used,immune,ward=attack(immune_state,jnp.int32(6),jnp.bool_(True),jnp.int32(10),zeros)
+        blocked,_,used,immune,ward=attack(immune_state,connected,damage,zeros)
         assert not getattr(blocked,field)[6] and (immune&(1<<6)) and not ward and not used[6]
         # The second identical artifact must not bypass the ward just spent.
-        missed=attack(before,jnp.int32(6),jnp.bool_(False),jnp.int32(10),zeros)[0]
+        missed=attack(before,jnp.zeros(6,bool),damage,zeros)[0]
         assert not getattr(missed,field)[6]
 
 
@@ -277,23 +280,28 @@ def test_artifact_drain_poison_refresh_and_wight(all_items):
     start=compiled_method(env,'_begin_battle')(state.replace(enemy=jnp.int32(0)))
     start=start.replace(actor=jnp.int32(1),hp=start.hp.at[1].set(10))
     before=refresh(inventory(env,start,'unholy_dagger','unholy_dagger'))
-    result=attack(before,jnp.int32(6),jnp.bool_(True),jnp.int32(19),jnp.zeros(84))
+    rolls=jnp.zeros(env.random_size)
+    single=jnp.arange(6)==0
+    damage=jnp.array([19,0,0,0,0,0],jnp.int32)
+    result=attack(before,single,damage,rolls)
     assert result[1][1]==14  # floor(19/4), once per named artifact
+    result=attack(before,jnp.arange(6)<2,jnp.array([19,7,0,0,0,0],jnp.int32),rolls)
+    assert result[1][1]==15  # floor(19/4) + floor(7/4)
     before=refresh(inventory(env,start,'skull_of_thanatos'))
     before=before.replace(poison_mode=before.poison_mode.at[6].set(2),
                           poison_damage=before.poison_damage.at[6].set(20),
                           poison_source=before.poison_source.at[6].set(3))
-    result=attack(before,jnp.int32(6),jnp.bool_(True),jnp.int32(10),jnp.zeros(84))[0]
+    result=attack(before,single,damage,rolls)[0]
     assert result.poison_damage[6]==35 and result.poison_source[6]==1 and result.poison_mode[6]==2
     before=before.replace(poison_damage=before.poison_damage.at[6].set(50))
-    result=attack(before,jnp.int32(6),jnp.bool_(True),jnp.int32(10),jnp.zeros(84))[0]
+    result=attack(before,single,damage,rolls)[0]
     assert result.poison_damage[6]==35 and result.poison_mode[6]==2
     # Use an existing upgrade with a known predecessor, instead of a level-1 foe.
     upgraded=env.progression.ids['knight']
     before=refresh(inventory(env,start,'wight_blade')).replace(
         unit_ids=start.unit_ids.at[6].set(upgraded),
         unit_levels=start.unit_levels.at[6].set(env.progression.base_levels[upgraded]))
-    result=attack(before,jnp.int32(6),jnp.bool_(True),jnp.int32(10),jnp.zeros(84))[0]
+    result=attack(before,single,damage,rolls)[0]
     assert result.decay_form[6]==env.progression.lower_forms[upgraded] and result.decay_form[6]>0
 
 
@@ -302,11 +310,58 @@ def test_equipment_disable_misses_after_round_40_without_spending_wards(all_item
     env, state, refresh, attack = all_items
     start = compiled_method(env, '_begin_battle')(state.replace(enemy=jnp.int32(0)))
     before = refresh(inventory(env, start, key)).replace(actor=jnp.int32(1), round=jnp.int32(40))
-    rolls = jnp.zeros(84)
-    early = attack(before, jnp.int32(6), jnp.bool_(True), jnp.int32(10), rolls)
+    rolls = jnp.zeros(env.random_size)
+    connected = jnp.arange(6) == 0
+    damage = jnp.where(connected, 10, 0).astype(jnp.int32)
+    early = attack(before, connected, damage, rolls)
     assert early[0].paralyzed[6]
     late = before.replace(round=jnp.int32(41), potion_wards=before.potion_wards.at[6].set(source))
-    after, hp, used, immune, ward = attack(late, jnp.int32(6), jnp.bool_(True), jnp.int32(10), rolls)
+    after, hp, used, immune, ward = attack(late, connected, damage, rolls)
     assert not after.paralyzed[6] and not after.long_paralyzed[6]
     assert not used[6] and not immune and not ward
     assert jnp.array_equal(hp, late.hp)
+
+
+def test_artifact_rolls_use_surviving_targets_of_each_attack(all_items):
+    env, state, _, attack = all_items
+    start = compiled_method(env, '_begin_battle')(state.replace(enemy=jnp.int32(0)))
+    items = [env.item_rules.keys.index(key) for key in ('soul_crystal', 'skull_of_thanatos')]
+    equipped = start.equipped.at[:2].set(jnp.array(items, jnp.int32))
+    before = start.replace(actor=jnp.int32(1), round=jnp.int32(1), equipped=equipped,
+                           hp=start.hp.at[6:].set(jnp.array([20,20,0,20,0,0], jnp.int32)))
+    # The primary hits two survivors and kills slot 8. Slot 9 missed the primary.
+    # 40 passes the first artifact, 41 misses. The second now uses its full 80.
+    rolls = jnp.full(env.random_size, .805, jnp.float32)
+    rolls = rolls.at[ARTIFACT_ROLL_START:ARTIFACT_ROLL_START+12].set(
+        jnp.tile(jnp.array([.405,.415,0.,0.,0.,0.], jnp.float32), 2))
+    connected = jnp.arange(6) < 3
+    after, _, _, _, _ = attack(before, connected, jnp.zeros(6,jnp.int32), rolls)
+    assert after.paralyzed[6:].tolist() == [True, False, False, False, False, False]
+    assert after.poison_damage[6:].tolist() == [35, 0, 0, 0, 0, 0]
+
+    warded = before.replace(potion_wards=before.potion_wards.at[6].set(64))
+    after, _, used, _, ward = attack(warded, connected, jnp.zeros(6,jnp.int32), rolls)
+    assert not after.paralyzed[6] and (used[6] & 64) and (ward & (1 << 6))
+    assert after.poison_damage[6] == 35
+
+    # Four primary targets give the mage a penalty of 40, then 50 on the next target.
+    # With two survivors, thresholds are 20 and 15. Rolling 20 hits only slot 6.
+    rolls = rolls.at[ARTIFACT_ROLL_START:ARTIFACT_ROLL_START+12].set(.205)
+    after, _, _, _, _ = attack(before, connected, jnp.zeros(6,jnp.int32), rolls,
+                               accuracy_falloff=True, primary_targets=jnp.arange(6)<4)
+    assert after.paralyzed[6:].tolist() == [True, False, False, False, False, False]
+
+
+def test_mage_battle_step_can_paralyze_multiple_targets_with_soul_crystal(all_items):
+    env, state, _, _ = all_items
+    start = compiled_method(env, '_begin_battle')(state.replace(enemy=jnp.int32(0)))
+    start = hero_roster_state(env, start, [None, 'g000uu0072', None, 'cultist', None, None])
+    start = enemy_roster_state(env, start, ['squire', 'squire', None, None, None, None])
+    crystal = env.item_rules.keys.index('soul_crystal')
+    start = start.replace(actor=jnp.int32(1), round=jnp.int32(1),
+                          equipped=start.equipped.at[:2].set(jnp.array([crystal, -1], jnp.int32)),
+                          hp=start.hp.at[6:8].set(200))
+    fight = compiled_method(env, '_battle_step')
+    after, _ = fight(start, jnp.int32(SHOOT), start.battle_key, jnp.zeros(env.random_size))
+    assert after.last_target == -1 and after.last_damage > 0
+    assert after.paralyzed[6:].tolist() == [True, True, False, False, False, False]
