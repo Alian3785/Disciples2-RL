@@ -271,6 +271,7 @@ def run_training(args, tracking):
                         'stoix/envs/number_grid_hero_skills.py',
                         'stoix/envs/number_grid_capital_training.py',
                         'stoix/envs/number_grid_target_rewards.py',
+                        'stoix/envs/number_grid_fog.py',
                         'numbergrid_campaign.py', 'numbergrid_comet_dashboard.py', 'numbergrid_wandb_dashboard.py',
                         'stoix/envs/number_grid_metrics.py',
                         'stoix/envs/number_grid_buildings.py', 'stoix/envs/data/buildings.json',

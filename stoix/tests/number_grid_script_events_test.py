@@ -172,7 +172,7 @@ def test_exit_requires_ambush_response_and_drained_battle_queue(campaign):
     assert bool(won(cleared))
     assert not bool(won(cleared.replace(position=jnp.array([3, 27], jnp.int32))))
     assert float(env.script_events.observation(at_goal)[-1]) == 0.
-    assert float(env.script_events.observation(cleared)[-1]) == 1.
+    assert float(env.script_events.observation(env._reveal_hero(cleared))[-1]) == 1.
     fresh, _ = compiled_method(env, 'reset')(jax.random.PRNGKey(43))
     assert not bool(fresh.script_objective_ready)
 

@@ -232,8 +232,9 @@ W&B использует тот же каталог разделов, метри
   `objective_item_acquired`;
 - `campaign/window/tracked_enemy_episodes_rate` — доля эпизодов, в которых
   уничтожен отслеживаемый отряд, в бою или заклинанием на карте; счётчик —
-  `tracked_enemy_defeated`. Поле `tracked_enemy` — индекс армии, только для
-  телеметрии, наград не даёт.
+  `tracked_enemy_defeated`. Поле `tracked_enemy` задаёт индекс армии.
+  В «Соляной темнице» `tracked_enemy_defeat_reward` добавляет за уничтожение
+  этого отряда столько же награды, сколько за получение ключа.
 
 Доли с начала обучения (`campaign/objective_item_episodes_rate`,
 `campaign/tracked_enemy_episodes_rate`) сохраняются локально и в W&B. В общем виде

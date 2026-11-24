@@ -4,6 +4,7 @@ The current scenario collects on a successful map move, per the user request.
 See docs/ITEMS.md for sources and scenario choices.
 """
 import jax.numpy as jnp
+from stoix.envs.number_grid_fog import revealed_at
 
 CHEST_LOOT = 21
 
@@ -63,4 +64,5 @@ class ChestRules:
 
     def observation(self, state):
         # Coordinates, scenario-specific item counts, then the live/collected flag.
-        return jnp.concatenate((self.features, state.chest_alive[:, None]), axis=1).reshape(-1)
+        rows = jnp.concatenate((self.features, state.chest_alive[:, None]), axis=1)
+        return jnp.where(revealed_at(state, self.positions)[:, None], rows, 0.).reshape(-1)

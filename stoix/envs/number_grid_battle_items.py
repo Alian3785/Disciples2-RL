@@ -5,8 +5,8 @@ and battle_env hero-item actions. Item IDs and prices: installed GItem.dbf.
 """
 import jax.numpy as jnp
 
-from stoix.envs.number_grid_combat import HP, DAMAGE, ARMOR, INITIATIVE, UNITS, accuracy_hits, can_revive
-from stoix.envs.number_grid_effects import source_protection, vampiric_heal, disable_attack_accuracy
+from stoix.envs.number_grid_combat import ATTACK_TYPES, HP, DAMAGE, ARMOR, INITIATIVE, UNITS, accuracy_hits, can_revive
+from stoix.envs.number_grid_effects import source_protection, vampiric_heal, disable_attack_allowed
 from stoix.envs.number_grid_updates import set_rows
 
 SLOTS, TALISMAN_USES, TARGETS = 2, 5, 6
@@ -19,6 +19,8 @@ KIND_NAMES = ('heal', 'revive', 'summon', 'damage', 'drain', 'dot', 'damage_buff
 POISON, BURN, WATER = range(3)  # catalogue identifiers; tick order is poison, water, burn
 # One-based JAX attack sources (number_grid_combat.ATTACK_TYPES).
 EARTH, FIRE, WATER_SOURCE, DEATH, MIND, AIR = 2, 3, 4, 6, 7, 9
+# The unit catalogue stores GimmuC's L_POISON immunity in this separate bit.
+POISON_CLASS_BIT = 1 << ATTACK_TYPES.index('poison')
 SOURCE_LABELS = {EARTH: 'Земля', FIRE: 'Огонь', WATER_SOURCE: 'Вода', DEATH: 'Смерть', MIND: 'Разум', AIR: 'Воздух'}
 DOT_FIELDS = ('poison', 'burn', 'water')
 # The four reference battle potions share the map potion inventory.
@@ -63,9 +65,10 @@ def _drain(amount, share=False):
 def _dot(dot, amount, party):
     name = ('Яд', 'Ожог', 'Обморожение')[dot]
     who = 'вражескому отряду' if party else 'врагу'
-    source = (5, FIRE, WATER_SOURCE)[dot]
-    return _effect(DOT, f'{name} {who}: {amount} HP за срабатывание; растущий шанс снятия', True, party,
-                   amount=amount, dot=dot, source=source)
+    source = (DEATH, FIRE, WATER_SOURCE)[dot]
+    return _effect(DOT, f'{name} {who}, источник {SOURCE_LABELS[source]}, точность 80%, '
+                   f'{amount} HP за срабатывание, растущий шанс снятия', True, party,
+                   amount=amount, dot=dot, source=source, accuracy=80)
 
 
 # Orb/talisman effects by base name; IDs are G000IG90xx (orb) and 91xx (talisman).
@@ -95,8 +98,10 @@ EFFECTS = (
     ('thanatos', 'Thanatos', 36, 800, _dot(POISON, 30, True)),
     ('frost', 'Frost', 37, 400, _dot(WATER, 10, True)),
     ('freezing', 'Freezing', 38, 600, _dot(WATER, 30, True)),
-    ('fear', 'Fear', 39, 600, _effect(PARALYSIS, 'Длительный паралич врага, Разум; растущий шанс снятия', True, source=MIND)),
-    ('witches', 'Witches', 40, 800, _effect(TRANSFORM, 'Превращение врага в беса, Разум', True, source=MIND)),
+    ('fear', 'Fear', 39, 600, _effect(PARALYSIS, 'Длительный паралич врага, Разум, точность 80%, растущий шанс снятия',
+                                     True, source=MIND, accuracy=80)),
+    ('witches', 'Witches', 40, 800, _effect(TRANSFORM, 'Превращение врага в беса, Разум, точность 80%',
+                                           True, source=MIND, accuracy=80)),
 )
 ORB_ONLY = (
     ('flame', 'Orb of Flame', 'G000IG9041', 1000, _dot(BURN, 15, True)),
@@ -203,7 +208,7 @@ class BattleItemRules:
             return jnp.array([item.get(name, default) for item in self.items] or [default], dtype)
         self.kind = table('kind', -1, jnp.int32)
         self.amount = table('amount', 0, jnp.int32)
-        self.accuracy = table('accuracy', 0, jnp.float32)
+        self.accuracy = table('accuracy', 100, jnp.float32)
         self.source = table('source', 0, jnp.uint32)
         self.enemy = table('enemy', False, bool)
         self.party = table('party', False, bool)
@@ -406,10 +411,11 @@ class BattleItemRules:
         extra = jnp.zeros(12, bool)
         status = jnp.zeros(6, bool)
 
-        def protect(kind_code, eligible, used):
-            hit, used, blocked, ward = source_protection(
-                (chosen & eligible & (code == kind_code))[target_slots], self.source[kind], traits, used, target_slots)
-            return hit, used, blocked, ward
+        hits = accuracy_hits(self.accuracy[kind], random_values[12:18], random_values[18:24])
+
+        def protect(kind_code, eligible, used, class_immunity_bit=0):
+            targets = (chosen & eligible & (code == kind_code))[target_slots]
+            return source_protection(targets & hits, self.source[kind], traits, used, target_slots, class_immunity_bit)
 
         if HEAL in self.kinds:
             healed = jnp.where(chosen & alive & (code == HEAL), jnp.minimum(amount, jnp.maximum(maximum-hp, 0)), 0)
@@ -455,10 +461,9 @@ class BattleItemRules:
             used = jnp.where(spawned, jnp.uint32(0), used)
             applied += jnp.any(spawned).astype(jnp.int32)
         if STRIKE in self.kinds or DRAIN in self.kinds:
-            hits = accuracy_hits(self.accuracy[kind], random_values[12:18], random_values[18:24])
-            struck, used, blocked, ward = protect(STRIKE, alive & hits[jnp.arange(12) % 6], used)
+            struck, used, blocked, ward = protect(STRIKE, alive, used)
             if DRAIN in self.kinds:
-                drained, used, drain_blocked, drain_ward = protect(DRAIN, alive & hits[jnp.arange(12) % 6], used)
+                drained, used, drain_blocked, drain_ward = protect(DRAIN, alive, used)
                 struck |= drained
                 blocked |= drain_blocked
                 ward |= drain_ward
@@ -477,7 +482,8 @@ class BattleItemRules:
                 pool = jnp.where(code == DRAIN, jnp.sum(removed)//2, 0)
                 hp = vampiric_heal(hp, maximum, state.escaped, state.actor, pool, self.share[kind])
         if DOT in self.kinds:
-            affected, used, blocked, ward = protect(DOT, alive, used)
+            class_immunity = jnp.where(self.dot[kind] == POISON, jnp.uint32(POISON_CLASS_BIT), jnp.uint32(0))
+            affected, used, blocked, ward = protect(DOT, alive, used, class_immunity)
             immune |= blocked
             warded |= ward
             duration = 2
@@ -509,8 +515,8 @@ class BattleItemRules:
                 bonus_turns=state.bonus_turns+extra.astype(jnp.int32))
             status |= extra[:6]  # an ally-only effect
         if PARALYSIS in self.kinds:
-            accuracy = disable_attack_accuracy(100., jnp.bool_(True), state.round)
-            affected, used, blocked, ward = protect(PARALYSIS, alive & ~state.long_paralyzed & (accuracy > 0), used)
+            allowed = disable_attack_allowed(True, state.round)
+            affected, used, blocked, ward = protect(PARALYSIS, alive & ~state.long_paralyzed & allowed, used)
             immune |= blocked
             warded |= ward
             status |= affected

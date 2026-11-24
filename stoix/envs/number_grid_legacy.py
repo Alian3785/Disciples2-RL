@@ -9,6 +9,7 @@ import jax.numpy as jnp
 from flax import struct
 from stoa import AddActionMaskWrapper, ArraySpace, DictSpace, DiscreteSpace, Environment, StepType, TimeStep
 from numbergrid_progression import validate_progression
+from stoix.envs.number_grid_fog import FogRules, revealed_at
 
 MAP = json.loads((Path(__file__).resolve().parents[2] / 'maps/number_grid-24x24-v5.json').read_text())
 # Row, column; clockwise from north. Walls/occupied destinations consume a step.
@@ -26,6 +27,7 @@ class NumberGridState:
     won: jax.Array
     lost: jax.Array
     visited: jax.Array
+    revealed: jax.Array
 
 
 class NumberGrid(Environment):
@@ -51,9 +53,9 @@ class NumberGrid(Environment):
         self.visited_words = (self.size * self.size + 31) // 32 if self.exploration_bonus else 0
         self.initial_number = int(self.map_config['agent_number'])
         self.num_opponents = len(self.map_config['opponent_numbers'])
-        self.number_scale = max(self.initial_number + self.num_opponents,
-                                max(self.map_config['opponent_numbers']))
-        self.observation_size = 4 + 4 * self.num_opponents
+        self.number_scale = self.initial_number + self.num_opponents
+        self.fog = FogRules(self.map_config)
+        self.observation_size = 4 + 4 * self.num_opponents + self.fog.observation_size
         self.max_return = self.num_opponents + 3 + self.exploration_bonus * ((self.size - 2)**2 - 1)
         self.opponent_positions = jnp.asarray(self.map_config['opponent_positions'], jnp.int32)
         self.opponent_numbers = jnp.asarray(self.map_config['opponent_numbers'], jnp.int32)
@@ -71,21 +73,27 @@ class NumberGrid(Environment):
             number=jnp.int32(self.initial_number), alive=jnp.ones(self.num_opponents, dtype=bool),
             step_count=jnp.int32(0), done=jnp.bool_(False),
             won=jnp.bool_(False), lost=jnp.bool_(False),
-            visited=visited,
+            visited=visited, revealed=self.fog.capital,
         )
+        state = self.fog.reveal(state)
         return state, self._timestep(state, jnp.float32(0), first=True)
 
     def observation(self, state):
+        return jnp.concatenate((self._numeric_observation(state), self.fog.observation(state)))
+
+    def _numeric_observation(self, state):
         # Physical state: agent and opponents, elapsed fraction. The episodic
         # exploration memory is used only for reward, not appended to policy input.
         opponents = jnp.concatenate([
             self.opponent_positions.astype(jnp.float32) / (self.size - 1),
             self.opponent_numbers[:, None].astype(jnp.float32) / self.number_scale,
             state.alive[:, None].astype(jnp.float32),
-        ], axis=1).reshape(-1)
+        ], axis=1)
+        visible = state.alive & revealed_at(state, self.opponent_positions)
         return jnp.concatenate([
             state.position.astype(jnp.float32) / (self.size - 1),
-            jnp.asarray([state.number / self.number_scale], jnp.float32), opponents,
+            jnp.asarray([state.number / self.number_scale], jnp.float32),
+            jnp.where(visible[:, None], opponents, 0.).reshape(-1),
             jnp.asarray([state.step_count / self.max_steps], jnp.float32),
         ])
 
@@ -145,6 +153,7 @@ class NumberGrid(Environment):
             step_count=steps, done=lost | won | (steps >= self.max_steps),
             won=won, lost=lost, visited=visited,
         )
+        next_state = self.fog.reveal(next_state)
         reward = jnp.where(lost, -1.0, count.astype(jnp.float32) + 3.0 * won)
         reward = (reward + bonus) - jnp.float32(self.step_cost)
         # Raw environments are absorbing; training adds Stoa's auto-reset wrapper.
@@ -167,6 +176,7 @@ class NumberGrid(Environment):
             'done': ArraySpace((), bool), 'won': ArraySpace((), bool),
             'lost': ArraySpace((), bool),
             'visited': ArraySpace((self.visited_words,), jnp.uint32),
+            'revealed': ArraySpace((self.size, self.size), bool),
         })
 
 

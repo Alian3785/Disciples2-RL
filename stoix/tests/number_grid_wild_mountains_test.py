@@ -659,7 +659,8 @@ def test_baroness_rods_pay_like_land(mountains):
     hired, _ = step(state.replace(gold=jnp.int32(1000)), jnp.int32(rods.start))
     assert bool(hired.rod_planter) and int(hired.gold) == 700 and not bool(mask(hired)[rods.start])
     assert not bool(jnp.any(mask(hired)[rods.plant_start:rods.end]))  # every guard still stands
-    freed = hired.replace(alive=hired.alive.at[config['guards'][0]].set(False))
+    freed = hired.replace(alive=hired.alive.at[config['guards'][0]].set(False),
+                          revealed=env.fog.playable)
     assert mask(freed)[rods.plant_start:rods.end].tolist() == [True, False, False, False, False]
     planted, _ = step(freed, jnp.int32(rods.plant_start))
     death = 3  # resource index: gold, infernal, life, death, runes, elves

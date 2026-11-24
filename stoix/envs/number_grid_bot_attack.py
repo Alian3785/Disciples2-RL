@@ -21,7 +21,6 @@ class BotAttackRules:
     def __init__(self, game_map, initial_progress=None):
         spec = game_map.get('bot_attack')
         self.enabled = bool(spec)
-        self.observation_size = 0
         if not self.enabled:
             return
         count = len(game_map['opponent_positions'])
@@ -58,8 +57,6 @@ class BotAttackRules:
         self.raids = jnp.array(self.raid_enemies, jnp.int32)
         self.raid_mask = jnp.zeros(count, bool).at[self.raids].set(True)
         self.initial_progress = initial_progress
-        # Days left until Edwin and until the next stationary party.
-        self.observation_size = 1+bool(self.raid_enemies)
 
     def _arrive(self, state, enemy, due, position, attack):
         """Restore a fresh party, optionally queuing Edwin's forced encounter."""
@@ -105,10 +102,3 @@ class BotAttackRules:
         after = self.schedule_respawn(before, after)
         won = victory & self.mask[jnp.maximum(before.enemy, 0)] & (before.enemy >= 0) & ~before.summon_battle
         return after.replace(bot_hero_victories=after.bot_hero_victories+won.astype(jnp.int32))
-
-    def observation(self, state):
-        values = [jnp.maximum(self.day-state.day, 0)/self.day]
-        if self.raid_enemies:
-            left = jnp.maximum(state.bot_respawn_day-state.day, 0)
-            values.append(left/self.first_day)
-        return jnp.asarray(values, jnp.float32)

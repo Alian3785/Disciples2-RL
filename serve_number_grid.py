@@ -88,6 +88,7 @@ class Agent:
         # The whole map defines observations and actions, not just its name.
         if json.loads((results / 'map.json').read_text(encoding='utf-8')) != MAP:
             raise ValueError('The checkpoint was trained on a different map.')
+        self.observation_size = result.get('observation_size')
         config = OmegaConf.load(results / 'config.json')
         self.params = jax.tree.map(jnp.asarray, serialization.msgpack_restore(checkpoint)['actor_params'])
         self.actor = FeedForwardActor(
@@ -102,6 +103,8 @@ class Agent:
         self.policies = {}
 
     def policy(self, env):
+        if self.observation_size != env.observation_size:
+            raise ValueError('The checkpoint uses a different NumberGrid observation layout.')
         if id(env) not in self.policies:
             @jax.jit
             def choose(state):

@@ -39,6 +39,8 @@ def build(output):
         torso=hydra.utils.instantiate(config.network.actor_network.pre_torso),
         action_head=hydra.utils.instantiate(config.network.actor_network.action_head, action_dim=8))
     env = NumberGrid(map_config=game_map)
+    if result.get('observation_size') != env.observation_size:
+        raise ValueError('The checkpoint uses a different NumberGrid observation layout.')
     policy_env = wrap_wall_action_mask(env)
     advance = jax.jit(env.step)
     @jax.jit

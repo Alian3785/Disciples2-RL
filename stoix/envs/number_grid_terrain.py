@@ -6,6 +6,7 @@ and no flight or terrain boots.
 """
 import jax.numpy as jnp
 
+from stoix.envs.number_grid_fog import revealed_at
 from stoix.envs.number_grid_sites import site_entries
 
 PLAIN, ROAD, FOREST, WATER = range(4)
@@ -100,6 +101,8 @@ class TerrainRules:
 
     def observation(self, state, directions, item_rules=None, spells=None):
         flying, dead = self.travel_flags(state)
-        return jnp.concatenate((self.kinds(state.position+self.local_offsets)/3.,
-            self.move_cost(state,state.position+directions,item_rules,spells)/12.,
+        local = state.position + self.local_offsets
+        adjacent = state.position + directions
+        return jnp.concatenate((jnp.where(revealed_at(state, local), self.kinds(local)/3., 0.),
+            jnp.where(revealed_at(state, adjacent), self.move_cost(state,adjacent,item_rules,spells)/12., 0.),
             jnp.array([flying,dead], jnp.float32)))

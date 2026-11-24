@@ -47,7 +47,7 @@ def shortest_path():
 
 
 def plain(state):
-    return {f.name: np.asarray(getattr(state, f.name)).tolist() for f in dataclasses.fields(state)}
+    return {f.name: np.asarray(getattr(state, f.name)).tolist() for f in dataclasses.fields(state) if f.name != 'revealed'}
 
 
 def reset(env):
@@ -59,7 +59,7 @@ def test_reset_and_observation():
     state, ts = env.reset(jax.random.PRNGKey(1))
     assert plain(state) == initial_state()
     assert ts.first() and ts.discount == 1 and ts.reward == 0
-    assert ts.observation.shape == (16,)
+    assert ts.observation.shape == (16 + env.fog.observation_size,)
     assert ts.observation.dtype == jnp.float32
     assert env.action_space().num_values == 8
     assert np.isfinite(ts.observation).all()
@@ -200,7 +200,7 @@ def test_vmap_and_jit_run_on_selected_device():
     states, _ = compiled_method(env,'reset',batched=True)(jax.random.split(jax.random.PRNGKey(1), 32))
     states, ts = compiled_method(env,'step',batched=True)(states, jnp.zeros(32, jnp.int32))
     assert states.position.shape == (32, 2)
-    assert ts.observation.shape == (32, 16)
+    assert ts.observation.shape == (32, 16 + env.fog.observation_size)
     assert np.all(np.asarray(states.step_count) == 1)
     assert states.position.devices() == {jax.devices()[0]}
 
@@ -212,8 +212,8 @@ def test_training_autoreset_preserves_terminal_observation():
     states, ts = env.reset(jax.random.split(jax.random.PRNGKey(0), 2))
     states, ts = compiled_method(env,'step')(states, jnp.zeros(2, jnp.int32))
     assert np.all(ts.truncated()) and np.all(ts.discount == 1)
-    assert np.all(np.asarray(ts.observation[:, -1]) == 0)
-    assert np.all(np.asarray(ts.extras['next_obs'][:, -1]) == 1)
+    assert np.all(np.asarray(ts.observation[:, -LEGACY_MAP['size']**2-1]) == 0)
+    assert np.all(np.asarray(ts.extras['next_obs'][:, -LEGACY_MAP['size']**2-1]) == 1)
     assert np.all(np.asarray(ts.extras['episode_metrics']['episode_length']) == 1)
 
 
@@ -241,11 +241,12 @@ def test_current_full_observation_and_reset():
     state, ts = env.reset(jax.random.PRNGKey(43))
     assert plain(state) == reference.initial_state(MAP)
     assert state.alive.shape == (12,)
-    assert ts.observation.shape == (52,)
-    assert env.observation_space().shape == (52,)
+    assert ts.observation.shape == (52 + env.fog.observation_size,)
+    assert env.observation_space().shape == (52 + env.fog.observation_size,)
     assert env.max_return == pytest.approx(15 + 483 * env.exploration_bonus)
     np.testing.assert_allclose(ts.observation[3:51].reshape(12,4)[:,2],
-                               np.asarray(MAP['opponent_numbers']) / env.number_scale)
+                               np.where(state.revealed[env.opponent_positions[:, 0], env.opponent_positions[:, 1]],
+                                        np.asarray(MAP['opponent_numbers']) / env.number_scale, 0.))
     other, _ = env.reset(jax.random.PRNGKey(999))
     assert plain(other) == plain(state)
 
@@ -261,7 +262,7 @@ def test_current_grid_vmap_scan_on_gpu():
         return jax.lax.scan(advance, states, jnp.zeros((32, 64), jnp.int32))
     states, ts = rollout(jax.random.split(jax.random.PRNGKey(55),64))
     assert states.alive.shape == (64,12)
-    assert ts.observation.shape == (32,64,52)
+    assert ts.observation.shape == (32, 64, 52 + env.fog.observation_size)
     assert all(x.devices() == {jax.devices()[0]} for x in jax.tree.leaves((states,ts)))
 
 

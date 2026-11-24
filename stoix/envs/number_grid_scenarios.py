@@ -7,6 +7,7 @@ from functools import lru_cache
 
 import jax
 import jax.numpy as jnp
+from stoix.envs.number_grid_fog import visible_enemies
 
 
 @lru_cache(maxsize=4)
@@ -131,9 +132,10 @@ class ScenarioRules:
 
     def observation(self, state):
         indices = self.indices
-        return jnp.stack((state.scenario_spawned[indices], state.pending_encounters[indices],
+        rows = jnp.stack((state.scenario_spawned[indices], state.pending_encounters[indices],
             jnp.maximum(0, self.spawn_turns-(state.day-1))/self.max_turn,
-            self.wave_indices/11.), axis=-1).reshape(-1)
+            self.wave_indices/11.), axis=-1)
+        return jnp.where(visible_enemies(state)[indices][:, None], rows, 0.).reshape(-1)
 
     def wave_bonus(self, before, after):
         complete_before = before.scenario_spawned[self.indices] & ~before.alive[self.indices]

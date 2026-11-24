@@ -13,6 +13,7 @@ not change. Rods stay until the episode ends. Each rod pays the optional `reward
 request 09.11.2026; 1.0 on «Дикие горы»), at most once per source.
 """
 import jax.numpy as jnp
+from stoix.envs.number_grid_fog import revealed_at
 
 ROD_PLANTER_HIRED, ROD_PLANTED = 63, 64
 KEYS = {'name', 'cost', 'rod_cost', 'reward', 'sources', 'guards'}
@@ -67,14 +68,16 @@ class RodRules:
                              rod_cost=self.rod_cost, reward=self.reward, sources=spec['sources'], guards=spec['guards'])
 
     def guard_defeated(self, state):
-        return (self.guards < 0) | ~state.alive[jnp.maximum(self.guards, 0)]
+        guards = jnp.maximum(self.guards, 0)
+        return (self.guards < 0) | (~state.alive[guards] & revealed_at(state, state.enemy_positions[guards]))
 
     def available(self, state):
         ready = ~state.in_battle & ~state.done
         hire = ready & ~state.rod_planter & (state.gold >= self.cost)
         land = self.territory.owned(state, self.territory.mine_positions)[self.sources]
+        known = revealed_at(state, self.territory.mine_positions[self.sources])
         plant = (ready & state.rod_planter & ~state.mine_rods[self.sources] & ~land & self.guard_defeated(state)
-                 & (state.gold >= self.rod_cost))
+                 & known & (state.gold >= self.rod_cost))
         return jnp.concatenate((hire[None], plant))
 
     def apply(self, state, action):
@@ -92,5 +95,6 @@ class RodRules:
         ), jnp.where(plant, self.reward, 0.).astype(jnp.float32)
 
     def observation(self, state):
-        return jnp.concatenate((state.rod_planter[None], state.mine_rods[self.sources],
-                                self.guard_defeated(state))).astype(jnp.float32)
+        known = revealed_at(state, self.territory.mine_positions[self.sources])
+        return jnp.concatenate((state.rod_planter[None], known & state.mine_rods[self.sources],
+                                known & self.guard_defeated(state))).astype(jnp.float32)

@@ -40,6 +40,7 @@ JAX campaign map, extended to the capital by user request (2026-11-08):
 """
 import jax
 import jax.numpy as jnp
+from stoix.envs.number_grid_fog import revealed_at
 import numpy as np
 
 from stoix.envs.number_grid_combat import HP
@@ -299,6 +300,7 @@ class GarrisonRules:
         bits = jnp.left_shift(jnp.uint32(1), jnp.maximum(self.offer_required, 0).astype(jnp.uint32))
         built = (self.offer_required < 0) | ((state.buildings & bits) != 0)
         selected = self.selected_site(state)
+        known = revealed_at(state, self.positions[selected])
         hire = (ready & self.owned(state)[selected] & built & (state.gold >= self.offer_costs)
                 & (self.targets(state)[selected] >= 0))
         parts = [hire]
@@ -306,7 +308,7 @@ class GarrisonRules:
             recovery = self.selected_site(state)
             gids = state.garrison_ids[recovery]
             dead = (gids != 0) & (state.garrison_hp[recovery] <= 0)
-            temple = ready & self.capital.temple_built(state)
+            temple = ready & known & self.capital.temple_built(state)
             parts.append(temple & dead & (state.gold >= self.revive_price(state)))
             # Healing: a living wounded unit and gold for at least one HP; masked otherwise.
             hp, maximum = state.garrison_hp[recovery], self.garrison_max_hp(state)[recovery]
@@ -322,9 +324,8 @@ class GarrisonRules:
         parts.append(here & leader & (gids != 0) & ~self.progression.capital_guards[gids] & room
                      & (self.take_targets(state) >= 0))
         possible, _ = self.swap_pairs(state)
-        selected = self.selected_site(state)
         unused = (state.garrison_swaps_used[selected] & self.swap_bits) == 0
-        parts.append(ready & possible & unused & (state.garrison_swaps_today[selected] < SWAP_LIMIT))
+        parts.append(ready & known & possible & unused & (state.garrison_swaps_today[selected] < SWAP_LIMIT))
         parts.append(ready & self.owned(state) & (jnp.arange(self.count) != selected))
         return jnp.concatenate(parts)
 
@@ -640,13 +641,15 @@ class GarrisonRules:
                           jnp.sum(self.occupied(ids), axis=1)/6.,
                           (state.garrison_battle & (state.garrison_site == jnp.arange(self.count))).astype(jnp.float32),
                           attacked.astype(jnp.float32)), axis=-1)
-        sites = jnp.concatenate((head, cells.reshape(self.count, -1)), axis=1).reshape(-1)
+        known = revealed_at(state, self.positions)
+        sites = jnp.concatenate((head, cells.reshape(self.count, -1)), axis=1)
+        sites = jnp.where(known[:, None], sites, 0.).reshape(-1)
         if not self.action_count:
             return sites
         swaps = jnp.concatenate((state.garrison_swaps_today[:, None]/SWAP_LIMIT,
-            ((state.garrison_swaps_used[:, None] & self.swap_bits) != 0).astype(jnp.float32)), axis=1).reshape(-1)
-        selected = (jnp.arange(self.count) == self.selected_site(state)).astype(jnp.float32)
-        return jnp.concatenate((sites, swaps, selected))
+            ((state.garrison_swaps_used[:, None] & self.swap_bits) != 0).astype(jnp.float32)), axis=1)
+        selected = known & (jnp.arange(self.count) == self.selected_site(state))
+        return jnp.concatenate((sites, jnp.where(known[:, None], swaps, 0.).reshape(-1), selected))
 
     def snapshot(self, state):
         """UI: local settlement transfers and the selected garrison's paid recovery offers."""

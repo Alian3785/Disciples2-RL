@@ -5,6 +5,7 @@ docs/BETHREZENS_RETREAT.md and docs/MAPS.md. No host callbacks or source parsing
 """
 import jax
 import jax.numpy as jnp
+from stoix.envs.number_grid_fog import revealed_at, visible_enemies
 
 from stoix.envs.number_grid_combat import ATTACK_TYPES, HP
 from stoix.envs.number_grid_items import remove_items
@@ -30,7 +31,9 @@ class ScriptEventRules:
         count = len(game_map['opponent_positions'])
         reserved = game_map.get('scenario_event_enemies', [])
         self.reserved = jnp.array([i in reserved for i in range(count)], bool)
-        self.observation_size = self.count + int(self.objective_event >= 0)
+        self.observation_size = int(self.objective_event >= 0)
+        if self.objective_event >= 0:
+            self.objective_position = jnp.asarray(game_map['objective_position'], jnp.int32)
         self.initial_orders = jnp.zeros(0, jnp.int32)
         if not self.configured:
             return
@@ -128,9 +131,10 @@ class ScriptEventRules:
                     radii=jnp.array([e.get('radius', 1) for e in rows], jnp.int32)))
 
     def observation(self, state):
-        values = (state.script_events_fired.astype(jnp.float32), state.script_orders/14.)
+        values = (jnp.where(visible_enemies(state)[self.movers], state.script_orders/14., 0.),)
         if self.objective_event >= 0:
-            values += (jnp.atleast_1d(self.objective_ready(state)).astype(jnp.float32),)
+            ready = self.objective_ready(state) & revealed_at(state, self.objective_position)
+            values += (jnp.atleast_1d(ready).astype(jnp.float32),)
         return jnp.concatenate(values)
 
     def objective_ready(self, state):

@@ -1,6 +1,7 @@
 """Faction recruitment and leadership from the Python reference; see docs/ECONOMY.md."""
 import jax
 import jax.numpy as jnp
+from stoix.envs.number_grid_fog import revealed_at
 
 HIRED, DISMISSED = 41, 42
 
@@ -197,12 +198,20 @@ class RecruitmentRules:
         return jax.lax.cond(valid, change, lambda s: (s, jnp.float32(0)), state)
 
     def observation(self, state):
-        parts = [self.composition(state)/5., self.ids/len(self.progression.rows),
-            self.prices(state)/1000., (self.targets(state)+1)/6., self.positions.reshape(-1)/self.scale]
+        known_positions = revealed_at(state, self.positions)
+        positions = jnp.where(known_positions[:, None], self.positions/self.scale, 0.)
         if self.initial_stock.size:
-            camps = (jnp.atleast_1d(self.sites.at(state, 'mercenary')) if self.camp_count == 1
-                     else self.sites.at_sites(state)[self.sites.kind_sites['mercenary']])
-            parts.extend((state.mercenary_stock/self.initial_stock, camps))
+            camps = self.sites.kind_sites['mercenary']
+            known_camps = revealed_at(state, self.sites.anchors[camps])
+            known_mercenaries = revealed_at(state, self.sites.anchors[self.offer_sites])
+            known = jnp.concatenate((jnp.ones(5, bool), known_mercenaries))
+        else:
+            known = jnp.ones(self.offer_count, bool)
+        parts = [self.composition(state)/5., jnp.where(known, self.ids/len(self.progression.rows), 0.),
+            jnp.where(known, self.prices(state)/1000., 0.), jnp.where(known, (self.targets(state)+1)/6., 0.), positions.reshape(-1)]
+        if self.initial_stock.size:
+            stock = jnp.where(known_mercenaries, state.mercenary_stock/self.initial_stock, 0.)
+            parts.extend((stock, known_camps & self.sites.at_sites(state)[camps]))
         if self.faction_only_rewards:
             parts.append(state.mercenary_units[:6].astype(jnp.float32))
         return jnp.concatenate(parts)

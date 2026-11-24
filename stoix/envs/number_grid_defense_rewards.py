@@ -38,6 +38,7 @@ import math
 
 import jax
 import jax.numpy as jnp
+from stoix.envs.number_grid_fog import revealed_at
 import numpy as np
 
 KEYS = {'attacker_xp', 'party_level_record', 'mana_guard', 'level2_multiplier', 'level3_multiplier',
@@ -240,9 +241,11 @@ class DefenseRewards:
         return after.replace(defense_raw_return=raw_return), reward+adjustment
 
     def observation(self, state):
+        indices = self.repeat_indices
+        known_defeats = revealed_at(state, state.enemy_positions[indices]) & state.defense_defeated[indices]
         parts = (jnp.array([state.party_level_record/100., state.party_reward_multiplier-1.,
                                            state.defense_raw_return/1000.], jnp.float32),
-                 state.party_level_milestones, state.defense_defeated[self.repeat_indices])
+                 state.party_level_milestones, known_defeats)
         if self.day_count:
             parts += (jnp.array([state.party_upgrade_count/self.upgrade_scale], jnp.float32),
                       state.party_day_milestones)

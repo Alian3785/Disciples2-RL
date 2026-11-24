@@ -1,7 +1,7 @@
 """Map casts of researched spells. Sources: docs/MAGIC.md.
 
-Python reference campaign_env_magic.py: offensive spells hit one nearest
-living stack (Chebyshev distance, then the lower stack index, no pathfinding).
+Offensive spells hit the nearest living stack on a revealed tile (Chebyshev
+distance, then the lower source ID, no pathfinding).
 Damage and debuffs skip stacks on city/ruin sites; summons reach any stack and
 immediately start a separate battle of the summoned unit alone. Support spells
 affect the hero stack until the next REST. Every check is shared by mask/step.
@@ -11,6 +11,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from stoix.envs.number_grid_combat import ATTACK_TYPES, HP
+from stoix.envs.number_grid_fog import revealed_at, visible_enemies
 from stoix.envs.number_grid_updates import set_rows
 from stoix.envs.number_grid_spell_items import (LORE_LEVEL, SCROLL_MAGE_COST, SCROLL_MAGE_HIRED,
                                                 scenario_spell_items, spell_item_action_names)
@@ -223,19 +224,20 @@ class SpellCastRules:
 
     # Targeting -----------------------------------------------------------
     def targets(self, state):
-        """Nearest living stack and nearest field stack with their distances."""
+        """Nearest visible stack and nearest visible field stack with their distances."""
         distance = jnp.max(jnp.abs(state.enemy_positions - state.position), axis=1)
         # Reference: distance, then source enemy ID (the mobile bot is -75).
         key = distance * self.enemy_count + self.target_order
         worst = jnp.iinfo(jnp.int32).max
-        any_key = jnp.where(state.alive, key, worst)
+        visible = visible_enemies(state)
+        any_key = jnp.where(visible, key, worst)
         field = self.field
         if self.bot_enemy is not None:
             position = state.enemy_positions[self.bot_enemy]
             protected = (jnp.all(position == self.bot_home)
                          | jnp.all(position == jnp.array(self.territory.capital)))
             field = field.at[self.bot_enemy].set(~protected)
-        field_key = jnp.where(state.alive & field, key, worst)
+        field_key = jnp.where(visible & field, key, worst)
         any_target, field_target = jnp.argmin(any_key), jnp.argmin(field_key)
         any_target = jnp.where(any_key[any_target] < worst, any_target, -1).astype(jnp.int32)
         field_target = jnp.where(field_key[field_target] < worst, field_target, -1).astype(jnp.int32)
@@ -265,7 +267,12 @@ class SpellCastRules:
         support = jnp.any(living) & jnp.where(kind == MOVES, state.movement_points < cap,
             jnp.where(kind == HEAL, jnp.any(living & (state.hp[:6] < max_hp[:6])),
                       ~self.effect_active(state.spell_effects, sel(self.blockers))))
-        offense = jnp.where(sel(self.field_only), field_target >= 0, any_target >= 0)
+        # Check the actual target even if the caller supplies a preselected attacker.
+        candidates = jnp.stack((any_target, field_target))
+        indices = jnp.clip(candidates, 0, self.enemy_count - 1)
+        known = ((candidates >= 0) & (candidates < self.enemy_count) & state.alive[indices]
+                 & revealed_at(state, state.enemy_positions[indices]))
+        offense = jnp.where(sel(self.field_only), known[1], known[0])
         return jnp.where(sel(self.offensive), offense, support) & ~state.in_battle & ~state.done
 
     def _book(self, state, index=None):
@@ -557,12 +564,13 @@ class SpellCastRules:
     def observation(self, state):
         any_target, field_target, distance = self.targets(state)
         scale = self.size - 1
+        visible = visible_enemies(state)
+        marked = jnp.any(state.enemy_spell_effects != 0, axis=-1) if self.effect_shape else state.enemy_spell_effects != 0
         parts = [
             state.spell_casts / self.limits,
             self.effect_active(state.spell_effects, self.bits).astype(jnp.float32),
-            jnp.sum(state.enemy_wounds, axis=1) / self.base_totals,
-            ((jnp.any(state.enemy_spell_effects != 0, axis=-1) if self.effect_shape
-              else state.enemy_spell_effects != 0) + 2. * state.summon_marks) / 3.,
+            jnp.where(visible, jnp.sum(state.enemy_wounds, axis=1) / self.base_totals, 0.),
+            jnp.where(visible, (marked + 2. * state.summon_marks) / 3., 0.),
             jnp.array([state.summon_battle, any_target >= 0, field_target >= 0,
                        jnp.where(any_target >= 0, distance[jnp.maximum(any_target, 0)] / scale, 1.),
                        jnp.where(field_target >= 0, distance[jnp.maximum(field_target, 0)] / scale, 1.)], jnp.float32)]

@@ -19,7 +19,8 @@ def cuda_only():
 def defence():
     env = NumberGrid(map_config=load_map('city_defence_train'))
     state, _ = compiled_method(env, 'reset')(jax.random.PRNGKey(0))
-    return env, state
+    row, col = env.garrisons.positions[0]
+    return env, state.replace(revealed=state.revealed.at[row, col].set(True))
 
 
 def step(env, state, action):

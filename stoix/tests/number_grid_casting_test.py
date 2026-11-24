@@ -25,7 +25,8 @@ MANA = jnp.full(5, 5000, jnp.int32)
 def ready(env, initial, *spells, **changes):
     """Day-one map state with the listed legion spells learned and ample mana."""
     bits = sum(1 << i for i in spells)
-    return initial.replace(learned_spells=jnp.uint32(bits), mana=MANA, **changes)
+    return initial.replace(learned_spells=jnp.uint32(bits), mana=MANA,
+                           revealed=env.fog.playable, **changes)
 
 
 def faction_rules(env, faction, lord='warrior'):
@@ -94,7 +95,7 @@ def test_nearest_target_is_one_vector_chebyshev_argmin(current_game):
     alive = rng.random((256, rules.enemy_count)) < .3
     alive[0] = False  # no living stack at all
     initial = current_game[1]
-    batch = jax.vmap(lambda p, a: initial.replace(position=p, alive=a))(jnp.asarray(points), jnp.asarray(alive))
+    batch = jax.vmap(lambda p, a: initial.replace(position=p, alive=a, revealed=env.fog.playable))(jnp.asarray(points), jnp.asarray(alive))
     any_target, field_target, distance = jax.jit(jax.vmap(rules.targets))(batch)
     for k in range(len(points)):
         d = np.max(np.abs(positions - points[k]), axis=1)
@@ -129,7 +130,7 @@ def test_damage_hits_nearest_field_stack_spends_mana_and_daily_limit(current_gam
     assert float(ts.reward) == pytest.approx(-env.step_cost)
     both, _ = step(burned, jnp.int32(rules.start+2))
     assert both.enemy_wounds[0, 0] == 30
-    tail = compiled_method(env, 'observation')(both)[:-1][-rules.observation_size-env.unit_swaps.observation_size:-env.unit_swaps.observation_size]
+    tail = compiled_method(env, 'observation')(both)[:-1-env.fog.observation_size][-rules.observation_size-env.unit_swaps.observation_size:-env.unit_swaps.observation_size]
     np.testing.assert_allclose(tail[:rules.count], np.eye(rules.count)[1]+np.eye(rules.count)[2])
     assert float(tail[2*rules.count]) == pytest.approx(.3)  # 30 of the Squire's 100 HP
     np.testing.assert_allclose(tail[-5:], [0, 1, 1, 6/47, 6/47], rtol=1e-6)
@@ -402,7 +403,7 @@ def test_human_cast_metadata_quotes_and_summon_event(human_service):
     assert casting['daily_limit'] == 1 and len(casting['spells']) == 17
     assert casting['spells'][1] == {**casting['spells'][1], 'kind': 'damage', 'amount': 15, 'element': 'fire', 'action': 213}
     assert game['snapshot']['cast_quotes']['status'] == [1]*17
-    service.sessions[game['session']] = (key, state.replace(learned_spells=jnp.uint32(1), mana=MANA), total)
+    service.sessions[game['session']] = (key, ready(env, state, 0), total)
     event = service.act(game['session'], env.casting.start)['snapshot']
     assert event['state']['last_event'] == SUMMON_CAST and event['state']['summon_battle']
     assert event['state']['in_battle'] and event['state']['last_spell_target'] == 0
