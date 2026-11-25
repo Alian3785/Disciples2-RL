@@ -19,6 +19,7 @@ import jax
 import jax.numpy as jnp
 
 from stoix.envs.number_grid_combat import HP
+from stoix.envs.number_grid_fog import visible_enemies
 
 THIEF_POISONED, THIEF_FAILED = 65, 66  # last_event: the army is poisoned / the thief died
 MAX_TRIES = 2  # per hired thief per day: the second only after a successful first
@@ -52,7 +53,7 @@ def capital_attackers(env, state, capital):
         future = env.script_events.advance(future)
     if env.campaign_events.enabled:
         future = env.campaign_events.advance(future)
-    return state.alive & future.alive & jnp.all(future.enemy_positions == capital, axis=-1)
+    return visible_enemies(state) & future.alive & jnp.all(future.enemy_positions == capital, axis=-1)
 
 
 class ThiefRules:

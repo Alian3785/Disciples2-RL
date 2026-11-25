@@ -1,6 +1,7 @@
 """Guarded 3x3 ruins with one-shot loot. Sources: docs/ECONOMY.md."""
 import jax.numpy as jnp
 from stoix.envs.number_grid_limits import add_resource
+from stoix.envs.number_grid_fog import revealed_at
 
 from stoix.envs.number_grid_sites import APPROACH_OFFSETS
 
@@ -97,4 +98,5 @@ class RuinRules:
             gold=add_resource(state.gold,jnp.sum(jnp.where(collected,self.gold,0)))), .25*jnp.any(collected)
 
     def observation(self, state):
-        return jnp.concatenate((self.features,state.ruin_looted[:,None]),axis=1).reshape(-1)
+        rows = jnp.concatenate((self.features, state.ruin_looted[:, None]), axis=1)
+        return jnp.where(revealed_at(state, self.entrances)[:, None], rows, 0.).reshape(-1)

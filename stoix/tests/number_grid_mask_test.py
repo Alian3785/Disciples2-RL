@@ -33,7 +33,7 @@ def test_requested_wrapper_and_observation_space():
     assert isinstance(env, AddActionMaskWrapper)
     state, ts = env.reset(jax.random.PRNGKey(0))
     assert set(ts.observation) == {'observation', 'action_mask'}
-    assert ts.observation['observation'].shape == (52,)
+    assert ts.observation['observation'].shape == (52 + MAP['size'] ** 2,)
     assert ts.observation['action_mask'].shape == (8,)
     assert jax.tree.structure(ts.observation) == jax.tree.structure(env.observation_space().generate_value())
     state, ts = compiled_method(env,'step')(state, jnp.int32(7))
@@ -41,7 +41,7 @@ def test_requested_wrapper_and_observation_space():
     np.testing.assert_array_equal(ts.observation['action_mask'], ts.extras['action_mask'])
     legacy = wrap_wall_action_mask(NumberGrid(map_config={**MAP, 'mask_walls': False}))
     assert isinstance(legacy, NumberGrid)
-    assert legacy.reset(jax.random.PRNGKey(0))[1].observation.shape == (52,)
+    assert legacy.reset(jax.random.PRNGKey(0))[1].observation.shape == (52 + legacy.fog.observation_size,)
 
 
 def test_autoreset_keeps_reset_mask_and_final_mask_separate():

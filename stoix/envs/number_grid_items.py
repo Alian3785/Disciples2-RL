@@ -8,6 +8,7 @@ import jax.numpy as jnp
 
 from stoix.envs.number_grid_battle_items import MAGIC_ITEMS, TALISMAN_USES
 from stoix.envs.number_grid_hero_skills import lore_levels
+from stoix.envs.number_grid_fog import revealed_at
 from stoix.envs.number_grid_spell_items import SPELL_ITEMS
 from stoix.envs.number_grid_updates import set_column, set_rows
 
@@ -171,6 +172,7 @@ class ItemRules:
         initial = [self.keys.index(key) for key,count in inventories[0].items() for _ in range(count)]
         self.initial_inventory = jnp.array(initial+[-1]*(self.capacity-len(initial)),jnp.int32)
         self.chest_loot = jnp.array([[c.get(key,0) for key in self.keys] for c in inventories[1:chest_count+1]],jnp.int32).reshape(chest_count,self.count)
+        self.chest_positions = jnp.array([c['position'] for c in game_map.get('chests', [])], jnp.int32).reshape(-1, 2)
         # Chest and ruin loot features skip merchant- and city-only kinds: their columns are always zero.
         looted = {key for contents in inventories[:ruin_end] for key,count in contents.items() if count}
         self.loot_kinds = [i for i,key in enumerate(self.keys) if key in looted]
@@ -279,8 +281,10 @@ class ItemRules:
         return jnp.sum(state.item_inventory[:,None]==jnp.arange(self.count)[None,:],axis=0)
 
     def observation(self,state):
+        chest_loot = jnp.where(revealed_at(state, self.chest_positions)[:, None],
+                               self.chest_loot[:, self.loot_kinds], 0)
         return jnp.concatenate(((state.item_inventory+1)/max(1,self.count),
-                                (state.equipped+1)/max(1,self.count),self.chest_loot[:,self.loot_kinds].reshape(-1),
+                                (state.equipped+1)/max(1,self.count),chest_loot.reshape(-1),
                                 state.item_charges_spent/float(TALISMAN_USES)))
 
     @property

@@ -25,6 +25,7 @@ from collections import deque
 
 import jax
 import jax.numpy as jnp
+from stoix.envs.number_grid_fog import revealed_at, visible_enemies
 import numpy as np
 
 from stoix.envs.number_grid_combat import ATTACK_TYPES
@@ -196,7 +197,7 @@ class CampaignEventRules:
         self.offsets = jnp.array(offsets, jnp.int32)
         self.rings = jnp.max(jnp.abs(self.offsets), axis=1)
         self.directions = jnp.array([(r, c) for r in (-1, 0, 1) for c in (-1, 0, 1) if r or c], jnp.int32)
-        self.observation_size = 2*E+self.mover_count
+        self.observation_size = self.mover_count if self.target_count else 0
         self.metadata = dict(events=[dict(id=e['id'], name=e['name']) for e in events],
                              targets=targets, armies=[a['enemy'] for a in armies])
 
@@ -335,5 +336,8 @@ class CampaignEventRules:
             pending_encounters=state.pending_encounters.at[indices].set(state.pending_encounters[indices] | contact))
 
     def observation(self, state):
-        return jnp.concatenate((state.campaign_fired, state.campaign_enabled,
-                                (state.campaign_targets+1)/(self.target_count+1))).astype(jnp.float32)
+        if not self.target_count:
+            return jnp.zeros(0, jnp.float32)
+        targets = state.campaign_targets
+        known = visible_enemies(state)[self.movers] & revealed_at(state, self.targets[jnp.maximum(targets, 0)])
+        return jnp.where(known, (targets+1)/(self.target_count+1), 0.)

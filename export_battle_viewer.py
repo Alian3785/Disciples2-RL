@@ -77,6 +77,8 @@ def build(output=None, episodes=3, seeds=None):
     params = jax.tree.map(jnp.asarray,serialization.msgpack_restore(checkpoint)['actor_params'])
     config = OmegaConf.load(output/'config.json')
     env = NumberGrid(map_config=game_map)
+    if result.get('observation_size') != env.observation_size:
+        raise ValueError('The checkpoint uses a different NumberGrid observation layout.')
     policy_env = wrap_wall_action_mask(env)
     actor = FeedForwardActor(torso=hydra.utils.instantiate(config.network.actor_network.pre_torso),
                              action_head=hydra.utils.instantiate(config.network.actor_network.action_head,

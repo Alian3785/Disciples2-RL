@@ -80,7 +80,7 @@ def test_hire_scroll_consumption_and_staff_access(current_game):
         return apply(state, jnp.int32(a), max_hp(state), movement_cap(state))
 
     state = initial.replace(item_inventory=items.initial_inventory, mana=MANA, gold=jnp.int32(SCROLL_MAGE_COST),
-                            spell_casts=jnp.zeros(rules.book_count, jnp.int32))
+                            spell_casts=jnp.zeros(rules.book_count, jnp.int32), revealed=env.fog.playable)
     # Locked until a reader is hired: once, for 500 gold, while a scroll or staff is owned.
     usable, hire = check(state)
     assert not any(usable.values()) and hire and set(status(state).values()) == {1}

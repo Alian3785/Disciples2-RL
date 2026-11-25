@@ -2404,6 +2404,7 @@
   "reconstruction_note": "S103 static map with selected pursuit/ambush events and capital defense; victory requires the Runic Key at the gate.",
   "battle_automatic_turn_limit": 16,
   "tracked_enemy": 39,
+  "tracked_enemy_defeat_reward": 100.0,
   "max_spell_level": 4,
   "max_hero_level": 9,
   "starting_land": [

@@ -4,6 +4,7 @@ from pathlib import Path
 
 import jax
 import jax.numpy as jnp
+from stoix.envs.number_grid_fog import revealed_at
 from stoix.envs.number_grid_limits import add_resource
 
 from stoix.envs.number_grid_battle_items import MAGIC_BY_KEY
@@ -327,12 +328,16 @@ class SiteRules:
         return state
 
     def observation(self, state):
-        parts = [self.anchors.reshape(-1)/self.map_scale,
-                 state.merchant_stock/jnp.maximum(self.initial_stock, 1), self.buy_prices(state)/1000.]
+        known = revealed_at(state, self.anchors)
+        stock = jnp.where(known[self.buy_sites], state.merchant_stock/jnp.maximum(self.initial_stock, 1), 0.)
+        prices = jnp.where(known[self.buy_sites], self.buy_prices(state)/1000., 0.)
+        parts = [jnp.where(known[:, None], self.anchors/self.map_scale, 0.).reshape(-1), stock, prices]
         if self.has_trainer:
-            parts.append(self.training_quotes(state)[:, 0]/10.)
+            parts.append(jnp.where(jnp.any(known[self.kind_sites['trainer']]), self.training_quotes(state)[:, 0]/10., 0.))
         if self.has_spell_shop:
-            parts += [state.spell_stock/self.spell_initial_stock, self.spell_prices/1000.]
+            known_spells = known[self.spell_sites]
+            parts += [jnp.where(known_spells, state.spell_stock/self.spell_initial_stock, 0.),
+                      jnp.where(known_spells, self.spell_prices/1000., 0.)]
         return jnp.concatenate(parts)
 
     def quotes(self, state):

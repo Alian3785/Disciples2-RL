@@ -63,14 +63,15 @@ def effect_tables(profiles):
     )
 
 
-def source_protection(eligible, source, traits, used, slots):
+def source_protection(eligible, source, traits, used, slots, class_immunity_bit=0):
     """Secondary source is 1-based, or zero for an effect without a source.
 
-    A missed/ineligible effect never spends a ward. Immunity takes precedence.
+    Source and attack-class immunities both take precedence over a source ward.
+    A missed/ineligible effect never spends a ward.
     Return valid hits, updated spent-source bits, and display slot bitsets.
     """
     bit = jnp.where(source > 0, jnp.left_shift(jnp.uint32(1), jnp.maximum(source, 1)-1), jnp.uint32(0))
-    immune = eligible & ((traits[slots, 2] & bit) != 0)
+    immune = eligible & ((traits[slots, 2] & (bit | class_immunity_bit)) != 0)
     warded = eligible & ~immune & ((traits[slots, 3] & ~used[slots] & bit) != 0)
     used = set_rows(used, slots, used[slots] | jnp.where(warded, bit, jnp.uint32(0)))
     bits = jnp.left_shift(jnp.uint32(1), slots.astype(jnp.uint32))

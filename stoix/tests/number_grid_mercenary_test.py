@@ -13,8 +13,10 @@ from stoix.tests.number_grid_fixtures import compiled_method, hero_roster_state
 
 
 def camp_state(env, state):
+    row, col = env.site_rules.anchors[env.site_rules.kind_sites['mercenary'][0]]
     return hero_roster_state(env, state, [None, 'duke', None, None, None, None]).replace(
         position=env.site_rules.approaches['mercenary'][0], gold=jnp.int32(1000),
+        revealed=state.revealed.at[row,col].set(True),
         hire_rewarded_capacity=jnp.int32(0), movement_points=jnp.int32(0))
 
 
@@ -97,7 +99,7 @@ def test_mercenary_lute_discount_nonstacking_and_observable_quotes(current_game)
     assert hired.gold == 0 and hired.last_service_cost == 765
     before = compiled_method(env,'observation')(base)
     after = compiled_method(env,'observation')(base.replace(mercenary_stock=jnp.zeros(2,jnp.int32)))
-    assert before.shape == (1846,) and jnp.all(jnp.isfinite(before))
+    assert before.shape == (1846 + env.fog.observation_size - 5,) and jnp.all(jnp.isfinite(before))
     assert not jnp.array_equal(before,after)
 
 

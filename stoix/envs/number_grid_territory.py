@@ -7,6 +7,7 @@ from collections import deque
 from functools import lru_cache
 import jax
 import jax.numpy as jnp
+from stoix.envs.number_grid_fog import revealed_at
 from stoix.envs.number_grid_limits import add_resource
 
 from stoix.envs.number_grid_lords import lord_settings
@@ -255,11 +256,11 @@ class TerritoryRules:
             [c['position'] for c in self.enemy_capitals], jnp.int32).reshape(-1, 2)
         offsets = [(r,c) for r in range(-2,3) for c in range(-2,3)]
         self.local_offsets = jnp.array(offsets,jnp.int32)
-        # Mana, six income values, independent source growth, city and mine rows,
+        # Mana, six known income values, city and mine rows,
         # local 5x5 ownership/obstacle windows, fort/lord context.
-        self.observation_size = 5+6+(1+self.count)+8*self.count+5*len(self.mines)+50+3
+        self.observation_size = 5+6+7*self.count+5*len(self.mines)+50+3
         if self.contested:
-            self.observation_size += 25+len(self.mines)+len(self.opponent_sources)
+            self.observation_size += 25+len(self.mines)
         self.metadata = dict(cities=[dict(c,action=start+i) for i,c in enumerate(self.cities)],
             mines=self.mines, resource_kinds=RESOURCE_KINDS, resource_names=RESOURCE_NAMES,
             mine_income=50,base_income=self.base_income.tolist(),capital_growth=10,
@@ -469,8 +470,9 @@ class TerritoryRules:
         # A planted rod pays as if the land covered its source (number_grid_rods.py).
         return self.owned(state,self.mine_positions) | state.mine_rods
 
-    def income(self,state):
-        income = self.base_income+50*jnp.sum(self.mine_onehot*self.mine_ownership(state)[:,None],axis=0)
+    def income(self,state,known=True):
+        sources = self.mine_ownership(state) & known
+        income = self.base_income+50*jnp.sum(self.mine_onehot*sources[:,None],axis=0)
         return income if self.passive_mana_income else income.at[1:].set(0)
 
     def next_turn(self,state,resting=True):
@@ -566,19 +568,23 @@ class TerritoryRules:
 
     def observation(self,state):
         """Encode land, resource ownership, and settlement state without changing territory."""
+        known_cities = revealed_at(state, self.positions)
+        known_mines = revealed_at(state, self.mine_positions)
         cities = jnp.concatenate((self.positions/(self.size-1),state.city_levels[:,None]/5.,state.city_owned[:,None],
-            state.territory_claims[1:,None]/(self.size*self.size),
             self.remaining_defenders(state)[:,None]/2.,
-            self.costs[state.city_levels,None]/1000.,state.city_upgraded_today[:,None]),axis=1).reshape(-1)
+            self.costs[state.city_levels,None]/1000.,state.city_upgraded_today[:,None]),axis=1)
         mines = jnp.concatenate((self.mine_positions/(self.size-1),self.mine_kinds[:,None]/5.,
-            self.mine_ownership(state)[:,None],jnp.full((len(self.mines),1),.05)),axis=1).reshape(-1)
+            self.mine_ownership(state)[:,None],jnp.full((len(self.mines),1),.05)),axis=1)
         local = state.position+self.local_offsets
-        observation = jnp.concatenate((state.mana/1000.,self.income(state)/100.,state.territory_claims/(self.size*self.size),
-            cities,mines,self.owned(state,local),self.blocked(local),
+        known_local = revealed_at(state, local)
+        observation = jnp.concatenate((state.mana/1000.,self.income(state, known_mines)/100.,
+            jnp.where(known_cities[:, None], cities, 0.).reshape(-1),
+            jnp.where(known_mines[:, None], mines, 0.).reshape(-1),
+            known_local & self.owned(state,local),known_local & self.blocked(local),
             jnp.array([self.service_at(state),self.fort_regeneration(state)/100.,self.lord_regen/100.])))
         if self.contested:
-            observation = jnp.concatenate((observation, self.owner(state, local) == 2,
-                self.owner(state, self.mine_positions) == 2, state.opponent_claims/(self.size*self.size)))
+            observation = jnp.concatenate((observation, known_local & (self.owner(state, local) == 2),
+                known_mines & (self.owner(state, self.mine_positions) == 2)))
         return observation
 
     def quotes(self,state,banner=0):

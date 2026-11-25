@@ -22,6 +22,7 @@ from stoix.envs.number_grid_progression import ProgressionRules, BLOCKED_XP_FEAT
 from stoix.envs.number_grid_limits import MAX_HP, MAX_RESOURCE, cap_stats, add_resource
 from stoix.envs.number_grid_summoning import Summoning, COPY_ALLY, COPY_ACTIONS, advance_linked_queue
 from stoix.envs.number_grid_chests import ChestRules
+from stoix.envs.number_grid_fog import revealed_at, visible_enemies
 from stoix.envs.number_grid_capital_training import CapitalTrainingRules
 from stoix.envs.number_grid_items import ItemRules
 from stoix.envs.number_grid_sites import BOUGHT, SiteRules, sites_present, trade_action_names
@@ -268,6 +269,7 @@ class BattleState(NumberGridState):
     reference_previous: jax.Array
     reference_city_reached: jax.Array
     reference_defeated: jax.Array
+    tracked_enemy_rewarded: jax.Array
     reference_hp_milestones: jax.Array
     reference_potion_pending: jax.Array
     capital_defense_acquired: jax.Array  # newly obtained defensive bottles, not initial stock
@@ -904,11 +906,17 @@ class NumberGrid(Summoning, NumericNumberGrid):
         self.objective_reward_hero_only = game_map.get('objective_reward_hero_only', False)
         if type(self.objective_reward_hero_only) is not bool:
             raise ValueError('objective_reward_hero_only must be true or false')
-        # Telemetry only: an army whose destruction is charted (S103's Green Dragon). No reward.
+        # Chart this army's defeat and optionally award a scenario-specific bonus.
         self.tracked_enemy = game_map.get('tracked_enemy')
         if self.tracked_enemy is not None and (type(self.tracked_enemy) is not int
                                                or not 0 <= self.tracked_enemy < len(game_map['opponent_positions'])):
             raise ValueError('tracked_enemy must index an opponent army')
+        self.tracked_enemy_defeat_reward = game_map.get('tracked_enemy_defeat_reward', 0.)
+        if (type(self.tracked_enemy_defeat_reward) not in (int, float)
+                or not 0 <= self.tracked_enemy_defeat_reward < float('inf')):
+            raise ValueError('tracked_enemy_defeat_reward must be finite and nonnegative')
+        if self.tracked_enemy_defeat_reward and (self.tracked_enemy is None or not self.reference_rewards):
+            raise ValueError('tracked_enemy_defeat_reward requires tracked_enemy and python_reference rewards')
         if self.objective_enemy is not None:
             if type(self.objective_enemy) is not int or not 0 <= self.objective_enemy < len(self.opponent_positions):
                 raise ValueError('objective_enemy must be a valid zero-based enemy index')
@@ -1034,6 +1042,11 @@ class NumberGrid(Summoning, NumericNumberGrid):
         self.num_actions += len(garrison_action_names(game_map))
         if self.basic_combat:
             self.terrain = TerrainRules(game_map, self.progression if self.progression_enabled else None)
+        if self.progression_enabled:
+            self.scout_ranges = jnp.asarray([
+                min(8, int(row.get('scouting', row.get('game_data', {}).get('SCOUT', 0)) or 0))
+                if row.get('hero') else 0 for row in self.progression.rows
+            ], jnp.int32)
         self.script_events = ScriptEventRules(game_map, self)
         self.campaign_events = CampaignEventRules(game_map, self)
         self.garrisons = GarrisonRules(game_map, self.progression if self.progression_enabled else None,
@@ -1082,7 +1095,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
         if (self.warrior_slot >= 0 or self.has_enemy_warriors) and self.observation_version not in (3, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45):
             raise ValueError('Warrior maps require battle_observation_version 3, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17 or 18')
         self.observation_size = (4 + 5 * self.num_opponents + (141 if self.basic_combat else 48) + 6 if self.observation_version in (2, 3, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45)
-                                 else self.observation_size + 2 * self.num_opponents + 12 * 8 + 6)
+                                 else 4 + 6 * self.num_opponents + 12 * 8 + 6)
+        self.observation_size += self.fog.observation_size
         self.observation_size += 1  # Strategic day, shared by every campaign and battle mode.
         self.observation_size += self.scenario.observation_size
         self.observation_size += self.script_events.observation_size
@@ -1093,7 +1107,6 @@ class NumberGrid(Summoning, NumericNumberGrid):
         self.observation_size += self.attacker_spells.observation_size
         self.observation_size += self.defense_rewards.observation_size
         self.observation_size += self.bot.observation_size
-        self.observation_size += self.bot_attack.observation_size
         self.observation_size += 4 if self.position_objective else 0
         self.observation_size += int(self.objective_item is not None)
         self.observation_size += self.capital_training.observation_size
@@ -1248,6 +1261,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             reference_previous=jnp.full(2, -1, jnp.int32),
             reference_city_reached=jnp.zeros(self.territory.count if self.territory_enabled else 0, bool),
             reference_defeated=jnp.zeros(self.num_opponents, bool),
+            tracked_enemy_rewarded=jnp.bool_(False),
             capital_defense_acquired=jnp.int32(0),
             capital_defense_peak=jnp.zeros(self.capital_training.count, jnp.int32),
             capital_rounds_rewarded=jnp.int32(0),
@@ -1293,7 +1307,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
             position=jnp.asarray(self.map_config['agent_position'], jnp.int32),
             number=jnp.int32(self.initial_number), alive=~self.scenario.scheduled,
             step_count=zero, done=jnp.bool_(False), won=jnp.bool_(False), lost=jnp.bool_(False),
-            visited=visited, battle_key=rng_key, in_battle=jnp.bool_(False), enemy=jnp.int32(-1),
+            visited=visited, revealed=self.fog.capital, battle_key=rng_key,
+            in_battle=jnp.bool_(False), enemy=jnp.int32(-1),
             origin=jnp.asarray(self.map_config['agent_position'], jnp.int32),
             second_strike=jnp.bool_(False), poison_mode=jnp.zeros(12, jnp.int32),
             poison_damage=jnp.zeros(12, jnp.int32), poison_source=jnp.full(12, -1, jnp.int32),
@@ -1372,8 +1387,10 @@ class NumberGrid(Summoning, NumericNumberGrid):
             state=self.site_rules.autosell(state)
         if self.recruitment_enabled:
             state=state.replace(hire_rewarded_capacity=self.recruitment.reward_occupancy(state))
+        state = self._reveal_hero(state)
         if self.script_events.enabled:
             state = self.script_events.process(self, state, new_day=True, locations=False)
+            state = self._reveal_hero(state)
         if self.reference_rewards:
             state = state.replace(reference_visits=state.reference_visits.at[
                 state.position[0]*self.size+state.position[1]].set(1),
@@ -1381,6 +1398,24 @@ class NumberGrid(Summoning, NumericNumberGrid):
         if self.defense_rewards.enabled:
             state = self.defense_rewards.reset(state)
         return state, self._timestep(state, jnp.float32(0), first=True)
+
+    def _hero_scout_radius(self, state):
+        if not self.progression_enabled:
+            return 5
+        scouts = self.scout_ranges[state.unit_ids[:6]]
+        return jnp.max(jnp.where(state.hp[:6] > 0, scouts, 0))
+
+    def _reveal_hero(self, state):
+        # Temporary battle armies cannot scout for the player.
+        radius = jnp.where(state.in_battle, -1, self._hero_scout_radius(state))
+        return self.fog.reveal(state, radius)
+
+    def _visible_move(self, state, destination):
+        """Adjacent destinations known from exploration or the hero's current sight."""
+        adjacent = jnp.abs(destination - state.position)
+        radius = self._hero_scout_radius(state)
+        in_sight = (radius >= 2) | ((radius == 1) & (jnp.sum(adjacent, axis=-1) == 1))
+        return in_sight | revealed_at(state, destination)
 
     def _clear_roster_slots(self, state, affected):
         fields = self._empty_summon_fields(state)
@@ -1502,10 +1537,12 @@ class NumberGrid(Summoning, NumericNumberGrid):
             targets = jnp.where(attacking, jnp.argmax(matches, axis=1), -1)
         entered, zone = jax.vmap(lambda d, m: self.zones.resolve(state, d, m))(destinations, ~attacking)
         targets = jnp.where(attacking, targets, zone)
+        known_target = (targets >= 0) & visible_enemies(state)[jnp.maximum(targets, 0)]
         step = jnp.where(entered & ~attacking, self.move_cost(state, destinations), 0)
         costs = jnp.minimum(state.movement_points,
                             jnp.where(targets >= 0, (self.movement_cap(state)+1)//2, 0) + step)
-        return jnp.stack((targets, costs), axis=1)
+        known_cost = revealed_at(state, destinations) & ((targets < 0) | known_target)
+        return jnp.stack((jnp.where(known_target, targets, -1), jnp.where(known_cost, costs, 0)), axis=1)
 
     def rest_penalty(self, state):
         if self.reference_rewards:
@@ -1993,10 +2030,15 @@ class NumberGrid(Summoning, NumericNumberGrid):
         """Encode the current world and battle state into the configured flat feature vector."""
         if not self.battle_mode:
             return super().observation(state)
+        visible = visible_enemies(state)
+        terrain = self.terrain.grid if self.basic_combat else 0
+        blocked = self.territory.blocked_grid if self.territory_enabled else False
+        owners = state.territory_owners if self.territory_enabled else 0
+        explored = self.fog.observation(state, terrain, blocked, owners)
         # One-based campaign day; no clipping, and no change during tactical rounds.
         day = jnp.asarray([state.day / 100.], jnp.float32)
         context = jnp.asarray([
-            state.in_battle, (state.enemy + 1) / self.num_opponents,
+            state.in_battle, jnp.where(state.in_battle, (state.enemy + 1) / self.num_opponents, 0.),
             state.round / self.max_rounds, state.actor / 11,
             state.origin[0] / (self.size - 1), state.origin[1] / (self.size - 1)
         ], jnp.float32)
@@ -2009,6 +2051,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             world = jnp.stack((state.enemy_positions[:,0] / (self.size-1),
                                state.enemy_positions[:,1] / (self.size-1), state.alive,
                                self.enemy_counts / 6, self.enemy_health / self.hero_hp),axis=1)
+            world = jnp.where(visible[:, None], world, 0.)
             active = (state.hp > 0) & ~state.escaped
             queue = jnp.where(active & (state.turn_phase < 2), state.priority, 0.)
             hp_scale = (jnp.maximum(self.max_hp(state), 1) if self.observation_version in (3, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45)
@@ -2126,12 +2169,11 @@ class NumberGrid(Summoning, NumericNumberGrid):
             if self.defense_rewards.enabled:
                 context=jnp.concatenate((context,self.defense_rewards.observation(state)))
             if self.bot.enabled:
-                context=jnp.concatenate((context,self.bot.observation(state)))
-            if self.bot_attack.enabled:
-                context=jnp.concatenate((context,self.bot_attack.observation(state)))
+                context=jnp.concatenate((context,jnp.where(visible[self.bot.enemy], self.bot.observation(state), 0.)))
             if self.position_objective:
-                context=jnp.concatenate((context, self.objective_position/(self.size-1),
-                                         (self.objective_position-state.position)/(self.size-1)))
+                goal = jnp.concatenate((self.objective_position, self.objective_position-state.position))
+                context=jnp.concatenate((context, jnp.where(
+                    revealed_at(state, self.objective_position), goal/(self.size-1), 0.)))
                 if self.objective_item is not None:
                     context=jnp.concatenate((context, jnp.asarray([self._has_objective_item(state)], jnp.float32)))
             if self.capital_training.enabled:
@@ -2142,14 +2184,15 @@ class NumberGrid(Summoning, NumericNumberGrid):
             return jnp.concatenate((state.position / (self.size-1),
                                     jnp.asarray([state.number / self.number_scale,
                                                  state.step_count / self.max_steps],jnp.float32),
-                                    world.reshape(-1), units.reshape(-1), context, day))
-        base = super().observation(state)
+                                    world.reshape(-1), units.reshape(-1), context, day, explored))
+        base = super()._numeric_observation(state)
         units = jnp.stack((state.hp / self.hero_hp, self.max_hp(state) / self.hero_hp,
                            state.priority, state.turn_phase / 2, state.defended,
                            state.retreating, state.escaped,
                            (self.slots == state.actor) & state.in_battle), axis=1)
-        return jnp.concatenate((base, self.enemy_counts / 6, self.enemy_health / self.hero_hp,
-                                units.reshape(-1), context, day))
+        return jnp.concatenate((base, jnp.where(visible, self.enemy_counts / 6, 0.),
+                                jnp.where(visible, self.enemy_health / self.hero_hp, 0.),
+                                units.reshape(-1), context, day, explored))
 
     def _melee_targets(self, state, enemy_side=False):
         """Same reachability for both sides; pending retreat still occupies a slot."""
@@ -2209,6 +2252,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             if not self.territory_enabled:
                 movement &= ~self.ruins.blocked(destination)
             movement = (movement | self.ruins.attackable(state,destination)) & ~state.in_battle
+        movement &= self._visible_move(state, destination)
         if self.basic_combat:
             movement &= state.movement_points > 0
         controlled = (state.in_battle & (state.actor < 6) & (state.hp[state.actor] > 0)
@@ -2606,6 +2650,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
         if self.unit_swaps_enabled:
             next_state, swap_bonus = self.unit_swaps.apply(next_state, action, resting)
             bonus += swap_bonus
+        if self.script_events.enabled or self.campaign_events.enabled:
+            next_state = self._reveal_hero(next_state)
         if self.script_events.enabled:
             next_state = self.script_events.process(self, next_state, new_day=resting,
                                                     locations=~(engage | summon))
@@ -2678,6 +2724,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
             # One battle per decision: a party encounter first, then the waiting garrison battles.
             next_state, garrison = self.garrisons.engage(next_state, ~(engage | summon) & ~next_state.done)
             engage |= garrison
+        # A move into a zone of control can start combat before the public step ends.
+        next_state = jax.lax.cond(moved & engage, self._reveal_hero, lambda s: s, next_state)
         next_state = jax.lax.cond(engage | summon, lambda s: self._begin_battle(s, key, random_values), lambda s: s, next_state)
         if self.encounters_enabled:
             inside_fort = (jnp.all(next_state.position == jnp.array(self.territory.capital))
@@ -3689,6 +3737,8 @@ class NumberGrid(Summoning, NumericNumberGrid):
             if not self.territory_enabled:
                 world_valid &= ~self.ruins.blocked(destination)
             world_valid |= (action>=0)&(action<8)&self.ruins.attackable(state,destination)
+        visible_move = self._visible_move(state, destination)
+        world_valid &= visible_move
         if self.basic_combat:
             building = jnp.clip(action - BUILD_START, 0, BUILD_SLOTS-1)
             world_valid &= state.movement_points > 0
@@ -3845,7 +3895,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             if self.capital_training.incubus_building_reward:
                 reward += self.capital_training.incubus_hall(state, next_state)
         if self.territory_enabled:
-            bumped = (~valid & ~state.done & ~state.in_battle & (action>=0) & (action<8)
+            bumped = (~valid & visible_move & ~state.done & ~state.in_battle & (action>=0) & (action<8)
                 & jnp.all((destination>0)&(destination<self.size-1)) & self.territory.blocked(destination))
             reward -= .25*bumped
             next_state = next_state.replace(last_event=jnp.where(bumped,OBSTACLE,next_state.last_event))
@@ -3870,6 +3920,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             reward += target_reward
         if self.defense_rewards.enabled:
             next_state, reward = self.defense_rewards.finish(state, next_state, reward)
+        next_state = self._reveal_hero(next_state)
         ts = self._timestep(next_state, jnp.where(state.done, 0., reward))
         ts = ts.replace(extras={**ts.extras, 'battle_transition': counts[0],
                                 'player_battle_transition': counts[1],

@@ -94,7 +94,14 @@ def test_map_layout_and_large_units(mirror):
             if uid and env.progression.rows[uid].get('size', 1) == 2:
                 assert slot < 3 and squad[slot+3] == 0
     assert not m['cities'] and not m['chests'] and not m['ruins']
-    assert len(m['mines']) == 4
+    assert len(m['mines']) == 6
+    # User edits 2026-11-16: Mermaid and Kraken stand in the water, mirrored death/rune sources.
+    water = {tuple(p) for p in m['terrain']['water']}
+    sea = [i for i, r in enumerate(m['enemy_rosters']) if {'mermaid', 'g000uu5027'} & set(r)]
+    assert m['allow_water_objects'] and sea == [9, 10, 28, 29]
+    assert all(tuple(m['opponent_positions'][i]) in water for i in sea)
+    centre = {mine['kind']: mine['position'] for mine in m['mines'][4:]}
+    assert centre == {'death': [23, 26], 'runes': [26, 23]}
     names = [env.progression.rows[i]['name'] for i in state.bot_ids.tolist() if i]
     assert names == ['Скваер', 'Рыцарь на пегасе', 'Скваер', 'Служка']
     assert load_map('mirrow_match') == load_map('mirror-match') == load_map('mirror_match')
@@ -129,12 +136,13 @@ def test_fronts_repaint_each_other_income_and_read_only_queries(mirror):
     full = state
     for _ in range(150):
         full = grow(full)
-    # Once the map is full, each side takes ten of the other's tiles every day.
-    assert land(full) == (1081, 1087)
+    # Once the map is full, each side takes ten of the other's tiles every day. The opponent
+    # paints second, so both centre sources (death, runes; 2026-11-16) end the day as its own.
+    assert land(full) == (1074, 1087)
     assert land(grow(full)) == land(full)
     chex.assert_trees_all_equal(grow(full).territory_claims, full.territory_claims)
     quotes = jax.jit(t.quotes)(full)
-    assert quotes['mine_owner'].tolist() == [1, 2, 1, 2]
+    assert quotes['mine_owner'].tolist() == [1, 2, 1, 2, 2, 2]
     assert quotes['income'].tolist() == [150, 75, 0, 0, 0, 0]
     before = full.territory_owners
     jax.jit(t.observation)(full)

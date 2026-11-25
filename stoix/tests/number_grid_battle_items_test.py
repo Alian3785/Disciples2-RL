@@ -566,6 +566,32 @@ def test_fear_item_respects_defending_side_without_armour(effects):
     assert not jnp.any(after.long_paralyzed[:,7])
 
 
+@pytest.mark.parametrize('key', ['orb_of_bane', 'talisman_of_bane'])
+def test_poison_items_check_hits_and_both_immunities(effects, key):
+    from stoix.envs.number_grid_combat import ATTACK_TYPES
+
+    env, base, *_ = effects
+    rules = env.battle_item_rules
+    # The gargoyle covers slot 9. The zombie has Death immunity, the gargoyle poison immunity.
+    roster = ['g000uu0055', 'g000uu0087', 'goblin', None, 'goblin', 'goblin']
+    state = slots(env, owned(env, enemy_roster_state(env, base, roster), key), key, None)
+    death_ward = 1 << ATTACK_TYPES.index('death')
+    traits = env._combat_traits(state)
+    ward_slots = jnp.array([6, 8, 10])
+    traits = traits.at[ward_slots, 3].set(traits[ward_slots, 3] | death_ward)
+    # Slot 10 misses its ward. Slot 11 hits exactly at the inclusive accuracy boundary.
+    rolls = jnp.zeros(env.random_size).at[16:18].set(jnp.array([.99, .805]))
+    rolls = rolls.at[22:24].set(jnp.array([.99, .805]))
+    action = jnp.int32(rules.use_start + 12)
+    after, _, used, info = rules.use(env, state, state.hp, state.wards_used, action, rolls,
+                                     env._combat_stats(state), traits)
+    assert int(info['immune']) == ((1 << 6) | (1 << 7))
+    assert int(info['ward']) == 1 << 8
+    assert (used[6:] & death_ward).tolist() == [0, 0, death_ward, 0, 0, 0]
+    assert after.poison_damage[6:].tolist() == [0, 0, 0, 0, 0, 10]
+    assert int(after.battle_item_charges[0]) == int(state.battle_item_charges[0]) - 1
+
+
 def test_reference_item_effects(effects):
     """Check catalogued item effects against their expected combat-state changes."""
     env, base, keys, valid, after, hp, info, _ = effects

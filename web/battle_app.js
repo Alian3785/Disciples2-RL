@@ -122,16 +122,22 @@
       return card;
     }));
     // Spells of another faction bought in a spell shop: no research, one cast per day.
-    $('spell-list').append(...(casting?.spells||[]).slice(info.spells.length).filter(c=>!c.item_only).map((cast,k)=>{
+    const sites=siteInfo();
+    const discoveredOffers=new Set((sites?.spells||[])
+      .filter(offer=>revealedAt(snap.state,sites.sites?.[offer.site]?.position))
+      .map(offer=>offer.spell));
+    $('spell-list').append(...(casting?.spells||[]).slice(info.spells.length).flatMap((cast,k)=>{
+      if(cast.item_only)return [];
       const i=info.spells.length+k,book=snap.state.learned_spells;
       // One uint32 up to 32 book spells, else 32-bit words (wide spellbooks).
       const learned=Array.isArray(book)?(book[i>>5]>>>(i&31))&1:(book>>>i)&1;
+      if(!learned&&!discoveredOffers.has(cast.id))return [];
       const card=document.createElement('article');card.className='spell-card'+(learned?' is-learned':'');
       card.hidden=$('spell-level').value!=='all'&&Number($('spell-level').value)!==cast.level;
       const title=document.createElement('h3');title.textContent=cast.name+' · '+['','I','II','III','IV','V'][cast.level];
       const description=document.createElement('p');description.textContent=cast.description;
       const status=document.createElement('p');status.className='spell-state';status.textContent=learned?'Куплено в лавке заклинаний':'Продаётся в лавке заклинаний; изучить нельзя';
-      card.append(title,description,status);castBlock(card,cast,i);return card;
+      card.append(title,description,status);castBlock(card,cast,i);return [card];
     }));
     function castBlock(card,cast,i){
       const effect=document.createElement('p');effect.className='spell-effect';effect.textContent=castEffect(cast);
@@ -169,11 +175,14 @@
     }));
   }
   const ruinInfo=()=>mode==='manual'?(manualRuins||data.ruins):data.ruins;
+  const revealedAt=(state,position)=>!state.revealed||!!(position&&state.revealed[position[0]]?.[position[1]]);
+  const garrisonRevealed=(snap,index)=>index===snap.garrisons.sites.length-1||revealedAt(snap.state,territoryInfo()?.cities[index]?.position);
   const lootText=ruin=>[...Object.entries(ruin.potions||{}),...Object.entries(ruin.items||{})].filter(([,n])=>n).map(([key,n])=>(potionInfo()?.find(p=>p.key===key)?.name||equipmentInfo()?.items.find(p=>p.key===key)?.name||key)+' × '+n).concat(ruin.gold?[fmt(ruin.gold)+' золота']:[]).join(', ');
   function renderRuins(snap){
     const ruins=ruinInfo()?.ruins||[],s=snap.state;
-    $('ruins-panel').hidden=!ruins.length;
-    $('ruin-list').replaceChildren(...ruins.map((ruin,i)=>{
+    $('ruins-panel').hidden=!ruins.some(ruin=>revealedAt(s,ruin.entrance));
+    $('ruin-list').replaceChildren(...ruins.flatMap((ruin,i)=>{
+      if(!revealedAt(s,ruin.entrance))return [];
       const card=document.createElement('article');card.className='city-card';
       const title=document.createElement('b');title.textContent=ruin.name+' · 3 × 3';
       const status=document.createElement('p');status.textContent=s.ruin_looted[i]?'Разграблены. Непроходимое препятствие.':partyText(combatInfo()?.enemies[ruin.enemy]);
@@ -191,7 +200,7 @@
   function renderTerritory(snap){
     const info=territoryInfo(),q=snap.territory_quotes,s=snap.state;
     $('city-services').hidden=!info;$('mana-resources').hidden=!info;
-    const manaKinds=(info?.resource_kinds||[]).filter(kind=>manaMarkers[kind]&&info.mines.some(mine=>mine.kind===kind));
+    const manaKinds=(info?.resource_kinds||[]).filter(kind=>manaMarkers[kind]&&info.mines.some(mine=>mine.kind===kind&&revealedAt(s,mine.position)));
     manaLegend.hidden=!manaKinds.length;
     manaLegend.replaceChildren(...manaKinds.map(kind=>{
       const marker=manaMarkers[kind],entry=document.createElement('span'),icon=document.createElement('i');
@@ -204,11 +213,15 @@
       const row=document.createElement('div'),label=document.createElement('span'),value=document.createElement('b');
       label.textContent=name;value.textContent=fmt(s.mana[i])+' (+'+fmt(q.income[i+1])+')';row.append(label,value);return row;
     }));
-    $('city-list').replaceChildren(...info.cities.map((city,i)=>{
+    $('city-list').replaceChildren(...info.cities.flatMap((city,i)=>{
+      const known=revealedAt(s,city.position);
+      if(!known&&!s.city_owned[i])return [];
       const card=document.createElement('article');card.className='city-card';
       const heading=document.createElement('b');heading.textContent=city.name+' · уровень '+s.city_levels[i];
       const count=(s.enemy_positions||currentMap().opponent_positions).filter((p,j)=>s.alive[j]&&p.every((v,k)=>v===city.position[k])).length;
-      const status=document.createElement('p');status.textContent='Клетка '+city.position.join(', ')+' · '+(s.city_owned[i]?'Ваш город':count?'Защитников: '+count+' отряда':'Для захвата войдите с живым героем');
+      const status=document.createElement('p');status.textContent=known
+        ?'Клетка '+city.position.join(', ')+' · '+(s.city_owned[i]?'Ваш город':count?'Защитников: '+count+' отряда':'Для захвата войдите с живым героем')
+        :'Ваш город под туманом';
       const detail=document.createElement('small');detail.textContent='Рост земли +'+info.city_growth[s.city_levels[i]]+' клеток/ход · регенерация и броня +'+info.city_bonus[s.city_levels[i]]+'%';
       const button=document.createElement('button');button.dataset.action=city.action;button.onclick=()=>sendAction(city.action);
       button.textContent=!s.city_owned[i]?'Сначала захватите город':s.city_levels[i]>=5?'Максимальный уровень':s.city_upgraded_today[i]?'Уже улучшен в этом ходу':'Улучшить · '+fmt(q.city_costs[i])+' золота';
@@ -251,10 +264,11 @@
     (garrisons?.sites||[]).forEach((site,g)=>{
       if(!site.owned||!garrisons.offers.length)return;
       const card=document.createElement('article');card.className='site-offer';
-      const name=document.createElement('b');name.textContent='Охрана: '+site.name+' · до '+site.capacity+' клеток'+(site.selected?' · выбран':'');
+      const known=garrisonRevealed(snap,g);
+      const name=document.createElement('b');name.textContent='Охрана: '+site.name+(known?' · до '+site.capacity+' клеток':' · город под туманом')+(site.selected?' · выбран':'');
       const units=document.createElement('small');
       units.textContent=site.units.length?site.units.map(u=>u.name+' '+u.hp+'/'+u.max_hp+(u.hp?'':' (погиб)')).join(' · '):'Охраны нет';
-      card.append(name,units);
+      card.append(name);if(known)card.append(units);
       if(!site.selected){
         const action=garrisons.select_start+g;
         const b=document.createElement('button');b.dataset.action=action;b.onclick=()=>sendAction(action);
@@ -274,17 +288,18 @@
   function renderSites(snap){
     const info=siteInfo(),s=snap.state,panel=$('site-services');
     panel.hidden=!info;if(!info)return;
-    const here=kind=>info.sites.find(site=>site.kind===kind&&site.interaction_tiles.some(p=>p.every((v,i)=>v===s.position[i])));
+    const knownSite=site=>site&&revealedAt(s,site.position);
+    const here=kind=>info.sites.find(site=>knownSite(site)&&site.kind===kind&&site.interaction_tiles.some(p=>p.every((v,i)=>v===s.position[i])));
     const button=(text,action)=>{const b=document.createElement('button');b.textContent=text;b.dataset.action=action;b.onclick=()=>sendAction(action);return b;};
     const ready=kind=>s.done?'Эпизод завершён.':s.in_battle?'Завершите бой.':here(kind)?'Вы у входа: '+here(kind).name+'.':'Подойдите на одну из пяти подсвеченных клеток у входа.';
     // With several sites of a kind, every offer names its own site.
-    const siteName=(kind,site)=>info.sites.filter(x=>x.kind===kind).length>1&&info.sites[site]?' · '+info.sites[site].name:'';
-    for(const [id,kind] of [['merchant-site','merchant'],['trainer-site','trainer'],['spell-shop','spell_shop']])$(id).hidden=!info.sites.some(x=>x.kind===kind);
+    const siteName=(kind,site)=>info.sites.filter(x=>knownSite(x)&&x.kind===kind).length>1&&knownSite(info.sites[site])?' · '+info.sites[site].name:'';
+    for(const [id,kind] of [['merchant-site','merchant'],['trainer-site','trainer'],['spell-shop','spell_shop']])$(id).hidden=!info.sites.some(x=>knownSite(x)&&x.kind===kind);
     const recruits=recruitmentInfo(),quotes=snap.recruitment_quotes;
-    $('mercenary-camp').hidden=!recruits?.offers.some(o=>o.mercenary);
+    $('mercenary-camp').hidden=!recruits?.offers.some(o=>o.mercenary&&knownSite(info.sites[o.camp]));
     $('mercenary-status').textContent=ready('mercenary')+' Нужен живой герой; запас не пополняется.';
     $('mercenary-offers').replaceChildren(...(recruits?.offers||[]).flatMap((offer,i)=>{
-      if(!offer.mercenary||!quotes)return [];
+      if(!offer.mercenary||!quotes||!knownSite(info.sites[offer.camp]))return [];
       const card=document.createElement('article');card.className='site-offer';
       const stock=s.mercenary_stock[offer.stock_index],price=quotes.prices[i];
       const name=document.createElement('b');name.textContent=offer.name+' · осталось '+stock+siteName('mercenary',offer.camp);
@@ -294,6 +309,7 @@
     }));
     $('merchant-status').textContent=ready('merchant')+' Драгоценности здесь продаются автоматически.';
     const offers=info.buy.map((p,i)=>{
+      if(!knownSite(info.sites[p.site]))return null;
       const card=document.createElement('div');card.className='site-offer';
       const stock=s.merchant_stock?.[i]??0,price=snap.site_quotes?.buy?.[i]??p.price;
       const name=document.createElement('b');name.textContent=p.name+' · '+stock+' шт.'+siteName('merchant',p.site);
@@ -302,17 +318,18 @@
       card.append(name,detail,button('Купить · '+fmt(price)+' золота',p.action),reason);return card;
     });
     // One collapsible section per category: potions, artifacts, scrolls...
-    const groups=[...new Set(info.buy.map(p=>p.group||'Зелья'))];
-    $('merchant-stock').replaceChildren(...(groups.length<2?offers:groups.map(group=>{
+    const groups=[...new Set(info.buy.filter((_,i)=>offers[i]).map(p=>p.group||'Зелья'))];
+    $('merchant-stock').replaceChildren(...(groups.length<2?offers.filter(Boolean):groups.map(group=>{
       const box=document.createElement('details'),title=document.createElement('summary');box.className='site-group';
-      const cards=offers.filter((_,i)=>(info.buy[i].group||'Зелья')===group);
+      const cards=offers.filter((card,i)=>card&&(info.buy[i].group||'Зелья')===group);
       title.textContent=group+' · '+cards.length;box.open=!closedShopGroups.has(group);
       box.ontoggle=()=>box.open?closedShopGroups.delete(group):closedShopGroups.add(group);
       box.append(title,...cards);return box;
     })));
     const book=castInfo()?.spells||[];
     $('spell-shop-status').textContent=ready('spell_shop')+' Купленное заклинание сразу изучено. Его может применять любой правитель, по полной цене маны.';
-    $('spell-shop-offers').replaceChildren(...(info.spells||[]).map((offer,i)=>{
+    $('spell-shop-offers').replaceChildren(...(info.spells||[]).flatMap((offer,i)=>{
+      if(!knownSite(info.sites[offer.site]))return [];
       const card=document.createElement('article');card.className='site-offer';
       const stock=s.spell_stock?.[i]??0,index=book.findIndex(c=>c.id===offer.spell),cast=book[index];
       const words=s.learned_spells;
@@ -470,7 +487,7 @@
     // Hiring, recovery and swaps use the selected settlement; transfers use the party's actual location.
     const garrisons=snap.garrisons,capital=garrisons?.sites?.[garrisons.sites.length-1];
     const transfer=garrisons?.sites?.find(site=>site.at_party)||capital;
-    const recovery=garrisons?.sites?.find(site=>site.selected)||capital;
+    const recovery=garrisons?.sites?.find((site,i)=>site.selected&&garrisonRevealed(snap,i));
     if(recovery&&garrisons.revive_start!=null)$('service-status').textContent+=' Восстановление гарнизона: '+recovery.name+'.';
     const garrisonButton=(text,action)=>{const b=document.createElement('button');b.dataset.action=action;b.textContent=text;
       b.onclick=()=>sendAction(action);b.disabled=mode!=='manual'||busy||!session||!snap.action_mask[action];return b;};
@@ -479,7 +496,7 @@
       const name=document.createElement('h3');name.textContent='Выбрать город';card.append(name);
       const note=document.createElement('p');note.className='recovery-price';
       note.textContent='Найм, лечение, воскрешение и перестановки: '+(recovery?.name||'выберите поселение');card.append(note);
-      garrisons.sites.forEach((site,i)=>{if(site.owned){
+      garrisons.sites.forEach((site,i)=>{if(site.owned&&garrisonRevealed(snap,i)){
         const button=garrisonButton(site.name+(site.selected?' · выбран':''),garrisons.select_start+i);
         button.setAttribute('aria-pressed',String(site.selected));card.append(button);
       }});
@@ -619,6 +636,7 @@
       ctx.fillStyle='#626c63';ctx.beginPath();ctx.moveTo((c+.16)*cell,(r+.8)*cell);ctx.lineTo((c+.48)*cell,(r+.2)*cell);ctx.lineTo((c+.84)*cell,(r+.8)*cell);ctx.fill();
     }
     for(const capital of territoryInfo()?.enemy_capitals||[]){
+      if(!revealedAt(s,capital.position))continue;
       const cells=capital.footprint||[];if(!cells.length)continue;
       const rows=cells.map(p=>p[0]),cols=cells.map(p=>p[1]),top=Math.min(...rows),left=Math.min(...cols);
       const {x:c,y:r,width:w,height:h}=displayRect([top,left],Math.max(...rows)-top+1,Math.max(...cols)-left+1,map.size);
@@ -640,6 +658,7 @@
       if(current()?.territory_quotes?.mine_owned[i]){ctx.strokeStyle='#795a37';ctx.lineWidth=1.5;ctx.strokeRect(c*cell+1,r*cell+1,cell-2,cell-2);}
     }
     for(const site of siteInfo()?.sites||[]){
+      if(!revealedAt(s,site.position))continue;
       const style={merchant:['#b58242','#e3cba5','#775129','Торг'],trainer:['#688da4','#c3d7df','#3f637b','Тренер'],mercenary:['#8e7b59','#e5dcc7','#665238','Наём'],spell_shop:['#7b68a8','#ddd5ef','#4c3d78','Магия']}[site.kind];
       const [color,fill,ink,label]=style;
       ctx.fillStyle=color+'29';
@@ -653,6 +672,7 @@
       ctx.fillStyle=color;ctx.fillRect(x+cell*.2,y+cell*2.25,cell*.55,cell*.55);
     }
     for(const [i,ruin] of (ruinInfo()?.ruins||[]).entries()){
+      if(!revealedAt(s,ruin.entrance))continue;
       const cleared=s.ruin_looted?.[i],bounds=displayRect(ruin.position,3,3,map.size),x=bounds.x*cell,y=bounds.y*cell;
       if(!cleared){ctx.fillStyle='#97795324';for(const position of ruin.interaction_tiles){const tile=displayTile(position,map.size);ctx.fillRect(tile.x*cell+1,tile.y*cell+1,cell-2,cell-2);}}
       roundRect(x+1,y+1,cell*3-2,cell*3-2,cell*.16,cleared?'#c6c9c3':'#d6c9b4');
@@ -665,6 +685,7 @@
     // Cities occupy one tile. Keep the larger label transparent and below
     // neighboring units/chests so the annotation cannot hide a selectable target.
     (territoryInfo()?.cities||[]).forEach((city,i)=>{
+      if(!revealedAt(s,city.position))return;
       const tile=displayTile(city.position,map.size),x=(tile.x+.5)*cell,y=(tile.y+.5)*cell;
       const owned=s.city_owned[i],size=cell*3;
       ctx.save();
@@ -697,7 +718,7 @@
       ctx.fillStyle='#604515';ctx.font='650 '+Math.round(cell*.62)+'px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('♜',(x+.5)*cell,(y+.52)*cell);
       ctx.strokeStyle='#aa7623';ctx.lineWidth=2;ctx.strokeRect(x*cell+1,y*cell+1,cell-2,cell-2);
     }
-    if(map.campaign_objective==='reach_position'){
+    if(map.campaign_objective==='reach_position'&&revealedAt(s,map.objective_position)){
       const {x,y}=displayTile(map.objective_position,map.size);
       ctx.save();ctx.strokeStyle='#197d60';ctx.fillStyle='#b4f0ce';ctx.lineWidth=2;
       const radius=map.objective_radius||0;
@@ -713,6 +734,14 @@
       ctx.fillRect(x*cell,y*cell,cell,cell);ctx.strokeRect(x*cell,y*cell,cell,cell);
       ctx.fillStyle='#07523d';ctx.font='800 '+Math.max(12,Math.round(cell*.85))+'px system-ui';
       ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('⚑',(x+.5)*cell,(y+.5)*cell);ctx.restore();
+    }
+    if(s.revealed){
+      ctx.fillStyle='#222621';
+      s.revealed.forEach((row,r)=>row.forEach((known,c)=>{
+        if(known)return;
+        const {x,y}=displayTile([r,c],map.size);
+        ctx.fillRect(x*cell,y*cell,cell,cell);
+      }));
     }
     const agent=displayTile(s.position,map.size),x=(agent.x+.5)*cell,y=(agent.y+.5)*cell,radius=Math.max(16,cell*.85);
     ctx.save();
@@ -917,15 +946,23 @@
     // With objective cities (reference "cities" goal) count those cities instead.
     const guards=new Set([...(territoryInfo()?.enemy_capitals||[]).flatMap(c=>c.guards||[c.guard]),...(map.optional_enemies||[])]);
     const targetEnemy=Number.isInteger(map.objective_enemy)?map.objective_enemy:null;
-    const targetName=targetEnemy===null?'':partyText(combatInfo()?.enemies[targetEnemy]);
+    const positions=s.enemy_positions||map.opponent_positions;
+    const targetKnown=targetEnemy!==null&&revealedAt(s,positions[targetEnemy]);
+    const targetName=targetKnown?partyText(combatInfo()?.enemies[targetEnemy]):'цель не разведана';
     const goalCities=targetEnemy===null?(territoryInfo()?.cities||[]).map((c,i)=>c.objective?i:-1).filter(i=>i>=0):[];
     const remainingEnemy=i=>s.alive[i]||s.scenario_spawned?.[i]===false;
     const waves=map.campaign_objective==='waves';
     $('remaining').textContent=targetEnemy!==null?Number(remainingEnemy(targetEnemy)):waves?(map.scheduled_enemies||[]).filter(e=>remainingEnemy(e.enemy)).length:goalCities.length?goalCities.filter(i=>!s.city_owned?.[i]).length:s.alive.filter((a,i)=>a&&!guards.has(i)).length;
     $('remaining-label').textContent=targetEnemy!==null?'цель: '+targetName+' · отряд № '+(targetEnemy+1):waves?'армий волн осталось, включая ещё не появившиеся':goalCities.length?'целевых городов осталось ('+goalCities.map(i=>territoryInfo().cities[i].name).join(', ')+')':'отрядов осталось'+((map.optional_enemies||[]).length?' (без необязательных)':'');
+    if(s.revealed){
+      $('remaining').textContent=s.alive.filter((alive,i)=>alive&&revealedAt(s,positions[i])).length;
+      $('remaining-label').textContent='обнаружено вражеских отрядов'+(targetKnown?' · цель: '+targetName:'');
+    }
     if(map.campaign_objective==='reach_position'){
       $('remaining').textContent=Number(!s.won);
-      $('remaining-label').textContent='цель: привести живого героя '+(map.objective_radius?'в зону ⚑ радиуса '+map.objective_radius:'к ⚑')+' · строка '+map.objective_position[0]+', столбец '+map.objective_position[1];
+      $('remaining-label').textContent=revealedAt(s,map.objective_position)
+        ?'цель: привести живого героя '+(map.objective_radius?'в зону ⚑ радиуса '+map.objective_radius:'к ⚑')+' · строка '+map.objective_position[0]+', столбец '+map.objective_position[1]
+        :'цель: найти выход и привести туда живого героя';
       if(map.objective_item){
         const key=equipmentInfo()?.items?.findIndex(item=>item.key===map.objective_item);
         const carried=key>=0&&(s.item_inventory||[]).includes(key);
@@ -938,8 +975,12 @@
         $('remaining-label').textContent+=!responded?' · нужно пережить ответный ход засады':pending||s.in_battle?' · завершите начатые бои':' · ответный ход засады состоялся';
       }
     }
-    $('chest-status').hidden=!(map.chests||[]).length;
-    $('chest-status').textContent=(s.last_event===21?eventText(snap)+' ':'')+'Сундуков осталось: '+(s.chest_alive||[]).filter(Boolean).length+' / '+(map.chests||[]).length+'. Подойдите на соседнюю клетку, включая диагональ: всё содержимое попадёт в инвентарь.';
+    const discoveredChests=(map.chests||[]).flatMap((chest,i)=>revealedAt(s,chest.position)?[i]:[]);
+    const remainingChests=discoveredChests.filter(i=>s.chest_alive?.[i]).length;
+    $('chest-status').hidden=!discoveredChests.length;
+    $('chest-status').textContent=discoveredChests.length
+      ?(s.last_event===21?eventText(snap)+' ':'')+'Сундуков осталось: '+remainingChests+' / '+discoveredChests.length+'. Подойдите на соседнюю клетку, включая диагональ: всё содержимое попадёт в инвентарь.'
+      :'';
     $('wins').textContent=s.alive.filter((v,i)=>!v&&s.scenario_spawned?.[i]!==false).length;
     if(map.scenario_events?.length)$('wins').textContent=(s.reference_defeated||[]).filter(Boolean).length;
     $('steps').textContent=fmt(s.step_count);$('reward').textContent=fmt(snap.total_reward);
@@ -1062,10 +1103,11 @@
   canvas.onmousemove=event=>{
     const snap=current();if(!snap)return;
     const map=currentMap(),[row,col]=mapTileAtPointer(event);
+    if(!revealedAt(snap.state,[row,col])){canvas.title='Не разведано';return;}
     const chest=(map.chests||[]).find((c,i)=>snap.state.chest_alive?.[i]&&c.position[0]===row&&c.position[1]===col);
     const territory=territoryInfo(),cityIndex=territory?.cities.findIndex(c=>c.position[0]===row&&c.position[1]===col)??-1;
     const mineIndex=territory?.mines.findIndex(m=>m.position[0]===row&&m.position[1]===col)??-1;
-    const ruinIndex=ruinInfo()?.ruins.findIndex(r=>r.footprint.some(p=>p[0]===row&&p[1]===col))??-1;
+    const ruinIndex=ruinInfo()?.ruins.findIndex(r=>revealedAt(snap.state,r.entrance)&&r.footprint.some(p=>p[0]===row&&p[1]===col))??-1;
     if(ruinIndex>=0){const ruin=ruinInfo().ruins[ruinIndex];canvas.title=ruin.name+' · '+(snap.state.ruin_looted[ruinIndex]?'Разграблены · непроходимы':partyText(combatInfo()?.enemies[ruin.enemy])+' · награда: '+lootText(ruin));return;}
     if(cityIndex>=0){
       const city=territory.cities[cityIndex],defenders=(snap.state.enemy_positions||map.opponent_positions).map((p,i)=>snap.state.alive[i]&&p[0]===row&&p[1]===col?enemyParty(map,i):null).filter(Boolean);
@@ -1082,7 +1124,8 @@
   canvas.ondblclick=event=>{
     const snap=current();if(mode!=='manual'||!snap||snap.state.in_battle||busy||snap.state.done)return;
     const map=currentMap(),[row,col]=mapTileAtPointer(event);
-    const ruin=ruinInfo()?.ruins.find((r,i)=>!snap.state.ruin_looted[i]&&r.footprint.some(p=>p[0]===row&&p[1]===col));
+    if(!revealedAt(snap.state,[row,col]))return;
+    const ruin=ruinInfo()?.ruins.find((r,i)=>revealedAt(snap.state,r.entrance)&&!snap.state.ruin_looted[i]&&r.footprint.some(p=>p[0]===row&&p[1]===col));
     const enemy=ruin?.enemy??(snap.state.enemy_positions||map.opponent_positions).findIndex((p,i)=>snap.state.alive[i]&&p[0]===row&&p[1]===col);
     if(enemy<0)return;
     const commands=snap.map_commands||[],fights=action=>commands[action]?.[0]===enemy&&snap.action_mask[action];

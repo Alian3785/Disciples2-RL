@@ -2,6 +2,7 @@
 
 The snapshot omits the optional bot, so its ordinary roster is taken from
 maps/mirror_match.py. Coordinates (x,y) become [y+1,x+1] inside the JAX wall.
+user_changes() then applies the user's own edits to the reference layout.
 """
 import argparse
 import hashlib
@@ -12,6 +13,48 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.build_default_map import CURRENT, RULES, UNITS, cell, dump, roster
+
+WATER_SUBRACE = '11'  # Gunits SUBRACE L_NEUTRAL_WATER: Mermaid and Kraken
+# User request 2026-11-16: death and rune sources on the other diagonal through the centre,
+# two tiles from Tiamat and equally far from both capitals; each is the other's 180° mirror.
+CENTRE_SOURCES = (dict(kind='death', position=[23, 26]), dict(kind='runes', position=[26, 23]))
+
+
+def user_changes(game_map):
+    """User edits of 2026-11-16 on top of the reference layout; applying them twice changes nothing.
+
+    Stacks of sea units stand on the only water tile next to them, which keeps the mirror
+    symmetry; the two centre mana sources are added.
+    """
+    water = [tuple(p) for p in game_map['terrain']['water']]
+    taken = ({tuple(p) for p in game_map['opponent_positions']} | {tuple(p) for p in game_map['obstacles']}
+             | {tuple(m['position']) for m in game_map['mines']})
+    positions = [list(p) for p in game_map['opponent_positions']]
+    moved = 0
+    for index, roster in enumerate(game_map['enemy_rosters']):
+        if not any(k and UNITS[k].get('game_data', {}).get('SUBRACE') == WATER_SUBRACE for k in roster):
+            continue
+        here = tuple(positions[index])
+        if here in water:
+            continue
+        near = [w for w in water if max(abs(w[0]-here[0]), abs(w[1]-here[1])) == 1 and w not in taken]
+        if len(near) != 1:
+            raise ValueError(f'Stack {index} at {here} needs exactly one free water tile beside it, not {near}')
+        positions[index] = list(near[0])
+        taken.add(near[0])
+        moved += 1
+    mines = list(game_map['mines'])
+    for source in CENTRE_SOURCES:
+        if source not in mines:
+            if tuple(source['position']) in taken | set(water):
+                raise ValueError(f'Mana source on a taken tile: {source}')
+            mines.append(dict(source))
+    result = {}
+    for key, value in game_map.items():
+        result[key] = positions if key == 'opponent_positions' else mines if key == 'mines' else value
+        if key == 'terrain':
+            result['allow_water_objects'] = True
+    return result
 
 
 def build(layout, source_hash):
@@ -62,7 +105,7 @@ def build(layout, source_hash):
                   battle_observation_version=45)
     from scripts.land_data import layout_land
     layout_land(result, layout)
-    return result
+    return user_changes(result)
 
 
 def main():
