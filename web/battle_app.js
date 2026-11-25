@@ -380,7 +380,7 @@
     const info=battleItemInfo(),s=snap.state,mask=snap.action_mask,q=snap.battle_item_quotes;
     $('battle-items').hidden=!info;$('battle-item-actions').hidden=!info||!s.in_battle;
     if(!info)return;
-    $('battle-item-rule').textContent='Положить предмет в свободный слот можно на карте один раз за ход, снять нельзя. В бою герой применяет предмет вместо своего действия. Зелья доступны всегда; сферы и талисманы — с 10 уровня героя, лорду-магу или с книгой: Tome of Arcanum для сфер, Tome of Sorcery для талисманов. Сфера и зелье расходуются; у талисмана '+info.talisman_uses+' зарядов, не больше одного применения за бой.';
+    $('battle-item-rule').textContent='Положить предмет в свободный слот можно на карте один раз за ход, снять нельзя. В бою герой применяет предмет вместо своего действия. В форме беса боевые предметы недоступны. Сферы и талисманы требуют 10-го уровня героя, лорда-мага или книги: Tome of Arcanum для сфер, Tome of Sorcery для талисманов. Сфера и зелье расходуются; у талисмана '+info.talisman_uses+' зарядов, не больше одного применения за бой.';
     $('battle-item-slots').replaceChildren(...Array.from({length:info.slots},(_,k)=>{
       const row=document.createElement('div');row.className='equipment-slot';
       const title=document.createElement('span');title.textContent='Боевой слот '+(k+1);

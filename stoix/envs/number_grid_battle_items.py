@@ -372,7 +372,7 @@ class BattleItemRules:
             return jnp.zeros(0, bool)
         actor = state.actor
         acting = (state.in_battle & ~state.done & (actor < 6) & (actor == env._equipment_hero(state))
-                  & ~state.retreating[actor] & ~state.paralyzed[actor] & ~state.long_paralyzed[actor]
+                  & ~state.imp[actor] & ~state.retreating[actor] & ~state.paralyzed[actor] & ~state.long_paralyzed[actor]
                   & ~state.second_strike & (state.post_victory == 0))
         masks = []
         for slot in range(SLOTS):
