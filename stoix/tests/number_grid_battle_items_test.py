@@ -178,6 +178,26 @@ def test_battle_potion_heals_and_is_drunk(default_game, item_battle):
     assert healed.hp[0] == 90 and healed.potions[healing] == 1 and healed.battle_items.tolist() == [-1, -1]
 
 
+@pytest.mark.core
+def test_hero_in_imp_form_cannot_use_battle_items(default_game, item_battle):
+    env, _, step, mask = default_game
+    rules = env.battle_item_rules
+    healing = env.potion_rules.keys.index('healing')
+    potion_battle = slots(env, item_battle, 'healing', None).replace(
+        potions=item_battle.potions.at[healing].set(1), hp=item_battle.hp.at[0].set(40))
+    for battle, names in ((item_battle, ('item1_ally_0', 'item2_ally_3')),
+                          (potion_battle, ('item1_ally_0',))):
+        actions = jnp.array([NAMES.index(name) for name in names], jnp.int32)
+        assert jnp.all(mask(battle)[actions])
+        transformed = battle.replace(imp=battle.imp.at[battle.actor].set(True))
+        assert not jnp.any(mask(transformed)[rules.use_start:rules.end])
+        for action in actions:
+            rejected, _ = step(transformed, action)
+            for field in ('actor', 'imp', 'hp', 'battle_items', 'battle_item_charges',
+                          'battle_item_used', 'item_inventory', 'potions'):
+                np.testing.assert_array_equal(getattr(rejected, field), getattr(transformed, field))
+
+
 @pytest.mark.parametrize('item', ['orb_of_life', 'life'])
 def test_battle_items_cannot_revive_summons(default_game, item_battle, item):
     env, _, step, mask = default_game
