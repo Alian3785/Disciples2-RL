@@ -122,16 +122,22 @@
       return card;
     }));
     // Spells of another faction bought in a spell shop: no research, one cast per day.
-    $('spell-list').append(...(casting?.spells||[]).slice(info.spells.length).filter(c=>!c.item_only).map((cast,k)=>{
+    const sites=siteInfo();
+    const discoveredOffers=new Set((sites?.spells||[])
+      .filter(offer=>revealedAt(snap.state,sites.sites?.[offer.site]?.position))
+      .map(offer=>offer.spell));
+    $('spell-list').append(...(casting?.spells||[]).slice(info.spells.length).flatMap((cast,k)=>{
+      if(cast.item_only)return [];
       const i=info.spells.length+k,book=snap.state.learned_spells;
       // One uint32 up to 32 book spells, else 32-bit words (wide spellbooks).
       const learned=Array.isArray(book)?(book[i>>5]>>>(i&31))&1:(book>>>i)&1;
+      if(!learned&&!discoveredOffers.has(cast.id))return [];
       const card=document.createElement('article');card.className='spell-card'+(learned?' is-learned':'');
       card.hidden=$('spell-level').value!=='all'&&Number($('spell-level').value)!==cast.level;
       const title=document.createElement('h3');title.textContent=cast.name+' · '+['','I','II','III','IV','V'][cast.level];
       const description=document.createElement('p');description.textContent=cast.description;
       const status=document.createElement('p');status.className='spell-state';status.textContent=learned?'Куплено в лавке заклинаний':'Продаётся в лавке заклинаний; изучить нельзя';
-      card.append(title,description,status);castBlock(card,cast,i);return card;
+      card.append(title,description,status);castBlock(card,cast,i);return [card];
     }));
     function castBlock(card,cast,i){
       const effect=document.createElement('p');effect.className='spell-effect';effect.textContent=castEffect(cast);
@@ -969,8 +975,12 @@
         $('remaining-label').textContent+=!responded?' · нужно пережить ответный ход засады':pending||s.in_battle?' · завершите начатые бои':' · ответный ход засады состоялся';
       }
     }
-    $('chest-status').hidden=!(map.chests||[]).length;
-    $('chest-status').textContent=(s.last_event===21?eventText(snap)+' ':'')+'Сундуков осталось: '+(s.chest_alive||[]).filter(Boolean).length+' / '+(map.chests||[]).length+'. Подойдите на соседнюю клетку, включая диагональ: всё содержимое попадёт в инвентарь.';
+    const discoveredChests=(map.chests||[]).flatMap((chest,i)=>revealedAt(s,chest.position)?[i]:[]);
+    const remainingChests=discoveredChests.filter(i=>s.chest_alive?.[i]).length;
+    $('chest-status').hidden=!discoveredChests.length;
+    $('chest-status').textContent=discoveredChests.length
+      ?(s.last_event===21?eventText(snap)+' ':'')+'Сундуков осталось: '+remainingChests+' / '+discoveredChests.length+'. Подойдите на соседнюю клетку, включая диагональ: всё содержимое попадёт в инвентарь.'
+      :'';
     $('wins').textContent=s.alive.filter((v,i)=>!v&&s.scenario_spawned?.[i]!==false).length;
     if(map.scenario_events?.length)$('wins').textContent=(s.reference_defeated||[]).filter(Boolean).length;
     $('steps').textContent=fmt(s.step_count);$('reward').textContent=fmt(snap.total_reward);

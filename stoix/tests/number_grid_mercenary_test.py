@@ -13,8 +13,10 @@ from stoix.tests.number_grid_fixtures import compiled_method, hero_roster_state
 
 
 def camp_state(env, state):
+    row, col = env.site_rules.anchors[env.site_rules.kind_sites['mercenary'][0]]
     return hero_roster_state(env, state, [None, 'duke', None, None, None, None]).replace(
         position=env.site_rules.approaches['mercenary'][0], gold=jnp.int32(1000),
+        revealed=state.revealed.at[row,col].set(True),
         hire_rewarded_capacity=jnp.int32(0), movement_points=jnp.int32(0))
 
 

@@ -204,7 +204,9 @@ def finish(env, before, after):
     reward += terminal*5.*jnp.sum(defeated)/max(1, env.reference_enemy_count)
     if env.tracked_enemy_defeat_reward:
         enemy = env.tracked_enemy
-        reward += env.tracked_enemy_defeat_reward*(before.alive[enemy] & ~after.alive[enemy])
+        defeated_now = before.alive[enemy] & ~after.alive[enemy]
+        reward += env.tracked_enemy_defeat_reward*(defeated_now & ~before.tracked_enemy_rewarded)
+        after = after.replace(tracked_enemy_rewarded=before.tracked_enemy_rewarded | defeated_now)
     # Ruins are collected at the end of battle. Pay for
     # the one-shot source transition, never for inventory changes or purchases.
     pickups = env.map_config.get('item_pickup_rewards', {})

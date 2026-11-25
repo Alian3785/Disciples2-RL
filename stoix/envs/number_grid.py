@@ -269,6 +269,7 @@ class BattleState(NumberGridState):
     reference_previous: jax.Array
     reference_city_reached: jax.Array
     reference_defeated: jax.Array
+    tracked_enemy_rewarded: jax.Array
     reference_hp_milestones: jax.Array
     reference_potion_pending: jax.Array
     capital_defense_acquired: jax.Array  # newly obtained defensive bottles, not initial stock
@@ -1260,6 +1261,7 @@ class NumberGrid(Summoning, NumericNumberGrid):
             reference_previous=jnp.full(2, -1, jnp.int32),
             reference_city_reached=jnp.zeros(self.territory.count if self.territory_enabled else 0, bool),
             reference_defeated=jnp.zeros(self.num_opponents, bool),
+            tracked_enemy_rewarded=jnp.bool_(False),
             capital_defense_acquired=jnp.int32(0),
             capital_defense_peak=jnp.zeros(self.capital_training.count, jnp.int32),
             capital_rounds_rewarded=jnp.int32(0),
@@ -2648,8 +2650,9 @@ class NumberGrid(Summoning, NumericNumberGrid):
         if self.unit_swaps_enabled:
             next_state, swap_bonus = self.unit_swaps.apply(next_state, action, resting)
             bonus += swap_bonus
-        if self.script_events.enabled:
+        if self.script_events.enabled or self.campaign_events.enabled:
             next_state = self._reveal_hero(next_state)
+        if self.script_events.enabled:
             next_state = self.script_events.process(self, next_state, new_day=resting,
                                                     locations=~(engage | summon))
         if self.items_enabled:

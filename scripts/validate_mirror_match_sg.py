@@ -80,7 +80,7 @@ def check_party(check, game, label, roster, levels, obj, units, allow_substitute
     """
     cells, consistent = group_units(obj, units)
     check(consistent, f'{label}: group lists units without cells')
-    used, substitutions = set(), []
+    used_cells, used_units, substitutions = set(), set(), []
     for slot, key in enumerate(roster):
         if key is None:
             continue
@@ -90,7 +90,10 @@ def check_party(check, game, label, roster, levels, obj, units, allow_substitute
         if not check(len(found) == 1 and all(c in cells for c in own), f'{label} slot {slot}: cells {own} hold {found}', 'unit'):
             continue
         unit = cells[own[0]]
-        used.update(own)
+        used_cells.update(own)
+        unit_id = unit['UNIT_ID']
+        check(unit_id not in used_units, f'{label} slot {slot}: unit {unit_id} already occupies another slot', 'unit')
+        used_units.add(unit_id)
         kind = unit['TYPE'].upper()
         if kind == want:
             check(unit['LEVEL'] == levels[slot], f'{label} slot {slot}: level {unit["LEVEL"]} != JAX {levels[slot]}')
@@ -105,7 +108,8 @@ def check_party(check, game, label, roster, levels, obj, units, allow_substitute
             substitutions.append((want, kind, 'copy' if copy else 'nearest' if nearest else 'base soldier'))
         check(unit['HP'] == game.hp(kind) and unit['XP'] == 0, f'{label} slot {slot}: HP/XP {unit["HP"]}/{unit["XP"]}')
         check(not unit.get('#'+unit['UNIT_ID']), f'{label} slot {slot}: modifiers')
-    check(set(cells) == used, f'{label}: units in cells the JAX roster leaves empty: {sorted(set(cells)-used)}')
+    extra_cells = sorted(set(cells) - used_cells)
+    check(not extra_cells, f'{label}: units in cells the JAX roster leaves empty: {extra_cells}')
     leaders = [u for u in cells.values() if game.leader(u['TYPE'].upper())]
     leaders = list({u['UNIT_ID']: u for u in leaders}.values())
     check(len(leaders) == 1 and leaders[0]['UNIT_ID'] == obj['LEADER_ID'], f'{label}: exactly one leader, the stack leader')
@@ -179,7 +183,7 @@ def validate(data, game_map, game):
     roads = {(r['POS_X'], r['POS_Y']): r for r in by['CMidRoad']}
     jax_roads = {original(c) for c in game_map['terrain']['road']}
     omitted = sorted(jax_roads-set(roads), key=lambda p: (p[1], p[0]))
-    check(set(roads) <= jax_roads and all(p in forts or p in crystals for p in omitted), 'roads: JAX roads except fort/resource tiles')
+    check(set(roads) == jax_roads - (forts | set(crystals)), 'roads: JAX roads except fort/resource tiles')
     for (x, y), r in roads.items():
         around = tuple(int(p in roads) for p in ((x, y-1), (x+1, y), (x, y+1), (x-1, y)))
         check(r['INDEX'] == ROAD_INDEX[around] and plan[r['ROAD_ID']] == {(x, y)}, f'road {(x, y)} image/plan')
@@ -257,6 +261,7 @@ def validate(data, game_map, game):
         effects = pairs[names.index('EFFECT_QTY'):]
         check(e['HERETIC'] == 1 and e['VERHERETIC'] == 1 and e['ENABLED'] == 1 and e['COND_QTY'] == 1
               and e['CATEGORY'] == KILL_STACK and e['ID_STACK'] == tiamat_stack
+              and e['EFFECT_QTY'] == 1
               and dict(effects[1:]).get('CATEGORY') == WIN and dict(effects).get('ID_PLAYER1') == LEGIONS
               and dict(effects).get('WIN_SCEN') == 1, 'objective: the Legions win when Tiamat\'s stack is destroyed')
     return check, dict(tiles=len(tiles), stacks=len(stacks), substitutions=substitutions, roads=len(roads),

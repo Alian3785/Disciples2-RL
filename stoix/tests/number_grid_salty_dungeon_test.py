@@ -150,12 +150,15 @@ def test_green_dragon_defeat_reward_is_once_and_specific(dungeon):
     dragon = enemy_index(env, 'S103KC002B')
     another = enemy_index(env, 'S103KC002D')
     assert env.tracked_enemy == dragon and bool(initial.alive[dragon])
-    finish = jax.jit(lambda before, after: rewards.finish(env, before, after)[1])
+    finish = jax.jit(lambda before, after: rewards.finish(env, before, after))
     defeated = initial.replace(alive=initial.alive.at[dragon].set(False))
     other_defeated = initial.replace(alive=initial.alive.at[another].set(False))
-    assert float(finish(initial, defeated)) == pytest.approx(env.map_config['item_pickup_rewards']['runic_key'])
-    assert float(finish(defeated, defeated)) == 0.
-    assert float(finish(initial, other_defeated)) == 0.
+    paid, reward = finish(initial, defeated)
+    assert float(reward) == pytest.approx(env.map_config['item_pickup_rewards']['runic_key'])
+    assert float(finish(paid, paid)[1]) == 0.
+    assert float(finish(initial, other_defeated)[1]) == 0.
+    respawned = paid.replace(alive=initial.alive)
+    assert float(finish(respawned, respawned.replace(alive=defeated.alive))[1]) == 0.
 
 
 HUMANS = ('S103KC0057', 'S103KC0058', 'S103KC0059', 'S103KC005A')
